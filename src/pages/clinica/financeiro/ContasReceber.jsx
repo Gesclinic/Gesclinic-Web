@@ -11,6 +11,7 @@ import { listAccountPlans, listCostCenters } from "@/lib/financeApi";
 import { listProfessionals } from "@/lib/professionalsApi";
 import { supabase } from "@/lib/customSupabaseClient";
 import { useNavigate } from "react-router-dom";
+import FinancialIntegrationStatus from "@/components/clinica/financeiro/FinancialIntegrationStatus";
 
 export default function ContasReceber() {
   const breadcrumbs = useBreadcrumbs([
@@ -574,7 +575,12 @@ export default function ContasReceber() {
         </Card>
       </div>
 
-      {/* 🔍 FILTROS */}
+      {/* � FINANCIAL INTEGRATION STATUS (PHASE 3B) */}
+      <div className="mb-6">
+        <FinancialIntegrationStatus />
+      </div>
+
+      {/* �🔍 FILTROS */}
       <Card className="p-4 mb-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold flex items-center gap-2">

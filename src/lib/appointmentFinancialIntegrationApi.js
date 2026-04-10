@@ -1,418 +1,478 @@
 /**
- * Appointment Financial Integration API
- * Integra finalizações de atendimentos com:
- * - Produção Médica
- * - Repasse Médico  
- * - Transações Financeiras
- * - Contas a Receber / Guias de Faturamento
+ * PHASE 2: Appointment Financial Integration API
+ * Wraps PHASE 1 database triggers & functions
+ * 
+ * Responsibilities:
+ * - Finalize appointment → trigger AR/TISS guide auto-creation
+ * - Fetch auto-created financial records
+ * - Cancel appointment → trigger AR soft-delete
+ * - Error handling & idempotency
+ * 
+ * Date: April 11, 2026
  */
 
-import { supabase } from './customSupabaseClient';
+import { customSupabaseClient } from './customSupabaseClient';
+
+
+// ============================================================================
+// 1. FINALIZE APPOINTMENT (triggers AR + Guide creation via PHASE 1 triggers)
+// ============================================================================
 
 /**
- * Quando um atendimento é finalizado, processa automaticamente:
- * 1. Cria registro de produção médica
- * 2. Calcula repasse (70/30)
- * 3. Cria transações financeiras
- * 4. Cria contas a receber ou guia de faturamento
+ * Mark appointment as "attended" → auto-triggers:
+ *   - create_ar_receivable_from_appointment() 
+ *   - create_tiss_guide_from_appointment() (if convênio)
+ * 
+ * @param {UUID} appointmentId 
+ * @param {UUID} clinicId 
+ * @returns {Promise<{success: boolean, appointment: object, ar: object|null, guide: object|null}>}
  */
-export const finalizeAppointmentWithFinancials = async (appointmentId, financialData = {}) => {
+export async function finalizeAppointmentWithFinancials(appointmentId, clinicId) {
   try {
-    console.log('🚀 [finalizeAppointmentWithFinancials] Iniciando...', {
-      appointmentId,
-      financialData
-    });
+    const supabase = customSupabaseClient;
 
-    // 0️⃣ Buscar dados completos do appointment e paciente
-    console.log('📊 Buscando dados completos do appointment...');
-    const { data: apt, error: aptError } = await supabase
+    // Step 1: Get current appointment details
+    const { data: currentAppointment, error: fetchError } = await supabase
       .from('appointments')
-      .select(`
+      .select(
+        `
         id, 
-        value, 
-        service_id, 
-        patient_id,
-        clinic_id,
+        clinic_id, 
+        status, 
+        total_value, 
+        payer_id, 
         professional_id,
-        appointment_date,
-        payer_type,
-        health_plan,
-        authorization_number,
-        card_number,
-        guide_number,
-        payment_method,
-        status
-      `)
+        service_id
+      `
+      )
       .eq('id', appointmentId)
+      .eq('clinic_id', clinicId)
       .single();
-    
-    if (aptError || !apt) {
-      console.error('❌ Appointment não encontrado:', aptError?.message);
+
+    if (fetchError || !currentAppointment) {
       return {
         success: false,
-        message: 'Appointment não encontrado',
-        error: aptError
+        error: `Appointment not found: ${fetchError?.message || 'Unknown'}`,
       };
     }
 
-    console.log('✅ Appointment carregado:', { id: apt.id, value: apt.value });
-
-    // 🆕 Buscar dados do paciente se não tiverem vindo em financialData
-    let patientName = financialData.patient_name;
-    let patientEmail = financialData.patient_email;
-    let patientCpf = financialData.patient_cpf;
-    let patientPhone = financialData.patient_phone;
-
-    if (!patientName || !patientEmail || !patientCpf || !patientPhone) {
-      console.log('👤 Buscando dados do paciente...');
-      const { data: patient } = await supabase
-        .from('patients')
-        .select('name, email, cpf, phone')
-        .eq('id', apt.patient_id)
-        .single();
-
-      if (patient) {
-        patientName = patientName || patient.name;
-        patientEmail = patientEmail || patient.email;
-        patientCpf = patientCpf || patient.cpf;
-        patientPhone = patientPhone || patient.phone;
-        console.log(`✅ Paciente: ${patientName}`);
-      }
-    }
-
-    // Determinar valor com prioridade correta
-    let appointmentValue = financialData.value || apt.value || 0;
-    
-    if (!appointmentValue || appointmentValue === 0) {
-      console.log('💰 Valor = 0, buscando no serviço...');
-      if (apt.service_id) {
-        const { data: svc } = await supabase
-          .from('services')
-          .select('price')
-          .eq('id', apt.service_id)
-          .single();
-        
-        if (svc?.price) {
-          appointmentValue = svc.price;
-          console.log(`   ✅ Valor no serviço: R$ ${appointmentValue}`);
-        }
-      }
-    }
-
-    console.log('📋 Dados finais:', { 
-      appointmentId, 
-      value: appointmentValue, 
-      patientName, 
-      payer_type: apt.payer_type 
-    });
-
-    // 1️⃣ Chamar função RPC para processamento financeiro
-    console.log('💰 [Etapa 1] Processando produção + repasse...');
-    const { data: financialResult, error: financialError } = await supabase.rpc(
-      'finalize_appointment_financial',
-      { 
-        p_appointment_id: appointmentId,
-        p_appointment_value: appointmentValue
-      }
-    );
-
-    if (financialError) {
-      console.error('❌ Erro ao processar financeiro:', financialError);
-      return {
-        success: false,
-        message: `Erro ao processar dados financeiros: ${financialError.message}`,
-        error: financialError
-      };
-    }
-
-    console.log('✅ Processamento financeiro concluído:', financialResult);
-
-    // 2️⃣ Se houver dados de check-in, criar contas a receber ou guia de faturamento
-    if (appointmentValue > 0) {
-      console.log('📋 [Etapa 2] Processando documentos (AR/Billing)...');
-      const { saveCheckInFinancialData } = await import('./financialCheckInApi');
-      
-      // Montar dados financeiros completos garantindo todos os campos
-      const completeFinancialData = {
-        payer_type: apt.payer_type || 'PARTICULAR',
-        patient_name: patientName || 'Paciente',
-        patient_email: patientEmail,
-        patient_cpf: patientCpf,
-        patient_phone: patientPhone,
-        payment_method: financialData.payment_method || apt.payment_method,
-        health_plan: financialData.health_plan || apt.health_plan,
-        authorization_number: financialData.authorization_number || apt.authorization_number,
-        card_number: financialData.card_number || apt.card_number,
-        guide_number: financialData.guide_number || apt.guide_number,
-        card_verified: financialData.card_verified || false,
-        authorization_verified: financialData.authorization_verified || false,
-        value: appointmentValue,
-        copayment: financialData.copayment || 0,
-        discount: financialData.discount || 0,
-      };
-      
-      const checkInResult = await saveCheckInFinancialData(appointmentId, completeFinancialData);
-      
-      if (checkInResult.error) {
-        console.warn('⚠️  Aviso ao processar check-in:', checkInResult.message);
-      } else {
-        console.log('✅ Documentos processados:', checkInResult);
-      }
-
-      // 🚀 BLOCKER 2 FIX: Auto-create billing guide after AR (if applicable)
-      if (checkInResult.type === 'receivable' || appointmentValue > 0) {
-        console.log('📝 [AUTO-GUIDE] Tentando criar guia automaticamente...');
-        try {
-          const { criarGuia } = await import('./guiasApi');
-          const guideData = {
-            appointment_id: appointmentId,
-            paciente_nome: patientName,
-            payer_name: apt.payer_type === 'PARTICULAR' ? null : apt.health_plan,
-            plan_name: apt.health_plan,
-            card_number: apt.card_number,
-            professional_name: apt.professional_id ? `Professional ${apt.professional_id}` : null,
-            service_code: apt.service_id ? `Service ${apt.service_id}` : null,
-            value: appointmentValue,
-          };
-          
-          const guide = await criarGuia(apt.clinic_id, guideData);
-          console.log('✅ Guia criada automaticamente:', guide);
-          
-          return {
-            success: true,
-            message: '✅ Atendimento finalizado com documentos (AR + Guia)',
-            financial: financialResult,
-            documents: checkInResult,
-            guide: guide
-          };
-        } catch (guideErr) {
-          console.warn('⚠️  Aviso ao criar guia automaticamente:', guideErr.message);
-        }
-      }
-
-      return {
-        success: true,
-        message: '✅ Atendimento finalizado com processamento financeiro completo',
-        financial: financialResult,
-        documents: checkInResult
-      };
-    }
-
-    return {
-      success: true,
-      message: '✅ Atendimento finalizado com produção + repasse',
-      financial: financialResult
-    };
-
-  } catch (error) {
-    console.error('❌ Erro em finalizeAppointmentWithFinancials:', error);
-    return {
-      success: false,
-      message: `Erro: ${error.message}`,
-      error
-    };
-  }
-};
-
-/**
- * Calcular repasse médico para um período específico
- */
-export const calculateMonthlyRepasse = async (clinicId, professionalId, month = new Date()) => {
-  try {
-    console.log('📊 [calculateMonthlyRepasse] Calculando repasse...', {
-      clinicId,
-      professionalId,
-      month
-    });
-
-    const monthDate = month.toISOString().split('T')[0];
-
-    const { data: result, error } = await supabase.rpc(
-      'calculate_monthly_repasse',
-      {
-        p_clinic_id: clinicId,
-        p_professional_id: professionalId,
-        p_month: monthDate
-      }
-    );
-
-    if (error) throw error;
-
-    console.log('✅ Repasse calculado:', result);
-    return {
-      success: true,
-      data: result
-    };
-
-  } catch (error) {
-    console.error('❌ Erro ao calcular repasse:', error);
-    return {
-      success: false,
-      message: error.message,
-      error
-    };
-  }
-};
-
-/**
- * Processar apenas a produção médica
- */
-export const processAppointmentProduction = async (appointmentId, appointmentValue = 0) => {
-  try {
-    console.log('🏥 [processAppointmentProduction] Criando produção médica...', {
-      appointmentId,
-      appointmentValue
-    });
-
-    const { data: result, error } = await supabase.rpc(
-      'process_appointment_medical_production',
-      {
-        p_appointment_id: appointmentId,
-        p_appointment_value: appointmentValue
-      }
-    );
-
-    if (error) throw error;
-
-    console.log('✅ Produção criada:', result);
-    return {
-      success: true,
-      data: result
-    };
-
-  } catch (error) {
-    console.error('❌ Erro ao criar produção:', error);
-    return {
-      success: false,
-      message: error.message,
-      error
-    };
-  }
-};
-
-/**
- * Reprocessar atendimento (caso tenha sido atualizado)
- * Remove dados antigos e recria com novos valores
- */
-export const reprocessAppointmentFinancials = async (appointmentId, financialData = {}) => {
-  try {
-    console.log('🔄 [reprocessAppointmentFinancials] Reprocessando...', {
-      appointmentId,
-      financialData
-    });
-
-    // 1️⃣ Obter dados do appointment
-    const { data: appointment, error: aptError } = await supabase
+    // Step 2: Update status to 'attended' (triggers PHASE 1 functions)
+    const { data: updatedAppointment, error: updateError } = await supabase
       .from('appointments')
-      .select('id, clinic_id, professional_id, appointment_date, value')
+      .update({
+        status: 'attended',
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', appointmentId)
+      .eq('clinic_id', clinicId)
+      .select()
       .single();
 
-    if (aptError || !appointment) {
-      throw new Error('Aparecimento não encontrado');
+    if (updateError) {
+      return {
+        success: false,
+        error: `Failed to update appointment: ${updateError.message}`,
+      };
     }
 
-    // 2️⃣ Remover registros antigos
-    console.log('🗑️  Removendo registros anteriores...');
-    
-    await Promise.all([
-      supabase
-        .from('medical_production')
-        .delete()
-        .eq('atendimento_id', appointmentId),
-      
-      supabase
-        .from('financial_transactions')
-        .delete()
+    // Step 3: Fetch auto-created AR (check if trigger fired)
+    const { data: arRecord } = await supabase
+      .from('ar_receivables')
+      .select('*')
+      .eq('appointment_id', appointmentId)
+      .eq('clinic_id', clinicId)
+      .single();
+
+    // Step 4: Fetch auto-created TISS guide (if convênio)
+    let guideRecord = null;
+    if (currentAppointment.payer_id) {
+      const { data: guide } = await supabase
+        .from('billing_guides')
+        .select('*')
         .eq('appointment_id', appointmentId)
-        .eq('category', 'appointment')
-    ]);
-
-    console.log('✅ Registros removidos');
-
-    // 3️⃣ Reprocessar
-    return await finalizeAppointmentWithFinancials(appointmentId, financialData);
-
-  } catch (error) {
-    console.error('❌ Erro ao reprocessar:', error);
-    return {
-      success: false,
-      message: error.message,
-      error
-    };
-  }
-};
-
-/**
- * Dashboard: Resumo de produção e repasse
- */
-export const getProductionAndRepasseSummary = async (clinicId, month = new Date()) => {
-  try {
-    const monthStr = month.toISOString().slice(0, 7); // YYYY-MM
-    const start = monthStr + '-01';
-    const end = new Date(new Date(monthStr + '-01').setMonth(
-      new Date(monthStr + '-01').getMonth() + 1
-    )).toISOString().slice(0, 10);
-
-    // Produção
-    const { data: production, error: prodError } = await supabase
-      .from('medical_production')
-      .select('professional_id, valor_bruto, valor_liquido')
-      .eq('clinic_id', clinicId)
-      .gte('data_atendimento', start)
-      .lt('data_atendimento', end);
-
-    // Repassos
-    const { data: repassos, error: repError } = await supabase
-      .from('medical_repasse')
-      .select('professional_id, valor_profissional, valor_clinica')
-      .eq('clinic_id', clinicId)
-      .gte('periodo_inicio', start)
-      .lt('periodo_fim', end);
-
-    if (prodError || repError) throw prodError || repError;
-
-    // Agregar por profissional
-    const summary = {};
-    
-    (production || []).forEach(p => {
-      if (!summary[p.professional_id]) {
-        summary[p.professional_id] = {
-          producao_bruta: 0,
-          producao_liquida: 0,
-          repasse_prof: 0,
-          repasse_clinic: 0
-        };
-      }
-      summary[p.professional_id].producao_bruta += p.valor_bruto;
-      summary[p.professional_id].producao_liquida += p.valor_liquido;
-    });
-
-    (repassos || []).forEach(r => {
-      if (!summary[r.professional_id]) {
-        summary[r.professional_id] = {
-          producao_bruta: 0,
-          producao_liquida: 0,
-          repasse_prof: 0,
-          repasse_clinic: 0
-        };
-      }
-      summary[r.professional_id].repasse_prof += r.valor_profissional;
-      summary[r.professional_id].repasse_clinic += r.valor_clinica;
-    });
+        .eq('clinic_id', clinicId)
+        .single();
+      guideRecord = guide;
+    }
 
     return {
       success: true,
-      month: monthStr,
-      summary
+      appointment: updatedAppointment,
+      ar: arRecord || null,
+      guide: guideRecord || null,
+      message: `Appointment finalized. AR created: ${!!arRecord}, Guide created: ${!!guideRecord}`,
     };
-
   } catch (error) {
-    console.error('❌ Erro ao get summary:', error);
+    console.error('Error in finalizeAppointmentWithFinancials:', error);
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
+}
+
+// ============================================================================
+// 2. GET AUTO-CREATED AR RECORD
+// ============================================================================
+
+/**
+ * Fetch AR receivable created by trigger
+ * 
+ * @param {UUID} appointmentId 
+ * @param {UUID} clinicId 
+ * @returns {Promise<object>}
+ */
+export async function getARFromAppointment(appointmentId, clinicId) {
+  try {
+    const supabase = customSupabaseClient;
+
+    const { data, error } = await supabase
+      .from('ar_receivables')
+      .select(
+        `
+        id,
+        clinic_id,
+        appointment_id,
+        payer_name,
+        valor,
+        status,
+        origem,
+        descricao,
+        created_at,
+        updated_at
+      `
+      )
+      .eq('appointment_id', appointmentId)
+      .eq('clinic_id', clinicId)
+      .single();
+
+    if (error) {
+      console.warn(
+        `AR not found for appointment ${appointmentId}: ${error.message}`
+      );
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error fetching AR:', error);
+    return null;
+  }
+}
+
+// ============================================================================
+// 3. GET AUTO-CREATED TISS GUIDE
+// ============================================================================
+
+/**
+ * Fetch TISS billing guide created by trigger
+ * 
+ * @param {UUID} appointmentId 
+ * @param {UUID} clinicId 
+ * @returns {Promise<object>}
+ */
+export async function getTISSGuideFromAppointment(appointmentId, clinicId) {
+  try {
+    const supabase = customSupabaseClient;
+
+    const { data, error } = await supabase
+      .from('billing_guides')
+      .select(
+        `
+        id,
+        clinic_id,
+        appointment_id,
+        payer_id,
+        guide_number,
+        status,
+        created_at,
+        updated_at
+      `
+      )
+      .eq('appointment_id', appointmentId)
+      .eq('clinic_id', clinicId)
+      .single();
+
+    if (error) {
+      console.warn(
+        `Guide not found for appointment ${appointmentId}: ${error.message}`
+      );
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error fetching TISS guide:', error);
+    return null;
+  }
+}
+
+// ============================================================================
+// 4. CANCEL APPOINTMENT FINANCIALS
+// ============================================================================
+
+/**
+ * Cancel appointment → soft-delete AR via PHASE 1 trigger
+ * 
+ * @param {UUID} appointmentId 
+ * @param {UUID} clinicId 
+ * @returns {Promise<{success: boolean, message: string}>}
+ */
+export async function cancelAppointmentFinancials(appointmentId, clinicId) {
+  try {
+    const supabase = customSupabaseClient;
+
+    // Step 1: Update appointment status to 'canceled' (triggers cancel function)
+    const { error: updateError } = await supabase
+      .from('appointments')
+      .update({
+        status: 'canceled',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', appointmentId)
+      .eq('clinic_id', clinicId);
+
+    if (updateError) {
+      return {
+        success: false,
+        message: `Failed to cancel appointment: ${updateError.message}`,
+      };
+    }
+
+    // Step 2: Verify AR was soft-deleted
+    const { data: arRecord } = await supabase
+      .from('ar_receivables')
+      .select('status')
+      .eq('appointment_id', appointmentId)
+      .eq('clinic_id', clinicId)
+      .single();
+
+    return {
+      success: true,
+      message: `Appointment canceled. AR status: ${arRecord?.status || 'not found'}`,
+      arStatus: arRecord?.status,
+    };
+  } catch (error) {
+    console.error('Error canceling appointment financials:', error);
     return {
       success: false,
       message: error.message,
-      error
     };
   }
+}
+
+// ============================================================================
+// 5. VALIDATE FINANCIAL INTEGRATION STATUS
+// ============================================================================
+
+/**
+ * Check if appointment has auto-created financial records
+ * 
+ * @param {UUID} appointmentId 
+ * @param {UUID} clinicId 
+ * @returns {Promise<{appointment: object, ar: object|null, guide: object|null, status: string}>}
+ */
+export async function validateFinancialIntegration(appointmentId, clinicId) {
+  try {
+    const supabase = customSupabaseClient;
+
+    // Get appointment
+    const { data: appointment } = await supabase
+      .from('appointments')
+      .select('id, status, total_value, payer_id')
+      .eq('id', appointmentId)
+      .eq('clinic_id', clinicId)
+      .single();
+
+    // Get AR
+    const { data: ar } = await supabase
+      .from('ar_receivables')
+      .select('id, status, valor')
+      .eq('appointment_id', appointmentId)
+      .eq('clinic_id', clinicId)
+      .maybeSingle();
+
+    // Get Guide
+    const { data: guide } = await supabase
+      .from('billing_guides')
+      .select('id, status, guide_number')
+      .eq('appointment_id', appointmentId)
+      .eq('clinic_id', clinicId)
+      .maybeSingle();
+
+    // Status summary
+    let status = 'pending';
+    if (appointment?.status === 'attended') {
+      if (ar && guide && appointment.payer_id) {
+        status = 'complete_with_guide';
+      } else if (ar && !appointment.payer_id) {
+        status = 'complete_particular';
+      } else {
+        status = 'partial_no_ar_guide';
+      }
+    } else if (appointment?.status === 'canceled') {
+      status = 'canceled';
+    }
+
+    return {
+      appointment,
+      ar,
+      guide,
+      status,
+    };
+  } catch (error) {
+    console.error('Error validating financial integration:', error);
+    return {
+      error: error.message,
+      status: 'error',
+    };
+  }
+}
+
+// ============================================================================
+// 6. LIST APPOINTMENTS WITH FINANCIAL STATUS
+// ============================================================================
+
+/**
+ * Get appointments within date range with their financial integration status
+ * 
+ * @param {UUID} clinicId 
+ * @param {string} startDate (ISO format)
+ * @param {string} endDate (ISO format)
+ * @returns {Promise<Array>}
+ */
+export async function listAppointmentsWithFinancialStatus(clinicId, startDate, endDate) {
+  try {
+    const supabase = customSupabaseClient;
+
+    // Get appointments
+    const { data: appointments, error } = await supabase
+      .from('appointments')
+      .select(
+        `
+        id,
+        clinic_id,
+        status,
+        total_value,
+        payer_id,
+        professional_id,
+        service_id,
+        appointment_time,
+        ar_receivables(id, status, valor),
+        billing_guides(id, status, guide_number)
+      `
+      )
+      .eq('clinic_id', clinicId)
+      .gte('appointment_time', startDate)
+      .lte('appointment_time', endDate)
+      .order('appointment_time', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching appointments:', error);
+      return [];
+    }
+
+    // Enrich with financial status
+    return appointments.map((appt) => ({
+      ...appt,
+      financial_status: deriveFinancialStatus(appt),
+    }));
+  } catch (error) {
+    console.error('Error in listAppointmentsWithFinancialStatus:', error);
+    return [];
+  }
+}
+
+// ============================================================================
+// 7. HELPER: DERIVE FINANCIAL STATUS
+// ============================================================================
+
+/**
+ * Determine financial integration status from appointment + related records
+ * 
+ * @param {object} appointment 
+ * @returns {string}
+ */
+function deriveFinancialStatus(appointment) {
+  const { status, payer_id, ar_receivables, billing_guides } = appointment;
+
+  if (status === 'attended') {
+    const hasAR = ar_receivables && ar_receivables.length > 0;
+    const hasGuide = billing_guides && billing_guides.length > 0;
+
+    if (payer_id && hasAR && hasGuide) {
+      return 'complete_with_guide'; // Convênio + AR + Guide
+    } else if (!payer_id && hasAR) {
+      return 'complete_particular'; // Particular + AR only
+    } else if (hasAR) {
+      return 'partial_missing_guide'; // Has AR but no guide (should have one for convênio)
+    } else {
+      return 'attended_no_financial'; // Attended but no AR (trigger may not have fired)
+    }
+  } else if (status === 'canceled') {
+    return 'canceled';
+  } else {
+    return 'pending'; // Not yet attended
+  }
+}
+
+// ============================================================================
+// 8. BULK VALIDATE FINANCIAL INTEGRATION
+// ============================================================================
+
+/**
+ * Check multiple appointments for financial status
+ * Useful for dashboard/reports
+ * 
+ * @param {UUID} clinicId 
+ * @param {Array<UUID>} appointmentIds 
+ * @returns {Promise<Array>}
+ */
+export async function bulkValidateFinancialIntegration(clinicId, appointmentIds) {
+  try {
+    const supabase = customSupabaseClient;
+
+    const { data, error } = await supabase
+      .from('appointments')
+      .select(
+        `
+        id,
+        status,
+        payer_id,
+        total_value,
+        ar_receivables(id, status),
+        billing_guides(id, status)
+      `
+      )
+      .eq('clinic_id', clinicId)
+      .in('id', appointmentIds);
+
+    if (error) {
+      console.error('Error in bulk validation:', error);
+      return [];
+    }
+
+    return data.map((appt) => ({
+      appointment_id: appt.id,
+      status: appt.status,
+      has_ar: appt.ar_receivables?.length > 0,
+      has_guide: appt.billing_guides?.length > 0,
+      ar_status: appt.ar_receivables?.[0]?.status || null,
+      guide_status: appt.billing_guides?.[0]?.status || null,
+      financial_status: deriveFinancialStatus(appt),
+    }));
+  } catch (error) {
+    console.error('Error in bulkValidateFinancialIntegration:', error);
+    return [];
+  }
+}
+
+export default {
+  finalizeAppointmentWithFinancials,
+  getARFromAppointment,
+  getTISSGuideFromAppointment,
+  cancelAppointmentFinancials,
+  validateFinancialIntegration,
+  listAppointmentsWithFinancialStatus,
+  bulkValidateFinancialIntegration,
 };

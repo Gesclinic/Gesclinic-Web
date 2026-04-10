@@ -194,11 +194,11 @@ BEGIN
   END IF;
 
   -- RULE 1: Check service individual configuration (highest priority)
-  SELECT percentage INTO v_percentage
+  SELECT percentual INTO v_percentage
   FROM repasse_config_servico
   WHERE clinic_id = p_clinic_id
     AND service_id = v_service_id
-    AND active = true
+    AND ativo = true
   ORDER BY created_at DESC
   LIMIT 1;
 
@@ -207,27 +207,12 @@ BEGIN
     RETURN v_repasse_amount;
   END IF;
 
-  -- RULE 2: Check service group configuration (second priority)
-  SELECT rcs.percentage INTO v_percentage
-  FROM professional_services ps
-  JOIN repasse_config_grupo rcg ON rcg.group_id = ps.group_id
-  WHERE ps.service_id = v_service_id
-    AND rcg.clinic_id = p_clinic_id
-    AND rcg.active = true
-  ORDER BY rcg.created_at DESC
-  LIMIT 1;
-
-  IF v_percentage IS NOT NULL AND v_percentage > 0 THEN
-    v_repasse_amount := (v_value * v_percentage) / 100.0;
-    RETURN v_repasse_amount;
-  END IF;
-
-  -- RULE 3: Check professional general configuration (default)
-  SELECT percentage INTO v_percentage
+  -- RULE 2: Check professional general configuration (default)
+  SELECT percentual INTO v_percentage
   FROM repasse_config_profissional
   WHERE clinic_id = p_clinic_id
     AND professional_id = p_professional_id
-    AND active = true
+    AND ativo = true
   ORDER BY created_at DESC
   LIMIT 1;
 
@@ -345,13 +330,10 @@ CREATE INDEX IF NOT EXISTS idx_repasse_config_profissional_active
 -- ============================================================================
 
 /*
- * TEST 1: Verify functions exist
- */
--- SELECT proname FROM pg_proc 
--- WHERE proname IN (
---   'create_ar_receivable_from_appointment',
---   'create_tiss_guide_from_appointment',
---   'cancel_ar_receivable_from_appointment',
+ * TEST 1: Verify functions existtivo);
+
+CREATE INDEX IF NOT EXISTS idx_repasse_config_profissional_active 
+  ON repasse_config_profissional(clinic_id, professional_id, ativo
 --   'calculate_repasse_per_appointment'
 -- );
 

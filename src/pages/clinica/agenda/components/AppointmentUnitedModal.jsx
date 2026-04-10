@@ -958,8 +958,8 @@ export default function AppointmentUnitedModal({
       }));
       
       console.log('   ✅ liberacaoData após setLiberacaoData será:', {
-        card_number: appointment.card_number || prev.card_number || '',
-        auth_number: appointment.authorization_number || prev.auth_number || '',
+        card_number: appointment.card_number || '',
+        auth_number: appointment.authorization_number || '',
       });
     }
   }, [tabAtivo, appointment, mode]);

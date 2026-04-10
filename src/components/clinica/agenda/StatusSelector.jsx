@@ -7,12 +7,16 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, CheckCircle2, AlertCircle } from "lucide-react";
 import { labelForStatus, colorForStatus } from '@/lib/statusLabels';
 import { updateAppointmentStatus } from '@/lib/agendaApi';
+import { useClinicContext } from '@/contexts/ClinicContext';
+import { finalizeAppointmentWithFinancials } from '@/lib/appointmentFinancialIntegrationApi';
 
 const StatusSelector = ({ appointment, onStatusChange, compact = false }) => {
+  const { clinicId } = useClinicContext();
   const [isUpdating, setIsUpdating] = useState(false);
+  const [financialStatus, setFinancialStatus] = useState(null);
 
   const statusOptions = [
     { value: 'agendado', label: 'Agendado' },
@@ -28,11 +32,45 @@ const StatusSelector = ({ appointment, onStatusChange, compact = false }) => {
     if (newStatus === appointment.status) return;
 
     setIsUpdating(true);
+    setFinancialStatus(null);
     try {
-      await updateAppointmentStatus(appointment.id, newStatus);
+      // Map 'atendido' to 'attended' for database trigger compliance
+      const dbStatus = newStatus === 'atendido' ? 'attended' : newStatus;
+
+      // Update status in DB (use 'attended' for trigger)
+      await updateAppointmentStatus(appointment.id, dbStatus);
+
+      // If marking as "attended", trigger financial integration
+      if (dbStatus === 'attended' && clinicId) {
+        const financialResult = await finalizeAppointmentWithFinancials(
+          appointment.id,
+          clinicId
+        );
+
+        if (financialResult.success) {
+          setFinancialStatus({
+            success: true,
+            ar: !!financialResult.ar,
+            guide: !!financialResult.guide,
+            message: financialResult.message
+          });
+          console.log('✅ Financial integration completed:', financialResult);
+        } else {
+          setFinancialStatus({
+            success: false,
+            message: financialResult.error || 'Erro ao processar financeiro'
+          });
+          console.warn('⚠️ Financial integration failed:', financialResult);
+        }
+      }
+
       onStatusChange && onStatusChange(appointment.id, newStatus);
     } catch (error) {
       console.error('Erro ao atualizar status:', error);
+      setFinancialStatus({
+        success: false,
+        message: error.message
+      });
     } finally {
       setIsUpdating(false);
     }
@@ -87,13 +125,40 @@ const StatusSelector = ({ appointment, onStatusChange, compact = false }) => {
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 flex-wrap">
       <Badge 
         variant="outline"
         className={`${statusColors.bg} ${statusColors.text} ${statusColors.border}`}
       >
         {statusLabel}
       </Badge>
+
+      {/* Financial Status Feedback */}
+      {financialStatus && (
+        <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
+          financialStatus.success
+            ? 'bg-green-100 text-green-800'
+            : 'bg-red-100 text-red-800'
+        }`}>
+          {financialStatus.success ? (
+            <>
+              <CheckCircle2 className="w-3 h-3" />
+              <span>
+                {financialStatus.ar && financialStatus.guide
+                  ? '✅ AR + Guia'
+                  : financialStatus.ar
+                  ? '✅ AR'
+                  : '✅ Processado'}
+              </span>
+            </>
+          ) : (
+            <>
+              <AlertCircle className="w-3 h-3" />
+              <span>{financialStatus.message}</span>
+            </>
+          )}
+        </div>
+      )}
       
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
