@@ -1,0 +1,22 @@
+-- Add optional columns to link AP bills (repasse) to revenue and doctor/service context
+alter table if exists public.ap_bills
+  add column if not exists repasse_doctor_name text,
+  add column if not exists linked_invoice_id uuid references public.invoices(id),
+  add column if not exists linked_service text,
+  add column if not exists linked_revenue numeric;
+
+-- Simple dashboard view for margins by doctor and service
+drop view if exists public.repasse_dashboard;
+create or replace view public.repasse_dashboard as
+select
+  ab.clinic_id,
+  coalesce(ab.repasse_doctor_name, 'N/A') as doctor,
+  coalesce(ab.linked_service, 'N/A') as service,
+  sum(coalesce(ab.linked_revenue, 0)) as revenue_total,
+  sum(case when cp.name = 'Repasse Médico' then coalesce(ab.amount,0) else 0 end) as repasse_total,
+  sum(coalesce(ab.linked_revenue, 0)) - sum(case when cp.name = 'Repasse Médico' then coalesce(ab.amount,0) else 0 end) as margin
+from public.ap_bills ab
+left join public.account_plans cp on cp.id = ab.category_id
+group by ab.clinic_id, doctor, service;
+
+comment on view public.repasse_dashboard is 'Aggregated revenue vs repasse by doctor and service';

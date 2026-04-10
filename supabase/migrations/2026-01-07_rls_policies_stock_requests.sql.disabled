@@ -1,0 +1,73 @@
+-- Enable RLS and add tenant-aware policies for stock_requests and stock_request_items
+-- Adjust as needed for your auth/tenant model
+
+-- stock_requests
+alter table if exists public.stock_requests enable row level security;
+
+do $$ begin
+  create policy stock_requests_select_policy on public.stock_requests
+    for select
+    using (clinic_id in (select clinic_id from public.user_clinics where user_id = auth.uid() and status = 'active'));
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create policy stock_requests_insert_policy on public.stock_requests
+    for insert
+    with check (clinic_id in (select clinic_id from public.user_clinics where user_id = auth.uid() and status = 'active'));
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create policy stock_requests_update_policy on public.stock_requests
+    for update
+    using (clinic_id in (select clinic_id from public.user_clinics where user_id = auth.uid() and status = 'active'))
+    with check (clinic_id in (select clinic_id from public.user_clinics where user_id = auth.uid() and status = 'active'));
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create policy stock_requests_delete_policy on public.stock_requests
+    for delete
+    using (clinic_id in (select clinic_id from public.user_clinics where user_id = auth.uid() and status = 'active'));
+exception when duplicate_object then null; end $$;
+
+-- stock_request_items
+alter table if exists public.stock_request_items enable row level security;
+
+do $$ begin
+  create policy stock_request_items_select_policy on public.stock_request_items
+    for select
+    using (request_id in (
+      select id from public.stock_requests
+      where clinic_id in (select clinic_id from public.user_clinics where user_id = auth.uid() and status = 'active')
+    ));
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create policy stock_request_items_insert_policy on public.stock_request_items
+    for insert
+    with check (request_id in (
+      select id from public.stock_requests
+      where clinic_id in (select clinic_id from public.user_clinics where user_id = auth.uid() and status = 'active')
+    ));
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create policy stock_request_items_update_policy on public.stock_request_items
+    for update
+    using (request_id in (
+      select id from public.stock_requests
+      where clinic_id in (select clinic_id from public.user_clinics where user_id = auth.uid() and status = 'active')
+    ))
+    with check (request_id in (
+      select id from public.stock_requests
+      where clinic_id in (select clinic_id from public.user_clinics where user_id = auth.uid() and status = 'active')
+    ));
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create policy stock_request_items_delete_policy on public.stock_request_items
+    for delete
+    using (request_id in (
+      select id from public.stock_requests
+      where clinic_id in (select clinic_id from public.user_clinics where user_id = auth.uid() and status = 'active')
+    ));
+exception when duplicate_object then null; end $$;

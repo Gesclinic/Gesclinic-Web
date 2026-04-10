@@ -1,0 +1,20 @@
+{
+  "name": "Gesclinic Web",
+  "short_name": "Gesclinic",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0f4c81",
+  "icons": [
+    {
+      "src": "/src/assets/logo_gesclinic_g.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/src/assets/logo_gesclinic_g.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

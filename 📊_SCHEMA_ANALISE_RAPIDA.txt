@@ -1,0 +1,155 @@
+╔═══════════════════════════════════════════════════════════════╗
+║           🔍 O SCHEMA ATUAL É O MELHOR?                        ║
+╚═══════════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 RESPOSTA RÁPIDA:
+
+  ⚠️  Atual funciona, mas está INCOMPLETO.
+  ✅ Recomendação: Adicione room_number + alguns campos
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 ANÁLISE ATUAL:
+
+✅ BOM:
+  ✓ UUID primária
+  ✓ Foreign key com cascade
+  ✓ Timestamps (auditoria)
+  ✓ is_active (soft delete)
+
+⚠️  FALTANDO:
+  ✗ room_number (como usuário identifica a sala?)
+  ✗ Constraints (type, capacity validação)
+  ✗ Índices de performance
+  ✗ Campos úteis (floor, wing, bathroom, ac)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 CENÁRIO 1: Usuário vê
+┌────────────────────────┐
+│ Sala 1 (ID)            │
+│ Capacidade: 2          │
+│ Tipo: Consultório      │
+└────────────────────────┘
+
+❌ PROBLEMA: Qual é o "Número" ou "Código" da sala?
+   UUID não é humanamente legível!
+
+┌────────────────────────┐
+│ Sala 201 (room_number) │
+│ Capacidade: 2          │
+│ Tipo: Consultório      │
+│ Localização: Piso 2    │
+└────────────────────────┘
+
+✅ SOLUÇÃO: Adicionar room_number!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎁 RECOMENDAÇÕES:
+
+NÍVEL 1 - ESSENCIAL (adicionar já):
+┌──────────────────────────────────────┐
+│ room_number VARCHAR(50)  ← NOVO      │
+│ Identificador humanamente legível    │
+│ Ex: "201", "A1", "Sala 1"            │
+└──────────────────────────────────────┘
+
+NÍVEL 2 - RECOMENDADO (quando crecer):
+┌──────────────────────────────────────┐
+│ floor INT                ← NOVO      │
+│ wing VARCHAR(50)         ← NOVO      │
+│ section VARCHAR(50)      ← NOVO      │
+│ Localização mais precisa            │
+└──────────────────────────────────────┘
+
+NÍVEL 3 - NICE TO HAVE (se precisar):
+┌──────────────────────────────────────┐
+│ has_bathroom BOOLEAN     ← NOVO      │
+│ has_ac BOOLEAN           ← NOVO      │
+│ notes TEXT               ← NOVO      │
+│ active_since TIMESTAMP   ← NOVO      │
+│ Dados extras para relatórios        │
+└──────────────────────────────────────┘
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 COMPARAÇÃO:
+
+ATUAL (Simples):
+  ✅ Rápido
+  ✅ Poucos campos
+  ❌ Sem room_number
+  ❌ Sem filtros avançados
+
+RECOMENDADO (Completo):
+  ✅ Pronto para crescer
+  ✅ Dados ricos
+  ✅ Relatórios avançados
+  ⚠️  Mais manutenção
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🚀 O QUE FAZER AGORA?
+
+PASSO 1 - Adicione o essencial:
+─────────────────────────────
+
+ALTER TABLE rooms 
+  ADD COLUMN room_number VARCHAR(50) NOT NULL UNIQUE;
+
+CREATE INDEX idx_rooms_room_number ON rooms(room_number);
+CREATE INDEX idx_rooms_clinic_active ON rooms(clinic_id, is_active);
+
+
+PASSO 2 - Depois, quando precisar:
+──────────────────────────────────
+
+ALTER TABLE rooms ADD COLUMN floor INT;
+ALTER TABLE rooms ADD COLUMN wing VARCHAR(50);
+ALTER TABLE rooms ADD COLUMN notes TEXT;
+
+
+PASSO 3 - Continue monitorando:
+───────────────────────────────
+
+Conforme usar, você vê quais campos são realmente
+necessários. Adicione conforme demanda.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 TABELA RECOMENDADA FINAL:
+
+┌─ rooms
+│  ├─ id (UUID) ✅
+│  ├─ clinic_id (UUID) ✅
+│  ├─ room_number (VARCHAR) ← NOVO (essencial!)
+│  ├─ name (VARCHAR) ✅
+│  ├─ type (VARCHAR) ✅
+│  ├─ unit (VARCHAR) ✅
+│  ├─ floor (INT) ← NOVO (opcional)
+│  ├─ wing (VARCHAR) ← NOVO (opcional)
+│  ├─ description (TEXT) ✅
+│  ├─ capacity (INT) ✅
+│  ├─ has_bathroom (BOOLEAN) ← NOVO (opcional)
+│  ├─ has_ac (BOOLEAN) ← NOVO (opcional)
+│  ├─ notes (TEXT) ← NOVO (opcional)
+│  ├─ is_active (BOOLEAN) ✅
+│  ├─ created_at (TIMESTAMP) ✅
+│  ├─ updated_at (TIMESTAMP) ✅
+│  └─ Índices otimizados ✅
+└─
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✨ CONCLUSÃO:
+
+  ⚠️  Atual: Funciona, mas falta room_number
+  ✅ Recomendado: Adicione room_number AGORA
+  🎯 Futuro: Adicione campos conforme necessário
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Criado: 18 de Janeiro de 2026

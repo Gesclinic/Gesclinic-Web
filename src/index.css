@@ -1,0 +1,351 @@
+﻿/* -------------------------------------------------------
+   TAILWIND CORE (sempre no topo)
+------------------------------------------------------- */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* -------------------------------------------------------
+   CUSTOMIZAÃ‡Ã•ES EXTERNAS (depois do Tailwind)
+------------------------------------------------------- */
+@import "./react-calendar-custom.css";
+
+/* -------------------------------------------------------
+   BASE THEME VARIABLES â€” GESCLINIC PREMIUM
+------------------------------------------------------- */
+@layer base {
+  :root {
+    --primary: 204 74% 31%;
+    --primary-light: 204 30% 92%;
+    --primary-soft: 204 35% 85%;
+    --primary-hover: 204 74% 24%;
+    --primary-border: 204 74% 18%;
+
+    --secondary: 114 43% 52%;
+    --secondary-hover: 114 43% 45%;
+
+    --background: 210 20% 97%;
+    --foreground: 222 84% 5%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 84% 5%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 84% 5%;
+
+    --muted: 210 40% 97%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: var(--primary-light);
+    --accent-foreground: var(--primary);
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214 31% 91%;
+    --input: 214 31% 91%;
+    --ring: var(--primary);
+
+    --radius: 0.5rem;
+  }
+
+  body {
+    @apply bg-[hsl(var(--background))] text-foreground antialiased;
+  }
+
+  * {
+    @apply border-border;
+  }
+}
+
+/* -------------------------------------------------------------------
+   COMPONENTES CUSTOM PREMIUM
+------------------------------------------------------------------- */
+@layer components {
+  .btn-primary {
+    @apply bg-[hsl(var(--primary))]
+           text-white font-semibold
+           px-4 py-2 rounded-lg shadow-sm
+           transition-all;
+  }
+  .btn-primary:hover {
+    background: hsl(var(--primary-hover));
+  }
+
+  .btn-secondary {
+    @apply bg-[hsl(var(--secondary))]
+           text-white font-semibold
+           px-4 py-2 rounded-lg shadow-sm
+           transition-all;
+  }
+  .btn-secondary:hover {
+    background: hsl(var(--secondary-hover));
+  }
+}
+
+/* -------------------------------------------------------------------
+   UTILITÃRIOS PREMIUM
+------------------------------------------------------------------- */
+@layer utilities {
+  .app-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3vh;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  .app-modal-shell {
+    width: calc(100vw - 6vh);
+    max-width: calc(100vw - 6vh);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  .app-modal-shell--form {
+    height: calc(100vh - 6vh);
+    max-height: calc(100vh - 6vh);
+  }
+
+  .app-modal-shell--wide {
+    max-width: min(calc(100vw - 6vh), 1200px);
+  }
+
+  .app-modal-shell--medium {
+    max-width: min(calc(100vw - 6vh), 1000px);
+  }
+
+  .app-modal-shell--compact {
+    width: min(calc(100vw - 6vh), 900px);
+    max-width: calc(100vw - 6vh);
+    height: auto;
+    max-height: calc(100vh - 6vh);
+  }
+
+  .app-modal-card {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .app-modal-card--auto {
+    max-height: calc(100vh - 6vh);
+  }
+
+  .app-modal-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .app-dialog-shell {
+    width: calc(100vw - 6vh);
+    max-width: calc(100vw - 6vh);
+  }
+
+  .app-dialog-shell--content {
+    height: calc(100vh - 6vh);
+    max-height: calc(100vh - 6vh);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0;
+  }
+
+  .app-dialog-shell--wide {
+    max-width: min(calc(100vw - 6vh), 1200px);
+  }
+
+  .app-dialog-shell--compact {
+    width: min(calc(100vw - 6vh), 900px);
+    max-width: calc(100vw - 6vh);
+    height: auto;
+    max-height: calc(100vh - 6vh);
+  }
+
+  .hover-primary-soft:hover {
+    background-color: hsl(var(--primary-light));
+  }
+
+  .btn-active-contrast {
+    border: 2px solid hsl(var(--primary));
+    box-shadow: 0 0 12px rgba(20, 91, 138, 0.22);
+    transform: scale(1.05);
+  }
+
+  .shadow-soft {
+    box-shadow:
+      0 4px 6px -1px rgba(0, 0, 0, 0.06),
+      0 2px 4px -2px rgba(0, 0, 0, 0.04);
+  }
+}
+
+/* -------------------------------------------------------------------
+   FIX â€” DAY PICKER REACT (necessÃ¡rio)
+------------------------------------------------------------------- */
+.rdp {
+  display: inline-block !important;
+  width: auto !important;
+  height: auto !important;
+  max-height: none !important;
+}
+
+.rdp-month {
+  width: 100% !important;
+}
+
+.rdp-table {
+  width: 100% !important;
+  border-collapse: separate !important;
+  table-layout: fixed !important;
+}
+
+/* -------------------------------------------------------------------
+   FIX RADIX â€” POPOVER / DROPDOWN
+------------------------------------------------------------------- */
+[data-radix-popover-content-wrapper] {
+  position: static !important;
+  transform: none !important;
+
+  display: inline-block !important;
+
+  width: auto !important;
+  height: auto !important;
+  inset: unset !important;
+}
+/* ===== AGENDA | SEMANA ===== */
+.week-day-active {
+  background-color: rgb(239 246 255); /* blue-50 */
+  position: relative;
+}
+
+.week-day-active::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: rgb(59 130 246); /* blue-500 */
+}
+
+.week-day-active-header {
+  background-color: rgb(219 234 254); /* blue-100 */
+  border-bottom: 1px solid rgb(147 197 253); /* blue-300 */
+}
+
+.week-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 999px;
+}
+
+.week-slot {
+  cursor: pointer;
+  position: relative;
+}
+
+.week-slot-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background-color: rgb(59 130 246); /* blue-500 */
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.week-slot:hover {
+  background-color: rgba(59, 130, 246, 0.06); /* blue-500 bem leve */
+  cursor: pointer;
+}
+
+/* ===== CUSTOMIZAÃ‡Ã•ES DE SCROLLBAR ===== */
+/* Scrollbar para Chrome, Edge, Safari */
+.scrollbar-custom::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scrollbar-custom::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-custom::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+
+.scrollbar-custom::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Scrollbar para Firefox */
+.scrollbar-custom {
+  scrollbar-color: #cbd5e1 transparent;
+  scrollbar-width: thin;
+}
+
+/* Aplicar a modais e conteÃºdo com scroll */
+.modal-content-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+
+.modal-content-scroll::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.modal-content-scroll::-webkit-scrollbar-thumb {
+  background: #64748b;
+  border-radius: 4px;
+  border: 2px solid #f1f5f9;
+}
+
+.modal-content-scroll::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Firefox */
+.modal-content-scroll {
+  scrollbar-color: #64748b #f1f5f9;
+  scrollbar-width: thin;
+}
+
+/* -------------------------------------------------------
+   INPUT DATE - Remove setas nativas (chevrons)
+   Permite apenas navegaÃ§Ã£o through buttons customizados
+------------------------------------------------------- */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  display: none !important;
+}
+
+input[type="date"]::-webkit-outer-spin-button,
+input[type="date"]::-webkit-inner-spin-button {
+  display: none !important;
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="date"]::-moz-calendar-picker-indicator {
+  display: none !important;
+}

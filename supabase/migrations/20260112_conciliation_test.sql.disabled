@@ -1,0 +1,31 @@
+-- Testes automatizados para conciliação bancária
+-- Execute no Supabase SQL Editor ou psql
+
+-- 1. Inserção de movimentação
+insert into conciliation_bank_statements (bank_account_id, date, description, amount, type, status)
+values ('00000000-0000-0000-0000-000000000001', '2026-01-10', 'PIX TESTE', 1000, 'credit', 'pending') returning id into test_id;
+
+-- 2. Conciliação
+update conciliation_bank_statements set status='reconciled', linked_financial_id='00000000-0000-0000-0000-000000000002' where id=test_id;
+-- Auditoria
+insert into conciliation_audit (statement_id, action, user_id, details) values (test_id, 'conciliar', '00000000-0000-0000-0000-000000000003', '{"financialId":"00000000-0000-0000-0000-000000000002"}');
+
+-- 3. Divergência
+update conciliation_bank_statements set status='divergent' where id=test_id;
+insert into conciliation_audit (statement_id, action, user_id, details) values (test_id, 'divergente', '00000000-0000-0000-0000-000000000003', '{"reason":"Teste divergente"}');
+
+-- 4. Ignorar
+update conciliation_bank_statements set status='ignored' where id=test_id;
+insert into conciliation_audit (statement_id, action, user_id, details) values (test_id, 'ignorar', '00000000-0000-0000-0000-000000000003', null);
+
+-- 5. Teste de bloqueio de edição (deve falhar)
+-- Tente editar valor ou data após status ser reconciled/divergent/ignored
+-- Este comando deve gerar erro:
+update conciliation_bank_statements set amount=2000 where id=test_id;
+
+-- 6. Verificar registros na tabela de auditoria
+select * from conciliation_audit where statement_id=test_id;
+
+-- 7. Limpeza (opcional)
+delete from conciliation_audit where statement_id=test_id;
+delete from conciliation_bank_statements where id=test_id;

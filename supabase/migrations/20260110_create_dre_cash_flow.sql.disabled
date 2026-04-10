@@ -1,0 +1,66 @@
+-- Chart of Accounts
+create table if not exists chart_of_accounts (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  type text not null check (type in ('revenue', 'expense')),
+  dre_group text not null
+);
+
+-- Accounts Receivable (minimal)
+create table if not exists accounts_receivable (
+  id uuid primary key default gen_random_uuid(),
+  description text,
+  value numeric,
+  due_date date,
+  paid_at date,
+  status text,
+  chart_account_id uuid references chart_of_accounts(id)
+);
+
+-- Accounts Payable (minimal, if not exists)
+create table if not exists accounts_payable (
+  id uuid primary key default gen_random_uuid(),
+  description text,
+  value numeric,
+  due_date date,
+  paid_at date,
+  paid_value numeric,
+  status text,
+  payment_method text,
+  updated_at timestamptz default now(),
+  chart_account_id uuid references chart_of_accounts(id),
+  cost_center text
+);
+
+-- DRE Monthly View
+create or replace view dre_monthly as
+select
+  date_trunc('month', coalesce(ar.paid_at, ap.paid_at)) as month,
+  coa.dre_group,
+  sum(case when coa.type = 'revenue' then ar.value else 0 end) as total_revenue,
+  sum(case when coa.type = 'expense' then ap.paid_value else 0 end) as total_expense
+from chart_of_accounts coa
+left join accounts_receivable ar on ar.chart_account_id = coa.id
+left join accounts_payable ap on ap.chart_account_id = coa.id
+where ar.paid_at is not null or ap.paid_at is not null
+group by month, coa.dre_group;
+
+-- Cash Flow View
+create or replace view cash_flow as
+select
+  date_trunc('day', paid_at)::date as date,
+  sum(paid_value) * -1 as amount,
+  'expense' as type
+from accounts_payable
+where status = 'paid'
+group by date_trunc('day', paid_at)
+
+union all
+
+select
+  date_trunc('day', paid_at)::date,
+  sum(value),
+  'revenue'
+from accounts_receivable
+where status = 'paid'
+group by date_trunc('day', paid_at);

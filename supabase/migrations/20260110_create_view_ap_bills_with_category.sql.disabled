@@ -1,0 +1,10 @@
+-- Create a view to expose category_name for server-side sorting
+drop view if exists public.ap_bills_with_category;
+create or replace view public.ap_bills_with_category as
+select
+  ap.*,
+  cp.name as category_name
+from public.ap_bills ap
+left join public.account_plans cp on cp.id = ap.category_id;
+
+comment on view public.ap_bills_with_category is 'ap_bills with category_name for sorting and filtering';

@@ -1,0 +1,76 @@
+/* Estiliza as setas do react-calendar para ficarem maiores */
+
+.react-calendar__navigation {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+/* DESABILITA os botões de seta de navegação por mês - apenas mostra o rótulo */
+.react-calendar__navigation button {
+  display: none !important;
+}
+
+.react-calendar__navigation__label {
+  font-size: 1rem !important;
+  color: #2563eb !important;
+  font-weight: 600 !important;
+  background: transparent !important;
+  margin: 0 0.25rem !important;
+  padding: 0.15rem 0.5rem !important;
+  border-radius: 0.5rem !important;
+  border: none !important;
+  box-shadow: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Backup - se a rule acima não funcionar */
+.react-calendar__navigation__prev-label,
+.react-calendar__navigation__next-label,
+.react-calendar__navigation__prev2-label,
+.react-calendar__navigation__next2-label {
+  display: none !important;
+}
+
+.appointment-availability-calendar .appointment-calendar-tile {
+  border-radius: 0.375rem !important;
+}
+
+.appointment-availability-calendar .appointment-calendar-tile--available {
+  background: #ecfdf5 !important;
+  color: #047857 !important;
+  font-weight: 600 !important;
+}
+
+.appointment-availability-calendar .appointment-calendar-tile--selected {
+  background: #2563eb !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+.appointment-availability-calendar .appointment-calendar-tile--unavailable,
+.appointment-availability-calendar .appointment-calendar-tile--unavailable:disabled {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+
+.appointment-availability-calendar .appointment-calendar-tile--holiday-blocked,
+.appointment-availability-calendar .appointment-calendar-tile--holiday-blocked:disabled {
+  background: #fee2e2 !important;
+  color: #dc2626 !important;
+  font-weight: 700 !important;
+  text-decoration: line-through !important;
+  opacity: 1 !important;
+}
+
+.appointment-availability-calendar .appointment-calendar-tile--holiday-selected,
+.appointment-availability-calendar .appointment-calendar-tile--holiday-selected:disabled {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  opacity: 1 !important;
+}

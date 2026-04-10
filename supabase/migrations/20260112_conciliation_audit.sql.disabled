@@ -1,0 +1,31 @@
+-- Auditoria para conciliação bancária
+
+create table if not exists conciliation_audit (
+  id uuid primary key default gen_random_uuid(),
+  statement_id uuid not null references conciliation_bank_statements(id),
+  action text not null, -- 'conciliar', 'ajustar', 'divergente', 'ignorar'
+  user_id uuid,
+  details jsonb,
+  created_at timestamptz default now()
+);
+
+-- Trigger para bloquear edição após conciliação
+create or replace function block_edit_after_conciliation()
+returns trigger as $$
+begin
+  if (old.status in ('reconciled','adjusted','divergent','ignored')) and (new.amount <> old.amount or new.date <> old.date) then
+    raise exception 'Movimentação conciliada/divergente/ignorada não pode ser editada';
+  end if;
+  return new;
+end;
+$$ language plpgsql;
+
+do $$
+begin
+  if exists (select 1 from information_schema.tables where table_name='conciliation_bank_statements') then
+    drop trigger if exists trg_block_edit_after_conciliation on conciliation_bank_statements;
+    create trigger trg_block_edit_after_conciliation
+      before update on conciliation_bank_statements
+      for each row execute function block_edit_after_conciliation();
+  end if;
+end$$;

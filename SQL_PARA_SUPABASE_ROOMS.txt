@@ -1,0 +1,115 @@
+╔════════════════════════════════════════════════════════════════════╗
+║                    🚀 SQL PRONTO PARA SUPABASE                      ║
+║                                                                    ║
+║  Copie o SQL abaixo e execute no SQL Editor do Supabase            ║
+╚════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════
+
+TÍTULO: Adicionar Coluna room_number à Tabela rooms
+
+DESCRIÇÃO: 
+  - Adiciona identificador/número da sala (ex: 201, A1, Sala 1)
+  - Cria índices para melhor performance
+  - Sincroniza o banco de dados com o formulário do frontend
+
+═══════════════════════════════════════════════════════════════════════
+
+SQL PARA COPIAR E COLAR:
+
+═══════════════════════════════════════════════════════════════════════
+
+-- Adicionar coluna room_number à tabela rooms
+ALTER TABLE rooms
+ADD COLUMN IF NOT EXISTS room_number VARCHAR(50);
+
+-- Criar índice para busca rápida por número de sala
+CREATE INDEX IF NOT EXISTS idx_rooms_room_number ON rooms(room_number);
+
+-- Criar índice composto para clinic_id + room_number
+CREATE INDEX IF NOT EXISTS idx_rooms_clinic_room_number ON rooms(clinic_id, room_number);
+
+-- Confirmação
+SELECT 'Coluna room_number adicionada com sucesso!' as status;
+
+═══════════════════════════════════════════════════════════════════════
+
+📍 COMO EXECUTAR NO SUPABASE:
+
+1️⃣  Abra: https://app.supabase.com/project/[seu-projeto-id]
+2️⃣  Clique em: SQL Editor (no menu esquerdo)
+3️⃣  Clique em: New Query
+4️⃣  Cole o SQL acima
+5️⃣  Clique em: Run (ou pressione Ctrl + Enter)
+6️⃣  Veja a mensagem: "Coluna room_number adicionada com sucesso!"
+
+═══════════════════════════════════════════════════════════════════════
+
+✅ CONFIRMAÇÃO:
+
+Após executar, a tabela rooms terá:
+
+┌─ rooms
+│  ├─ id (UUID) ✅
+│  ├─ clinic_id (UUID) ✅
+│  ├─ name (VARCHAR) ✅
+│  ├─ type (VARCHAR) ✅
+│  ├─ unit (VARCHAR) ✅
+│  ├─ description (TEXT) ✅
+│  ├─ capacity (INT) ✅
+│  ├─ room_number (VARCHAR) ✅ ← NOVO
+│  ├─ is_active (BOOLEAN) ✅
+│  ├─ created_at (TIMESTAMP) ✅
+│  ├─ updated_at (TIMESTAMP) ✅
+│  ├─ idx_rooms_room_number ✅ ← NOVO ÍNDICE
+│  └─ idx_rooms_clinic_room_number ✅ ← NOVO ÍNDICE
+
+═══════════════════════════════════════════════════════════════════════
+
+🧪 TESTE NO FRONTEND:
+
+Após executar o SQL:
+
+1. Acesse: http://localhost:3000/clinica/base-sistema/salas
+2. Clique em "+ Nova Sala"
+3. Preencha:
+   - Nome: "Consultório A"
+   - Número/Identificador: "201"
+   - Tipo: "Consultório"
+   - Unidade: "Piso 2"
+   - Descrição: "Consultório com ar condicionado"
+   - Capacidade: 2
+4. Clique em "Criar"
+5. Verifique se a sala aparece na listagem
+
+═══════════════════════════════════════════════════════════════════════
+
+⚠️  IMPORTANTE:
+
+- Se a coluna já existir, o SQL não causará erro (IF NOT EXISTS)
+- Os índices melhoram a performance de busca
+- Não há perda de dados em operações já existentes
+
+═══════════════════════════════════════════════════════════════════════
+
+📞 SUPORTE:
+
+Se receber erro ao executar:
+
+❌ "Does not exist": Verifique se está na tabela 'rooms' correta
+❌ "Duplicate column": A coluna já existe (ignore, é normal)
+❌ Outro erro: Verificar logs do Supabase
+
+═══════════════════════════════════════════════════════════════════════
+
+✨ Próximas Etapas:
+
+1. Execute o SQL acima
+2. Recarregue a página do navegador
+3. Teste criar uma sala
+4. Tudo deve funcionar normalmente
+
+═══════════════════════════════════════════════════════════════════════
+
+Gerado: 18 de Janeiro de 2026
+Status: ✅ Pronto para Supabase

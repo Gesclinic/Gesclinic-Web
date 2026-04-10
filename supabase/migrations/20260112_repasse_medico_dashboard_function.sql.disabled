@@ -1,0 +1,25 @@
+-- Função detalhada para dashboard de repasse médico
+create or replace function dashboard_repasse_medico(p_clinic_id uuid, p_mes int, p_ano int)
+returns table(
+  profissional text,
+  total_pago numeric,
+  total_pendente numeric,
+  evolucao_mes jsonb
+) as $$
+begin
+  return query
+    select
+      p.nome as profissional,
+      sum(case when r.status = 'pago' then r.valor_liquido else 0 end) as total_pago,
+      sum(case when r.status in ('calculado','aguardando_recebimento','liberado') then r.valor_liquido else 0 end) as total_pendente,
+      (
+        select jsonb_agg(jsonb_build_object('mes', r2.periodo_mes, 'valor', r2.valor_liquido))
+        from repasse_medico r2
+        where r2.clinic_id = p_clinic_id and r2.professional_id = r.professional_id and r2.periodo_ano = p_ano
+      ) as evolucao_mes
+    from repasse_medico r
+    join professionals p on p.id = r.professional_id
+    where r.clinic_id = p_clinic_id and r.periodo_mes = p_mes and r.periodo_ano = p_ano
+    group by p.nome, r.professional_id;
+end;
+$$ language plpgsql;

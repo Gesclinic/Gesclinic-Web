@@ -1,0 +1,55 @@
+-- Exemplo de lógica detalhada para geração de repasse médico (simplificada)
+create or replace function gerar_repasse_medico(p_clinic_id uuid, p_mes int, p_ano int, p_tipo_geracao text)
+returns void as $$
+declare
+  r_prof record;
+  v_regra jsonb;
+  v_valor_bruto numeric;
+  v_valor_recebido numeric;
+  v_percentual numeric;
+  v_valor_liquido numeric;
+begin
+  -- Para cada profissional com atendimentos no período
+  for r_prof in
+    select a.professional_id, sum(a.valor_bruto) as valor_bruto, sum(a.valor_recebido) as valor_recebido
+    from atendimentos a
+    where a.clinic_id = p_clinic_id and extract(month from a.data) = p_mes and extract(year from a.data) = p_ano
+      and a.status = 'realizado'
+    group by a.professional_id
+  loop
+    -- Buscar regra prioritária (serviço > convênio > profissional)
+    select to_jsonb(rc.*) into v_regra from repasse_config rc
+      where rc.clinic_id = p_clinic_id and rc.professional_id = r_prof.professional_id
+      and rc.data_inicio_vigencia <= now() and (rc.data_fim_vigencia is null or rc.data_fim_vigencia >= now())
+      order by rc.prioridade asc limit 1;
+    v_valor_bruto := r_prof.valor_bruto;
+    v_valor_recebido := r_prof.valor_recebido;
+    v_percentual := (v_regra->>'percentual')::numeric;
+    v_valor_liquido := v_valor_recebido * (v_percentual/100);
+    -- Inserir snapshot do repasse
+    insert into repasse_medico (clinic_id, professional_id, periodo_mes, periodo_ano, tipo_geracao, status, valor_bruto, valor_recebido, valor_pendente, percentual, valor_liquido, regra_aplicada, frozen)
+    values (p_clinic_id, r_prof.professional_id, p_mes, p_ano, p_tipo_geracao, 'calculado', v_valor_bruto, v_valor_recebido, v_valor_recebido, v_percentual, v_valor_liquido, v_regra, true);
+    -- Log
+    insert into repasse_log (repasse_id, evento, usuario_id, detalhes)
+    values ((select id from repasse_medico where clinic_id=p_clinic_id and professional_id=r_prof.professional_id and periodo_mes=p_mes and periodo_ano=p_ano order by data_geracao desc limit 1), 'calculado', null, v_regra);
+  end loop;
+end;
+$$ language plpgsql;
+
+-- Exemplo de lógica para liberar repasse para pagamento
+create or replace function liberar_repasse_pagamento(p_repasse_id uuid)
+returns void as $$
+declare
+  r_rep repasse_medico%rowtype;
+begin
+  select * into r_rep from repasse_medico where id = p_repasse_id;
+  -- Cria conta a pagar vinculada ao profissional
+  insert into ap_bills (clinic_id, favorecido_id, valor, categoria, status, data_vencimento)
+  values (r_rep.clinic_id, r_rep.professional_id, r_rep.valor_liquido, 'Repasse Médico', 'aberto', now());
+  -- Atualiza status do repasse
+  update repasse_medico set status = 'liberado', data_liberacao = now() where id = p_repasse_id;
+  -- Log
+  insert into repasse_log (repasse_id, evento, usuario_id, detalhes)
+  values (p_repasse_id, 'liberado', null, to_jsonb(r_rep));
+end;
+$$ language plpgsql;

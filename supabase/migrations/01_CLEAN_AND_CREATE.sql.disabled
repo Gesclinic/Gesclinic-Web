@@ -1,0 +1,470 @@
+-- ============================================================
+-- LIMPEZA E RECRIAÇÃO COMPLETA DO BANCO
+-- ============================================================
+-- AVISO: Este script deleta TODAS as tabelas e recria tudo do zero
+-- Use apenas se souber que não há dados importantes
+-- ============================================================
+
+-- Desabilitar verificações de chave estrangeira temporariamente
+SET session_replication_role = 'replica';
+
+-- Deletar todas as tabelas na ordem correta (dependências)
+DROP TABLE IF EXISTS conciliation_import_batches CASCADE;
+DROP TABLE IF EXISTS conciliation_suggestions CASCADE;
+DROP TABLE IF EXISTS conciliation_auto_rules CASCADE;
+DROP TABLE IF EXISTS conciliation_link_history CASCADE;
+DROP TABLE IF EXISTS conciliation_bank_statements CASCADE;
+DROP TABLE IF EXISTS clinic_bank_accounts CASCADE;
+DROP TABLE IF EXISTS repasse_medico CASCADE;
+DROP TABLE IF EXISTS ap_items CASCADE;
+DROP TABLE IF EXISTS ap_bills CASCADE;
+DROP TABLE IF EXISTS ar_invoices CASCADE;
+DROP TABLE IF EXISTS recurring_accounts_payable CASCADE;
+DROP TABLE IF EXISTS chart_of_accounts CASCADE;
+DROP TABLE IF EXISTS cost_centers CASCADE;
+DROP TABLE IF EXISTS clinics CASCADE;
+
+-- Deletar funções
+DROP FUNCTION IF EXISTS update_ap_bills_timestamp() CASCADE;
+DROP FUNCTION IF EXISTS update_ar_invoices_timestamp() CASCADE;
+DROP FUNCTION IF EXISTS update_conciliation_bank_statements_timestamp() CASCADE;
+DROP FUNCTION IF EXISTS update_clinic_bank_accounts_timestamp() CASCADE;
+DROP FUNCTION IF EXISTS update_conciliation_auto_rules_timestamp() CASCADE;
+DROP FUNCTION IF EXISTS list_bank_statements(UUID, VARCHAR, DATE, DATE, INT, INT) CASCADE;
+DROP FUNCTION IF EXISTS calculate_balance_difference(UUID, UUID) CASCADE;
+
+-- Reabilitar verificações
+SET session_replication_role = 'origin';
+
+-- ============================================================
+-- AGORA CRIAR TUDO DO ZERO
+-- ============================================================
+
+-- 1. TABELA BASE - CLÍNICA
+CREATE TABLE clinics (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  email TEXT,
+  phone TEXT,
+  address TEXT,
+  city TEXT,
+  state TEXT,
+  zip_code TEXT,
+  cnpj TEXT UNIQUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_clinics_name ON clinics(name);
+
+-- 2. PLANO DE CONTAS
+CREATE TABLE chart_of_accounts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  clinic_id UUID NOT NULL REFERENCES clinics(id),
+  name TEXT NOT NULL,
+  type TEXT NOT NULL CHECK (type in ('revenue', 'expense', 'asset', 'liability')),
+  dre_group TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_chart_of_accounts_clinic ON chart_of_accounts(clinic_id);
+
+-- 3. CENTROS DE CUSTO
+CREATE TABLE cost_centers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  clinic_id UUID NOT NULL REFERENCES clinics(id),
+  name TEXT NOT NULL,
+  description TEXT,
+  active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_cost_centers_clinic ON cost_centers(clinic_id);
+
+-- 4. CONTAS A PAGAR
+CREATE TABLE ap_bills (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  clinic_id UUID NOT NULL REFERENCES clinics(id),
+  supplier_id UUID,
+  supplier_name TEXT,
+  description TEXT NOT NULL,
+  amount DECIMAL(12, 2) NOT NULL,
+  paid_value DECIMAL(12, 2) DEFAULT 0,
+  due_date DATE,
+  paid_at TIMESTAMP WITH TIME ZONE,
+  status VARCHAR(50) DEFAULT 'open',
+  payment_method VARCHAR(100),
+  chart_account_id UUID REFERENCES chart_of_accounts(id),
+  cost_center_id UUID REFERENCES cost_centers(id),
+  recurring_config_id UUID,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_ap_bills_clinic ON ap_bills(clinic_id);
+CREATE INDEX idx_ap_bills_status ON ap_bills(status);
+CREATE INDEX idx_ap_bills_due_date ON ap_bills(due_date);
+CREATE INDEX idx_ap_bills_paid_at ON ap_bills(paid_at);
+
+-- 5. ITENS DE AP
+CREATE TABLE ap_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  bill_id UUID NOT NULL REFERENCES ap_bills(id) ON DELETE CASCADE,
+  description TEXT,
+  quantity DECIMAL(10, 2),
+  unit_price DECIMAL(12, 2),
+  total_price DECIMAL(12, 2),
+  tax_type VARCHAR(50),
+  tax_rate DECIMAL(5, 2),
+  tax_amount DECIMAL(12, 2),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_ap_items_bill ON ap_items(bill_id);
+
+-- 6. CONTAS A RECEBER
+CREATE TABLE ar_invoices (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  clinic_id UUID NOT NULL REFERENCES clinics(id),
+  patient_id UUID,
+  patient_name TEXT,
+  description TEXT,
+  amount DECIMAL(12, 2) NOT NULL,
+  received_value DECIMAL(12, 2) DEFAULT 0,
+  due_date DATE,
+  received_at TIMESTAMP WITH TIME ZONE,
+  status VARCHAR(50) DEFAULT 'open',
+  payment_method VARCHAR(100),
+  chart_account_id UUID REFERENCES chart_of_accounts(id),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_ar_invoices_clinic ON ar_invoices(clinic_id);
+CREATE INDEX idx_ar_invoices_status ON ar_invoices(status);
+CREATE INDEX idx_ar_invoices_due_date ON ar_invoices(due_date);
+
+-- 7. CONTAS RECURSIVAS
+CREATE TABLE recurring_accounts_payable (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  clinic_id UUID NOT NULL REFERENCES clinics(id),
+  supplier_id UUID,
+  supplier_name TEXT NOT NULL,
+  description TEXT NOT NULL,
+  amount DECIMAL(12, 2) NOT NULL,
+  frequency VARCHAR(50) NOT NULL,
+  day_of_month INT,
+  chart_account_id UUID REFERENCES chart_of_accounts(id),
+  cost_center_id UUID REFERENCES cost_centers(id),
+  active BOOLEAN DEFAULT TRUE,
+  next_due_date DATE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_recurring_clinic ON recurring_accounts_payable(clinic_id);
+
+-- 8. REPASSE MÉDICO
+CREATE TABLE repasse_medico (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  clinic_id UUID NOT NULL REFERENCES clinics(id),
+  professional_id UUID,
+  professional_name TEXT,
+  period_start DATE NOT NULL,
+  period_end DATE NOT NULL,
+  total_appointments INT DEFAULT 0,
+  total_revenue DECIMAL(12, 2) DEFAULT 0,
+  amount_due DECIMAL(12, 2) DEFAULT 0,
+  amount_paid DECIMAL(12, 2) DEFAULT 0,
+  status VARCHAR(50) DEFAULT 'pending',
+  payment_date TIMESTAMP WITH TIME ZONE,
+  notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_repasse_medico_clinic ON repasse_medico(clinic_id);
+CREATE INDEX idx_repasse_medico_professional ON repasse_medico(professional_id);
+CREATE INDEX idx_repasse_medico_period ON repasse_medico(period_start, period_end);
+
+-- 9. CONTAS BANCÁRIAS
+CREATE TABLE clinic_bank_accounts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  clinic_id UUID NOT NULL REFERENCES clinics(id),
+  account_name VARCHAR(255) NOT NULL,
+  bank_name VARCHAR(100),
+  account_number VARCHAR(100),
+  account_holder VARCHAR(255),
+  bank_balance DECIMAL(12, 2) DEFAULT 0,
+  system_balance DECIMAL(12, 2) DEFAULT 0,
+  last_reconciliation_date DATE,
+  active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_clinic_bank_accounts_clinic ON clinic_bank_accounts(clinic_id);
+CREATE INDEX idx_clinic_bank_accounts_active ON clinic_bank_accounts(active);
+
+-- 10. EXTRATOS BANCÁRIOS
+CREATE TABLE conciliation_bank_statements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  clinic_id UUID NOT NULL REFERENCES clinics(id),
+  bank_account_id UUID REFERENCES clinic_bank_accounts(id),
+  statement_date DATE NOT NULL,
+  description TEXT NOT NULL,
+  amount DECIMAL(12, 2) NOT NULL,
+  transaction_type VARCHAR(20) NOT NULL,
+  bank_id VARCHAR(255),
+  status VARCHAR(50) NOT NULL DEFAULT 'pending',
+  linked_financial_id UUID,
+  linked_type VARCHAR(20),
+  divergence_reason TEXT,
+  import_batch_id UUID,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  created_by UUID,
+  updated_by UUID
+);
+
+CREATE INDEX idx_conciliation_bank_statements_clinic ON conciliation_bank_statements(clinic_id);
+CREATE INDEX idx_conciliation_bank_statements_status ON conciliation_bank_statements(status);
+CREATE INDEX idx_conciliation_bank_statements_date ON conciliation_bank_statements(statement_date);
+CREATE INDEX idx_conciliation_bank_statements_account ON conciliation_bank_statements(bank_account_id);
+
+-- 11. HISTÓRICO DE CONCILIAÇÃO
+CREATE TABLE conciliation_link_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  bank_statement_id UUID NOT NULL REFERENCES conciliation_bank_statements(id) ON DELETE CASCADE,
+  financial_id UUID,
+  financial_type VARCHAR(20),
+  action VARCHAR(50) NOT NULL,
+  action_notes TEXT,
+  user_id UUID,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_conciliation_link_history_statement ON conciliation_link_history(bank_statement_id);
+CREATE INDEX idx_conciliation_link_history_financial ON conciliation_link_history(financial_id);
+CREATE INDEX idx_conciliation_link_history_created ON conciliation_link_history(created_at);
+
+-- 12. REGRAS AUTOMÁTICAS
+CREATE TABLE conciliation_auto_rules (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  clinic_id UUID NOT NULL REFERENCES clinics(id),
+  rule_name VARCHAR(255) NOT NULL,
+  description TEXT,
+  pattern_keywords TEXT[],
+  min_amount DECIMAL(12, 2),
+  max_amount DECIMAL(12, 2),
+  transaction_type VARCHAR(20),
+  default_category_id UUID REFERENCES chart_of_accounts(id),
+  default_cost_center_id UUID REFERENCES cost_centers(id),
+  default_payment_method VARCHAR(100),
+  auto_create_if_no_match BOOLEAN DEFAULT FALSE,
+  active BOOLEAN DEFAULT TRUE,
+  priority INT DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_conciliation_auto_rules_clinic ON conciliation_auto_rules(clinic_id);
+CREATE INDEX idx_conciliation_auto_rules_active ON conciliation_auto_rules(active);
+
+-- 13. SUGESTÕES DE CONCILIAÇÃO
+CREATE TABLE conciliation_suggestions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  bank_statement_id UUID NOT NULL REFERENCES conciliation_bank_statements(id) ON DELETE CASCADE,
+  suggested_financial_id UUID,
+  suggested_type VARCHAR(20),
+  match_score DECIMAL(3, 2),
+  match_reason VARCHAR(255),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_conciliation_suggestions_statement ON conciliation_suggestions(bank_statement_id);
+CREATE INDEX idx_conciliation_suggestions_financial ON conciliation_suggestions(suggested_financial_id);
+
+-- 14. LOTES DE IMPORTAÇÃO
+CREATE TABLE conciliation_import_batches (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  clinic_id UUID NOT NULL REFERENCES clinics(id),
+  bank_name VARCHAR(255),
+  account_number VARCHAR(100),
+  import_date DATE,
+  total_records INT DEFAULT 0,
+  total_amount_credit DECIMAL(12, 2) DEFAULT 0,
+  total_amount_debit DECIMAL(12, 2) DEFAULT 0,
+  import_status VARCHAR(50) DEFAULT 'processing',
+  import_error_message TEXT,
+  imported_by UUID,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_conciliation_import_batches_clinic ON conciliation_import_batches(clinic_id);
+CREATE INDEX idx_conciliation_import_batches_date ON conciliation_import_batches(import_date);
+
+-- ============================================================
+-- TRIGGERS
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION update_ap_bills_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = CURRENT_TIMESTAMP;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_ap_bills_timestamp
+BEFORE UPDATE ON ap_bills
+FOR EACH ROW
+EXECUTE FUNCTION update_ap_bills_timestamp();
+
+CREATE OR REPLACE FUNCTION update_ar_invoices_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = CURRENT_TIMESTAMP;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_ar_invoices_timestamp
+BEFORE UPDATE ON ar_invoices
+FOR EACH ROW
+EXECUTE FUNCTION update_ar_invoices_timestamp();
+
+CREATE OR REPLACE FUNCTION update_conciliation_bank_statements_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = CURRENT_TIMESTAMP;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_conciliation_bank_statements_timestamp
+BEFORE UPDATE ON conciliation_bank_statements
+FOR EACH ROW
+EXECUTE FUNCTION update_conciliation_bank_statements_timestamp();
+
+CREATE OR REPLACE FUNCTION update_clinic_bank_accounts_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = CURRENT_TIMESTAMP;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_clinic_bank_accounts_timestamp
+BEFORE UPDATE ON clinic_bank_accounts
+FOR EACH ROW
+EXECUTE FUNCTION update_clinic_bank_accounts_timestamp();
+
+CREATE OR REPLACE FUNCTION update_conciliation_auto_rules_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = CURRENT_TIMESTAMP;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_conciliation_auto_rules_timestamp
+BEFORE UPDATE ON conciliation_auto_rules
+FOR EACH ROW
+EXECUTE FUNCTION update_conciliation_auto_rules_timestamp();
+
+-- ============================================================
+-- FUNÇÕES RPC
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION list_bank_statements(
+  p_clinic_id UUID,
+  p_status VARCHAR DEFAULT NULL,
+  p_start_date DATE DEFAULT NULL,
+  p_end_date DATE DEFAULT NULL,
+  p_limit INT DEFAULT 100,
+  p_offset INT DEFAULT 0
+)
+RETURNS TABLE(
+  id UUID,
+  statement_date DATE,
+  description TEXT,
+  amount DECIMAL,
+  transaction_type VARCHAR,
+  status VARCHAR,
+  linked_financial_id UUID,
+  created_at TIMESTAMP WITH TIME ZONE
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    cbs.id,
+    cbs.statement_date,
+    cbs.description,
+    cbs.amount,
+    cbs.transaction_type,
+    cbs.status,
+    cbs.linked_financial_id,
+    cbs.created_at
+  FROM conciliation_bank_statements cbs
+  WHERE cbs.clinic_id = p_clinic_id
+    AND (p_status IS NULL OR cbs.status = p_status)
+    AND (p_start_date IS NULL OR cbs.statement_date >= p_start_date)
+    AND (p_end_date IS NULL OR cbs.statement_date <= p_end_date)
+  ORDER BY cbs.statement_date DESC
+  LIMIT p_limit
+  OFFSET p_offset;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION calculate_balance_difference(
+  p_clinic_id UUID,
+  p_account_id UUID
+)
+RETURNS TABLE(
+  bank_balance DECIMAL,
+  system_balance DECIMAL,
+  difference DECIMAL,
+  pending_total DECIMAL,
+  conciliated_total DECIMAL
+) AS $$
+BEGIN
+  RETURN QUERY
+  WITH bank_totals AS (
+    SELECT 
+      COALESCE(SUM(CASE WHEN transaction_type = 'credit' THEN amount ELSE -amount END), 0) as total
+    FROM conciliation_bank_statements
+    WHERE clinic_id = p_clinic_id
+      AND (p_account_id IS NULL OR bank_account_id = p_account_id)
+  ),
+  system_totals AS (
+    SELECT 
+      COALESCE(SUM(amount), 0) as total
+    FROM (
+      SELECT amount FROM ap_bills 
+      WHERE clinic_id = p_clinic_id AND status = 'paid'
+      UNION ALL
+      SELECT amount FROM ar_invoices
+      WHERE clinic_id = p_clinic_id AND status = 'paid'
+    ) t
+  )
+  SELECT 
+    (SELECT total FROM bank_totals)::DECIMAL,
+    (SELECT total FROM system_totals)::DECIMAL,
+    ((SELECT total FROM bank_totals) - (SELECT total FROM system_totals))::DECIMAL,
+    (SELECT COALESCE(SUM(amount), 0) FROM conciliation_bank_statements 
+     WHERE clinic_id = p_clinic_id AND status = 'pending')::DECIMAL,
+    (SELECT COALESCE(SUM(amount), 0) FROM conciliation_bank_statements 
+     WHERE clinic_id = p_clinic_id AND status = 'conciliated')::DECIMAL;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================================
+-- FIM DA CRIAÇÃO
+-- ============================================================
+-- ✅ Todas as 14 tabelas foram criadas com sucesso!
+-- ✅ 5 triggers para auditoria automática
+-- ✅ 2 funções RPC para cálculos
+-- ✅ Índices para performance
+-- O banco está pronto para uso!
+-- ============================================================

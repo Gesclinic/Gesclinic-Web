@@ -1,0 +1,301 @@
+PROMPT ÚNICO: REFATORAÇÃO DO MENU "BASE DO SISTEMA"
+═══════════════════════════════════════════════════════════════════
+
+Você é um arquiteto de software sênior especializado em ERP médico,
+React e Supabase.
+
+OBJETIVO:
+─────────
+Refatore o menu "Base do Sistema" do Gesclinic Web aplicando melhorias
+de escalabilidade, clareza e consistência com padrões de ERP médico.
+
+═══════════════════════════════════════════════════════════════════
+
+REQUISITO 1: ESTRUTURA DE MENU EM TRÊS BLOCOS
+──────────────────────────────────────────────
+
+A. CADASTROS ESTRUTURAIS
+   └─ Descrição: Dados mestres que formam a base operacional
+   
+   Itens:
+   ├─ Serviços/Procedimentos
+   │  └─ Descrição: Tipos de atendimento ofertados pela clínica
+   │
+   ├─ Profissionais
+   │  └─ Descrição: Médicos, enfermeiros e outros prestadores
+   │
+   ├─ Convênios/Seguradoras
+   │  └─ Descrição: Planos de saúde e convênios
+   │
+   ├─ Salas/Consultórios
+   │  └─ Descrição: Espaços físicos de atendimento
+   │
+   └─ Recursos/Equipamentos
+      └─ Descrição: Aparelhos, instrumentos e itens de consumo
+
+B. REGRAS OPERACIONAIS
+   └─ Descrição: Configurações que definem o fluxo de atendimento
+   
+   Itens:
+   ├─ Regras da Agenda
+   │  └─ Descrição: Duração de consultas, intervalos, bloqueios
+   │
+   ├─ Vínculos (Profissional ↔ Serviço)
+   │  └─ Descrição: Quem faz o quê, competências profissionais
+   │
+   └─ Disponibilidades
+      └─ Descrição: Horários de funcionamento (em desenvolvimento)
+
+C. PARÂMETROS FINANCEIROS
+   └─ Descrição: Valores e políticas de faturamento
+   
+   Itens:
+   ├─ Valores de Serviço
+   │  └─ Descrição: Tabelas de preços por convênio/plano
+   │
+   └─ Repasse de Médicos
+      └─ Descrição: Cálculo de ganho profissional
+
+═══════════════════════════════════════════════════════════════════
+
+REQUISITO 2: CRIAR ROTAS CONFORME ESPECIFICAÇÃO
+────────────────────────────────────────────────
+
+Rotas a implementar em AppRoutes.jsx (ou rota genérica base/*):
+
+A. CADASTROS ESTRUTURAIS
+   ✓ /clinica/base/servicos
+   ✓ /clinica/base/profissionais
+   ✓ /clinica/base/convenios
+   ✓ /clinica/base/salas
+   ✓ /clinica/base/recursos
+
+B. REGRAS OPERACIONAIS
+   ✓ /clinica/base/vinculos
+   ✓ /clinica/base/regras-agenda
+   ✓ /clinica/base/disponibilidades (para futuro)
+
+C. PARÂMETROS FINANCEIROS
+   ✓ /clinica/base/valores-servico
+   ✓ /clinica/base/repasse
+
+Padrão de rota:
+  /clinica/base/:modulo
+  
+Componente esperado:
+  src/pages/clinica/base/:modulo/index.jsx
+
+═══════════════════════════════════════════════════════════════════
+
+REQUISITO 3: REMOVER DEPENDÊNCIAS INEXISTENTES
+──────────────────────────────────────────────
+
+Problema identificado:
+  - services.group_id foi removido mas ainda está em queries
+  - Referências a colunas inexistentes causam erros 500
+  - Queries precisam ser validadas contra schema atual
+
+Ações obrigatórias:
+  ✓ Auditar todas as queries em src/lib/*Api.js
+  ✓ Remover referências a colunas que não existem
+  ✓ Usar apenas colunas definidas no schema
+  ✓ Testar cada query antes de usar
+  ✓ Adicionar console.log de debug em desenvolvimento
+
+Colunas a NUNCA usar:
+  ✗ services.group_id (não existe)
+  ✗ professionals.user_id (verificar se existe)
+  ✗ Qualquer coluna não documentada no schema
+
+═══════════════════════════════════════════════════════════════════
+
+REQUISITO 4: GARANTIR CONSISTÊNCIA
+──────────────────────────────────
+
+Entre três elementos:
+
+A. MENU (SidebarMenu.jsx)
+   └─ Define onde o usuário clica
+   
+B. ROTAS (AppRoutes.jsx)
+   └─ Define aonde o usuário vai
+   
+C. PERMISSÕES (useAuth hook)
+   └─ Define se o usuário PODE ir
+
+Checklist de consistência:
+  ✓ Cada item do menu tem uma rota correspondente
+  ✓ Cada rota tem uma página/componente
+  ✓ Cada página respeita permissões (userRole)
+  ✓ Nomes de URLs seguem padrão kebab-case
+  ✓ Labels no menu são claros e descritivos
+  ✓ Ícones representam corretamente a função
+  ✓ Ordem do menu segue lógica operacional
+
+═══════════════════════════════════════════════════════════════════
+
+ESTRUTURA DE COMPONENTES ESPERADA
+──────────────────────────────────
+
+src/pages/clinica/base/
+├── servicos/
+│   ├── index.jsx              (Listar serviços)
+│   ├── novo.jsx               (Criar novo)
+│   └── [id].jsx               (Editar/deletar)
+│
+├── profissionais/
+│   ├── index.jsx
+│   ├── novo.jsx
+│   └── [id].jsx
+│
+├── convenios/
+│   ├── index.jsx
+│   ├── novo.jsx
+│   └── [id].jsx
+│
+├── salas/
+│   ├── index.jsx
+│   ├── novo.jsx
+│   └── [id].jsx
+│
+├── recursos/
+│   ├── index.jsx
+│   ├── novo.jsx
+│   └── [id].jsx
+│
+├── vinculos/
+│   ├── index.jsx              (Gerenciar vínculos prof↔serviço)
+│   └── novo.jsx
+│
+├── regras-agenda/
+│   ├── index.jsx              (Configurar regras)
+│   └── [id].jsx
+│
+└── repasse/
+    └── index.jsx              (Configurar repasse)
+
+Componente unificado:
+  src/components/BaseDataTable.jsx
+    └─ Reutilizável para CRUD de todas as entidades
+    
+═══════════════════════════════════════════════════════════════════
+
+PADRÃO DE IMPLEMENTAÇÃO
+───────────────────────
+
+1. Páginas:
+   ```jsx
+   export const ServicosPage = () => {
+     const { clinicId, userRole } = useAuth();
+     const { data, loading, error } = useServices(clinicId);
+     
+     if (!canAccess(userRole, 'base:servicos')) {
+       return <AccessDenied />;
+     }
+     
+     return (
+       <BaseDataTable
+         title="Serviços/Procedimentos"
+         data={data}
+         columns={servicosColumns}
+         onNew={() => navigate('novo')}
+       />
+     );
+   };
+   ```
+
+2. Queries (em clinicsApi.js ou novo baseApi.js):
+   ```javascript
+   export const getServices = async (clinicId) => {
+     const { data, error } = await supabase
+       .from('services')
+       .select('id, name, description, category')  // ✓ Apenas colunas existentes
+       .eq('clinic_id', clinicId)
+       .eq('deleted_at', null);  // Soft delete
+     
+     if (error) throw error;
+     return data;
+   };
+   ```
+
+3. Menu (em SidebarMenu.jsx):
+   ```jsx
+   const baseSystemMenu = [
+     {
+       group: 'CADASTROS ESTRUTURAIS',
+       items: [
+         { label: 'Serviços', icon: 'medical', path: '/clinica/base/servicos' },
+         { label: 'Profissionais', icon: 'doctor', path: '/clinica/base/profissionais' },
+         { label: 'Convênios', icon: 'hospital', path: '/clinica/base/convenios' },
+         { label: 'Salas', icon: 'door', path: '/clinica/base/salas' },
+         { label: 'Recursos', icon: 'box', path: '/clinica/base/recursos' },
+       ]
+     },
+     {
+       group: 'REGRAS OPERACIONAIS',
+       items: [
+         { label: 'Regras da Agenda', icon: 'calendar', path: '/clinica/base/regras-agenda' },
+         { label: 'Vínculos', icon: 'link', path: '/clinica/base/vinculos' },
+       ]
+     },
+     {
+       group: 'PARÂMETROS FINANCEIROS',
+       items: [
+         { label: 'Valores de Serviço', icon: 'dollar', path: '/clinica/base/valores-servico' },
+         { label: 'Repasse de Médicos', icon: 'percentage', path: '/clinica/base/repasse' },
+       ]
+     }
+   ];
+   ```
+
+═══════════════════════════════════════════════════════════════════
+
+VALIDAÇÃO ANTES DE ENTREGAR
+────────────────────────────
+
+Execute este checklist:
+
+✓ Teste cada rota no navegador (sem erro 404)
+✓ Teste CRUD básico em cada página (create, read, update, delete)
+✓ Verifique que soft delete funciona (deleted_at)
+✓ Verifique isolamento por clinic_id (dados não vazam)
+✓ Verifique permissões (role != admin vê acesso negado)
+✓ Verifique queries no browser console (sem erros de coluna)
+✓ Teste mask/formatação de dados (CPF, telefone, etc)
+✓ Teste responsividade (mobile, tablet, desktop)
+✓ Verifique loading states (skeleton, spinner)
+✓ Verifique error states (mensagens claras)
+
+═══════════════════════════════════════════════════════════════════
+
+MÉTRICAS DE SUCESSO
+────────────────────
+
+Este projeto será bem-sucedido quando:
+
+1. ✓ Menu do "Base do Sistema" exibe 3 blocos claramente
+2. ✓ Cada item de menu leva a uma página funcional
+3. ✓ Cada página permite CRUD de sua entidade
+4. ✓ Nenhuma query referencia colunas inexistentes
+5. ✓ Acesso é controlado por permissões (role)
+6. ✓ Dados são isolados por clinic_id
+7. ✓ UI é consistente com resto da aplicação
+8. ✓ Documentação reflete a nova estrutura
+
+═══════════════════════════════════════════════════════════════════
+
+PRÓXIMOS PASSOS
+────────────────
+
+1. Audit: Listar todas as queries e identificar problemas
+2. Fix: Corrigir queries para usar apenas colunas existentes
+3. Create: Implementar páginas/componentes do base/*
+4. Routes: Registrar rotas em AppRoutes.jsx
+5. Menu: Atualizar SidebarMenu.jsx
+6. Permissions: Adicionar regras em useAuth hook
+7. Test: Testar toda a funcionalidade
+8. Document: Atualizar documentação
+
+═══════════════════════════════════════════════════════════════════
+
+FIM DO PROMPT

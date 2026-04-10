@@ -1,0 +1,12 @@
+-- Add address fields and documents metadata to stock_suppliers
+ALTER TABLE stock_suppliers
+  ADD COLUMN IF NOT EXISTS street TEXT,
+  ADD COLUMN IF NOT EXISTS neighborhood TEXT,
+  ADD COLUMN IF NOT EXISTS city TEXT,
+  ADD COLUMN IF NOT EXISTS state TEXT,
+  ADD COLUMN IF NOT EXISTS postal_code TEXT,
+  ADD COLUMN IF NOT EXISTS documents JSONB DEFAULT '[]'::jsonb;
+
+-- Optional: basic check constraint for UF length (2), only applies if not null
+ALTER TABLE stock_suppliers
+  ADD CONSTRAINT stock_suppliers_state_len CHECK (state IS NULL OR char_length(state) = 2);

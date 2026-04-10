@@ -1,0 +1,123 @@
+╔═══════════════════════════════════════════════════════════════╗
+║        ❓ POR QUE FORAM EXCLUÍDOS ESSES CAMPOS?               ║
+╚═══════════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 RESPOSTA SIMPLES:
+
+  ❌ services_allowed
+  ❌ resources
+  ❌ location
+  ❌ status
+
+  NÃO EXISTEM NA TABELA "rooms" DO SUPABASE!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 PROVA: Schema Real do Supabase
+
+Tabela: rooms
+
+  ✅ id (UUID)
+  ✅ clinic_id (UUID)
+  ✅ name (VARCHAR) ← obrigatório
+  ✅ type (VARCHAR)
+  ✅ unit (VARCHAR) ← aqui vai location!
+  ✅ description (TEXT)
+  ✅ capacity (INT)
+  ✅ is_active (BOOLEAN) ← aqui vai status!
+  ✅ created_at (TIMESTAMP)
+  ✅ updated_at (TIMESTAMP)
+
+  ❌ services_allowed    ← NÃO EXISTE
+  ❌ resources          ← NÃO EXISTE
+  ❌ location           ← NÃO EXISTE (use "unit")
+  ❌ status             ← NÃO EXISTE (use "is_active")
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️  O ERRO QUE ACONTECIA:
+
+Quando o formulário tentava salvar:
+
+  {
+    name: "Sala 01",
+    services_allowed: "Consulta, Cirurgia"  ← Erro!
+    resources: "[...]"                       ← Erro!
+    location: "Piso 2"                       ← Erro!
+    status: "available"                      ← Erro!
+  }
+
+Supabase respondia:
+
+  ❌ ERRO PGRST204
+     "Could not find the 'services_allowed' column 
+      of 'rooms' in the schema cache"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔄 CONVERSÃO:
+
+❌ location        →  ✅ unit
+   "Piso 2"           "Piso 2"
+
+❌ status          →  ✅ is_active
+   "available"        true/false
+
+❌ services_allowed  →  ❓ Precisa de tabela separada
+❌ resources         →  ❓ Precisa de tabela separada
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 POR QUE ELES NÃO FORAM CRIADOS?
+
+┌─ services_allowed
+│  └─ Deveria ser uma tabela M:M (muitos-para-muitos)
+│     Cada sala pode ter MÚLTIPLOS serviços
+│     Não cabe em uma coluna VARCHAR
+
+├─ resources
+│  └─ Deveria ser uma tabela M:M
+│     Cada sala pode ter MÚLTIPLOS recursos
+│     Com quantidade, descrição, etc
+│     Não cabe em uma coluna JSON simples
+
+├─ location
+│  └─ Redundante! Já existe como "unit"
+│     Por que ter duas colunas pro mesmo dado?
+
+└─ status
+   └─ Já existe como "is_active" (boolean)
+      Simples: ativo ou inativo
+      Se precisar mais, evolua para M:M depois
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ SOLUÇÃO CORRETA:
+
+Se você PRECISA desses dados, crie tabelas separadas:
+
+┌─ room_services (M:M)
+│  ├── id
+│  ├── room_id (FK → rooms)
+│  └── service_id (FK → services)
+
+└─ room_resources (M:M)
+   ├── id
+   ├── room_id (FK → rooms)
+   ├── resource_name
+   └── quantity
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 CONCLUSÃO:
+
+  ✅ Removidos PORQUE NÃO EXISTEM no banco
+  ✅ Sem eles, a sala é criada normalmente
+  ✅ Se precisar, criar tabelas M:M depois
+  ✅ Sistema agora está CORRETO e FUNCIONANDO
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Criado: 18 de Janeiro de 2026

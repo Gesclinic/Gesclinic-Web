@@ -1,0 +1,22 @@
+-- SUPABASE MIGRATION: conciliation_bank_statements
+
+create type if not exists conciliation_status as enum (
+  'pending',      -- 🟡 Pendente
+  'reconciled',   -- 🟢 Conciliado
+  'adjusted',     -- 🔵 Ajustado
+  'divergent',    -- 🔴 Divergente
+  'ignored'       -- ⚠ Ignorado
+);
+
+create table if not exists conciliation_bank_statements (
+  id uuid primary key default gen_random_uuid(),
+  bank_account_id uuid references bank_accounts(id),
+  date date not null,
+  description text not null,
+  amount numeric(14,2) not null,
+  type text check (type in ('credit', 'debit')) not null,
+  status conciliation_status not null default 'pending',
+  linked_financial_id uuid references financial_transactions(id),
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);

@@ -1,0 +1,67 @@
+// src/views/AgendaSala.jsx
+import React, { useState } from 'react';
+import { useClinicContext } from '../contexts/useClinicContext';
+import { listarAgenda } from '../services/agendaService';
+import { mapAgendaItem } from '../services/agendaMapper';
+import AgendamentoDetalhesModal from '../components/AgendamentoDetalhesModal';
+
+export function AgendaSala() {
+  const { clinic } = useClinicContext();
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [loading, setLoading] = useState(false);
+  const [agendas, setAgendas] = useState([]);
+  const [error, setError] = useState(null);
+
+  async function fetchAgenda() {
+    setLoading(true);
+    setError(null);
+    const { data, error } = await listarAgenda({ clinicId: clinic.id, date });
+    if (error) setError('Erro ao buscar agendamentos');
+    setAgendas(Array.isArray(data) ? data.map(mapAgendaItem) : []);
+    setLoading(false);
+  }
+
+  React.useEffect(() => {
+    if (clinic?.id && date) fetchAgenda();
+    // eslint-disable-next-line
+  }, [clinic?.id, date]);
+
+  // Agrupa por sala
+  const salas = {};
+  agendas.forEach(a => {
+    const nome = a.room || 'Sem sala';
+    if (!salas[nome]) salas[nome] = [];
+    salas[nome].push(a);
+  });
+  const [modalDetalhesId, setModalDetalhesId] = useState(null);
+
+  return (
+    <div>
+      <h2>Agenda por Sala</h2>
+      <input type="date" value={date} onChange={e => setDate(e.target.value)} />
+      {loading && <p>Carregando...</p>}
+      {error && <p style={{color: 'red'}}>{error}</p>}
+      {!loading && agendas.length === 0 && <p>Nenhum agendamento encontrado</p>}
+      {!loading && Object.keys(salas).length > 0 && (
+        <div>
+          {Object.entries(salas).map(([nome, ags]) => (
+            <div key={nome} style={{marginBottom: 24}}>
+              <h3>{nome}</h3>
+              <ul>
+                {ags.sort((a, b) => a.startTime - b.startTime).map(a => (
+                  <li key={a.id} style={{ cursor: 'pointer' }} onClick={() => setModalDetalhesId(a.id)}>
+                    {a.startTime ? a.startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
+                    {' — '}{a.patient}{' — '}{a.professional}{' — '}{a.service}{' — '}{a.status}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+      {modalDetalhesId && (
+        <AgendamentoDetalhesModal agendamentoId={modalDetalhesId} onClose={() => setModalDetalhesId(null)} />
+      )}
+    </div>
+  );
+}

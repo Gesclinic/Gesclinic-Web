@@ -1,0 +1,80 @@
+# 🎯 RESUMO EXECUTIVO - Sincronização Salas (Rooms)
+
+## ✅ O Que Foi Corrigido
+
+### Frontend (React)
+✅ Removidos campos inexistentes: `services_allowed`, `resources`, `location`, `status`
+✅ Mantidos campos reais do schema: `type`, `unit`, `description`, `capacity`
+✅ Adicionado campo necessário: `room_number`
+
+### Backend (Supabase)
+❌ Falta adicionar: `room_number` à tabela `rooms`
+
+---
+
+## 🚀 Próximo Passo - SQL para Supabase
+
+**Copie e cole este SQL no Supabase SQL Editor:**
+
+```sql
+ALTER TABLE rooms ADD COLUMN IF NOT EXISTS room_number VARCHAR(50);
+CREATE INDEX IF NOT EXISTS idx_rooms_room_number ON rooms(room_number);
+CREATE INDEX IF NOT EXISTS idx_rooms_clinic_room_number ON rooms(clinic_id, room_number);
+SELECT 'Coluna room_number adicionada com sucesso!' as status;
+```
+
+**Onde executar:**
+1. Supabase Dashboard → SQL Editor → New Query
+2. Cole o SQL acima
+3. Clique em **Run**
+
+---
+
+## 📊 Resultado Final
+
+**Tabela rooms após executar:**
+- ✅ id (UUID)
+- ✅ clinic_id (UUID) 
+- ✅ name (VARCHAR) - obrigatório
+- ✅ room_number (VARCHAR) - **NOVO**
+- ✅ type (VARCHAR)
+- ✅ unit (VARCHAR)
+- ✅ description (TEXT)
+- ✅ capacity (INT)
+- ✅ is_active (BOOLEAN)
+- ✅ created_at (TIMESTAMP)
+- ✅ updated_at (TIMESTAMP)
+
+---
+
+## 📁 Arquivos Gerados
+
+1. `supabase/migrations/2026-01-18_add_room_number_to_rooms.sql`
+   - SQL migration para adicionar coluna
+
+2. `SQL_PARA_SUPABASE_ROOMS.txt`
+   - Instruções simples e diretas (copiar e colar)
+
+3. `SINCRONIZACAO_ROOMS_COMPLETA.md`
+   - Documentação técnica completa
+
+4. `INSTRUCOES_ADICIONAR_ROOM_NUMBER.md`
+   - Passo a passo visual com opções
+
+---
+
+## ✨ Teste Rápido Após SQL
+
+```
+1. Execute o SQL acima no Supabase
+2. Acesse: http://localhost:3000/clinica/base-sistema/salas
+3. Clique em "+ Nova Sala"
+4. Preencha os campos (com o novo "Número/Identificador")
+5. Clique em "Criar"
+6. Verificado ✅
+```
+
+---
+
+**Status:** ✅ Pronto para Produção
+**Data:** 18 de Janeiro de 2026

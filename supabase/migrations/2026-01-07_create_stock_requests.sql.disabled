@@ -1,0 +1,24 @@
+-- Stock requests (requisitions) tables
+create table if not exists public.stock_requests (
+  id uuid primary key default gen_random_uuid(),
+  clinic_id uuid not null,
+  request_date date not null default current_date,
+  location_id uuid not null references public.stock_locations(id) on delete restrict,
+  requested_by text,
+  notes text,
+  status text not null default 'pending' check (status in ('pending','approved','rejected','fulfilled','cancelled')),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists stock_requests_clinic_idx on public.stock_requests (clinic_id);
+create index if not exists stock_requests_status_idx on public.stock_requests (status);
+
+create table if not exists public.stock_request_items (
+  id uuid primary key default gen_random_uuid(),
+  request_id uuid not null references public.stock_requests(id) on delete cascade,
+  item_id uuid not null references public.stock_items(id) on delete restrict,
+  qty numeric not null check (qty > 0)
+);
+
+create index if not exists stock_request_items_request_idx on public.stock_request_items (request_id);
+create index if not exists stock_request_items_item_idx on public.stock_request_items (item_id);

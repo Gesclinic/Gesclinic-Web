@@ -1,0 +1,94 @@
+-- VERSÃO DE TESTE: Apenas as tabelas, sem índices de code
+-- Execute este arquivo PRIMEIRO para criar as estruturas
+-- Depois execute os índices separadamente
+
+-- ============================================================
+-- 1. BASE TABLES (Clínicas e Usuários)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS clinics (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  email TEXT,
+  phone TEXT,
+  address TEXT,
+  city TEXT,
+  state TEXT,
+  zip_code TEXT,
+  cnpj TEXT UNIQUE,
+  
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_clinics_name ON clinics(name);
+CREATE INDEX IF NOT EXISTS idx_clinics_cnpj ON clinics(cnpj);
+
+CREATE TABLE IF NOT EXISTS users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  clinic_id UUID REFERENCES clinics(id),
+  email TEXT UNIQUE NOT NULL,
+  
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_clinic ON users(clinic_id);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+
+-- ============================================================
+-- 2. PACIENTES
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS patients (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  clinic_id UUID NOT NULL REFERENCES clinics(id),
+  
+  name TEXT NOT NULL,
+  email TEXT,
+  phone TEXT,
+  document_id VARCHAR(20),
+  date_of_birth DATE,
+  
+  zip_code TEXT,
+  
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_patients_clinic ON patients(clinic_id);
+CREATE INDEX IF NOT EXISTS idx_patients_name ON patients(name);
+CREATE INDEX IF NOT EXISTS idx_patients_email ON patients(email);
+CREATE INDEX IF NOT EXISTS idx_patients_document ON patients(document_id);
+
+-- ============================================================
+-- 3. SERVIÇOS - COM COLUNA CODE
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS services (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  clinic_id UUID NOT NULL REFERENCES clinics(id),
+  
+  code VARCHAR(50),
+  name TEXT NOT NULL,
+  description TEXT,
+  
+  duration_minutes INT,
+  price DECIMAL(12, 2),
+  
+  active BOOLEAN DEFAULT TRUE,
+  
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_services_clinic ON services(clinic_id);
+CREATE INDEX IF NOT EXISTS idx_services_name ON services(name);
+-- NÃO VAMOS CRIAR idx_services_code AINDA
+
+-- ============================================================
+-- SUCESSO: Tabelas básicas criadas
+-- ============================================================
+
+-- Mensagem de conclusão
+SELECT 'SUCCESS: Tabelas básicas criadas sem erros!' as status;

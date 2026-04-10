@@ -1,0 +1,59 @@
+-- Tabela principal de repasses médicos
+create table if not exists repasse_medico (
+    id uuid primary key default gen_random_uuid(),
+    clinic_id uuid references clinics(id),
+    professional_id uuid references professionals(id),
+    periodo_mes int not null,
+    periodo_ano int not null,
+    tipo_geracao text not null, -- atendimentos_realizados, valores_recebidos, etc
+    status text not null, -- calculado, aguardando_recebimento, liberado, pago, cancelado, ajustado
+    valor_bruto numeric(14,2) not null,
+    valor_recebido numeric(14,2) not null,
+    valor_pendente numeric(14,2) not null,
+    percentual numeric(5,2),
+    valor_liquido numeric(14,2) not null,
+    regra_aplicada jsonb not null, -- snapshot da regra
+    data_geracao timestamp default now(),
+    data_liberacao timestamp,
+    data_pagamento timestamp,
+    conta_pagar_id uuid references ap_bills(id),
+    frozen boolean default true
+);
+
+-- Configuração de regras de repasse
+create table if not exists repasse_config (
+    id uuid primary key default gen_random_uuid(),
+    clinic_id uuid references clinics(id),
+    professional_id uuid references professionals(id),
+    service_id uuid references services(id),
+    convenio_id uuid references convenios(id),
+    tipo_regra text not null, -- percentual, valor_fixo
+    base_calculo text not null, -- bruto, liquido, recebido
+    percentual numeric(5,2),
+    valor_fixo numeric(14,2),
+    data_inicio_vigencia date not null,
+    data_fim_vigencia date,
+    prioridade int not null default 0, -- 0=serviço, 1=convênio, 2=profissional
+    created_at timestamp default now(),
+    updated_at timestamp default now()
+);
+
+-- Log de alterações e eventos do repasse
+create table if not exists repasse_log (
+    id uuid primary key default gen_random_uuid(),
+    repasse_id uuid references repasse_medico(id),
+    evento text not null, -- calculado, liberado, pago, cancelado, ajuste, etc
+    usuario_id uuid references users(id),
+    detalhes jsonb,
+    created_at timestamp default now()
+);
+
+-- Ajustes manuais de repasse
+create table if not exists repasse_ajuste (
+    id uuid primary key default gen_random_uuid(),
+    repasse_id uuid references repasse_medico(id),
+    valor_ajuste numeric(14,2) not null,
+    motivo text not null,
+    usuario_id uuid references users(id),
+    created_at timestamp default now()
+);

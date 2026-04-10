@@ -1,0 +1,26 @@
+-- Função para geração de repasse médico (snapshot, não recalcula após gerado)
+create or replace function gerar_repasse_medico(p_clinic_id uuid, p_mes int, p_ano int, p_tipo_geracao text)
+returns void as $$
+begin
+  -- Aqui viria a lógica de busca de atendimentos, contas a receber pagas, aplicação de regras, geração de snapshot na tabela repasse_medico
+  -- Exemplo: inserir um registro por profissional, congelando valores e regra aplicada
+  -- Também registrar evento no repasse_log
+end;
+$$ language plpgsql;
+
+-- Função para liberar repasse para pagamento (cria conta a pagar e atualiza status)
+create or replace function liberar_repasse_pagamento(p_repasse_id uuid)
+returns void as $$
+begin
+  -- Lógica: criar conta a pagar vinculada ao profissional, atualizar status do repasse para 'liberado', registrar log
+end;
+$$ language plpgsql;
+
+-- Função para dashboard de repasse
+create or replace function dashboard_repasse_medico(p_clinic_id uuid, p_mes int, p_ano int)
+returns table(profissional text, total_pago numeric, total_pendente numeric, evolucao_mes jsonb) as $$
+begin
+  -- Lógica: sumarizar totais por profissional, pago x pendente, evolução mensal
+  return;
+end;
+$$ language plpgsql;

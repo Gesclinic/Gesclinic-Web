@@ -1,0 +1,121 @@
+03_FRONTEND_BASE_DO_SISTEMA.PROMPT.TXT
+═════════════════════════════════════════════════════════════════════════════════
+
+Você é um desenvolvedor frontend sênior em React.
+
+Atualize as telas da Base do Sistema para refletir
+o modelo de dados oficial do Gesclinic Web.
+
+═════════════════════════════════════════════════════════════════════════════════
+
+REGRAS OBRIGATÓRIAS:
+
+1. PROFISSIONAIS:
+   ┌─────────────────────────────────────────────────────────────────────────┐
+   │ - Abas: Dados | Serviços | Convênios | Agenda | Financeiro             │
+   │ - Não permitir exclusão física (apenas inativar)                        │
+   │ - Aba "Dados": nome, email, CPF, especialidade, telefone, activo       │
+   │ - Aba "Serviços": listar serviços que o prof oferece (M:M)             │
+   │ - Aba "Convênios": listar convênios que atende (M:M)                   │
+   │ - Aba "Agenda": horários de trabalho por dia da semana                 │
+   │ - Aba "Financeiro": regras de remuneração, comissão, etc               │
+   └─────────────────────────────────────────────────────────────────────────┘
+
+2. SERVIÇOS:
+   ┌─────────────────────────────────────────────────────────────────────────┐
+   │ Campos obrigatórios:                                                    │
+   │ - Nome do serviço                                                       │
+   │ - Descrição                                                             │
+   │ - Tempo padrão (em minutos)                                             │
+   │ - Tipo de cobrança (por consulta, por hora, por sessão, etc)          │
+   │ - Permite encaixe (SIM/NÃO)                                             │
+   │ - Exige autorização (SIM/NÃO)                                           │
+   │ - Valor base (padrão para todos os convênios)                          │
+   │ - Ativo (SIM/NÃO)                                                       │
+   └─────────────────────────────────────────────────────────────────────────┘
+
+3. CONVÊNIOS:
+   ┌─────────────────────────────────────────────────────────────────────────┐
+   │ - Código único                                                          │
+   │ - Nome                                                                  │
+   │ - Serviços cobertos (listar todos os serviços, marcar quais atende)    │
+   │ - Valores por serviço (table: serviço | valor deste convênio)          │
+   │ - Regras específicas (% desconto, margem mínima, etc)                  │
+   │ - Contato (telefone, email)                                             │
+   │ - Ativo (SIM/NÃO)                                                       │
+   └─────────────────────────────────────────────────────────────────────────┘
+
+4. SALAS:
+   ┌─────────────────────────────────────────────────────────────────────────┐
+   │ - Nome                                                                  │
+   │ - Número/Identificação                                                  │
+   │ - Capacidade (número de pessoas)                                        │
+   │ - Serviços permitidos (listar todos, marcar quais podem ser feitos)    │
+   │ - Recursos disponíveis (table: recurso | quantidade)                    │
+   │ - Status (disponível, manutenção, indisponível)                         │
+   │ - Ativo (SIM/NÃO)                                                       │
+   └─────────────────────────────────────────────────────────────────────────┘
+
+5. SELECTS DINÂMICOS:
+   ┌─────────────────────────────────────────────────────────────────────────┐
+   │ Todos os selects devem ser:                                             │
+   │ - Dinâmicos (carregar dados da API, não hardcoded)                     │
+   │ - Dependentes das regras já cadastradas                                │
+   │ - Filtrados por clínica (clinic_id)                                    │
+   │ - Com suporte a busca/filtro quando houver muitos items                │
+   │ - Com opção de "Nenhum" / "Não aplicável" quando apropriado            │
+   └─────────────────────────────────────────────────────────────────────────┘
+
+═════════════════════════════════════════════════════════════════════════════════
+
+OBJETIVO GERAL:
+
+Garantir UX clara, sem quebra de fluxo e sem inconsistência.
+
+✅ Componentes devem refletir 100% do modelo de dados oficial
+✅ Validações devem ser intuitivas e informativas
+✅ Fluxos de criação/edição devem ser lógicos
+✅ Não permitir estado inconsistente do banco
+✅ Design responsivo e acessível
+
+═════════════════════════════════════════════════════════════════════════════════
+
+STATUS DE IMPLEMENTAÇÃO:
+
+[ ] ProfessionalsPage:
+    [ ] Aba Dados
+    [ ] Aba Serviços (M:M)
+    [ ] Aba Convênios (M:M)
+    [ ] Aba Agenda
+    [ ] Aba Financeiro
+    [ ] Desabilitar delete físico (apenas inativar)
+
+[ ] ServicesPage:
+    [ ] Tempo padrão
+    [ ] Tipo de cobrança (enum/select dinâmico)
+    [ ] Permite encaixe (checkbox/toggle)
+    [ ] Exige autorização (checkbox/toggle)
+    [ ] Valor base (number field)
+
+[ ] HealthInsurancesPage:
+    [ ] Serviços cobertos (multi-select com table de valores)
+    [ ] Valores por serviço (table dinâmica)
+    [ ] Regras específicas
+    [ ] Contato
+
+[ ] RoomsPage:
+    [ ] Capacidade (number field)
+    [ ] Serviços permitidos (multi-select)
+    [ ] Recursos disponíveis (table dinâmica)
+
+[ ] Selects Dinâmicos:
+    [ ] Remover valores hardcoded
+    [ ] Implementar filtro por clinic_id
+    [ ] Adicionar busca quando necessário
+    [ ] Testar dependências entre campos
+
+═════════════════════════════════════════════════════════════════════════════════
+
+Data: 15 de Janeiro de 2026
+Versão: 1.0
+Status: ⏳ AGUARDANDO IMPLEMENTAÇÃO

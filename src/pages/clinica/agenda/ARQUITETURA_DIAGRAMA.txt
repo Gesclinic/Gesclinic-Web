@@ -1,0 +1,236 @@
+📊 DIAGRAMA DE ARQUITETURA - AGENDA ÚNICA
+==========================================
+
+┌─────────────────────────────────────────────────────────────────┐
+│                          /clinica/agenda                        │
+│                       (ROTA ÚNICA - SEM SUB-ROTAS)              │
+└─────────────────────────┬───────────────────────────────────────┘
+                          │
+                          ▼
+         ┌────────────────────────────────────┐
+         │      AgendaPage.jsx (Principal)    │
+         │  - Orquestra componentes           │
+         │  - Carrega dados (Supabase)        │
+         │  - Gerencia contextos (Auth, Clinic)
+         │  - Implementa handlers de ação     │
+         └────────────────────┬───────────────┘
+                              │
+         ┌────────────────────┼────────────────────┐
+         │                    │                    │
+         ▼                    ▼                    ▼
+    ┌─────────────┐   ┌──────────────┐   ┌──────────────────┐
+    │AgendaHeader │   │useAgendaStore│   │AppointmentModal  │
+    │────────────│   │──────────────│   │──────────────────│
+    │• Input data │   │ESTADO ÚNICO  │   │• Tab: Agendamento
+    │• Botões nav │   │• date        │   │• Tab: Paciente   │
+    │• Novo agend │   │• viewMode    │   │• Tab: Financeiro │
+    └─────────────┘   │• filters     │   │• Tab: Histórico  │
+                      │• appointments
+                      │• selectedSlot
+                      │• metadata    │   └──────────────────┘
+                      │• indicators  │
+                      └──────┬───────┘
+                             │
+         ┌───────────────────┼────────────────────┐
+         │                   │                    │
+         ▼                   ▼                    ▼
+   ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐
+   │AgendaIndicators
+   │──────────────│  │AgendaTabs    │  │AgendaFilters     │
+   │• Taxa ocupação  │──────────────│  │──────────────────│
+   │• Total agendam. │[ Geral ]     │  │• Busca           │
+   │• Confirmados    │[Profissional]│  │• Profissional    │
+   │• Faltas         │[ Sala ]      │  │• Sala            │
+   │• Encaixes       │              │  │• Status          │
+   │                 │(sem mudar     │  │• Convênio        │
+   │(Reagem filtros) │ rota!)       │  │• Serviço         │
+   └──────────────────┴──────────────┴──────────────────────┘
+                             │
+                             ▼
+         ┌───────────────────────────────────┐
+         │      AgendaTimeline               │
+         │ (3 modos de renderização)         │
+         │──────────────────────────────────│
+         │                                   │
+         │  Modo GERAL:                      │
+         │  ┌─────────────────────────────┐  │
+         │  │Hora│Paciente│Prof│Sala│Status  │
+         │  ├─────────────────────────────┤  │
+         │  │08:00│João  │Dr Silva│S1│✓  │  │
+         │  │08:30│      │        │  │   │  │
+         │  │09:00│Maria │Dra Santos│S2│⚠  │  │
+         │  └─────────────────────────────┘  │
+         │                                   │
+         │  Modo PROFISSIONAL (Colunas):    │
+         │  ┌────────────────┬────────────┐  │
+         │  │Dr Silva │ Dra Santos        │  │
+         │  ├────────────────┼────────────┤  │
+         │  │João    │ Maria              │  │
+         │  │        │ Ana                │  │
+         │  └────────────────┴────────────┘  │
+         │                                   │
+         │  Modo SALA (Colunas):            │
+         │  ┌────────────────┬────────────┐  │
+         │  │Sala 1  │ Sala 2              │  │
+         │  ├────────────────┼────────────┤  │
+         │  │João    │ Maria              │  │
+         │  │Carlos  │ Pedro              │  │
+         │  └────────────────┴────────────┘  │
+         │                                   │
+         │  Clique em slot → Abre Modal!   │
+         └───────────────────────────────────┘
+
+
+FLUXO DE DADOS:
+═══════════════
+
+   Usuário
+      │
+      ▼
+   AgendaPage
+      │
+      ├──▶ useAuth() → currentRole, clinicId
+      ├──▶ useClinicContext() → clinic
+      ├──▶ useAgendaStore() → estado único
+      │
+      ├──▶ useEffect → loadAgendaData()
+      │       │
+      │       └──▶ listAppointments(clinicId)
+      │               │
+      │               └──▶ Supabase: view_agenda_completa_v6
+      │
+      ├──▶ useEffect → loadMetadata()
+      │       │
+      │       ├──▶ professionalsApi.list()
+      │       ├──▶ roomsApi.list()         ← NOVO
+      │       ├──▶ servicesApi.list()
+      │       ├──▶ payersApi.list()
+      │       └──▶ patientsApi.list()
+      │
+      └──▶ Renderiza componentes
+          (AgendaHeader, AgendaIndicators, AgendaTabs, etc)
+
+
+GERENCIAMENTO DE ESTADO:
+════════════════════════
+
+const agenda = useAgendaStore()
+
+LEITURA:
+  agenda.date              // String (YYYY-MM-DD)
+  agenda.viewMode          // 'geral' | 'profissional' | 'sala'
+  agenda.filters           // { professional, room, status, payer, service, searchText }
+  agenda.appointments      // Array completo
+  agenda.filteredAppointments  // Array filtrado
+  agenda.selectedSlot      // Agendamento selecionado
+  agenda.indicators        // { total, confirmed, noShow, fitting, occupationRate }
+  agenda.metadata          // { professionals, rooms, services, payers, patients }
+
+ESCRITA:
+  agenda.setDate(date)
+  agenda.setViewMode(mode)
+  agenda.updateFilter(key, value)
+  agenda.setMultipleFilters(obj)
+  agenda.clearFilters()
+  agenda.selectSlot(slot)
+  agenda.deselectSlot()
+  agenda.setAppointments(arr)
+  agenda.updateAppointmentLocal(id, updates)
+  agenda.removeAppointmentLocal(id)
+  agenda.addAppointmentLocal(apt)
+
+
+CONTROLE DE PERMISSÕES (RBAC):
+════════════════════════════════
+
+┌─────────────┬────────────┬──────────────┬─────────┬────────┐
+│ Ação        │ recepcao   │ profissional │ gestor  │ admin  │
+├─────────────┼────────────┼──────────────┼─────────┼────────┤
+│ Ver tudo    │ ✅         │ ⚠️ seus      │ ✅      │ ✅     │
+│ Criar novo  │ ✅         │ ❌           │ ✅      │ ✅     │
+│ Editar      │ ✅         │ ❌           │ ✅      │ ✅     │
+│ Editar valor│ ❌         │ ❌           │ ✅      │ ✅     │
+│ Cancelar    │ ❌         │ ❌           │ ✅      │ ✅     │
+│ Confirmar   │ ✅         │ ✅           │ ✅      │ ✅     │
+│ Ver KPIs    │ ❌         │ ❌           │ ✅      │ ✅     │
+└─────────────┴────────────┴──────────────┴─────────┴────────┘
+
+
+ARQUIVOS CRIADOS:
+═════════════════
+
+Componentes (8):
+  ✅ AgendaPage.jsx
+  ✅ hooks/useAgendaStore.js
+  ✅ components/AgendaHeader.jsx
+  ✅ components/AgendaIndicators.jsx
+  ✅ components/AgendaTabs.jsx
+  ✅ components/AgendaFilters.jsx
+  ✅ components/AgendaTimeline.jsx
+  ✅ components/AppointmentModal.jsx
+
+APIs (1):
+  ✅ lib/roomsApi.js
+
+Documentação (5):
+  ✅ README.md
+  ✅ AGENDA_ARQUITETURA.js
+  ✅ GUIA_INTEGRACAO_API.js
+  ✅ CHECKLIST_VALIDACAO.js
+  ✅ EXEMPLOS_INTEGRACAO.js
+
+Modificados (1):
+  ✅ AppRoutes.jsx
+
+
+CORES POR STATUS:
+═════════════════
+
+Disponível      bg-gray-100     ◯ Vazio
+Confirmado      bg-green-100    ✓ Confirmado
+A confirmar     bg-yellow-100   ⚠ Atenção
+Faltou          bg-red-100      ✗ Cancelado
+Encaixe         bg-blue-100     ⚡ Urgente
+
+
+PRÓXIMOS PASSOS:
+════════════════
+
+1. IMPLEMENTAR APIs (Veja EXEMPLOS_INTEGRACAO.js):
+   □ createAppointment()
+   □ updateAppointment()
+   □ deleteAppointment()
+   □ Verificar outras APIs
+
+2. IMPLEMENTAR HANDLERS em AgendaPage.jsx:
+   □ handleSaveAppointment()
+   □ handleCancelAppointment()
+   □ handleConfirmAppointment()
+   □ handleFittingAppointment()
+
+3. TESTAR com CHECKLIST_VALIDACAO.js:
+   □ 90 itens de validação
+   □ Teste manual (50 min)
+   □ Teste em diferentes roles
+   □ Teste responsividade
+
+4. MELHORIAS FUTURAS:
+   □ Notificações (toast)
+   □ Histórico de alterações
+   □ Agendamento recorrente
+   □ Sincronização Google Calendar
+   □ SMS/Email de confirmação
+
+
+STATUS ATUAL:
+═════════════
+
+✅ Estrutura: 100% completa
+✅ Componentes: 100% prontos
+✅ Estado: 100% centralizado
+✅ UI: 100% responsiva
+✅ Documentação: 100% detalhada
+⭕ APIs: Necessita completar implementação
+⭕ Testes: Aguarda testes com dados reais
+
+PRONTO PARA: Desenvolvimento completo com Supabase

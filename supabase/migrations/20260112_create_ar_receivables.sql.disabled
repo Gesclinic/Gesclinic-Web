@@ -1,0 +1,114 @@
+-- Accounts Receivable core table
+-- Creates table `ar_receivables` aligned with Gesclinic requirements
+
+create table if not exists public.ar_receivables (
+  id uuid primary key default gen_random_uuid(),
+  clinic_id uuid not null,
+
+  -- Pagador: somente um principal; armazenamos nome para fácil exibição
+  payer_name text,
+  paciente_id uuid null,
+  convenio_id uuid null,
+  empresa_id uuid null,
+
+  -- Contexto
+  origem text check (origem in ('Agenda','Faturamento','Contrato','Manual')) not null default 'Manual',
+  descricao text,
+  servico_id uuid null,
+  profissional_id uuid null,
+  centro_custo_id uuid null,
+  plano_contas_id uuid null,
+
+  -- Valores
+  valor_bruto numeric(12,2) not null default 0,
+  descontos numeric(12,2) not null default 0,
+  valor_liquido numeric(12,2) generated always as (greatest(valor_bruto - descontos, 0)) stored,
+  forma_prevista text null,
+
+  -- Datas
+  data_emissao date not null default (current_date),
+  data_vencimento date null,
+  data_recebimento date null,
+
+  -- Status
+  status text check (status in ('open','planned','received','partial','overdue','canceled','glossed')) not null default 'open',
+
+  -- Parcelamento
+  parcelado boolean not null default false,
+  parcela_atual int null,
+  total_parcelas int null,
+  grupo_parcelamento_id uuid null,
+
+  -- Origem detalhes
+  appointment_id uuid null,
+  lote_faturamento_id uuid null,
+  numero_guia text null,
+  previsao_pagamento date null,
+  contrato_id uuid null,
+  competencia text null,
+
+  -- Repasse
+  repasse_gerado boolean not null default false,
+
+  created_at timestamptz not null default now()
+);
+
+-- Indexes
+create index if not exists idx_ar_receivables_clinic on public.ar_receivables (clinic_id);
+create index if not exists idx_ar_receivables_status on public.ar_receivables (status);
+create index if not exists idx_ar_receivables_venc on public.ar_receivables (data_vencimento);
+create index if not exists idx_ar_receivables_receb on public.ar_receivables (data_recebimento);
+
+-- Trigger: marca repasse_gerado quando status muda para 'received'
+create or replace function public.ar_receivables_mark_repasse()
+returns trigger as $$
+begin
+  if (tg_op = 'UPDATE') then
+    if (new.status = 'received' and coalesce(old.status, '') <> 'received') then
+      new.data_recebimento := coalesce(new.data_recebimento, current_date);
+      new.repasse_gerado := true;
+      -- Tentar gerar/atualizar repasse médico para o mês/ano
+      begin
+        perform public.generate_doctor_commissions_v2(new.clinic_id, extract(month from new.data_recebimento)::int, extract(year from new.data_recebimento)::int, 'standard');
+      exception when others then
+        -- Ignora se função não existir; UI pode disparar manualmente
+        null;
+      end;
+    end if;
+  end if;
+  return new;
+end;
+$$ language plpgsql;
+
+create trigger ar_receivables_repasse_trg
+before update on public.ar_receivables
+for each row execute function public.ar_receivables_mark_repasse();
+
+-- View simplificada para UI
+create or replace view public.view_ar_receivables_v1 as
+select
+  r.id,
+  r.clinic_id,
+  r.origem,
+  r.descricao,
+  r.payer_name as pagador,
+  r.paciente_id,
+  r.convenio_id,
+  r.empresa_id,
+  r.profissional_id,
+  r.centro_custo_id,
+  r.plano_contas_id,
+  r.valor_bruto,
+  r.descontos,
+  r.valor_liquido,
+  r.forma_prevista,
+  r.data_emissao,
+  r.data_vencimento,
+  r.data_recebimento,
+  r.status,
+  r.parcelado,
+  r.parcela_atual,
+  r.total_parcelas,
+  r.grupo_parcelamento_id,
+  r.created_at
+from public.ar_receivables r;

@@ -1,0 +1,18 @@
+-- Migration: Add payment method and installments fields to ap_bills table
+-- Purpose: Support detailed payment tracking for accounts payable
+
+BEGIN;
+
+-- Add installments column (default to 1)
+ALTER TABLE public.ap_bills
+ADD COLUMN IF NOT EXISTS installments INT DEFAULT 1;
+
+-- Add payment_method column for payment type tracking
+ALTER TABLE public.ap_bills
+ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50);
+
+-- Add comment to document the fields
+COMMENT ON COLUMN public.ap_bills.installments IS 'Number of payment installments for this bill';
+COMMENT ON COLUMN public.ap_bills.payment_method IS 'Payment method (dinheiro, credito, debito, boleto, transferencia, pix, cheque)';
+
+COMMIT;

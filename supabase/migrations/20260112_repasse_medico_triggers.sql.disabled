@@ -1,0 +1,28 @@
+-- TRIGGER: Bloqueia recalculo de repasse já gerado (frozen=true)
+create or replace function trg_bloqueia_recalculo_repasse()
+returns trigger as $$
+begin
+  if OLD.frozen = true then
+    raise exception 'Repasse já gerado não pode ser alterado';
+  end if;
+  return NEW;
+end;
+$$ language plpgsql;
+
+create trigger bloqueia_recalculo_repasse
+before update on repasse_medico
+for each row execute function trg_bloqueia_recalculo_repasse();
+
+-- TRIGGER: Log de alterações em repasse
+create or replace function trg_log_alteracao_repasse()
+returns trigger as $$
+begin
+  insert into repasse_log (repasse_id, evento, usuario_id, detalhes)
+  values (NEW.id, TG_OP, NEW.updated_by, row_to_json(NEW));
+  return NEW;
+end;
+$$ language plpgsql;
+
+create trigger log_alteracao_repasse
+after update on repasse_medico
+for each row execute function trg_log_alteracao_repasse();

@@ -1,0 +1,9 @@
+data,descricao,valor,tipo
+2026-01-10,PIX Recebido - Paciente João Silva,1200.00,credit
+2026-01-10,Tarifa Bancária,32.50,debit
+2026-01-11,Depósito Convênio Unimed,5800.00,credit
+2026-01-11,Pagamento Fornecedor ABC,450.75,debit
+2026-01-12,PIX Enviado - Salários,4500.00,debit
+2026-01-12,Recebimento Cheque,2300.00,credit
+2026-01-13,Transferência Interna,1000.00,debit
+2026-01-13,PIX Recebido - Consulta,250.00,credit

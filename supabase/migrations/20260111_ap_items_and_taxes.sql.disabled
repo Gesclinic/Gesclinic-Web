@@ -1,0 +1,37 @@
+-- Add NF taxes columns to ap_bills (if not exists)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='ap_bills' AND column_name='ir_pct') THEN
+    ALTER TABLE ap_bills ADD COLUMN ir_pct numeric(6,2);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='ap_bills' AND column_name='csll_pct') THEN
+    ALTER TABLE ap_bills ADD COLUMN csll_pct numeric(6,2);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='ap_bills' AND column_name='pis_cofins_pct') THEN
+    ALTER TABLE ap_bills ADD COLUMN pis_cofins_pct numeric(6,2);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='ap_bills' AND column_name='iss_pct') THEN
+    ALTER TABLE ap_bills ADD COLUMN iss_pct numeric(6,2);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='ap_bills' AND column_name='icms_pct') THEN
+    ALTER TABLE ap_bills ADD COLUMN icms_pct numeric(6,2);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='ap_bills' AND column_name='taxes_retained') THEN
+    ALTER TABLE ap_bills ADD COLUMN taxes_retained boolean DEFAULT true;
+  END IF;
+END$$;
+
+-- Create ap_items table to store NF products per AP
+CREATE TABLE IF NOT EXISTS ap_items (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  ap_bill_id uuid NOT NULL REFERENCES ap_bills(id) ON DELETE CASCADE,
+  clinic_id uuid NOT NULL,
+  stock_item_id uuid NULL,
+  name text NOT NULL,
+  qty numeric(18,3) NOT NULL,
+  unit_value numeric(18,2) NOT NULL,
+  total_value numeric(18,2) NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS ap_items_bill_idx ON ap_items(ap_bill_id);

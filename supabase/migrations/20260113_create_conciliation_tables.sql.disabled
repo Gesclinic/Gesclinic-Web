@@ -1,0 +1,301 @@
+-- Conciliação Bancária - Tabelas e estrutura
+-- Created: 2026-01-12
+
+-- ========================================
+-- 1. Tabela de extratos bancários importados
+-- ========================================
+CREATE TABLE IF NOT EXISTS conciliation_bank_statements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  clinic_id UUID NOT NULL,
+  bank_account_id UUID,
+  
+  -- Dados do extrato
+  statement_date DATE NOT NULL,
+  description TEXT NOT NULL,
+  amount DECIMAL(12, 2) NOT NULL,
+  transaction_type VARCHAR(20) NOT NULL, -- 'credit' ou 'debit'
+  bank_id VARCHAR(255), -- ID do banco se disponível
+  
+  -- Status de conciliação
+  status VARCHAR(50) NOT NULL DEFAULT 'pending', -- pending, conciliated, adjusted, divergent, ignored
+  
+  -- Vinculação com lançamento financeiro
+  linked_financial_id UUID, -- FK para ap_bills ou ar_invoices
+  linked_type VARCHAR(20), -- 'payable' ou 'receivable'
+  divergence_reason TEXT, -- motivo se divergente
+  
+  -- Auditoria
+  import_batch_id UUID,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  created_by UUID,
+  updated_by UUID,
+  
+  CONSTRAINT fk_clinic FOREIGN KEY (clinic_id) REFERENCES clinics(id)
+);
+
+CREATE INDEX idx_conciliation_bank_statements_clinic ON conciliation_bank_statements(clinic_id);
+CREATE INDEX idx_conciliation_bank_statements_status ON conciliation_bank_statements(status);
+CREATE INDEX idx_conciliation_bank_statements_date ON conciliation_bank_statements(statement_date);
+CREATE INDEX idx_conciliation_bank_statements_account ON conciliation_bank_statements(bank_account_id);
+
+-- ========================================
+-- 2. Histórico de vínculo de conciliação
+-- ========================================
+CREATE TABLE IF NOT EXISTS conciliation_link_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  bank_statement_id UUID NOT NULL,
+  financial_id UUID,
+  financial_type VARCHAR(20), -- 'payable' ou 'receivable'
+  
+  action VARCHAR(50) NOT NULL, -- 'conciliate', 'adjust', 'divergent', 'ignore', 'unlink'
+  action_notes TEXT,
+  
+  user_id UUID,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  
+  CONSTRAINT fk_bank_statement FOREIGN KEY (bank_statement_id) REFERENCES conciliation_bank_statements(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_conciliation_link_history_statement ON conciliation_link_history(bank_statement_id);
+CREATE INDEX idx_conciliation_link_history_financial ON conciliation_link_history(financial_id);
+CREATE INDEX idx_conciliation_link_history_created ON conciliation_link_history(created_at);
+
+-- ========================================
+-- 3. Regras automáticas de conciliação
+-- ========================================
+CREATE TABLE IF NOT EXISTS conciliation_auto_rules (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  clinic_id UUID NOT NULL,
+  
+  rule_name VARCHAR(255) NOT NULL,
+  description TEXT,
+  
+  -- Condições
+  pattern_keywords TEXT[], -- ARRAY de palavras-chave a buscar
+  min_amount DECIMAL(12, 2),
+  max_amount DECIMAL(12, 2),
+  transaction_type VARCHAR(20), -- 'credit', 'debit' ou NULL (ambos)
+  
+  -- Ação automática
+  default_category_id UUID, -- plano de contas
+  default_cost_center_id UUID,
+  default_payment_method VARCHAR(100),
+  auto_create_if_no_match BOOLEAN DEFAULT FALSE,
+  
+  active BOOLEAN DEFAULT TRUE,
+  priority INT DEFAULT 0,
+  
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  
+  CONSTRAINT fk_clinic_rules FOREIGN KEY (clinic_id) REFERENCES clinics(id)
+);
+
+CREATE INDEX idx_conciliation_auto_rules_clinic ON conciliation_auto_rules(clinic_id);
+CREATE INDEX idx_conciliation_auto_rules_active ON conciliation_auto_rules(active);
+
+-- ========================================
+-- 4. Sugestões de conciliação (cache)
+-- ========================================
+CREATE TABLE IF NOT EXISTS conciliation_suggestions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  bank_statement_id UUID NOT NULL,
+  
+  suggested_financial_id UUID,
+  suggested_type VARCHAR(20), -- 'payable' ou 'receivable'
+  
+  match_score DECIMAL(3, 2), -- 0.0 a 1.0
+  match_reason VARCHAR(255),
+  
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  
+  CONSTRAINT fk_bank_statement_suggestion FOREIGN KEY (bank_statement_id) REFERENCES conciliation_bank_statements(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_conciliation_suggestions_statement ON conciliation_suggestions(bank_statement_id);
+CREATE INDEX idx_conciliation_suggestions_financial ON conciliation_suggestions(suggested_financial_id);
+
+-- ========================================
+-- 5. Sumário de importação de extratos
+-- ========================================
+CREATE TABLE IF NOT EXISTS conciliation_import_batches (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  clinic_id UUID NOT NULL,
+  
+  bank_name VARCHAR(255),
+  account_number VARCHAR(100),
+  import_date DATE,
+  
+  total_records INT DEFAULT 0,
+  total_amount_credit DECIMAL(12, 2) DEFAULT 0,
+  total_amount_debit DECIMAL(12, 2) DEFAULT 0,
+  
+  import_status VARCHAR(50) DEFAULT 'processing', -- 'processing', 'completed', 'error'
+  import_error_message TEXT,
+  
+  imported_by UUID,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  
+  CONSTRAINT fk_clinic_batch FOREIGN KEY (clinic_id) REFERENCES clinics(id)
+);
+
+CREATE INDEX idx_conciliation_import_batches_clinic ON conciliation_import_batches(clinic_id);
+CREATE INDEX idx_conciliation_import_batches_date ON conciliation_import_batches(import_date);
+
+-- ========================================
+-- 6. Contas bancárias da clínica
+-- ========================================
+CREATE TABLE IF NOT EXISTS clinic_bank_accounts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  clinic_id UUID NOT NULL,
+  
+  account_name VARCHAR(255) NOT NULL,
+  bank_name VARCHAR(100),
+  account_number VARCHAR(100),
+  account_holder VARCHAR(255),
+  
+  bank_balance DECIMAL(12, 2) DEFAULT 0,
+  system_balance DECIMAL(12, 2) DEFAULT 0,
+  last_reconciliation_date DATE,
+  
+  active BOOLEAN DEFAULT TRUE,
+  
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  
+  CONSTRAINT fk_clinic_account FOREIGN KEY (clinic_id) REFERENCES clinics(id)
+);
+
+CREATE INDEX idx_clinic_bank_accounts_clinic ON clinic_bank_accounts(clinic_id);
+CREATE INDEX idx_clinic_bank_accounts_active ON clinic_bank_accounts(active);
+
+-- ========================================
+-- Triggers para auditoria
+-- ========================================
+CREATE OR REPLACE FUNCTION update_conciliation_bank_statements_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = CURRENT_TIMESTAMP;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_conciliation_bank_statements_timestamp
+BEFORE UPDATE ON conciliation_bank_statements
+FOR EACH ROW
+EXECUTE FUNCTION update_conciliation_bank_statements_timestamp();
+
+CREATE OR REPLACE FUNCTION update_clinic_bank_accounts_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = CURRENT_TIMESTAMP;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_clinic_bank_accounts_timestamp
+BEFORE UPDATE ON clinic_bank_accounts
+FOR EACH ROW
+EXECUTE FUNCTION update_clinic_bank_accounts_timestamp();
+
+CREATE OR REPLACE FUNCTION update_conciliation_auto_rules_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = CURRENT_TIMESTAMP;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_conciliation_auto_rules_timestamp
+BEFORE UPDATE ON conciliation_auto_rules
+FOR EACH ROW
+EXECUTE FUNCTION update_conciliation_auto_rules_timestamp();
+
+-- ========================================
+-- RPC: Listar extratos para conciliação
+-- ========================================
+CREATE OR REPLACE FUNCTION list_bank_statements(
+  p_clinic_id UUID,
+  p_status VARCHAR DEFAULT NULL,
+  p_start_date DATE DEFAULT NULL,
+  p_end_date DATE DEFAULT NULL,
+  p_limit INT DEFAULT 100,
+  p_offset INT DEFAULT 0
+)
+RETURNS TABLE(
+  id UUID,
+  statement_date DATE,
+  description TEXT,
+  amount DECIMAL,
+  transaction_type VARCHAR,
+  status VARCHAR,
+  linked_financial_id UUID,
+  created_at TIMESTAMP WITH TIME ZONE
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    cbs.id,
+    cbs.statement_date,
+    cbs.description,
+    cbs.amount,
+    cbs.transaction_type,
+    cbs.status,
+    cbs.linked_financial_id,
+    cbs.created_at
+  FROM conciliation_bank_statements cbs
+  WHERE cbs.clinic_id = p_clinic_id
+    AND (p_status IS NULL OR cbs.status = p_status)
+    AND (p_start_date IS NULL OR cbs.statement_date >= p_start_date)
+    AND (p_end_date IS NULL OR cbs.statement_date <= p_end_date)
+  ORDER BY cbs.statement_date DESC
+  LIMIT p_limit
+  OFFSET p_offset;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ========================================
+-- RPC: Calcular diferença de saldos
+-- ========================================
+CREATE OR REPLACE FUNCTION calculate_balance_difference(
+  p_clinic_id UUID,
+  p_account_id UUID
+)
+RETURNS TABLE(
+  bank_balance DECIMAL,
+  system_balance DECIMAL,
+  difference DECIMAL,
+  pending_total DECIMAL,
+  conciliated_total DECIMAL
+) AS $$
+BEGIN
+  RETURN QUERY
+  WITH bank_totals AS (
+    SELECT 
+      COALESCE(SUM(CASE WHEN transaction_type = 'credit' THEN amount ELSE -amount END), 0) as total
+    FROM conciliation_bank_statements
+    WHERE clinic_id = p_clinic_id
+      AND (p_account_id IS NULL OR bank_account_id = p_account_id)
+  ),
+  system_totals AS (
+    SELECT 
+      COALESCE(SUM(amount), 0) as total
+    FROM (
+      SELECT amount FROM ap_bills 
+      WHERE clinic_id = p_clinic_id AND status = 'paid'
+      UNION ALL
+      SELECT amount FROM ar_invoices
+      WHERE clinic_id = p_clinic_id AND status = 'paid'
+    ) t
+  )
+  SELECT 
+    (SELECT total FROM bank_totals)::DECIMAL,
+    (SELECT total FROM system_totals)::DECIMAL,
+    ((SELECT total FROM bank_totals) - (SELECT total FROM system_totals))::DECIMAL,
+    (SELECT COALESCE(SUM(amount), 0) FROM conciliation_bank_statements 
+     WHERE clinic_id = p_clinic_id AND status = 'pending')::DECIMAL,
+    (SELECT COALESCE(SUM(amount), 0) FROM conciliation_bank_statements 
+     WHERE clinic_id = p_clinic_id AND status = 'conciliated')::DECIMAL;
+END;
+$$ LANGUAGE plpgsql;

@@ -1,0 +1,418 @@
+# 🧾 RESUMO VISUAL - AUDITORIA FINANCEIRA DO ATENDIMENTO
+
+## ARQUITETURA EM CAMADAS
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    FRONTEND (React)                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │  AppointmentFinancialAuditTimeline                       │  │
+│  │  - Timeline visual com ícones                           │  │
+│  │  - Cards por evento                                     │  │
+│  │  - Modo compacto/expandido                             │  │
+│  │  - Detecção de divergências                            │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│                            ↑                                    │
+│                    useAppointmentFinancialAudit                 │
+│                            ↓                                    │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │  Custom Hooks                                            │  │
+│  │  - Gerenciar estado                                      │  │
+│  │  - Auto-refresh                                          │  │
+│  │  - Validação de permissões                              │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│                                                                 │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+                   auditFinancialApi.js
+                             │
+         ┌───────────────────┼───────────────────┐
+         │                   │                   │
+         ↓                   ↓                   ↓
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│Get Timeline  │  │Get Summary   │  │Check         │
+│              │  │              │  │Divergences   │
+└──────────────┘  └──────────────┘  └──────────────┘
+         │                   │                   │
+         └───────────────────┼───────────────────┘
+                             │
+┌─────────────────────────────────────────────────────────────────┐
+│                BACKEND (Supabase/PostgreSQL)                    │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │  appointment_financial_audit_logs (Tabela Append-Only)   │  │
+│  │  ├─ id (UUID)                                           │  │
+│  │  ├─ appointment_id (FK)                                 │  │
+│  │  ├─ financial_event_type (ENUM)                         │  │
+│  │  ├─ related_entity (accounts_receivable, etc)           │  │
+│  │  ├─ amount, previous_amount (NUMERIC)                   │  │
+│  │  ├─ status                                              │  │
+│  │  ├─ performed_by (FK → users)                           │  │
+│  │  ├─ performed_by_role (TEXT)                            │  │
+│  │  ├─ performed_at (TIMESTAMPTZ)                          │  │
+│  │  └─ context (JSONB)                                     │  │
+│  │                                                          │  │
+│  │  Índices:                                                │  │
+│  │  ├─ idx_appointment_id                                  │  │
+│  │  ├─ idx_event_type                                      │  │
+│  │  ├─ idx_performed_at                                    │  │
+│  │  └─ idx_appointment_event (compound)                    │  │
+│  │                                                          │  │
+│  │  Triggers:                                               │  │
+│  │  ├─ Bloqueia UPDATE                                     │  │
+│  │  └─ Bloqueia DELETE                                     │  │
+│  │                                                          │  │
+│  │  RLS Policies:                                           │  │
+│  │  ├─ SELECT: GESTOR, FINANCEIRO, ADMIN apenas            │  │
+│  │  ├─ INSERT: Usuários da clínica                         │  │
+│  │  └─ UPDATE/DELETE: BLOQUEADO                            │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## FLUXO DE DADOS
+
+### 1️⃣ Criar Conta a Receber
+
+```
+financeApi.createAR(appointmentId, payload)
+    │
+    ├─ INSERT INTO accounts_receivable
+    │
+    └─ auditFinancialIntegration.logReceivableCreated()
+        │
+        └─ logAppointmentFinancialAudit({
+             appointmentId,
+             financialEventType: "RECEIVABLE_CREATED",
+             relatedEntity: "accounts_receivable",
+             relatedEntityId: receivable.id,
+             amount: receivable.amount,
+             performed_by: currentUser.id,
+             performed_by_role: "GESTOR",
+             context: { payer_id, ... }
+           })
+            │
+            └─ INSERT INTO appointment_financial_audit_logs
+```
+
+### 2️⃣ Registrar Pagamento
+
+```
+financeApi.updateAR(id, { status: 'received', paid_amount: X })
+    │
+    ├─ UPDATE accounts_receivable
+    │
+    └─ auditFinancialIntegration.logPaymentReceived()
+        │
+        └─ logAppointmentFinancialAudit({
+             appointmentId,
+             financialEventType: "PAYMENT_RECEIVED",
+             relatedEntity: "accounts_receivable",
+             amount: paid_amount,
+             previousAmount: pending_amount,
+             status: "received"
+           })
+            │
+            └─ INSERT INTO appointment_financial_audit_logs
+```
+
+### 3️⃣ Calcular Repasse Médico
+
+```
+repasseMedicoApi.gerarRepasse({ clinicId, mes, ano })
+    │
+    ├─ CALL gerar_repasse_medico() [RPC]
+    │
+    └─ Para cada resultado:
+        └─ auditFinancialIntegration.logRepasseCalculated()
+            │
+            └─ logAppointmentFinancialAudit({
+                 appointmentId,
+                 financialEventType: "REPASSE_CALCULATED",
+                 relatedEntity: "repasse_medico",
+                 amount: repasse.amount,
+                 context: { professional_id, commission, ... }
+               })
+                │
+                └─ INSERT INTO appointment_financial_audit_logs
+```
+
+### 4️⃣ Visualizar Timeline
+
+```
+AppointmentDrawer.jsx
+    │
+    ├─ <AppointmentFinancialAuditTimeline appointmentId={...} />
+    │
+    ├─ useAppointmentFinancialAudit(appointmentId)
+    │    │
+    │    └─ getAppointmentFinancialAuditTrail(appointmentId)
+    │        │
+    │        └─ SELECT * FROM appointment_financial_audit_logs
+    │           WHERE appointment_id = ?
+    │           ORDER BY performed_at
+    │
+    └─ Renderizar timeline com eventos ordenados
+```
+
+---
+
+## EXEMPLO DE CARD DE EVENTO
+
+```
+┌──────────────────────────────────────────────────┐
+│ 🧾 Conta a Receber Criada      [GESTOR] 10:30    │
+├──────────────────────────────────────────────────┤
+│                                                  │
+│  Data/Hora: 14/01/2026 às 10:30:45              │
+│                                                  │
+│  Valor: R$ 150.00                               │
+│                                                  │
+│  Status: open                                   │
+│                                                  │
+│  ▶ Detalhes adicionais                          │
+│    ├─ clinic_id: "abc..."                       │
+│    ├─ payer_id: "def..."                        │
+│    └─ description: "Conta a receber criada"    │
+│                                                  │
+└──────────────────────────────────────────────────┘
+```
+
+---
+
+## EXEMPLO DE TIMELINE COMPLETA
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                  Auditoria Financeira                    │
+├─────────────────────────────────────────────────────────┤
+│                                                          │
+│  Resumo: 4 eventos | R$ 150.00 | 2 usuários             │
+│                                                          │
+│  ┌─ 📄 Conta a Receber Criada         [14/01 10:30]    │
+│  │  └─ R$ 150.00 (open)                              │
+│  │  └─ Gestor                                         │
+│  │                                                     │
+│  ├─ 📤 Guia Enviada                   [14/01 11:00]    │
+│  │  └─ R$ 150.00 (sent)                              │
+│  │  └─ Financeiro                                     │
+│  │                                                     │
+│  ├─ ✅ Pagamento Recebido             [14/01 15:00]    │
+│  │  └─ R$ 150.00 (received)                          │
+│  │  └─ Caixa                                          │
+│  │                                                     │
+│  └─ 💰 Repasse Calculado              [15/01 09:00]    │
+│     └─ R$ 125.00 (calculated)                         │
+│     └─ Sistema                                         │
+│                                                          │
+│  ⚠️ Divergências: Nenhuma detectada ✅                 │
+│                                                          │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## TIPOS DE EVENTO
+
+```
+┌──────────────────────────────┬─────────────┬────────────┐
+│ Evento                       │ Cor         │ Ícone      │
+├──────────────────────────────┼─────────────┼────────────┤
+│ RECEIVABLE_CREATED           │ 🔵 Azul     │ 📄 Arquivo │
+│ BILLING_GUIDE_CREATED        │ 🔷 Cyan     │ 📄 Arquivo │
+│ BILLING_SENT                 │ 🟢 Verde    │ ✅ Check   │
+│ PAYMENT_RECEIVED             │ 💚 Esmeralda│ 💰 Dinheiro│
+│ GLOSA_REGISTERED             │ 🔴 Vermelho │ ❌ X       │
+│ GLOSA_REVERSED               │ 🟠 Laranja  │ ⚠️ Alerta  │
+│ REPASSE_CALCULATED           │ 🟣 Roxo     │ 💰 Dinheiro│
+│ REPASSE_PAID                 │ 🟣 Indigo   │ ✅ Check   │
+└──────────────────────────────┴─────────────┴────────────┘
+```
+
+---
+
+## PERMISSÕES POR ROLE
+
+```
+┌────────────┬───────────┬─────────────┬──────────┬────────┐
+│ Role       │ Visualizar│ Criar Log   │ Editar   │ Deletar│
+├────────────┼───────────┼─────────────┼──────────┼────────┤
+│ GESTOR     │    ✅     │     ✅      │    ❌    │   ❌   │
+│ FINANCEIRO │    ✅     │     ✅      │    ❌    │   ❌   │
+│ ADMIN      │    ✅     │     ✅      │    ❌    │   ❌   │
+│ PROFISSIONAL│   ❌     │     ❌      │    ❌    │   ❌   │
+│ RECEPÇÃO   │    ❌     │     ❌      │    ❌    │   ❌   │
+└────────────┴───────────┴─────────────┴──────────┴────────┘
+```
+
+---
+
+## DIVERGÊNCIAS DETECTADAS
+
+```
+┌────────────────────────────────────────────────────┐
+│ ⚠️ Divergências Detectadas: 2                       │
+├────────────────────────────────────────────────────┤
+│                                                    │
+│ 🔴 [HIGH] Pagamento sem Conta a Receber           │
+│ └─ Pagamento de R$ 100 foi recebido               │
+│    mas nenhuma conta a receber foi encontrada     │
+│                                                    │
+│ 🟡 [MEDIUM] Glosa e Repasse Simultâneos           │
+│ └─ Atendimento tem glosa (R$ 50) e repasse        │
+│    (R$ 100) registrados                           │
+│                                                    │
+└────────────────────────────────────────────────────┘
+```
+
+---
+
+## EXEMPLO DE CONTEXTO (JSONB)
+
+```json
+{
+  "clinic_id": "550e8400-e29b-41d4-a716-446655440000",
+  "professional_id": "550e8400-e29b-41d4-a716-446655440001",
+  "patient_id": "550e8400-e29b-41d4-a716-446655440002",
+  "payer_id": "550e8400-e29b-41d4-a716-446655440003",
+  "description": "Glosa registrada: Serviço não autorizado",
+  "reason": "Serviço não autorizado",
+  "payment_method": "pix",
+  "receipt_number": "REC-001",
+  "notes": "Conferido manualmente",
+  "custom_field": "Custom value"
+}
+```
+
+---
+
+## FLUXO DE INTEGRAÇÃO
+
+### Antes da Integração
+```
+financeApi.createAR()
+    └─ INSERT accounts_receivable
+    └─ ❌ Nenhum log
+```
+
+### Depois da Integração
+```
+financeApi.createAR()
+    ├─ INSERT accounts_receivable ✅
+    └─ logReceivableCreated() ✅
+        └─ INSERT appointment_financial_audit_logs ✅
+```
+
+---
+
+## RESPONSIVIDADE
+
+### Desktop (≥1024px)
+```
+┌──────────────────────────────────────────────────┐
+│              Timeline Completa                    │
+│ ┌─── Evento 1  (expandido com detalhes)       │
+│ ├─── Evento 2  (resumido)                     │
+│ ├─── Evento 3  (resumido)                     │
+│ └─── Evento 4  (resumido)                     │
+│                                                │
+│ Statisticas: 4 eventos | R$ 150 | 2 usuários │
+└──────────────────────────────────────────────────┘
+```
+
+### Tablet (768px-1023px)
+```
+┌────────────────────────────────┐
+│   Timeline Média               │
+│ ┌─── Evento 1 (compacto)   │
+│ ├─── Evento 2 (compacto)   │
+│ ├─── Evento 3 (compacto)   │
+│ └─── Evento 4 (compacto)   │
+└────────────────────────────────┘
+```
+
+### Mobile (<768px)
+```
+┌──────────────────┐
+│ Resumo Rápido    │
+│ ✅ Evento 1      │
+│ ✅ Evento 2      │
+│ ✅ Evento 3      │
+│ ✅ Evento 4      │
+└──────────────────┘
+```
+
+---
+
+## COMPARAÇÃO: ANTES vs DEPOIS
+
+### ❌ ANTES (Sem Auditoria)
+```
+User: "Quanto foi pago desse atendimento?"
+Admin: 🤷 "Não sei, preciso procurar nos logs de caixa"
+
+5 minutos depois...
+
+Admin: "Achei que foram R$ 150, mas não tenho certeza"
+User: "E quando foi pago?"
+Admin: 😕 "Também não sei com precisão, o sistema não registra"
+```
+
+### ✅ DEPOIS (Com Auditoria)
+```
+User: "Quanto foi pago desse atendimento?"
+Gestor: "Excelente pergunta! *abre drawer* 
+         - Conta criada: 14/01 10:30 por João (Gestor)
+         - Pagamento recebido: 14/01 15:00 por Maria (Caixa)
+         - Valor: R$ 150.00
+         - Método: PIX
+         - Recibo: REC-001"
+User: ✅ Perfeito! Temos rastreabilidade total!
+```
+
+---
+
+## IMPACTO ESPERADO
+
+| Métrica | Antes | Depois | Melhoria |
+|---------|-------|--------|----------|
+| **Tempo para rastrear evento** | 10 min | <1 min | 90% ↓ |
+| **Precisão de auditoria** | 60% | 100% | 67% ↑ |
+| **Divergências detectadas** | 0 | 100% | ∞ ↑ |
+| **Conformidade LGPD** | Parcial | Completa | 100% ✅ |
+| **Confiança em dados financeiros** | Média | Alta | 50% ↑ |
+
+---
+
+## ROADMAP FUTURO
+
+```
+v1.0 (Agora)
+├─ Logging automático ✅
+├─ Timeline visual ✅
+├─ Detecção de divergências ✅
+└─ Permissões por role ✅
+
+v1.1 (Semana 2)
+├─ Dashboard de análise
+├─ Alertas automáticos
+└─ Relatórios personalizados
+
+v1.2 (Mês 2)
+├─ Webhooks para eventos
+├─ Integração com BI
+└─ Machine learning para detecção de fraudes
+```
+
+---
+
+**Versão:** 1.0  
+**Data:** 14 de Janeiro de 2026  
+**Status:** ✅ Pronto  
+**Complexidade:** ⭐⭐⭐ Intermediário

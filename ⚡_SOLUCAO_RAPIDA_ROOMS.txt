@@ -1,0 +1,100 @@
+╔════════════════════════════════════════════════════════════════╗
+║                   ✨ SOLUÇÃO COMPLETA - SALAS                   ║
+║                                                                ║
+║  Frontend: ✅ CORRIGIDO                                        ║
+║  Backend:  ❌ 1 COLUNA FALTANDO (faremos agora)               ║
+╚════════════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 O QUE VOCÊ PRECISA FAZER (2 MINUTOS):
+
+1. Copie este SQL:
+
+   ALTER TABLE rooms ADD COLUMN IF NOT EXISTS room_number VARCHAR(50);
+   CREATE INDEX IF NOT EXISTS idx_rooms_room_number ON rooms(room_number);
+   CREATE INDEX IF NOT EXISTS idx_rooms_clinic_room_number ON rooms(clinic_id, room_number);
+
+
+2. Abra: https://app.supabase.com
+
+3. Seu projeto → SQL Editor → New Query
+
+4. Cole o SQL
+
+5. Clique em Run (ou Ctrl+Enter)
+
+6. Pronto! ✅
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📝 O QUE VAI ACONTECER:
+
+[ANTES]
+❌ Erro ao criar sala
+   → Campo room_number não existia
+
+[DEPOIS]
+✅ Sala criada com sucesso
+   ✅ Nome
+   ✅ Número da Sala (novo!)
+   ✅ Tipo
+   ✅ Unidade
+   ✅ Descrição
+   ✅ Capacidade
+   ✅ Ativo
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🧪 TESTE:
+
+http://localhost:3000/clinica/base-sistema/salas
+→ "+ Nova Sala"
+→ Preencha: Nome: "Sala 01", Número: "201", ...
+→ Clique: "Criar"
+→ ✅ Sala aparece na listagem
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📂 ARQUIVOS GERADOS:
+
+✅ SQL_PARA_SUPABASE_ROOMS.txt
+   ← Pronto para copiar e colar
+
+✅ supabase/migrations/2026-01-18_add_room_number_to_rooms.sql
+   ← Arquivo de migration
+
+✅ INSTRUCOES_ADICIONAR_ROOM_NUMBER.md
+   ← Instruções detalhadas
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✨ RESULTADO:
+
+A tabela ROOMS terá:
+
+  ✅ id
+  ✅ clinic_id
+  ✅ name
+  ✅ room_number        ← NOVO
+  ✅ type
+  ✅ unit
+  ✅ description
+  ✅ capacity
+  ✅ is_active
+  ✅ created_at
+  ✅ updated_at
+
+E 2 novos ÍNDICES para performance:
+  ✅ idx_rooms_room_number
+  ✅ idx_rooms_clinic_room_number
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⏱️  TEMPO: 2 minutos
+📊 RISCO: Nenhum (operação segura)
+🎯 STATUS: ✅ Pronto para Produção
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Criado em: 18 de Janeiro de 2026

@@ -1,0 +1,638 @@
+[
+  {
+    "codigo_cbhpm": "10101012",
+    "descricao_completa": "Em consultório (no horário normal ou preestabelecido)",
+    "valor_base": 92.21,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "10101020",
+    "descricao_completa": "Em domicílio",
+    "valor_base": 0,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "10101039",
+    "descricao_completa": "Em pronto socorro",
+    "valor_base": 92.21,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "10102019",
+    "descricao_completa": "Visita hospitalar a paciente internado",
+    "valor_base": 45.08,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "10103015",
+    "descricao_completa": "Atendimento ao recém-nascido em berçário",
+    "valor_base": 144.26,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "10103031",
+    "descricao_completa": "Atendimento ao recém-nascido em sala de parto (parto normal ou operatório de alto risco)",
+    "valor_base": 247.95,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "10103023",
+    "descricao_completa": "Atendimento ao recém-nascido em sala de parto (parto normal ou operatório de baixo risco)",
+    "valor_base": 213.01,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "10104011",
+    "descricao_completa": "Atendimento do intensivista diarista (por dia e por paciente)",
+    "valor_base": 60.86,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "10104020",
+    "descricao_completa": "Atendimento médico do intensivista em UTI geral ou pediátrica (plantão de 12 horas - por paciente)",
+    "valor_base": 144.26,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "10105077",
+    "descricao_completa": "Acompanhamento médico para transporte intra-hospitalar de pacientes graves, com ventilação assistida, da UTI para o centro de diagnóstico",
+    "valor_base": 60.86,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "10105050",
+    "descricao_completa": "Transporte extra-hospitalar aéreo ou aquático de pacientes graves, 1ª hora - a partir do deslocamento do médico",
+    "valor_base": 172.44,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "10105069",
+    "descricao_completa": "Transporte extra-hospitalar aéreo ou aquático de pacientes graves, por hora adicional",
+    "valor_base": 60.86,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "10105034",
+    "descricao_completa": "Transporte extra-hospitalar terrestre de pacientes graves, 1ª hora - a partir do deslocamento do médico",
+    "valor_base": 144.26,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "10105042",
+    "descricao_completa": "Transporte extra-hospitalar terrestre de pacientes graves, por hora adicional - até o retorno do médico à base",
+    "valor_base": 60.86,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "10106014",
+    "descricao_completa": "Aconselhamento genético",
+    "valor_base": 172.44,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "10106146",
+    "descricao_completa": "Atendimento ambulatorial em puericultura",
+    "valor_base": 126.23,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "10106030",
+    "descricao_completa": "Atendimento ao familiar do adolescente",
+    "valor_base": 33.81,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "10106049",
+    "descricao_completa": "Atendimento pediátrico a gestantes (3º trimestre)",
+    "valor_base": 60.86,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "10106111",
+    "descricao_completa": "Exame de aptidão física e mental para concessão de benefícios fiscais conferidos pela Secretaria da Receita Federal e da Fazenda Estadual, a que fazem jus portadores de mobilidade reduzida, com necessidade de adaptação veicular",
+    "valor_base": 60.86,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "10106120",
+    "descricao_completa": "Exame de aptidão física e mental para ratificação, quando a condição física e mental assim o requerer, dos exames realizados pelo órgão previdenciário, incluindo restrição ou liberação para a condução de veículo automotor",
+    "valor_base": 60.86,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "10106065",
+    "descricao_completa": "Exame de aptidão física e mental, ou em portadores de mobilidade reduzida, para fins de inscrição ou renovação de CNH (Carteira Nacional de Habilitação)",
+    "valor_base": 60.86,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "10106073",
+    "descricao_completa": "Junta Médica (três ou mais profissionais) - destina-se ao esclarecimento diagnóstico ou decisão de conduta em caso de difícil solução - por profissional",
+    "valor_base": 126.23,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "10106138",
+    "descricao_completa": "Prova de direção veicular em banca especial - Avaliação Clínica durante a prova prática de direção veicular procedida por dois médicos simultaneamente - por profissional",
+    "valor_base": 126.23,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20101210",
+    "descricao_completa": "Acompanhamento clínico ambulatorial pós-transplante de córnea - por avaliação do 11º ao 30º dia até 3 avaliações",
+    "valor_base": 60.86,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20101228",
+    "descricao_completa": "Acompanhamento clínico ambulatorial pós-transplante de medula óssea",
+    "valor_base": 60.86,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20101015",
+    "descricao_completa": "Acompanhamento clínico ambulatorial pós-transplante renal - por avaliação",
+    "valor_base": 60.86,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20101023",
+    "descricao_completa": "Análise da proporcionalidade cineantropométrica",
+    "valor_base": 11.27,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20101201",
+    "descricao_completa": "Avaliação clínica e eletrônica de paciente portador de marca-passo ou sincronizador ou desfibrilador",
+    "valor_base": 138.63,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20101090",
+    "descricao_completa": "Avaliação da composição corporal por antropometria (inclui consulta)",
+    "valor_base": 60.86,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20101104",
+    "descricao_completa": "Avaliação da composição corporal por bioimpedanciometria",
+    "valor_base": 32.26,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20101112",
+    "descricao_completa": "Avaliação da composição corporal por pesagem hidrostática",
+    "valor_base": 11.27,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20101074",
+    "descricao_completa": "Avaliação nutrológica (inclui consulta)",
+    "valor_base": 60.86,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20101082",
+    "descricao_completa": "Avaliação nutrológica pré e pós-cirurgia bariátrica (inclui consulta)",
+    "valor_base": 60.86,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20101120",
+    "descricao_completa": "Controle anti-doping (por período de 2 horas) - durante competições",
+    "valor_base": 229.92,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20101139",
+    "descricao_completa": "Controle anti-doping (por período de 2 horas) - fora de competições",
+    "valor_base": 229.92,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20101155",
+    "descricao_completa": "Prestação de serviços em delegações ou competições esportivas",
+    "valor_base": 344.88,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20101171",
+    "descricao_completa": "Rejeição de enxerto renal - tratamento ambulatorial - avaliação clínica diária",
+    "valor_base": 72.13,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20102011",
+    "descricao_completa": "Holter de 24 horas - 2 ou mais canais - analógico",
+    "valor_base": 150.07,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20102020",
+    "descricao_completa": "Holter de 24 horas - 3 canais - digital",
+    "valor_base": 200.62,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20102062",
+    "descricao_completa": "Monitor de eventos sintomáticos por 15 a 30 dias (LOOPER)",
+    "valor_base": 433.92,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20102038",
+    "descricao_completa": "Monitorização ambulatorial da pressão arterial - MAPA (24 horas)",
+    "valor_base": 200.62,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20102070",
+    "descricao_completa": "Tilt teste",
+    "valor_base": 200.62,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103018",
+    "descricao_completa": "Adaptação e treinamento de recursos ópticos para visão subnormal (por sessão) - binocular",
+    "valor_base": 22.54,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103026",
+    "descricao_completa": "Amputação bilateral (preparação do coto)",
+    "valor_base": 43.01,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103034",
+    "descricao_completa": "Amputação bilateral (treinamento protético)",
+    "valor_base": 42.11,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103042",
+    "descricao_completa": "Amputação unilateral (preparação do coto)",
+    "valor_base": 28.63,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103050",
+    "descricao_completa": "Amputação unilateral (treinamento protético)",
+    "valor_base": 28.89,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103069",
+    "descricao_completa": "Assistência fisiátrica respiratória em pré e pós-operatório de condições cirúrgicas",
+    "valor_base": 26.43,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103077",
+    "descricao_completa": "Ataxias",
+    "valor_base": 36.79,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103093",
+    "descricao_completa": "Atendimento fisiátrico no pré e pós-operatório de pacientes para prevenção de sequelas",
+    "valor_base": 22.54,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103107",
+    "descricao_completa": "Atendimento fisiátrico no pré e pós-parto",
+    "valor_base": 22.54,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103115",
+    "descricao_completa": "Atividade reflexa ou aplicação de técnica cinesioterápica específica",
+    "valor_base": 22.54,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103123",
+    "descricao_completa": "Atividades em escola de postura (máximo de 10 pessoas) - por sessão",
+    "valor_base": 33.81,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103131",
+    "descricao_completa": "Biofeedback com EMG",
+    "valor_base": 77.58,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103140",
+    "descricao_completa": "Bloqueio fenólico, alcoólico ou com toxina botulínica por segmento corporal",
+    "valor_base": 197.71,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103158",
+    "descricao_completa": "Confecção de órteses em material termo-sensível (por unidade)",
+    "valor_base": 27.98,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103166",
+    "descricao_completa": "Confecção de prótese imediata",
+    "valor_base": 115.47,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103174",
+    "descricao_completa": "Confecção de prótese provisória",
+    "valor_base": 93.83,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103182",
+    "descricao_completa": "Desvios posturais da coluna vertebral",
+    "valor_base": 22.54,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103190",
+    "descricao_completa": "Disfunção vésico-uretral",
+    "valor_base": 24.61,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103204",
+    "descricao_completa": "Distrofia simpático-reflexa",
+    "valor_base": 39.64,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103212",
+    "descricao_completa": "Distúrbios circulatórios artério-venosos e linfáticos",
+    "valor_base": 36.8,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103220",
+    "descricao_completa": "Doenças pulmonares atendidas em ambulatório",
+    "valor_base": 28.24,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103239",
+    "descricao_completa": "Exercícios de ortóptica (por sessão)",
+    "valor_base": 11.27,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103247",
+    "descricao_completa": "Exercícios para reabilitação do asmático (ERAC) - por sessão coletiva",
+    "valor_base": 16.97,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103255",
+    "descricao_completa": "Exercícios para reabilitação do asmático (ERAI) - por sessão individual",
+    "valor_base": 28.24,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103263",
+    "descricao_completa": "Hemiparesia",
+    "valor_base": 48.32,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103271",
+    "descricao_completa": "Hemiplegia",
+    "valor_base": 49.36,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103280",
+    "descricao_completa": "Hemiplegia e hemiparesia com afasia",
+    "valor_base": 49.62,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103298",
+    "descricao_completa": "Hipo ou agenesia de membros",
+    "valor_base": 27.98,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103301",
+    "descricao_completa": "Infiltração de ponto gatilho (por músculo) ou agulhamento seco (por músculo)",
+    "valor_base": 99.18,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103310",
+    "descricao_completa": "Lesão nervosa periférica afetando mais de um nervo com alterações sensitivas e/ou motoras",
+    "valor_base": 39,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103328",
+    "descricao_completa": "Lesão nervosa periférica afetando um nervo com alterações sensitivas e/ou motoras",
+    "valor_base": 39,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103336",
+    "descricao_completa": "Manipulação vertebral",
+    "valor_base": 60.86,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103344",
+    "descricao_completa": "Miopatias",
+    "valor_base": 38.61,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103360",
+    "descricao_completa": "Paciente com D.P.O.C. em atendimento ambulatorial necessitando reeducação e reabilitação respiratória",
+    "valor_base": 40.81,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103379",
+    "descricao_completa": "Paciente em pós-operatório de cirurgia cardíaca, atendido em ambulatório, duas a três vezes por semana",
+    "valor_base": 22.54,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103387",
+    "descricao_completa": "Pacientes com doença isquêmica do coração, atendido em ambulatório de 8 a 24 semanas",
+    "valor_base": 22.54,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103395",
+    "descricao_completa": "Pacientes com doença isquêmica do coração, atendido em ambulatório, até 8 semanas de programa",
+    "valor_base": 22.54,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103409",
+    "descricao_completa": "Pacientes com doenças neuro-músculo-esqueléticas com envolvimento tegumentar",
+    "valor_base": 24.36,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103417",
+    "descricao_completa": "Pacientes sem doença coronariana clinicamente manifesta, mas considerada de alto risco, atendido em ambulatório, duas a três vezes por semana",
+    "valor_base": 47.55,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103425",
+    "descricao_completa": "Paralisia cerebral",
+    "valor_base": 52.73,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103433",
+    "descricao_completa": "Paralisia cerebral com distúrbio de comunicação",
+    "valor_base": 50.91,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103441",
+    "descricao_completa": "Paraparesia/tetraparesia",
+    "valor_base": 42.37,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103450",
+    "descricao_completa": "Paraplegia e tetraplegia",
+    "valor_base": 40.55,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103468",
+    "descricao_completa": "Parkinson",
+    "valor_base": 48.06,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103476",
+    "descricao_completa": "Patologia neurológica com dependência de atividades da vida diária",
+    "valor_base": 45.09,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103514",
+    "descricao_completa": "Patologia osteomioarticular em diferentes segmentos da coluna",
+    "valor_base": 65.3,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103492",
+    "descricao_completa": "Patologia osteomioarticular em dois ou mais membros",
+    "valor_base": 52.86,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103484",
+    "descricao_completa": "Patologia osteomioarticular em um membro",
+    "valor_base": 39.9,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103506",
+    "descricao_completa": "Patologia osteomioarticular em um segmento da coluna",
+    "valor_base": 37.31,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103522",
+    "descricao_completa": "Patologias osteomioarticulares com dependência de atividades da vida diária",
+    "valor_base": 41.98,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103549",
+    "descricao_completa": "Procedimentos mesoterápicos (por região anatômica)",
+    "valor_base": 35.11,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103557",
+    "descricao_completa": "Procedimentos mesoterápicos com calcitonina (qualquer segmento)",
+    "valor_base": 35.11,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103565",
+    "descricao_completa": "Processos inflamatórios pélvicos",
+    "valor_base": 28.5,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103581",
+    "descricao_completa": "Programa de exercício supervisionado com obtenção de eletrocardiograma e/ou saturação de O2 - sessão coletiva",
+    "valor_base": 11.27,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103573",
+    "descricao_completa": "Programa de exercício supervisionado com obtenção de eletrocardiograma e/ou saturação de O2 - sessão individual",
+    "valor_base": 11.27,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103603",
+    "descricao_completa": "Programa de exercício supervisionado sem obtenção de eletrocardiograma e/ou saturação de O2 - sessão coletiva",
+    "valor_base": 11.27,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103590",
+    "descricao_completa": "Programa de exercício supervisionado sem obtenção de eletrocardiograma e/ou saturação de O2 - sessão individual",
+    "valor_base": 11.27,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103611",
+    "descricao_completa": "Queimados - seguimento ambulatorial para prevenção de sequelas (por segmento)",
+    "valor_base": 37.7,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103727",
+    "descricao_completa": "Reabilitação cardíaca supervisionada. Programa de 12 semanas. Duas a três sessões por semana (por sessão)",
+    "valor_base": 33.81,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103620",
+    "descricao_completa": "Reabilitação de paciente com endoprótese",
+    "valor_base": 32.39,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103638",
+    "descricao_completa": "Reabilitação labiríntica (por sessão)",
+    "valor_base": 46.77,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103646",
+    "descricao_completa": "Reabilitação perineal com biofeedback",
+    "valor_base": 251.84,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103654",
+    "descricao_completa": "Recuperação funcional de distúrbios crânio-faciais",
+    "valor_base": 26.95,
+    "ativo": true
+  },
+  {
+    "codigo_cbhpm": "20103530",
+    "descricao_completa": "Recuperação funcional pós-operatória ou por imobilização da patologia vertebral",
+    "valor_base": 45.48,
+    "ativo": true
+  }
+]

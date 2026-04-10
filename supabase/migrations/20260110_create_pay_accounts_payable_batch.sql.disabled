@@ -1,0 +1,21 @@
+-- RPC: pay_accounts_payable_batch
+create or replace function pay_accounts_payable_batch(
+  p_ids uuid[],
+  p_payment_date date,
+  p_payment_method text
+)
+returns void
+language plpgsql
+security definer
+as $$
+begin
+  update accounts_payable
+     set status = 'paid',
+         paid_at = p_payment_date,
+         paid_value = value,
+         payment_method = p_payment_method,
+         updated_at = now()
+   where id = any(p_ids)
+     and status <> 'paid';
+end;
+$$;

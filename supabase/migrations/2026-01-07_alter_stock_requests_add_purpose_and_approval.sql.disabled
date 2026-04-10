@@ -1,0 +1,18 @@
+-- Add purpose and approval fields to stock_requests; add item_note to stock_request_items
+alter table if exists public.stock_requests
+  add column if not exists purpose text,
+  add column if not exists approved_by text,
+  add column if not exists approved_at timestamptz,
+  add column if not exists approval_comment text;
+
+alter table if exists public.stock_request_items
+  add column if not exists item_note text,
+  add column if not exists delivered_qty numeric not null default 0;
+
+create index if not exists stock_requests_purpose_idx on public.stock_requests (purpose);
+
+-- Allow new status 'partially_fulfilled'
+alter table if exists public.stock_requests
+  drop constraint if exists stock_requests_status_check;
+alter table if exists public.stock_requests
+  add constraint stock_requests_status_check check (status in ('pending','approved','rejected','fulfilled','cancelled','partially_fulfilled'));
