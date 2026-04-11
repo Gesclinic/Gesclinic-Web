@@ -740,6 +740,16 @@ export default function AgendaPage() {
   }, [modeParam, appointmentIdFromUrl, appointmentDateFromStateOrUrl, agenda.date, agenda.loading, agenda.appointments, agenda.selectSlot]);
 
   const handleSlotClick = (slot) => {
+    console.log('🖱️ handleSlotClick recebeu slot:', {
+      type: slot.type,
+      id: slot.id,
+      patient_id: slot.patient_id,
+      professional_id: slot.professional_id,
+      service_id: slot.service_id,
+      room_id: slot.room_id,
+      status: slot.status,
+    });
+    
     if (slot.type === 'new') {
       handleNewAppointment(slot);
     } else if (slot.type === 'bloquear') {
@@ -754,8 +764,12 @@ export default function AgendaPage() {
     } else if (slot.type === 'start-attendance') {
       // Iniciar atendimento - muda status para em_atendimento
       handleStartAttendance(slot.id);
+    } else if (slot.type === 'edit') {
+      console.log('✏️ Editando agendamento:', slot.id);
+      agenda.selectSlot(slot);
     } else {
-      // Editar agendamento existente
+      // Fallback: Editar agendamento existente
+      console.log('⚠️ Type não identificado, tratando como edit. Type:', slot.type);
       agenda.selectSlot(slot);
     }
   };
@@ -1162,6 +1176,14 @@ export default function AgendaPage() {
     }
   };
 
+  // 🏁 Effect para alerta de renderização (apenas uma vez)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !window.testeAlertShown) {
+      window.testeAlertShown = true;
+      // alert('✅ AgendaPage renderizou com sucesso! Mode: ' + agendaMode);
+    }
+  }, [agendaMode]);
+
   // Loading states
   if (loadingClinic || !clinic) {
     console.log('⏳ [AgendaPage] AINDA EM LOADING:', { loadingClinic, clinic: !!clinic });
@@ -1176,12 +1198,6 @@ export default function AgendaPage() {
   }
 
   console.log('✅ [AgendaPage] CARREGADO COM SUCESSO');
-  
-  // 🔥 TESTE: Alert simples para confirmar renderização
-  if (typeof window !== 'undefined' && !window.testeAlertShown) {
-    window.testeAlertShown = true;
-    alert('✅ AgendaPage renderizou com sucesso! Mode: ' + agendaMode);
-  }
 
   // 🔍 LOG FINAL ANTES DE RENDER
   console.log('╔═══════════════════════════════════════════════════════════════╗');
@@ -1192,6 +1208,24 @@ export default function AgendaPage() {
   console.log('║ agendaMode:', agendaMode);
   console.log('║ clinicId:', clinicId);
   console.log('╚═══════════════════════════════════════════════════════════════╝');
+  
+  // 🔒 Guard: Aguardar clinicId estar disponível
+  if (loadingClinic || !clinicId) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="text-center">
+          <div className="mb-4">
+            <div className="inline-block animate-spin">
+              <div className="h-12 w-12 border-4 border-blue-300 border-t-blue-600 rounded-full"></div>
+            </div>
+          </div>
+          <p className="text-lg font-semibold text-gray-700 mb-2">Verificando configuração...</p>
+          <p className="text-sm text-gray-500">Clínica: {clinicId ? '✅ Carregada' : '⏳ Carregando'}</p>
+          <p className="text-sm text-gray-500">Auth: {authLoading ? '⏳ Carregando' : '✅ Pronto'}</p>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen bg-gray-50 pb-8">

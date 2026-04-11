@@ -193,6 +193,7 @@ export default function AppointmentUnitedModal({
   onClose = () => {},
   mode = 'new',
   appointment = null,
+  appointmentIdToEdit = null,
   arrivals = {},
   onArrivalsUpdate = null,
   onSuccess = null,
@@ -213,10 +214,59 @@ export default function AppointmentUnitedModal({
   const [holidayMap, setHolidayMap] = useState({});
   const [calendarActiveStartDate, setCalendarActiveStartDate] = useState(new Date());
   const [accountPlans, setAccountPlans] = useState([]);
+  const [loadedAppointmentFromId, setLoadedAppointmentFromId] = useState(null);
+
+  // 📥 Load appointment from appointmentIdToEdit if appointment prop is not provided
+  useEffect(() => {
+    console.log('🔍 [AppointmentUnitedModal] useEffect DISPARO 1: appointmentIdToEdit?', appointmentIdToEdit, '!appointment?', !appointment, 'isOpen?', isOpen);
+    if (appointmentIdToEdit && !appointment && isOpen) {
+      console.log('📥 [AppointmentUnitedModal] Carregando agendamento via appointmentIdToEdit:', appointmentIdToEdit);
+      
+      (async () => {
+        try {
+          const { data: apt, error } = await supabase
+            .from('appointments')
+            .select(`
+              id, clinic_id, patient_id, professional_id, service_id, room_id,
+              payer_id, plan_id, scheduled_date, scheduled_time, end_time, status,
+              notes, value, duration, payment_method, convenio_id, plano_contas_id,
+              billing_notes, billing_data, guide_number, authorization_number,
+              authorization_expiry, authorization_verified, card_number, discount,
+              discount_reason, discount_authorized_by, discount_authorized_at,
+              discount_observation,
+              patients (id, name, phone, cell_phone, email, document_id, birthdate, gender, street, number, neighborhood, city, state, zip_code, record_number, photo_url),
+              professionals (id, name),
+              services (id, name, code),
+              payers (id, name),
+              plans (id, name, code)
+            `)
+            .eq('id', appointmentIdToEdit)
+            .eq('clinic_id', clinicId)
+            .single();
+          
+          if (error) {
+            console.error('❌ Erro ao carregar agendamento:', error);
+            setLoadedAppointmentFromId(null);
+          } else {
+            console.log('✅ Agendamento carregado via appointmentIdToEdit:', apt);
+            setLoadedAppointmentFromId(apt);
+          }
+        } catch (err) {
+          console.error('❌ Exceção ao carregar agendamento:', err);
+          setLoadedAppointmentFromId(null);
+        }
+      })();
+    } else {
+      setLoadedAppointmentFromId(null);
+    }
+  }, [appointmentIdToEdit, appointment, isOpen]);
 
   // 🔍 DEBUG
-  console.log('📋 [AppointmentUnitedModal] RENDER:', { isOpen, mode, appointmentId: appointment?.id, appointmentStatus: appointment?.status, attendanceCreated });
-  console.log('📋 [AppointmentUnitedModal] MODE e APPOINTMENT:', { mode, hasAppointment: !!appointment, appointmentKeys: appointment ? Object.keys(appointment) : [] });
+  console.log('📋 [AppointmentUnitedModal] RENDER:', { isOpen, mode, appointmentId: appointment?.id, appointmentStatus: appointment?.status, attendanceCreated, appointmentIdToEdit });
+  console.log('📋 [AppointmentUnitedModal] MODE e APPOINTMENT:', { mode, hasAppointment: !!appointment, appointmentKeys: appointment ? Object.keys(appointment) : [], hasLoadedFromId: !!loadedAppointmentFromId });
+  
+  // 🔗 Consolidate appointment from both sources (prop or loaded via ID)
+  const finalAppointment = appointment || loadedAppointmentFromId;
   
   // 🎯 AVISO VISUAL SE MODE FOR 'new'
   if (isOpen && mode === 'new') {
@@ -314,45 +364,45 @@ export default function AppointmentUnitedModal({
 
   // Inicializar/resetar dados ao abrir
   useEffect(() => {
-    console.log('🔄 [AppointmentUnitedModal] useEffect ACIONADO:', { isOpen, mode, hasAppointment: !!appointment });
-    console.log('   appointment completo:', appointment);
-    if (appointment) {
-      console.log('   appointment.id:', appointment.id);
-      console.log('   !appointment.id:', !appointment.id);
-      console.log('   appointment.professionalId:', appointment.professionalId);
-      console.log('   appointment.date:', appointment.date);
-      console.log('   appointment.time:', appointment.time);
-      console.log('   Chave "id" em appointment?:', 'id' in appointment);
+    console.log('🔄 [AppointmentUnitedModal] useEffect ACIONADO:', { isOpen, mode, hasAppointment: !!finalAppointment, hasAppointmentProp: !!appointment, hasLoadedFromId: !!loadedAppointmentFromId });
+    console.log('   appointment completo:', finalAppointment);
+    if (finalAppointment) {
+      console.log('   finalAppointment.id:', finalAppointment.id);
+      console.log('   !finalAppointment.id:', !finalAppointment.id);
+      console.log('   finalAppointment.professionalId:', finalAppointment.professionalId);
+      console.log('   finalAppointment.date:', finalAppointment.date);
+      console.log('   finalAppointment.time:', finalAppointment.time);
+      console.log('   Chave "id" em finalAppointment?:', 'id' in finalAppointment);
     }
     if (isOpen) {
       if (mode === 'new') {
         console.log('✅ Modo NEW detectado');
-        console.log('   appointment && !appointment.id =', appointment && !appointment.id);
+        console.log('   finalAppointment && !finalAppointment.id =', finalAppointment && !finalAppointment.id);
         // ✅ Se há appointment sem ID (vindo de slot), preencher com dados do slot
-        if (appointment && !appointment.id) {
-          console.log('📅 [AppointmentUnitedModal] ✅ ENTRANDO NO IF - Modo NEW com slot data:', appointment);
-          console.log('   Setting professionalId:', appointment.professionalId);
-          console.log('   appointment object keys:', Object.keys(appointment));
-          console.log('   *** appointment.professional_id (underscore):', appointment.professional_id);
-          console.log('   *** appointment.professionalId (camelCase):', appointment.professionalId);
+        if (finalAppointment && !finalAppointment.id) {
+          console.log('📅 [AppointmentUnitedModal] ✅ ENTRANDO NO IF - Modo NEW com slot data:', finalAppointment);
+          console.log('   Setting professionalId:', finalAppointment.professionalId);
+          console.log('   finalAppointment object keys:', Object.keys(finalAppointment));
+          console.log('   *** finalAppointment.professional_id (underscore):', finalAppointment.professional_id);
+          console.log('   *** finalAppointment.professionalId (camelCase):', finalAppointment.professionalId);
           setTabAtivo('dados');
           setSelectedPatient(null);
           setAgendamentoData({
-            date: appointment.date || '',
-            time: appointment.time || '',
+            date: finalAppointment.date || '',
+            time: finalAppointment.time || '',
             endTime: '',
-            duration: appointment.duration || 30,
+            duration: finalAppointment.duration || 30,
             patientName: '',
             patientId: null,
             phone: '',
             recordNumber: '',
-            professionalId: appointment.professionalId || '', // ✅ PRÉ-PREENCHER DO SLOT
+            professionalId: finalAppointment.professionalId || '', // ✅ PRÉ-PREENCHER DO SLOT
             serviceId: '',
             serviceCode: '',
             payerId: '',
             planId: '',
             planCode: '',
-            roomId: appointment.roomId || '', // ✅ PRÉ-PREENCHER DO SLOT
+            roomId: finalAppointment.roomId || '', // ✅ PRÉ-PREENCHER DO SLOT
             value: '0.00',
             notes: '',
             status: 'scheduled',
@@ -398,12 +448,12 @@ export default function AppointmentUnitedModal({
             discount: '0.00',
           });
           setPagamentoData(defaultPaymentData);
-          console.log('✅ [AppointmentUnitedModal] Dados do slot pré-preenchidos com profissional:', appointment.professionalId);
+          console.log('✅ [AppointmentUnitedModal] Dados do slot pré-preenchidos com profissional:', finalAppointment.professionalId);
         } else {
           // ✅ RESETAR TUDO para modo novo (sem dados de slot)
           console.log('📅 [AppointmentUnitedModal] ❌ Entrando no ELSE - Resetando dados (sem slot data)');
-          console.log('   appointment:', appointment);
-          console.log('   appointment?.id:', appointment?.id);
+          console.log('   finalAppointment:', finalAppointment);
+          console.log('   finalAppointment?.id:', finalAppointment?.id);
           setTabAtivo('dados');
           setSelectedPatient(null); // ✅ Limpar paciente selecionado
           setAgendamentoData({
@@ -468,32 +518,32 @@ export default function AppointmentUnitedModal({
           });
           setPagamentoData(defaultPaymentData);
         }
-      } else if (mode === 'edit' && appointment) {
-        console.log('✅ [AppointmentUnitedModal] EDIT MODE - appointment recebido:', appointment);
-        console.log('  date:', appointment.scheduled_date);
-        console.log('  time:', appointment.scheduled_time);
-        console.log('  patient:', appointment.patients?.name);
-        console.log('  professionalId:', appointment.professional_id);
+      } else if (mode === 'edit' && finalAppointment) {
+        console.log('✅ [AppointmentUnitedModal] EDIT MODE - appointment recebido:', finalAppointment);
+        console.log('  date:', finalAppointment.scheduled_date);
+        console.log('  time:', finalAppointment.scheduled_time);
+        console.log('  patient:', finalAppointment.patients?.name);
+        console.log('  professionalId:', finalAppointment.professional_id);
         setTabAtivo('dados');
         const newData = {
-          date: appointment.scheduled_date || '',
-          time: appointment.scheduled_time || '',
-          endTime: appointment.end_time || '',
-          duration: appointment.duration || 30,
-          patientName: appointment.patients?.name || appointment.patient_name || '',
-          patientId: appointment.patient_id || null,
-          phone: appointment.patients?.phone || appointment.patient_phone || '',
-          recordNumber: appointment.record_number || appointment.patients?.record_number || '',
-          professionalId: appointment.professional_id || '',
-          serviceId: appointment.service_id || '',
-          serviceCode: appointment.services?.code || '',
-          payerId: appointment.payer_id || '',
-          planId: appointment.plan_id || '',
-          planCode: appointment.plans?.code || '',
-          roomId: appointment.room_id || '',
-          value: appointment.value?.toString() || '0.00',
-          notes: appointment.notes || '',
-          status: appointment.status || 'scheduled',
+          date: finalAppointment.scheduled_date || '',
+          time: finalAppointment.scheduled_time || '',
+          endTime: finalAppointment.end_time || '',
+          duration: finalAppointment.duration || 30,
+          patientName: finalAppointment.patients?.name || finalAppointment.patient_name || '',
+          patientId: finalAppointment.patient_id || null,
+          phone: finalAppointment.patients?.phone || finalAppointment.patient_phone || '',
+          recordNumber: finalAppointment.record_number || finalAppointment.patients?.record_number || '',
+          professionalId: finalAppointment.professional_id || '',
+          serviceId: finalAppointment.service_id || '',
+          serviceCode: finalAppointment.services?.code || '',
+          payerId: finalAppointment.payer_id || '',
+          planId: finalAppointment.plan_id || '',
+          planCode: finalAppointment.plans?.code || '',
+          roomId: finalAppointment.room_id || '',
+          value: finalAppointment.value?.toString() || '0.00',
+          notes: finalAppointment.notes || '',
+          status: finalAppointment.status || 'scheduled',
         };
         console.log('📝 [AppointmentUnitedModal] setAgendamentoData com:', newData);
         console.log('🎬 [IMPORTANTE] STATUS DO AGENDAMENTO:', newData.status);
@@ -503,66 +553,66 @@ export default function AppointmentUnitedModal({
         // 👤 TAMBÉM CARREGAR DADOS CADASTRAIS DO PACIENTE
         console.log('👤 [AppointmentUnitedModal] Carregando dados cadastrais do paciente');
         setCadastralData({
-          name: appointment.patients?.name || '',
-          document_id: appointment.patients?.document_id || '',
-          birthdate: appointment.patients?.birthdate || '',
-          gender: appointment.patients?.gender || '',
-          phone: appointment.patients?.phone || '',
-          cell_phone: appointment.patients?.cell_phone || '',
-          email: appointment.patients?.email || '',
-          street: appointment.patients?.street || '',
-          number: appointment.patients?.number || '',
-          neighborhood: appointment.patients?.neighborhood || '',
-          city: appointment.patients?.city || '',
-          state: appointment.patients?.state || '',
-          zip_code: appointment.patients?.zip_code || '',
-          photo_url: appointment.patients?.photo_url || null,
+          name: finalAppointment.patients?.name || '',
+          document_id: finalAppointment.patients?.document_id || '',
+          birthdate: finalAppointment.patients?.birthdate || '',
+          gender: finalAppointment.patients?.gender || '',
+          phone: finalAppointment.patients?.phone || '',
+          cell_phone: finalAppointment.patients?.cell_phone || '',
+          email: finalAppointment.patients?.email || '',
+          street: finalAppointment.patients?.street || '',
+          number: finalAppointment.patients?.number || '',
+          neighborhood: finalAppointment.patients?.neighborhood || '',
+          city: finalAppointment.patients?.city || '',
+          state: finalAppointment.patients?.state || '',
+          zip_code: finalAppointment.patients?.zip_code || '',
+          photo_url: finalAppointment.patients?.photo_url || null,
         });
 
         // ✅ TAMBÉM CARREGAR SELECTEDPATIENT PARA MOSTRAR EM DESTAQUE
-        if (appointment.patients) {
+        if (finalAppointment.patients) {
           setSelectedPatient({
-            patientId: appointment.patient_id,
-            patientName: appointment.patients?.name || '',
-            name: appointment.patients?.name || '',
-            document_id: appointment.patients?.document_id || '',
-            phone: appointment.patients?.phone || '',
-            birthdate: appointment.patients?.birthdate || '',
-            gender: appointment.patients?.gender || '',
-            cell_phone: appointment.patients?.cell_phone || '',
-            email: appointment.patients?.email || '',
-            street: appointment.patients?.street || '',
-            number: appointment.patients?.number || '',
-            neighborhood: appointment.patients?.neighborhood || '',
-            city: appointment.patients?.city || '',
-            state: appointment.patients?.state || '',
-            zip_code: appointment.patients?.zip_code || '',
+            patientId: finalAppointment.patient_id,
+            patientName: finalAppointment.patients?.name || '',
+            name: finalAppointment.patients?.name || '',
+            document_id: finalAppointment.patients?.document_id || '',
+            phone: finalAppointment.patients?.phone || '',
+            birthdate: finalAppointment.patients?.birthdate || '',
+            gender: finalAppointment.patients?.gender || '',
+            cell_phone: finalAppointment.patients?.cell_phone || '',
+            email: finalAppointment.patients?.email || '',
+            street: finalAppointment.patients?.street || '',
+            number: finalAppointment.patients?.number || '',
+            neighborhood: finalAppointment.patients?.neighborhood || '',
+            city: finalAppointment.patients?.city || '',
+            state: finalAppointment.patients?.state || '',
+            zip_code: finalAppointment.patients?.zip_code || '',
           });
         }
         
         // 💳 INICIALIZAR DADOS DE PAGAMENTO (para particular E convênio)
         console.log('💳 [AppointmentUnitedModal] Carregando dados de pagamento');
-        console.log('   discount:', appointment.discount);
-        console.log('   payment_method:', appointment.payment_method);
-        console.log('   discount_reason:', appointment.discount_reason);
+        console.log('   discount:', finalAppointment.discount);
+        console.log('   payment_method:', finalAppointment.payment_method);
+        console.log('   discount_reason:', finalAppointment.discount_reason);
         
         setPagamentoData(prev => ({
           ...defaultPaymentData,
-          payment_method: appointment.payment_method || 'DINHEIRO',
-          discount: appointment.discount ? parseFloat(appointment.discount).toFixed(2) : '0.00',
-          discount_reason: appointment.discount_reason || '',
-          discount_authorized_by: appointment.discount_authorized_by || null,
-          discount_authorized_at: appointment.discount_authorized_at || null,
-          discount_observation: appointment.discount_observation || '',
-          plano_contas_id: appointment.plano_contas_id || '',
+          payment_method: finalAppointment.payment_method || 'DINHEIRO',
+          discount: finalAppointment.discount ? parseFloat(finalAppointment.discount).toFixed(2) : '0.00',
+          discount_reason: finalAppointment.discount_reason || '',
+          discount_authorized_by: finalAppointment.discount_authorized_by || null,
+          discount_authorized_at: finalAppointment.discount_authorized_at || null,
+          discount_observation: finalAppointment.discount_observation || '',
+          plano_contas_id: finalAppointment.plano_contas_id || '',
           dinheiro: {
             ...defaultPaymentData.dinheiro,
-            value_received: appointment.value?.toString() || '0.00',
+            value_received: finalAppointment.value?.toString() || '0.00',
           }
         }));
         
         // 💳 SE FOR PARTICULAR, ADICIONAR CAMPOS ESPECÍFICOS
-        if (checkIsParticular(appointment.payer_id)) {
+        if (checkIsParticular(finalAppointment.payer_id)) {
           console.log('💳 [AppointmentUnitedModal] Pagador é particular');
         } else {
           console.log('💳 [AppointmentUnitedModal] Pagador é convênio/empresa');
@@ -570,25 +620,25 @@ export default function AppointmentUnitedModal({
 
         // 📋 CARREGAR DADOS DE LIBERAÇÃO (Liberação tab)
         console.log('📋 [AppointmentUnitedModal] Carregando dados de liberação');
-        console.log('   appointment.card_number:', appointment.card_number);
-        console.log('   appointment.authorization_number:', appointment.authorization_number);
-        console.log('   appointment.authorization_expiry:', appointment.authorization_expiry);
-        console.log('   appointment.authorization_verified:', appointment.authorization_verified);
+        console.log('   finalAppointment.card_number:', finalAppointment.card_number);
+        console.log('   finalAppointment.authorization_number:', finalAppointment.authorization_number);
+        console.log('   finalAppointment.authorization_expiry:', finalAppointment.authorization_expiry);
+        console.log('   finalAppointment.authorization_verified:', finalAppointment.authorization_verified);
         
         // Tentar recuperar dados salvos anteriormente
-        const savedLiberacao = sessionStorage.getItem(`liberacaoData_${appointment.id}`);
+        const savedLiberacao = sessionStorage.getItem(`liberacaoData_${finalAppointment.id}`);
         const liberacaoFromStorage = savedLiberacao ? JSON.parse(savedLiberacao) : null;
         
         const liberacaoValores = {
-          payer_name: appointment.payers?.name || '',
-          plan_name: appointment.plans?.name || '',
-          plan_code: appointment.plans?.code || '',
-          card_number: appointment.card_number || '',
-          requires_auth: appointment.authorization_number ? 'yes' : 'no',
-          auth_number: appointment.authorization_number || '',
-          auth_expiry: appointment.authorization_expiry || '',
-          auth_status: appointment.authorization_verified ? 'approved' : 'pending',
-          authorized: appointment.authorization_verified || false,
+          payer_name: finalAppointment.payers?.name || '',
+          plan_name: finalAppointment.plans?.name || '',
+          plan_code: finalAppointment.plans?.code || '',
+          card_number: finalAppointment.card_number || '',
+          requires_auth: finalAppointment.authorization_number ? 'yes' : 'no',
+          auth_number: finalAppointment.authorization_number || '',
+          auth_expiry: finalAppointment.authorization_expiry || '',
+          auth_status: finalAppointment.authorization_verified ? 'approved' : 'pending',
+          authorized: finalAppointment.authorization_verified || false,
         };
         console.log('   liberacaoValores calculados:', liberacaoValores);
         
@@ -596,94 +646,94 @@ export default function AppointmentUnitedModal({
 
         // 📝 CARREGAR DADOS DE FATURAMENTO (Faturamento tab)
         console.log('📝 [AppointmentUnitedModal] Carregando dados de faturamento');
-        console.log('   appointment.billing_data:', appointment.billing_data);
-        console.log('   appointment.guide_number:', appointment.guide_number);
-        console.log('   appointment.value:', appointment.value);
+        console.log('   finalAppointment.billing_data:', finalAppointment.billing_data);
+        console.log('   finalAppointment.guide_number:', finalAppointment.guide_number);
+        console.log('   finalAppointment.value:', finalAppointment.value);
         
         // Tentar recuperar dados salvos anteriormente
-        const savedFaturamento = sessionStorage.getItem(`faturamentoData_${appointment.id}`);
+        const savedFaturamento = sessionStorage.getItem(`faturamentoData_${finalAppointment.id}`);
         const faturamentoFromStorage = savedFaturamento ? JSON.parse(savedFaturamento) : null;
         
         // 🔍 DESSERIALIZAR billing_data JSON se existir
         let billingDataParsed = {};
-        if (appointment.billing_data) {
+        if (finalAppointment.billing_data) {
           try {
-            console.log('   📦 billing_data exists, tipo:', typeof appointment.billing_data);
-            billingDataParsed = typeof appointment.billing_data === 'string' 
-              ? JSON.parse(appointment.billing_data)
-              : appointment.billing_data;
+            console.log('   📦 billing_data exists, tipo:', typeof finalAppointment.billing_data);
+            billingDataParsed = typeof finalAppointment.billing_data === 'string' 
+              ? JSON.parse(finalAppointment.billing_data)
+              : finalAppointment.billing_data;
             console.log('✅ [AppointmentUnitedModal] billing_data desserializado:', billingDataParsed);
           } catch (err) {
             console.warn('⚠️ Erro ao desserializar billing_data:', err);
-            console.warn('   billing_data raw:', appointment.billing_data);
+            console.warn('   billing_data raw:', finalAppointment.billing_data);
           }
         } else {
-          console.log('   ⚠️ appointment.billing_data é null/undefined');
+          console.log('   ⚠️ finalAppointment.billing_data é null/undefined');
         }
         
         console.log('📝 [Debug] Valores que serão usados no faturamentoData:');
         console.log('   guide_type:', billingDataParsed.guide_type || 'consulta');
         console.log('   code_type:', billingDataParsed.code_type || 'tuss');
-        console.log('   procedure_code:', billingDataParsed.procedure_code || appointment.services?.code || '');
-        console.log('   guide_number:', appointment.guide_number || '');
-        console.log('   estimated_value:', billingDataParsed.estimated_value?.toString() || appointment.value?.toString() || '0.00');
+        console.log('   procedure_code:', billingDataParsed.procedure_code || finalAppointment.services?.code || '');
+        console.log('   guide_number:', finalAppointment.guide_number || '');
+        console.log('   estimated_value:', billingDataParsed.estimated_value?.toString() || finalAppointment.value?.toString() || '0.00');
         
         setFaturamentoData(faturamentoFromStorage || {
-          service_name: appointment.services?.name || '',
+          service_name: finalAppointment.services?.name || '',
           guide_type: billingDataParsed.guide_type || 'consulta',
           code_type: billingDataParsed.code_type || 'tuss',
-          procedure_code: billingDataParsed.procedure_code || appointment.services?.code || '',
-          service_date: billingDataParsed.service_date || appointment.scheduled_date || '',
-          service_place: billingDataParsed.service_place || appointment.service_place || '',
-          requesting_doctor: billingDataParsed.requesting_doctor || appointment.requesting_doctor || appointment.professionals?.name || '',
-          responsible_doctor: billingDataParsed.responsible_doctor || appointment.responsible_doctor || appointment.professionals?.name || '',
-          guide_number: appointment.guide_number || '',
-          estimated_value: (billingDataParsed.estimated_value?.toString() || appointment.value?.toString() || '0.00'),
-          authorized_value: (billingDataParsed.authorized_value?.toString() || appointment.value?.toString() || '0.00'),
-          discount: appointment.discount ? parseFloat(appointment.discount).toFixed(2) : '0.00',
-          plano_contas_id: appointment.plano_contas_id || '',
-          convenio_id: appointment.convenio_id || '',
-          notes: billingDataParsed.notes || appointment.notes || '',
+          procedure_code: billingDataParsed.procedure_code || finalAppointment.services?.code || '',
+          service_date: billingDataParsed.service_date || finalAppointment.scheduled_date || '',
+          service_place: billingDataParsed.service_place || finalAppointment.service_place || '',
+          requesting_doctor: billingDataParsed.requesting_doctor || finalAppointment.requesting_doctor || finalAppointment.professionals?.name || '',
+          responsible_doctor: billingDataParsed.responsible_doctor || finalAppointment.responsible_doctor || finalAppointment.professionals?.name || '',
+          guide_number: finalAppointment.guide_number || '',
+          estimated_value: (billingDataParsed.estimated_value?.toString() || finalAppointment.value?.toString() || '0.00'),
+          authorized_value: (billingDataParsed.authorized_value?.toString() || finalAppointment.value?.toString() || '0.00'),
+          discount: finalAppointment.discount ? parseFloat(finalAppointment.discount).toFixed(2) : '0.00',
+          plano_contas_id: finalAppointment.plano_contas_id || '',
+          convenio_id: finalAppointment.convenio_id || '',
+          notes: billingDataParsed.notes || finalAppointment.notes || '',
         });
-      } else if (mode === 'reception' && appointment) {
+      } else if (mode === 'reception' && finalAppointment) {
         setTabAtivo('cadastrais');
         setAgendamentoData({
-          date: appointment.scheduled_date || '',
-          time: appointment.scheduled_time || '',
-          endTime: appointment.end_time || '',
-          duration: appointment.duration || 30,
-          patientName: appointment.patients?.name || '',
-          patientId: appointment.patient_id || null,
-          phone: appointment.patients?.phone || '',
-          recordNumber: appointment.record_number || '',
-          professionalId: appointment.professional_id || '',
-          serviceId: appointment.service_id || '',
-          payerId: appointment.payer_id || '',
-          planId: appointment.plan_id || '',
-          planCode: appointment.plans?.code || '',
-          roomId: appointment.room_id || '',
-          value: appointment.value?.toString() || '0.00',
-          notes: appointment.notes || '',
-          status: appointment.status || 'scheduled',
+          date: finalAppointment.scheduled_date || '',
+          time: finalAppointment.scheduled_time || '',
+          endTime: finalAppointment.end_time || '',
+          duration: finalAppointment.duration || 30,
+          patientName: finalAppointment.patients?.name || '',
+          patientId: finalAppointment.patient_id || null,
+          phone: finalAppointment.patients?.phone || '',
+          recordNumber: finalAppointment.record_number || '',
+          professionalId: finalAppointment.professional_id || '',
+          serviceId: finalAppointment.service_id || '',
+          payerId: finalAppointment.payer_id || '',
+          planId: finalAppointment.plan_id || '',
+          planCode: finalAppointment.plans?.code || '',
+          roomId: finalAppointment.room_id || '',
+          value: finalAppointment.value?.toString() || '0.00',
+          notes: finalAppointment.notes || '',
+          status: finalAppointment.status || 'scheduled',
         });
         setCadastralData({
-          name: appointment.patients?.name || '',
-          document_id: appointment.patients?.document_id || '',
-          birthdate: appointment.patients?.birthdate || '',
-          gender: appointment.patients?.gender || '',
-          phone: appointment.patients?.phone || '',
-          cell_phone: appointment.patients?.cell_phone || '',
-          email: appointment.patients?.email || '',
-          street: appointment.patients?.street || '',
-          number: appointment.patients?.number || '',
-          neighborhood: appointment.patients?.neighborhood || '',
-          city: appointment.patients?.city || '',
-          state: appointment.patients?.state || '',
-          zip_code: appointment.patients?.zip_code || '',
+          name: finalAppointment.patients?.name || '',
+          document_id: finalAppointment.patients?.document_id || '',
+          birthdate: finalAppointment.patients?.birthdate || '',
+          gender: finalAppointment.patients?.gender || '',
+          phone: finalAppointment.patients?.phone || '',
+          cell_phone: finalAppointment.patients?.cell_phone || '',
+          email: finalAppointment.patients?.email || '',
+          street: finalAppointment.patients?.street || '',
+          number: finalAppointment.patients?.number || '',
+          neighborhood: finalAppointment.patients?.neighborhood || '',
+          city: finalAppointment.patients?.city || '',
+          state: finalAppointment.patients?.state || '',
+          zip_code: finalAppointment.patients?.zip_code || '',
         });
       }
     }
-  }, [isOpen, mode, appointment]);
+  }, [isOpen, mode, appointment, loadedAppointmentFromId, finalAppointment]);
 
   // 💰 Carregar planos de contas
   useEffect(() => {

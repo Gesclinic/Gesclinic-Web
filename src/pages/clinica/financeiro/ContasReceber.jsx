@@ -575,7 +575,7 @@ export default function ContasReceber() {
         </Card>
       </div>
 
-      {/* � FINANCIAL INTEGRATION STATUS (PHASE 3B) */}
+      {/* 📊 FINANCIAL INTEGRATION STATUS (PHASE 3B) */}
       <div className="mb-6">
         <FinancialIntegrationStatus />
       </div>

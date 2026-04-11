@@ -480,7 +480,13 @@ function TimelineGeral({ timeSlots, appointments, onSlotClick, onCheckin, date, 
                         </button>
                       )}
                       <button
-                        onClick={() => onSlotClick({ ...apt, type: 'edit' })}
+                        onClick={() => {
+                          console.log('🖱️ [AgendaTimeline] Clicou em EDITAR. apt completo:', apt);
+                          console.log('   apt.id:', apt?.id);
+                          console.log('   apt.appointment_id:', apt?.appointment_id);
+                          console.log('   apt keys:', Object.keys(apt || {}));
+                          onSlotClick({ ...apt, type: 'edit' });
+                        }}
                         className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition font-medium shadow-md whitespace-nowrap"
                         title="Editar agendamento"
                       >

@@ -89,7 +89,6 @@ export default function ModalCriarAgendamento({
               discount_authorized_by,
               discount_authorized_at,
               discount_observation,
-              record_number,
               patients (
                 id,
                 name,
@@ -191,6 +190,7 @@ export default function ModalCriarAgendamento({
       onClose={handleClose}
       mode={determinedMode}
       appointment={finalAppointment}
+      appointmentIdToEdit={appointmentIdToEdit}
       arrivals={arrivals}
       onArrivalsUpdate={onArrivalsUpdate}
       onSuccess={handleSuccess}
