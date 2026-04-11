@@ -74,7 +74,15 @@ export async function listHealthInsurances(clinicId, options = {}) {
       bank_account,
       active,
       created_at,
-      updated_at
+      updated_at,
+      registration_ans,
+      tiss_enabled,
+      submission_method,
+      tiss_endpoint,
+      tiss_username,
+      tiss_password,
+      tiss_response_email,
+      tiss_last_sync
     `)
     .eq("clinic_id", clinicId)
     .order("name", { ascending: true });
@@ -174,7 +182,15 @@ export async function getHealthInsurance(insuranceId, clinicId) {
       bank_account,
       active,
       created_at,
-      updated_at
+      updated_at,
+      registration_ans,
+      tiss_enabled,
+      submission_method,
+      tiss_endpoint,
+      tiss_username,
+      tiss_password,
+      tiss_response_email,
+      tiss_last_sync
     `)
     .eq("id", insuranceId)
     .eq("clinic_id", clinicId)
