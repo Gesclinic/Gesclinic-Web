@@ -3263,7 +3263,9 @@ export function ConveniosPage() {
                         <button
 
                           onClick={(e) => {
+                            e.preventDefault();
                             e.stopPropagation();
+                            closeInsuranceDetail();
                             handleEdit(insurance);
                           }}
 
@@ -3282,6 +3284,7 @@ export function ConveniosPage() {
                         <button
 
                           onClick={(e) => {
+                            e.preventDefault();
                             e.stopPropagation();
                             handleDelete(insurance.id, insurance.name);
                           }}
