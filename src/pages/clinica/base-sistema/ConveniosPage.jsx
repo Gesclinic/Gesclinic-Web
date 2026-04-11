@@ -30,6 +30,8 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 import { Button } from "@/components/ui/button";
 
+import { TISSConfigurationTab } from "@/components/TISSConfigurationTab";
+
 import { AlertCircle, Plus, Edit2, Trash2, Check, X, Landmark, Upload, Save } from "lucide-react";
 import * as XLSX from "xlsx";
 
@@ -3461,6 +3463,20 @@ export function ConveniosPage() {
                 >
 
                   Tabela de Preços
+
+                </button>
+
+                <button
+
+                  type="button"
+
+                  onClick={() => setActiveTab("tiss")}
+
+                  style={{flex: '1', padding: '0 !important', margin: '0 !important', fontSize: '14px', fontWeight: '500', border: 'none', borderBottom: activeTab === "tiss" ? '2px solid #7c3aed' : '2px solid transparent', textAlign: 'center', cursor: 'pointer', transition: 'all 0.3s', backgroundColor: 'transparent', color: activeTab === "tiss" ? '#7c3aed' : '#4b5563', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', lineHeight: '1', whiteSpace: 'nowrap', fontFamily: 'inherit', boxSizing: 'border-box'}}
+
+                >
+
+                  🏥 TISS
 
                 </button>
 
@@ -7907,7 +7923,25 @@ export function ConveniosPage() {
 
                   )}
 
+                  {/* ABA: TISS */}
 
+                  {activeTab === "tiss" && selectedInsurance && (
+
+                    <TISSConfigurationTab 
+
+                      insurance={selectedInsurance} 
+
+                      onUpdate={() => {
+
+                        handleEdit(editingId);
+
+                      }}
+
+                      clinicId={clinicId}
+
+                    />
+
+                  )}
 
 
 
