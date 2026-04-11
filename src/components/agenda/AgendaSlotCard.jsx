@@ -88,12 +88,12 @@ export default function AgendaSlotCard({
       }}
     >
       <div style={{ width: 90, paddingRight: 12, paddingLeft: 12, textAlign: 'center', flexShrink: 0, fontWeight: 600, fontSize: '13px', color: '#0066cc' }}>{horario}</div>
-      <div style={{ width: 140, paddingRight: 12, textAlign: 'left', flexShrink: 0, fontSize: '13px', fontWeight: 500, color: '#333' }}>{agendamento.patient || "—"}</div>
-      <div style={{ width: 40, paddingRight: 8, textAlign: 'left', flexShrink: 0, fontSize: '11px', color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{agendamento.prontuario || "—"}</div>
-      <div style={{ width: 160, paddingRight: 12, textAlign: 'left', flexShrink: 0, fontSize: '12px', color: '#333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{agendamento.service || "—"}</div>
-      <div style={{ width: 50, paddingRight: 8, textAlign: 'left', flexShrink: 0, fontSize: '11px', color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{agendamento.payer || "—"}</div>
-      <div style={{ minWidth: 120, paddingRight: 12, flex: 1, textAlign: 'left', fontSize: '12px', color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{agendamento.plan || agendamento.notes || ""}</div>
-      <div style={{ width: 130, paddingRight: 12, textAlign: 'left', flexShrink: 0, fontSize: '12px', fontWeight: 500, color: '#333' }}>{agendamento.professional || "—"}</div>
+      <div style={{ width: 140, paddingRight: 12, textAlign: 'left', flexShrink: 0, fontSize: '13px', fontWeight: 500, color: '#333' }}>{agendamento.patient_name || "—"}</div>
+      <div style={{ width: 40, paddingRight: 8, textAlign: 'left', flexShrink: 0, fontSize: '11px', color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{agendamento.patient_prontuario || "—"}</div>
+      <div style={{ width: 160, paddingRight: 12, textAlign: 'left', flexShrink: 0, fontSize: '12px', color: '#333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{agendamento.service_name || "—"}</div>
+      <div style={{ width: 50, paddingRight: 8, textAlign: 'left', flexShrink: 0, fontSize: '11px', color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{agendamento.payer_name || "—"}</div>
+      <div style={{ minWidth: 120, paddingRight: 12, flex: 1, textAlign: 'left', fontSize: '12px', color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{agendamento.plan_name || agendamento.notes || ""}</div>
+      <div style={{ width: 130, paddingRight: 12, textAlign: 'left', flexShrink: 0, fontSize: '12px', fontWeight: 500, color: '#333' }}>{agendamento.professional_name || "—"}</div>
       <div style={{ 
         width: 200, 
         paddingRight: 12, 
