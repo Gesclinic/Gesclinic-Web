@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/select";
 import { AlertCircle, CheckCircle, Eye, EyeOff } from "lucide-react";
 
-export function TISSConfigurationTab({ insurance, onUpdate, clinicId }) {
+export function TISSConfigurationTab({ insurance, insuranceId, onUpdate, clinicId }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
@@ -66,6 +66,8 @@ export function TISSConfigurationTab({ insurance, onUpdate, clinicId }) {
       setError(null);
       setSuccess(false);
 
+      console.log("📝 [TISS] Salvando configurações:", { insuranceId, clinicId });
+
       // Validações
       if (formData.tiss_enabled) {
         if (!formData.registration_ans?.trim()) {
@@ -92,11 +94,16 @@ export function TISSConfigurationTab({ insurance, onUpdate, clinicId }) {
         tiss_response_email: formData.tiss_response_email || null,
       };
 
-      const { error: updateError } = await supabase
+      console.log("📤 [TISS] Dados para UPDATE:", updateData);
+
+      const { error: updateError, data } = await supabase
         .from("payers")
         .update(updateData)
-        .eq("id", insurance.id)
-        .eq("clinic_id", clinicId);
+        .eq("id", insuranceId)
+        .eq("clinic_id", clinicId)
+        .select();
+
+      console.log("📥 [TISS] Resposta Supabase:", { error: updateError, data });
 
       if (updateError) throw updateError;
 

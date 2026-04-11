@@ -7949,11 +7949,13 @@ export function ConveniosPage() {
 
                   {/* ABA: TISS */}
 
-                  {activeTab === "tiss" && selectedInsurance && (
+                  {activeTab === "tiss" && selectedInsurance && editingId && (
 
                     <TISSConfigurationTab 
 
                       insurance={selectedInsurance} 
+
+                      insuranceId={editingId}
 
                       onUpdate={() => {
 
