@@ -52,6 +52,7 @@ export function mapAgendaItem(a = {}) {
       cell_phone: a.patient_mobile || a.patients?.cell_phone || a.patient?.cell_phone || "—",
     },
     patient_name: a.patient_name || a.patients?.name || a.patient?.name || "—",
+    patient_prontuario: a.patients?.prontuario_numero || a.patient?.prontuario_numero || "—",
     prontuario: a.patients?.record_number || a.patient?.record_number || "—",
     patientPhone: a.patient_phone || a.patients?.phone || a.patient?.phone || "—",
     patientEmail: a.patients?.email || a.patient?.email || "—",
@@ -81,6 +82,7 @@ export function mapAgendaItem(a = {}) {
           : (a.convenio?.name || a.convenio || "—"),
     payer_name: a.payer_name || a.payers?.name || (a.payer_id ? "Convênio" : "Particular"),
     plan: a.plan?.name ?? "—",
+    plan_name: a.plan_name || a.plans?.name || a.plan?.name ?? "—",
 
     // Observações
     notes: a.notes ?? "—",
