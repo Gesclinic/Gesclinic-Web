@@ -4,9 +4,9 @@
   "type": "module",
   "version": "0.0.0",
   "scripts": {
-    "dev": "vite --host :: --port 3000",
+    "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview --host :: --port 3000",
+    "preview": "vite preview",
     "clean": "rm -rf node_modules/.vite dist",
     "clean:win": "rmdir /s /q node_modules\\.vite dist",
     "fresh": "npm run clean && npm install && npm run dev",

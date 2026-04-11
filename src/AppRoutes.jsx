@@ -79,6 +79,7 @@ import XMLPage from "@/pages/clinica/faturamento/XMLPage";
 import RetornosPage from "@/pages/clinica/faturamento/RetornosPage";
 import LotesPage from "@/pages/clinica/faturamento/LotesPage";
 import RelatoriosPage from "@/pages/clinica/faturamento/RelatoriosPage";
+import TISSPage from "@/pages/clinica/faturamento/TISSPage";
 
 // Dashboards
 import DashboardAtendimentos from "@/pages/clinica/dashboard/DashboardAtendimentos";
@@ -441,6 +442,7 @@ export default function AppRoutes() {
           <Route path="faturamento/retornos" element={<RetornosPage />} />
           <Route path="faturamento/lotes" element={<LotesPage />} />
           <Route path="faturamento/relatorios" element={<RelatoriosPage />} />
+          <Route path="faturamento/tiss" element={<TISSPage />} />
 
           {/* OUTRAS */}
           {/* 👥 PACIENTES - V2: SINGLE-SCREEN COM ABAS INTERNAS */}
