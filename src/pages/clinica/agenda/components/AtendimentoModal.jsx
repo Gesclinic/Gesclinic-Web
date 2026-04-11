@@ -781,6 +781,51 @@ export default function AtendimentoModal({
     return () => clearTimeout(autoSaveTimer);
   }, [liberacaoData.card_number, liberacaoData.auth_number, liberacaoData.auth_expiry, appointment?.id]);
 
+  // ✅ Atualizar Valor Estimado quando convênio ou serviço mudam
+  useEffect(() => {
+    if (agendamentoData.payerId && agendamentoData.serviceId && clinicId) {
+      fetchServicePriceForPayer();
+    }
+  }, [agendamentoData.payerId, agendamentoData.serviceId, clinicId]);
+
+  const fetchServicePriceForPayer = async () => {
+    try {
+      console.log('💰 Buscando preço do serviço para o convênio...', {
+        payerId: agendamentoData.payerId,
+        serviceId: agendamentoData.serviceId,
+        clinicId: clinicId
+      });
+
+      const { data: priceData, error } = await supabase
+        .from('service_prices')
+        .select('price')
+        .eq('payer_id', agendamentoData.payerId)
+        .eq('service_id', agendamentoData.serviceId)
+        .eq('clinic_id', clinicId)
+        .maybeSingle();
+
+      if (error) {
+        console.warn('⚠️ Erro ao buscar preço:', error);
+        return;
+      }
+
+      if (priceData?.price) {
+        console.log('✅ Preço encontrado:', priceData.price);
+        setFaturamentoData(prev => ({
+          ...prev,
+          estimated_value: priceData.price,
+          authorized_value: priceData.price
+        }));
+        // Também atualizar o valor do agendamento
+        updateAgendamentoField('value', priceData.price.toString());
+      } else {
+        console.log('ℹ️ Nenhum preço configurado para este serviço neste convênio');
+      }
+    } catch (err) {
+      console.error('❌ Erro ao buscar preço do serviço:', err);
+    }
+  };
+
   // Salvar dados cadastrais (Padrão TISS)
   const handleSaveCadastral = async (e) => {
     try {
