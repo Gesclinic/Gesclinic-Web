@@ -21,7 +21,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useClinicContext } from "@/contexts/ClinicContext";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/SupabaseAuthContext";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

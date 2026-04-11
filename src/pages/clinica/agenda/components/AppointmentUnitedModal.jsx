@@ -348,6 +348,14 @@ export default function AppointmentUnitedModal({
     authorized_value: '0.00',
     discount: '0.00',
     plano_contas_id: '',
+    diagnosis_code: '',
+    subscriber_number: '',
+    dependent_number: '',
+    dependent_name: '',
+    dependent_birthdate: '',
+    dependent_gender: '',
+    quantity: 1,
+    notes: ''
   });
 
   // Dados de Pagamento (com estrutura completa)
@@ -515,6 +523,14 @@ export default function AppointmentUnitedModal({
             estimated_value: '0.00',
             authorized_value: '0.00',
             discount: '0.00',
+            diagnosis_code: '',
+            subscriber_number: '',
+            dependent_number: '',
+            dependent_name: '',
+            dependent_birthdate: '',
+            dependent_gender: '',
+            quantity: 1,
+            notes: '',
           });
           setPagamentoData(defaultPaymentData);
         }
@@ -694,6 +710,13 @@ export default function AppointmentUnitedModal({
           plano_contas_id: finalAppointment.plano_contas_id || '',
           convenio_id: finalAppointment.convenio_id || '',
           notes: billingDataParsed.notes || finalAppointment.notes || '',
+          diagnosis_code: billingDataParsed.diagnosis_code || finalAppointment.diagnosis_code || '',
+          subscriber_number: finalAppointment.subscriber_number || '',
+          dependent_number: finalAppointment.dependent_number || '',
+          dependent_name: finalAppointment.dependent_name || '',
+          dependent_birthdate: finalAppointment.dependent_birthdate || '',
+          dependent_gender: finalAppointment.dependent_gender || '',
+          quantity: finalAppointment.quantity || 1,
         });
       } else if (mode === 'reception' && finalAppointment) {
         setTabAtivo('cadastrais');
@@ -2780,6 +2803,15 @@ export default function AppointmentUnitedModal({
                   </div>
 
                   <div>
+                    <Label>📅 Validade da Autorização</Label>
+                    <Input
+                      type="date"
+                      value={liberacaoData.auth_expiry || ''}
+                      onChange={(e) => updateLiberacaoField('auth_expiry', e.target.value)}
+                    />
+                  </div>
+
+                  <div>
                     <Label>✓ Autorizado?</Label>
                     <label className="flex items-center gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
                       <input
@@ -2901,6 +2933,100 @@ export default function AppointmentUnitedModal({
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  {/* SEÇÃO DE DADOS TISS ADICIONAIS */}
+                  <div className="border-t border-purple-200 pt-4 mt-4">
+                    <p className="text-sm font-semibold text-purple-900 mb-4">📋 Dados Adicionais TISS</p>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>🔍 Código CID (Diagnóstico)</Label>
+                        <Input
+                          placeholder="Ex: E11 (Diabetes)"
+                          value={faturamentoData.diagnosis_code || ''}
+                          onChange={(e) => updateFaturamentoField('diagnosis_code', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label>🔢 Quantidade de Procedimentos</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={faturamentoData.quantity || 1}
+                          onChange={(e) => updateFaturamentoField('quantity', parseInt(e.target.value) || 1)}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="mt-3">👤 Nº Beneficiário (Segurado)</Label>
+                      <Input
+                        placeholder="Número do beneficiário principal"
+                        value={faturamentoData.subscriber_number || ''}
+                        onChange={(e) => updateFaturamentoField('subscriber_number', e.target.value)}
+                      />
+                    </div>
+
+                    {/* DADOS DE DEPENDENTE */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+                      <p className="text-sm font-semibold text-blue-900 mb-3">👨‍👩‍👧 Dados do Dependente (se aplicável)</p>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Nº Beneficiário Dependente</Label>
+                          <Input
+                            placeholder="Matrícula do dependente"
+                            value={faturamentoData.dependent_number || ''}
+                            onChange={(e) => updateFaturamentoField('dependent_number', e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <Label>Nome Dependente</Label>
+                          <Input
+                            placeholder="Nome completo"
+                            value={faturamentoData.dependent_name || ''}
+                            onChange={(e) => updateFaturamentoField('dependent_name', e.target.value)}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 mt-3">
+                        <div>
+                          <Label>Data de Nascimento Dependente</Label>
+                          <Input
+                            type="date"
+                            value={faturamentoData.dependent_birthdate || ''}
+                            onChange={(e) => updateFaturamentoField('dependent_birthdate', e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <Label>Gênero Dependente</Label>
+                          <Select
+                            value={faturamentoData.dependent_gender || ''}
+                            onValueChange={(value) => updateFaturamentoField('dependent_gender', value)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="M">Masculino</SelectItem>
+                              <SelectItem value="F">Feminino</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <Label>📝 Observações/Notas</Label>
+                      <Textarea
+                        placeholder="Observações adicionais para faturamento"
+                        value={faturamentoData.notes || ''}
+                        onChange={(e) => updateFaturamentoField('notes', e.target.value)}
+                        rows={3}
+                      />
+                    </div>
                   </div>
                 </div>
               )}

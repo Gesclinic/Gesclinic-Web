@@ -40,10 +40,10 @@ import {
   validateTISSDataCompleteness,
   generateTISSXML,
   downloadTISSXML,
+  getTISSSubmissionStatus,
 } from "@/lib/tissApi";
 import {
   submitGuideWithOperatorRouting,
-  getTISSSubmissionStatus,
   getRejectedTISSSubmissions,
 } from "@/lib/tissSubmissionServiceApi";
 
