@@ -3262,7 +3262,10 @@ export function ConveniosPage() {
 
                         <button
 
-                          onClick={() => handleEdit(insurance)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEdit(insurance);
+                          }}
 
                           className="p-2 hover:bg-blue-100 rounded-lg text-blue-600 transition"
 
@@ -3278,7 +3281,10 @@ export function ConveniosPage() {
 
                         <button
 
-                          onClick={() => handleDelete(insurance.id, insurance.name)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(insurance.id, insurance.name);
+                          }}
 
                           className="p-2 hover:bg-red-100 rounded-lg text-red-600 transition"
 
