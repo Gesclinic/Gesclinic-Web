@@ -223,23 +223,7 @@ export default function CheckinDrawer({
       // - Contas a Receber (PARTICULAR) ou Guia de Faturamento (CONVÊNIO)
       const financialResult = await finalizeAppointmentWithFinancials(
         currentAppointment.id,
-        {
-          payer_type: currentAppointment.payer_type || 'CONVENIO' || 'PARTICULAR',
-          patient_name: currentAppointment.patient?.name || currentAppointment.lead_name,
-          patient_email: currentAppointment.patient?.email,
-          patient_cpf: currentAppointment.patient?.cpf,
-          patient_phone: currentAppointment.patient?.phone,
-          payment_method: currentAppointment.payment_method,
-          health_plan: currentAppointment.health_plan,
-          authorization_number: currentAppointment.authorization_number,
-          card_number: currentAppointment.card_number,
-          guide_number: currentAppointment.guide_number,
-          card_verified: currentAppointment.card_verified || false,
-          authorization_verified: currentAppointment.authorization_verified || false,
-          value: currentAppointment.value || 0,
-          copayment: currentAppointment.copayment || 0,
-          discount: currentAppointment.discount || 0,
-        }
+        currentAppointment.clinic_id
       );
 
       if (financialResult.success) {
