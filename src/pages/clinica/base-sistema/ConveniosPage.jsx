@@ -2714,9 +2714,21 @@ export function ConveniosPage() {
 
 
 
-  // Detalhe de Convênio com M:M Serviços
+  // Se formulário/modal está aberto, renderizar somente o modal (não detalhes)
 
-  if (selectedInsurance) {
+  if (showForm) {
+
+    // O modal será renderizado abaixo (no return principal)
+
+    // Retorna null aqui para que a página de detalhes não tenha prioridade
+
+  }
+
+
+
+  // Detalhe de Convênio com M:M Serviços (só se NÃO está em edição)
+
+  if (selectedInsurance && !showForm) {
 
     return (
 
