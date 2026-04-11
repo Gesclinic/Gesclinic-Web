@@ -43,6 +43,15 @@ export function TISSConfigurationTab({ insurance, insuranceId, onUpdate, clinicI
 
   useEffect(() => {
     if (insurance) {
+      console.log("🔄 [TISS] Atualizando formData com dados do insurance:", {
+        id: insurance.id,
+        registration_ans: insurance.registration_ans,
+        tiss_enabled: insurance.tiss_enabled,
+        submission_method: insurance.submission_method,
+        tiss_endpoint: insurance.tiss_endpoint,
+        tiss_username: insurance.tiss_username,
+      });
+      
       setFormData({
         registration_ans: insurance.registration_ans || "",
         tiss_enabled: insurance.tiss_enabled || false,
@@ -56,8 +65,14 @@ export function TISSConfigurationTab({ insurance, insuranceId, onUpdate, clinicI
   }, [insurance?.id]);
 
   const handleChange = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    console.log(`📝 [TISS] Campo alterado - ${field}:`, value);
+    setFormData((prev) => {
+      const updated = { ...prev, [field]: value };
+      console.log(`📊 [TISS] FormData após alteração:`, updated);
+      return updated;
+    });
     setSuccess(false);
+  };
   };
 
   const handleSave = async () => {
@@ -67,21 +82,31 @@ export function TISSConfigurationTab({ insurance, insuranceId, onUpdate, clinicI
       setSuccess(false);
 
       console.log("📝 [TISS] Salvando configurações:", { insuranceId, clinicId });
+      console.log("📋 [TISS] FormData atual:", formData);
 
       // Validações
       if (formData.tiss_enabled) {
+        console.log("🔍 [TISS] TISS habilitado - validando campos obrigatórios...");
+        
         if (!formData.registration_ans?.trim()) {
           throw new Error("Código ANS é obrigatório quando TISS está habilitado");
         }
+        console.log("✅ [TISS] Código ANS OK:", formData.registration_ans);
+        
         if (!formData.submission_method) {
           throw new Error("Método de submissão é obrigatório");
         }
+        console.log("✅ [TISS] Método de submissão OK:", formData.submission_method);
+        
         if (formData.submission_method === "HTTP" && !formData.tiss_endpoint?.trim()) {
           throw new Error("Endpoint TISS é obrigatório para submissão HTTP");
         }
+        console.log("✅ [TISS] Endpoint OK:", formData.tiss_endpoint);
+        
         if (!formData.tiss_username?.trim() || !formData.tiss_password?.trim()) {
           throw new Error("Credenciais (usuário e senha) são obrigatórias");
         }
+        console.log("✅ [TISS] Credenciais OK");
       }
 
       const updateData = {
@@ -111,7 +136,7 @@ export function TISSConfigurationTab({ insurance, insuranceId, onUpdate, clinicI
       onUpdate?.();
       console.log("✅ Configurações TISS salvas com sucesso!");
     } catch (err) {
-      console.error("❌ Erro ao salvar configurações TISS:", err);
+      console.error("❌ Erro ao salvar configurações TISS:", err.message || err);
       setError(err.message || "Erro ao salvar configurações");
     } finally {
       setLoading(false);
