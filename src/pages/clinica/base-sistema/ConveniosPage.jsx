@@ -2198,6 +2198,8 @@ export function ConveniosPage() {
 
     setEditingId(null);
 
+    setSelectedInsurance(null);
+
     setActiveTab("general");
 
     setFormData({
