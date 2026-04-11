@@ -19,7 +19,7 @@ import {
 import { useClinicContext } from '@/contexts/ClinicContext';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import Calendar from 'react-calendar';
-import { AlertCircle, CalendarDays, ChevronLeft, ChevronRight, Clock3 } from 'lucide-react';
+import { AlertCircle, CalendarDays, ChevronLeft, ChevronRight, Clock3, Send } from 'lucide-react';
 import { createAppointment, updateAppointment } from '@/lib/appointmentsApi';
 import { createPatient, updatePatient } from '@/lib/patientsApi';
 import { uploadPatientPhoto } from '@/lib/patientsApi';
@@ -36,6 +36,7 @@ import {
 import PaymentMethodFields from './PaymentMethodFields';
 import PatientSearchOrCreate from './PatientSearchOrCreate';
 import PhotoCapture from '@/components/PhotoCapture';
+import { TISSSubmissionDialog } from '@/components/TISSSubmissionDialog';
 import { processPaymentComplete } from '@/lib/paymentRegistrationApi';
 import { getServicePrice } from '@/lib/getServicePrice';
 import { checkMultipleDates } from '@/lib/holidaysApi';
@@ -215,6 +216,8 @@ export default function AppointmentUnitedModal({
   const [calendarActiveStartDate, setCalendarActiveStartDate] = useState(new Date());
   const [accountPlans, setAccountPlans] = useState([]);
   const [loadedAppointmentFromId, setLoadedAppointmentFromId] = useState(null);
+  const [tissDialogOpen, setTissDialogOpen] = useState(false); // 🎯 TISS Dialog state
+  const [selectedGuideForTiss, setSelectedGuideForTiss] = useState(null); // 📋 Guide selecionado para envio TISS
 
   // 📥 Load appointment from appointmentIdToEdit if appointment prop is not provided
   useEffect(() => {
@@ -3027,6 +3030,25 @@ export default function AppointmentUnitedModal({
                         rows={3}
                       />
                     </div>
+
+                    {/* BOTÃO ENVIAR TISS */}
+                    {finalAppointment?.id && (
+                      <div className="mt-6 pt-4 border-t border-purple-200">
+                        <Button
+                          onClick={() => {
+                            setSelectedGuideForTiss(finalAppointment);
+                            setTissDialogOpen(true);
+                          }}
+                          className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2"
+                        >
+                          <Send className="mr-2 h-4 w-4" />
+                          📤 Enviar para TISS
+                        </Button>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Enviar dados desta guia para processamento TISS da operadora
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -3744,5 +3766,32 @@ export default function AppointmentUnitedModal({
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* TISS SUBMISSION DIALOG */}
+    {selectedGuideForTiss && (
+      <TISSSubmissionDialog
+        isOpen={tissDialogOpen}
+        onClose={() => {
+          setTissDialogOpen(false);
+          setSelectedGuideForTiss(null);
+        }}
+        guideId={selectedGuideForTiss.id}
+        clinicId={clinicId}
+        guideData={{
+          service_name: selectedGuideForTiss.services?.name,
+          guide_number: faturamentoData.guide_number,
+          patient_name: selectedGuideForTiss.patients?.name,
+          professional_name: selectedGuideForTiss.professionals?.name,
+          estimated_value: faturamentoData.estimated_value,
+          diagnosis_code: faturamentoData.diagnosis_code,
+          subscriber_number: faturamentoData.subscriber_number,
+        }}
+        onSubmitSuccess={() => {
+          setTissDialogOpen(false);
+          setSelectedGuideForTiss(null);
+          onSuccess?.();
+        }}
+      />
+    )}
   );
 }
