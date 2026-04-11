@@ -3266,7 +3266,6 @@ export function ConveniosPage() {
                             e.preventDefault();
                             e.stopPropagation();
                             handleEdit(insurance);
-                            setSelectedInsurance(null);
                           }}
 
                           className="p-2 hover:bg-blue-100 rounded-lg text-blue-600 transition"
