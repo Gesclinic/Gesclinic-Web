@@ -1863,7 +1863,8 @@ export default function AppointmentUnitedModal({
   `;
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && handleCloseModal()}>
+    <>
+      <Dialog open={isOpen} onOpenChange={(open) => !open && handleCloseModal()}>
       <DialogContent className="app-dialog-shell app-dialog-shell--content">
         <DialogHeader className="border-b border-gray-200 px-6 pb-4 pt-6 text-left">
           <DialogTitle className="flex items-center gap-3">
@@ -3793,5 +3794,6 @@ export default function AppointmentUnitedModal({
         }}
       />
     )}
+    </>
   );
 }
