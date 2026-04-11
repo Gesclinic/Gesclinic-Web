@@ -121,7 +121,7 @@ export function TISSConfigurationTab({ insurance, insuranceId, onUpdate, clinicI
       console.log("📤 [TISS] Dados para UPDATE:", updateData);
 
       const { error: updateError, data } = await supabase
-        .from("payers")
+        .from("health_insurances")
         .update(updateData)
         .eq("id", insuranceId)
         .eq("clinic_id", clinicId)
