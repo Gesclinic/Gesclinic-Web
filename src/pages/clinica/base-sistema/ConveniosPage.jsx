@@ -7957,53 +7957,11 @@ export function ConveniosPage() {
 
                       insuranceId={editingId}
 
-                      onUpdate={async () => {
+                      onUpdate={() => {
 
-                        console.log("[TISS] onUpdate - recarregando dados do convênio");
+                        console.log("[TISS] Configurações salvas");
 
-                        try {
-
-                          // Recarregar dados da operadora para mostrar atualizações
-
-                          const { data, error } = await supabase
-
-                            .from("health_insurances")
-
-                            .select("*")
-
-                            .eq("id", editingId)
-
-                            .eq("clinic_id", clinicId)
-
-                            .single();
-
-                          
-
-                          if (error) {
-
-                            console.error("[TISS] Erro ao recarregar convênio:", error);
-
-                            return;
-
-                          }
-
-                          
-
-                          if (data) {
-
-                            setSelectedInsurance(data);
-
-                            setInsurances(prev => prev.map(i => i.id === editingId ? data : i));
-
-                            console.log("[TISS] Convênio recarregado com sucesso");
-
-                          }
-
-                        } catch (err) {
-
-                          console.error("[TISS] Erro na atualização:", err);
-
-                        }
+                        // Dados já foram salvos no Supabase, apenas feche com sucesso
 
                       }}
 
