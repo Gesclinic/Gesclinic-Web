@@ -73,7 +73,6 @@ export function TISSConfigurationTab({ insurance, insuranceId, onUpdate, clinicI
     });
     setSuccess(false);
   };
-  };
 
   const handleSave = async () => {
     try {
