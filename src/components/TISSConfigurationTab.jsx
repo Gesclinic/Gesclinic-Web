@@ -125,11 +125,24 @@ export function TISSConfigurationTab({ insurance, insuranceId, onUpdate, clinicI
         .update(updateData)
         .eq("id", insuranceId)
         .eq("clinic_id", clinicId)
-        .select();
+        .select("*");
 
-      console.log("📥 [TISS] Resposta Supabase:", { error: updateError, data });
+      console.log("📥 [TISS] Resposta Supabase:", { 
+        error: updateError, 
+        data,
+        updateError_code: updateError?.code,
+        updateError_message: updateError?.message
+      });
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error("❌ [TISS] Erro RLS ou Supabase:", updateError);
+        throw new Error(`Supabase Error: ${updateError.code} - ${updateError.message}`);
+      }
+
+      if (!data || data.length === 0) {
+        console.warn("⚠️ [TISS] UPDATE retornou vazio - verificar RLS ou permissões");
+        throw new Error("UPDATE retornou sem dados - verificar permissões RLS");
+      }
 
       setSuccess(true);
       onUpdate?.();
@@ -295,6 +308,11 @@ export function TISSConfigurationTab({ insurance, insuranceId, onUpdate, clinicI
         >
           {loading ? "💾 Salvando..." : "💾 Salvar Configurações TISS"}
         </Button>
+      </div>
+
+      {/* DEBUG INFO */}
+      <div className="bg-gray-100 p-2 rounded text-xs text-gray-600">
+        <p>🔍 Debug: insuranceId={insuranceId?.substring(0, 8)}... clinicId={clinicId?.substring(0, 8)}...</p>
       </div>
 
       {/* INFO DE TISS HABILITADO */}
