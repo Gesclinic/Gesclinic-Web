@@ -2014,6 +2014,8 @@ export function ConveniosPage() {
 
     setEditingId(insurance.id);
 
+    setSelectedInsurance(insurance);
+
     setFormData({
 
       code: insurance.code || "",
