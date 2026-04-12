@@ -82,7 +82,7 @@ export function mapAgendaItem(a = {}) {
           : (a.convenio?.name || a.convenio || "—"),
     payer_name: a.payer_name || a.payers?.name || (a.payer_id ? "Convênio" : "Particular"),
     plan: a.plan?.name ?? "—",
-    plan_name: a.plan_name || a.plans?.name || a.plan?.name ?? "—",
+    plan_name: a.plan_name || a.plans?.name || a.plan?.name || "—",
 
     // Observações
     notes: a.notes ?? "—",
