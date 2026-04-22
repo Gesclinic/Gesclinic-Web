@@ -5,7 +5,7 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { format, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, addDays, isSameMonth, isSameDay, getDate, getDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { listarAgenda } from "../services/agendaService";
-import { mapAgendaItem } from "../services/agendaMapper";
+import { mapAgendaItem } from "@/modules/agenda/services/agendaMapper";
 import { listProfessionals } from '@/lib/professionalsApi';
 import { listServices } from '@/lib/servicesApi';
 import { listPayers } from '@/lib/payersApi';

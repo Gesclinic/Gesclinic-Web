@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useClinicContext } from '../contexts/useClinicContext';
 import { listarAgenda } from '../services/agendaService';
-import { mapAgendaItem } from '../services/agendaMapper';
+import { mapAgendaItem } from '@/modules/agenda/services/agendaMapper';
 
 export function AgendaUnificada() {
   const { clinic } = useClinicContext();

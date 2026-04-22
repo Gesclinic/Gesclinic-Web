@@ -3,13 +3,14 @@
  * 
  * Serviços de negócio (API layer) para o domínio "agenda".
  * 
- * Estrutura futura:
- * - agendaService (listar, criar, editar, deletar agendamentos)
- * - agendaQueryService (queries complexas)
+ * Inclui:
+ * - Mappers: Transformadores de dados puros
+ * - agendaService (listar, criar, editar, deletar agendamentos) - em preparação
+ * - agendaQueryService (queries complexas) - em preparação
  * - Etc.
- * 
- * Status: Em preparação. Serviços existentes em @/pages/clinica/agenda/services
- * serão movidos e refatorados.
  */
 
-// Placeholder - Estrutura em preparação
+// Mappers - Transformadores de dados
+export { mapAgendaItem } from './agendaMapper';
+export { mapAgendaPorProfissional } from './agendaPorProfissionalMapper';
+export { mapearPorSala } from './agendaPorSalaMapper';

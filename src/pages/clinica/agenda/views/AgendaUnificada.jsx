@@ -5,7 +5,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { format, parse } from "date-fns";
 import { listAppointments } from "@/lib/appointmentsApi";
-import { mapAgendaItem } from "../services/agendaMapper";
+import { mapAgendaItem } from "@/modules/agenda/services/agendaMapper";
 import { useClinicContext } from "@/contexts/ClinicContext";
 import { useAuth } from "@/contexts/SupabaseAuthContext";
 import { AGENDA_TABS_COLORS } from '../config/agendaTabsColors.config';

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { carregarAgenda } from "../services/agendaService";
-import { mapAgendaPorProfissional } from "../mappers/agendaPorProfissionalMapper";
+import { mapAgendaPorProfissional } from "@/modules/agenda/services/agendaPorProfissionalMapper";
 import { useClinicContext } from "@/contexts/ClinicContext";
 import { format } from "date-fns";
 

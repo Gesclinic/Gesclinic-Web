@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useClinicContext } from '@/contexts/ClinicContext';
 import { buscarAgendamentoPorId, listarPacientes, listarProfissionais, listarServicosPorProfissional, listarSalas, listarConvenios, listarPlanosPorConvenio, atualizarAgendamento } from '../services/agendaService';
-import { mapAgendaItem } from '../services/agendaMapper';
+import { mapAgendaItem } from '@/modules/agenda/services/agendaMapper';
 import { format } from 'date-fns';
 
 const STATUS_OPTIONS = [
