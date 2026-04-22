@@ -13,7 +13,7 @@ import {
 import { ptBR } from 'date-fns/locale';
 import { getProfessionalAvailableSlots } from '@/lib/agendaUtils';
 import { checkMultipleDates } from '@/lib/holidaysApi';
-import { getStatusStyle } from '@/utils/getStatusStyle';
+import { getStatusStyle } from '@/utils/helpers/getStatusStyle';
 
 /**
  * AgendaMonthView - Visualização em calendário mensal

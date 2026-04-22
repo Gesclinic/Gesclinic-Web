@@ -7,7 +7,7 @@ import { supabase } from '@/lib/customSupabaseClient';
 import ModalCriarAgendamento from '../components/ModalCriarAgendamento';
 import AtendimentoModal from '../components/AtendimentoModal';
 import StatusBadge from '../components/StatusBadge';
-import { getStatusStyle } from '@/utils/getStatusStyle';
+import { getStatusStyle } from '@/utils/helpers/getStatusStyle';
 
 import { checkMultipleDates } from '@/lib/holidaysApi';
 import {

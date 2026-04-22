@@ -29,7 +29,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { NONE, asUuidOrNull } from "@/lib/selectUtils";
 import { statusToCanonical } from "@/lib/statusLabels";
-import { toIsoUtcOrNull } from "@/utils/dateFnsTzHelper";
+import { toIsoUtcOrNull } from "@/utils/helpers/dateFnsTzHelper";
 import { attachDisplayNames } from "@/lib/appointmentsColumns";
 import PatientDialog from "@/components/pacientes/PatientDialog";
 import { useNavigate } from "react-router-dom";

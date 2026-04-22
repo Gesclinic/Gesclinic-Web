@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/customSupabaseClient";
-import { normalizeCodeCBHPM } from "@/utils/formatters";
+import { normalizeCodeCBHPM } from "@/utils/formatters/formatters";
 
 /**
  * Lista todos os serviços de uma clínica

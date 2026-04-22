@@ -11,7 +11,7 @@ import { useAuth } from "@/contexts/SupabaseAuthContext.jsx";
 import { Label } from "@/components/ui/label";
 import { attachDisplayNames } from "@/lib/appointmentsColumns";
 import { getPatientById, listPatients } from "@/lib/patientsApi";
-import { formatPhone } from "@/utils/formatPhone";
+import { formatPhone } from "@/utils/formatters/formatPhone";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";

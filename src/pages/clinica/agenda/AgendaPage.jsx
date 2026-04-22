@@ -21,7 +21,7 @@ import AgendaProfessionalView from './components/AgendaProfessionalView';
 import AgendaProfessionalFilters from './components/AgendaProfessionalFilters';
 import CheckinDrawer from './components/CheckinDrawer';
 import AtendimentoModal from './components/AtendimentoModal';
-import { suggestEncaixes } from './utils/suggestEncaixe';
+import { suggestEncaixes } from '@/modules/agenda/utils/suggestEncaixe';
 import { migrateStatus, SERVICE_STATUSES } from '@/lib/appointmentStatusConstants';
 
 // APIs

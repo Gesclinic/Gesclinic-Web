@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useFormValidation, validators, composeValidators } from '@/hooks/useFormValidation';
-import { maskCPF, maskPhone, maskCEP, maskDate, maskCurrency, maskCNPJ } from '@/components/MaskedInput';
+import { maskCPF, maskPhone, maskCEP, maskDate, maskCurrency, maskCNPJ } from '@/components/forms/MaskedInput';
 
 /**
  * Testes para useFormValidation Hook

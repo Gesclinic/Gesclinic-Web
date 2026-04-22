@@ -10,7 +10,7 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@
 import { Save, CreditCard, FileText, User, Printer, History, Loader2, ClipboardList } from "lucide-react";
 import { supabase } from "@/lib/customSupabaseClient.js";
 import { useToast } from "@/components/ui/use-toast";
-import { formatPhone } from "@/utils/formatPhone";
+import { formatPhone } from "@/utils/formatters/formatPhone";
 
 export default function DrawerAtendimento({ open, onClose, appointment, onSave }) {
   const { toast } = useToast();

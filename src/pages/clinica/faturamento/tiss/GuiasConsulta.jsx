@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
-import { normalizeCodeCBHPM } from '@/utils/formatters';
+import { normalizeCodeCBHPM } from '@/utils/formatters/formatters';
 import { 
   FileUp, 
   Plus, 

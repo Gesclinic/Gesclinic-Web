@@ -17,7 +17,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { X, Search, Plus, CheckCircle2, AlertCircle, Loader } from 'lucide-react';
-import { formatPhone } from '@/utils/formatPhone';
+import { formatPhone } from '@/utils/formatters/formatPhone';
 
 export default function MergePatientModal({
   isOpen,

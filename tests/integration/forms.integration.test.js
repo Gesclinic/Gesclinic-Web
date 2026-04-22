@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { TabbedForm } from '@/components/TabbedForm';
-import { MaskedInput } from '@/components/MaskedInput';
-import { ValidatedFormField } from '@/components/ValidatedFormField';
+import { TabbedForm } from '@/components/forms/TabbedForm';
+import { MaskedInput } from '@/components/forms/MaskedInput';
+import { ValidatedFormField } from '@/components/forms/ValidatedFormField';
 
 /**
  * Testes de Integração: TabbedForm

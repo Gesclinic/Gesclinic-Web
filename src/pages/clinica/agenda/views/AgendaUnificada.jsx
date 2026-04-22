@@ -15,7 +15,7 @@ import AgendaTimeSlotRow from '../components/AgendaTimeSlotRow';
 import { listProfessionals } from '@/lib/professionalsApi';
 import { listServices } from '@/lib/servicesApi';
 import { listPayers } from '@/lib/payersApi';
-import { generateTimeSlots } from '@/utils/generateTimeSlots';
+import { generateTimeSlots } from '@/utils/helpers/generateTimeSlots';
 import { getProfessionalSchedules } from '@/lib/professionalScheduleApi';
 import AgendaFilters from '@/components/agenda/AgendaFilters';
 import AgendaSlotCard from '@/components/agenda/AgendaSlotCard';

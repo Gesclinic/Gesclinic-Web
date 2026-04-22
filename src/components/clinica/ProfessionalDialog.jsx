@@ -16,7 +16,7 @@ import { listPayers } from '@/lib/payersApi';
 import { getProfessionalDetails } from '@/lib/professionalsApi';
 import { asUuidOrNull, selectValue, fromSelect, isNone, asStringOrNull } from '@/lib/selectUtils';
 import { PROFESSIONAL_KIND_OPTIONS } from '@/lib/professionalEnums';
-import { maskCPF, maskPhone } from '@/components/MaskedInput';
+import { maskCPF, maskPhone } from '@/components/forms/MaskedInput';
 import { User, X } from 'lucide-react';
 
 const initialFormState = {

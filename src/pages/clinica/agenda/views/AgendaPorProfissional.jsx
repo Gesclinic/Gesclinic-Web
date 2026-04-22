@@ -15,7 +15,7 @@ import { useClinicContext } from "@/contexts/ClinicContext";
 import { useAuth } from "@/contexts/SupabaseAuthContext";
 import { getAccessibleAgendaTabs, DEFAULT_AGENDA_TAB_BY_ROLE } from '@/config/agendaTabs.config';
 import { AGENDA_TABS_COLORS } from '../config/agendaTabsColors.config';
-import { getStatusStyle } from '@/utils/getStatusStyle';
+import { getStatusStyle } from '@/utils/helpers/getStatusStyle';
 import AgendaViewModeTabs from '../components/AgendaViewModeTabs';
 import AgendaSlotCard from '@/components/agenda/AgendaSlotCard';
 import AppointmentUnitedModal from '@/pages/clinica/agenda/components/AppointmentUnitedModal';

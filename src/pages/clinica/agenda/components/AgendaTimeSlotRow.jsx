@@ -1,6 +1,6 @@
 // src/pages/clinica/agenda/components/AgendaTimeSlotRow.jsx
 import React from 'react';
-import { getStatusStyle } from '@/utils/getStatusStyle';
+import { getStatusStyle } from '@/utils/helpers/getStatusStyle';
 
 /**
  * props:

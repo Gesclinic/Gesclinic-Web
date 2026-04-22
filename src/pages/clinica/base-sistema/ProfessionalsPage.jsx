@@ -23,7 +23,7 @@ import { AlertCircle, Plus, Edit2, X, Check, Users, FileText, Download, User } f
 import BaseSystemHeader from "@/components/layout/BaseSystemHeader";
 import { Alert } from "@/components/layout/BaseSystemAlert";
 import EmptyState from "@/components/layout/EmptyState";
-import { maskCPF, maskPhone } from "@/components/MaskedInput";
+import { maskCPF, maskPhone } from "@/components/forms/MaskedInput";
 import { ProfessionalServicesTab } from "@/components/base-sistema/ProfessionalServicesTab";
 import { ProfessionalScheduleTab } from "@/components/base-sistema/ProfessionalScheduleTab";
 import ProfessionalConveniosTab from "@/components/base-sistema/ProfessionalConveniosTab";

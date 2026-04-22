@@ -4,7 +4,7 @@ import { ptBR } from 'date-fns/locale';
 import clsx from 'clsx';
 import { checkMultipleDates, getHolidayDetails, openHolidayManual } from '@/lib/holidaysApi';
 import { getClinicTimeSlots, getProfessionalAvailableSlots } from '@/lib/agendaUtils';
-import { getStatusStyle } from '@/utils/getStatusStyle';
+import { getStatusStyle } from '@/utils/helpers/getStatusStyle';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useClinicContext } from '@/contexts/ClinicContext';
 

@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { normalizeCodeCBHPM } from '@/utils/formatters';
+import { normalizeCodeCBHPM } from '@/utils/formatters/formatters';
 import { 
   Scissors, 
   Plus, 

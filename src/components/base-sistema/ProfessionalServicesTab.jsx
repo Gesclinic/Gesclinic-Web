@@ -9,7 +9,7 @@ import * as servicesApi from "@/lib/servicesApi";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Trash2, Edit2, X, Clock, Award } from "lucide-react";
-import { normalizeCodeCBHPM } from "@/utils/formatters";
+import { normalizeCodeCBHPM } from "@/utils/formatters/formatters";
 
 export function ProfessionalServicesTab({ 
   profesionalId, 

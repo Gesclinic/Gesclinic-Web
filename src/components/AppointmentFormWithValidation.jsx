@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { ValidatedFormField, ValidatedFormFieldGroup } from '@/components/ValidatedFormField';
+import { ValidatedFormField, ValidatedFormFieldGroup } from '@/components/forms/ValidatedFormField';
 import { useFormValidation, validators, composeValidators } from '@/hooks/useFormValidation';
 import { useDependentSelect } from '@/hooks/useDynamicSelect';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';

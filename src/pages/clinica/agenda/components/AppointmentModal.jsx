@@ -1,13 +1,13 @@
 // src/pages/clinica/agenda/components/AppointmentModal.jsx
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
-import { formatPhone } from '@/utils/formatPhone';
+import { formatPhone } from '@/utils/formatters/formatPhone';
 import AppointmentAuditTimeline from './AppointmentAuditTimeline';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { listarConveniosPorProfissional } from '@/pages/clinica/agenda/services/agendaService';
 import { supabase } from '@/lib/customSupabaseClient';
-import { suggestEncaixes } from '../utils/suggestEncaixe';
-import { generateTimeSlots } from '@/utils/generateTimeSlots';
+import { suggestEncaixes } from '@/modules/agenda/utils/suggestEncaixe';
+import { generateTimeSlots } from '@/utils/helpers/generateTimeSlots';
 
 /**
  * AppointmentModal - Modal com abas para criar/editar agendamentos
