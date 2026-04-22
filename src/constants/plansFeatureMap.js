@@ -117,6 +117,8 @@ export const PLANS_FEATURES = {
         relatorios: true,
         invoices: true,
         recibos: true,
+        caixa: true,
+        caixaGerencial: false,
       },
       // Relatórios - INCLUÍDO
       relatorios: {
@@ -208,6 +210,8 @@ export const PLANS_FEATURES = {
         centrosCusto: true,
         multiunidades: true,
         conciliacao: true,
+        caixa: true,
+        caixaGerencial: true,
       },
       // Relatórios - AVANÇADO
       relatorios: {

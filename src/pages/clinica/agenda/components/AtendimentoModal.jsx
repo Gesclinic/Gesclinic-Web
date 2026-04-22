@@ -2,19 +2,48 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useClinicContext } from '@/contexts/ClinicContext';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import Calendar from 'react-calendar';
+import 'react-calendar/dist/Calendar.css';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { X, ChevronRight, CheckCircle, Edit2, Calendar, Clock, User, DollarSign, TrendingUp, FileText } from 'lucide-react';
+import {
+  CalendarDays,
+  Clock3,
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  CheckCircle,
+  Edit2,
+  Clock,
+  User,
+  DollarSign,
+  TrendingUp,
+  FileText,
+} from 'lucide-react';
+import PatientSearchOrCreate from './PatientSearchOrCreate';
 import { APPOINTMENT_STATUS } from '@/lib/appointmentStatusEnums';
 import { migrateStatus, SERVICE_STATUSES, getStatusLabelOnly } from '@/lib/appointmentStatusConstants';
 import { createAR } from '@/lib/financeApi';
 import { logAppointmentFinancialAudit, FINANCIAL_EVENT_TYPES } from '@/lib/auditFinancialApi';
+import discountApprovalsApi from '@/lib/discountApprovalsApi';
+import { getUserNameById } from '@/lib/usersApi';
 
 // 💳 Função para formatar nome da forma de pagamento
 const formatPaymentMethod = (method) => {
@@ -27,6 +56,79 @@ const formatPaymentMethod = (method) => {
   };
   return paymentNames[method?.toUpperCase()] || method || '';
 };
+
+// ✨ FUNÇÕES HELPER PARA ABA DADOS AGENDAMENTO
+const MONTH_LABELS = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+];
+
+const MODAL_VISIBLE_STATUSES = ['scheduled', 'confirmed', 'completed', 'cancelled'];
+
+const STATUS_CONFIG = {
+  'scheduled': { label: 'Agendado', icon: '📅', color: 'blue' },
+  'confirmed': { label: 'Confirmado', icon: '✅', color: 'green' },
+  'completed': { label: 'Completado', icon: '✓', color: 'emerald' },
+  'cancelled': { label: 'Cancelado', icon: '✗', color: 'red' },
+  'no-show': { label: 'Não Compareceu', icon: '⚠️', color: 'orange' },
+};
+
+const formatDateToIso = (date) => {
+  if (!date) return '';
+  const d = new Date(date);
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${month}-${day}`;
+};
+
+const parseLocalDate = (dateString) => {
+  if (!dateString) return null;
+  const [year, month, day] = dateString.split('-');
+  return new Date(year, month - 1, day);
+};
+
+const timeToMinutes = (timeString) => {
+  if (!timeString) return 0;
+  const [hours, minutes] = timeString.split(':').map(Number);
+  return hours * 60 + minutes;
+};
+
+const minutesToTime = (minutes) => {
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+};
+
+const formatScheduleWindow = (schedule) => {
+  if (!schedule) return '';
+  return `${schedule.start_time || '00:00'} - ${schedule.end_time || '23:59'}`;
+};
+
+// ✨ FUNÇÃO CORRETA PARA VERIFICAR DISPONIBILIDADE (CÓPIA DO APPOINTMENTUNITEDMODAL)
+const isDateInsideScheduleRange = (dateString, schedule) => {
+  if (!dateString) return false;
+  const startsOk = !schedule?.start_date || dateString >= schedule.start_date;
+  const endsOk = !schedule?.end_date || dateString <= schedule.end_date;
+  return startsOk && endsOk;
+};
+
+const getSchedulesForDate = (dateString, schedules) => {
+  const parsedDate = parseLocalDate(dateString);
+  if (!parsedDate) return [];
+
+  const weekday = parsedDate.getDay();
+
+  return (schedules || [])
+    .filter((schedule) => (
+      schedule &&
+      schedule.active !== false &&
+      Number(schedule.day_of_week) === weekday &&
+      isDateInsideScheduleRange(dateString, schedule)
+    ))
+    .sort((left, right) => timeToMinutes(left.start_time) - timeToMinutes(right.start_time));
+};
+
+
 
 /**
  * AtendimentoModal - Tela de atendimento com abas
@@ -45,11 +147,13 @@ export default function AtendimentoModal({
 }) {
   const navigate = useNavigate();
   const { clinicId } = useClinicContext();
-  const [tabAtivo, setTabAtivo] = useState('cadastrais');
+  const { user, currentRole } = useAuth();
+  const [tabAtivo, setTabAtivo] = useState('dados_agendamento');
   const [loading, setLoading] = useState(false);
   const [checkInCompleted, setCheckInCompleted] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [successMessageVisible, setSuccessMessageVisible] = useState(false);
+  const [isDiscountSectionOpen, setIsDiscountSectionOpen] = useState(false);
   
   // Dados Cadastrais (Padrão TISS)
   const [cadastralData, setCadastralData] = useState({
@@ -103,12 +207,17 @@ export default function AtendimentoModal({
     authorized_value: '',
     discount: 0, // 💰 DESCONTO AUTORIZADO
     discount_reason: '', // Motivo do desconto
+    discount_authorized_by: null, // Quem autorizou o desconto
+    discount_authorized_at: null, // Quando foi autorizado
     notes: '',
   });
 
-  // Pagamento no Balcão
+  // Pagamento no Balcão - NOVO: Suporte a múltiplas formas de pagamento
+  const [pagamentoSplits, setPagamentoSplits] = useState([]);
+
+  // Pagamento no Balcão - LEGADO: Mantido para compatibilidade
   const [pagamentoData, setPagamentoData] = useState({
-    payment_method: '', // DINHEIRO, CARTAO, PIX, CHEQUE, BOLETO
+    payment_method: '', // DINHEIRO, CARTAO, PIX, CHEQUE, BOLETO, TRANSFERENCIA, DIRETO_PROFISSIONAL, FATURADO
     amount_paid: '',
     change: '',
     receipt_number: '',
@@ -133,6 +242,13 @@ export default function AtendimentoModal({
     boleto_number: '',
     boleto_due_date: '',
     boleto_bank: '',
+    // Específico para TRANSFERENCIA
+    transfer_type: '', // PIX, TED, DOC
+    transfer_reference: '',
+    transfer_bank: '',
+    // Específico para DIRETO_PROFISSIONAL
+    repasse_type: '', // DINHEIRO, DEPOSITO, CHEQUE, PIX
+    repasse_date: '',
   });
 
   // 💰 Informações de Registro e Caixa
@@ -147,6 +263,70 @@ export default function AtendimentoModal({
     cashFlowRegistered: false,
   });
 
+  // 👤 Nome de quem autorizou o desconto
+  const [discountAuthorizedByName, setDiscountAuthorizedByName] = useState('');
+
+  // 💳 Estado para gerenciar split de pagamento em edição
+  const [editingSplitId, setEditingSplitId] = useState(null);
+  const [splitDetails, setSplitDetails] = useState({
+    cardLastDigits: '',
+    cardBrand: '',
+    cardInstallments: '1',
+    pixIdentifier: '',
+    pixTransactionId: '',
+    tedType: 'TED', // TED ou DOC
+    tedReference: '',
+    boletoNumber: '',
+    boletoBarcode: '',
+    bolletoDueDate: '',
+    checkNumber: '',
+    checkDueDate: '',
+  });
+
+  // ✨ ESTADOS PARA ABA DADOS AGENDAMENTO (Edição de Agendamento)
+  const [agendamentoData, setAgendamentoData] = useState({
+    patientId: '',
+    patientName: '',
+    phone: '',
+    date: '',
+    time: '',
+    duration: 30,
+    roomId: '',
+    professionalId: '',
+    serviceId: '',
+    serviceCode: '',
+    payerId: '',
+    value: '',
+    status: 'scheduled',
+    notes: '',
+    endTime: '',
+  });
+
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [professionals, setProfessionals] = useState([]);
+  const [services, setServices] = useState([]);
+  const [payers, setPayers] = useState([]);
+  const [rooms, setRooms] = useState([]);
+  const [professionalSchedules, setProfessionalSchedules] = useState([]);
+  const [loadingProfessionalSchedules, setLoadingProfessionalSchedules] = useState(false);
+  const [calendarActiveStartDate, setCalendarActiveStartDate] = useState(new Date());
+  const [calendarSelectedDate, setCalendarSelectedDate] = useState(new Date());
+
+  // ✨ FUNÇÕES DE ATUALIZAÇÃO PARA ABA DADOS AGENDAMENTO
+  const updateAgendamentoField = (field, value) => {
+    setAgendamentoData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const updateCadastralField = (field, value) => {
+    setCadastralData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
   // Carregar dados do paciente quando modal abre
   useEffect(() => {
     if (isOpen && appointment) {
@@ -155,6 +335,166 @@ export default function AtendimentoModal({
       loadPatientData();
     }
   }, [isOpen, appointment]);
+
+  // ✨ Carregar dados para ABA DADOS AGENDAMENTO
+  useEffect(() => {
+    if (isOpen && clinicId) {
+      const loadData = async () => {
+        try {
+          // Carregar profissionais
+          const { data: profs } = await supabase
+            .from('professionals')
+            .select('id, name')
+            .eq('clinic_id', clinicId);
+          setProfessionals(profs || []);
+
+          // Carregar serviços
+          const { data: servs } = await supabase
+            .from('services')
+            .select('id, name, code')
+            .eq('clinic_id', clinicId);
+          setServices(servs || []);
+
+          // Carregar convênios
+          const { data: pyr } = await supabase
+            .from('payers')
+            .select('id, name')
+            .eq('clinic_id', clinicId);
+          setPayers(pyr || []);
+
+          // Carregar salas
+          const { data: rm } = await supabase
+            .from('rooms')
+            .select('id, name')
+            .eq('clinic_id', clinicId);
+          setRooms(rm || []);
+        } catch (err) {
+          console.warn('⚠️ Erro ao carregar dados da aba:', err.message);
+        }
+      };
+
+      loadData();
+    }
+  }, [isOpen, clinicId]);
+
+  // ✨ CARREGAR DADOS DO APPOINTMENT EXISTENTE PARA A ABA
+  useEffect(() => {
+    if (isOpen && appointment) {
+      console.log('✅ Carregando dados do appointment existente para aba Dados Agendamento');
+      
+      // Preencher agendamentoData
+      setAgendamentoData({
+        patientId: appointment.patient_id || '',
+        patientName: appointment.patients?.name || appointment.patient_name || '',
+        phone: appointment.patients?.phone || appointment.patient_phone || '',
+        date: appointment.scheduled_date || '',
+        time: appointment.scheduled_time || appointment.start_time?.split('T')[1]?.slice(0, 5) || '',
+        duration: appointment.duration_minutes || appointment.duration || 30,
+        roomId: appointment.room_id || '',
+        professionalId: appointment.professional_id || '',
+        serviceId: appointment.service_id || '',
+        serviceCode: appointment.services?.code || '',
+        payerId: appointment.payer_id || '',
+        value: appointment.value?.toString() || '',
+        status: appointment.status || 'scheduled',
+        notes: appointment.notes || '',
+        endTime: appointment.end_time || '',
+      });
+
+      // Preencher cadastralData
+      setCadastralData({
+        name: appointment.patients?.name || '',
+        document_id: appointment.patients?.document_id || '',
+        birthdate: appointment.patients?.birthdate || '',
+        gender: appointment.patients?.gender || '',
+        phone: appointment.patients?.phone || '',
+        cell_phone: appointment.patients?.cell_phone || '',
+        email: appointment.patients?.email || '',
+        street: appointment.patients?.street || '',
+        number: appointment.patients?.number || '',
+        neighborhood: appointment.patients?.neighborhood || '',
+        city: appointment.patients?.city || '',
+        state: appointment.patients?.state || '',
+        zip_code: appointment.patients?.zip_code || '',
+      });
+
+      // Preencher selectedPatient
+      if (appointment.patients) {
+        setSelectedPatient({
+          patientId: appointment.patient_id,
+          patientName: appointment.patients.name || '',
+          name: appointment.patients.name || '',
+          document_id: appointment.patients.document_id || '',
+          phone: appointment.patients.phone || '',
+          birthdate: appointment.patients.birthdate || '',
+          gender: appointment.patients.gender || '',
+          cell_phone: appointment.patients.cell_phone || '',
+          email: appointment.patients.email || '',
+          street: appointment.patients.street || '',
+          number: appointment.patients.number || '',
+          neighborhood: appointment.patients.neighborhood || '',
+          city: appointment.patients.city || '',
+          state: appointment.patients.state || '',
+          zip_code: appointment.patients.zip_code || '',
+        });
+      }
+
+      // Carregar schedules do profissional selecionado
+      if (appointment.professional_id) {
+        (async () => {
+          try {
+            setLoadingProfessionalSchedules(true);
+            const { data: schedules } = await supabase
+              .from('professional_schedules')
+              .select('*')
+              .eq('professional_id', appointment.professional_id)
+              .eq('clinic_id', clinicId);
+            setProfessionalSchedules(schedules || []);
+            console.log('✅ Schedules carregados:', schedules?.length);
+          } catch (err) {
+            console.warn('⚠️ Erro ao carregar schedules:', err.message);
+          } finally {
+            setLoadingProfessionalSchedules(false);
+          }
+        })();
+      }
+
+      // Inicializar calendário com a data do agendamento
+      if (appointment.scheduled_date) {
+        const appointmentDate = parseLocalDate(appointment.scheduled_date);
+        if (appointmentDate) {
+          setCalendarActiveStartDate(appointmentDate);
+          setCalendarSelectedDate(appointmentDate);
+        }
+      }
+    }
+  }, [isOpen, appointment, clinicId]);
+
+  // ✨ CARREGAR SCHEDULES QUANDO PROFISSIONAL MUDA
+  useEffect(() => {
+    if (agendamentoData.professionalId && isOpen) {
+      const loadSchedules = async () => {
+        try {
+          setLoadingProfessionalSchedules(true);
+          const { data: schedules } = await supabase
+            .from('professional_schedules')
+            .select('*')
+            .eq('professional_id', agendamentoData.professionalId)
+            .eq('clinic_id', clinicId);
+          setProfessionalSchedules(schedules || []);
+          console.log('✅ Schedules do profissional carregados:', schedules?.length);
+        } catch (err) {
+          console.warn('⚠️ Erro ao carregar schedules:', err.message);
+        } finally {
+          setLoadingProfessionalSchedules(false);
+        }
+      };
+
+      loadSchedules();
+    } else {
+      setProfessionalSchedules([]);
+    }
+  }, [agendamentoData.professionalId, isOpen, clinicId]);
 
   // 🔄 Função para recarregar dados do appointment após auto-save
   const refreshAppointmentData = async () => {
@@ -379,6 +719,8 @@ export default function AtendimentoModal({
         authorized_value: freshBillingData?.authorized_value || appointment.value || estimatedValue, // 💰 Puxar valor do agendamento
         discount: parseFloat(freshBillingData?.discount !== undefined ? freshBillingData.discount : (appointmentFresh?.discount || appointment.discount || 0)), // ✅ Sempre carregar desconto do appointmentFresh do banco
         discount_reason: appointmentFresh?.discount_reason || appointment.discount_reason || freshBillingData?.discount_reason || '', // ✅ Carregar motivo do desconto
+        discount_authorized_by: appointmentFresh?.discount_authorized_by || appointment.discount_authorized_by || null, // ✅ Carregar quem autorizou o desconto
+        discount_authorized_at: appointmentFresh?.discount_authorized_at || appointment.discount_authorized_at || null, // ✅ Carregar quando foi autorizado
         notes: appointmentFresh?.notes || appointment.notes || freshBillingData?.notes || '', // ✅ Carregar observação
       });
 
@@ -412,6 +754,21 @@ export default function AtendimentoModal({
         boleto_due_date: '',
         boleto_bank: '',
       });
+
+      // 💳 Carregar múltiplos pagamentoSplits se estiverem salvos no campo notes
+      try {
+        if (appointmentFresh?.notes && appointmentFresh.notes.includes('Múltiplos pagamentos:')) {
+          // Extrair JSON dos múltiplos pagamentos
+          const jsonMatch = appointmentFresh.notes.match(/Múltiplos pagamentos:\s*(\[.*\])/);
+          if (jsonMatch && jsonMatch[1]) {
+            const loadedSplits = JSON.parse(jsonMatch[1]);
+            console.log('✅ Pagamentoventos split carregados:', loadedSplits);
+            setPagamentoSplits(loadedSplits);
+          }
+        }
+      } catch (parseErr) {
+        console.warn('⚠️ Erro ao carregar pagamentoSplits:', parseErr.message);
+      }
 
       // 🎯 Determinar a aba apropriada baseado no que já foi preenchido
       // Usar dados FRESCOS do appointmentFresh (carregado do DB) para verificar se tudo está pronto
@@ -781,6 +1138,71 @@ export default function AtendimentoModal({
     return () => clearTimeout(autoSaveTimer);
   }, [liberacaoData.card_number, liberacaoData.auth_number, liberacaoData.auth_expiry, appointment?.id]);
 
+  // 👤 Buscar nome de quem autorizou o desconto
+  useEffect(() => {
+    const fetchAuthorizerName = async () => {
+      if (faturamentoData.discount_authorized_by) {
+        try {
+          const name = await getUserNameById(faturamentoData.discount_authorized_by);
+          setDiscountAuthorizedByName(name || faturamentoData.discount_authorized_by);
+        } catch (err) {
+          console.warn('⚠️ Erro ao buscar nome do autorizador:', err.message);
+          setDiscountAuthorizedByName(faturamentoData.discount_authorized_by);
+        }
+      } else {
+        setDiscountAuthorizedByName('');
+      }
+    };
+    
+    fetchAuthorizerName();
+  }, [faturamentoData.discount_authorized_by]);
+
+  // ✨ Salvar dados de agendamento (data, hora, profissional, serviço, etc)
+  const handleSaveAgendamento = async (e) => {
+    e?.preventDefault?.();
+    if (!appointment?.id) return;
+
+    setLoading(true);
+    try {
+      console.log('💾 [handleSaveAgendamento] Salvando:', {
+        date: agendamentoData.date,
+        time: agendamentoData.time,
+        professionalId: agendamentoData.professionalId,
+        serviceId: agendamentoData.serviceId,
+        payerId: agendamentoData.payerId,
+        value: agendamentoData.value,
+        status: agendamentoData.status,
+        notes: agendamentoData.notes,
+      });
+
+      const updateData = {
+        scheduled_date: agendamentoData.date,
+        scheduled_time: agendamentoData.time,
+        professional_id: agendamentoData.professionalId,
+        service_id: agendamentoData.serviceId,
+        payer_id: agendamentoData.payerId || null,
+        value: parseFloat(agendamentoData.value) || null,
+        status: agendamentoData.status || 'agendado',
+        notes: agendamentoData.notes || null,
+      };
+
+      const { error } = await supabase
+        .from('appointments')
+        .update(updateData)
+        .eq('id', appointment.id);
+
+      if (error) throw error;
+
+      console.log('✅ Agendamento salvo com sucesso!');
+      setTabAtivo('cadastrais');
+    } catch (err) {
+      console.error('❌ Erro ao salvar agendamento:', err.message);
+      alert(`Erro ao salvar: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Salvar dados cadastrais (Padrão TISS)
   const handleSaveCadastral = async (e) => {
     try {
@@ -1033,14 +1455,15 @@ export default function AtendimentoModal({
       setLoading(true);
       
       // 🔍 Validar dados
-      if (!pagamentoData.payment_method) {
+      if (!pagamentoData.payment_method && pagamentoSplits.length === 0) {
         console.warn('❌ Forma de pagamento é obrigatória');
-        alert('⚠️ Selecione uma forma de pagamento');
+        alert('⚠️ Selecione uma forma de pagamento ou adicione um split de pagamento');
         setLoading(false);
         return;
       }
 
       console.log('📤 Iniciando processo de registro financeiro...');
+      console.log('📦 Splits de pagamento:', pagamentoSplits);
       
       // 💰 Criar Conta a Receber (AR) para particular
       let arId = null;
@@ -1049,59 +1472,108 @@ export default function AtendimentoModal({
       
       try {
         if (arValue > 0) {
-          // 🎯 Verificar se é cartão parcelado
-          const isInstalledCard = pagamentoData.payment_method === 'CARTAO' && 
-                                   parseInt(pagamentoData.card_installments || 1) > 1;
-          const installments = isInstalledCard ? parseInt(pagamentoData.card_installments) : 1;
-          
-          console.log(`💳 Criando Conta a Receber (valor com desconto: R$ ${arValue.toFixed(2)})...${isInstalledCard ? ` com ${installments} parcelas` : ''}`);
-          
-          const createdARs = [];
-          const installmentValue = (arValue / installments).toFixed(2);
-          
-          // 🔄 Criar uma AR para cada parcela
-          for (let i = 0; i < installments; i++) {
-            const dueDate = new Date();
-            dueDate.setDate(dueDate.getDate() + 30 + (i * 30)); // Primeira vence em 30 dias, depois a cada 30 dias
+          // 🎯 Se tem splits, usar o saldo dos splits. Se não, usar forma de pagamento única
+          if (pagamentoSplits && pagamentoSplits.length > 0) {
+            const totalPago = pagamentoSplits.reduce((sum, split) => sum + (parseFloat(split.amount) || 0), 0);
+            const saldoAberto = arValue - totalPago;
             
-            const arResult = await createAR(clinicId, {
-              amount: parseFloat(installmentValue),
-              due_date: dueDate.toISOString().split('T')[0],
-              customer_name: appointment.patients?.name || 'Paciente',
-              appointment_id: appointment.id,
-            });
+            console.log(`💳 Múltiplos pagamentos detectados. Total pago: R$ ${totalPago.toFixed(2)}, Saldo aberto: R$ ${saldoAberto.toFixed(2)}`);
             
-            createdARs.push(arResult);
-            console.log(`✅ ${isInstalledCard ? `Parcela ${i + 1}/${installments}` : 'Conta a Receber'} criada:`, { 
-              id: arResult.id, 
-              value: installmentValue, 
-              due_date: dueDate.toISOString().split('T')[0]
-            });
-          }
-          
-          arId = createdARs[0].id;
-          
-          // 📋 Registrar auditoria de criação de AR
-          try {
-            await logAppointmentFinancialAudit({
-              appointmentId: appointment.id,
-              financialEventType: FINANCIAL_EVENT_TYPES.RECEIVABLE_CREATED,
-              relatedEntity: 'accounts_receivable',
-              relatedEntityId: arId,
-              amount: arValue,
-              context: {
-                payment_method: pagamentoData.payment_method,
-                installments: installments,
-                installment_value: parseFloat(installmentValue),
-                notes: isInstalledCard 
-                  ? `Pagamento em ${installments}x no cartão ${pagamentoData.card_brand || ''} (últimos dígitos: ${pagamentoData.card_last_digits})` 
-                  : pagamentoData.notes || 'Lançamento de particular no check-in',
-              },
-            });
-            console.log('✅ Auditoria financeira registrada');
-          } catch (auditErr) {
-            console.warn('⚠️ Erro ao registrar auditoria:', auditErr.message);
-            // Continuar mesmo com erro de auditoria
+            // Se há saldo aberto, criar AR para o valor faltante
+            if (saldoAberto > 0.01) {
+              const dueDate = new Date();
+              dueDate.setDate(dueDate.getDate() + 30);
+              
+              const arResult = await createAR(clinicId, {
+                amount: saldoAberto,
+                due_date: dueDate.toISOString().split('T')[0],
+                customer_name: appointment.patients?.name || 'Paciente',
+                appointment_id: appointment.id,
+              });
+              
+              arId = arResult.id;
+              console.log(`✅ Conta a Receber criada para saldo aberto:`, { 
+                id: arResult.id, 
+                value: saldoAberto, 
+                due_date: dueDate.toISOString().split('T')[0]
+              });
+            }
+            
+            // Registrar auditoria de múltiplos pagamentos
+            try {
+              await logAppointmentFinancialAudit({
+                appointmentId: appointment.id,
+                financialEventType: FINANCIAL_EVENT_TYPES.RECEIVABLE_CREATED,
+                relatedEntity: 'accounts_receivable',
+                relatedEntityId: arId || 'multiple-payments',
+                amount: arValue,
+                context: {
+                  payment_splits: pagamentoSplits.map(s => ({ method: s.method, amount: s.amount })),
+                  total_paid: pagamentoSplits.reduce((sum, split) => sum + (parseFloat(split.amount) || 0), 0),
+                  balance_open: saldoAberto,
+                  notes: 'Múltiplas formas de pagamento',
+                },
+              });
+              console.log('✅ Auditoria financeira registrada');
+            } catch (auditErr) {
+              console.warn('⚠️ Erro ao registrar auditoria:', auditErr.message);
+            }
+          } else {
+            // Forma de pagamento única (legado)
+            // 🎯 Verificar se é cartão parcelado
+            const isInstalledCard = pagamentoData.payment_method === 'CARTAO' && 
+                                     parseInt(pagamentoData.card_installments || 1) > 1;
+            const installments = isInstalledCard ? parseInt(pagamentoData.card_installments) : 1;
+            
+            console.log(`💳 Criando Conta a Receber (valor com desconto: R$ ${arValue.toFixed(2)})...${isInstalledCard ? ` com ${installments} parcelas` : ''}`);
+            
+            const createdARs = [];
+            const installmentValue = (arValue / installments).toFixed(2);
+            
+            // 🔄 Criar uma AR para cada parcela
+            for (let i = 0; i < installments; i++) {
+              const dueDate = new Date();
+              dueDate.setDate(dueDate.getDate() + 30 + (i * 30)); // Primeira vence em 30 dias, depois a cada 30 dias
+              
+              const arResult = await createAR(clinicId, {
+                amount: parseFloat(installmentValue),
+                due_date: dueDate.toISOString().split('T')[0],
+                customer_name: appointment.patients?.name || 'Paciente',
+                appointment_id: appointment.id,
+              });
+              
+              createdARs.push(arResult);
+              console.log(`✅ ${isInstalledCard ? `Parcela ${i + 1}/${installments}` : 'Conta a Receber'} criada:`, { 
+                id: arResult.id, 
+                value: installmentValue, 
+                due_date: dueDate.toISOString().split('T')[0]
+              });
+            }
+            
+            arId = createdARs[0].id;
+            
+            // 📋 Registrar auditoria de criação de AR
+            try {
+              await logAppointmentFinancialAudit({
+                appointmentId: appointment.id,
+                financialEventType: FINANCIAL_EVENT_TYPES.RECEIVABLE_CREATED,
+                relatedEntity: 'accounts_receivable',
+                relatedEntityId: arId,
+                amount: arValue,
+                context: {
+                  payment_method: pagamentoData.payment_method,
+                  installments: installments,
+                  installment_value: parseFloat(installmentValue),
+                  notes: isInstalledCard 
+                    ? `Pagamento em ${installments}x no cartão ${pagamentoData.card_brand || ''} (últimos dígitos: ${pagamentoData.card_last_digits})` 
+                    : pagamentoData.notes || 'Lançamento de particular no check-in',
+                },
+              });
+              console.log('✅ Auditoria financeira registrada');
+            } catch (auditErr) {
+              console.warn('⚠️ Erro ao registrar auditoria:', auditErr.message);
+              // Continuar mesmo com erro de auditoria
+            }
           }
         }
       } catch (arError) {
@@ -1113,16 +1585,20 @@ export default function AtendimentoModal({
       // 📊 Atualizar appointment com dados de pagamento
       console.log('📤 Atualizando dados de pagamento do appointment...');
       
+      // 💾 Serializar splits de pagamento como JSON
+      const paymentSplitsJson = pagamentoSplits && pagamentoSplits.length > 0 
+        ? JSON.stringify(pagamentoSplits)
+        : null;
+      
       const updatePayload = {
-        payment_method: pagamentoData.payment_method,
+        payment_method: pagamentoData.payment_method || (pagamentoSplits?.[0]?.method || null),
         value: parseFloat(faturamentoData.estimated_value || '0'),
         discount: parseFloat(faturamentoData.discount || '0'),
-        discount_reason: faturamentoData.discount_reason || null, // ✅ Salvar motivo do desconto
-        notes: pagamentoData.notes || null, // ✅ Salvar observação
+        discount_reason: faturamentoData.discount_reason || null,
+        notes: paymentSplitsJson ? `Múltiplos pagamentos: ${paymentSplitsJson}` : (pagamentoData.notes || null),
         status: 'confirmed',
         updated_at: new Date().toISOString(),
         card_number: liberacaoData.card_number || null,
-        // ✅ Para Convênio Faturado: usar auth_number de liberação. Para Particular/Convênio Particular: usar receipt_number
         authorization_number: isConvenioFaturado ? (liberacaoData.auth_number || null) : (pagamentoData.receipt_number || null),
         guide_number: faturamentoData.guide_number || null,
         card_brand: pagamentoData.card_brand || null,
@@ -1139,31 +1615,13 @@ export default function AtendimentoModal({
 
       if (error) {
         console.error('❌ Detalhes do erro:', error);
-        // Se o erro for sobre discount_reason, tenta novamente sem essa coluna
-        if (error.message && error.message.includes('discount_reason')) {
-          console.log('⚠️ Coluna discount_reason ainda não existe. Salvando sem ela...');
-          const updatePayloadWithoutDiscount = { ...updatePayload };
-          delete updatePayloadWithoutDiscount.discount_reason;
-          
-          const { data: retryData, error: retryError } = await supabase
-            .from('appointments')
-            .update(updatePayloadWithoutDiscount)
-            .eq('id', appointment.id);
-          
-          if (retryError) {
-            throw new Error(retryError.message);
-          }
-        } else {
-          throw new Error(error.message);
-        }
+        throw new Error(error.message);
       }
       
       // 💾 Atualizar estado de registro
       const operationHash = `${appointment.id}-${Date.now()}`.substring(0, 16);
-      const isInstalledCard = pagamentoData.payment_method === 'CARTAO' && 
-                               parseInt(pagamentoData.card_installments || 1) > 1;
-      const installments = isInstalledCard ? parseInt(pagamentoData.card_installments) : 1;
-      const valueWithDiscount = parseFloat(faturamentoData.estimated_value || '0') - parseFloat(faturamentoData.discount || '0');
+      const totalPaid = pagamentoSplits.reduce((sum, split) => sum + (parseFloat(split.amount) || 0), 0);
+      const saldoAberto = parseFloat(faturamentoData.estimated_value || '0') - parseFloat(faturamentoData.discount || '0') - totalPaid;
       
       setRegistroData({
         receivableId: arId,
@@ -1171,15 +1629,17 @@ export default function AtendimentoModal({
         registeredAt: new Date().toISOString(),
         registeredBy: 'Sistema',
         operationHash: operationHash,
-        arValue: valueWithDiscount,
-        paymentMethod: pagamentoData.payment_method,
+        arValue: saldoAberto > 0 ? saldoAberto : 0,
+        paymentMethod: pagamentoData.payment_method || 'Múltiplos',
         cashFlowRegistered: false,
       });
       
       // 🎯 Exibir mensagem de sucesso
-      const successMsg = arId 
-        ? `✅ Dados de pagamento registrados! ${installments > 1 ? `✓ ${installments} parcelas criadas no contas a receber` : '✓ Conta a Receber criada'}`
-        : '✅ Dados de pagamento registrados!';
+      const successMsg = pagamentoSplits && pagamentoSplits.length > 0
+        ? `✅ Dados de pagamento registrados! ${pagamentoSplits.length} forma(s) de pagamento salva(s)`
+        : (arId 
+          ? '✅ Dados de pagamento registrados! ✓ Conta a Receber criada'
+          : '✅ Dados de pagamento registrados!');
       console.log('✅ SUCESSO:', successMsg);
       showSuccessNotification(successMsg);
       
@@ -1202,12 +1662,72 @@ export default function AtendimentoModal({
     }
   };
 
+  // ✅ VALIDAÇÃO DE DADOS FINANCEIROS ANTES DE LIBERAR
+  const validateFinancialData = () => {
+    const errors = [];
+    
+    // 1. Verificar dados cadastrais
+    if (!cadastralData.name?.trim()) errors.push('Nome do paciente incompleto');
+    if (!cadastralData.email?.trim()) errors.push('Email do paciente não preenchido');
+    if (!cadastralData.phone?.trim() && !cadastralData.cell_phone?.trim()) errors.push('Telefone não preenchido');
+    
+    // 2. VALIDA PAGAMENTO NO BALCÃO se for Particular Puro OU Convênio Particular
+    // (Convênio Particular = convênio chamado "Particular" que permite pagamento no balcão)
+    if (isParticular || isConvenioParticular) {
+      // Requer forma de pagamento
+      if (!pagamentoData.payment_method) {
+        errors.push('Forma de pagamento não preenchida');
+      }
+      
+      // Se tem desconto: deve estar autorizado ou solicitado
+      if (faturamentoData.discount > 0) {
+        if (!faturamentoData.discount_reason) {
+          errors.push('Desconto sem motivo informado');
+        }
+      }
+
+      // ✅ Verificar se há saldo em aberto
+      const valorTotal = parseFloat(faturamentoData.estimated_value || '0') - parseFloat(faturamentoData.discount || '0');
+      const totalPago = pagamentoSplits.reduce((sum, split) => sum + (parseFloat(split.amount) || 0), 0);
+      const saldoAberto = valorTotal - totalPago;
+      if (saldoAberto > 0.01) {
+        errors.push(`Valor em aberto: R$ ${saldoAberto.toFixed(2)} (Preencha o valor faltante antes de liberar)`);
+      }
+    } 
+    // 3. VALIDA CONVÊNIO FATURADO (requer autorização/guia TISS)
+    else if (isConvenioFaturado) {
+      // Requer liberação preenchida
+      if (!liberacaoData.auth_number?.trim() && !appointment?.guide_number?.trim()) {
+        errors.push('Nº Autorização ou Guia TISS não preenchido');
+      }
+      
+      // Se é Convênio Faturado: requer guia TISS
+      if (!faturamentoData.guide_number?.trim()) {
+        errors.push('Nº Guia TISS não preenchido');
+      }
+    }
+    
+    return {
+      valid: errors.length === 0,
+      errors: errors
+    };
+  };
+
   // Marcar como check-in completo
   // Marcar como check-in completo e aguardando profissional
   const handleCompleteCheckIn = async (e) => {
     try {
       e?.preventDefault?.();
       e?.stopPropagation?.();
+      
+      // ✅ VALIDAR DADOS FINANCEIROS ANTES DE LIBERAR
+      const validation = validateFinancialData();
+      if (!validation.valid) {
+        alert(`❌ Dados incompletos para liberar:\n\n${validation.errors.map(e => `• ${e}`).join('\n')}`);
+        console.error('❌ Validação falhou:', validation.errors);
+        return;
+      }
+      
       setLoading(true);
       
       console.log('🔄 Iniciando liberação para profissional - appt:', appointment.id);
@@ -1301,6 +1821,106 @@ export default function AtendimentoModal({
   `;
 
   // ✅ Guard clause - retornar null se modal não estiver aberto ou appointment for null
+  // ✨ PROPRIEDADES COMPUTADAS PARA ABA DADOS AGENDAMENTO
+  const selectedProfessional = professionals.find(p => p.id === agendamentoData.professionalId);
+  const availableWeekdayLabels = professionalSchedules.length > 0 
+    ? [...new Set(professionalSchedules.map(s => {
+        const dayMap = { 1: 'Segunda', 2: 'Terça', 3: 'Quarta', 4: 'Quinta', 5: 'Sexta', 6: 'Sábado', 0: 'Domingo' };
+        return dayMap[s.day_of_week] || '';
+      }))].filter(Boolean)
+    : [];
+
+  const calendarYearOptions = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() + i - 2);
+
+  // ✨ USAR FUNÇÃO CORRETA PARA VERIFICAR DISPONIBILIDADE
+  const hasAvailabilityForDate = (date) => {
+    if (!agendamentoData.professionalId) {
+      return true;
+    }
+    const dateString = formatDateToIso(date);
+    return getSchedulesForDate(dateString, professionalSchedules).length > 0;
+  };
+
+  const isBlockedHolidayDate = (date) => {
+    // Placeholder: sem dados de feriados carregados
+    return false;
+  };
+
+  // ✨ CALCULAR SCHEDULES PARA A DATA SELECIONADA
+  const schedulesForSelectedDate = agendamentoData.date 
+    ? getSchedulesForDate(agendamentoData.date, professionalSchedules)
+    : [];
+
+  const selectedDateHasAvailability = !agendamentoData.professionalId || !agendamentoData.date
+    ? true
+    : schedulesForSelectedDate.length > 0 && !isBlockedHolidayDate(parseLocalDate(agendamentoData.date));
+
+  const selectedDateHoliday = null;
+  const selectedDateBlockedByHoliday = false;
+
+  // ✨ CALCULAR HORÁRIOS SUGERIDOS
+  const buildAvailableSlots = (schedules, duration) => {
+    const uniqueSlots = new Set();
+    const fallbackDuration = 30;
+
+    (schedules || []).forEach((schedule) => {
+      if (!schedule) return;
+      const startMinutes = timeToMinutes(schedule.start_time);
+      const endMinutes = timeToMinutes(schedule.end_time);
+      const breakStart = schedule.break_start ? timeToMinutes(schedule.break_start) : null;
+      const breakEnd = schedule.break_end ? timeToMinutes(schedule.break_end) : null;
+      const slotDuration = Number(schedule.duration_minutes) || Number(duration) || fallbackDuration;
+
+      for (let currentMinutes = startMinutes; currentMinutes + slotDuration <= endMinutes; currentMinutes += slotDuration) {
+        const slotEnd = currentMinutes + slotDuration;
+        const overlapsBreak = breakStart !== null && breakEnd !== null && currentMinutes < breakEnd && slotEnd > breakStart;
+
+        if (!overlapsBreak) {
+          uniqueSlots.add(minutesToTime(currentMinutes));
+        }
+      }
+    });
+
+    return Array.from(uniqueSlots).sort((left, right) => timeToMinutes(left) - timeToMinutes(right));
+  };
+
+  const availableTimeSlots = selectedDateBlockedByHoliday 
+    ? [] 
+    : buildAvailableSlots(schedulesForSelectedDate, agendamentoData.duration);
+
+
+  const handleCalendarPrevMonth = () => {
+    setCalendarActiveStartDate(prev => {
+      const newDate = new Date(prev);
+      newDate.setMonth(newDate.getMonth() - 1);
+      return newDate;
+    });
+  };
+
+  const handleCalendarNextMonth = () => {
+    setCalendarActiveStartDate(prev => {
+      const newDate = new Date(prev);
+      newDate.setMonth(newDate.getMonth() + 1);
+      return newDate;
+    });
+  };
+
+  const handleCalendarMonthChange = (e) => {
+    setCalendarActiveStartDate(prev => {
+      const newDate = new Date(prev);
+      newDate.setMonth(parseInt(e.target.value));
+      return newDate;
+    });
+  };
+
+  const handleCalendarYearChange = (e) => {
+    setCalendarActiveStartDate(prev => {
+      const newDate = new Date(prev);
+      newDate.setFullYear(parseInt(e.target.value));
+      return newDate;
+    });
+  };
+
   if (!isOpen || !appointment) {
     return null;
   }
@@ -1398,6 +2018,13 @@ export default function AtendimentoModal({
         <div className="border-b border-gray-200 flex gap-2 mb-6 flex-wrap">
           <button
             type="button"
+            onClick={() => setTabAtivo('dados_agendamento')}
+            className={tabClass('dados_agendamento')}
+          >
+            📅 Dados do Agendamento
+          </button>
+          <button
+            type="button"
             onClick={() => setTabAtivo('cadastrais')}
             className={tabClass('cadastrais')}
           >
@@ -1454,11 +2081,547 @@ export default function AtendimentoModal({
         </div>
 
         {/* Conteúdo das Abas - Dividido em scroll + footer */}
-        <div style={{ display: 'flex', flexDirection: 'column', height: '60vh', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '80vh', overflow: 'hidden' }}>
           {/* Área com scroll */}
-          <div style={{ flex: 1, overflowY: 'auto', paddingRight: '20px' }}>
+          <div style={{ flex: 1, overflowY: 'auto', paddingRight: '12px' }}>
             <div className="space-y-4">
-              {/* ABA 1: DADOS CADASTRAIS (PADRÃO TISS) */}
+              {tabAtivo === 'dados_agendamento' && (
+                <div className="space-y-4">
+                  <div className="bg-blue-50 border border-blue-300 rounded-lg p-3 mb-4">
+                    <p className="text-sm font-semibold text-blue-900">📅 Preencha os dados do agendamento</p>
+                  </div>
+
+                  <PatientSearchOrCreate
+                    clinicId={clinicId}
+                    initialPhone={agendamentoData.phone}
+                    selectedPatient={selectedPatient}
+                    onSelect={(pacientData) => {
+                      console.log('✅ Paciente selecionado:', pacientData);
+                      setSelectedPatient(pacientData);
+                      setAgendamentoData(prev => ({
+                        ...prev,
+                        patientId: pacientData.patientId,
+                        patientName: pacientData.patientName,
+                        phone: pacientData.phone,
+                      }));
+                      setCadastralData({
+                        name: pacientData.name,
+                        document_id: pacientData.document_id,
+                        birthdate: pacientData.birthdate,
+                        gender: pacientData.gender,
+                        phone: pacientData.phone,
+                        cell_phone: pacientData.cell_phone,
+                        email: pacientData.email,
+                        street: pacientData.street,
+                        number: pacientData.number || '',
+                        neighborhood: pacientData.neighborhood || '',
+                        city: pacientData.city,
+                        state: pacientData.state,
+                        zip_code: pacientData.zip_code,
+                      });
+                    }}
+                    onCreateNew={() => {
+                      console.log('➕ Modo: criar novo paciente');
+                      setSelectedPatient(null);
+                    }}
+                    onClearSelection={() => {
+                      console.log('🔄 Limpando seleção de paciente');
+                      setSelectedPatient(null);
+                    }}
+                  />
+
+                  {/* ✅ MODO: NOVO PACIENTE (sem seleção) - CAMPOS SIMPLES */}
+                  {!selectedPatient && (
+                    <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
+                      <p className="text-sm font-semibold text-blue-900 mb-3">➕ Novo Paciente - Preencha dados básicos</p>
+                      <p className="text-xs text-blue-700 mb-4">Dados completos serão preenchidos quando o paciente chegar na recepção</p>
+                      
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <Label className="text-sm">👤 Nome do Paciente *</Label>
+                          <Input
+                            placeholder="Nome"
+                            value={agendamentoData.patientName}
+                            onChange={(e) => updateAgendamentoField('patientName', e.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm">🎂 Data de Nascimento</Label>
+                          <Input
+                            type="date"
+                            value={cadastralData.birthdate || ''}
+                            onChange={(e) => updateCadastralField('birthdate', e.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm">📱 Telefone *</Label>
+                          <Input
+                            placeholder="Telefone"
+                            value={agendamentoData.phone}
+                            onChange={(e) => updateAgendamentoField('phone', e.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>📅 Data *</Label>
+                      <Input
+                        type="date"
+                        value={agendamentoData.date}
+                        onChange={(e) => updateAgendamentoField('date', e.target.value)}
+                      />
+                      {agendamentoData.date && selectedDateBlockedByHoliday && (
+                        <p className="mt-2 text-xs text-red-700">
+                          Data bloqueada por feriado: {selectedDateHoliday?.name || 'Feriado'}.
+                        </p>
+                      )}
+                      {agendamentoData.professionalId && agendamentoData.date && !selectedDateHasAvailability && (
+                        <p className="mt-2 text-xs text-amber-700">
+                          O profissional selecionado nao atende nesta data. Use o calendario abaixo para escolher um dia disponivel.
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <Label>🕐 Hora *</Label>
+                      <Input
+                        type="time"
+                        value={agendamentoData.time}
+                        onChange={(e) => updateAgendamentoField('time', e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>⏱️ Duração (min)</Label>
+                      <Input
+                        type="number"
+                        min="5"
+                        value={agendamentoData.duration}
+                        onChange={(e) => updateAgendamentoField('duration', parseInt(e.target.value) || 30)}
+                      />
+                    </div>
+                    <div>
+                      <Label>🚪 Sala</Label>
+                      <Select
+                        value={agendamentoData.roomId || ''}
+                        onValueChange={(value) => updateAgendamentoField('roomId', value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione sala" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {rooms.map((room) => (
+                            <SelectItem key={room.id} value={room.id}>
+                              {room.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>👤 Paciente *</Label>
+                      <Input
+                        placeholder="Nome do paciente"
+                        value={agendamentoData.patientName}
+                        onChange={(e) => updateAgendamentoField('patientName', e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label>📞 Telefone</Label>
+                      <Input
+                        placeholder="(11) 99999-9999"
+                        value={agendamentoData.phone}
+                        onChange={(e) => updateAgendamentoField('phone', e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>🏥 Profissional *</Label>
+                    <Select
+                      value={agendamentoData.professionalId || ''}
+                      onValueChange={(value) => {
+                        console.log('👥 [Select] Profissional selecionado:', value);
+                        updateAgendamentoField('professionalId', value);
+                      }}
+                    >
+                      <SelectTrigger>
+                        {agendamentoData.professionalId && professionals.find(p => p.id === agendamentoData.professionalId) ? (
+                          <span>{professionals.find(p => p.id === agendamentoData.professionalId)?.name}</span>
+                        ) : (
+                          <SelectValue placeholder="Selecione profissional" />
+                        )}
+                      </SelectTrigger>
+                      <SelectContent>
+                        {professionals.map((prof) => (
+                          <SelectItem key={prof.id} value={prof.id}>
+                            {prof.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                          <CalendarDays className="h-4 w-4 text-blue-600" />
+                          Calendario de disponibilidade
+                        </p>
+                        <p className="mt-1 text-xs text-slate-600">
+                          {selectedProfessional
+                            ? `${selectedProfessional.name} atende em ${availableWeekdayLabels.length > 0 ? availableWeekdayLabels.join(', ') : 'nenhum dia cadastrado'}.`
+                            : 'Selecione um profissional para visualizar os dias de atendimento.'}
+                        </p>
+                      </div>
+
+                      {selectedProfessional && !loadingProfessionalSchedules && professionalSchedules.length > 0 && (
+                        <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">
+                          {availableWeekdayLabels.length} dia(s) ativo(s)
+                        </span>
+                      )}
+                    </div>
+
+                    {!selectedProfessional && (
+                      <div className="rounded-lg border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-600">
+                        Escolha o profissional primeiro. O calendario passa a destacar apenas os dias em que ele atende.
+                      </div>
+                    )}
+
+                    {selectedProfessional && loadingProfessionalSchedules && (
+                      <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-600">
+                        Carregando disponibilidade do profissional...
+                      </div>
+                    )}
+
+                    {selectedProfessional && !loadingProfessionalSchedules && professionalSchedules.length === 0 && (
+                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                        Este profissional ainda nao possui dias de atendimento cadastrados em Disponibilidades.
+                      </div>
+                    )}
+
+                    {selectedProfessional && !loadingProfessionalSchedules && professionalSchedules.length > 0 && (
+                      <div className="grid gap-4 xl:grid-cols-[minmax(300px,340px)_1fr]">
+                        <div className="rounded-lg border border-slate-200 bg-white p-3">
+                          <div className="mb-3 flex items-center justify-between gap-2 border-b border-slate-200 pb-3">
+                            <button
+                              type="button"
+                              onClick={handleCalendarPrevMonth}
+                              className="rounded-md border border-slate-200 p-2 text-slate-600 transition hover:border-blue-300 hover:text-blue-700"
+                              aria-label="Mes anterior"
+                            >
+                              <ChevronLeft className="h-4 w-4" />
+                            </button>
+
+                            <div className="flex items-center gap-2">
+                              <select
+                                value={calendarActiveStartDate.getMonth()}
+                                onChange={handleCalendarMonthChange}
+                                className="rounded-md border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700 outline-none transition focus:border-blue-400"
+                                aria-label="Selecionar mes"
+                              >
+                                {MONTH_LABELS.map((monthLabel, monthIndex) => (
+                                  <option key={monthLabel} value={monthIndex}>
+                                    {monthLabel}
+                                  </option>
+                                ))}
+                              </select>
+
+                              <select
+                                value={calendarActiveStartDate.getFullYear()}
+                                onChange={handleCalendarYearChange}
+                                className="rounded-md border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700 outline-none transition focus:border-blue-400"
+                                aria-label="Selecionar ano"
+                              >
+                                {calendarYearOptions.map((yearOption) => (
+                                  <option key={yearOption} value={yearOption}>
+                                    {yearOption}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={handleCalendarNextMonth}
+                              className="rounded-md border border-slate-200 p-2 text-slate-600 transition hover:border-blue-300 hover:text-blue-700"
+                              aria-label="Proximo mes"
+                            >
+                              <ChevronRight className="h-4 w-4" />
+                            </button>
+                          </div>
+
+                          <Calendar
+                            className="appointment-availability-calendar"
+                            locale="pt-BR"
+                            value={calendarSelectedDate}
+                            onChange={(nextValue) => {
+                              const selectedDate = Array.isArray(nextValue) ? nextValue[0] : nextValue;
+                              updateAgendamentoField('date', formatDateToIso(selectedDate));
+                            }}
+                            activeStartDate={calendarActiveStartDate}
+                            onActiveStartDateChange={({ activeStartDate }) => {
+                              if (activeStartDate) {
+                                setCalendarActiveStartDate(activeStartDate);
+                              }
+                            }}
+                            minDetail="month"
+                            prevLabel={null}
+                            nextLabel={null}
+                            prev2Label={null}
+                            next2Label={null}
+                            showNavigation={false}
+                            showNeighboringMonth={false}
+                            tileDisabled={({ date, view }) => view === 'month' && (!hasAvailabilityForDate(date) || isBlockedHolidayDate(date))}
+                            tileClassName={({ date, view }) => {
+                              if (view !== 'month') return '';
+
+                              const dateString = formatDateToIso(date);
+                              const blockedHoliday = isBlockedHolidayDate(date);
+
+                              if (agendamentoData.date && dateString === agendamentoData.date) {
+                                return blockedHoliday
+                                  ? 'appointment-calendar-tile appointment-calendar-tile--holiday-selected'
+                                  : 'appointment-calendar-tile appointment-calendar-tile--selected';
+                              }
+
+                              if (blockedHoliday) {
+                                return 'appointment-calendar-tile appointment-calendar-tile--holiday-blocked';
+                              }
+
+                              if (hasAvailabilityForDate(date)) {
+                                return 'appointment-calendar-tile appointment-calendar-tile--available';
+                              }
+
+                              return 'appointment-calendar-tile appointment-calendar-tile--unavailable';
+                            }}
+                          />
+                        </div>
+
+                        <div className="space-y-3">
+                          <div className="rounded-lg border border-slate-200 bg-white p-4">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Dia selecionado</p>
+                            <p className="mt-1 text-sm font-medium text-slate-900">
+                              {agendamentoData.date
+                                ? parseLocalDate(agendamentoData.date)?.toLocaleDateString('pt-BR', {
+                                    weekday: 'long',
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric',
+                                  })
+                                : 'Selecione uma data no calendario'}
+                            </p>
+
+                            {selectedDateHoliday && (
+                              <div className={`mt-3 rounded-lg border px-3 py-2 text-sm ${selectedDateBlockedByHoliday ? 'border-red-200 bg-red-50 text-red-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
+                                {selectedDateBlockedByHoliday ? 'Feriado bloqueado' : 'Feriado'}: {selectedDateHoliday.name}
+                              </div>
+                            )}
+
+                            {agendamentoData.date && selectedDateHasAvailability && (
+                              <div className="mt-3 space-y-2">
+                                <p className="text-xs font-medium text-slate-600">Janelas de atendimento</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {schedulesForSelectedDate.map((schedule) => (
+                                    <span
+                                      key={schedule.id || `${schedule.day_of_week}-${schedule.start_time}-${schedule.end_time}`}
+                                      className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700"
+                                    >
+                                      {formatScheduleWindow(schedule)}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {agendamentoData.date && !selectedDateHasAvailability && !selectedDateBlockedByHoliday && (
+                              <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                                <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                                <span>Sem expediente cadastrado para este profissional neste dia.</span>
+                              </div>
+                            )}
+
+                            {agendamentoData.date && selectedDateBlockedByHoliday && (
+                              <div className="mt-3 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                                <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                                <span>Agendamento bloqueado por feriado.</span>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="rounded-lg border border-slate-200 bg-white p-4">
+                            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                              <Clock3 className="h-4 w-4" />
+                              Horarios sugeridos
+                            </p>
+
+                            {agendamentoData.date && availableTimeSlots.length > 0 ? (
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                {availableTimeSlots.map((slot) => (
+                                  <button
+                                    key={slot}
+                                    type="button"
+                                    onClick={() => {
+                                      updateAgendamentoField('time', slot);
+                                      updateAgendamentoField('endTime', minutesToTime(timeToMinutes(slot) + (Number(agendamentoData.duration) || 30)));
+                                    }}
+                                    className={`rounded-full border px-3 py-1 text-xs font-medium transition ${agendamentoData.time === slot ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-blue-300 hover:text-blue-700'}`}
+                                  >
+                                    {slot}
+                                  </button>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="mt-3 text-sm text-slate-500">
+                                {agendamentoData.date
+                                  ? 'Nao ha horarios disponiveis para o dia selecionado.'
+                                  : 'Selecione um dia disponivel no calendario para ver os horarios.'}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="flex flex-wrap gap-2 text-xs text-slate-600">
+                            <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-emerald-700">Dia com atendimento</span>
+                            <span className="rounded-full bg-blue-100 px-2.5 py-1 text-blue-700">Dia selecionado</span>
+                            <span className="rounded-full bg-red-100 px-2.5 py-1 text-red-700">Feriado bloqueado</span>
+                            <span className="rounded-full bg-slate-200 px-2.5 py-1 text-slate-600">Dia bloqueado</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>💊 Serviço *</Label>
+                      <Select
+                        value={agendamentoData.serviceId || ''}
+                        onValueChange={(value) => {
+                          console.log('💊 [Select] Serviço selecionado:', value);
+                          const selectedService = services.find(s => s.id === value);
+                          console.log('💊 [DEBUG] Service found:', selectedService);
+                          console.log('💊 [DEBUG] Service keys:', selectedService ? Object.keys(selectedService) : 'null');
+                          console.log('💊 [DEBUG] Service code value:', selectedService?.code);
+                          updateAgendamentoField('serviceId', value);
+                          const serviceCode = selectedService?.code || selectedService?.codigo || selectedService?.service_code || selectedService?.id || '';
+                          console.log('💊 [DEBUG] Final serviceCode:', serviceCode);
+                          updateAgendamentoField('serviceCode', serviceCode);
+                        }}
+                      >
+                        <SelectTrigger>
+                          {agendamentoData.serviceId && services.find(s => s.id === agendamentoData.serviceId) ? (
+                            <span>{services.find(s => s.id === agendamentoData.serviceId)?.name}</span>
+                          ) : (
+                            <SelectValue placeholder="Selecione serviço" />
+                          )}
+                        </SelectTrigger>
+                        <SelectContent>
+                          {services.map((service) => (
+                            <SelectItem key={service.id} value={service.id}>
+                              {service.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>📋 Código do Serviço</Label>
+                      <Input
+                        type="text"
+                        value={agendamentoData.serviceCode || ''}
+                        disabled
+                        className="bg-gray-50"
+                        placeholder="Auto-preenchido"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>🏥 Convênio</Label>
+                      <Select
+                        value={agendamentoData.payerId || ''}
+                        onValueChange={(value) => {
+                          console.log('🏥 [Select] Convênio selecionado:', value);
+                          updateAgendamentoField('payerId', value);
+                        }}
+                      >
+                        <SelectTrigger>
+                          {agendamentoData.payerId && payers.find(p => p.id === agendamentoData.payerId) ? (
+                            <span>{payers.find(p => p.id === agendamentoData.payerId)?.name}</span>
+                          ) : (
+                            <SelectValue placeholder="Selecione um convênio" />
+                          )}
+                        </SelectTrigger>
+                        <SelectContent>
+                          {payers.map((payer) => (
+                            <SelectItem key={payer.id} value={payer.id}>
+                              {payer.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>💰 Valor (R$)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={agendamentoData.value}
+                        onChange={(e) => updateAgendamentoField('value', e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>🔹 Status *</Label>
+                    <Select
+                      value={agendamentoData.status || 'scheduled'}
+                      onValueChange={(value) => {
+                        console.log('🔹 [Status] Alterando status para:', value);
+                        updateAgendamentoField('status', value);
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MODAL_VISIBLE_STATUSES.map((statusValue) => {
+                          const statusConfig = STATUS_CONFIG[statusValue];
+                          return (
+                            <SelectItem key={statusValue} value={statusValue}>
+                              {statusConfig?.icon || '•'} {statusConfig?.label || statusValue}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label>📝 Observações</Label>
+                    <Textarea
+                      placeholder="Observações importantes..."
+                      value={agendamentoData.notes}
+                      onChange={(e) => updateAgendamentoField('notes', e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* ABA 2: DADOS CADASTRAIS (PADRÃO TISS) */}
               {tabAtivo === 'cadastrais' && (
                 <div className="space-y-4">
               <div className="bg-blue-50 border border-blue-300 rounded-lg p-3 mb-4">
@@ -1718,8 +2881,6 @@ export default function AtendimentoModal({
                 <p className="text-sm font-semibold text-blue-900">📋 Validação de Cobertura (Padrão TISS)</p>
                 <p className="text-xs text-blue-700 mt-1">Operadora: {liberacaoData.payer_name || 'Não definida'}</p>
               </div>
-
-              )}
 
               {/* Seção 1: Dados do Beneficiário */}
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
@@ -2080,458 +3241,665 @@ export default function AtendimentoModal({
                 </div>
               </div>
 
-              {/* Seção de Ajuste de Desconto */}
-              <div className="bg-gradient-to-br from-red-50 to-orange-50 border-2 border-red-300 rounded-lg p-4">
-                <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  <span className="text-2xl">💰</span>
-                  Desconto Autorizado
-                </h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Valor do Desconto (R$)</label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={faturamentoData.discount || 0}
-                      onChange={(e) => setFaturamentoData({...faturamentoData, discount: parseFloat(e.target.value) || 0})}
-                      placeholder="0,00"
-                      className="text-lg font-bold border-red-400 focus:ring-red-500"
-                    />
-                    <p className="text-xs text-gray-600 mt-1">Deixe em branco ou 0 para sem desconto</p>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">Motivo do Desconto</label>
-                    <select
-                      value={faturamentoData.discount_reason || ''}
-                      onChange={(e) => setFaturamentoData({...faturamentoData, discount_reason: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              {/* Seção de Ajuste de Desconto - Sempre disponível (sem exigir Liberação para Particular) */}
+              {/* VERSÃO COMPACTA: Quando há solicitação pendente e seção não está aberta */}
+              {faturamentoData.discount > 0 && !faturamentoData.discount_authorized_by && !isDiscountSectionOpen && (
+                <div className="bg-yellow-50 border-l-4 border-yellow-500 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-yellow-800">⏳ Solicitação de desconto enviada</p>
+                      <p className="text-xs text-yellow-700 mt-1">Desconto: R$ {parseFloat(faturamentoData.discount).toFixed(2)} • Motivo: {faturamentoData.discount_reason}</p>
+                      <p className="text-xs text-yellow-600 mt-1">Aguardando aprovação na página de Autorizações</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsDiscountSectionOpen(true)}
+                      className="px-3 py-1 bg-yellow-500 text-white text-xs font-semibold rounded hover:bg-yellow-600 transition whitespace-nowrap ml-2"
                     >
-                      <option value="">— Nenhum motivo —</option>
-                      <option value="Autorizado Adm">Autorizado Adm</option>
-                      <option value="Autorizado Médico">Autorizado Médico</option>
-                      <option value="Convênio/Acordo">Convênio/Acordo</option>
-                      <option value="Promoção">Promoção</option>
-                      <option value="Fidelidade">Fidelidade</option>
-                      <option value="Dificuldade Financeira">Dificuldade Financeira</option>
-                      <option value="Erro de Cobrança">Erro de Cobrança</option>
-                      <option value="Cortesia">Cortesia</option>
-                      <option value="Outro">Outro</option>
-                    </select>
+                      ✏️ Editar
+                    </button>
                   </div>
                 </div>
-              </div>
+              )}
 
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-2">Forma de Pagamento <span className="text-red-500">*</span></label>
-                <select
-                  value={pagamentoData.payment_method}
-                  onChange={(e) => {
-                    const valorComDesconto = (parseFloat(faturamentoData.estimated_value || '0') - parseFloat(faturamentoData.discount || '0')).toFixed(2);
-                    setPagamentoData({
-                      ...pagamentoData,
-                      payment_method: e.target.value,
-                      amount_paid: valorComDesconto
-                    });
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg font-medium text-sm focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">— Selecione —</option>
-                  <option value="DINHEIRO">💵 Dinheiro</option>
-                  <option value="CARTAO">💳 Cartão de Crédito/Débito</option>
-                  <option value="PIX">📱 PIX</option>
-                  <option value="CHEQUE">📋 Cheque</option>
-                  <option value="BOLETO">📄 Boleto</option>
-                </select>
-              </div>
-
-              {/* ====== PAGAMENTO EM DINHEIRO ====== */}
-              {pagamentoData.payment_method === 'DINHEIRO' && (
-                <div className="space-y-4">
-                  <div className="bg-green-50 border border-green-300 rounded-lg p-4">
-                    <h3 className="font-bold text-green-900 mb-3 text-sm">💵 Dados do Pagamento em Dinheiro</h3>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Valor Recebido (R$) <span className="text-red-500">*</span></label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={pagamentoData.amount_paid}
-                          onChange={(e) => {
-                            const value = parseFloat(e.target.value) || 0;
-                            const valorComDesconto = parseFloat(faturamentoData.estimated_value || '0') - parseFloat(faturamentoData.discount || '0');
-                            const change = (value - valorComDesconto).toFixed(2);
-                            setPagamentoData({
-                              ...pagamentoData,
-                              amount_paid: e.target.value,
-                              change: change
+              {/* VERSÃO COMPLETA: Quando expandida ou sem solicitação */}
+              {(!faturamentoData.discount > 0 || faturamentoData.discount_authorized_by || isDiscountSectionOpen) && (
+                <div className="bg-gradient-to-br from-red-50 to-orange-50 border-2 border-red-300 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                      <span className="text-2xl">💰</span>
+                      Desconto Autorizado
+                    </h3>
+                    {faturamentoData.discount > 0 && !faturamentoData.discount_authorized_by && (
+                      <button
+                        type="button"
+                        onClick={() => setIsDiscountSectionOpen(false)}
+                        className="text-sm text-gray-600 hover:text-gray-900"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                  
+                  {/* Verificação de Permissão */}
+                  {(currentRole !== 'admin' && currentRole !== 'gerente_financeiro' && currentRole !== 'gestor') && (
+                    <div className="bg-red-100 border-l-4 border-red-600 p-3 mb-4 rounded">
+                      <p className="text-sm font-semibold text-red-800">
+                        ⚠️ Apenas Administrador ou Gerente Financeiro podem autorizar descontos.
+                      </p>
+                    </div>
+                  )}
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Valor do Desconto (R$)</label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={faturamentoData.discount || 0}
+                        onChange={(e) => {
+                          const newDiscount = parseFloat(e.target.value) || 0;
+                          // Se está tentando aplicar desconto e não tem permissão, mostrar aviso
+                          if (newDiscount > 0 && (currentRole !== 'admin' && currentRole !== 'gerente_financeiro' && currentRole !== 'gestor')) {
+                            alert('❌ Você não tem permissão para autorizar descontos. Apenas Administrador ou Gerente Financeiro podem fazer isso.');
+                            return;
+                          }
+                          // Se tem permissão e está aplicando desconto, registrar autorização
+                          if (newDiscount > 0 && faturamentoData.discount === 0) {
+                            setFaturamentoData({
+                              ...faturamentoData,
+                              discount: newDiscount,
+                              discount_authorized_by: user?.email || 'Sistema',
+                              discount_authorized_at: new Date().toISOString()
                             });
-                          }}
-                          placeholder="0,00"
-                          className="font-bold text-lg border-green-300 focus:ring-green-500"
-                        />
+                          } else {
+                            setFaturamentoData({...faturamentoData, discount: newDiscount});
+                          }
+                        }}
+                        disabled={(currentRole !== 'admin' && currentRole !== 'gerente_financeiro' && currentRole !== 'gestor')}
+                        placeholder="0,00"
+                        className="text-lg font-bold border-red-400 focus:ring-red-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      />
+                      <p className="text-xs text-gray-600 mt-1">Deixe em branco ou 0 para sem desconto</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Motivo do Desconto</label>
+                      <select
+                        value={faturamentoData.discount_reason || ''}
+                        onChange={(e) => setFaturamentoData({...faturamentoData, discount_reason: e.target.value})}
+                        disabled={(currentRole !== 'admin' && currentRole !== 'gerente_financeiro' && currentRole !== 'gestor')}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      >
+                        <option value="">— Nenhum motivo —</option>
+                        <option value="Autorizado Adm">Autorizado Adm</option>
+                        <option value="Autorizado Médico">Autorizado Médico</option>
+                        <option value="Convênio/Acordo">Convênio/Acordo</option>
+                        <option value="Promoção">Promoção</option>
+                        <option value="Fidelidade">Fidelidade</option>
+                        <option value="Dificuldade Financeira">Dificuldade Financeira</option>
+                        <option value="Erro de Cobrança">Erro de Cobrança</option>
+                        <option value="Cortesia">Cortesia</option>
+                        <option value="Outro">Outro</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Botão para Solicitar Autorização de Desconto (se há desconto não autorizado) */}
+                  {faturamentoData.discount > 0 && !faturamentoData.discount_authorized_by && (
+                    <div className="mt-4">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!faturamentoData.discount_reason || faturamentoData.discount_reason.trim() === '') {
+                            alert('⚠️ Por favor, selecione um motivo válido para o desconto antes de solicitar');
+                            return;
+                          }
+
+                          try {
+                            setLoading(true);
+                            
+                            // 📝 Enviar solicitação para fila de aprovação via API
+                            await discountApprovalsApi.createDiscountAuthorization(
+                              clinicId,
+                              appointment?.id,
+                              faturamentoData.discount,
+                              faturamentoData.discount_reason,
+                              '',  // notes
+                              user?.id
+                            );
+                            
+                            console.log('✅ Solicitação de desconto salva no banco de dados');
+                            showSuccessNotification('📋 Solicitação enviada com sucesso! Aguardando aprovação na página de Autorizações...');
+                            setIsDiscountSectionOpen(false); // Fechar seção após solicitar
+                            
+                          } catch (error) {
+                            console.error('Erro ao solicitar autorização:', error);
+                            alert('❌ Erro ao enviar solicitação de autorização: ' + error.message);
+                          } finally {
+                            setLoading(false);
+                          }
+                        }}
+                        disabled={loading || !faturamentoData.discount || !faturamentoData.discount_reason}
+                        className="w-full px-4 py-2 bg-yellow-500 text-white text-sm font-bold rounded-lg hover:bg-yellow-600 transition disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        📝 Solicitar Autorização de Desconto
+                      </button>
+                      <p className="text-xs text-gray-600 mt-2 text-center">
+                        O desconto será enviado para aprovação do Administrador/Gerente Financeiro na página de Autorizações
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Mostrar informações de autorização */}
+                  {faturamentoData.discount > 0 && faturamentoData.discount_authorized_by && (
+                    <div className="bg-green-50 border-l-4 border-green-600 p-3 mt-4 rounded">
+                      <p className="text-xs font-semibold text-green-800">
+                        ✅ Desconto autorizado por: {discountAuthorizedByName || faturamentoData.discount_authorized_by}
+                      </p>
+                      {faturamentoData.discount_authorized_at && (
+                        <p className="text-xs text-green-700 mt-1">
+                          Em: {new Date(faturamentoData.discount_authorized_at).toLocaleString('pt-BR')}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ====== NOVA INTERFACE: MÚLTIPLOS PAGAMENTOS ====== */}
+              <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
+                <h3 className="font-bold text-blue-900 mb-4 text-sm flex items-center gap-2">
+                  <span className="text-xl">💳</span>
+                  Formas de Pagamento (Múltiplas)
+                </h3>
+
+                {/* Valor Total */}
+                {(() => {
+                  const valorComDesconto = parseFloat(faturamentoData.estimated_value || '0') - parseFloat(faturamentoData.discount || '0');
+                  const totalPago = pagamentoSplits.reduce((sum, split) => sum + (parseFloat(split.amount) || 0), 0);
+                  const saldo = (valorComDesconto - totalPago).toFixed(2);
+                  const completed = saldo <= 0.01;
+
+                  return (
+                    <div className="grid grid-cols-4 gap-3 mb-4 text-sm">
+                      <div className="bg-white border border-blue-200 rounded p-3">
+                        <p className="text-xs text-gray-600">Valor Total</p>
+                        <p className="font-bold text-lg text-blue-900">R$ {valorComDesconto.toFixed(2)}</p>
                       </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Troco (R$)</label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={pagamentoData.change}
-                          disabled
-                          className="bg-green-200 font-bold text-green-900 border-green-400"
-                        />
+                      <div className="bg-white border border-blue-200 rounded p-3">
+                        <p className="text-xs text-gray-600">Já Pago</p>
+                        <p className="font-bold text-lg text-blue-600">R$ {totalPago.toFixed(2)}</p>
                       </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Status</label>
-                        <div className={`px-3 py-2 rounded font-bold text-center ${parseFloat(pagamentoData.amount_paid || '0') >= (parseFloat(faturamentoData.estimated_value || '0') - parseFloat(faturamentoData.discount || '0')) ? 'bg-green-200 text-green-900' : 'bg-yellow-200 text-yellow-900'}`}>
-                          {parseFloat(pagamentoData.amount_paid || '0') >= (parseFloat(faturamentoData.estimated_value || '0') - parseFloat(faturamentoData.discount || '0')) ? '✓ OK' : '⚠️ Incompleto'}
+                      <div className={`border rounded p-3 ${completed ? 'bg-green-50 border-green-300' : 'bg-yellow-50 border-yellow-300'}`}>
+                        <p className={`text-xs ${completed ? 'text-green-600' : 'text-yellow-600'}`}>Saldo</p>
+                        <p className={`font-bold text-lg ${completed ? 'text-green-900' : 'text-yellow-900'}`}>
+                          R$ {saldo}
+                        </p>
+                      </div>
+                      <div className={`border rounded p-3 flex items-center justify-center ${completed ? 'bg-green-100 border-green-400' : 'bg-orange-100 border-orange-400'}`}>
+                        <p className={`font-bold ${completed ? 'text-green-900' : 'text-orange-900'}`}>
+                          {completed ? '✓ Completo' : '⚠️ Incompleto'}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Lista de Splits Adicionados */}
+                {pagamentoSplits.length > 0 && (
+                  <div className="mb-4">
+                    <label className="text-xs font-semibold text-gray-700 mb-2 block">Formas Adicionadas:</label>
+                    <div className="space-y-2">
+                      {pagamentoSplits.map((split, idx) => (
+                        <div key={split.id} className="flex items-center gap-2 bg-white p-3 border border-gray-300 rounded">
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold text-gray-900">
+                              {split.method === 'FATURADO' ? '📄 Faturado' : split.method}
+                            </p>
+                            <p className="text-xs text-gray-600">R$ {parseFloat(split.amount || '0').toFixed(2)}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPagamentoSplits(pagamentoSplits.filter((_, i) => i !== idx));
+                            }}
+                            className="px-2 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded hover:bg-red-200 transition"
+                          >
+                            ✕ Remover
+                          </button>
                         </div>
-                      </div>
+                      ))}
                     </div>
                   </div>
+                )}
 
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                    <label className="block text-xs font-semibold text-gray-700 mb-2">📝 Observações</label>
-                    <textarea
-                      value={pagamentoData.notes}
-                      onChange={(e) => setPagamentoData({...pagamentoData, notes: e.target.value})}
-                      placeholder="Ex: Cliente solicitou recibo, trocos em moedas, etc..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
-                      rows="2"
-                    />
+                {/* Adicionar Nova Forma de Pagamento */}
+                <div className="bg-white border border-blue-200 rounded-lg p-3 mb-4">
+                  <p className="text-xs font-semibold text-gray-700 mb-3">Adicionar Nova Forma de Pagamento:</p>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Forma de Pagamento</label>
+                      <select
+                        id="newPaymentMethod"
+                        defaultValue=""
+                        className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm"
+                      >
+                        <option value="">— Selecione —</option>
+                        <optgroup label="💼 Faturado">
+                          <option value="FATURADO">Faturado (Convênio/Particular)</option>
+                        </optgroup>
+                        <optgroup label="💰 Em Espécie">
+                          <option value="DINHEIRO">Dinheiro</option>
+                          <option value="CHEQUE">Cheque</option>
+                        </optgroup>
+                        <optgroup label="💳 Cartão">
+                          <option value="CARTAO">Cartão de Crédito/Débito</option>
+                        </optgroup>
+                        <optgroup label="📱 Digital">
+                          <option value="PIX">PIX</option>
+                          <option value="TRANSFERENCIA">Transferência Bancária</option>
+                          <option value="BOLETO">Boleto</option>
+                        </optgroup>
+                        <optgroup label="👤 Outro">
+                          <option value="DIRETO_PROFISSIONAL">Direto ao Profissional</option>
+                        </optgroup>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">Valor (R$)</label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        id="newPaymentAmount"
+                        placeholder="0,00"
+                        className="text-sm"
+                      />
+                    </div>
+                    <div className="flex items-end">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const methodSelect = document.getElementById('newPaymentMethod');
+                          const amountInput = document.getElementById('newPaymentAmount');
+                          const method = methodSelect.value;
+                          const amount = parseFloat(amountInput.value);
+
+                          if (!method) {
+                            alert('⚠️ Selecione uma forma de pagamento');
+                            return;
+                          }
+                          if (isNaN(amount) || amount <= 0) {
+                            alert('⚠️ Digite um valor válido maior que 0');
+                            return;
+                          }
+
+                          // Validar saldo
+                          const valorComDesconto = parseFloat(faturamentoData.estimated_value || '0') - parseFloat(faturamentoData.discount || '0');
+                          const totalPago = pagamentoSplits.reduce((sum, split) => sum + (parseFloat(split.amount) || 0), 0);
+                          if ((totalPago + amount) > valorComDesconto + 0.01) {
+                            alert(`⚠️ Valor excede o saldo. Saldo disponível: R$ ${(valorComDesconto - totalPago).toFixed(2)}`);
+                            return;
+                          }
+
+                          // Adicionar split
+                          setPagamentoSplits([
+                            ...pagamentoSplits,
+                            {
+                              id: Date.now(),
+                              method,
+                              amount: amount.toString(),
+                              details: {}
+                            }
+                          ]);
+
+                          // Limpar inputs
+                          methodSelect.value = '';
+                          amountInput.value = '';
+                        }}
+                        className="w-full px-3 py-2 bg-blue-600 text-white text-xs font-bold rounded hover:bg-blue-700 transition"
+                      >
+                        ➕ Adicionar
+                      </button>
+                    </div>
                   </div>
                 </div>
-              )}
 
-              {/* ====== PAGAMENTO COM CARTÃO ====== */}
-              {pagamentoData.payment_method === 'CARTAO' && (
-                <div className="space-y-4">
-                  <div className="bg-purple-50 border border-purple-300 rounded-lg p-4">
-                    <h3 className="font-bold text-purple-900 mb-3 text-sm">💳 Dados do Cartão</h3>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Bandeira <span className="text-red-500">*</span></label>
-                        <select
-                          value={pagamentoData.card_brand}
-                          onChange={(e) => setPagamentoData({...pagamentoData, card_brand: e.target.value})}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                        >
-                          <option value="">— Selecione —</option>
-                          <option value="VISA">VISA</option>
-                          <option value="MASTERCARD">MASTERCARD</option>
-                          <option value="ELO">ELO</option>
-                          <option value="AMEX">AMERICAN EXPRESS</option>
-                          <option value="HIPERCARD">HIPERCARD</option>
-                          <option value="OUTRO">OUTRO</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Últimos 4 Dígitos <span className="text-red-500">*</span></label>
-                        <Input
-                          value={pagamentoData.card_last_digits}
-                          onChange={(e) => {
-                            const cleaned = e.target.value.replace(/\D/g, '').slice(0, 4);
-                            setPagamentoData({...pagamentoData, card_last_digits: cleaned});
-                          }}
-                          placeholder="0000"
-                          maxLength="4"
-                          className="text-center font-mono text-lg font-bold"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Parcelas <span className="text-red-500">*</span></label>
-                        <select
-                          value={pagamentoData.card_installments}
-                          onChange={(e) => setPagamentoData({...pagamentoData, card_installments: e.target.value})}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                        >
-                          {[1, 2, 3, 4, 6, 8, 10, 12].map(n => (
-                            <option key={n} value={n}>{n}x</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                    <div className="mt-3 grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Nº Autorização/Comprovante <span className="text-red-500">*</span></label>
-                        <Input
-                          value={pagamentoData.receipt_number}
-                          onChange={(e) => setPagamentoData({...pagamentoData, receipt_number: e.target.value})}
-                          placeholder="Ex: 123456"
-                          className="text-sm font-mono"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Valor (R$)</label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={pagamentoData.amount_paid}
-                          onChange={(e) => setPagamentoData({...pagamentoData, amount_paid: e.target.value})}
-                          disabled
-                          className="bg-gray-100 font-bold"
-                        />
-                      </div>
-                    </div>
+                {pagamentoSplits.length > 0 && (
+                  <div className="bg-green-50 border border-green-300 rounded p-3">
+                    <p className="text-xs font-semibold text-green-800">
+                      ✓ {pagamentoSplits.length} forma(s) de pagamento adicionada(s)
+                    </p>
                   </div>
+                )}
+              </div>
 
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                    <label className="block text-xs font-semibold text-gray-700 mb-2">📝 Observações</label>
-                    <textarea
-                      value={pagamentoData.notes}
-                      onChange={(e) => setPagamentoData({...pagamentoData, notes: e.target.value})}
-                      placeholder="Ex: Cliente solicitou nota, problemas na máquina, etc..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
-                      rows="2"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* ====== PAGAMENTO VIA PIX ====== */}
-              {pagamentoData.payment_method === 'PIX' && (
-                <div className="space-y-4">
-                  <div className="bg-blue-50 border border-blue-300 rounded-lg p-4">
-                    <h3 className="font-bold text-blue-900 mb-3 text-sm">📱 Dados do PIX</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="col-span-2">
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Identificador PIX (Chave/CPF/Telefone) <span className="text-red-500">*</span></label>
-                        <Input
-                          value={pagamentoData.pix_identifier}
-                          onChange={(e) => setPagamentoData({...pagamentoData, pix_identifier: e.target.value})}
-                          placeholder="Ex: chave@email.com, 123.456.789-10, (11) 99999-9999"
-                          className="text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">ID da Transação PIX <span className="text-red-500">*</span></label>
-                        <Input
-                          value={pagamentoData.pix_transaction_id}
-                          onChange={(e) => setPagamentoData({...pagamentoData, pix_transaction_id: e.target.value})}
-                          placeholder="Ex: e1047061-7aed-4f57-bcb0-f851c621c1e6"
-                          className="text-sm font-mono"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Horário do PIX</label>
-                        <Input
-                          type="datetime-local"
-                          value={pagamentoData.pix_timestamp}
-                          onChange={(e) => setPagamentoData({...pagamentoData, pix_timestamp: e.target.value})}
-                          className="text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Valor (R$)</label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={pagamentoData.amount_paid}
-                          onChange={(e) => setPagamentoData({...pagamentoData, amount_paid: e.target.value})}
-                          disabled
-                          className="bg-gray-100 font-bold"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                    <label className="block text-xs font-semibold text-gray-700 mb-2">📝 Observações</label>
-                    <textarea
-                      value={pagamentoData.notes}
-                      onChange={(e) => setPagamentoData({...pagamentoData, notes: e.target.value})}
-                      placeholder="Ex: Comprovante enviado via WhatsApp, valor confirmado..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
-                      rows="2"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* ====== PAGAMENTO COM CHEQUE ====== */}
-              {pagamentoData.payment_method === 'CHEQUE' && (
-                <div className="space-y-4">
-                  <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-4">
-                    <h3 className="font-bold text-yellow-900 mb-3 text-sm">📋 Dados do Cheque</h3>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Banco <span className="text-red-500">*</span></label>
-                        <Input
-                          value={pagamentoData.check_bank}
-                          onChange={(e) => setPagamentoData({...pagamentoData, check_bank: e.target.value})}
-                          placeholder="Ex: Banco do Brasil"
-                          className="text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Agência <span className="text-red-500">*</span></label>
-                        <Input
-                          value={pagamentoData.check_agency}
-                          onChange={(e) => {
-                            const cleaned = e.target.value.replace(/\D/g, '').slice(0, 5);
-                            setPagamentoData({...pagamentoData, check_agency: cleaned});
-                          }}
-                          placeholder="0000"
-                          className="text-sm font-mono"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Conta <span className="text-red-500">*</span></label>
-                        <Input
-                          value={pagamentoData.check_account}
-                          onChange={(e) => setPagamentoData({...pagamentoData, check_account: e.target.value})}
-                          placeholder="Ex: 123456-7"
-                          className="text-sm font-mono"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4 mt-4">
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Nº Cheque <span className="text-red-500">*</span></label>
-                        <Input
-                          value={pagamentoData.check_number}
-                          onChange={(e) => {
-                            const cleaned = e.target.value.replace(/\D/g, '').slice(0, 10);
-                            setPagamentoData({...pagamentoData, check_number: cleaned});
-                          }}
-                          placeholder="0000000000"
-                          className="text-sm font-mono font-bold text-lg"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Data de Compensação <span className="text-red-500">*</span></label>
-                        <Input
-                          type="date"
-                          value={pagamentoData.check_due_date}
-                          onChange={(e) => setPagamentoData({...pagamentoData, check_due_date: e.target.value})}
-                          className="text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Valor (R$)</label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={pagamentoData.amount_paid}
-                          onChange={(e) => setPagamentoData({...pagamentoData, amount_paid: e.target.value})}
-                          disabled
-                          className="bg-gray-100 font-bold"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                    <p className="text-xs text-red-800">⚠️ <span className="font-semibold">Atenção:</span> Verifique a data da compensação do cheque antes de confirmar</p>
-                  </div>
-
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                    <label className="block text-xs font-semibold text-gray-700 mb-2">📝 Observações</label>
-                    <textarea
-                      value={pagamentoData.notes}
-                      onChange={(e) => setPagamentoData({...pagamentoData, notes: e.target.value})}
-                      placeholder="Ex: Cheque pré-datado, solicitação de cliente confirmada..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
-                      rows="2"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* ====== PAGAMENTO COM BOLETO ====== */}
-              {pagamentoData.payment_method === 'BOLETO' && (
-                <div className="space-y-4">
-                  <div className="bg-indigo-50 border border-indigo-300 rounded-lg p-4">
-                    <h3 className="font-bold text-indigo-900 mb-3 text-sm">📄 Dados do Boleto</h3>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="col-span-2">
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Nº Boleto (Código de Barras) <span className="text-red-500">*</span></label>
-                        <Input
-                          value={pagamentoData.boleto_number}
-                          onChange={(e) => {
-                            const cleaned = e.target.value.replace(/\D/g, '').slice(0, 47);
-                            setPagamentoData({...pagamentoData, boleto_number: cleaned});
-                          }}
-                          placeholder="00000.00000 00000.000000 00000.000000 0 00000000000000"
-                          className="text-sm font-mono font-bold"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">47 dígitos do código de barras</p>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Banco <span className="text-red-500">*</span></label>
-                        <Input
-                          value={pagamentoData.boleto_bank}
-                          onChange={(e) => setPagamentoData({...pagamentoData, boleto_bank: e.target.value})}
-                          placeholder="Ex: Caixa"
-                          className="text-sm"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 mt-4">
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Data de Vencimento <span className="text-red-500">*</span></label>
-                        <Input
-                          type="date"
-                          value={pagamentoData.boleto_due_date}
-                          onChange={(e) => setPagamentoData({...pagamentoData, boleto_due_date: e.target.value})}
-                          className="text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-gray-700 mb-1">Valor (R$)</label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={pagamentoData.amount_paid}
-                          onChange={(e) => setPagamentoData({...pagamentoData, amount_paid: e.target.value})}
-                          disabled
-                          className="bg-gray-100 font-bold"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                    <p className="text-xs text-red-800">⚠️ <span className="font-semibold">Atenção:</span> Boleto é apenas para futura compensação. Registre como pendente.</p>
-                  </div>
-
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                    <label className="block text-xs font-semibold text-gray-700 mb-2">📝 Observações</label>
-                    <textarea
-                      value={pagamentoData.notes}
-                      onChange={(e) => setPagamentoData({...pagamentoData, notes: e.target.value})}
-                      placeholder="Ex: Boleto enviado por email, data negociada..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
-                      rows="2"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Resumo de Pagamento */}
-              {pagamentoData.payment_method && (
-                <div className="bg-gradient-to-r from-green-50 to-green-100 border border-green-400 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="font-bold text-green-900">✓ Resumo do Pagamento</p>
+              {/* ====== RESUMO DO PAGAMENTO (Múltiplos) ====== */}
+              {pagamentoSplits.length > 0 && (
+                <div className="bg-gradient-to-r from-green-50 to-green-100 border-2 border-green-400 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="font-bold text-green-900 text-sm">✓ Resumo das Formas de Pagamento</p>
                     <span className="inline-block px-2 py-1 bg-green-200 text-green-900 text-xs font-bold rounded">PRONTO</span>
                   </div>
-                  <div className="grid grid-cols-3 gap-4 text-sm">
-                    <div>
-                      <p className="text-xs text-green-700">Forma</p>
-                      <p className="font-bold text-green-900">{pagamentoData.payment_method}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-green-700">Valor</p>
-                      <p className="font-bold text-lg text-green-900">R$ {parseFloat(pagamentoData.amount_paid || '0').toFixed(2)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-green-700">Status</p>
-                      <p className="font-bold text-green-900">Registrado ✓</p>
-                    </div>
+                  <div className="space-y-3">
+                    {pagamentoSplits.map((split, idx) => (
+                      <div key={split.id} className="border-2 border-green-300 rounded-lg overflow-hidden">
+                        {/* Cabeçalho do Split */}
+                        <div className="flex justify-between items-center bg-green-100 p-3 text-sm">
+                          <div>
+                            <span className="font-semibold text-green-900">
+                              {split.method === 'FATURADO' ? '📄 Faturado' : 
+                               split.method === 'CARTAO' ? '💳 Cartão' :
+                               split.method === 'PIX' ? '📱 PIX' :
+                               split.method === 'TRANSFERENCIA' ? '🏦 Transferência' :
+                               split.method === 'BOLETO' ? '📋 Boleto' :
+                               split.method === 'CHEQUE' ? '✓ Cheque' :
+                               split.method === 'DINHEIRO' ? '💵 Dinheiro' :
+                               split.method}
+                            </span>
+                            {split.details?.cardBrand && <span className="text-xs text-green-700 ml-2">({split.details.cardBrand})</span>}
+                            {split.details?.pixIdentifier && <span className="text-xs text-green-700 ml-2">{split.details.pixIdentifier}</span>}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-green-900">R$ {parseFloat(split.amount || '0').toFixed(2)}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                console.log('🔄 Clicou em editar split', split.id, 'Modo anterior:', editingSplitId);
+                                if (editingSplitId === split.id) {
+                                  setEditingSplitId(null);
+                                } else {
+                                  setEditingSplitId(split.id);
+                                  setSplitDetails(split.details || {});
+                                  console.log('✏️ Abrindo edição do split', split.id);
+                                }
+                              }}
+                              className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition"
+                            >
+                              {editingSplitId === split.id ? '✓ Pronto' : '✏️ Editar'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPagamentoSplits(pagamentoSplits.filter(s => s.id !== split.id));
+                                if (editingSplitId === split.id) setEditingSplitId(null);
+                              }}
+                              className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition"
+                            >
+                              ✕ Remover
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* PIX - Campos de Edição */}
+                        {editingSplitId === split.id && split.method === 'PIX' && (
+                          <div className="bg-white border-t border-green-300 p-4 space-y-3">
+                            <p className="text-xs font-bold text-gray-800 mb-2">📱 Dados do PIX</p>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-xs font-semibold text-gray-700 mb-1">Chave PIX</label>
+                                <Input
+                                  type="text"
+                                  value={splitDetails.pixIdentifier || ''}
+                                  onChange={(e) => {
+                                    const newDetails = {...splitDetails, pixIdentifier: e.target.value};
+                                    setSplitDetails(newDetails);
+                                    const updatedSplits = pagamentoSplits.map(s => 
+                                      s.id === split.id ? {...s, details: newDetails} : s
+                                    );
+                                    setPagamentoSplits(updatedSplits);
+                                  }}
+                                  placeholder="Telefone, email, CPF ou aleatória"
+                                  className="text-xs"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-semibold text-gray-700 mb-1">ID da Transação</label>
+                                <Input
+                                  type="text"
+                                  value={splitDetails.pixTransactionId || ''}
+                                  onChange={(e) => {
+                                    const newDetails = {...splitDetails, pixTransactionId: e.target.value};
+                                    setSplitDetails(newDetails);
+                                    const updatedSplits = pagamentoSplits.map(s => 
+                                      s.id === split.id ? {...s, details: newDetails} : s
+                                    );
+                                    setPagamentoSplits(updatedSplits);
+                                  }}
+                                  placeholder="ID do Pix (opcional)"
+                                  className="text-xs"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* CARTÃO - Campos de Edição */}
+                        {editingSplitId === split.id && split.method === 'CARTAO' && (
+                          <div className="bg-white border-t border-green-300 p-4 space-y-3">
+                            <p className="text-xs font-bold text-gray-800 mb-2">💳 Dados do Cartão</p>
+                            <div className="grid grid-cols-3 gap-3">
+                              <div>
+                                <label className="block text-xs font-semibold text-gray-700 mb-1">Bandeira</label>
+                                <select
+                                  value={splitDetails.cardBrand || ''}
+                                  onChange={(e) => {
+                                    const newDetails = {...splitDetails, cardBrand: e.target.value};
+                                    setSplitDetails(newDetails);
+                                    const updatedSplits = pagamentoSplits.map(s => 
+                                      s.id === split.id ? {...s, details: newDetails} : s
+                                    );
+                                    setPagamentoSplits(updatedSplits);
+                                  }}
+                                  className="w-full px-2 py-2 border border-gray-300 rounded text-xs"
+                                >
+                                  <option value="">— Selecione —</option>
+                                  <option value="VISA">Visa</option>
+                                  <option value="MASTERCARD">Mastercard</option>
+                                  <option value="ELO">Elo</option>
+                                  <option value="AMEX">American Express</option>
+                                  <option value="HIPERCARD">Hipercard</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-xs font-semibold text-gray-700 mb-1">Últimos 4 dígitos</label>
+                                <Input
+                                  type="text"
+                                  maxLength="4"
+                                  value={splitDetails.cardLastDigits || ''}
+                                  onChange={(e) => {
+                                    const newDetails = {...splitDetails, cardLastDigits: e.target.value};
+                                    setSplitDetails(newDetails);
+                                    const updatedSplits = pagamentoSplits.map(s => 
+                                      s.id === split.id ? {...s, details: newDetails} : s
+                                    );
+                                    setPagamentoSplits(updatedSplits);
+                                  }}
+                                  placeholder="0000"
+                                  className="text-xs"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-semibold text-gray-700 mb-1">Parcelas</label>
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  max="12"
+                                  value={splitDetails.cardInstallments || '1'}
+                                  onChange={(e) => {
+                                    const newDetails = {...splitDetails, cardInstallments: e.target.value};
+                                    setSplitDetails(newDetails);
+                                    const updatedSplits = pagamentoSplits.map(s => 
+                                      s.id === split.id ? {...s, details: newDetails} : s
+                                    );
+                                    setPagamentoSplits(updatedSplits);
+                                  }}
+                                  className="text-xs"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* TRANSFERÊNCIA - Campos de Edição */}
+                        {editingSplitId === split.id && split.method === 'TRANSFERENCIA' && (
+                          <div className="bg-white border-t border-green-300 p-4 space-y-3">
+                            <p className="text-xs font-bold text-gray-800 mb-2">🏦 Dados da Transferência</p>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-xs font-semibold text-gray-700 mb-1">Tipo</label>
+                                <select
+                                  value={splitDetails.tedType || 'TED'}
+                                  onChange={(e) => {
+                                    const newDetails = {...splitDetails, tedType: e.target.value};
+                                    setSplitDetails(newDetails);
+                                    const updatedSplits = pagamentoSplits.map(s => 
+                                      s.id === split.id ? {...s, details: newDetails} : s
+                                    );
+                                    setPagamentoSplits(updatedSplits);
+                                  }}
+                                  className="w-full px-2 py-2 border border-gray-300 rounded text-xs"
+                                >
+                                  <option value="TED">TED</option>
+                                  <option value="DOC">DOC</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-xs font-semibold text-gray-700 mb-1">Referência</label>
+                                <Input
+                                  type="text"
+                                  value={splitDetails.tedReference || ''}
+                                  onChange={(e) => {
+                                    const newDetails = {...splitDetails, tedReference: e.target.value};
+                                    setSplitDetails(newDetails);
+                                    const updatedSplits = pagamentoSplits.map(s => 
+                                      s.id === split.id ? {...s, details: newDetails} : s
+                                    );
+                                    setPagamentoSplits(updatedSplits);
+                                  }}
+                                  placeholder="Número da transferência"
+                                  className="text-xs"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* BOLETO - Campos de Edição */}
+                        {editingSplitId === split.id && split.method === 'BOLETO' && (
+                          <div className="bg-white border-t border-green-300 p-4 space-y-3">
+                            <p className="text-xs font-bold text-gray-800 mb-2">📋 Dados do Boleto</p>
+                            <div className="grid grid-cols-3 gap-3">
+                              <div>
+                                <label className="block text-xs font-semibold text-gray-700 mb-1">Número do Boleto</label>
+                                <Input
+                                  type="text"
+                                  value={splitDetails.boletoNumber || ''}
+                                  onChange={(e) => {
+                                    const newDetails = {...splitDetails, boletoNumber: e.target.value};
+                                    setSplitDetails(newDetails);
+                                    const updatedSplits = pagamentoSplits.map(s => 
+                                      s.id === split.id ? {...s, details: newDetails} : s
+                                    );
+                                    setPagamentoSplits(updatedSplits);
+                                  }}
+                                  placeholder="Número do boleto"
+                                  className="text-xs"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-semibold text-gray-700 mb-1">Código de Barras</label>
+                                <Input
+                                  type="text"
+                                  value={splitDetails.boletoBarcode || ''}
+                                  onChange={(e) => {
+                                    const newDetails = {...splitDetails, boletoBarcode: e.target.value};
+                                    setSplitDetails(newDetails);
+                                    const updatedSplits = pagamentoSplits.map(s => 
+                                      s.id === split.id ? {...s, details: newDetails} : s
+                                    );
+                                    setPagamentoSplits(updatedSplits);
+                                  }}
+                                  placeholder="Código de barras"
+                                  className="text-xs"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-semibold text-gray-700 mb-1">Data de Vencimento</label>
+                                <Input
+                                  type="date"
+                                  value={splitDetails.bolletoDueDate || ''}
+                                  onChange={(e) => {
+                                    const newDetails = {...splitDetails, bolletoDueDate: e.target.value};
+                                    setSplitDetails(newDetails);
+                                    const updatedSplits = pagamentoSplits.map(s => 
+                                      s.id === split.id ? {...s, details: newDetails} : s
+                                    );
+                                    setPagamentoSplits(updatedSplits);
+                                  }}
+                                  className="text-xs"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* CHEQUE - Campos de Edição */}
+                        {editingSplitId === split.id && split.method === 'CHEQUE' && (
+                          <div className="bg-white border-t border-green-300 p-4 space-y-3">
+                            <p className="text-xs font-bold text-gray-800 mb-2">✓ Dados do Cheque</p>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-xs font-semibold text-gray-700 mb-1">Número do Cheque</label>
+                                <Input
+                                  type="text"
+                                  value={splitDetails.checkNumber || ''}
+                                  onChange={(e) => {
+                                    const newDetails = {...splitDetails, checkNumber: e.target.value};
+                                    setSplitDetails(newDetails);
+                                    const updatedSplits = pagamentoSplits.map(s => 
+                                      s.id === split.id ? {...s, details: newDetails} : s
+                                    );
+                                    setPagamentoSplits(updatedSplits);
+                                  }}
+                                  placeholder="Número do cheque"
+                                  className="text-xs"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-semibold text-gray-700 mb-1">Data de Vencimento</label>
+                                <Input
+                                  type="date"
+                                  value={splitDetails.checkDueDate || ''}
+                                  onChange={(e) => {
+                                    const newDetails = {...splitDetails, checkDueDate: e.target.value};
+                                    setSplitDetails(newDetails);
+                                    const updatedSplits = pagamentoSplits.map(s => 
+                                      s.id === split.id ? {...s, details: newDetails} : s
+                                    );
+                                    setPagamentoSplits(updatedSplits);
+                                  }}
+                                  className="text-xs"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="border-t-2 border-green-300 mt-3 pt-3 flex justify-between items-center">
+                    <p className="font-bold text-green-900 text-sm">Total Pago:</p>
+                    <p className="font-bold text-lg text-green-900">
+                      R$ {pagamentoSplits.reduce((sum, split) => sum + (parseFloat(split.amount) || 0), 0).toFixed(2)}
+                    </p>
                   </div>
                 </div>
               )}
+
             </div>
           )}
+
+          {/* ABA 4.5: RESUMO FINANCEIRO - REGISTRO, CAIXA E CONTAS A RECEBER */}
 
           {/* ABA 4.5: RESUMO FINANCEIRO - REGISTRO, CAIXA E CONTAS A RECEBER */}
           {tabAtivo === 'financeiro' && (
@@ -2690,6 +4058,17 @@ export default function AtendimentoModal({
                         <p className="font-bold text-green-600">R$ {registroData.arValue.toFixed(2)}</p>
                       </div>
                       <div className="bg-white p-3 rounded border border-green-100">
+                        <p className="text-xs text-gray-600 font-medium">Saldo em Aberto</p>
+                        <p className="font-bold text-red-600">
+                          R$ {(() => {
+                            const valorTotal = parseFloat(faturamentoData.estimated_value || '0') - parseFloat(faturamentoData.discount || '0');
+                            const totalPago = pagamentoSplits.reduce((sum, split) => sum + (parseFloat(split.amount) || 0), 0);
+                            const saldoAberto = valorTotal - totalPago;
+                            return saldoAberto.toFixed(2);
+                          })()}
+                        </p>
+                      </div>
+                      <div className="bg-white p-3 rounded border border-green-100">
                         <p className="text-xs text-gray-600 font-medium">ID da AR</p>
                         <p className="font-mono text-xs font-semibold text-gray-900">
                           {registroData.receivableId ? registroData.receivableId.substring(0, 8) + '...' : 'Aguardando'}
@@ -2753,6 +4132,21 @@ export default function AtendimentoModal({
           {/* ABA 5: RESUMO FINAL */}
           {tabAtivo === 'resumo' && (
             <div className="space-y-4">
+              {(() => {
+                const validation = validateFinancialData();
+                return validation.valid ? null : (
+                  <div className="bg-red-50 border-l-4 border-red-600 p-4 rounded-lg">
+                    <p className="text-sm font-bold text-red-900 mb-2">❌ Não é possível liberar o atendimento:</p>
+                    <ul className="list-disc list-inside text-sm text-red-800 space-y-1">
+                      {validation.errors.map((error, idx) => (
+                        <li key={idx}>{error}</li>
+                      ))}
+                    </ul>
+                    <p className="text-xs text-red-700 mt-3">Corrija os dados nas abas anteriores antes de liberar.</p>
+                  </div>
+                );
+              })()}
+
               <div className="bg-green-50 border border-green-300 rounded-lg p-4 mb-4">
                 <p className="text-lg font-bold text-green-900">
                   ✅ Dados do Atendimento Confirmados
@@ -2853,10 +4247,25 @@ export default function AtendimentoModal({
                       <p className="text-xs text-gray-600 font-medium">Valor da Consulta</p>
                       <p className="font-semibold text-gray-900">R$ {parseFloat(faturamentoData.estimated_value || '0').toFixed(2)}</p>
                     </div>
+                    {faturamentoData.discount > 0 && (
+                      <div>
+                        <p className="text-xs text-gray-600 font-medium">Desconto</p>
+                        <div>
+                          <p className="font-semibold text-red-600">- R$ {parseFloat(faturamentoData.discount || '0').toFixed(2)}</p>
+                          <p className="text-xs text-gray-700 mt-1">{faturamentoData.discount_reason || 'Sem motivo'}</p>
+                          {faturamentoData.discount_authorized_by && (
+                            <p className="text-xs text-green-700">✓ Autorizado: {discountAuthorizedByName || faturamentoData.discount_authorized_by}</p>
+                          )}
+                          {!faturamentoData.discount_authorized_by && (
+                            <p className="text-xs text-yellow-700">⏳ Pendente de aprovação</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
                     <div>
-                      <p className="text-xs text-gray-600 font-medium">Valor Recebido</p>
+                      <p className="text-xs text-gray-600 font-medium">Valor a Receber</p>
                       {/* Force recalculation on render to avoid stale values */}
-                      <p className="font-semibold text-green-600">R$ {(parseFloat(faturamentoData.estimated_value || '0') - parseFloat(faturamentoData.discount || '0')).toFixed(2)}</p>
+                      <p className="font-semibold text-green-600 text-lg">R$ {(parseFloat(faturamentoData.estimated_value || '0') - parseFloat(faturamentoData.discount || '0')).toFixed(2)}</p>
                     </div>
                     {pagamentoData.payment_method === 'DINHEIRO' && (
                       <div>
@@ -2895,6 +4304,38 @@ export default function AtendimentoModal({
                       </div>
                     </div>
                   )}
+
+                  {/* ✅ RESUMO DE MÚLTIPLOS PAGAMENTOS - Mostrar saldo em aberto */}
+                  {pagamentoSplits && pagamentoSplits.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-orange-300">
+                      <p className="text-xs font-bold text-orange-900 mb-3">💳 Resumo de Pagamentos Realizados</p>
+                      <div className="space-y-2">
+                        {pagamentoSplits.map((split, idx) => (
+                          <div key={idx} className="flex justify-between bg-white px-3 py-2 rounded border border-orange-100">
+                            <span className="font-medium text-gray-700">{formatPaymentMethod(split.method)}:</span>
+                            <span className="text-gray-900">R$ {parseFloat(split.amount || '0').toFixed(2)}</span>
+                          </div>
+                        ))}
+                        
+                        {/* SALDO EM ABERTO */}
+                        {(() => {
+                          const valorTotal = parseFloat(faturamentoData.estimated_value || '0') - parseFloat(faturamentoData.discount || '0');
+                          const totalPago = pagamentoSplits.reduce((sum, split) => sum + (parseFloat(split.amount) || 0), 0);
+                          const saldoAberto = valorTotal - totalPago;
+                          
+                          if (saldoAberto > 0.01) {
+                            return (
+                              <div className="mt-3 pt-3 border-t border-red-200 flex justify-between bg-red-50 px-3 py-2 rounded border border-red-200">
+                                <span className="font-bold text-red-800">Saldo em Aberto:</span>
+                                <span className="font-bold text-lg text-red-600">R$ {saldoAberto.toFixed(2)}</span>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -2910,6 +4351,30 @@ export default function AtendimentoModal({
 
           {/* FOOTER COM BOTÕES - SEMPRE VISÍVEL */}
           <div className="border-t border-gray-200 p-4 bg-white flex gap-2 justify-end flex-shrink-0">
+            {tabAtivo === 'dados_agendamento' && (
+              <>
+                <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+                <Button
+                  type="button"
+                  onClick={handleSaveAgendamento}
+                  disabled={loading || !agendamentoData.date || !agendamentoData.time || !agendamentoData.professionalId || !agendamentoData.serviceId}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold"
+                  title={!agendamentoData.date || !agendamentoData.time || !agendamentoData.professionalId || !agendamentoData.serviceId ? 'Preencha Data, Hora, Profissional e Serviço' : 'Salvar dados do agendamento'}
+                >
+                  {loading ? (
+                    <>
+                      <span className="animate-spin mr-2">⏳</span>
+                      Salvando...
+                    </>
+                  ) : (
+                    <>
+                      ✓ Salvar e Continuar →
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
+            
             {tabAtivo === 'cadastrais' && (
               <>
                 <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
@@ -3047,31 +4512,37 @@ export default function AtendimentoModal({
                     </Button>
                   </>
                 ) : (
-                  <Button
-                    type="button"
-                    onClick={handleCompleteCheckIn}
-                    disabled={loading}
-                    className="bg-green-600 hover:bg-green-700 text-white font-bold"
-                  >
-                    {loading ? (
-                      <>
-                        <span className="animate-spin mr-2">⏳</span>
-                        Liberando...
-                      </>
-                    ) : (
-                      <>
-                        ✅ Liberar para Atendimento
-                      </>
-                    )}
-                  </Button>
+                  <>
+                    {(() => {
+                      const validation = validateFinancialData();
+                      return (
+                        <Button
+                          type="button"
+                          onClick={handleCompleteCheckIn}
+                          disabled={loading || !validation.valid}
+                          className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-bold"
+                          title={!validation.valid ? `❌ Erros:\n${validation.errors.map(e => `• ${e}`).join('\n')}` : 'Liberar paciente para atendimento'}
+                        >
+                          {loading ? (
+                            <>
+                              <span className="animate-spin mr-2">⏳</span>
+                              Liberando...
+                            </>
+                          ) : (
+                            <>
+                              ✓ Liberar para Atendimentos
+                            </>
+                          )}
+                        </Button>
+                      );
+                    })()}
+                  </>
                 )}
               </>
             )}
           </div>
         </div>
       </DialogContent>
-
-
     </Dialog>
   );
 }

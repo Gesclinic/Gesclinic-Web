@@ -284,6 +284,22 @@ export function getMenuItems(role = "admin") {
           featurePath: "financeiro.conciliacao",
         },
         {
+          id: "financeiro.caixa",
+          label: "Caixa Individual",
+          icon: "DollarSign",
+          path: "/clinica/financeiro/caixa",
+          roles: ["admin", "gestor", "financeiro", "recepcao"],
+          featurePath: "financeiro.caixa",
+        },
+        {
+          id: "financeiro.caixa_gerencial",
+          label: "Caixa Gerencial",
+          icon: "BarChart3",
+          path: "/clinica/financeiro/caixa-gerencial",
+          roles: ["admin", "gestor"],
+          featurePath: "financeiro.caixa_gerencial",
+        },
+        {
           id: "financeiro.estrutura",
           label: "Estrutura Financeira",
           icon: "Settings2",

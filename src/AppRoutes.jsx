@@ -28,7 +28,6 @@ import AgendaConfig from "@/pages/clinica/configuracoes/AgendaConfig";
 import ContaConfig from "@/pages/clinica/configuracoes/ContaConfig";
 import FaturamentoConfig from "@/pages/clinica/configuracoes/FaturamentoConfig";
 import EstoqueConfig from "@/pages/clinica/configuracoes/EstoqueConfig";
-import Pacientes from "@/pages/clinica/Paciente/Pacientes";
 
 // Estoque
 import EstoqueProdutos from "@/pages/clinica/estoque/Produtos";
@@ -65,6 +64,8 @@ import CentroCustosConfig from "@/pages/clinica/financeiro/custos/Config";
 import FinanceConciliacaoBancaria from "@/pages/clinica/financeiro/ConciliacaoBancaria";
 import FinanceAutomacaoFinanceira from "@/pages/clinica/financeiro/AutomacaoFinanceira";
 import DashboardDRE from "@/pages/clinica/financeiro/DashboardDRE";
+import CaixaIndividual from "@/pages/clinica/financeiro/CaixaIndividual";
+import CaixaGerencial from "@/pages/clinica/financeiro/CaixaGerencial";
 // Novas páginas de repasse (estrutura real)
 import RepasseMedicoLayout from "@/pages/financeiro/RepasseMedicoLayout";
 import RepasseMedicoPage from "@/pages/financeiro/RepasseMedicoPage";
@@ -393,6 +394,8 @@ export default function AppRoutes() {
               </ProtectedWizardRoute>
             } 
           />
+          <Route path="financeiro/caixa" element={<CaixaIndividual />} />
+          <Route path="financeiro/caixa-gerencial" element={<CaixaGerencial />} />
           <Route path="financeiro/resultado" element={<DashboardDRE />} />
           <Route path="financeiro/dre" element={<Navigate to="/clinica/financeiro/resultado" replace />} />
           <Route path="financeiro/pagar" element={<FinanceContasPagar />} />

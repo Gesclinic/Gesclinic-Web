@@ -24,3 +24,23 @@ export async function listUsers(clinicId) {
 
     return usersData;
 }
+
+export async function getUserNameById(userId) {
+    try {
+        const { data, error } = await supabase
+            .from('users')
+            .select('full_name, email')
+            .eq('id', userId)
+            .single();
+        
+        if (error) {
+            console.warn(`Could not fetch user name for ${userId}:`, error.message);
+            return userId.substring(0, 8) + '...';
+        }
+        
+        return data.full_name || data.email || userId.substring(0, 8) + '...';
+    } catch (err) {
+        console.warn(`Error fetching user name for ${userId}:`, err);
+        return userId.substring(0, 8) + '...';
+    }
+}
