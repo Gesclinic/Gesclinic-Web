@@ -254,6 +254,13 @@ export function mapFromDatabase(record) {
     planName: record.plans?.name || null,
     planCode: record.plans?.code || null,
     
+    // 📦 Dados relacionados (OBJETOS COMPLETOS para componentes)
+    professionals: record.professionals || null,
+    services: record.services || null,
+    rooms: record.rooms || null,
+    payers: record.payers || null,
+    patients: record.patients || null,
+    
     // Dados relacionados (nomes para exibição) - SNAKE_CASE (compatibilidade com agenda)
     patient_name: record.patients?.name || record.lead_name || null,
     patient_phone: record.patients?.phone || record.patient_phone || null,
