@@ -523,11 +523,18 @@ export default function AtendimentoModal({
       if (!appointment || !appointment.patientId) return;
 
       // 🔄 Primeiro, recarregar DATA MAIS RECENTE do appointment do banco
-      console.log('🔄 [AtendimentoModal] Carregando dados mais recentes do appointment...');
+      console.log('🔄 [AtendimentoModal] Carregando dados mais recentes do appointment com relacionamentos...');
       let appointmentFresh = appointment; // Fallback: usar o appointment original
       const { data: appointmentData, error: appointmentError } = await supabase
         .from('appointments')
-        .select('*')
+        .select(`
+          *,
+          patients (id, name, phone, document_id, birthdate, gender, email, street, number, neighborhood, city, state, zip_code),
+          professionals (id, name),
+          services (id, name, code),
+          payers (id, name),
+          rooms (id, name)
+        `)
         .eq('id', appointment.id)
         .maybeSingle();
 
