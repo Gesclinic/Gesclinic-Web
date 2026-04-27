@@ -272,9 +272,6 @@ export function mapFromDatabase(record) {
     payer_name: record.payers?.active === false ? null : (record.payers?.name || 'Particular'),
     plan_name: record.plans?.name || null,
     plan_code: record.plans?.code || null,
-    
-    // Keep raw snake_case for backward compatibility if needed
-    ...record
   };
   
   // 🔍 DEBUG: Log mapped camelCase data
