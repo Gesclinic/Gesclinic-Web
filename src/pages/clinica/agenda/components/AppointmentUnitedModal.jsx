@@ -2413,7 +2413,9 @@ export default function AppointmentUnitedModal({
 
                             {agendamentoData.date && availableTimeSlots.length > 0 ? (
                               <div className="mt-3 flex flex-wrap gap-2">
-                                {availableTimeSlots.map((slot) => (
+                                {availableTimeSlots.map((slot) => {
+                                  const appointmentTime = agendamentoData.time?.slice(0, 5);
+                                  return (
                                   <button
                                     key={slot}
                                     type="button"
@@ -2421,11 +2423,12 @@ export default function AppointmentUnitedModal({
                                       updateAgendamentoField('time', slot);
                                       updateAgendamentoField('endTime', minutesToTime(timeToMinutes(slot) + (Number(agendamentoData.duration) || 30)));
                                     }}
-                                    className={`rounded-full border px-3 py-1 text-xs font-medium transition ${agendamentoData.time === slot ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-blue-300 hover:text-blue-700'}`}
+                                    className={`rounded-full border px-3 py-1 text-xs font-medium transition ${appointmentTime === slot ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-blue-300 hover:text-blue-700'}`}
                                   >
                                     {slot}
                                   </button>
-                                ))}
+                                  );
+                                })}
                               </div>
                             ) : (
                               <p className="mt-3 text-sm text-slate-500">
