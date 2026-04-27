@@ -775,15 +775,29 @@ export default function AgendaIndex() {
   const handleEditAppointment = useCallback((appointmentId) => {
     console.log('✏️ [AgendaIndex] Editando agendamento:', appointmentId);
     console.log('   typeof appointmentId:', typeof appointmentId);
-    console.log('   ✅ Definindo appointmentIdToEdit para:', appointmentId);
-    console.log('   ✅ Definindo modalNovoOpen para: true');
     
-    // ✅ Profissionais PODEM editar seus agendamentos via modal
-    // Abrir modal de edição para todos os roles
+    // 🔍 ENCONTRAR O AGENDAMENTO COMPLETO NA LISTA
+    const foundAppointment = appointments.find(apt => apt.id === appointmentId);
+    
+    if (!foundAppointment) {
+      console.error('❌ [AgendaIndex] Agendamento não encontrado:', appointmentId);
+      console.log('   Disponíveis:', appointments.map(a => a.id).join(', '));
+      return;
+    }
+    
+    console.log('✅ [AgendaIndex] Agendamento encontrado:', {
+      id: foundAppointment.id,
+      mode: 'edit',
+      patient: foundAppointment.patient_id,
+      payer: foundAppointment.payer_id,
+      professional: foundAppointment.professional_id,
+    });
+    
+    // ✅ PASSAR O AGENDAMENTO COMPLETO PARA ABRIR EM MODO EDIT
     setAppointmentIdToEdit(appointmentId);
-    setNovoAgendamentoInfo(null);
+    setNovoAgendamentoInfo(foundAppointment);
     setModalNovoOpen(true);
-  }, []);
+  }, [appointments]);
 
   const handleCancelAppointment = useCallback((appointment) => {
     console.log('Cancelar agendamento:', appointment.id);

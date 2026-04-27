@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import AppointmentUnitedModal from './AppointmentUnitedModal';
 import { listRooms } from '@/lib/roomsApi';
 import { getAppointmentById } from '@/lib/appointmentsApi';
@@ -50,10 +50,42 @@ export default function ModalCriarAgendamento({
   // Estado para armazenar o agendamento carregado
   const [loadedAppointment, setLoadedAppointment] = useState(null);
   
+  // Estado para detectar quando modal reabre
+  const [wasModalOpenBefore, setWasModalOpenBefore] = useState(false);
+  
+  // ✅ CALCULAR isModalOpen AQUI (ANTES dos useEffects)
+  // Se 'open' for true (interface antiga), usa true. Caso contrário, usa 'isOpen'
+  const isModalOpen = open === true ? true : isOpen;
+  
+  // 📋 PASSO 3: Consolidate appointment from BOTH sources (prop or loaded via ID)
+  // Prioridade: data (passed from parent) > loadedAppointment > appointment
+  const finalAppointment = useMemo(() => data || loadedAppointment || appointment, [data, loadedAppointment, appointment]);
+  
+  // 🔍 DEBUG: QUAL SOURCE ESTÁ SENDO USADO?
+  console.log('📋 [ModalCriarAgendamento] Consolidando appointment:', {
+    temData: !!data,
+    temLoadedAppointment: !!loadedAppointment,
+    temAppointment: !!appointment,
+    final: finalAppointment ? '✅' : '❌',
+    modo: appointmentIdToEdit ? 'EDIT' : 'NEW',
+  });
+  
+  if (finalAppointment) {
+    console.log('✅ [ModalCriarAgendamento] finalAppointment COMPLETO:', {
+      id: finalAppointment.id,
+      professionalId: finalAppointment.professionalId,
+      professional_id: finalAppointment.professional_id,
+      payerId: finalAppointment.payerId,
+      payer_id: finalAppointment.payer_id,
+      data: finalAppointment.date,
+      time: finalAppointment.time || finalAppointment.scheduled_time,
+    });
+  }
+  
   // Carregar appointment quando appointmentIdToEdit muda
   useEffect(() => {
-    if (appointmentIdToEdit) {
-      console.log('📥 [ModalCriarAgendamento] Carregando agendamento:', appointmentIdToEdit);
+    if (appointmentIdToEdit && !data) {
+      console.log('📥 [ModalCriarAgendamento] Carregando agendamento via appointmentIdToEdit:', appointmentIdToEdit);
       
       (async () => {
         try {
@@ -64,6 +96,7 @@ export default function ModalCriarAgendamento({
               id: apt.id,
               professionalId: apt.professionalId,
               patientId: apt.patientId,
+              payerId: apt.payerId,
               date: apt.date,
               startTime: apt.startTime,
             });
@@ -77,10 +110,38 @@ export default function ModalCriarAgendamento({
           setLoadedAppointment(null);
         }
       })();
-    } else {
+    } else if (data) {
+      // ✅ SE DATA JÁ FOI PASSADA VIA PROPS, NÃO PRECISA CARREGAR
+      console.log('✅ [ModalCriarAgendamento] Dados já foram passados via props (data):', data);
       setLoadedAppointment(null);
     }
-  }, [appointmentIdToEdit]);
+  }, [appointmentIdToEdit, data]);
+  
+  // 🔄 RECARREGAR DADOS QUANDO MODAL REABRE APÓS FECHAR
+  useEffect(() => {
+    if (isModalOpen && !wasModalOpenBefore && appointmentIdToEdit) {
+      console.log('🔄 [ModalCriarAgendamento] Modal REABRINDO - recarregando dados atualizados após save');
+      
+      (async () => {
+        try {
+          const apt = await getAppointmentById(appointmentIdToEdit);
+          if (apt) {
+            console.log('✅ Dados ATUALIZADOS recarregados:', {
+              id: apt.id,
+              payerId: apt.payerId,
+              roomId: apt.roomId,
+              value: apt.value,
+              date: apt.date,
+            });
+            setLoadedAppointment(apt);
+          }
+        } catch (err) {
+          console.error('❌ Erro ao recarregar dados:', err);
+        }
+      })();
+    }
+    setWasModalOpenBefore(isModalOpen);
+  }, [isModalOpen, appointmentIdToEdit]);
   
   // Carregar rooms se clinicId for fornecido
   useEffect(() => {
@@ -95,10 +156,6 @@ export default function ModalCriarAgendamento({
   
   // Determinar o modo baseado no estado
   const determinedMode = appointmentIdToEdit ? 'edit' : mode;
-  
-  // Determinar se o modal está aberto (compatível com ambas as interfaces)
-  // Se 'open' for true (interface antiga), usa true. Caso contrário, usa 'isOpen'
-  const isModalOpen = open === true ? true : isOpen;
   
   // Handler de fechamento que chama o callback correto
   const handleClose = () => {
@@ -121,17 +178,17 @@ export default function ModalCriarAgendamento({
     handleClose();
   };
   
-  const finalAppointment = loadedAppointment || appointment || data;
-  
+  // 🎬 DEBUG LOG
   if (isModalOpen && finalAppointment) {
-    console.log('🎬 [ModalCriarAgendamento RETURN - PRE RENDER]');
-    console.log('   loadedAppointment:', loadedAppointment);
-    console.log('   appointment prop:', appointment);
-    console.log('   data prop:', data);
-    console.log('   → finalAppointment RESULTADO:', finalAppointment);
-    console.log('   finalAppointment.professionalId:', finalAppointment.professionalId);
-    console.log('   finalAppointment.professional_id:', finalAppointment.professional_id);
-    console.log('   finalAppointment keys:', Object.keys(finalAppointment));
+    console.log('🎬 [ModalCriarAgendamento RENDER]');
+    console.log('   loadedAppointment:', !!loadedAppointment);
+    console.log('   appointment prop:', !!appointment);
+    console.log('   data prop:', !!data);
+    console.log('   → finalAppointment:', finalAppointment ? 'SIM' : 'NÃO');
+    if (finalAppointment) {
+      console.log('   finalAppointment.professionalId:', finalAppointment.professionalId);
+      console.log('   finalAppointment.professional_id:', finalAppointment.professional_id);
+    }
   }
   
   return (

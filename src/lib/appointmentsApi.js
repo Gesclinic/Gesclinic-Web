@@ -129,28 +129,43 @@ function validateAppointment(payload) {
  * @throws {Error} Se payload for inv�lido
  */
 function mapToDatabase(payload) {
-  if (!payload) throw new Error("Payload inv�lido");
+  if (!payload) throw new Error("Payload inválido");
 
+  // ✅ ACEITAR AMBOS OS FORMATOS (camelCase E snake_case)
   return {
     id: payload.id,
 
-    clinic_id: payload.clinicId,
-    patient_id: payload.patientId,
-    professional_id: payload.professionalId,
-    service_id: payload.serviceId,
+    clinic_id: payload.clinicId || payload.clinic_id,
+    patient_id: payload.patientId || payload.patient_id,
+    professional_id: payload.professionalId || payload.professional_id,
+    service_id: payload.serviceId || payload.service_id,
+    room_id: payload.roomId || payload.room_id,
+    payer_id: payload.payerId || payload.payer_id,
+    plan_id: payload.planId || payload.plan_id,
 
-    scheduled_date: payload.date,
-    scheduled_time: payload.startTime,
-    end_time: payload.endTime,
+    // 📅 Datas/Horários (aceitar ambos camelCase e snake_case)
+    scheduled_date: payload.date || payload.scheduled_date,
+    scheduled_time: payload.time || payload.startTime || payload.scheduled_time,
+    end_time: payload.endTime || payload.end_time,
+    duration: payload.duration || 30,
 
+    // 📊 Status e valores
     status: payload.status || "scheduled",
-
     notes: payload.notes || null,
-    value: payload.value || 0,
-    discount: payload.discount || 0,
+    value: payload.value ? parseFloat(payload.value) : 0,
+    discount: payload.discount ? parseFloat(payload.discount) : 0,
+    
+    // 💳 Campos financeiros
+    discount_reason: payload.discount_reason || null,
+    discount_authorized_by: payload.discount_authorized_by || null,
+    discount_authorized_at: payload.discount_authorized_at || null,
+    discount_observation: payload.discount_observation || null,
+    payment_method: payload.payment_method || null,
 
-    payer_id: payload.payerId || null,
-    payer_type: payload.payerType || null,
+    // 🏥 Campos adicionais
+    payer_type: payload.payerType || payload.payer_type || null,
+    convenio_id: payload.convenio_id || null,
+    plano_contas_id: payload.plano_contas_id || null,
 
     updated_at: new Date().toISOString()
   };
@@ -580,11 +595,19 @@ export async function getAppointmentById(appointmentId) {
   // Apply status migration
   mapped.status = migrateStatus(mapped.status);
   
-  console.log('✅ [getAppointmentById] Agendamento carregado com mapeamento:', {
+  console.log('✅ [getAppointmentById] RAW SUPABASE RESPONSE:', {
+    scheduled_date: apt.scheduled_date,
+    scheduled_time: apt.scheduled_time,
+    end_time: apt.end_time,
+  });
+  
+  console.log('✅ [getAppointmentById] APÓS MAPEAMENTO:', {
     id: mapped.id,
     professionalId: mapped.professionalId,
     patientId: mapped.patientId,
     date: mapped.date,
+    startTime: mapped.startTime,
+    endTime: mapped.endTime,
   });
   
   return mapped;

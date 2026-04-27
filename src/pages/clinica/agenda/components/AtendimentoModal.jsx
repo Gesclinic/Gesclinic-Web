@@ -44,6 +44,7 @@ import { createAR } from '@/lib/financeApi';
 import { logAppointmentFinancialAudit, FINANCIAL_EVENT_TYPES } from '@/lib/auditFinancialApi';
 import discountApprovalsApi from '@/lib/discountApprovalsApi';
 import { getUserNameById } from '@/lib/usersApi';
+import { mapFromDatabase } from '@/lib/appointmentsApi';
 
 // 💳 Função para formatar nome da forma de pagamento
 const formatPaymentMethod = (method) => {
@@ -560,14 +561,17 @@ export default function AtendimentoModal({
           }
 
           console.log('✅ [AtendimentoModal] Dados frescos carregados:', freshAppointment);
-          mapAndSetAppointmentData(freshAppointment);
+          // 🔄 APLICAR MAPEAMENTO snake_case → camelCase
+          const mappedAppointment = mapFromDatabase(freshAppointment);
+          console.log('✅ [AtendimentoModal] Dados mapeados (snake_case → camelCase):', mappedAppointment);
+          mapAndSetAppointmentData(mappedAppointment);
         } catch (err) {
           console.warn('❌ [AtendimentoModal] Erro ao buscar dados frescos:', err);
           mapAndSetAppointmentData(appointment);
         }
       })();
     }
-  }, [isOpen, appointment, clinicId, mapAndSetAppointmentData]);
+  }, [isOpen, appointment, clinicId]);
 
   // ✨ CARREGAR SCHEDULES QUANDO PROFISSIONAL MUDA
   useEffect(() => {
