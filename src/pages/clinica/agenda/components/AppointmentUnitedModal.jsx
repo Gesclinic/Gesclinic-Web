@@ -1725,6 +1725,74 @@ export default function AppointmentUnitedModal({
   // ════════════════════════════════════════════════════════════════
 
   /**
+   * ETAPA 1 - VALIDAÇÃO: Valida formData antes do save
+   * @param {Object} data - dados do formulário
+   * @returns {Object} resultado da validação { valid, errors }
+   */
+  const validateFormData = (data) => {
+    const errors = [];
+
+    // Campos obrigatórios
+    if (!data.professional_id) errors.push('Profissional é obrigatório');
+    if (!data.service_id) errors.push('Serviço é obrigatório');
+    if (!data.scheduled_date) errors.push('Data é obrigatória');
+    if (!data.scheduled_time) errors.push('Hora é obrigatória');
+    if (!data.payer_id) errors.push('Convênio é obrigatório');
+    if (!data.room_id) errors.push('Sala é obrigatória');
+    if (!data.plano_contas_id) errors.push('Plano de contas é obrigatório');
+
+    console.log('🔍 VALIDAÇÃO FORMDATA FINAL:', {
+      patient_id: data.patient_id || null,
+      professional_id: data.professional_id || null,
+      service_id: data.service_id || null,
+      payer_id: data.payer_id || null,
+      room_id: data.room_id || null,
+      plano_contas_id: data.plano_contas_id || null,
+      scheduled_date: data.scheduled_date || null,
+      scheduled_time: data.scheduled_time || null,
+      value: data.value || null,
+      status: data.status || null,
+      notes: data.notes || null,
+    });
+
+    if (errors.length > 0) {
+      console.error('❌ ERROS DE VALIDAÇÃO:', errors);
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors
+    };
+  };
+
+  /**
+   * ETAPA 2 - NORMALIZAÇÃO: Converte campos vazios para null
+   * Garante que string vazia se torna null, não undefined
+   * @param {Object} data - dados a normalizar
+   * @returns {Object} dados normalizados
+   */
+  const normalizePayload = (data) => {
+    return {
+      patient_id: data.patient_id || null,
+      professional_id: data.professional_id || null,
+      service_id: data.service_id || null,
+      payer_id: data.payer_id || null,
+      room_id: data.room_id || null,
+      plano_contas_id: data.plano_contas_id || null,
+      scheduled_date: data.scheduled_date || null,
+      scheduled_time: data.scheduled_time || null,
+      value: data.value ? parseFloat(data.value) : null,
+      status: data.status || 'scheduled',
+      notes: data.notes || null,
+      duration: data.duration ? parseInt(data.duration) : 30,
+      end_time: data.end_time || null,
+      lead_name: data.lead_name || null,
+      lead_phone: data.lead_phone || null,
+      patient_type: data.patient_type || 'PATIENT',
+    };
+  };
+
+  /**
    * Campos editáveis pelo usuário no formulário
    * Qualquer outro campo é considerado crítico e não deve ser alterado
    */
@@ -1767,56 +1835,64 @@ export default function AppointmentUnitedModal({
   };
 
   /**
-   * Constrói payload LIMPO para CREATE de novo agendamento
-   * Garante que clinic_id SEMPRE está presente
-   * @param {Object} formData - dados do formulário
+   * ETAPA 3 - CREATE: Constrói payload para INSERT
+   * Usa APENAS formData, sem dependências de outros state objects
+   * @param {Object} formData - dados do formulário (normalizado)
    * @param {String} finalPatientId - ID do paciente (pode ser null para leads)
    * @returns {Object} Payload pronto para Supabase
    */
   const buildCreatePayload = (formData, finalPatientId) => {
-    // 🔥 CRÍTICO: clinic_id DEVE estar aqui
+    // 🔥 NORMALIZAR PRIMEIRO
+    const normalized = normalizePayload(formData);
+
+    // 🔥 CONSTRUIR PAYLOAD COM APENAS formData
     const payload = {
       clinic_id: clinicId,
       patient_id: finalPatientId,
       patient_type: finalPatientId ? 'PATIENT' : 'LEAD',
-      lead_name: !finalPatientId ? agendamentoData.patientName : null,
-      lead_phone: !finalPatientId ? agendamentoData.phone : null,
+      lead_name: !finalPatientId ? formData.lead_name : null,
+      lead_phone: !finalPatientId ? formData.lead_phone : null,
       
-      // Campos do formulário
-      professional_id: formData.professional_id || null,
-      service_id: formData.service_id || null,
-      payer_id: formData.payer_id || null,
-      room_id: formData.room_id || null,
-      scheduled_date: formData.scheduled_date || null,
-      scheduled_time: formData.scheduled_time || null,
-      value: formData.value ? parseFloat(formData.value) : null,
-      notes: formData.notes || null,
+      // Campos do formulário (TODOS de formData normalizado)
+      professional_id: normalized.professional_id,
+      service_id: normalized.service_id,
+      payer_id: normalized.payer_id,
+      room_id: normalized.room_id,
+      plano_contas_id: normalized.plano_contas_id,
+      scheduled_date: normalized.scheduled_date,
+      scheduled_time: normalized.scheduled_time,
+      end_time: normalized.end_time,
+      value: normalized.value,
+      notes: normalized.notes,
       
       // Campos críticos
-      status: formData.status || 'scheduled',
-      end_time: agendamentoData.endTime?.trim() ? agendamentoData.endTime : null,
-      duration: agendamentoData.duration || 30,
-      discount: pagamentoData.discount ? parseFloat(pagamentoData.discount) : 0,
-      payment_method: pagamentoData.payment_method || null,
-      convenio_id: faturamentoData?.convenio_id || null,
-      plano_contas_id: faturamentoData?.plano_contas_id || pagamentoData?.plano_contas_id || null,
+      status: normalized.status,
+      duration: normalized.duration,
+      discount: 0,
+      payment_method: null,
       
       created_at: new Date().toISOString(),
     };
 
-    // ✅ VALIDAÇÃO: Garantir que clinic_id não é undefined ou null
+    // ✅ VALIDAÇÃO: Garantir que clinic_id não é undefined
     if (!payload.clinic_id) {
       throw new Error('❌ clinic_id é obrigatório e não pode estar vazio');
     }
 
-    console.log('📦 [CREATE] Payload construído:', {
+    console.log('📦 PAYLOAD CREATE (100% FORMDATA):', JSON.stringify({
       clinic_id: payload.clinic_id,
       patient_id: payload.patient_id,
+      patient_type: payload.patient_type,
       professional_id: payload.professional_id,
       service_id: payload.service_id,
       payer_id: payload.payer_id,
       room_id: payload.room_id,
-    });
+      plano_contas_id: payload.plano_contas_id,
+      scheduled_date: payload.scheduled_date,
+      scheduled_time: payload.scheduled_time,
+      value: payload.value,
+      duration: payload.duration,
+    }, null, 2));
 
     return payload;
   };
@@ -2289,7 +2365,11 @@ export default function AppointmentUnitedModal({
                           <Input
                             placeholder="Nome"
                             value={agendamentoData.patientName}
-                            onChange={(e) => updateAgendamentoField('patientName', e.target.value)}
+                            onChange={(e) => {
+                              updateAgendamentoField('patientName', e.target.value);
+                              // ETAPA 6: Sincronizar com formData
+                              setFormData(prev => ({ ...prev, lead_name: e.target.value }));
+                            }}
                             className="mt-1"
                           />
                         </div>
@@ -2307,7 +2387,11 @@ export default function AppointmentUnitedModal({
                           <Input
                             placeholder="Telefone"
                             value={agendamentoData.phone}
-                            onChange={(e) => updateAgendamentoField('phone', e.target.value)}
+                            onChange={(e) => {
+                              updateAgendamentoField('phone', e.target.value);
+                              // ETAPA 6: Sincronizar com formData
+                              setFormData(prev => ({ ...prev, lead_phone: e.target.value }));
+                            }}
                             className="mt-1"
                           />
                         </div>
@@ -2321,7 +2405,11 @@ export default function AppointmentUnitedModal({
                       <Input
                         type="date"
                         value={agendamentoData.date}
-                        onChange={(e) => updateAgendamentoField('date', e.target.value)}
+                        onChange={(e) => {
+                          updateAgendamentoField('date', e.target.value);
+                          // ETAPA 6: Sincronizar com formData
+                          setFormData(prev => ({ ...prev, scheduled_date: e.target.value }));
+                        }}
                       />
                       {agendamentoData.date && selectedDateBlockedByHoliday && (
                         <p className="mt-2 text-xs text-red-700">
@@ -2344,6 +2432,8 @@ export default function AppointmentUnitedModal({
                           console.log('   e.target.value:', e.target.value);
                           console.log('   typeof:', typeof e.target.value);
                           updateAgendamentoField('time', e.target.value);
+                          // ETAPA 6: Sincronizar com formData
+                          setFormData(prev => ({ ...prev, scheduled_time: e.target.value }));
                         }}
                         onBlur={(e) => console.log('🔵 [TIME INPUT] onBlur - Valor final:', e.target.value)}
                       />
@@ -2357,7 +2447,11 @@ export default function AppointmentUnitedModal({
                         type="number"
                         min="5"
                         value={agendamentoData.duration}
-                        onChange={(e) => updateAgendamentoField('duration', parseInt(e.target.value) || 30)}
+                        onChange={(e) => {
+                          updateAgendamentoField('duration', parseInt(e.target.value) || 30);
+                          // ETAPA 6: Sincronizar com formData
+                          setFormData(prev => ({ ...prev, duration: parseInt(e.target.value) || 30 }));
+                        }}
                       />
                     </div>
                     <div>
@@ -2415,6 +2509,8 @@ export default function AppointmentUnitedModal({
                       onValueChange={(value) => {
                         console.log('👥 [Select] Profissional selecionado:', value);
                         updateAgendamentoField('professionalId', value);
+                        // ETAPA 6: Sincronizar com formData
+                        setFormData(prev => ({ ...prev, professional_id: value }));
                       }}
                     >
                       <SelectTrigger>
@@ -2760,7 +2856,11 @@ export default function AppointmentUnitedModal({
                         step="0.01"
                         min="0"
                         value={agendamentoData.value}
-                        onChange={(e) => updateAgendamentoField('value', e.target.value)}
+                        onChange={(e) => {
+                          updateAgendamentoField('value', e.target.value);
+                          // ETAPA 6: Sincronizar com formData
+                          setFormData(prev => ({ ...prev, value: e.target.value }));
+                        }}
                       />
                     </div>
                   </div>
@@ -2772,6 +2872,8 @@ export default function AppointmentUnitedModal({
                       onValueChange={(value) => {
                         console.log('🔹 [Status] Alterando status para:', value);
                         updateAgendamentoField('status', value);
+                        // ETAPA 6: Sincronizar com formData
+                        setFormData(prev => ({ ...prev, status: value }));
                       }}
                     >
                       <SelectTrigger>
@@ -2795,7 +2897,11 @@ export default function AppointmentUnitedModal({
                     <Textarea
                       placeholder="Observações importantes..."
                       value={agendamentoData.notes}
-                      onChange={(e) => updateAgendamentoField('notes', e.target.value)}
+                      onChange={(e) => {
+                        updateAgendamentoField('notes', e.target.value);
+                        // ETAPA 6: Sincronizar com formData
+                        setFormData(prev => ({ ...prev, notes: e.target.value }));
+                      }}
                     />
                   </div>
                 </div>
@@ -3234,7 +3340,11 @@ export default function AppointmentUnitedModal({
                     <Label>📊 Plano de Contas *</Label>
                     <Select
                       value={faturamentoData.plano_contas_id || ''}
-                      onValueChange={(value) => updateFaturamentoField('plano_contas_id', value)}
+                      onValueChange={(value) => {
+                        updateFaturamentoField('plano_contas_id', value);
+                        // ETAPA 6: Sincronizar com formData
+                        setFormData(prev => ({ ...prev, plano_contas_id: value }));
+                      }}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o plano de contas" />
@@ -3397,7 +3507,11 @@ export default function AppointmentUnitedModal({
                     <Label>📊 Plano de Contas *</Label>
                     <Select
                       value={pagamentoData.plano_contas_id || ''}
-                      onValueChange={(value) => updatePagamentoField('plano_contas_id', value)}
+                      onValueChange={(value) => {
+                        updatePagamentoField('plano_contas_id', value);
+                        // ETAPA 6: Sincronizar com formData
+                        setFormData(prev => ({ ...prev, plano_contas_id: value }));
+                      }}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o plano de contas" />
@@ -3420,7 +3534,11 @@ export default function AppointmentUnitedModal({
                         step="0.01"
                         min="0"
                         value={agendamentoData.value}
-                        onChange={(e) => updateAgendamentoField('value', e.target.value)}
+                        onChange={(e) => {
+                          updateAgendamentoField('value', e.target.value);
+                          // ETAPA 6: Sincronizar com formData
+                          setFormData(prev => ({ ...prev, value: e.target.value }));
+                        }}
                       />
                     </div>
                   </div>

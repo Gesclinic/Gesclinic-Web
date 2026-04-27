@@ -13,6 +13,7 @@ import { useState } from 'react';
 export function useAppointmentForm() {
 
   const getEmpty = () => ({
+    // 🔧 DADOS PRINCIPAIS
     patient_id: '',
     professional_id: '',
     service_id: '',
@@ -22,7 +23,15 @@ export function useAppointmentForm() {
     scheduled_time: '',
     value: '',
     status: 'scheduled',
-    notes: ''
+    notes: '',
+    
+    // 🔧 DADOS EXPANDIDOS (para consolidação completa)
+    plano_contas_id: '',
+    duration: 30,
+    end_time: '',
+    lead_name: '',
+    lead_phone: '',
+    patient_type: 'PATIENT',
   });
 
   const [formData, setFormData] = useState(getEmpty());
@@ -46,13 +55,20 @@ export function useAppointmentForm() {
       scheduled_time: apt.scheduled_time || '',
       value: apt.value || '',
       status: apt.status || 'scheduled',
-      notes: apt.notes || ''
+      notes: apt.notes || '',
+      plano_contas_id: apt.plano_contas_id || '',
+      duration: apt.duration || 30,
+      end_time: apt.end_time || '',
+      lead_name: apt.lead_name || '',
+      lead_phone: apt.lead_phone || '',
+      patient_type: apt.patient_type || 'PATIENT',
     });
 
     console.log('✅ [useAppointmentForm] Formulário preenchido:', {
       payer_id: apt.payer_id,
       room_id: apt.room_id,
       professional_id: apt.professional_id,
+      plano_contas_id: apt.plano_contas_id,
     });
   };
 
