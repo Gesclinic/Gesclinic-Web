@@ -1,0 +1,184 @@
+╔════════════════════════════════════════════════════════════════════════╗
+║                    🔥 PASSE 2: DEBUG MELHORADO                        ║
+║                                                                        ║
+║     Usuários TÊM clinic_id, MAS erro "não tem clínica" persiste       ║
+║                    → auth.uid() não está encontrando                  ║
+║                                                                        ║
+╚════════════════════════════════════════════════════════════════════════╝
+
+
+═══════════════════════════════════════════════════════════════════════════════
+PROBLEMA: auth.uid() vs public.users
+═══════════════════════════════════════════════════════════════════════════════
+
+Flow quando usuário tenta criar agendamento:
+
+1. Usuário clica "Salvar"
+   ↓
+2. Trigger BEFORE INSERT executa
+   ↓
+3. Trigger faz: auth.uid() → retorna UUID
+   ↓
+4. Trigger faz: SELECT clinic_id FROM users WHERE id = [auth_uid]
+   ↓
+5. Se retorna NULL → Erro "Usuário não tem clínica associada"
+   ↓
+6. Se retorna UUID → clinic_id é FORÇADO ✅
+
+
+═══════════════════════════════════════════════════════════════════════════════
+SOLUÇÃO: 2 PASSOS
+═══════════════════════════════════════════════════════════════════════════════
+
+
+PASSO 1️⃣: Execute Trigger Melhorado
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📄 Arquivo: ⚡_TRIGGER_MELHORADO_COM_LOGGING.sql
+
+Ações:
+1. Supabase Dashboard → SQL Editor → New Query
+2. Copiar TODO o arquivo ⚡_TRIGGER_MELHORADO_COM_LOGGING.sql
+3. Colar no SQL Editor
+4. Clique RUN
+
+Resultado esperado:
+✅ Triggers criados
+✅ Função com logging ativa
+✅ Índices criados
+
+
+PASSO 2️⃣: Execute SQL de Diagnóstico
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📄 Arquivo: 🔍_SQL_DIAGNOSTICO_AUTH_UID.sql
+
+Ações:
+1. Supabase Dashboard → SQL Editor → New Query
+2. Copiar TODO o arquivo 🔍_SQL_DIAGNOSTICO_AUTH_UID.sql
+3. Colar no SQL Editor
+4. Clique RUN
+
+Resultado esperado:
+✅ Vê seu auth.uid()
+✅ Vê todos usuários
+✅ Vê se seu auth.uid() está em public.users
+✅ Vê trigger ativo
+
+
+═══════════════════════════════════════════════════════════════════════════════
+DEPOIS DOS 2 PASSOS
+═══════════════════════════════════════════════════════════════════════════════
+
+TESTE 1: Criar Agendamento
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Recarregue página (Ctrl+R)
+2. Logout + Login
+3. Ir para http://localhost:3000/clinica/agenda
+4. Novo Agendamento
+5. Preencha campos
+6. Salvar
+
+Se der erro → Vá para TESTE 2
+
+
+TESTE 2: Ver Logs do Erro
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Supabase Dashboard
+2. Menu: Logs (ou Database → Logs)
+3. Procure por: "set_appointments_clinic_id"
+4. Copie a mensagem de erro COMPLETA
+5. Cole aqui no chat
+
+Exemplo de log esperado:
+  NOTICE: set_appointments_clinic_id - auth.uid(): 6b85ef79-89e8-43ca-ba91-c00ce56c35a7
+  NOTICE: set_appointments_clinic_id - clinic_id encontrado: dcee437c-fd14-463c-b25e-a318f5da60b7
+  NOTICE: set_appointments_clinic_id - clinic_id FORÇADO: dcee437c-fd14-463c-b25e-a318f5da60b7
+
+
+═══════════════════════════════════════════════════════════════════════════════
+POSSÍVEIS DIAGNÓSTICOS
+═══════════════════════════════════════════════════════════════════════════════
+
+Cenário 1: auth.uid() retorna NULL
+───────────────────────────────────
+Erro: "Sem usuário autenticado. Sessão inválida."
+Causa: Usuário não está autenticado propriamente
+Solução: Logout + Login novamente, ou limpar localStorage
+
+
+Cenário 2: auth.uid() é válido MAS não está em public.users
+───────────────────────────────────────────────────────────
+Erro: "Usuário [UUID] não tem clínica associada"
+Causa: Usuário em auth.users MAS não migrado para public.users
+Solução: Inserir usuário em public.users com INSERT manual
+
+
+Cenário 3: Usuário está em public.users MAS clinic_id é NULL
+──────────────────────────────────────────────────────────────
+Erro: Igual Cenário 2
+Causa: clinic_id não foi preenchido
+Solução: UPDATE para preencher clinic_id
+
+
+Cenário 4: Tudo OK, trigger funciona! ✅
+──────────────────────────────────────────
+Erro: NENHUM!
+Log: NOTICE mostra clinic_id FORÇADO
+Resultado: Agendamento criado com sucesso
+
+
+═══════════════════════════════════════════════════════════════════════════════
+CHECKLIST
+═══════════════════════════════════════════════════════════════════════════════
+
+Pré-Debug:
+  [ ] Usuários têm clinic_id na tabela? SIM ✅
+  [ ] Erro ainda aparece? SIM ✅
+  [ ] SQL UPDATE foi executado? SIM ✅
+
+Passo 1 - Trigger Melhorado:
+  [ ] Arquivo ⚡_TRIGGER_MELHORADO_COM_LOGGING.sql copiado?
+  [ ] Colado em Supabase SQL Editor?
+  [ ] Clicou RUN?
+  [ ] Retornou sucesso (sem erros)?
+
+Passo 2 - Diagnóstico:
+  [ ] Arquivo 🔍_SQL_DIAGNOSTICO_AUTH_UID.sql copiado?
+  [ ] Colado em Supabase SQL Editor?
+  [ ] Clicou RUN?
+  [ ] Viu os resultados?
+
+Teste:
+  [ ] Recarregou página (Ctrl+R)?
+  [ ] Fez logout + login?
+  [ ] Tentou criar agendamento?
+  [ ] Se erro: Copiou mensagem exata?
+
+
+═══════════════════════════════════════════════════════════════════════════════
+PRÓXIMA AÇÃO
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Execute: ⚡_TRIGGER_MELHORADO_COM_LOGGING.sql
+
+2. Execute: 🔍_SQL_DIAGNOSTICO_AUTH_UID.sql
+
+3. Teste criar agendamento
+
+4. Se erro: Cole aqui a mensagem exata de erro
+
+5. Diagnosticaremos juntos!
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+Arquivos importantes:
+  📄 ⚡_TRIGGER_MELHORADO_COM_LOGGING.sql ← EXECUTE PRIMEIRO
+  📄 🔍_SQL_DIAGNOSTICO_AUTH_UID.sql ← EXECUTE SEGUNDO
+  📄 🔧_DEBUG_TRIGGER_EXECUTE_AGORA.txt ← INSTRUÇÕES DETALHADAS
+
+
+═══════════════════════════════════════════════════════════════════════════════
