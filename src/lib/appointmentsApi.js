@@ -526,10 +526,26 @@ export async function createAppointment(payload) {
   const { data: result, error } = await supabase
     .from("appointments")
     .insert([data])
-    .select()
+    .select(`
+      *,
+      patients (id, name, phone),
+      professionals (id, name),
+      services (id, name),
+      payers (id, name),
+      rooms (id, name)
+    `)
     .single();
 
   if (error) throw error;
+
+  console.log('✅ [createAppointment] Appointment created com relacionamentos:', {
+    appointmentId: result?.id,
+    patientName: result?.patients?.name,
+    professionalName: result?.professionals?.name,
+    serviceName: result?.services?.name,
+    payerName: result?.payers?.name,
+    roomName: result?.rooms?.name,
+  });
 
   return mapFromDatabase(result);
 }
@@ -542,7 +558,14 @@ export async function updateAppointment(id, payload) {
     .from("appointments")
     .update(data)
     .eq("id", id)
-    .select();
+    .select(`
+      *,
+      patients (id, name, phone),
+      professionals (id, name),
+      services (id, name),
+      payers (id, name),
+      rooms (id, name)
+    `);
 
   if (error) {
     console.error('❌ [updateAppointment] Supabase error:', error);
@@ -551,6 +574,14 @@ export async function updateAppointment(id, payload) {
 
   // ✅ UPDATE was successful even if .select() returns empty (RLS might block)
   if (result && result.length > 0) {
+    console.log('✅ [updateAppointment] Appointment updated com relacionamentos:', {
+      appointmentId: result[0]?.id,
+      patientName: result[0]?.patients?.name,
+      professionalName: result[0]?.professionals?.name,
+      serviceName: result[0]?.services?.name,
+      payerName: result[0]?.payers?.name,
+      roomName: result[0]?.rooms?.name,
+    });
     return mapFromDatabase(result[0]);
   }
 
