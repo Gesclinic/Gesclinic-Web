@@ -411,6 +411,70 @@ export async function listAppointments({
     payers: apt.payers || (apt.payer_id ? { id: apt.payer_id, name: apt.payer_name } : null),
   }));
 
+  // 🔍 Se faltam dados de paciente/profissional/serviço/convênio, buscar separadamente
+  const needsPatientNames = appointmentsWithRelations.some(a => 
+    (a.patient_id && !a.patients?.name) || 
+    (a.professional_id && !a.professionals?.name) ||
+    (a.service_id && !a.services?.name) ||
+    (a.payer_id && !a.payers?.name)
+  );
+
+  if (needsPatientNames) {
+    console.log('⚠️ [listAppointments] Faltam dados de relacionamentos, buscando separadamente...');
+    
+    // Coletar IDs únicos que faltam
+    const patientIds = [...new Set(appointmentsWithRelations
+      .filter(a => a.patient_id && !a.patients?.name)
+      .map(a => a.patient_id))];
+    
+    const profIds = [...new Set(appointmentsWithRelations
+      .filter(a => a.professional_id && !a.professionals?.name)
+      .map(a => a.professional_id))];
+    
+    const serviceIds = [...new Set(appointmentsWithRelations
+      .filter(a => a.service_id && !a.services?.name)
+      .map(a => a.service_id))];
+    
+    const payerIds = [...new Set(appointmentsWithRelations
+      .filter(a => a.payer_id && !a.payers?.name)
+      .map(a => a.payer_id))];
+
+    // Buscar dados em paralelo
+    const [patientsData, profsData, servicesData, payersData] = await Promise.all([
+      patientIds.length > 0 ? supabase.from('patients').select('id, name, phone').in('id', patientIds).then(r => r.data || []) : Promise.resolve([]),
+      profIds.length > 0 ? supabase.from('professionals').select('id, name').in('id', profIds).then(r => r.data || []) : Promise.resolve([]),
+      serviceIds.length > 0 ? supabase.from('services').select('id, name').in('id', serviceIds).then(r => r.data || []) : Promise.resolve([]),
+      payerIds.length > 0 ? supabase.from('payers').select('id, name').in('id', payerIds).then(r => r.data || []) : Promise.resolve([]),
+    ]);
+
+    // Popular os dados que faltavam
+    appointmentsWithRelations.forEach(apt => {
+      if (apt.patient_id && !apt.patients?.name) {
+        const p = patientsData.find(x => x.id === apt.patient_id);
+        if (p) apt.patients = p;
+      }
+      if (apt.professional_id && !apt.professionals?.name) {
+        const p = profsData.find(x => x.id === apt.professional_id);
+        if (p) apt.professionals = p;
+      }
+      if (apt.service_id && !apt.services?.name) {
+        const s = servicesData.find(x => x.id === apt.service_id);
+        if (s) apt.services = s;
+      }
+      if (apt.payer_id && !apt.payers?.name) {
+        const p = payersData.find(x => x.id === apt.payer_id);
+        if (p) apt.payers = p;
+      }
+    });
+
+    console.log('✅ [listAppointments] Dados de relacionamentos populados:', {
+      patients: patientsData.length,
+      professionals: profsData.length,
+      services: servicesData.length,
+      payers: payersData.length,
+    });
+  }
+
   const result = appointmentsWithRelations.map(normalizeAppointment);
   
   // Helpers function to normalize appointment with proper field mapping and display data
