@@ -1766,6 +1766,61 @@ export default function AppointmentUnitedModal({
     return payload;
   };
 
+  /**
+   * Constrói payload LIMPO para CREATE de novo agendamento
+   * Garante que clinic_id SEMPRE está presente
+   * @param {Object} formData - dados do formulário
+   * @param {String} finalPatientId - ID do paciente (pode ser null para leads)
+   * @returns {Object} Payload pronto para Supabase
+   */
+  const buildCreatePayload = (formData, finalPatientId) => {
+    // 🔥 CRÍTICO: clinic_id DEVE estar aqui
+    const payload = {
+      clinic_id: clinicId,
+      patient_id: finalPatientId,
+      patient_type: finalPatientId ? 'PATIENT' : 'LEAD',
+      lead_name: !finalPatientId ? agendamentoData.patientName : null,
+      lead_phone: !finalPatientId ? agendamentoData.phone : null,
+      
+      // Campos do formulário
+      professional_id: formData.professional_id || null,
+      service_id: formData.service_id || null,
+      payer_id: formData.payer_id || null,
+      room_id: formData.room_id || null,
+      scheduled_date: formData.scheduled_date || null,
+      scheduled_time: formData.scheduled_time || null,
+      value: formData.value ? parseFloat(formData.value) : null,
+      notes: formData.notes || null,
+      
+      // Campos críticos
+      status: formData.status || 'scheduled',
+      end_time: agendamentoData.endTime?.trim() ? agendamentoData.endTime : null,
+      duration: agendamentoData.duration || 30,
+      discount: pagamentoData.discount ? parseFloat(pagamentoData.discount) : 0,
+      payment_method: pagamentoData.payment_method || null,
+      convenio_id: faturamentoData?.convenio_id || null,
+      plano_contas_id: faturamentoData?.plano_contas_id || pagamentoData?.plano_contas_id || null,
+      
+      created_at: new Date().toISOString(),
+    };
+
+    // ✅ VALIDAÇÃO: Garantir que clinic_id não é undefined ou null
+    if (!payload.clinic_id) {
+      throw new Error('❌ clinic_id é obrigatório e não pode estar vazio');
+    }
+
+    console.log('📦 [CREATE] Payload construído:', {
+      clinic_id: payload.clinic_id,
+      patient_id: payload.patient_id,
+      professional_id: payload.professional_id,
+      service_id: payload.service_id,
+      payer_id: payload.payer_id,
+      room_id: payload.room_id,
+    });
+
+    return payload;
+  };
+
   // Handle saving appointment changes
   const handleSaveChanges = async () => {
     try {
@@ -1831,43 +1886,10 @@ export default function AppointmentUnitedModal({
           finalPatientId = newPatient.id;
         }
 
-        // ✅ Construir payload seguro usando formData
-        const newAppointmentData = {
-          clinic_id: clinicId,
-          patient_id: finalPatientId,
-          patient_type: finalPatientId ? 'PATIENT' : 'LEAD',
-          lead_name: !finalPatientId ? agendamentoData.patientName : null,
-          lead_phone: !finalPatientId ? agendamentoData.phone : null,
-          
-          // 🔧 Campos do formulário (formData - snake_case)
-          professional_id: formData.professional_id || null,
-          service_id: formData.service_id || null,
-          payer_id: formData.payer_id || null,
-          room_id: formData.room_id || null,
-          scheduled_date: formData.scheduled_date || null,
-          scheduled_time: formData.scheduled_time || null,
-          value: formData.value ? parseFloat(formData.value) : null,
-          notes: formData.notes || null,
-          
-          // 🔐 Campos críticos (mantidos do agendamentoData)
-          end_time: agendamentoData.endTime?.trim() ? agendamentoData.endTime : null,
-          status: formData.status || 'scheduled',
-          discount: pagamentoData.discount ? parseFloat(pagamentoData.discount) : 0,
-          duration: agendamentoData.duration,
-          payment_method: pagamentoData.payment_method || null,
-          convenio_id: faturamentoData?.convenio_id || null,
-          plano_contas_id: faturamentoData?.plano_contas_id || pagamentoData?.plano_contas_id || null,
-        };
+        // ✅ Construir payload limpo usando buildCreatePayload
+        const newAppointmentData = buildCreatePayload(formData, finalPatientId);
 
-        console.log('📦 [CREATE] Payload pronto:', {
-          patient_id: newAppointmentData.patient_id,
-          professional_id: newAppointmentData.professional_id,
-          service_id: newAppointmentData.service_id,
-          payer_id: newAppointmentData.payer_id,
-          room_id: newAppointmentData.room_id,
-          scheduled_date: newAppointmentData.scheduled_date,
-          scheduled_time: newAppointmentData.scheduled_time,
-        });
+        console.log('📦 [CREATE] Payload enviando:', JSON.stringify(newAppointmentData, null, 2));
 
         const createdAppointment = await createAppointment(newAppointmentData);
         console.log('✅ Novo agendamento criado!', createdAppointment.id);
