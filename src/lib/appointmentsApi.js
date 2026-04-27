@@ -141,33 +141,16 @@ function mapToDatabase(payload) {
     service_id: payload.serviceId || payload.service_id,
     room_id: payload.roomId || payload.room_id,
     payer_id: payload.payerId || payload.payer_id,
-    plan_id: payload.planId || payload.plan_id,
 
     // 📅 Datas/Horários (aceitar ambos camelCase e snake_case)
     scheduled_date: payload.date || payload.scheduled_date,
     scheduled_time: payload.time || payload.startTime || payload.scheduled_time,
     end_time: payload.endTime || payload.end_time,
-    duration: payload.duration || 30,
 
     // 📊 Status e valores
     status: payload.status || "scheduled",
     notes: payload.notes || null,
     value: payload.value ? parseFloat(payload.value) : 0,
-    discount: payload.discount ? parseFloat(payload.discount) : 0,
-    
-    // 💳 Campos financeiros
-    discount_reason: payload.discount_reason || null,
-    discount_authorized_by: payload.discount_authorized_by || null,
-    discount_authorized_at: payload.discount_authorized_at || null,
-    discount_observation: payload.discount_observation || null,
-    payment_method: payload.payment_method || null,
-
-    // 🏥 Campos adicionais
-    payer_type: payload.payerType || payload.payer_type || null,
-    convenio_id: payload.convenio_id || null,
-    plano_contas_id: payload.plano_contas_id || null,
-
-    updated_at: new Date().toISOString()
   };
 }
 
