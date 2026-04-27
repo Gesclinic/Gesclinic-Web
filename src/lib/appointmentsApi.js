@@ -393,13 +393,25 @@ export async function listAppointments({
     console.log('   professional_id:', first.professional_id);
     console.log('   service_id:', first.service_id);
     console.log('   payer_id:', first.payer_id);
-    console.log('   patients:', first.patients);
-    console.log('   professionals:', first.professionals);
-    console.log('   services:', first.services);
-    console.log('   payers:', first.payers);
+    console.log('   patient_name (direto):', first.patient_name);
+    console.log('   payer_name (direto):', first.payer_name);
+    console.log('   patients (relacionamento):', first.patients);
+    console.log('   professionals (relacionamento):', first.professionals);
+    console.log('   services (relacionamento):', first.services);
+    console.log('   payers (relacionamento):', first.payers);
   }
 
-  const result = (data ?? []).map(normalizeAppointment);
+  // Se os relacionamentos não vieram do Supabase, buscar separadamente
+  const appointmentsWithRelations = (data ?? []).map(apt => ({
+    ...apt,
+    // Se não temos o objeto patients, tentar usar o campo desnormalizado patient_name
+    patients: apt.patients || (apt.patient_id ? { id: apt.patient_id, name: apt.patient_name } : null),
+    professionals: apt.professionals || (apt.professional_id ? { id: apt.professional_id, name: null } : null),
+    services: apt.services || (apt.service_id ? { id: apt.service_id, name: null } : null),
+    payers: apt.payers || (apt.payer_id ? { id: apt.payer_id, name: apt.payer_name } : null),
+  }));
+
+  const result = appointmentsWithRelations.map(normalizeAppointment);
   
   // Helpers function to normalize appointment with proper field mapping and display data
   function normalizeAppointment(apt) {
@@ -411,19 +423,19 @@ export async function listAppointments({
     };
   }
 
-  // 🔍 DEBUG: Log para verificar dados dos agendamentos
+  // 🔍 DEBUG: Log para verificar dados dos agendamentos DEPOIS DE MAPEAR
   if (result.length > 0) {
     console.log('📊 [listAppointments] PRIMEIRO AGENDAMENTO COM DADOS MAPEADOS:');
     const first = result[0];
     console.log('   ID:', first.id);
+    console.log('   patientName:', first.patientName);
     console.log('   patient_name:', first.patient_name);
+    console.log('   professionalName:', first.professionalName);
     console.log('   professional_name:', first.professional_name);
+    console.log('   serviceName:', first.serviceName);
     console.log('   service_name:', first.service_name);
+    console.log('   payerName:', first.payerName);
     console.log('   payer_name:', first.payer_name);
-    console.log('   patients obj:', first.patients);
-    console.log('   professionals obj:', first.professionals);
-    console.log('   services obj:', first.services);
-    console.log('   payers obj:', first.payers);
   }
 
   console.log(`✅ [listAppointments] Carregados ${result.length} agendamentos para clínica ${clinicId}`);
