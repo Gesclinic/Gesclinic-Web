@@ -416,9 +416,10 @@ export default function AppointmentUnitedModal({
           console.log('   *** finalAppointment.professionalId (camelCase):', finalAppointment.professionalId);
           setTabAtivo('dados');
           setSelectedPatient(null);
+          console.log("⏰ TIME FINAL:", finalAppointment.time, finalAppointment.scheduled_time);
           setAgendamentoData({
             date: finalAppointment.date || '',
-            time: finalAppointment.time || '',
+            time: finalAppointment.time || finalAppointment.scheduled_time || '',
             endTime: '',
             duration: finalAppointment.duration || 30,
             patientName: '',
