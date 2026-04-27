@@ -177,6 +177,26 @@ const renderOccupiedSlot = (apt, time, isCurrentTime, late, statusLabel, getStat
   const statusBgColor = statusStyle.background || '#fef3c7';
   const actionConfig = getAppointmentActionConfig(apt, currentRole);
   console.log('🎨 [renderOccupiedSlot] Status:', statusLabel, '| Background:', statusBgColor, '| Full:', statusStyle);
+  
+  // 🔍 DEBUG: Se for agendamento das 8h, mostrar dados
+  if (time && time.includes('08:')) {
+    console.log('🕐 [renderOccupiedSlot] RENDERIZANDO 8h:', {
+      time,
+      patient_name: apt.patient_name,
+      patient_paciente: apt.paciente,
+      patient_patient: apt.patient,
+      phone: apt.patient_phone,
+      service_name: apt.service_name,
+      service_serviço: apt.serviço,
+      service_service: apt.service,
+      payer_name: apt.payer_name,
+      payer_convênio: apt.convênio,
+      professional_name: apt.professional_name,
+      professional_profissional: apt.profissional,
+      professional_professional: apt.professional,
+    });
+  }
+  
   return (
   <div className="grid grid-cols-12 gap-0 h-14 items-center w-full border-b border-gray-100" style={{ background: statusBgColor }}>
     <div className="col-span-1 px-3 text-sm font-semibold border-r border-gray-200 flex items-center justify-center" style={{ color: '#0052cc', fontSize: '12px', fontWeight: 600, background: statusBgColor }}>
@@ -246,6 +266,24 @@ export default function AgendaDayView({
   payers = [], // 🆕 Lista de convênios
 }) {
   console.log('🎬 [AgendaDayView] RENDERIZANDO com appointments:', { count: appointments.length, data: appointments });
+  
+  // 🔍 DEBUG: Mostrar específico agendamento das 8h
+  if (appointments.length > 0) {
+    const apt8h = appointments.find(a => {
+      const time = a.scheduled_time || a.start_time || a.time || '';
+      return time.includes('08:');
+    });
+    if (apt8h) {
+      console.log('🕐 [AgendaDayView] AGENDAMENTO DAS 8H ENCONTRADO:');
+      console.log('   ID:', apt8h.id);
+      console.log('   scheduled_time:', apt8h.scheduled_time);
+      console.log('   patient_name:', apt8h.patient_name);
+      console.log('   professional_name:', apt8h.professional_name);
+      console.log('   service_name:', apt8h.service_name);
+      console.log('   payer_name:', apt8h.payer_name);
+      console.log('   status:', apt8h.status);
+    }
+  }
   
   const [currentTime, setCurrentTime] = useState(new Date());
   const [hoveredRow, setHoveredRow] = useState(null);

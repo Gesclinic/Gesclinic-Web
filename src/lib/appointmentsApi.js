@@ -383,15 +383,47 @@ export async function listAppointments({
     return [];
   }
 
+  // 🔍 DEBUG: Ver dados RAW antes de mapear
+  if (data && data.length > 0) {
+    console.log('📊 [listAppointments] DADOS RAW DO SUPABASE (primeiro agendamento):');
+    const first = data[0];
+    console.log('   ID:', first.id);
+    console.log('   scheduled_time:', first.scheduled_time);
+    console.log('   patient_id:', first.patient_id);
+    console.log('   professional_id:', first.professional_id);
+    console.log('   service_id:', first.service_id);
+    console.log('   payer_id:', first.payer_id);
+    console.log('   patients:', first.patients);
+    console.log('   professionals:', first.professionals);
+    console.log('   services:', first.services);
+    console.log('   payers:', first.payers);
+  }
+
   const result = (data ?? []).map(normalizeAppointment);
   
   // Helpers function to normalize appointment with proper field mapping and display data
   function normalizeAppointment(apt) {
+    const mapped = mapFromDatabase(apt);
     return {
-      ...mapFromDatabase(apt),
+      ...mapped,
       // Apply status migration
-      status: migrateStatus(mapFromDatabase(apt).status),
+      status: migrateStatus(mapped.status),
     };
+  }
+
+  // 🔍 DEBUG: Log para verificar dados dos agendamentos
+  if (result.length > 0) {
+    console.log('📊 [listAppointments] PRIMEIRO AGENDAMENTO COM DADOS MAPEADOS:');
+    const first = result[0];
+    console.log('   ID:', first.id);
+    console.log('   patient_name:', first.patient_name);
+    console.log('   professional_name:', first.professional_name);
+    console.log('   service_name:', first.service_name);
+    console.log('   payer_name:', first.payer_name);
+    console.log('   patients obj:', first.patients);
+    console.log('   professionals obj:', first.professionals);
+    console.log('   services obj:', first.services);
+    console.log('   payers obj:', first.payers);
   }
 
   console.log(`✅ [listAppointments] Carregados ${result.length} agendamentos para clínica ${clinicId}`);
