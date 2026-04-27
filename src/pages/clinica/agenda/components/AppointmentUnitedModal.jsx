@@ -1798,11 +1798,12 @@ export default function AppointmentUnitedModal({
       console.log('💾 [SAVE INITIATED]', { mode, appointmentId: appointment?.id, currentStatus: agendamentoData.status });
       
       // 🏥 GARANTIR clinic_id ANTES DE QUALQUER OPERACAO
-      const clinicId = currentClinic?.id || session?.user?.clinic_id;
-      console.log('🏥 clinic_id extraído:', clinicId);
+      console.log('🏥 clinicId extraído do contexto:', clinicId);
       
       if (!clinicId) {
-        throw new Error('clinic_id nao encontrado');
+        console.error('❌ clinicId não encontrado');
+        alert('Erro: clínica não identificada. Faça login novamente.');
+        return;
       }
       
       let appointmentId = appointment?.id;
@@ -2110,6 +2111,11 @@ export default function AppointmentUnitedModal({
     console.log('     - Services:', services?.length);
     console.log('     - Payers:', payers?.length);
     console.log('     - Selected Patient:', !!selectedPatient);
+  }
+
+  // 🔐 PROTEÇÃO: Garantir que clinicId existe
+  if (!clinicId) {
+    return <div className="p-4 text-center">Carregando clínica...</div>;
   }
 
   return (
