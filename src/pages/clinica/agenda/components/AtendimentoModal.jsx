@@ -2227,7 +2227,10 @@ export default function AtendimentoModal({
                       <Label>🚪 Sala</Label>
                       <Select
                         value={agendamentoData.roomId || ''}
-                        onValueChange={(value) => updateAgendamentoField('roomId', value)}
+                        onValueChange={(value) => {
+                          console.log('🚪 [Select Sala] Valor selecionado:', value, 'Estado anterior:', agendamentoData.roomId);
+                          updateAgendamentoField('roomId', value);
+                        }}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione sala" />
@@ -2569,7 +2572,7 @@ export default function AtendimentoModal({
                       <Select
                         value={agendamentoData.payerId || ''}
                         onValueChange={(value) => {
-                          console.log('🏥 [Select] Convênio selecionado:', value);
+                          console.log('💳 [Select Convênio] Estado anterior:', agendamentoData.payerId, '→ Novo valor:', value, 'Payers disponíveis:', payers.length);
                           updateAgendamentoField('payerId', value);
                         }}
                       >
