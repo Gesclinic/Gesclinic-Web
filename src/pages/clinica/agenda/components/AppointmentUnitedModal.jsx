@@ -1720,6 +1720,48 @@ export default function AppointmentUnitedModal({
     }
   };
 
+  // ════════════════════════════════════════════════════════════════
+  // 🔧 ETAPA 6: REFACTORED SAVE LOGIC WITH FORMDATA
+  // ════════════════════════════════════════════════════════════════
+
+  /**
+   * Campos editáveis pelo usuário no formulário
+   * Qualquer outro campo é considerado crítico e não deve ser alterado
+   */
+  const editableFields = [
+    'patient_id',
+    'professional_id',
+    'service_id',
+    'payer_id',
+    'room_id',
+    'scheduled_date',
+    'scheduled_time',
+    'value',
+    'status',
+    'notes'
+  ];
+
+  /**
+   * Constrói payload seguro para CREATE/UPDATE
+   * Garante que apenas campos editáveis sejam alterados
+   * @param {Object} sourceData - formData do hook (snake_case)
+   * @param {Object} originalData - dados originais do banco (para campos preservados)
+   * @returns {Object} Payload pronto para Supabase
+   */
+  const buildPayload = (sourceData, originalData = {}) => {
+    const payload = {};
+
+    // Apenas copiar campos editáveis
+    editableFields.forEach(field => {
+      payload[field] = sourceData[field];
+    });
+
+    // Adicionar timestamp
+    payload.updated_at = new Date().toISOString();
+
+    return payload;
+  };
+
   // Handle saving appointment changes
   const handleSaveChanges = async () => {
     try {
@@ -1754,51 +1796,49 @@ export default function AppointmentUnitedModal({
       let appointmentId = appointment?.id;
       let patientId = appointment?.patient_id;
 
-      // 📝 MODO NOVO: Criar novo agendamento
+      // 📝 MODO NOVO: Criar novo agendamento (usando formData)
       if (mode === 'new') {
-        console.log('📝 Criando novo agendamento...', { 
-          data: agendamentoData.date, 
-          tempo: agendamentoData.time 
-        });
+        console.log('📝 [CREATE] Iniciando criação de novo agendamento');
+        console.log('🔍 [CREATE] formData:', formData);
 
-        let finalPatientId = agendamentoData.patientId || null;
+        let finalPatientId = formData.patient_id || null;
 
         // 👤 SE NENHUM PACIENTE SELECIONADO, CRIAR NOVO PACIENTE COM DADOS BÁSICOS
-        if (!agendamentoData.patientId && agendamentoData.patientName?.trim()) {
-          console.log('👤 Criando novo paciente automaticamente...', {
-            name: agendamentoData.patientName,
-            phone: agendamentoData.phone,
-            birthdate: cadastralData.birthdate,
-          });
+        if (!formData.patient_id && agendamentoData.patientName?.trim()) {
+          console.log('👤 Criando novo paciente automaticamente...');
 
           const newPatientData = {
             name: agendamentoData.patientName,
             phone: agendamentoData.phone,
             birthdate: cadastralData.birthdate || null,
-            // Deixar os outros campos em branco para preenchimento posterior
           };
 
           const newPatient = await createPatient(clinicId, newPatientData);
-          console.log('✅ Novo paciente criado!', newPatient);
+          console.log('✅ Novo paciente criado!', newPatient.id);
           finalPatientId = newPatient.id;
         }
 
+        // ✅ Construir payload seguro usando formData
         const newAppointmentData = {
           clinic_id: clinicId,
           patient_id: finalPatientId,
           patient_type: finalPatientId ? 'PATIENT' : 'LEAD',
           lead_name: !finalPatientId ? agendamentoData.patientName : null,
           lead_phone: !finalPatientId ? agendamentoData.phone : null,
-          professional_id: agendamentoData.professionalId || null,
-          service_id: agendamentoData.serviceId || null,
-          payer_id: agendamentoData.payerId || null,
-          room_id: agendamentoData.roomId || null,
-          scheduled_date: agendamentoData.date,
-          scheduled_time: agendamentoData.time,
+          
+          // 🔧 Campos do formulário (formData - snake_case)
+          professional_id: formData.professional_id || null,
+          service_id: formData.service_id || null,
+          payer_id: formData.payer_id || null,
+          room_id: formData.room_id || null,
+          scheduled_date: formData.scheduled_date || null,
+          scheduled_time: formData.scheduled_time || null,
+          value: formData.value ? parseFloat(formData.value) : null,
+          notes: formData.notes || null,
+          
+          // 🔐 Campos críticos (mantidos do agendamentoData)
           end_time: agendamentoData.endTime?.trim() ? agendamentoData.endTime : null,
-          status: 'scheduled',
-          notes: agendamentoData.notes,
-          value: agendamentoData.value ? parseFloat(agendamentoData.value) : null,
+          status: formData.status || 'scheduled',
           discount: pagamentoData.discount ? parseFloat(pagamentoData.discount) : 0,
           duration: agendamentoData.duration,
           payment_method: pagamentoData.payment_method || null,
@@ -1806,15 +1846,31 @@ export default function AppointmentUnitedModal({
           plano_contas_id: faturamentoData?.plano_contas_id || pagamentoData?.plano_contas_id || null,
         };
 
+        console.log('📦 [CREATE] Payload pronto:', {
+          patient_id: newAppointmentData.patient_id,
+          professional_id: newAppointmentData.professional_id,
+          service_id: newAppointmentData.service_id,
+          payer_id: newAppointmentData.payer_id,
+          room_id: newAppointmentData.room_id,
+          scheduled_date: newAppointmentData.scheduled_date,
+          scheduled_time: newAppointmentData.scheduled_time,
+        });
+
         const createdAppointment = await createAppointment(newAppointmentData);
-        console.log('✅ Novo agendamento criado com sucesso!', createdAppointment);
+        console.log('✅ Novo agendamento criado!', createdAppointment.id);
         
         appointmentId = createdAppointment.id;
         patientId = createdAppointment.patient_id;
       }
-      // ✏️ MODO EDITAR: Atualizar agendamento existente
-      else if (mode === 'edit' && appointmentId) {
-        console.log('💾 Atualizando agendamento...', { id: appointmentId });
+      // ✏️ MODO EDITAR: Atualizar agendamento existente (usando formData)
+      else if (mode === 'edit') {
+        // 🔐 PROTEÇÃO: Verificar ID do agendamento
+        if (!appointmentId) {
+          throw new Error('⚠️ ID do agendamento não encontrado. Não é possível atualizar.');
+        }
+
+        console.log('💾 [UPDATE] Iniciando atualização do agendamento', { id: appointmentId });
+        console.log('🔍 [UPDATE] formData:', formData);
         
         // 🔧 FUNÇÃO AUXILIAR: Calcular end_time baseado na hora inicial e duração
         const calcularEndTime = (startTime, durationMinutes = 30) => {
@@ -1824,52 +1880,53 @@ export default function AppointmentUnitedModal({
           return minutesToTime(endMinutes);
         };
         
+        // ✅ Construir payload seguro usando formData + dados críticos
         const payload = {
-          scheduled_date: agendamentoData.date,
-          scheduled_time: agendamentoData.time,
-          end_time: calcularEndTime(agendamentoData.time, agendamentoData.duration),
+          // 🔧 Campos do formulário (editáveis - de formData)
+          patient_id: formData.patient_id || null,
+          professional_id: formData.professional_id || null,
+          service_id: formData.service_id || null,
+          payer_id: formData.payer_id || null,
+          room_id: formData.room_id || null,
+          scheduled_date: formData.scheduled_date || null,
+          scheduled_time: formData.scheduled_time || null,
+          value: formData.value ? parseFloat(formData.value) : null,
+          status: formData.status || 'scheduled',
+          notes: formData.notes || null,
+          
+          // 🔐 Campos críticos (mantidos do agendamentoData / pagamentoData)
+          end_time: calcularEndTime(formData.scheduled_time, agendamentoData.duration),
           duration: agendamentoData.duration || 30,
-          
-          patient_id: agendamentoData.patientId || null,
-          professional_id: agendamentoData.professionalId || null,
-          service_id: agendamentoData.serviceId || null,
-          
-          payer_id: agendamentoData.payerId || null,
-          room_id: agendamentoData.roomId || null,
-          
-          value: agendamentoData.value ? parseFloat(agendamentoData.value) : null,
           discount: pagamentoData.discount ? parseFloat(pagamentoData.discount) : 0,
           discount_reason: agendamentoData.discount_reason || null,
           discount_authorized_by: agendamentoData.discount_authorized_by || null,
           discount_authorized_at: agendamentoData.discount_authorized_at || null,
           discount_observation: agendamentoData.discount_observation || null,
-          
           payment_method: pagamentoData.payment_method || null,
-          
-          status: agendamentoData.status,
-          notes: agendamentoData.notes || null,
+          updated_at: new Date().toISOString(),
         };
-        
-        console.log("🚀 PAYLOAD COMPLETO PARA UPDATE:", payload);
-        console.log('💾 Campos do payload:', Object.keys(payload));
-        console.log('   - date:', payload.scheduled_date);
-        console.log('   - time:', payload.scheduled_time);
-        console.log('   - payer_id:', payload.payer_id);
-        console.log('   - room_id:', payload.room_id);
-        console.log('   - value:', payload.value);
-        console.log('   - duration:', payload.duration);
+
+        console.log('📦 [UPDATE] Payload pronto:', {
+          patient_id: payload.patient_id,
+          professional_id: payload.professional_id,
+          service_id: payload.service_id,
+          payer_id: payload.payer_id,
+          room_id: payload.room_id,
+          scheduled_date: payload.scheduled_date,
+          scheduled_time: payload.scheduled_time,
+          value: payload.value,
+        });
 
         const updateData = payload;
-        
         const result = await updateAppointment(appointmentId, updateData);
         
-        console.log('✅ Agendamento atualizado com sucesso!');
-        console.log('🔍 [DEBUG] Resposta retornada:', JSON.stringify(result, null, 2));
-        console.log('   Valores específicos que foram atualizados:');
-        console.log('   - payer_id:', updateData.payer_id);
-        console.log('   - room_id:', updateData.room_id);
-        console.log('   - professional_id:', updateData.professional_id);
-        console.log('   - service_id:', updateData.service_id);
+        console.log('✅ [UPDATE] Agendamento atualizado com sucesso!');
+        console.log('🔍 [UPDATE] Valores atualizados:', {
+          payer_id: updateData.payer_id,
+          room_id: updateData.room_id,
+          professional_id: updateData.professional_id,
+          service_id: updateData.service_id,
+        });
         
         // 💳 SALVAR DADOS DE FATURAMENTO (se houver)
         if (faturamentoData && (faturamentoData.guide_number || faturamentoData.authorized_value)) {
