@@ -1,0 +1,177 @@
+╔════════════════════════════════════════════════════════════════════╗
+║        🎉 ETAPA 6 — SAVE LOGIC REFATORADA COM SEGURANÇA 🎉       ║
+╚════════════════════════════════════════════════════════════════════╝
+
+┌────────────────────────────────────────────────────────────────────┐
+│                      📊 PROGRESSO GERAL                             │
+├────────────────────────────────────────────────────────────────────┤
+│                                                                    │
+│  ETAPA 0: Git + Backup              ██████████████████░░ ✅        │
+│  ETAPA 1: Baseline Test             ████████████████░░░░ ✅        │
+│  ETAPA 2: Hook Created              ██████████████████░░ ✅        │
+│  ETAPA 3: Hook Integrated           ██████████████████░░ ✅        │
+│  ETAPA 4: useEffect Fill            ██████████████████░░ ✅        │
+│  ETAPA 5: Selects Synced            ██████████████████░░ ✅        │
+│  ETAPA 6: Save Logic Refactored     ██████████████████░░ ✅ NOVO   │
+│  ETAPA 7: Manual Testing            ░░░░░░░░░░░░░░░░░░░ ⏳        │
+│  ETAPA 8: Cleanup Logs              ░░░░░░░░░░░░░░░░░░░ ⏳        │
+│  ETAPA 10: Final Commit             ░░░░░░░░░░░░░░░░░░░ ⏳        │
+│                                                                    │
+│  Overall Progress:  75% ████████████████░░░░                      │
+│                                                                    │
+└────────────────────────────────────────────────────────────────────┘
+
+╔════════════════════════════════════════════════════════════════════╗
+║                  🔧 MUDANÇAS EM ETAPA 6                            ║
+╚════════════════════════════════════════════════════════════════════╝
+
+┌─ CRIAR NOVO AGENDAMENTO (CREATE) ─────────────────────────────────┐
+│                                                                   │
+│  ❌ ANTES:                                                         │
+│     professional_id: agendamentoData.professionalId  (camelCase)  │
+│     service_id: agendamentoData.serviceId            (camelCase)  │
+│     payer_id: agendamentoData.payerId                (PERDIDO!)   │
+│     room_id: agendamentoData.roomId                  (PERDIDO!)   │
+│                                                                   │
+│  ✅ DEPOIS:                                                        │
+│     professional_id: formData.professional_id        (snake_case) │
+│     service_id: formData.service_id                  (snake_case) │
+│     payer_id: formData.payer_id            ← RECUPERADO!          │
+│     room_id: formData.room_id               ← RECUPERADO!          │
+│                                                                   │
+└───────────────────────────────────────────────────────────────────┘
+
+┌─ EDITAR AGENDAMENTO EXISTENTE (UPDATE) ──────────────────────────┐
+│                                                                   │
+│  ❌ ANTES:                                                         │
+│     Sem validação de ID (erro silencioso possível)                │
+│     payer_id: agendamentoData.payerId      (pode perder)          │
+│     room_id: agendamentoData.roomId        (pode perder)          │
+│                                                                   │
+│  ✅ DEPOIS:                                                        │
+│     if (!appointmentId) throw Error(...)   ← NOVO                 │
+│     payer_id: formData.payer_id            ← SEGURO               │
+│     room_id: formData.room_id              ← SEGURO               │
+│     discount: PRESERVADO                   ← PROTEÇÃO             │
+│     payment_method: PRESERVADO             ← PROTEÇÃO             │
+│                                                                   │
+└───────────────────────────────────────────────────────────────────┘
+
+╔════════════════════════════════════════════════════════════════════╗
+║              🔒 CAMPOS PROTEGIDOS vs EDITÁVEIS                     ║
+╚════════════════════════════════════════════════════════════════════╝
+
+┌─ EDITÁVEIS (via formData) ────────────────────────────────────────┐
+│ ✅ patient_id          → Pode ser alterado pelo usuário           │
+│ ✅ professional_id     → Pode ser alterado pelo usuário           │
+│ ✅ service_id          → Pode ser alterado pelo usuário           │
+│ ✅ payer_id (convênio) → Pode ser alterado pelo usuário ⭐        │
+│ ✅ room_id (sala)      → Pode ser alterado pelo usuário ⭐        │
+│ ✅ scheduled_date      → Pode ser alterado pelo usuário           │
+│ ✅ scheduled_time      → Pode ser alterado pelo usuário           │
+│ ✅ value               → Pode ser alterado pelo usuário           │
+│ ✅ status              → Pode ser alterado pelo usuário           │
+│ ✅ notes               → Pode ser alterado pelo usuário           │
+└───────────────────────────────────────────────────────────────────┘
+
+┌─ PROTEGIDOS (não via formData) ───────────────────────────────────┐
+│ 🔐 discount            → Vem de pagamentoData (preservado)        │
+│ 🔐 discount_reason     → Vem de agendamentoData (preservado)      │
+│ 🔐 discount_authorized → Vem de agendamentoData (preservado)      │
+│ 🔐 payment_method      → Vem de pagamentoData (preservado)        │
+│ 🔐 convenio_id         → Vem de faturamentoData (preservado)      │
+│ 🔐 billing_data        → Vem de faturamentoData (preservado)      │
+│ 🔐 duration            → Vem de agendamentoData (preservado)      │
+│ 🔐 end_time            → Calculado automaticamente (preservado)   │
+└───────────────────────────────────────────────────────────────────┘
+
+╔════════════════════════════════════════════════════════════════════╗
+║                   ✅ VALIDAÇÃO & BUILD                             ║
+╚════════════════════════════════════════════════════════════════════╝
+
+Build Status:      ✅ SUCESSO
+Modules:           ✅ 4948 transformed
+Compile Time:      ✅ 24.37s
+Errors:            ✅ ZERO
+Warnings:          ✅ ZERO
+Syntax:            ✅ VÁLIDO
+
+Git Commit:        ✅ 058a66e
+Message:           ✅ refactor(ETAPA 6): save logic refatorada...
+Files Changed:     ✅ 1 (AppointmentUnitedModal.jsx)
+Insertions:        ✅ +117
+Deletions:         ✅ -60
+
+╔════════════════════════════════════════════════════════════════════╗
+║                   📋 PRÓXIMAS ETAPAS                               ║
+╚════════════════════════════════════════════════════════════════════╝
+
+┌─ ETAPA 7: MANUAL TESTING ─────────────────────────────────────────┐
+│                                                                   │
+│  [ ] Login com credenciais válidas                               │
+│  [ ] Criar novo agendamento                                      │
+│      → Preencher todos os campos do formulário                   │
+│      → Verificar console: [CREATE] logs                          │
+│      → Verificar que payer_id e room_id foram salvos             │
+│                                                                   │
+│  [ ] Editar agendamento                                          │
+│      → Abrir agendamento existente                               │
+│      → Alterar convênio (payer_id)                               │
+│      → Alterar sala (room_id)                                    │
+│      → Alterar profissional (professional_id)                    │
+│      → Verificar console: [UPDATE] logs                          │
+│      → Salvar e verificar que mudanças persistiram               │
+│                                                                   │
+│  [ ] Verificação de dados                                        │
+│      → Abrir novamente e confirmar mudanças                      │
+│      → Verificar que discount NÃO foi afetado                    │
+│      → Verificar que billing_data NÃO foi afetado                │
+│                                                                   │
+└───────────────────────────────────────────────────────────────────┘
+
+┌─ ETAPA 8: CLEANUP LOGS ───────────────────────────────────────────┐
+│                                                                   │
+│  [ ] Remover console.log de debug                                │
+│  [ ] Remover logs verbosos da refatoração                        │
+│  [ ] Manter apenas logs essenciais (erros)                       │
+│  [ ] Build final sem warnings                                    │
+│                                                                   │
+└───────────────────────────────────────────────────────────────────┘
+
+┌─ ETAPA 10: FINALIZAR ────────────────────────────────────────────┐
+│                                                                   │
+│  [ ] git checkout master                                         │
+│  [ ] git merge refactor/agendamento-form                         │
+│  [ ] Final build test                                            │
+│  [ ] Branch cleanup                                              │
+│                                                                   │
+└───────────────────────────────────────────────────────────────────┘
+
+╔════════════════════════════════════════════════════════════════════╗
+║                   🎯 RESUMO TÉCNICO                                ║
+╚════════════════════════════════════════════════════════════════════╝
+
+Padrão de Estado:
+  • formData (hook)          = snake_case (DB schema)
+  • agendamentoData (legacy) = camelCase (sendo migrado)
+  • Transição: CREATE/UPDATE agora usam formData
+
+Campos Críticos Recuperados:
+  • payer_id (convênio)   ← Era perdido em CREATE/UPDATE
+  • room_id (sala)        ← Era perdido em CREATE/UPDATE
+
+Proteções Adicionadas:
+  • Validação de ID em UPDATE mode
+  • buildPayload() para segurança
+  • editableFields[] para documentação
+
+Compatibilidade:
+  • ✅ Cria novo paciente automaticamente (mantido)
+  • ✅ Processa pagamento (mantido)
+  • ✅ Salva dados de faturamento (mantido)
+  • ✅ Preserva desconto (mantido)
+  • ✅ Modo recepção (mantido)
+
+╔════════════════════════════════════════════════════════════════════╗
+║              🚀 STATUS: 75% COMPLETO - ETAPA 6 PRONTA             ║
+╚════════════════════════════════════════════════════════════════════╝
