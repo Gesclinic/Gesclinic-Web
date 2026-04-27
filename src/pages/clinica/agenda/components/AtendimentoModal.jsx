@@ -396,7 +396,7 @@ export default function AtendimentoModal({
   }, [isOpen, clinicId]);
 
   // ✨ FUNÇÃO HELPER PARA MAPEAR E DEFINIR DADOS DO APPOINTMENT
-  const mapAndSetAppointmentData = useCallback((apt) => {
+  const mapAndSetAppointmentData = (apt) => {
     if (!apt) {
       console.warn('⚠️ [mapAndSetAppointmentData] Appointment é nulo');
       return;
@@ -526,7 +526,7 @@ export default function AtendimentoModal({
           setCalendarSelectedDate(appointmentDate);
         }
       }
-  }, [clinicId]); // useCallback dependencies
+  };
 
   // ✨ CARREGAR DADOS DO APPOINTMENT EXISTENTE PARA A ABA
   useEffect(() => {
