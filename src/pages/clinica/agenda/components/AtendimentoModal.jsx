@@ -1989,6 +1989,16 @@ export default function AtendimentoModal({
 
         {/* Info rápida do agendamento */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+          {console.log('🔍 [AtendimentoModal RENDER] Quick info display:', {
+            scheduledTime: appointment.scheduled_time,
+            startTime: appointment.startTime,
+            professionalName: appointment.professionals?.name,
+            professionalName_camelCase: appointment.professionalName,
+            serviceName: appointment.services?.name,
+            serviceName_camelCase: appointment.serviceName,
+            payerName: appointment.payers?.name,
+            payerName_camelCase: appointment.payerName,
+          })}
           <div className="grid grid-cols-4 gap-2 text-sm">
             <div>
               <p className="text-xs text-gray-600 font-medium">Horário</p>
