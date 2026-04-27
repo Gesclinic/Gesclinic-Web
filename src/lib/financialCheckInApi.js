@@ -50,8 +50,7 @@ export const saveCheckInFinancialData = async (appointmentId, financialData) => 
 
       await supabase
         .from('patients')
-        .update(patientUpdate)
-        .eq('id', appointment.patient_id);
+        .update(patientUpdate).eq('id', appointment.patient_id);
 
       console.log('✅ Dados do paciente atualizados:', patientUpdate);
     }
@@ -135,10 +134,11 @@ const createAccountsReceivable = async (appointmentId, appointment, financialDat
       console.log('   ⚠️ Valor de financialData está vazio, buscando no serviço...');
       
       const { data: service } = await supabase
-        .from('services')
-        .select('price, name')
-        .eq('id', appointment.service_id)
-        .single();
+        .from('services').select('price, name')
+        .eq('id', appointment.service_id);
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
       
       if (service?.price) {
         finalValue = parseFloat(service.price);
@@ -238,8 +238,10 @@ const createBillingGuide = async (appointmentId, appointment, financialData) => 
       const { data: service } = await supabase
         .from('services')
         .select('price')
-        .eq('id', appointment.service_id)
-        .single();
+        .eq('id', appointment.service_id);
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
       
       finalValue = service?.price || 0;
     }

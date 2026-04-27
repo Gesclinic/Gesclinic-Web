@@ -169,11 +169,15 @@ export async function deactivateResource(resourceId, clinicId) {
     .update({ active: false })
     .eq("id", resourceId)
     .eq("clinic_id", clinicId)
-    .select()
-    .maybeSingle();
+    .select();
 
   if (error) throw new Error(`Falha ao desativar recurso: ${error.message}`);
-  return data;
+  
+  if (!data || data.length === 0) {
+    throw new Error('Recurso não encontrado');
+  }
+  
+  return data[0];
 }
 
 /**
@@ -258,11 +262,15 @@ export async function deallocateResourceFromRoom(roomId, resourceId, clinicId) {
     .eq("room_id", roomId)
     .eq("resource_id", resourceId)
     .eq("clinic_id", clinicId)
-    .select()
-    .maybeSingle();
+    .select();
 
   if (error) throw new Error(`Falha ao remover alocação: ${error.message}`);
-  return data;
+  
+  if (!data || data.length === 0) {
+    throw new Error('Alocação não encontrada');
+  }
+  
+  return data[0];
 }
 
 /**
@@ -280,11 +288,15 @@ export async function updateRoomResourceQuantity(roomId, resourceId, clinicId, q
     .eq("room_id", roomId)
     .eq("resource_id", resourceId)
     .eq("clinic_id", clinicId)
-    .select()
-    .maybeSingle();
+    .select();
 
   if (error) throw new Error(`Falha ao atualizar quantidade: ${error.message}`);
-  return data;
+  
+  if (!data || data.length === 0) {
+    throw new Error('Recurso não encontrado');
+  }
+  
+  return data[0];
 }
 
 /**

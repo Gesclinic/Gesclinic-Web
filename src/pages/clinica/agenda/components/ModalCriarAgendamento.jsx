@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AppointmentUnitedModal from './AppointmentUnitedModal';
 import { listRooms } from '@/lib/roomsApi';
+import { getAppointmentById } from '@/lib/appointmentsApi';
 import { supabase } from '@/lib/customSupabaseClient';
 
 export default function ModalCriarAgendamento({
@@ -56,71 +57,20 @@ export default function ModalCriarAgendamento({
       
       (async () => {
         try {
-          const { data: apt, error } = await supabase
-            .from('appointments')
-            .select(`
-              id,
-              clinic_id,
-              patient_id,
-              professional_id,
-              service_id,
-              room_id,
-              payer_id,
-              plan_id,
-              scheduled_date,
-              scheduled_time,
-              end_time,
-              status,
-              notes,
-              value,
-              duration,
-              payment_method,
-              convenio_id,
-              plano_contas_id,
-              billing_notes,
-              billing_data,
-              guide_number,
-              authorization_number,
-              authorization_expiry,
-              authorization_verified,
-              card_number,
-              discount,
-              discount_reason,
-              discount_authorized_by,
-              discount_authorized_at,
-              discount_observation,
-              patients (
-                id,
-                name,
-                phone,
-                cell_phone,
-                email,
-                document_id,
-                birthdate,
-                gender,
-                street,
-                number,
-                neighborhood,
-                city,
-                state,
-                zip_code,
-                record_number,
-                photo_url
-              ),
-              professionals (id, name),
-              services (id, name, code),
-              payers (id, name),
-              plans (id, name, code)
-            `)
-            .eq('id', appointmentIdToEdit)
-            .single();
+          const apt = await getAppointmentById(appointmentIdToEdit);
           
-          if (error) {
-            console.error('❌ Erro ao carregar agendamento:', error);
-            setLoadedAppointment(null);
-          } else {
-            console.log('✅ Agendamento carregado:', apt);
+          if (apt) {
+            console.log('✅ Agendamento carregado com mapping:', {
+              id: apt.id,
+              professionalId: apt.professionalId,
+              patientId: apt.patientId,
+              date: apt.date,
+              startTime: apt.startTime,
+            });
             setLoadedAppointment(apt);
+          } else {
+            console.warn('⚠️ Agendamento não encontrado:', appointmentIdToEdit);
+            setLoadedAppointment(null);
           }
         } catch (err) {
           console.error('❌ Exceção ao carregar agendamento:', err);

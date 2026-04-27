@@ -1,9 +1,14 @@
 // src/lib/customSupabaseClient.js
 
+// ===================================================================
+// 🔐 PASSO 1: CRIAR CLIENTE SUPABASE CORRETO COM SESSION PERSISTENCE
+// ===================================================================
+
+import { createBrowserClient } from "@supabase/ssr";
+
 // DEBUG: Logar URL e chave do Supabase client ao inicializar
 console.log('[DEBUG Supabase] URL:', import.meta.env.VITE_SUPABASE_URL);
 console.log('[DEBUG Supabase] ANON KEY (primeiros 10 chars):', (import.meta.env.VITE_SUPABASE_ANON_KEY || '').slice(0, 10));
-import { createClient } from "@supabase/supabase-js";
 
 // ===================================================================
 // 🔐 CARREGA VARIÁVEIS DE AMBIENTE COM FALLBACK
@@ -47,33 +52,38 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
 }
 
 // ===================================================================
-// 🧩 SINGLETON DO SUPABASE (ESSENCIAL PARA VITE + HMR)
+// 🧩 SINGLETON DO SUPABASE COM createBrowserClient
 // ===================================================================
 let supabaseClient = globalThis.__GESCLINIC_SUPABASE;
 
 if (!supabaseClient) {
-  console.log("🚀 Criando nova instância do Supabase Client...");
+  console.log("🚀 Criando nova instância do Supabase Client com createBrowserClient...");
   console.log("📍 URL:", SUPABASE_URL);
   console.log("🔑 API Key (primeiros 50 chars):", SUPABASE_ANON_KEY.substring(0, 50) + "...");
   
-  supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-      storageKey: "gesclinic-auth-token",
-    },
-    db: { schema: "public" },
-    global: {
-      headers: {
-        "x-client-info": "gesclinic-web@1.0.0",
+  // PASSO 2: Usar createBrowserClient do @supabase/ssr com persistência de sessão
+  supabaseClient = createBrowserClient(
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY,
+    {
+      // PASSO 2: Garantir persistência de sessão
+      auth: {
+        persistSession: true,        // ✅ Persistir sessão no localStorage
+        autoRefreshToken: true,      // ✅ Auto-refresh de token expirado
+        detectSessionInUrl: true,    // ✅ Detectar sessão na URL
+        storageKey: "gesclinic-auth-token",
+        flowType: "pkce",            // ✅ PKCE flow para segurança extra
       },
-    },
-    // ⚠️ IMPORTANTE: O Supabase JS v2 deve enviar o apikey automaticamente
-    // Se não funcionar, isso é um problema com a library
-  });
+      db: { schema: "public" },
+      global: {
+        headers: {
+          "x-client-info": "gesclinic-web@1.0.0",
+        },
+      },
+    }
+  );
 
-  console.log("✅ Supabase Client criado com sucesso!");
+  console.log("✅ Supabase Client criado com sucesso usando createBrowserClient!");
   console.log("⚠️ Verificando se o cliente foi inicializado corretamente...");
   
   // Teste: Tenta fazer uma chamada simples para diagnosticar

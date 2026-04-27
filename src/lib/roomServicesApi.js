@@ -104,11 +104,15 @@ export async function updateRoomService(id, clinicId, updates) {
     .update(updates)
     .eq("id", id)
     .eq("clinic_id", clinicId)
-    .select()
-    .maybeSingle();
+    .select();
 
   if (error) throw new Error(`Falha ao atualizar atribuição: ${error.message}`);
-  return data;
+  
+  if (!data || data.length === 0) {
+    throw new Error('Atribuição não encontrada');
+  }
+  
+  return data[0];
 }
 
 /**

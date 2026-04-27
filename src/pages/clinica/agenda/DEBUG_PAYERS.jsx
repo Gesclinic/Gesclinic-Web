@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/customSupabaseClient";
-import { listarConveniosPorProfissional } from "@/pages/clinica/agenda/services/agendaService";
+import { listarConveniosPorProfissional } from "@/modules/agenda/services/agenda.api.business";
 
 export default function DebugPayers() {
   const [professionals, setProfessionals] = useState([]);

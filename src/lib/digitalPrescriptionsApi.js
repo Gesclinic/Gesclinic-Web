@@ -186,8 +186,7 @@ export async function updateDigitalPrescription(id, updates) {
         updated_at: new Date().toISOString(),
       })
       .eq("id", id)
-      .select()
-      .single(),
+      .select(),
     updates
   );
 
@@ -198,11 +197,14 @@ export async function updateDigitalPrescription(id, updates) {
         return localRow;
       }
     }
-    console.error("❌ Erro ao atualizar receita:", error);
     throw error;
   }
 
-  return markRemoteRow(data);
+  if (!data || data.length === 0) {
+    throw new Error('Record not found');
+  }
+
+  return data[0];
 }
 
 export async function deleteDigitalPrescription(id) {
@@ -250,8 +252,7 @@ export async function syncLocalDigitalPrescriptions(patientId, clinicId = null) 
             updated_at: new Date().toISOString(),
           },
         ], { onConflict: "id" })
-        .select()
-        .single(),
+        .select(),
       payload
     );
 
@@ -266,10 +267,15 @@ export async function syncLocalDigitalPrescriptions(patientId, clinicId = null) 
         };
       }
 
+      failedRows[failedRows.length - 1].error = error;
       continue;
     }
 
-    syncedRows.push(markRemoteRow(data));
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+
+    syncedRows.push(data[0]);
   }
 
   if (syncedRows.length) {

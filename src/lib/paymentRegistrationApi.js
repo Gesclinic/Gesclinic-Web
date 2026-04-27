@@ -69,10 +69,12 @@ export async function registerOrUpdateReceivable({
           received_at: now,
           payment_details: JSON.stringify(paymentData),
           updated_at: now,
-        })
-        .eq('id', existing.id)
-        .select()
-        .single();
+        }).eq('id', existing.id).select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
 
       if (error) {
         console.error('❌ Erro UPDATE accounts_receivable:', error);
@@ -101,9 +103,10 @@ export async function registerOrUpdateReceivable({
           due_date: now,
           created_at: now,
           updated_at: now,
-        })
-        .select()
-        .single();
+        }).select();
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
       if (error) {
         console.error('❌ Erro INSERT accounts_receivable:', error);
@@ -170,8 +173,10 @@ export async function recordFinancialEntry({
         cash_register_id: cashRegisterId,
         created_at: now,
       })
-      .select()
-      .single();
+      .select();
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
     if (error) throw error;
 
@@ -228,8 +233,7 @@ export async function recordToCashRegister({
       const newBalance = (parseFloat(cashSession.current_balance) || 0) + parseFloat(amount);
       await supabase
         .from('cash_register_sessions')
-        .update({ current_balance: newBalance })
-        .eq('id', sessionId);
+        .update({ current_balance: newBalance }).eq('id', sessionId);
     } else {
       // Criar novo caixa do dia
       const { data: newSession, error: sessionError } = await supabase
@@ -241,9 +245,12 @@ export async function recordToCashRegister({
           current_balance: amount,
           status: 'open',
           opened_at: now,
-        })
-        .select('id')
-        .single();
+        }).select('id');
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
 
       if (sessionError) throw sessionError;
       sessionId = newSession.id;
@@ -263,9 +270,10 @@ export async function recordToCashRegister({
           ? `Recebimento de ${appointmentDetails.patientName} - ${paymentMethod}`
           : `Recebimento via ${paymentMethod}`,
         recorded_at: now,
-      })
-      .select()
-      .single();
+      }).select();
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
     if (movementError) throw movementError;
 
@@ -315,8 +323,10 @@ export async function auditPaymentRecord({
         ip_address: null, // Pode capturar do navegador se necessário
         user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
       })
-      .select()
-      .single();
+      .select();
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
     if (error) throw error;
 
@@ -452,8 +462,12 @@ export async function closeCashRegister(sessionId, closedBy, discrepancy = 0) {
         discrepancy: discrepancy,
       })
       .eq('id', sessionId)
-      .select()
-      .single();
+      .select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
 
     if (error) throw error;
 
@@ -464,3 +478,4 @@ export async function closeCashRegister(sessionId, closedBy, discrepancy = 0) {
     throw error;
   }
 }
+

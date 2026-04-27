@@ -1,8 +1,8 @@
-Ôªø// src/pages/clinica/base-sistema/ConveniosPage.jsx
+// src/pages/clinica/base-sistema/ConveniosPage.jsx
 
 // ============================================================
 
-// CRUD Completo de Conv√™nios - Base do Sistema com M:M Servi√ßos
+// CRUD Completo de ConvÍnios - Base do Sistema com M:M ServiÁos
 
 // ============================================================
 
@@ -37,11 +37,11 @@ import * as XLSX from "xlsx";
 
 
 
-// Mapear tipos de conv√™nio para portugu√™s
+// Mapear tipos de convÍnio para portuguÍs
 
 const typeTranslations = {
 
-  health_plan: "Plano de Sa√∫de",
+  health_plan: "Plano de Sa˙de",
 
   private_insurance: "Seguro Privado",
 
@@ -81,7 +81,7 @@ export function ConveniosPage() {
 
 
 
-  // Estado: Financeiro (integrado √†s abas)
+  // Estado: Financeiro (integrado ‡s abas)
 
   const [showFinancialForm, setShowFinancialForm] = useState(false);
 
@@ -97,7 +97,7 @@ export function ConveniosPage() {
 
 
 
-  // Estado: Detalhe com M:M Servi√ßos
+  // Estado: Detalhe com M:M ServiÁos
 
   const [selectedInsurance, setSelectedInsurance] = useState(null);
 
@@ -105,7 +105,7 @@ export function ConveniosPage() {
 
   
 
-  // üÜï Estados para cadastro de pre√ßos
+  // ?? Estados para cadastro de preÁos
 
   const [showPricingForm, setShowPricingForm] = useState(false);
 
@@ -237,7 +237,7 @@ export function ConveniosPage() {
 
     bank_account: "",
 
-    // ===== NOVOS CAMPOS: ENDERE√áO =====
+    // ===== NOVOS CAMPOS: ENDERE«O =====
 
     address_street: "",
 
@@ -251,7 +251,7 @@ export function ConveniosPage() {
 
     address_zip_code: "",
 
-    // ===== NOVOS CAMPOS: IDENTIFICA√á√ÉO FISCAL =====
+    // ===== NOVOS CAMPOS: IDENTIFICA«√O FISCAL =====
 
     municipal_registration: "",
 
@@ -305,7 +305,7 @@ export function ConveniosPage() {
 
 
 
-  // üÜï Estados para gerenciar Planos
+  // ?? Estados para gerenciar Planos
 
   const [plansData, setPlansData] = useState([]);
 
@@ -357,11 +357,11 @@ export function ConveniosPage() {
 
   useEffect(() => {
 
-    // Carregar dados quando abrir a aba de pre√ßos
+    // Carregar dados quando abrir a aba de preÁos
 
     if ((editingId || showForm) && activeTab === "pricing" && clinicId) {
 
-      console.log("üìä Disparando loadPricingTabData...", { editingId, showForm, activeTab, clinicId });
+      console.log("?? Disparando loadPricingTabData...", { editingId, showForm, activeTab, clinicId });
 
       loadPricingTabData();
 
@@ -385,7 +385,7 @@ export function ConveniosPage() {
 
     } catch (err) {
 
-      setError(err.message || "Erro ao carregar conv√™nios");
+      setError(err.message || "Erro ao carregar convÍnios");
 
       console.error("Erro:", err);
 
@@ -401,12 +401,12 @@ export function ConveniosPage() {
 
 
 
-  // ===== CARREGAR DADOS PARA ABA DE PRE√áOS =====
+  // ===== CARREGAR DADOS PARA ABA DE PRE«OS =====
   const loadPricingTabData = async () => {
 
     if (!clinicId) {
 
-      console.log("‚è≠Ô∏è Pulando loadPricingTabData: clinicId n√£o definido");
+      console.log("?? Pulando loadPricingTabData: clinicId n„o definido");
 
       return;
 
@@ -414,29 +414,29 @@ export function ConveniosPage() {
 
     try {
 
-      console.log("üîÑ Iniciando carregamento completo de dados para pre√ßos...");
+      console.log("?? Iniciando carregamento completo de dados para preÁos...");
 
       
 
-      // 1Ô∏è‚É£ Carregar servi√ßos dispon√≠veis (sempre)
+      // 1?? Carregar serviÁos disponÌveis (sempre)
 
-      console.log("üì¶ Etapa 1: Carregando servi√ßos...");
+      console.log("?? Etapa 1: Carregando serviÁos...");
 
       const srvs = await servicesApi.listServices(clinicId);
 
       const servicesLoaded = Array.isArray(srvs) ? srvs : [];
 
-      console.log(`‚úÖ Servi√ßos carregados: ${servicesLoaded.length}`);
+      console.log(`? ServiÁos carregados: ${servicesLoaded.length}`);
 
       setServices(servicesLoaded);
 
       
 
-      // 2Ô∏è‚É£ Carregar planos e pre√ßos APENAS se editando conv√™nio existente
+      // 2?? Carregar planos e preÁos APENAS se editando convÍnio existente
 
       if (editingId) {
 
-        console.log("üìã Etapa 2: Carregando planos...");
+        console.log("?? Etapa 2: Carregando planos...");
 
         const { data: payer } = await supabase
 
@@ -448,13 +448,13 @@ export function ConveniosPage() {
 
           .eq('clinic_id', clinicId)
 
-          .maybeSingle(); // Use maybeSingle ao inv√©s de single para evitar erros
+          .maybeSingle(); // Use maybeSingle ao invÈs de single para evitar erros
 
         
 
         if (payer) {
 
-          console.log("‚úÖ Payer encontrado:", payer.id);
+          console.log("? Payer encontrado:", payer.id);
 
           const { data: plansLoaded } = await supabase
 
@@ -468,29 +468,29 @@ export function ConveniosPage() {
 
           
 
-          console.log(`‚úÖ Planos carregados: ${plansLoaded?.length || 0}`);
+          console.log(`? Planos carregados: ${plansLoaded?.length || 0}`);
 
           setPlansData(Array.isArray(plansLoaded) ? plansLoaded : []);
 
         } else {
 
-          console.warn("‚ö†Ô∏è Payer n√£o encontrado para:", formData.name);
+          console.warn("?? Payer n„o encontrado para:", formData.name);
 
           setPlansData([]);
 
         }
 
-        // 3Ô∏è‚É£ Carregar dados da tabela de pre√ßos
+        // 3?? Carregar dados da tabela de preÁos
 
-        console.log("üìä Etapa 3: Carregando tabela de pre√ßos...");
+        console.log("?? Etapa 3: Carregando tabela de preÁos...");
 
         await loadPricingTable();
 
       } else {
 
-        // Novo conv√™nio: limpar planos e pre√ßos
+        // Novo convÍnio: limpar planos e preÁos
 
-        console.log("üìã Etapa 2: Novo conv√™nio (sem planos/pre√ßos ainda)");
+        console.log("?? Etapa 2: Novo convÍnio (sem planos/preÁos ainda)");
 
         setPlansData([]);
 
@@ -500,7 +500,7 @@ export function ConveniosPage() {
 
     } catch (err) {
 
-      console.error("‚ùå Erro no loadPricingTabData:", err);
+      console.error("? Erro no loadPricingTabData:", err);
 
       setServices([]);
 
@@ -512,7 +512,7 @@ export function ConveniosPage() {
 
 
 
-  // ===== CARREGAR SERVI√áOS (para aba de Servi√ßos)
+  // ===== CARREGAR SERVI«OS (para aba de ServiÁos)
   const loadServicesTab = async () => {
 
     try {
@@ -527,7 +527,7 @@ export function ConveniosPage() {
 
     } catch (err) {
 
-      setError(err.message || "Erro ao carregar servi√ßos");
+      setError(err.message || "Erro ao carregar serviÁos");
 
       console.error("Erro:", err);
 
@@ -541,7 +541,7 @@ export function ConveniosPage() {
 
 
 
-  // üÜï Carregar tabela de pre√ßos base do conv√™nio
+  // ?? Carregar tabela de preÁos base do convÍnio
 
   const loadPricingTable = async () => {
 
@@ -567,7 +567,7 @@ export function ConveniosPage() {
 
       if (payerError || !payer) {
 
-        console.warn('‚ö†Ô∏è Payer n√£o encontrado para:', formData.name);
+        console.warn('?? Payer n„o encontrado para:', formData.name);
 
         setPricingTableData([]);
 
@@ -577,7 +577,7 @@ export function ConveniosPage() {
 
 
 
-      // üÜï Buscar todos os pre√ßos base do conv√™nio (que possuem pre√ßo configurado)
+      // ?? Buscar todos os preÁos base do convÍnio (que possuem preÁo configurado)
 
       const { data: prices, error: pricesError } = await supabase
 
@@ -623,13 +623,13 @@ export function ConveniosPage() {
 
         .eq('clinic_id', clinicId)
 
-        .gt('price', 0);  // üÜï Apenas pre√ßos > 0
+        .gt('price', 0);  // ?? Apenas preÁos > 0
 
 
 
       if (pricesError) {
 
-        console.error('Erro ao carregar pre√ßos:', pricesError);
+        console.error('Erro ao carregar preÁos:', pricesError);
 
         setPricingTableData([]);
 
@@ -639,11 +639,11 @@ export function ConveniosPage() {
 
 
 
-      // üÜï Enriquecer dados com informa√ß√µes financeiras
+      // ?? Enriquecer dados com informaÁıes financeiras
 
       const enrichedPrices = await Promise.all((prices || []).map(async (price) => {
 
-        // Contar quantos profissionais t√™m esse pre√ßo configurado
+        // Contar quantos profissionais tÍm esse preÁo configurado
 
         const { data: professionalPrices } = await supabase
 
@@ -673,7 +673,7 @@ export function ConveniosPage() {
 
 
 
-      // Ordenar por nome do servi√ßo no frontend
+      // Ordenar por nome do serviÁo no frontend
 
       const sortedPrices = enrichedPrices.sort((a, b) => {
 
@@ -691,7 +691,7 @@ export function ConveniosPage() {
 
     } catch (err) {
 
-      console.error('Erro ao carregar tabela de pre√ßos:', err);
+      console.error('Erro ao carregar tabela de preÁos:', err);
 
       setPricingTableData([]);
 
@@ -701,23 +701,23 @@ export function ConveniosPage() {
 
 
 
-  // üÜï Carregar servi√ßos dispon√≠veis
+  // ?? Carregar serviÁos disponÌveis
 
   const loadAvailableServices = async () => {
 
     try {
 
-      console.log("üì¶ Carregando servi√ßos da cl√≠nica...", { clinicId });
+      console.log("?? Carregando serviÁos da clÌnica...", { clinicId });
 
       const srvs = await servicesApi.listServices(clinicId);
 
-      console.log("‚úÖ Servi√ßos carregados:", srvs?.length || 0);
+      console.log("? ServiÁos carregados:", srvs?.length || 0);
 
       setServices(Array.isArray(srvs) ? srvs : []);
 
     } catch (err) {
 
-      console.error('‚ùå Erro ao carregar servi√ßos:', err);
+      console.error('? Erro ao carregar serviÁos:', err);
 
       setServices([]);
 
@@ -727,29 +727,29 @@ export function ConveniosPage() {
 
 
 
-  // üÜï Adicionar pre√ßo manualmente
+  // ?? Adicionar preÁo manualmente
 
   const handleAddPricingRow = async () => {
 
-    console.log("üí∞ [handleAddPricingRow] INICIANDO...", { pricingFormData, editingId });
+    console.log("?? [handleAddPricingRow] INICIANDO...", { pricingFormData, editingId });
 
     if (!pricingFormData.service_id || !pricingFormData.price) {
 
-      setError("Selecione um servi√ßo e informe um pre√ßo");
+      setError("Selecione um serviÁo e informe um preÁo");
 
-      console.warn("‚ö†Ô∏è [handleAddPricingRow] Valida√ß√£o falhou: sem service_id ou price");
+      console.warn("?? [handleAddPricingRow] ValidaÁ„o falhou: sem service_id ou price");
 
       return;
 
     }
 
-    // üî¥ Verificar se est√° criando novo conv√™nio
+    // ?? Verificar se est· criando novo convÍnio
 
     if (!editingId) {
 
-      setError("‚ö†Ô∏è Salve o conv√™nio PRIMEIRO antes de adicionar servi√ßos");
+      setError("?? Salve o convÍnio PRIMEIRO antes de adicionar serviÁos");
 
-      console.warn("‚ö†Ô∏è [handleAddPricingRow] Sem editingId - conv√™nio n√£o foi salvo");
+      console.warn("?? [handleAddPricingRow] Sem editingId - convÍnio n„o foi salvo");
 
       return;
 
@@ -759,7 +759,7 @@ export function ConveniosPage() {
 
       setError(null);
 
-      console.log("üîç [handleAddPricingRow] Etapa 1: Buscando ou criando payer...", { name: formData.name, clinicId });
+      console.log("?? [handleAddPricingRow] Etapa 1: Buscando ou criando payer...", { name: formData.name, clinicId });
 
       let payerData = await supabase
 
@@ -775,10 +775,10 @@ export function ConveniosPage() {
 
       
 
-      // Se payer n√£o existe, criar automaticamente
+      // Se payer n„o existe, criar automaticamente
       if (!payerData.data) {
 
-        console.log("üìù [handleAddPricingRow] Payer n√£o encontrado, criando novo...", { name: formData.name });
+        console.log("?? [handleAddPricingRow] Payer n„o encontrado, criando novo...", { name: formData.name });
 
         const { data: newPayer, error: createError } = await supabase
 
@@ -800,9 +800,9 @@ export function ConveniosPage() {
 
         if (createError) {
 
-          console.error("‚ùå [handleAddPricingRow] Erro ao criar payer:", createError);
+          console.error("? [handleAddPricingRow] Erro ao criar payer:", createError);
 
-          setError("Erro ao criar conv√™nio");
+          setError("Erro ao criar convÍnio");
 
           return;
 
@@ -810,21 +810,21 @@ export function ConveniosPage() {
 
         payerData = { data: newPayer };
 
-        console.log("‚úÖ [handleAddPricingRow] Payer criado:", { payerId: newPayer.id });
+        console.log("? [handleAddPricingRow] Payer criado:", { payerId: newPayer.id });
 
       } else {
 
-        console.log("‚úÖ [handleAddPricingRow] Etapa 2: Payer encontrado:", { payerId: payerData.data.id });
+        console.log("? [handleAddPricingRow] Etapa 2: Payer encontrado:", { payerId: payerData.data.id });
 
       }
 
 
 
-      // Se est√° em modo edi√ß√£o (tem ID), atualizar diretamente
+      // Se est· em modo ediÁ„o (tem ID), atualizar diretamente
 
       if (pricingFormData.id) {
 
-        console.log("üìù [handleAddPricingRow] Etapa 3: Atualizando pre√ßo existente...", { id: pricingFormData.id });
+        console.log("?? [handleAddPricingRow] Etapa 3: Atualizando preÁo existente...", { id: pricingFormData.id });
 
         const { error: updateError } = await supabase
 
@@ -840,9 +840,7 @@ export function ConveniosPage() {
 
             grupo: pricingFormData.grupo || null
 
-          })
-
-          .eq('id', pricingFormData.id);
+          }).eq('id', pricingFormData.id);
 
 
 
@@ -850,12 +848,11 @@ export function ConveniosPage() {
 
       } else {
 
-        // Verificar se j√° existe pre√ßo para este servi√ßo
+        // Verificar se j· existe preÁo para este serviÁo
 
         const { data: existing } = await supabase
 
-          .from('service_prices')
-          .select('id')
+          .from('service_prices').select('id')
 
           .eq('service_id', pricingFormData.service_id)
 
@@ -895,7 +892,7 @@ export function ConveniosPage() {
 
           // Criar novo
 
-          console.log("‚ûï [handleAddPricingRow] Etapa 4: Inserindo novo pre√ßo...", { 
+          console.log("? [handleAddPricingRow] Etapa 4: Inserindo novo preÁo...", { 
 
             service_id: pricingFormData.service_id,
 
@@ -927,13 +924,13 @@ export function ConveniosPage() {
 
           if (insertError) {
 
-            console.error("‚ùå [handleAddPricingRow] Erro no INSERT:", insertError);
+            console.error("? [handleAddPricingRow] Erro no INSERT:", insertError);
 
             throw insertError;
 
           }
 
-          console.log("‚úÖ [handleAddPricingRow] Etapa 5: Pre√ßo inserido com sucesso!");
+          console.log("? [handleAddPricingRow] Etapa 5: PreÁo inserido com sucesso!");
 
         }
 
@@ -945,17 +942,17 @@ export function ConveniosPage() {
 
       setShowPricingForm(false);
 
-      console.log("üîÑ [handleAddPricingRow] Recarregando tabela de pre√ßos...");
+      console.log("?? [handleAddPricingRow] Recarregando tabela de preÁos...");
 
       await loadPricingTable();
 
-      console.log("‚úÖ [handleAddPricingRow] SUCESSO! Servi√ßo salvo e tabela atualizada.");
+      console.log("? [handleAddPricingRow] SUCESSO! ServiÁo salvo e tabela atualizada.");
 
     } catch (err) {
 
-      setError(err.message || "Erro ao adicionar pre√ßo");
+      setError(err.message || "Erro ao adicionar preÁo");
 
-      console.error('‚ùå [handleAddPricingRow] Erro capturado:', err);
+      console.error('? [handleAddPricingRow] Erro capturado:', err);
 
     }
 
@@ -963,7 +960,7 @@ export function ConveniosPage() {
 
 
 
-  // üÜï Editar pre√ßo da tabela
+  // ?? Editar preÁo da tabela
 
   const handleEditPricingRow = async (priceEntry) => {
 
@@ -989,11 +986,11 @@ export function ConveniosPage() {
 
 
 
-  // üÜï Remover pre√ßo da tabela
+  // ?? Remover preÁo da tabela
 
   const handleRemovePricingRow = async (priceEntry) => {
 
-    if (!window.confirm(`Deseja remover o pre√ßo de "${priceEntry.services?.name || 'Servi√ßo desconhecido'}" (R$ ${(priceEntry.price || 0).toFixed(2).replace('.', ',')})?`)) {
+    if (!window.confirm(`Deseja remover o preÁo de "${priceEntry.services?.name || 'ServiÁo desconhecido'}" (R$ ${(priceEntry.price || 0).toFixed(2).replace('.', ',')})?`)) {
 
       return;
 
@@ -1025,7 +1022,7 @@ export function ConveniosPage() {
 
     } catch (err) {
 
-      setError(err.message || "Erro ao remover pre√ßo");
+      setError(err.message || "Erro ao remover preÁo");
 
       console.error('Erro:', err);
 
@@ -1035,7 +1032,7 @@ export function ConveniosPage() {
 
 
 
-  // üÜï Toggle status de pre√ßo (ativo/inativo)
+  // ?? Toggle status de preÁo (ativo/inativo)
 
   const togglePricingStatus = async (priceEntry) => {
 
@@ -1051,9 +1048,9 @@ export function ConveniosPage() {
 
 
 
-    // Se est√° ativo (tem scheduling_config), desativa (limpa)
+    // Se est· ativo (tem scheduling_config), desativa (limpa)
 
-    // Se est√° inativo (sem scheduling_config), ativa (cria objeto vazio)
+    // Se est· inativo (sem scheduling_config), ativa (cria objeto vazio)
 
     const newConfig = schedulingConfig ? null : {};
 
@@ -1077,7 +1074,7 @@ export function ConveniosPage() {
 
 
 
-      console.log(`‚úÖ Pre√ßo ${priceEntry.id} agora est√° ${newConfig ? 'ATIVO' : 'INATIVO'}`);
+      console.log(`? PreÁo ${priceEntry.id} agora est· ${newConfig ? 'ATIVO' : 'INATIVO'}`);
 
       setError(null);
 
@@ -1085,7 +1082,7 @@ export function ConveniosPage() {
 
     } catch (err) {
 
-      setError(err.message || "Erro ao alterar status do pre√ßo");
+      setError(err.message || "Erro ao alterar status do preÁo");
 
       console.error('Erro:', err);
 
@@ -1095,7 +1092,7 @@ export function ConveniosPage() {
 
 
 
-  // üÜï Processar upload de arquivo
+  // ?? Processar upload de arquivo
 
   const handleFileUpload = async (e) => {
 
@@ -1119,7 +1116,7 @@ export function ConveniosPage() {
 
       
 
-      // Detectar se √© Excel ou CSV
+      // Detectar se È Excel ou CSV
 
       const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
 
@@ -1149,13 +1146,13 @@ export function ConveniosPage() {
 
         
 
-        // Header √© a primeira linha
+        // Header È a primeira linha
 
         headers = (data[0] || []).map(h => String(h).toLowerCase().trim());
 
         
 
-        // Dados come√ßam a partir da 3¬™ linha (√≠ndice 2) como no template
+        // Dados comeÁam a partir da 3™ linha (Ìndice 2) como no template
 
         rows = data.slice(2).filter(row => row.some(cell => cell)); // Remover linhas vazias
 
@@ -1223,7 +1220,7 @@ export function ConveniosPage() {
 
       if (!payerDataUpload.data) {
 
-        console.log("üìù Criando payer para upload...", { name: formData.name });
+        console.log("?? Criando payer para upload...", { name: formData.name });
 
         const { data: newPayer, error: createError } = await supabase
 
@@ -1237,15 +1234,16 @@ export function ConveniosPage() {
 
           }])
 
-          .select('id')
+          .select('id');
 
-          .single();
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
         
 
         if (createError) {
 
-          setError("Erro ao criar conv√™nio");
+          setError("Erro ao criar convÍnio");
 
           return;
 
@@ -1257,13 +1255,13 @@ export function ConveniosPage() {
 
 
 
-      // Mapear posi√ß√µes das colunas esperadas
+      // Mapear posiÁıes das colunas esperadas
 
       const codigoIdx = headers.findIndex(h => h.includes('codigo'));
 
-      const servicoIdx = headers.findIndex(h => h.includes('servico') || h.includes('servi√ßo'));
+      const servicoIdx = headers.findIndex(h => h.includes('servico') || h.includes('serviÁo'));
 
-      const valorIdx = headers.findIndex(h => h.includes('valor') || h.includes('pre√ßo') || h.includes('preco'));
+      const valorIdx = headers.findIndex(h => h.includes('valor') || h.includes('preÁo') || h.includes('preco'));
 
       const planoIdx = headers.findIndex(h => h.includes('plano'));
 
@@ -1271,7 +1269,7 @@ export function ConveniosPage() {
 
 
 
-      // Processar linhas com suporte a m√∫ltiplas colunas
+      // Processar linhas com suporte a m˙ltiplas colunas
 
       const processedRows = rows.map(cols => {
 
@@ -1295,7 +1293,7 @@ export function ConveniosPage() {
 
       if (processedRows.length === 0) {
 
-        setError("Nenhum dado v√°lido encontrado no arquivo");
+        setError("Nenhum dado v·lido encontrado no arquivo");
 
         return;
 
@@ -1313,7 +1311,7 @@ export function ConveniosPage() {
 
         try {
 
-          // Buscar servi√ßo pelo c√≥digo ou nome
+          // Buscar serviÁo pelo cÛdigo ou nome
 
           let service = null;
 
@@ -1369,7 +1367,7 @@ export function ConveniosPage() {
 
 
 
-          // Verificar se j√° existe
+          // Verificar se j· existe
 
           const { data: existing } = await supabase
 
@@ -1449,7 +1447,7 @@ export function ConveniosPage() {
 
       setError(null);
 
-      alert(`‚úÖ ${successCount} pre√ßos importados com sucesso!\n‚ö†Ô∏è ${errorCount} linhas com erro.`);
+      alert(`? ${successCount} preÁos importados com sucesso!\n?? ${errorCount} linhas com erro.`);
 
       loadPricingTable();
 
@@ -1471,19 +1469,19 @@ export function ConveniosPage() {
 
 
 
-  // üìã Fun√ß√£o para converter categoria para label
+  // ?? FunÁ„o para converter categoria para label
   const getCategoryLabel = (categoryValue) => {
     const categoryMap = {
-      consultation: "üìã Consulta",
-      exam: "üî¨ Exame/SADT",
-      procedure: "üè• Procedimento",
-      surgery: "üè® Cirurgia",
-      other: "üìù Outro"
+      consultation: "?? Consulta",
+      exam: "?? Exame/SADT",
+      procedure: "?? Procedimento",
+      surgery: "?? Cirurgia",
+      other: "?? Outro"
     };
     return categoryMap[categoryValue] || categoryValue || '-';
   };
 
-  // üìã Fun√ß√£o para download de template Excel
+  // ?? FunÁ„o para download de template Excel
 
   const downloadExcelTemplate = () => {
 
@@ -1491,17 +1489,17 @@ export function ConveniosPage() {
 
     const data = [
 
-      ['C√≥digo', 'Servi√ßo', 'Plano', 'Categoria', 'Valor', 'Status', 'A√ß√µes'],
+      ['CÛdigo', 'ServiÁo', 'Plano', 'Categoria', 'Valor', 'Status', 'AÁıes'],
 
       [], // Linha em branco
 
-      ['12345', 'Consulta Cl√≠nica', 'Plano B√°sico', 'Consultas', 150.00, '‚úÖ Ativo', ''],
+      ['12345', 'Consulta ClÌnica', 'Plano B·sico', 'Consultas', 150.00, '? Ativo', ''],
 
-      ['12346', 'Eletrocardiograma', 'Plano Premium', 'Procedimentos', 250.00, '‚ö†Ô∏è Incompleto', ''],
+      ['12346', 'Eletrocardiograma', 'Plano Premium', 'Procedimentos', 250.00, '?? Incompleto', ''],
 
-      ['12347', 'Hemograma', 'Qualquer', 'Exames', 80.00, '‚úÖ Ativo', ''],
+      ['12347', 'Hemograma', 'Qualquer', 'Exames', 80.00, '? Ativo', ''],
 
-      ['12348', 'Ultrassom', 'Plano Completo', 'Procedimentos', 300.00, '‚ö†Ô∏è Incompleto', '']
+      ['12348', 'Ultrassom', 'Plano Completo', 'Procedimentos', 300.00, '?? Incompleto', '']
 
     ];
 
@@ -1517,9 +1515,9 @@ export function ConveniosPage() {
 
     worksheet['!cols'] = [
 
-      { wch: 12 },  // C√≥digo
+      { wch: 12 },  // CÛdigo
 
-      { wch: 25 },  // Servi√ßo
+      { wch: 25 },  // ServiÁo
 
       { wch: 15 },  // Plano
 
@@ -1529,7 +1527,7 @@ export function ConveniosPage() {
 
       { wch: 15 },  // Status
 
-      { wch: 8 }    // A√ß√µes
+      { wch: 8 }    // AÁıes
 
     ];
 
@@ -1561,7 +1559,7 @@ export function ConveniosPage() {
 
     const workbook = XLSX.utils.book_new();
 
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Pre√ßos');
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'PreÁos');
 
     
 
@@ -1575,7 +1573,7 @@ export function ConveniosPage() {
 
     if (!editingId || !formData) {
 
-      console.log("‚è≠Ô∏è Pulando loadPlansForPayer: editingId ou formData n√£o definido");
+      console.log("?? Pulando loadPlansForPayer: editingId ou formData n„o definido");
 
       return;
 
@@ -1585,7 +1583,7 @@ export function ConveniosPage() {
 
       setPlansLoading(true);
 
-      console.log("üìã Carregando planos para:", { payerName: formData.name });
+      console.log("?? Carregando planos para:", { payerName: formData.name });
 
       
 
@@ -1607,7 +1605,7 @@ export function ConveniosPage() {
 
       if (!payer) {
 
-        console.warn('‚ö†Ô∏è Nenhum payer encontrado com nome:', formData.name);
+        console.warn('?? Nenhum payer encontrado com nome:', formData.name);
 
         setPlansData([]);
 
@@ -1617,7 +1615,7 @@ export function ConveniosPage() {
 
       }
 
-      console.log("‚úÖ Payer encontrado:", payer.id);
+      console.log("? Payer encontrado:", payer.id);
 
       
 
@@ -1635,13 +1633,13 @@ export function ConveniosPage() {
 
       if (error) throw error;
 
-      console.log("‚úÖ Planos carregados:", data?.length || 0);
+      console.log("? Planos carregados:", data?.length || 0);
 
       setPlansData(Array.isArray(data) ? data : []);
 
     } catch (err) {
 
-      console.error("‚ùå Erro ao carregar planos:", err.message);
+      console.error("? Erro ao carregar planos:", err.message);
 
       setPlansData([]);
 
@@ -1653,7 +1651,7 @@ export function ConveniosPage() {
 
   };
 
-  // üÜï Gerar c√≥digo autom√°tico para o plano
+  // ?? Gerar cÛdigo autom·tico para o plano
   const generatePlanCode = (planName) => {
     if (!planName.trim()) return "";
     
@@ -1662,15 +1660,15 @@ export function ConveniosPage() {
     const initials = words
       .map(word => word.charAt(0).toUpperCase())
       .join('')
-      .substring(0, 4); // At√© 4 primeiras letras
+      .substring(0, 4); // AtÈ 4 primeiras letras
     
-    // Gerar n√∫mero sequencial de 3 d√≠gitos (001-999)
+    // Gerar n˙mero sequencial de 3 dÌgitos (001-999)
     const randomNumber = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
     
     return `${initials} - ${randomNumber}`;
   };
 
-  // üÜï Criar novo plano
+  // ?? Criar novo plano
 
   const handleAddPlan = async () => {
 
@@ -1700,7 +1698,7 @@ export function ConveniosPage() {
 
       if (payerError || !payer) {
 
-        throw new Error(`Payer n√£o encontrado para: ${formData.name}`);
+        throw new Error(`Payer n„o encontrado para: ${formData.name}`);
 
       }
 
@@ -1744,7 +1742,7 @@ export function ConveniosPage() {
 
     } catch (err) {
 
-      console.error("‚ùå Erro ao criar plano:", err.message);
+      console.error("? Erro ao criar plano:", err.message);
 
       alert("Erro ao criar plano: " + err.message);
 
@@ -1754,7 +1752,7 @@ export function ConveniosPage() {
 
 
 
-  // üÜï Deletar plano
+  // ?? Deletar plano
 
   const handleDeletePlan = async (planId, planName) => {
 
@@ -1782,7 +1780,7 @@ export function ConveniosPage() {
 
     } catch (err) {
 
-      console.error("‚ùå Erro ao deletar plano:", err.message);
+      console.error("? Erro ao deletar plano:", err.message);
 
       alert("Erro ao deletar plano: " + err.message);
 
@@ -1868,11 +1866,11 @@ export function ConveniosPage() {
 
       setEditingPlanActive(false);
 
-      alert("‚úÖ Plano atualizado com sucesso!");
+      alert("? Plano atualizado com sucesso!");
 
     } catch (err) {
 
-      console.error("‚ùå Erro ao atualizar plano:", err.message);
+      console.error("? Erro ao atualizar plano:", err.message);
 
       alert("Erro ao atualizar plano: " + err.message);
 
@@ -1900,7 +1898,7 @@ export function ConveniosPage() {
 
   useEffect(() => {
 
-    // Carregar planos quando a aba √© selecionada e h√° um conv√™nio em edi√ß√£o
+    // Carregar planos quando a aba È selecionada e h· um convÍnio em ediÁ„o
 
     if ((activeTab === "plans" || activeTab === "pricing") && editingId) {
 
@@ -1914,7 +1912,7 @@ export function ConveniosPage() {
 
   const generateConvenioCode = () => {
 
-    // Extrai n√∫meros dos c√≥digos existentes (ex: CONV001 -> 1)
+    // Extrai n˙meros dos cÛdigos existentes (ex: CONV001 -> 1)
 
     const existingCodes = insurances
 
@@ -1930,7 +1928,7 @@ export function ConveniosPage() {
 
 
 
-    // Encontra o maior n√∫mero e incrementa
+    // Encontra o maior n˙mero e incrementa
 
     const maxNumber = existingCodes.length > 0 ? Math.max(...existingCodes) : 0;
 
@@ -1938,7 +1936,7 @@ export function ConveniosPage() {
 
 
 
-    // Formata com 3 d√≠gitos (CONV001, CONV002, etc)
+    // Formata com 3 dÌgitos (CONV001, CONV002, etc)
 
     return `CONV${String(nextNumber).padStart(3, "0")}`;
 
@@ -1986,7 +1984,7 @@ export function ConveniosPage() {
 
       tiss_version: "3.05.00",
 
-      // ===== NOVOS CAMPOS: ENDERE√áO =====
+      // ===== NOVOS CAMPOS: ENDERE«O =====
 
       address_street: "",
 
@@ -2056,7 +2054,7 @@ export function ConveniosPage() {
 
       tiss_version: insurance.tiss_version || "3.05.00",
 
-      // ===== NOVOS CAMPOS: ENDERE√áO =====
+      // ===== NOVOS CAMPOS: ENDERE«O =====
 
       address_street: insurance.address_street || "",
 
@@ -2070,7 +2068,7 @@ export function ConveniosPage() {
 
       address_zip_code: insurance.address_zip_code || "",
 
-      // ===== NOVOS CAMPOS: IDENTIFICA√á√ÉO FISCAL =====
+      // ===== NOVOS CAMPOS: IDENTIFICA«√O FISCAL =====
 
       municipal_registration: insurance.municipal_registration || "",
 
@@ -2178,7 +2176,7 @@ export function ConveniosPage() {
 
     setError(null);
 
-    // üÜï Resetar estados dos planos
+    // ?? Resetar estados dos planos
 
     setPlansData([]);
 
@@ -2240,7 +2238,7 @@ export function ConveniosPage() {
 
       tiss_version: "3.05.00",
 
-      // ===== NOVOS CAMPOS: ENDERE√áO =====
+      // ===== NOVOS CAMPOS: ENDERE«O =====
 
       address_street: "",
 
@@ -2254,7 +2252,7 @@ export function ConveniosPage() {
 
       address_zip_code: "",
 
-      // ===== NOVOS CAMPOS: IDENTIFICA√á√ÉO FISCAL =====
+      // ===== NOVOS CAMPOS: IDENTIFICA«√O FISCAL =====
 
       municipal_registration: "",
 
@@ -2302,7 +2300,7 @@ export function ConveniosPage() {
 
     });
 
-    // üÜï Limpar estados dos planos
+    // ?? Limpar estados dos planos
 
     setPlansData([]);
 
@@ -2336,11 +2334,11 @@ export function ConveniosPage() {
 
 
 
-  // Fun√ß√£o para verificar se h√° mudan√ßas antes de fechar
+  // FunÁ„o para verificar se h· mudanÁas antes de fechar
 
   const handleCloseWithCheck = () => {
 
-    // Verifica se h√° algum dado preenchido no formul√°rio
+    // Verifica se h· algum dado preenchido no formul·rio
 
     const hasData = Object.entries(formData).some(([key, value]) => {
 
@@ -2358,7 +2356,7 @@ export function ConveniosPage() {
 
     if (hasData) {
 
-      if (window.confirm("Tem certeza que deseja sair? As altera√ß√µes n√£o salvas ser√£o perdidas.")) {
+      if (window.confirm("Tem certeza que deseja sair? As alteraÁıes n„o salvas ser„o perdidas.")) {
 
         closeForm();
 
@@ -2396,7 +2394,7 @@ export function ConveniosPage() {
 
     if (!priceFormData.service_id || (!priceFormData.service_value && !priceFormData.copay_value)) {
 
-      setError("Selecione um servi√ßo e defina pelo menos um valor");
+      setError("Selecione um serviÁo e defina pelo menos um valor");
 
       return;
 
@@ -2416,7 +2414,7 @@ export function ConveniosPage() {
 
     } catch (err) {
 
-      setError(err.message || "Erro ao adicionar servi√ßo");
+      setError(err.message || "Erro ao adicionar serviÁo");
 
       console.error("Erro:", err);
 
@@ -2432,7 +2430,7 @@ export function ConveniosPage() {
 
   const deleteServicePrice = async (serviceId) => {
 
-    if (!window.confirm("Tem certeza que deseja remover este servi√ßo?")) {
+    if (!window.confirm("Tem certeza que deseja remover este serviÁo?")) {
 
       return;
 
@@ -2448,7 +2446,7 @@ export function ConveniosPage() {
 
     } catch (err) {
 
-      setError(err.message || "Erro ao remover servi√ßo");
+      setError(err.message || "Erro ao remover serviÁo");
 
       console.error("Erro:", err);
 
@@ -2462,7 +2460,7 @@ export function ConveniosPage() {
 
     if (!formData.fantasy_name.trim()) {
 
-      setError("Nome Fantasia √© obrigat√≥rio");
+      setError("Nome Fantasia È obrigatÛrio");
 
       return false;
 
@@ -2470,7 +2468,7 @@ export function ConveniosPage() {
 
     if (!formData.code.trim()) {
 
-      setError("C√≥digo √© obrigat√≥rio");
+      setError("CÛdigo È obrigatÛrio");
 
       return false;
 
@@ -2478,7 +2476,7 @@ export function ConveniosPage() {
 
     if (!formData.type.trim()) {
 
-      setError("Tipo de conv√™nio √© obrigat√≥rio");
+      setError("Tipo de convÍnio È obrigatÛrio");
 
       return false;
 
@@ -2550,7 +2548,7 @@ export function ConveniosPage() {
 
         tiss_version: formData.tiss_version?.trim() || "3.05.00",
 
-        // ===== NOVOS CAMPOS: ENDERE√áO =====
+        // ===== NOVOS CAMPOS: ENDERE«O =====
 
         address_street: formData.address_street?.trim() || null,
 
@@ -2564,7 +2562,7 @@ export function ConveniosPage() {
 
         address_zip_code: formData.address_zip_code?.trim() || null,
 
-        // ===== NOVOS CAMPOS: IDENTIFICA√á√ÉO FISCAL =====
+        // ===== NOVOS CAMPOS: IDENTIFICA«√O FISCAL =====
 
         municipal_registration: formData.municipal_registration?.trim() || null,
 
@@ -2614,15 +2612,15 @@ export function ConveniosPage() {
 
 
 
-      console.log("üìä Frontend - Dados a salvar:", dataToSave);
+      console.log("?? Frontend - Dados a salvar:", dataToSave);
 
-      console.log("üîç Modo:", editingId ? "UPDATE" : "CREATE", editingId || "novo");
+      console.log("?? Modo:", editingId ? "UPDATE" : "CREATE", editingId || "novo");
 
 
 
       if (editingId) {
 
-        console.log("üîÑ Chamando UPDATE...");
+        console.log("?? Chamando UPDATE...");
 
         await healthInsurancesApi.updateHealthInsurance(editingId, clinicId, dataToSave);
 
@@ -2638,7 +2636,7 @@ export function ConveniosPage() {
 
       } else {
 
-        console.log("‚ûï Chamando CREATE...");
+        console.log("? Chamando CREATE...");
 
         const newInsurance = await healthInsurancesApi.createHealthInsurance(clinicId, dataToSave);
 
@@ -2652,9 +2650,9 @@ export function ConveniosPage() {
 
     } catch (err) {
 
-      console.error("‚ùå Erro ao salvar conv√™nio:", err);
+      console.error("? Erro ao salvar convÍnio:", err);
 
-      setError(err.message || "Erro ao salvar conv√™nio");
+      setError(err.message || "Erro ao salvar convÍnio");
 
     } finally {
 
@@ -2686,7 +2684,7 @@ export function ConveniosPage() {
 
     } catch (err) {
 
-      setError(err.message || "Erro ao deletar conv√™nio");
+      setError(err.message || "Erro ao deletar convÍnio");
 
       console.error("Erro:", err);
 
@@ -2714,19 +2712,19 @@ export function ConveniosPage() {
 
 
 
-  // Se formul√°rio/modal est√° aberto, renderizar somente o modal (n√£o detalhes)
+  // Se formul·rio/modal est· aberto, renderizar somente o modal (n„o detalhes)
 
   if (showForm) {
 
-    // O modal ser√° renderizado abaixo (no return principal)
+    // O modal ser· renderizado abaixo (no return principal)
 
-    // Retorna null aqui para que a p√°gina de detalhes n√£o tenha prioridade
+    // Retorna null aqui para que a p·gina de detalhes n„o tenha prioridade
 
   }
 
 
 
-  // Detalhe de Conv√™nio com M:M Servi√ßos (s√≥ se N√ÉO est√° em edi√ß√£o)
+  // Detalhe de ConvÍnio com M:M ServiÁos (sÛ se N√O est· em ediÁ„o)
 
   if (selectedInsurance && !showForm) {
 
@@ -2742,7 +2740,7 @@ export function ConveniosPage() {
 
         >
 
-          ‚Üê Voltar √† lista
+          ? Voltar ‡ lista
 
         </button>
 
@@ -2752,7 +2750,7 @@ export function ConveniosPage() {
 
           <h1 className="text-3xl font-bold text-gray-900">{selectedInsurance.name}</h1>
 
-          <p className="text-gray-600 mt-1">C√≥digo: {selectedInsurance.code}</p>
+          <p className="text-gray-600 mt-1">CÛdigo: {selectedInsurance.code}</p>
 
         </div>
 
@@ -2782,7 +2780,7 @@ export function ConveniosPage() {
 
           <CardHeader className="border-b">
 
-            <CardTitle>Servi√ßos e Valores</CardTitle>
+            <CardTitle>ServiÁos e Valores</CardTitle>
 
           </CardHeader>
 
@@ -2792,7 +2790,7 @@ export function ConveniosPage() {
 
               <div className="text-center py-8">
 
-                <div className="animate-spin inline-block">‚åõ</div>
+                <div className="animate-spin inline-block">?</div>
 
                 <p className="text-gray-600 mt-2">Carregando...</p>
 
@@ -2814,7 +2812,7 @@ export function ConveniosPage() {
 
                     <Plus className="w-4 h-4" />
 
-                    Adicionar Servi√ßo
+                    Adicionar ServiÁo
 
                   </Button>
 
@@ -2826,7 +2824,7 @@ export function ConveniosPage() {
 
                   <div className="border rounded-lg p-4 bg-blue-50">
 
-                    <h3 className="font-medium text-gray-900 mb-4">Novo Servi√ßo</h3>
+                    <h3 className="font-medium text-gray-900 mb-4">Novo ServiÁo</h3>
 
                     <div className="space-y-4">
 
@@ -2834,7 +2832,7 @@ export function ConveniosPage() {
 
                         <label className="block text-sm font-medium text-gray-700 mb-1">
 
-                          Servi√ßo <span className="text-red-500">*</span>
+                          ServiÁo <span className="text-red-500">*</span>
 
                         </label>
 
@@ -2854,7 +2852,7 @@ export function ConveniosPage() {
 
                         >
 
-                          <option value="">Selecione um servi√ßo</option>
+                          <option value="">Selecione um serviÁo</option>
 
                           {services.map((service) => (
 
@@ -2878,7 +2876,7 @@ export function ConveniosPage() {
 
                           <label className="block text-sm font-medium text-gray-700 mb-1">
 
-                            Valor do Servi√ßo (R$)
+                            Valor do ServiÁo (R$)
 
                           </label>
 
@@ -2996,13 +2994,13 @@ export function ConveniosPage() {
 
                         <tr className="border-b bg-gray-50">
 
-                          <th className="text-left py-3 px-4 font-semibold text-gray-700">Servi√ßo</th>
+                          <th className="text-left py-3 px-4 font-semibold text-gray-700">ServiÁo</th>
 
                           <th className="text-right py-3 px-4 font-semibold text-gray-700">Valor</th>
 
                           <th className="text-right py-3 px-4 font-semibold text-gray-700">Copagamento</th>
 
-                          <th className="text-center py-3 px-4 font-semibold text-gray-700">A√ß√µes</th>
+                          <th className="text-center py-3 px-4 font-semibold text-gray-700">AÁıes</th>
 
                         </tr>
 
@@ -3068,7 +3066,7 @@ export function ConveniosPage() {
 
                   <div className="text-center py-8 border rounded-lg bg-gray-50">
 
-                    <p className="text-gray-600">Nenhum servi√ßo cadastrado para este conv√™nio</p>
+                    <p className="text-gray-600">Nenhum serviÁo cadastrado para este convÍnio</p>
 
                   </div>
 
@@ -3100,9 +3098,9 @@ export function ConveniosPage() {
 
         category="4.1 Cadastros Estruturais"
 
-        title="Conv√™nios"
+        title="ConvÍnios"
 
-        subtitle="Cadastre conv√™nios e seguradoras de sa√∫de"
+        subtitle="Cadastre convÍnios e seguradoras de sa˙de"
 
       />
 
@@ -3130,7 +3128,7 @@ export function ConveniosPage() {
 
         <CardHeader className="flex flex-row items-center justify-between pb-4">
 
-          <CardTitle>Conv√™nios Cadastrados ({insurances.length})</CardTitle>
+          <CardTitle>ConvÍnios Cadastrados ({insurances.length})</CardTitle>
 
           <Button
 
@@ -3142,7 +3140,7 @@ export function ConveniosPage() {
 
             <Plus className="w-4 h-4" />
 
-            Novo Conv√™nio
+            Novo ConvÍnio
 
           </Button>
 
@@ -3156,9 +3154,9 @@ export function ConveniosPage() {
 
               icon={<Landmark className="w-12 h-12 mx-auto text-gray-400" />}
 
-              title="Nenhum conv√™nio cadastrado"
+              title="Nenhum convÍnio cadastrado"
 
-              description="Comece criando seu primeiro conv√™nio para gerenciar seguradoras e planos de sa√∫de"
+              description="Comece criando seu primeiro convÍnio para gerenciar seguradoras e planos de sa˙de"
 
               action={
 
@@ -3170,7 +3168,7 @@ export function ConveniosPage() {
 
                 >
 
-                  Cadastrar Primeiro Conv√™nio
+                  Cadastrar Primeiro ConvÍnio
 
                 </Button>
 
@@ -3188,7 +3186,7 @@ export function ConveniosPage() {
 
                   <tr className="border-b bg-gray-50">
 
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">C√≥digo</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700">CÛdigo</th>
 
                     <th className="text-left py-3 px-4 font-semibold text-gray-700">Nome</th>
 
@@ -3198,7 +3196,7 @@ export function ConveniosPage() {
 
                     <th className="text-center py-3 px-4 font-semibold text-gray-700">Status</th>
 
-                    <th className="text-center py-3 px-4 font-semibold text-gray-700">A√ß√µes</th>
+                    <th className="text-center py-3 px-4 font-semibold text-gray-700">AÁıes</th>
 
                   </tr>
 
@@ -3286,7 +3284,7 @@ export function ConveniosPage() {
 
                           disabled={submitting}
 
-                          title="Editar conv√™nio"
+                          title="Editar convÍnio"
 
                         >
 
@@ -3306,7 +3304,7 @@ export function ConveniosPage() {
 
                           disabled={submitting}
 
-                          title="Deletar conv√™nio"
+                          title="Deletar convÍnio"
 
                         >
 
@@ -3342,7 +3340,7 @@ export function ConveniosPage() {
 
             <Card className="app-modal-card shadow-2xl border-0">
 
-              {/* Bot√£o Fechar - Posicionado Absolutamente */}
+              {/* Bot„o Fechar - Posicionado Absolutamente */}
 
               <button
 
@@ -3366,7 +3364,7 @@ export function ConveniosPage() {
 
                 <CardTitle className="text-white">
 
-                  {editingId ? "Editar Conv√™nio" : "Novo Conv√™nio"}
+                  {editingId ? "Editar ConvÍnio" : "Novo ConvÍnio"}
 
                 </CardTitle>
 
@@ -3374,7 +3372,7 @@ export function ConveniosPage() {
 
 
 
-              {/* Abas de Navega√ß√£o */}
+              {/* Abas de NavegaÁ„o */}
 
               <div style={{display: 'flex', width: '100%', gap: '0', borderBottom: '1px solid #e5e7eb', backgroundColor: '#ffffff', alignItems: 'stretch', height: '48px', flexShrink: 0}}>
 
@@ -3402,7 +3400,7 @@ export function ConveniosPage() {
 
                 >
 
-                  Endere√ßo
+                  EndereÁo
 
                 </button>
 
@@ -3486,7 +3484,7 @@ export function ConveniosPage() {
 
                 >
 
-                  Tabela de Pre√ßos
+                  Tabela de PreÁos
 
                 </button>
 
@@ -3500,7 +3498,7 @@ export function ConveniosPage() {
 
                 >
 
-                  üè• TISS
+                  ?? TISS
 
                 </button>
 
@@ -3520,7 +3518,7 @@ export function ConveniosPage() {
 
                       <div className="space-y-6">
 
-                        {/* Se√ß√£o: C√≥digo + Tipo */}
+                        {/* SeÁ„o: CÛdigo + Tipo */}
 
                         <div className="grid grid-cols-4 gap-4">
 
@@ -3528,7 +3526,7 @@ export function ConveniosPage() {
 
                       <label className="block text-sm font-medium text-gray-700 mb-1">
 
-                        C√≥digo <span className="text-red-500">*</span>
+                        CÛdigo <span className="text-red-500">*</span>
 
                       </label>
 
@@ -3588,7 +3586,7 @@ export function ConveniosPage() {
 
                         <option value="">Selecione o tipo</option>
 
-                        <option value="health_plan">Plano de Sa√∫de</option>
+                        <option value="health_plan">Plano de Sa˙de</option>
 
                         <option value="private_insurance">Seguro Privado</option>
 
@@ -3606,7 +3604,7 @@ export function ConveniosPage() {
 
 
 
-                  {/* Se√ß√£o: Nome Fantasia + Raz√£o Social */}
+                  {/* SeÁ„o: Nome Fantasia + Raz„o Social */}
 
                   <div className="grid grid-cols-2 gap-4">
 
@@ -3630,7 +3628,7 @@ export function ConveniosPage() {
 
                         }
 
-                        placeholder="Ex: Unimed S√£o Paulo"
+                        placeholder="Ex: Unimed S„o Paulo"
 
                         className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
 
@@ -3648,7 +3646,7 @@ export function ConveniosPage() {
 
                       <label className="block text-sm font-medium text-gray-700 mb-1">
 
-                        Raz√£o Social
+                        Raz„o Social
 
                       </label>
 
@@ -3678,7 +3676,7 @@ export function ConveniosPage() {
 
 
 
-                  {/* Se√ß√£o: CNPJ + Pessoa de Contato */}
+                  {/* SeÁ„o: CNPJ + Pessoa de Contato */}
 
                   <div className="grid grid-cols-2 gap-4">
 
@@ -3734,7 +3732,7 @@ export function ConveniosPage() {
 
                         }
 
-                        placeholder="Nome do respons√°vel"
+                        placeholder="Nome do respons·vel"
 
                         className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
 
@@ -3748,7 +3746,7 @@ export function ConveniosPage() {
 
 
 
-                  {/* Se√ß√£o: Email (linha cheia) */}
+                  {/* SeÁ„o: Email (linha cheia) */}
 
                   <div>
 
@@ -3782,7 +3780,7 @@ export function ConveniosPage() {
 
 
 
-                  {/* Se√ß√£o: Telefone + Celular */}
+                  {/* SeÁ„o: Telefone + Celular */}
 
                   <div className="grid grid-cols-2 gap-4">
 
@@ -3852,13 +3850,13 @@ export function ConveniosPage() {
 
 
 
-                  {/* Se√ß√£o: Regras Espec√≠ficas em linha cheia */}
+                  {/* SeÁ„o: Regras EspecÌficas em linha cheia */}
 
                   <div>
 
                     <label className="block text-sm font-medium text-gray-700 mb-1">
 
-                      Regras Espec√≠ficas
+                      Regras EspecÌficas
 
                     </label>
 
@@ -3872,7 +3870,7 @@ export function ConveniosPage() {
 
                       }
 
-                      placeholder="Ex: Requer autoriza√ß√£o pr√©via, limite de 10 consultas/m√™s, etc"
+                      placeholder="Ex: Requer autorizaÁ„o prÈvia, limite de 10 consultas/mÍs, etc"
 
                       className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
 
@@ -3884,7 +3882,7 @@ export function ConveniosPage() {
 
                   </div>
 
-                  {/* Se√ß√£o: Checkbox Ativo */}
+                  {/* SeÁ„o: Checkbox Ativo */}
 
                   <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
 
@@ -3910,7 +3908,7 @@ export function ConveniosPage() {
 
                     <label htmlFor="active" className="text-sm font-medium text-gray-700 cursor-pointer">
 
-                      ‚úÖ Conv√™nio Ativo
+                      ? ConvÍnio Ativo
 
                     </label>
 
@@ -3928,7 +3926,7 @@ export function ConveniosPage() {
 
 
 
-                  {/* ABA: TABELA DE PRE√áOS */}
+                  {/* ABA: TABELA DE PRE«OS */}
 
                   {activeTab === "pricing" && (
 
@@ -3936,19 +3934,19 @@ export function ConveniosPage() {
 
                       <div className="border-b pb-6">
 
-                        {/* üìã Cabe√ßalho Limpo */}
+                        {/* ?? CabeÁalho Limpo */}
 
                         <div className="mb-6">
 
-                          <h3 className="text-lg font-bold text-gray-900 mb-1">üí∞ Tabela de Pre√ßos</h3>
+                          <h3 className="text-lg font-bold text-gray-900 mb-1">?? Tabela de PreÁos</h3>
 
-                          <p className="text-xs text-gray-500">Gerencie servi√ßos e pre√ßos para este conv√™nio</p>
+                          <p className="text-xs text-gray-500">Gerencie serviÁos e preÁos para este convÍnio</p>
 
                         </div>
 
                         
 
-                        {/* ‚ö†Ô∏è Aviso se n√£o salvou o conv√™nio ainda */}
+                        {/* ?? Aviso se n„o salvou o convÍnio ainda */}
 
                         {!editingId && (
 
@@ -3956,7 +3954,7 @@ export function ConveniosPage() {
 
                             <p className="text-sm text-amber-800">
 
-                              ‚ö†Ô∏è <strong>Salve o conv√™nio primeiro</strong> antes de adicionar servi√ßos
+                              ?? <strong>Salve o convÍnio primeiro</strong> antes de adicionar serviÁos
 
                             </p>
 
@@ -3966,7 +3964,7 @@ export function ConveniosPage() {
 
                         
 
-                        {/* Bot√µes de A√ß√£o */}
+                        {/* Botıes de AÁ„o */}
 
                         <div className="flex gap-2 flex-wrap mb-6">
 
@@ -3978,7 +3976,7 @@ export function ConveniosPage() {
 
                             disabled={!editingId}
 
-                            title={!editingId ? "Salve o conv√™nio primeiro" : ""}
+                            title={!editingId ? "Salve o convÍnio primeiro" : ""}
 
                             className={`text-white text-sm py-2 px-4 rounded flex items-center gap-2 ${
 
@@ -3990,7 +3988,7 @@ export function ConveniosPage() {
 
                             <Plus className="w-4 h-4" />
 
-                            Novo Servi√ßo
+                            Novo ServiÁo
 
                           </Button>
 
@@ -4004,7 +4002,7 @@ export function ConveniosPage() {
 
                               disabled={uploadingFile || !editingId}
 
-                              title={!editingId ? "Salve o conv√™nio primeiro" : ""}
+                              title={!editingId ? "Salve o convÍnio primeiro" : ""}
 
                               className={`text-white text-sm py-2 px-4 rounded flex items-center gap-2 ${
 
@@ -4044,7 +4042,7 @@ export function ConveniosPage() {
 
                             disabled={!editingId}
 
-                            title={!editingId ? "Salve o conv√™nio primeiro" : ""}
+                            title={!editingId ? "Salve o convÍnio primeiro" : ""}
 
                             className={`text-white text-sm py-2 px-4 rounded flex items-center gap-2 ${
 
@@ -4054,7 +4052,7 @@ export function ConveniosPage() {
 
                           >
 
-                            üì• Template Excel
+                            ?? Template Excel
 
                           </Button>
 
@@ -4066,7 +4064,7 @@ export function ConveniosPage() {
 
                           <>
 
-                            {/* Formul√°rio Compacto */}
+                            {/* Formul·rio Compacto */}
 
                               {showPricingForm && (
 
@@ -4074,7 +4072,7 @@ export function ConveniosPage() {
 
                                 <h4 className="text-sm font-semibold text-gray-900 mb-4">
 
-                                  {pricingFormData.id ? '‚úèÔ∏è Editar Servi√ßo' : '‚ûï Novo Servi√ßo'}
+                                  {pricingFormData.id ? '?? Editar ServiÁo' : '? Novo ServiÁo'}
 
                                 </h4>
 
@@ -4098,7 +4096,7 @@ export function ConveniosPage() {
 
                                   >
 
-                                    <option value="">üìã Selecione o servi√ßo</option>
+                                    <option value="">?? Selecione o serviÁo</option>
 
                                     {(services || [])
 
@@ -4122,7 +4120,7 @@ export function ConveniosPage() {
 
                                   >
 
-                                    <option value="">üìç Selecione o plano</option>
+                                    <option value="">?? Selecione o plano</option>
 
                                     {(plansData || []).map(plan => (
 
@@ -4148,7 +4146,7 @@ export function ConveniosPage() {
 
                                     onChange={(e) => setPricingFormData({...pricingFormData, price: e.target.value})}
 
-                                    placeholder="üíµ Pre√ßo (R$)"
+                                    placeholder="?? PreÁo (R$)"
 
                                     className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
 
@@ -4164,17 +4162,17 @@ export function ConveniosPage() {
 
                                   >
 
-                                    <option value="">üìä Selecione a Categoria</option>
+                                    <option value="">?? Selecione a Categoria</option>
 
-                                    <option value="consultation">üìã Consulta</option>
+                                    <option value="consultation">?? Consulta</option>
 
-                                    <option value="exam">üî¨ Exame/SADT</option>
+                                    <option value="exam">?? Exame/SADT</option>
 
-                                    <option value="procedure">üè• Procedimento</option>
+                                    <option value="procedure">?? Procedimento</option>
 
-                                    <option value="surgery">üè® Cirurgia</option>
+                                    <option value="surgery">?? Cirurgia</option>
 
-                                    <option value="other">üìù Outro</option>
+                                    <option value="other">?? Outro</option>
 
                                   </select>
 
@@ -4210,7 +4208,7 @@ export function ConveniosPage() {
 
                                   >
 
-                                    ‚úï
+                                    ?
 
                                   </Button>
 
@@ -4228,7 +4226,7 @@ export function ConveniosPage() {
 
                                     <div className="text-center">
 
-                                      <p className="text-xs text-gray-600">Servi√ßos</p>
+                                      <p className="text-xs text-gray-600">ServiÁos</p>
 
                                       <p className="text-lg font-bold text-gray-900">{pricingTableData.length}</p>
 
@@ -4284,9 +4282,9 @@ export function ConveniosPage() {
 
                                         <tr>
 
-                                          <th className="text-center py-2 px-3 font-semibold text-gray-800 text-xs">C√≥digo</th>
+                                          <th className="text-center py-2 px-3 font-semibold text-gray-800 text-xs">CÛdigo</th>
 
-                                          <th className="text-left py-2 px-3 font-semibold text-gray-800">Servi√ßo</th>
+                                          <th className="text-left py-2 px-3 font-semibold text-gray-800">ServiÁo</th>
 
                                           <th className="text-left py-2 px-3 font-semibold text-gray-800">Plano</th>
 
@@ -4296,7 +4294,7 @@ export function ConveniosPage() {
 
                                           <th className="text-center py-2 px-3 font-semibold text-gray-800">Status</th>
 
-                                          <th className="text-center py-2 px-3 font-semibold text-gray-800">A√ß√µes</th>
+                                          <th className="text-center py-2 px-3 font-semibold text-gray-800">AÁıes</th>
 
                                         </tr>
 
@@ -4332,7 +4330,7 @@ export function ConveniosPage() {
 
 
 
-                                          // Verificar se pre√ßo est√° ATIVO (active = true)
+                                          // Verificar se preÁo est· ATIVO (active = true)
 
                                           const isConfigured = priceEntry.active === true;
 
@@ -4398,7 +4396,7 @@ export function ConveniosPage() {
 
                                                   <span className={`text-xs font-semibold ${isConfigured ? 'text-green-600' : 'text-yellow-600'}`}>
 
-                                                    {isConfigured ? '‚úÖ' : '‚ö†Ô∏è'}
+                                                    {isConfigured ? '?' : '??'}
 
                                                   </span>
 
@@ -4418,7 +4416,7 @@ export function ConveniosPage() {
 
                                                 >
 
-                                                  ‚úèÔ∏è
+                                                  ??
 
                                                 </button>
 
@@ -4432,7 +4430,7 @@ export function ConveniosPage() {
 
                                                 >
 
-                                                  üóëÔ∏è
+                                                  ???
 
                                                 </button>
 
@@ -4462,7 +4460,7 @@ export function ConveniosPage() {
 
                                   <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
 
-                                    <p className="text-xs text-gray-600 font-semibold">Total de Servi√ßos</p>
+                                    <p className="text-xs text-gray-600 font-semibold">Total de ServiÁos</p>
 
                                     <p className="text-2xl font-bold text-blue-600">{pricingTableData.length}</p>
 
@@ -4470,7 +4468,7 @@ export function ConveniosPage() {
 
                                   <div className="bg-green-50 p-3 rounded-lg border border-green-200">
 
-                                    <p className="text-xs text-gray-600 font-semibold">Pre√ßo M√©dio</p>
+                                    <p className="text-xs text-gray-600 font-semibold">PreÁo MÈdio</p>
 
                                     <p className="text-2xl font-bold text-green-600">
 
@@ -4548,9 +4546,9 @@ export function ConveniosPage() {
 
                                       <tr>
 
-                                        <th className="text-center py-2 px-3 font-semibold text-gray-800 text-xs">C√≥digo</th>
+                                        <th className="text-center py-2 px-3 font-semibold text-gray-800 text-xs">CÛdigo</th>
 
-                                        <th className="text-left py-2 px-3 font-semibold text-gray-800">Servi√ßo</th>
+                                        <th className="text-left py-2 px-3 font-semibold text-gray-800">ServiÁo</th>
 
                                         <th className="text-left py-2 px-3 font-semibold text-gray-800">Plano</th>
 
@@ -4560,7 +4558,7 @@ export function ConveniosPage() {
 
                                         <th className="text-center py-2 px-3 font-semibold text-gray-800">Status</th>
 
-                                        <th className="text-center py-2 px-3 font-semibold text-gray-800">A√ß√µes</th>
+                                        <th className="text-center py-2 px-3 font-semibold text-gray-800">AÁıes</th>
 
                                       </tr>
 
@@ -4612,7 +4610,7 @@ export function ConveniosPage() {
 
                                             <td className="py-3 px-4 text-gray-900 font-medium">
 
-                                              {priceEntry.services?.name || 'Servi√ßo desconhecido'}
+                                              {priceEntry.services?.name || 'ServiÁo desconhecido'}
 
                                             </td>
 
@@ -4646,7 +4644,7 @@ export function ConveniosPage() {
 
                                                 <span className={`text-xs font-semibold ${isConfigured ? 'text-green-600' : 'text-yellow-600'}`}>
 
-                                                  {isConfigured ? '‚úÖ Ativo' : '‚ö†Ô∏è Incompleto'}
+                                                  {isConfigured ? '? Ativo' : '?? Incompleto'}
 
                                                 </span>
 
@@ -4666,7 +4664,7 @@ export function ConveniosPage() {
 
                                               >
 
-                                                ‚úèÔ∏è Editar
+                                                ?? Editar
 
                                               </button>
 
@@ -4680,7 +4678,7 @@ export function ConveniosPage() {
 
                                               >
 
-                                                üóëÔ∏è Remover
+                                                ??? Remover
 
                                               </button>
 
@@ -4708,15 +4706,15 @@ export function ConveniosPage() {
 
                                   <p className="text-sm text-gray-700">
 
-                                    <strong>Nenhum pre√ßo configurado</strong> para este conv√™nio ainda.
+                                    <strong>Nenhum preÁo configurado</strong> para este convÍnio ainda.
 
                                   </p>
 
                                   <p className="text-sm text-gray-600 mt-2">
 
-                                    A tabela mostra apenas os <strong>pre√ßos base</strong> efetivamente negociados com o conv√™nio. 
+                                    A tabela mostra apenas os <strong>preÁos base</strong> efetivamente negociados com o convÍnio. 
 
-                                    Pre√ßos espec√≠ficos de profissionais (negocia√ß√µes pontuais) aparecem como <strong>"‚úèÔ∏è Negocia√ß√£o"</strong> na edi√ß√£o do profissional.
+                                    PreÁos especÌficos de profissionais (negociaÁıes pontuais) aparecem como <strong>"?? NegociaÁ„o"</strong> na ediÁ„o do profissional.
 
                                   </p>
 
@@ -4726,7 +4724,7 @@ export function ConveniosPage() {
 
                             </>
 
-                            {/* Instru√ß√µes de Upload - Ocultas */}
+                            {/* InstruÁıes de Upload - Ocultas */}
 
                             </div>
 
@@ -4739,17 +4737,17 @@ export function ConveniosPage() {
 
                                   <p className="text-xs text-gray-600 mb-2">
 
-                                    Crie um arquivo CSV ou TXT com tr√™s colunas: <strong>C√≥digo CBHPM</strong>, <strong>Nome do Servi√ßo</strong> e <strong>Pre√ßo</strong>
+                                    Crie um arquivo CSV ou TXT com trÍs colunas: <strong>CÛdigo CBHPM</strong>, <strong>Nome do ServiÁo</strong> e <strong>PreÁo</strong>
 
                                   </p>
 
                                   <div className="bg-white p-2 rounded text-xs font-mono text-gray-700 overflow-x-auto mb-2">
 
-                                    <div>C√≥digo CBHPM,Nome do Servi√ßo,Pre√ßo</div>
+                                    <div>CÛdigo CBHPM,Nome do ServiÁo,PreÁo</div>
 
-                                    <div>10101012,Consulta em hor√°rio normal ou preestabelecido,150.00</div>
+                                    <div>10101012,Consulta em hor·rio normal ou preestabelecido,150.00</div>
 
-                                    <div>10101020,Consulta em domic√≠lio,80.50</div>
+                                    <div>10101020,Consulta em domicÌlio,80.50</div>
 
                                     <div>10101039,Consulta em pronto socorro,250.00</div>
 
@@ -4759,63 +4757,63 @@ export function ConveniosPage() {
 
                                 <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
 
-                                <p className="text-xs text-gray-600 font-semibold mb-3">üìä Estrutura da Tabela de Pre√ßos (Vis√£o Financeira):</p>
+                                <p className="text-xs text-gray-600 font-semibold mb-3">?? Estrutura da Tabela de PreÁos (Vis„o Financeira):</p>
 
                               <div className="space-y-2 text-xs text-gray-600">
 
                                 <div className="flex gap-2">
 
-                                  <span className="font-semibold min-w-max">ÔøΩ C√≥digo CBHPM:</span>
+                                  <span className="font-semibold min-w-max">? CÛdigo CBHPM:</span>
 
-                                  <span>Identificador √∫nico do servi√ßo conforme tabela CBHPM da ANS</span>
-
-                                </div>
-
-                                <div className="flex gap-2">
-
-                                  <span className="font-semibold min-w-max">ÔøΩüí∞ Pre√ßo Base:</span>
-
-                                  <span>Valor negociado com o conv√™nio para cada servi√ßo</span>
+                                  <span>Identificador ˙nico do serviÁo conforme tabela CBHPM da ANS</span>
 
                                 </div>
 
                                 <div className="flex gap-2">
 
-                                  <span className="font-semibold min-w-max">üë• Profissionais:</span>
+                                  <span className="font-semibold min-w-max">??? PreÁo Base:</span>
 
-                                  <span>Quantidade de profissionais vinculados a este conv√™nio</span>
-
-                                </div>
-
-                                <div className="flex gap-2">
-
-                                  <span className="font-semibold min-w-max">‚úÖ Status:</span>
-
-                                  <span>Ativo (pre√ßo configurado) ou Incompleto (sem hor√°rios definidos)</span>
+                                  <span>Valor negociado com o convÍnio para cada serviÁo</span>
 
                                 </div>
 
                                 <div className="flex gap-2">
 
-                                  <span className="font-semibold min-w-max">üìÖ Hor√°rios:</span>
+                                  <span className="font-semibold min-w-max">?? Profissionais:</span>
 
-                                  <span>N√∫mero de per√≠odos de agendamento configurados</span>
-
-                                </div>
-
-                                <div className="flex gap-2">
-
-                                  <span className="font-semibold min-w-max">üîÑ √ötil. Atualiza√ß√£o:</span>
-
-                                  <span>Data da √∫ltima modifica√ß√£o (importante para auditoria)</span>
+                                  <span>Quantidade de profissionais vinculados a este convÍnio</span>
 
                                 </div>
 
                                 <div className="flex gap-2">
 
-                                  <span className="font-semibold min-w-max">‚úèÔ∏è Negocia√ß√£o:</span>
+                                  <span className="font-semibold min-w-max">? Status:</span>
 
-                                  <span>Pre√ßo espec√≠fico de um profissional (override) que difere do base</span>
+                                  <span>Ativo (preÁo configurado) ou Incompleto (sem hor·rios definidos)</span>
+
+                                </div>
+
+                                <div className="flex gap-2">
+
+                                  <span className="font-semibold min-w-max">?? Hor·rios:</span>
+
+                                  <span>N˙mero de perÌodos de agendamento configurados</span>
+
+                                </div>
+
+                                <div className="flex gap-2">
+
+                                  <span className="font-semibold min-w-max">?? ⁄til. AtualizaÁ„o:</span>
+
+                                  <span>Data da ˙ltima modificaÁ„o (importante para auditoria)</span>
+
+                                </div>
+
+                                <div className="flex gap-2">
+
+                                  <span className="font-semibold min-w-max">?? NegociaÁ„o:</span>
+
+                                  <span>PreÁo especÌfico de um profissional (override) que difere do base</span>
 
                                 </div>
 
@@ -4823,17 +4821,17 @@ export function ConveniosPage() {
 
                               <div className="mt-3 pt-3 border-t border-blue-200">
 
-                                <p className="text-xs text-gray-600 font-semibold mb-2">Para adicionar pre√ßos a este conv√™nio:</p>
+                                <p className="text-xs text-gray-600 font-semibold mb-2">Para adicionar preÁos a este convÍnio:</p>
 
                                 <ol className="text-xs text-gray-600 space-y-1">
 
-                                  <li>1. Base do Sistema ‚Üí <strong>Profissionais</strong></li>
+                                  <li>1. Base do Sistema ? <strong>Profissionais</strong></li>
 
                                   <li>2. <strong>Editar</strong> um profissional</li>
 
-                                  <li>3. Aba <strong>"Conv√™nios"</strong> ‚Üí Adicionar este conv√™nio</li>
+                                  <li>3. Aba <strong>"ConvÍnios"</strong> ? Adicionar este convÍnio</li>
 
-                                  <li>4. <strong>Expandir servi√ßo</strong> e informar o pre√ßo base</li>
+                                  <li>4. <strong>Expandir serviÁo</strong> e informar o preÁo base</li>
 
                                   <li>5. Clicar em <strong>"Salvar"</strong></li>
 
@@ -4857,13 +4855,13 @@ export function ConveniosPage() {
 
 
 
-                  {/* ABA: ENDERE√áO */}
+                  {/* ABA: ENDERE«O */}
 
                   {activeTab === "address" && (
 
                     <div className="space-y-6">
 
-                  {/* ===== SE√á√ÉO: ENDERE√áO ===== */}
+                  {/* ===== SE«√O: ENDERE«O ===== */}
 
                   <div className="border-b pb-6">
 
@@ -4871,17 +4869,17 @@ export function ConveniosPage() {
 
                       <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">
 
-                        üìç
+                        ??
 
                       </span>
 
-                      Endere√ßo
+                      EndereÁo
 
                     </h3>
 
 
 
-                    {/* Grid: Rua + N√∫mero */}
+                    {/* Grid: Rua + N˙mero */}
 
                     <div className="grid grid-cols-3 gap-4 mb-4">
 
@@ -4919,7 +4917,7 @@ export function ConveniosPage() {
 
                         <label className="block text-sm font-medium text-gray-700 mb-1">
 
-                          N√∫mero
+                          N˙mero
 
                         </label>
 
@@ -5019,7 +5017,7 @@ export function ConveniosPage() {
 
 
 
-                    {/* Grid: Cidade + Estado + Pa√≠s */}
+                    {/* Grid: Cidade + Estado + PaÌs */}
 
                     <div className="grid grid-cols-3 gap-4 mb-4">
 
@@ -5043,7 +5041,7 @@ export function ConveniosPage() {
 
                           }
 
-                          placeholder="Ex: S√£o Paulo"
+                          placeholder="Ex: S„o Paulo"
 
                           className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
 
@@ -5093,7 +5091,7 @@ export function ConveniosPage() {
 
                         <label className="block text-sm font-medium text-gray-700 mb-1">
 
-                          Pa√≠s
+                          PaÌs
 
                         </label>
 
@@ -5135,7 +5133,7 @@ export function ConveniosPage() {
 
                     <div className="space-y-6">
 
-                      {/* ===== SE√á√ÉO: IDENTIFICA√á√ÉO FISCAL ===== */}
+                      {/* ===== SE«√O: IDENTIFICA«√O FISCAL ===== */}
 
                       <div className="border-b pb-6">
 
@@ -5143,17 +5141,17 @@ export function ConveniosPage() {
 
                           <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs">
 
-                            üìã
+                            ??
 
                           </span>
 
-                          Identifica√ß√£o Fiscal
+                          IdentificaÁ„o Fiscal
 
                         </h3>
 
 
 
-                        {/* Grid: Inscri√ß√£o Municipal + Inscri√ß√£o Estadual */}
+                        {/* Grid: InscriÁ„o Municipal + InscriÁ„o Estadual */}
 
                         <div className="grid grid-cols-2 gap-4 mb-4">
 
@@ -5161,7 +5159,7 @@ export function ConveniosPage() {
 
                             <label className="block text-sm font-medium text-gray-700 mb-1">
 
-                              Inscri√ß√£o Municipal
+                              InscriÁ„o Municipal
 
                             </label>
 
@@ -5193,7 +5191,7 @@ export function ConveniosPage() {
 
                             <label className="block text-sm font-medium text-gray-700 mb-1">
 
-                              Inscri√ß√£o Estadual
+                              InscriÁ„o Estadual
 
                             </label>
 
@@ -5239,9 +5237,9 @@ export function ConveniosPage() {
 
                         <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
 
-                          <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded text-xs">üìã</span>
+                          <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded text-xs">??</span>
 
-                          Dados Obrigat√≥rios para Faturamento
+                          Dados ObrigatÛrios para Faturamento
 
                         </h3>
 
@@ -5285,13 +5283,13 @@ export function ConveniosPage() {
 
                         />
 
-                        <p className="text-xs text-gray-500 mt-1">N√∫mero de registro na ANS (ag√™ncia de seguros privados). Obrigat√≥rio para planos privados.</p>
+                        <p className="text-xs text-gray-500 mt-1">N˙mero de registro na ANS (agÍncia de seguros privados). ObrigatÛrio para planos privados.</p>
 
                       </div>
 
 
 
-                      {/* Checkbox: Segue padr√£o TISS */}
+                      {/* Checkbox: Segue padr„o TISS */}
 
                       <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
 
@@ -5317,7 +5315,7 @@ export function ConveniosPage() {
 
                         <label htmlFor="tiss_pattern" className="text-sm font-medium text-gray-700">
 
-                          Segue padr√£o TISS (recomendado)
+                          Segue padr„o TISS (recomendado)
 
                         </label>
 
@@ -5325,13 +5323,13 @@ export function ConveniosPage() {
 
 
 
-                      {/* Campo: Vers√£o TISS */}
+                      {/* Campo: Vers„o TISS */}
 
                       <div>
 
                         <label className="block text-sm font-medium text-gray-700 mb-1">
 
-                          Vers√£o TISS <span className="text-red-500">*</span>
+                          Vers„o TISS <span className="text-red-500">*</span>
 
                         </label>
 
@@ -5371,7 +5369,7 @@ export function ConveniosPage() {
 
                         </select>
 
-                        <p className="text-xs text-gray-500 mt-1">Vers√£o do padr√£o TISS utilizado pelo conv√™nio</p>
+                        <p className="text-xs text-gray-500 mt-1">Vers„o do padr„o TISS utilizado pelo convÍnio</p>
 
                       </div>
 
@@ -5415,11 +5413,11 @@ export function ConveniosPage() {
 
                           <option value="sadt">Guia de SADT</option>
 
-                          <option value="hospitalization">Guia de Interna√ß√£o</option>
+                          <option value="hospitalization">Guia de InternaÁ„o</option>
 
                         </select>
 
-                        <p className="text-xs text-gray-500 mt-1">Tipo padr√£o de guia para este conv√™nio</p>
+                        <p className="text-xs text-gray-500 mt-1">Tipo padr„o de guia para este convÍnio</p>
 
                       </div>
 
@@ -5435,7 +5433,7 @@ export function ConveniosPage() {
 
                     <div className="space-y-6">
 
-                  {/* ===== SE√á√ÉO: TRIBUTOS ===== */}
+                  {/* ===== SE«√O: TRIBUTOS ===== */}
 
                   <div className="border-b pb-6">
 
@@ -5443,23 +5441,23 @@ export function ConveniosPage() {
 
                       <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs">
 
-                        üí∞
+                        ??
 
                       </span>
 
-                      Tributos (Para NF-e - Reforma Tribut√°ria 2024)
+                      Tributos (Para NF-e - Reforma Tribut·ria 2024)
 
                     </h3>
 
 
 
-                    {/* Campo: Regime Tribut√°rio */}
+                    {/* Campo: Regime Tribut·rio */}
 
                     <div className="mb-4">
 
                       <label className="block text-sm font-medium text-gray-700 mb-1">
 
-                        Regime Tribut√°rio
+                        Regime Tribut·rio
 
                       </label>
 
@@ -5493,7 +5491,7 @@ export function ConveniosPage() {
 
 
 
-                    {/* Checkbox: Ret√©m impostos */}
+                    {/* Checkbox: RetÈm impostos */}
 
                     <div className="flex items-center gap-2 mb-6 p-3 bg-blue-50 rounded border border-blue-200">
 
@@ -5531,7 +5529,7 @@ export function ConveniosPage() {
 
                       >
 
-                        ‚úì Operadora ret√©m impostos na fonte
+                        ? Operadora retÈm impostos na fonte
 
                       </label>
 
@@ -5545,7 +5543,7 @@ export function ConveniosPage() {
 
                       <div className="bg-gray-50 rounded border border-gray-200">
 
-                        {/* Cabe√ßalho */}
+                        {/* CabeÁalho */}
 
                         <div className="grid grid-cols-4 gap-2 p-3 border-b border-gray-200 font-bold text-xs text-gray-700 bg-gray-100">
 
@@ -5553,7 +5551,7 @@ export function ConveniosPage() {
 
                           <div>Tributo</div>
 
-                          <div>Al√≠quota (%)</div>
+                          <div>AlÌquota (%)</div>
 
                           <div>Notas</div>
 
@@ -5627,7 +5625,7 @@ export function ConveniosPage() {
 
                           />
 
-                          <div className="text-gray-500">Circula√ß√£o</div>
+                          <div className="text-gray-500">CirculaÁ„o</div>
 
                         </div>
 
@@ -5843,7 +5841,7 @@ export function ConveniosPage() {
 
                           />
 
-                          <div className="text-gray-500">Servi√ßo</div>
+                          <div className="text-gray-500">ServiÁo</div>
 
                         </div>
 
@@ -5915,7 +5913,7 @@ export function ConveniosPage() {
 
                           />
 
-                          <div className="text-gray-500">Servi√ßo Federal</div>
+                          <div className="text-gray-500">ServiÁo Federal</div>
 
                         </div>
 
@@ -5987,13 +5985,13 @@ export function ConveniosPage() {
 
                           />
 
-                          <div className="text-gray-500">Previd√™ncia</div>
+                          <div className="text-gray-500">PrevidÍncia</div>
 
                         </div>
 
 
 
-                        {/* IBS (Reforma Tribut√°ria) */}
+                        {/* IBS (Reforma Tribut·ria) */}
 
                         <div className="grid grid-cols-4 gap-2 p-3 border-b border-gray-100 items-center text-xs bg-green-50">
 
@@ -6065,7 +6063,7 @@ export function ConveniosPage() {
 
 
 
-                        {/* CBS (Reforma Tribut√°ria) */}
+                        {/* CBS (Reforma Tribut·ria) */}
 
                         <div className="grid grid-cols-4 gap-2 p-3 items-center text-xs bg-green-50">
 
@@ -6153,15 +6151,15 @@ export function ConveniosPage() {
 
                     <div className="space-y-6">
 
-                      {/* SE√á√ÉO 1: CONDI√á√ïES COMERCIAIS */}
+                      {/* SE«√O 1: CONDI«’ES COMERCIAIS */}
 
                       <div className="border-b pb-6">
 
                         <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
 
-                          <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">üìä</span>
+                          <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">??</span>
 
-                          Condi√ß√µes Comerciais
+                          CondiÁıes Comerciais
 
                         </h3>
 
@@ -6209,19 +6207,19 @@ export function ConveniosPage() {
 
                             />
 
-                            <p className="text-xs text-gray-500 mt-1">Desconto padr√£o do conv√™nio</p>
+                            <p className="text-xs text-gray-500 mt-1">Desconto padr„o do convÍnio</p>
 
                           </div>
 
 
 
-                          {/* Margem M√≠nima */}
+                          {/* Margem MÌnima */}
 
                           <div>
 
                             <label className="block text-sm font-medium text-gray-700 mb-1">
 
-                              Margem M√≠nima (%)
+                              Margem MÌnima (%)
 
                             </label>
 
@@ -6257,19 +6255,19 @@ export function ConveniosPage() {
 
                             />
 
-                            <p className="text-xs text-gray-500 mt-1">Margem m√≠nima aceit√°vel</p>
+                            <p className="text-xs text-gray-500 mt-1">Margem mÌnima aceit·vel</p>
 
                           </div>
 
 
 
-                          {/* Taxa de Administra√ß√£o */}
+                          {/* Taxa de AdministraÁ„o */}
 
                           <div>
 
                             <label className="block text-sm font-medium text-gray-700 mb-1">
 
-                              Taxa de Administra√ß√£o (%)
+                              Taxa de AdministraÁ„o (%)
 
                             </label>
 
@@ -6305,7 +6303,7 @@ export function ConveniosPage() {
 
                             />
 
-                            <p className="text-xs text-gray-500 mt-1">Taxa cobrada pelo conv√™nio</p>
+                            <p className="text-xs text-gray-500 mt-1">Taxa cobrada pelo convÍnio</p>
 
                           </div>
 
@@ -6411,13 +6409,13 @@ export function ConveniosPage() {
 
 
 
-                      {/* SE√á√ÉO 2: PRAZOS E PAGAMENTO */}
+                      {/* SE«√O 2: PRAZOS E PAGAMENTO */}
 
                       <div className="border-b pb-6">
 
                         <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
 
-                          <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs">‚è≥</span>
+                          <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs">?</span>
 
                           Prazos e Formas de Pagamento
 
@@ -6465,7 +6463,7 @@ export function ConveniosPage() {
 
                             />
 
-                            <p className="text-xs text-gray-500 mt-1">Dias at√© vencimento (ex: 30, 45, 60)</p>
+                            <p className="text-xs text-gray-500 mt-1">Dias atÈ vencimento (ex: 30, 45, 60)</p>
 
                           </div>
 
@@ -6477,7 +6475,7 @@ export function ConveniosPage() {
 
                             <label className="block text-sm font-medium text-gray-700 mb-1">
 
-                              Ciclo de Faturamento (dias do m√™s)
+                              Ciclo de Faturamento (dias do mÍs)
 
                             </label>
 
@@ -6505,7 +6503,7 @@ export function ConveniosPage() {
 
                                 max="31"
 
-                                placeholder="In√≠cio"
+                                placeholder="InÌcio"
 
                                 className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
 
@@ -6545,7 +6543,7 @@ export function ConveniosPage() {
 
                             </div>
 
-                            <p className="text-xs text-gray-500 mt-1">De ___ at√© ___ de cada m√™s</p>
+                            <p className="text-xs text-gray-500 mt-1">De ___ atÈ ___ de cada mÍs</p>
 
                           </div>
 
@@ -6565,7 +6563,7 @@ export function ConveniosPage() {
 
                               {[
 
-                                { id: "debit", label: "D√©bito Autom√°tico" },
+                                { id: "debit", label: "DÈbito Autom·tico" },
 
                                 { id: "boleto", label: "Boleto" },
 
@@ -6625,13 +6623,13 @@ export function ConveniosPage() {
 
 
 
-                      {/* SE√á√ÉO 3: REAJUSTES */}
+                      {/* SE«√O 3: REAJUSTES */}
 
                       <div className="border-b pb-6">
 
                         <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
 
-                          <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded text-xs">üìà</span>
+                          <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded text-xs">??</span>
 
                           Reajustes
 
@@ -6639,13 +6637,13 @@ export function ConveniosPage() {
 
                         <div className="grid grid-cols-2 gap-4">
 
-                          {/* √çndice de Reajuste */}
+                          {/* Õndice de Reajuste */}
 
                           <div>
 
                             <label className="block text-sm font-medium text-gray-700 mb-1">
 
-                              √çndice de Reajuste
+                              Õndice de Reajuste
 
                             </label>
 
@@ -6685,7 +6683,7 @@ export function ConveniosPage() {
 
                             </select>
 
-                            <p className="text-xs text-gray-500 mt-1">√çndice para reajuste anual</p>
+                            <p className="text-xs text-gray-500 mt-1">Õndice para reajuste anual</p>
 
                           </div>
 
@@ -6697,7 +6695,7 @@ export function ConveniosPage() {
 
                             <label className="block text-sm font-medium text-gray-700 mb-1">
 
-                              M√™s de Reajuste Anual
+                              MÍs de Reajuste Anual
 
                             </label>
 
@@ -6725,19 +6723,19 @@ export function ConveniosPage() {
 
                             />
 
-                            <p className="text-xs text-gray-500 mt-1">Quando ocorre a atualiza√ß√£o</p>
+                            <p className="text-xs text-gray-500 mt-1">Quando ocorre a atualizaÁ„o</p>
 
                           </div>
 
 
 
-                          {/* Pr√≥xima Data de Reajuste */}
+                          {/* PrÛxima Data de Reajuste */}
 
                           <div>
 
                             <label className="block text-sm font-medium text-gray-700 mb-1">
 
-                              Pr√≥xima Data de Reajuste
+                              PrÛxima Data de Reajuste
 
                             </label>
 
@@ -6765,7 +6763,7 @@ export function ConveniosPage() {
 
                             />
 
-                            <p className="text-xs text-gray-500 mt-1">Para controle/avalia√ß√£o</p>
+                            <p className="text-xs text-gray-500 mt-1">Para controle/avaliaÁ„o</p>
 
                           </div>
 
@@ -6775,27 +6773,27 @@ export function ConveniosPage() {
 
 
 
-                      {/* SE√á√ÉO 4: VIG√äNCIA DO CONTRATO */}
+                      {/* SE«√O 4: VIG NCIA DO CONTRATO */}
 
                       <div className="border-b pb-6">
 
                         <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
 
-                          <span className="bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-xs">üìÖ</span>
+                          <span className="bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-xs">??</span>
 
-                          Vig√™ncia do Contrato
+                          VigÍncia do Contrato
 
                         </h3>
 
                         <div className="grid grid-cols-2 gap-4">
 
-                          {/* Data In√≠cio */}
+                          {/* Data InÌcio */}
 
                           <div>
 
                             <label className="block text-sm font-medium text-gray-700 mb-1">
 
-                              Data de In√≠cio <span className="text-red-500">*</span>
+                              Data de InÌcio <span className="text-red-500">*</span>
 
                             </label>
 
@@ -6867,7 +6865,7 @@ export function ConveniosPage() {
 
 
 
-                          {/* Renova√ß√£o Autom√°tica */}
+                          {/* RenovaÁ„o Autom·tica */}
 
                           <div className="col-span-1">
 
@@ -6899,7 +6897,7 @@ export function ConveniosPage() {
 
                               <span className="text-sm font-medium text-gray-700">
 
-                                Renova√ß√£o Autom√°tica
+                                RenovaÁ„o Autom·tica
 
                               </span>
 
@@ -6909,13 +6907,13 @@ export function ConveniosPage() {
 
 
 
-                          {/* Dias Aviso Pr√©vio */}
+                          {/* Dias Aviso PrÈvio */}
 
                           <div>
 
                             <label className="block text-sm font-medium text-gray-700 mb-1">
 
-                              Dias de Aviso Pr√©vio
+                              Dias de Aviso PrÈvio
 
                             </label>
 
@@ -6947,7 +6945,7 @@ export function ConveniosPage() {
 
                             />
 
-                            <p className="text-xs text-gray-500 mt-1">Para n√£o renova√ß√£o</p>
+                            <p className="text-xs text-gray-500 mt-1">Para n„o renovaÁ„o</p>
 
                           </div>
 
@@ -6957,27 +6955,27 @@ export function ConveniosPage() {
 
 
 
-                      {/* SE√á√ÉO 5: POL√çTICA DE SUSPENS√ÉO E MULTAS */}
+                      {/* SE«√O 5: POLÕTICA DE SUSPENS√O E MULTAS */}
 
                       <div className="border-b pb-6">
 
                         <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
 
-                          <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-xs">‚ö†Ô∏è</span>
+                          <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-xs">??</span>
 
-                          Suspens√£o e Multas
+                          Suspens„o e Multas
 
                         </h3>
 
                         <div className="grid grid-cols-2 gap-4">
 
-                          {/* Dias para Suspens√£o */}
+                          {/* Dias para Suspens„o */}
 
                           <div>
 
                             <label className="block text-sm font-medium text-gray-700 mb-1">
 
-                              Dias para Suspens√£o (ap√≥s atraso)
+                              Dias para Suspens„o (apÛs atraso)
 
                             </label>
 
@@ -7069,7 +7067,7 @@ export function ConveniosPage() {
 
                             <label className="block text-sm font-medium text-gray-700 mb-1">
 
-                              Taxa de Juros Di√°ria (%)
+                              Taxa de Juros Di·ria (%)
 
                             </label>
 
@@ -7105,7 +7103,7 @@ export function ConveniosPage() {
 
                             />
 
-                            <p className="text-xs text-gray-500 mt-1">Taxa di√°ria de juros</p>
+                            <p className="text-xs text-gray-500 mt-1">Taxa di·ria de juros</p>
 
                           </div>
 
@@ -7115,13 +7113,13 @@ export function ConveniosPage() {
 
 
 
-                      {/* SE√á√ÉO 6: LIMITES E TETOS */}
+                      {/* SE«√O 6: LIMITES E TETOS */}
 
                       <div className="border-b pb-6">
 
                         <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
 
-                          <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">üìè</span>
+                          <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">??</span>
 
                           Limites e Tetos
 
@@ -7169,7 +7167,7 @@ export function ConveniosPage() {
 
                             />
 
-                            <p className="text-xs text-gray-500 mt-1">Limite m√°ximo por m√™s</p>
+                            <p className="text-xs text-gray-500 mt-1">Limite m·ximo por mÍs</p>
 
                           </div>
 
@@ -7219,13 +7217,13 @@ export function ConveniosPage() {
 
 
 
-                          {/* Co-participa√ß√£o */}
+                          {/* Co-participaÁ„o */}
 
                           <div>
 
                             <label className="block text-sm font-medium text-gray-700 mb-1">
 
-                              Co-participa√ß√£o/Franquia (R$)
+                              Co-participaÁ„o/Franquia (R$)
 
                             </label>
 
@@ -7251,7 +7249,7 @@ export function ConveniosPage() {
 
                               step="0.01"
 
-                              placeholder="Sem co-participa√ß√£o"
+                              placeholder="Sem co-participaÁ„o"
 
                               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
 
@@ -7259,7 +7257,7 @@ export function ConveniosPage() {
 
                             />
 
-                            <p className="text-xs text-gray-500 mt-1">Valor m√≠nimo que o paciente paga</p>
+                            <p className="text-xs text-gray-500 mt-1">Valor mÌnimo que o paciente paga</p>
 
                           </div>
 
@@ -7269,27 +7267,27 @@ export function ConveniosPage() {
 
 
 
-                      {/* SE√á√ÉO 7: CONTATOS FINANCEIROS E DADOS BANC√ÅRIOS */}
+                      {/* SE«√O 7: CONTATOS FINANCEIROS E DADOS BANC¡RIOS */}
 
                       <div>
 
                         <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
 
-                          <span className="bg-cyan-100 text-cyan-700 px-2 py-1 rounded text-xs">üë•</span>
+                          <span className="bg-cyan-100 text-cyan-700 px-2 py-1 rounded text-xs">??</span>
 
-                          Contatos Financeiros e Dados Banc√°rios
+                          Contatos Financeiros e Dados Banc·rios
 
                         </h3>
 
                         <div className="grid grid-cols-2 gap-4">
 
-                          {/* Respons√°velFinanceiro */}
+                          {/* Respons·velFinanceiro */}
 
                           <div>
 
                             <label className="block text-sm font-medium text-gray-700 mb-1">
 
-                              Respons√°vel Financeiro
+                              Respons·vel Financeiro
 
                             </label>
 
@@ -7409,7 +7407,7 @@ export function ConveniosPage() {
 
                             <label className="block text-sm font-medium text-gray-700 mb-1">
 
-                              Banco para Dep√≥sitos
+                              Banco para DepÛsitos
 
                             </label>
 
@@ -7431,7 +7429,7 @@ export function ConveniosPage() {
 
                               }
 
-                              placeholder="Ex: Ita√∫, Bradesco"
+                              placeholder="Ex: Ita˙, Bradesco"
 
                               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
 
@@ -7443,13 +7441,13 @@ export function ConveniosPage() {
 
 
 
-                          {/* Ag√™ncia */}
+                          {/* AgÍncia */}
 
                           <div>
 
                             <label className="block text-sm font-medium text-gray-700 mb-1">
 
-                              Ag√™ncia
+                              AgÍncia
 
                             </label>
 
@@ -7489,7 +7487,7 @@ export function ConveniosPage() {
 
                             <label className="block text-sm font-medium text-gray-700 mb-1">
 
-                              N√∫mero da Conta
+                              N˙mero da Conta
 
                             </label>
 
@@ -7543,9 +7541,9 @@ export function ConveniosPage() {
 
                           <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
 
-                            <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs">üìã</span>
+                            <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs">??</span>
 
-                            Planos de Sa√∫de
+                            Planos de Sa˙de
 
                           </h3>
 
@@ -7607,7 +7605,7 @@ export function ConveniosPage() {
 
                                   onChange={(e) => setNewPlanCode(e.target.value)}
 
-                                  placeholder="C√≥digo do plano (para vincular √† agenda)"
+                                  placeholder="CÛdigo do plano (para vincular ‡ agenda)"
 
                                   className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
 
@@ -7635,7 +7633,7 @@ export function ConveniosPage() {
 
                                 onChange={(e) => setNewPlanDescription(e.target.value)}
 
-                                placeholder="Descri√ß√£o do plano (opcional)"
+                                placeholder="DescriÁ„o do plano (opcional)"
 
                                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none h-20"
 
@@ -7745,7 +7743,7 @@ export function ConveniosPage() {
 
                                           onChange={(e) => setEditingPlanCode(e.target.value)}
 
-                                          placeholder="C√≥digo do plano (para vincular √† agenda)"
+                                          placeholder="CÛdigo do plano (para vincular ‡ agenda)"
 
                                           className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
 
@@ -7773,7 +7771,7 @@ export function ConveniosPage() {
 
                                         onChange={(e) => setEditingPlanDescription(e.target.value)}
 
-                                        placeholder="Descri√ß√£o do plano (opcional)"
+                                        placeholder="DescriÁ„o do plano (opcional)"
 
                                         className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none h-20"
 
@@ -7797,7 +7795,7 @@ export function ConveniosPage() {
 
                                         <label htmlFor={`plan-active-${editingPlanId}`} className="text-sm font-medium text-gray-700">
 
-                                          ‚úÖ Plano Ativo
+                                          ? Plano Ativo
 
                                         </label>
 
@@ -7821,7 +7819,7 @@ export function ConveniosPage() {
 
                                         >
 
-                                          Salvar Altera√ß√µes
+                                          Salvar AlteraÁıes
 
                                         </button>
 
@@ -7859,7 +7857,7 @@ export function ConveniosPage() {
 
                                       {plan.code && (
 
-                                        <p className="text-xs text-blue-600 font-mono mt-1">C√≥digo: {plan.code}</p>
+                                        <p className="text-xs text-blue-600 font-mono mt-1">CÛdigo: {plan.code}</p>
 
                                       )}
 
@@ -7959,9 +7957,9 @@ export function ConveniosPage() {
 
                       onUpdate={() => {
 
-                        console.log("[TISS] Configura√ß√µes salvas");
+                        console.log("[TISS] ConfiguraÁıes salvas");
 
-                        // Dados j√° foram salvos no Supabase, apenas feche com sucesso
+                        // Dados j· foram salvos no Supabase, apenas feche com sucesso
 
                       }}
 
@@ -7981,7 +7979,7 @@ export function ConveniosPage() {
 
 
 
-              {/* Footer com Bot√µes de A√ß√£o - Fica Fixo */}
+              {/* Footer com Botıes de AÁ„o - Fica Fixo */}
 
               <div className="border-t bg-white px-6 py-4 flex gap-3" style={{flexShrink: 0}}>
 

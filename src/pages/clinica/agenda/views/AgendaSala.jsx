@@ -1,7 +1,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { format } from "date-fns";
-import { listarAgenda } from "../services/agendaService";
+import { listarAgenda } from "@/modules/agenda/services/agenda.api.complex";
 import { mapAgendaItem } from "@/modules/agenda/services/agendaMapper";
 import { useClinicContext } from "@/contexts/ClinicContext";
 import AgendaFilters from '@/components/agenda/AgendaFilters';

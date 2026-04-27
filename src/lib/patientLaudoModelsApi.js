@@ -156,8 +156,12 @@ export async function updatePatientLaudoTemplate(id, updates) {
     .from('patient_laudo_templates')
     .update({ ...sanitizePayload(updates), updated_at: new Date().toISOString() })
     .eq('id', id)
-    .select()
-    .single();
+    .select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
 
   if (error) {
     if (shouldUseLocalFallback(error)) {

@@ -60,10 +60,10 @@ export const cashDrawerApi = {
           status: expectedBalance === parseFloat(closingBalance) ? 'closed_full' : 'closed_partial',
           closed_at: new Date().toISOString(),
           notes
-        })
-        .eq('id', drawerId)
-        .select()
-        .single();
+        }).eq('id', drawerId).select();
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
       if (error) throw error;
       return data;
@@ -77,8 +77,10 @@ export const cashDrawerApi = {
       const { data, error } = await client
         .from('cash_drawers')
         .select('*')
-        .eq('id', drawerId)
-        .single();
+        .eq('id', drawerId);
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
       if (error) throw error;
       return data;
@@ -124,8 +126,10 @@ export const cashDrawerApi = {
             description
           }
         ])
-        .select()
-        .single();
+        .select();
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
       if (error) throw error;
       return data;
@@ -277,10 +281,12 @@ export const cashDrawerApi = {
     try {
       const { data, error } = await client
         .from('cash_transfers')
-        .update({ status: 'confirmed' })
-        .eq('id', transferId)
-        .select()
-        .single();
+        .update({ status: 'confirmed' }).eq('id', transferId).select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found'); 
+    }
+    return data[0];
 
       if (error) throw error;
       return data;

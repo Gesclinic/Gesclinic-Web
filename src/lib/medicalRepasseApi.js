@@ -65,10 +65,12 @@ export async function salvarConfigRepasse(clinicId, professionalId, config) {
     // Update
     const { data, error } = await supabase
       .from('medical_repasse_config')
-      .update(dados)
-      .eq('id', existing.id)
-      .select()
-      .single();
+      .update(dados).eq('id', existing.id).select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
     
     if (error) throw error;
     return data;
@@ -77,8 +79,12 @@ export async function salvarConfigRepasse(clinicId, professionalId, config) {
     const { data, error } = await supabase
       .from('medical_repasse_config')
       .insert([dados])
-      .select()
-      .single();
+      .select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
     
     if (error) throw error;
     return data;
@@ -103,9 +109,10 @@ export async function registrarProducao(clinicId, professionalId, producao) {
       valor_bruto: producao.valor_bruto,
       valor_liquido: producao.valor_liquido || producao.valor_bruto,
       data_atendimento: producao.data_atendimento || new Date().toISOString().split('T')[0],
-    }])
-    .select()
-    .single();
+    }]).select();
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
   
   if (error) throw error;
   return data;
@@ -177,8 +184,10 @@ export async function obterRepassePeriodo(clinicId, professionalId, dataInicio, 
     .eq('clinic_id', clinicId)
     .eq('professional_id', professionalId)
     .eq('periodo_inicio', dataInicio)
-    .eq('periodo_fim', dataFim)
-    .single();
+    .eq('periodo_fim', dataFim);
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
   
   if (error && error.code !== 'PGRST116') throw error;
   return data || null;
@@ -436,3 +445,4 @@ export async function calcularRepasseEmLote(clinicId, dataInicio, dataFim) {
   
   return resultados;
 }
+

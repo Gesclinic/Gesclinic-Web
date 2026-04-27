@@ -23,15 +23,15 @@ export default function Atendimento() {
     if (guide && guide.id) {
       await supabase
         .from('appointment_guides')
-        .update({ ...fields })
-        .eq('id', guide.id);
+        .update({ ...fields }).eq('id', guide.id);
       setGuide({ ...guide, ...fields });
     } else {
       const { data: newGuide } = await supabase
         .from('appointment_guides')
-        .insert([{ ...fields, appointment_id: id }])
-        .select()
-        .single();
+        .insert([{ ...fields, appointment_id: id }]).select();
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
       setGuide(newGuide);
     }
     alert('Guia salva com sucesso!');
@@ -44,16 +44,20 @@ export default function Atendimento() {
       const { data: apptData } = await supabase
         .from('appointments')
         .select('*, patient:patients(*), professional:professionals(*), service:services(*)')
-        .eq('id', id)
-        .single();
+        .eq('id', id);
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
       setAppointment(apptData);
 
       // Buscar guia vinculada
       const { data: guideData } = await supabase
         .from('appointment_guides')
         .select('*')
-        .eq('appointment_id', id)
-        .single();
+        .eq('appointment_id', id);
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
       setGuide(guideData || {});
 
       // Buscar financeiro vinculado

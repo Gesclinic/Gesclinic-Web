@@ -137,11 +137,16 @@ export async function updateAgendaRule(serviceId, clinicId, updates) {
     .update(updates)
     .eq("service_id", serviceId)
     .eq("clinic_id", clinicId)
-    .select()
-    .maybeSingle();
+    .select();
 
   if (error) throw new Error(`Falha ao atualizar regra: ${error.message}`);
-  return data;
+  
+  // Handle array response (query may return 0+ rows, not 1)
+  if (!data || data.length === 0) {
+    throw new Error('Regra não encontrada');
+  }
+  
+  return data[0]; // Return first match (or consider filtering by id if exists)
 }
 
 /**
@@ -156,11 +161,16 @@ export async function deactivateAgendaRule(serviceId, clinicId) {
     .update({ active: false })
     .eq("service_id", serviceId)
     .eq("clinic_id", clinicId)
-    .select()
-    .maybeSingle();
+    .select();
 
   if (error) throw new Error(`Falha ao desativar regra: ${error.message}`);
-  return data;
+  
+  // Handle array response
+  if (!data || data.length === 0) {
+    throw new Error('Regra não encontrada');
+  }
+  
+  return data[0];
 }
 
 /**

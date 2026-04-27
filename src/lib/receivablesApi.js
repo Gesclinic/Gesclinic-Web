@@ -273,8 +273,12 @@ export async function updateReceivable(id, patch) {
     .from('ar_receivables')
     .update(upd)
     .eq('id', id)
-    .select()
-    .single();
+    .select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
   if (error) throw new Error(error.message);
   
   // Log: Pagamento recebido (se status mudou para received ou partial)
@@ -307,8 +311,12 @@ export async function getReceivableById(id) {
   const { data, error } = await supabase
     .from('ar_receivables')
     .select('*')
-    .eq('id', id)
-    .single();
+    .eq('id', id);
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
   if (error) throw new Error(error.message);
   return data;
 }
@@ -322,3 +330,4 @@ export const arStatusOptions = [
   { value: 'canceled', label: 'Cancelado' },
   { value: 'glossed', label: 'Glosado' },
 ];
+

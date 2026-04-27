@@ -35,10 +35,10 @@ export const cashTransfersApi = {
     try {
       const { data, error } = await client
         .from('cash_transfers')
-        .update({ status: 'confirmed', updated_at: new Date().toISOString() })
-        .eq('id', transferId)
-        .select()
-        .single();
+        .update({ status: 'confirmed', updated_at: new Date().toISOString() }).eq('id', transferId).select();
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
       if (error) throw error;
       return data;
@@ -51,10 +51,12 @@ export const cashTransfersApi = {
     try {
       const { data, error } = await client
         .from('cash_transfers')
-        .update({ status: 'reversed' })
-        .eq('id', transferId)
-        .select()
-        .single();
+        .update({ status: 'reversed' }).eq('id', transferId).select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found'); 
+    }
+    return data[0];
 
       if (error) throw error;
       return data;
@@ -87,8 +89,10 @@ export const cashTransfersApi = {
       const { data, error } = await client
         .from('cash_transfers')
         .select('*')
-        .eq('id', transferId)
-        .single();
+        .eq('id', transferId);
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
       if (error) throw error;
       return data;

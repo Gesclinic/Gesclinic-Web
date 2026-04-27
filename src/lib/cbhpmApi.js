@@ -207,10 +207,12 @@ export async function updateCBHPM(procedureId, procedureData) {
 
   const { data, error } = await supabase
     .from("cbhpm_procedures")
-    .update(updateData)
-    .eq("id", procedureId)
-    .select()
-    .single();
+    .update(updateData).eq("id", procedureId).select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
 
   if (error) throw error;
   return data;
@@ -334,8 +336,12 @@ export async function mapCBHPMToService(cbhpmId, serviceId, clinicId, options = 
         valor_especifico: options.valor_especifico ? parseFloat(options.valor_especifico) : null,
       },
     ])
-    .select()
-    .single();
+    .select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
 
   if (error) {
     if (error.code === "23505") {
@@ -409,8 +415,10 @@ export async function getEffectivePrice(cbhpmId, serviceId) {
     .from("cbhpm_service_mapping")
     .select("sobrescreve_valor, valor_especifico")
     .eq("cbhpm_id", cbhpmId)
-    .eq("service_id", serviceId)
-    .single();
+    .eq("service_id", serviceId);
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
   if (mapping && mapping.sobrescreve_valor && mapping.valor_especifico) {
     return mapping.valor_especifico;
@@ -437,3 +445,4 @@ export default {
   listServicesForCBHPM,
   getEffectivePrice,
 };
+

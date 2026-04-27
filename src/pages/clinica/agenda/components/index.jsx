@@ -737,6 +737,8 @@ export default function AgendaIndex() {
         date: date,
         viewMode: viewMode,
       });
+      // 🔧 FIX: Zerar appointmentIdToEdit para garantir que abre em modo 'new'
+      setAppointmentIdToEdit(null);
       setModalNovoOpen(true);
     } catch (error) {
       console.error('❌ Erro ao verificar feriado:', error);
@@ -1193,8 +1195,10 @@ export default function AgendaIndex() {
           
           // Limpar estado ao fechar
           if (!newOpen) {
-            console.log('   ➡️ Fechando modal - limpando appointmentIdToEdit e marcando como fechado');
-            setAppointmentIdToEdit(null);
+            console.log('   ➡️ Fechando modal');
+            console.log('   ✅ NÃO limpando appointmentIdToEdit - será zerado apenas ao abrir novo');
+            // 🔧 FIX: Não zerar appointmentIdToEdit aqui para evitar race condition
+            // Será zerado apenas quando abrir um novo agendamento
             setNovoAgendamentoInfo(null);
             
             // 🚩 CRÍTICO: Marcar que o modal foi fechado intencionalmente
@@ -1208,7 +1212,13 @@ export default function AgendaIndex() {
               navigate('/clinica/agenda', { replace: true });
             }
           } else {
-            console.log('   ➡️ Abrindo modal - appointmentIdToEdit agora é:', appointmentIdToEdit);
+            console.log('   ➡️ Abrindo modal');
+            // 🔧 FIX: Se abrindo SEM appointmentIdToEdit, isso é novo agendamento
+            if (!appointmentIdToEdit) {
+              console.log('   ✅ Novo agendamento detectado, modalNovoOpen=true, appointmentIdToEdit é null');
+            } else {
+              console.log('   ✅ Abrindo em modo EDIT com appointmentIdToEdit:', appointmentIdToEdit);
+            }
             // Resetar a flag ao abrir (se o usuário abrir um novo agendamento)
             hasModalBeenClosedRef.current = false;
           }

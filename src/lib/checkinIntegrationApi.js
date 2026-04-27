@@ -477,10 +477,10 @@ export async function confirmCheckin(appointmentId, clinicId, checkinData = {}) 
       .update({
         appointment_status: "confirmed",
         checked_in_at: new Date().toISOString(),
-      })
-      .eq("id", appointmentId)
-      .select()
-      .single();
+      }).eq("id", appointmentId).select();
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
     // Próximos passos
     const nextSteps = [];

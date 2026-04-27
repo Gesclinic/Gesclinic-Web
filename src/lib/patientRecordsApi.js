@@ -104,10 +104,10 @@ async function runRemoteUpdate(id, updates) {
     .update({
       ...updates,
       updated_at: new Date().toISOString(),
-    })
-    .eq("id", id)
-    .select()
-    .single();
+    }).eq("id", id).select();
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 }
 
 export async function listPatientRecords(patientId) {
@@ -211,8 +211,10 @@ export async function syncLocalPatientRecords(patientId) {
           updated_at: new Date().toISOString(),
         },
       ], { onConflict: "id" })
-      .select()
-      .single();
+      .select();
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
     if (error) {
       failedRows.push({ row, error });

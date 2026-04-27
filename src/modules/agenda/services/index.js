@@ -14,3 +14,30 @@
 export { mapAgendaItem } from './agendaMapper';
 export { mapAgendaPorProfissional } from './agendaPorProfissionalMapper';
 export { mapearPorSala } from './agendaPorSalaMapper';
+
+// Queries - Operações de leitura (GET)
+export {
+  listarServicosPorProfissional,
+  listarSalas,
+  listarProfissionais,
+  listarPlanosPorConvenio,
+  listarPacientes,
+  listarConvenios,
+  buscarAgendamentoPorId,
+} from './agenda.api.queries';
+
+// Complex Queries - Queries complexas com múltiplas operações
+export {
+  listarAgenda,
+} from './agenda.api.complex';
+
+// Business Logic - Operações de negócio complexas
+export {
+  listarConveniosPorProfissional,
+} from './agenda.api.business';
+
+// Mutations - Operações de escrita (CREATE, UPDATE, DELETE)
+export {
+  atualizarAgendamento,
+  criarAgendamento,
+} from './agenda.api.mutations';

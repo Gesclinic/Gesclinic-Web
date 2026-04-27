@@ -36,10 +36,10 @@ export const bankReconciliationApi = {
           status,
           notes,
           updated_at: new Date().toISOString()
-        })
-        .eq('id', reconciliationId)
-        .select()
-        .single();
+        }).eq('id', reconciliationId).select();
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
       if (error) throw error;
       return data;
@@ -73,8 +73,10 @@ export const bankReconciliationApi = {
       const { data, error } = await client
         .from('bank_reconciliation')
         .select('*')
-        .eq('id', reconciliationId)
-        .single();
+        .eq('id', reconciliationId);
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
       if (error) throw error;
       return data;

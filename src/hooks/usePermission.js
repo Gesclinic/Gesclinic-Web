@@ -28,7 +28,7 @@ export function usePermission(submoduleId) {
         .eq("user_id", userId)
         .eq("clinic_id", clinic.id)
         .eq("submodule_id", submoduleId)
-        .single();
+        .maybeSingle();
 
       if (error && error.code !== "PGRST116") {
         console.error("❌ usePermission load error:", error);

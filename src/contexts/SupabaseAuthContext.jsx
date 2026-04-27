@@ -34,21 +34,21 @@ export function AuthProvider({ children }) {
           .from("users")
           .select("clinic_id, role")
           .eq("id", currentUser.id)
-          .single();
+          .maybeSingle();
 
         console.log("🔍 Query resultado:", { userData, userError, currentUserId: currentUser.id });
 
         // Se não encontrou por ID, tentar buscar por email
-        if (userError?.code === "PGRST116") {
+        if (!userData && !userError) {
           console.log("Usuário não encontrado por ID, procurando por email...");
           
           const { data: userByEmail, error: emailError } = await supabase
             .from("users")
             .select("id, clinic_id, role")
             .eq("email", currentUser.email)
-            .single();
+            .maybeSingle();
 
-          if (!emailError && userByEmail) {
+          if (userByEmail) {
             // Encontrou por email, fazer upsert para atualizar o ID se necessário
             const { data: updated, error: updateError } = await supabase
               .from("users")
@@ -63,7 +63,7 @@ export function AuthProvider({ children }) {
                 { onConflict: "email" }
               )
               .select("clinic_id, role")
-              .single();
+              .maybeSingle();
 
             if (updateError) {
               console.error("Erro ao atualizar usuário:", updateError);
@@ -87,7 +87,7 @@ export function AuthProvider({ children }) {
                 }
               ])
               .select("clinic_id, role")
-              .single();
+              .maybeSingle();
 
             if (insertError) {
               console.error("Erro ao criar usuário:", insertError);
@@ -158,7 +158,7 @@ export function AuthProvider({ children }) {
                   .from("users")
                   .select("clinic_id, role")
                   .eq("id", sessionData.user_id)
-                  .single();
+                  .maybeSingle();
                 
                 if (!userError && userData?.clinic_id) {
                   console.log("✅ [initAuth] Clinic ID carregado do banco:", userData.clinic_id);
@@ -333,7 +333,19 @@ export function AuthProvider({ children }) {
     signUp,
     signOut,
     isAuthenticated: !!user,
+    // PASSO 4: Debug - log do usuário logado
+    userId: user?.id,
   };
+
+  // PASSO 5: Log de debug (temporário) - mostra quem está logado
+  if (user && !loading) {
+    console.log("👤 [AUTH] Usuário logado:", {
+      id: user.id,
+      email: user.email,
+      clinicId,
+      currentRole,
+    });
+  }
 
   if (loading) {
     return (

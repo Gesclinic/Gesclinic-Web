@@ -91,17 +91,14 @@ export default function AgendaProfessionalView({
               <tbody className="divide-y divide-gray-200">
                 {appointments.length > 0 ? (
                   appointments.map((appt) => {
-                    const patient = metadata.patients?.find(p => p.id === appt.patient_id);
-                    const service = metadata.services?.find(s => s.id === appt.service_id);
-                    const payer = metadata.payers?.find(py => py.id === appt.payer_id);
                     const statusBadge = getStatusBadge(appt.status);
                     
                     return (
                       <tr key={appt.id} className="hover:bg-gray-50 transition-colors divide-x divide-gray-200">
                         <td className="px-4 py-3 text-sm font-medium text-blue-600 whitespace-nowrap">{appt.scheduled_time}</td>
-                        <td className="px-4 py-3 text-sm text-gray-900">{patient?.name || 'N/A'}</td>
-                        <td className="px-4 py-3 text-sm text-gray-900">{service?.name || 'N/A'}</td>
-                        <td className="px-4 py-3 text-sm text-gray-900">{payer?.name || 'N/A'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">{appt.patient_name || 'N/A'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">{appt.service_name || 'N/A'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">{appt.payer_name || 'N/A'}</td>
                         <td className="px-4 py-3 text-sm">
                           <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${statusBadge.bg} ${statusBadge.text}`}>
                             {statusBadge.icon} {statusBadge.label}
@@ -154,13 +151,13 @@ export default function AgendaProfessionalView({
                       🎯 {nextAppointment.scheduled_time}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900">
-                      {metadata.patients?.find(p => p.id === nextAppointment.patient_id)?.name || 'N/A'}
+                      {nextAppointment.patient_name || 'N/A'}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900">
-                      {metadata.services?.find(s => s.id === nextAppointment.service_id)?.name || 'N/A'}
+                      {nextAppointment.service_name || 'N/A'}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900">
-                      {metadata.payers?.find(py => py.id === nextAppointment.payer_id)?.name || 'N/A'}
+                      {nextAppointment.payer_name || 'N/A'}
                     </td>
                     <td className="px-4 py-3 text-sm">
                       <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${getStatusBadge(nextAppointment.status).bg} ${getStatusBadge(nextAppointment.status).text}`}>
@@ -181,13 +178,13 @@ export default function AgendaProfessionalView({
                   <tr key={appt.id} className="hover:bg-gray-50 transition-colors divide-x divide-gray-200">
                     <td className="px-4 py-3 text-sm font-medium text-blue-600 whitespace-nowrap">{appt.scheduled_time}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">
-                      {metadata.patients?.find(p => p.id === appt.patient_id)?.name || 'N/A'}
+                      {appt.patient_name || 'N/A'}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900">
-                      {metadata.services?.find(s => s.id === appt.service_id)?.name || 'N/A'}
+                      {appt.service_name || 'N/A'}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-900">
-                      {metadata.payers?.find(py => py.id === appt.payer_id)?.name || 'N/A'}
+                      {appt.payer_name || 'N/A'}
                     </td>
                     <td className="px-4 py-3 text-sm">
                       <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${getStatusBadge(appt.status).bg} ${getStatusBadge(appt.status).text}`}>
@@ -227,10 +224,10 @@ function AppointmentCard({
   const statusInfo = getStatusBadge(appointment.status);
   const apptDate = parseISO(`${appointment.scheduled_date}T${appointment.scheduled_time}`);
 
-  // Encontrar dados relacionados do metadata
-  const patient = metadata.patients?.find(p => p.id === appointment.patient_id);
-  const service = metadata.services?.find(s => s.id === appointment.service_id);
-  const payer = metadata.payers?.find(py => py.id === appointment.payer_id);
+  // Usar dados normalizados do appointment (já vêm do mapFromDatabase)
+  const patientName = appointment.patient_name || appointment.patientName || 'Paciente desconhecido';
+  const serviceName = appointment.service_name || appointment.serviceName;
+  const payerName = appointment.payer_name || appointment.payerName;
 
   return (
     <div
@@ -265,16 +262,16 @@ function AppointmentCard({
 
             <div className="mt-3 space-y-1">
               <p className="font-semibold text-gray-900 truncate">
-                👤 {patient?.name || 'Paciente desconhecido'}
+                👤 {patientName}
               </p>
-              {service && (
+              {serviceName && (
                 <p className="text-sm text-gray-600">
-                  🏥 {service.name}
+                  🏥 {serviceName}
                 </p>
               )}
-              {payer && (
+              {payerName && (
                 <p className="text-sm text-gray-600">
-                  🏛️ {payer.name}
+                  🏛️ {payerName}
                 </p>
               )}
             </div>
@@ -297,32 +294,32 @@ function AppointmentCard({
           <div>
             <h4 className="text-sm font-semibold text-gray-700 mb-2">Paciente</h4>
             <div className="bg-white rounded p-2 text-sm">
-              <p className="font-medium text-gray-900">{patient?.name}</p>
-              {patient?.phone && (
-                <p className="text-gray-600">📞 {patient.phone}</p>
+              <p className="font-medium text-gray-900">{patientName}</p>
+              {appointment.patient_phone && (
+                <p className="text-gray-600">📞 {appointment.patient_phone}</p>
               )}
-              {patient?.email && (
-                <p className="text-gray-600">📧 {patient.email}</p>
+              {appointment.patient_mobile && (
+                <p className="text-gray-600">📱 {appointment.patient_mobile}</p>
               )}
             </div>
           </div>
 
           {/* Serviço e convênio */}
           <div className="grid grid-cols-2 gap-3">
-            {service && (
+            {serviceName && (
               <div>
                 <h4 className="text-sm font-semibold text-gray-700 mb-2">Serviço</h4>
                 <div className="bg-white rounded p-2 text-sm">
-                  <p className="font-medium text-gray-900">{service.name}</p>
+                  <p className="font-medium text-gray-900">{serviceName}</p>
                 </div>
               </div>
             )}
 
-            {payer && (
+            {payerName && (
               <div>
                 <h4 className="text-sm font-semibold text-gray-700 mb-2">Convênio</h4>
                 <div className="bg-white rounded p-2 text-sm">
-                  <p className="font-medium text-gray-900">{payer.name}</p>
+                  <p className="font-medium text-gray-900">{payerName}</p>
                 </div>
               </div>
             )}

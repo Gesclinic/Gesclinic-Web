@@ -104,8 +104,7 @@ export const examRequestsApi = {
     try {
       const { error } = await client
         .from('exam_request_templates')
-        .update({ is_active: false })
-        .eq('id', templateId);
+        .update({ is_active: false }).eq('id', templateId);
 
       if (error) throw error;
       return true;
@@ -133,9 +132,10 @@ export const examRequestsApi = {
             status: 'draft',
             created_by: userId
           }
-        ])
-        .select()
-        .single();
+        ]).select();
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
       if (error) throw error;
       return data;
@@ -148,10 +148,12 @@ export const examRequestsApi = {
     try {
       const { data, error } = await client
         .from('exam_requests')
-        .update(updates)
-        .eq('id', requestId)
-        .select()
-        .single();
+        .update(updates).eq('id', requestId).select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found'); 
+    }
+    return data[0];
 
       if (error) throw error;
       return data;
@@ -165,8 +167,10 @@ export const examRequestsApi = {
       const { data, error } = await client
         .from('exam_requests')
         .select('*')
-        .eq('id', requestId)
-        .single();
+        .eq('id', requestId);
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
       if (error) throw error;
       return data;
@@ -205,9 +209,10 @@ export const examRequestsApi = {
           sent_to_lab: sentToLab,
           lab_protocol: labProtocol
         })
-        .eq('id', requestId)
-        .select()
-        .single();
+        .eq('id', requestId).select();
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
       if (error) throw error;
       return data;
@@ -223,10 +228,10 @@ export const examRequestsApi = {
         .update({
           status: 'completed',
           completed_date: new Date().toISOString()
-        })
-        .eq('id', requestId)
-        .select()
-        .single();
+        }).eq('id', requestId).select();
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
       if (error) throw error;
       return data;
@@ -239,10 +244,12 @@ export const examRequestsApi = {
     try {
       const { data, error } = await client
         .from('exam_requests')
-        .update({ status: 'cancelled' })
-        .eq('id', requestId)
-        .select()
-        .single();
+        .update({ status: 'cancelled' }).eq('id', requestId).select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found'); 
+    }
+    return data[0];
 
       if (error) throw error;
       return data;
@@ -262,9 +269,10 @@ export const examRequestsApi = {
           printed_count: printedCount,
           last_printed_at: new Date().toISOString()
         })
-        .eq('id', requestId)
-        .select()
-        .single();
+        .eq('id', requestId).select();
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
       if (error) throw error;
       return data;

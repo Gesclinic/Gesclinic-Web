@@ -4,7 +4,7 @@ import { X } from 'lucide-react';
 import { formatPhone } from '@/utils/formatters/formatPhone';
 import AppointmentAuditTimeline from './AppointmentAuditTimeline';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
-import { listarConveniosPorProfissional } from '@/pages/clinica/agenda/services/agendaService';
+import { listarConveniosPorProfissional } from '@/modules/agenda/services/agenda.api.business';
 import { supabase } from '@/lib/customSupabaseClient';
 import { suggestEncaixes } from '@/modules/agenda/utils/suggestEncaixe';
 import { generateTimeSlots } from '@/utils/helpers/generateTimeSlots';
@@ -180,10 +180,15 @@ export default function AppointmentModal({
             .from('patients')
             .select('id, name, document_id, phone, cell_phone')
             .eq('id', formData.patient_id)
-            .single();
+            .maybeSingle();
 
           if (error) {
             console.warn('⚠️ Erro ao buscar paciente:', error);
+            throw error;
+          }
+
+          if (!patient) {
+            console.warn('⚠️ Paciente não encontrado:', formData.patient_id);
             return;
           }
 
@@ -264,10 +269,15 @@ export default function AppointmentModal({
           .select('price')
           .eq('payer_id', formData.payer_id)
           .eq('service_id', formData.service_id)
-          .single();
+          .maybeSingle();
 
         if (error) {
-          console.log("⚠️ Nenhum preço encontrado para esta combinação", error);
+          console.log("⚠️ Erro ao buscar preço:", error);
+          throw error;
+        }
+
+        if (!servicePrices) {
+          console.log("⚠️ Nenhum preço encontrado para esta combinação");
           return;
         }
 

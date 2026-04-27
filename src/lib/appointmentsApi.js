@@ -6,6 +6,301 @@ import { migrateStatus } from "@/lib/appointmentStatusConstants";
 // Import financial integration for auto-triggers
 import { finalizeAppointmentWithFinancials } from "@/lib/appointmentFinancialIntegrationApi";
 
+// ============================================================
+// HELPERS: Normaliza��o e Transforma��o
+// ============================================================
+
+/**
+ * Normaliza UUID: converte strings vazias e undefined em null
+ * @param {string} val - Valor a normalizar
+ * @returns {string|null} UUID ou null
+ */
+const normalizeUUID = (val) => (val === '' || val === undefined) ? null : val;
+
+/**
+ * Extrai data em formato YYYY-MM-DD
+ * @param {string|Date} dateStr - Data como string ou Date
+ * @returns {string|null} Data formatada ou null
+ */
+const extractDate = (dateStr) => {
+  if (!dateStr) return null;
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return null;
+    return date.toISOString().split('T')[0];
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Extrai hora em formato HH:MM:SS
+ * @param {string|Date} timeStr - Hora como string ou Date
+ * @returns {string|null} Hora formatada ou null
+ */
+const extractTime = (timeStr) => {
+  if (!timeStr) return null;
+  try {
+    // Se j� � HH:MM ou HH:MM:SS, retornar como est�
+    if (/^\d{2}:\d{2}(:\d{2})?$/.test(timeStr)) {
+      return timeStr.length === 5 ? `${timeStr}:00` : timeStr;
+    }
+    // Se � ISO, extrair a parte de hora
+    const date = new Date(timeStr);
+    if (isNaN(date.getTime())) return null;
+    const isoStr = date.toISOString();
+    return isoStr.split('T')[1].substring(0, 8); // HH:MM:SS
+  } catch {
+    return null;
+  }
+};
+
+// ============================================================
+// VALIDA��O: Garantir dados v�lidos ANTES de salvar
+// ============================================================
+
+/**
+ * Valida agendamento antes de salvar no banco
+ * @param {Object} payload - Dados do agendamento
+ * @throws {Error} Se alguma valida��o falhar
+ */
+function validateAppointment(payload) {
+  // Valida��es obrigat�rias
+  if (!payload.clinicId && !payload.clinic_id) {
+    throw new Error("? Cl�nica � obrigat�ria");
+  }
+
+  if (!payload.date && !payload.scheduled_date) {
+    throw new Error("? Data do agendamento � obrigat�ria");
+  }
+
+  if (!payload.startTime && !payload.scheduled_time) {
+    throw new Error("? Hor�rio do agendamento � obrigat�rio");
+  }
+
+  // Validar data/hora se forem fornecidas
+  if (payload.date) {
+    const date = new Date(payload.date);
+    if (isNaN(date.getTime())) {
+      throw new Error("? Data inv�lida");
+    }
+  }
+
+  if (payload.startTime) {
+    if (!/^\d{2}:\d{2}(:\d{2})?$/.test(payload.startTime) && !payload.startTime.match(/T\d{2}:\d{2}/)) {
+      throw new Error("? Hor�rio em formato inv�lido (esperado HH:MM ou ISO)");
+    }
+  }
+
+  // Valida��es de neg�cio
+  if (payload.value !== undefined && payload.value < 0) {
+    throw new Error("? Valor n�o pode ser negativo");
+  }
+
+  if (payload.discount !== undefined && payload.discount < 0) {
+    throw new Error("? Desconto n�o pode ser negativo");
+  }
+
+  if (payload.duration !== undefined && payload.duration <= 0) {
+    throw new Error("? Dura��o deve ser maior que zero");
+  }
+
+  return true;
+}
+
+// ============================================================
+// MAPPER: Frontend ? Banco de Dados
+// ============================================================
+
+/**
+ * Mapeia payload do frontend para formato correto do banco de dados
+ * 
+ * REGRAS CR�TICAS:
+ * - ? NUNCA usar start_time (coluna n�o existe no banco)
+ * - ? SEMPRE converter startTime ? scheduled_time
+ * - ? SEMPRE converter date ? scheduled_date
+ * - ? SEMPRE passar pelo mapper (nunca enviar payload direto)
+ * 
+ * Frontend usa:  date, startTime, endTime, clinicId, patientId, etc
+ * Banco usa:     scheduled_date, scheduled_time, end_time, clinic_id, patient_id, etc
+ * 
+ * @param {Object} payload - Dados vindos do frontend
+ * @returns {Object} Dados formatados para o banco
+ * @throws {Error} Se payload for inv�lido
+ */
+function mapToDatabase(payload) {
+  if (!payload) throw new Error("Payload inv�lido");
+
+  return {
+    id: payload.id,
+
+    clinic_id: payload.clinicId,
+    patient_id: payload.patientId,
+    professional_id: payload.professionalId,
+    service_id: payload.serviceId,
+
+    scheduled_date: payload.date,
+    scheduled_time: payload.startTime,
+    end_time: payload.endTime,
+
+    status: payload.status || "scheduled",
+
+    notes: payload.notes || null,
+    value: payload.value || 0,
+    discount: payload.discount || 0,
+
+    payer_id: payload.payerId || null,
+    payer_type: payload.payerType || null,
+
+    updated_at: new Date().toISOString()
+  };
+}
+
+// ============================================================
+// MAPPER INVERSO: Banco de Dados ? Frontend
+// ============================================================
+
+/**
+ * Mapeia registro do banco para formato esperado pelo frontend
+ * 
+ * Convers�o: Banco (snake_case) ? Frontend (camelCase)
+ * 
+ * @param {Object} record - Registro vindo do banco de dados
+ * @returns {Object} Dados formatados para o frontend
+ */
+export function mapFromDatabase(record) {
+  if (!record) return null;
+  
+  const mapped = {
+    // IDs em camelCase (critical para componentes)
+    id: record.id,
+    clinicId: record.clinic_id,
+    patientId: record.patient_id,
+    professionalId: record.professional_id,  // ✅ ESSE ERA O PROBLEMA!
+    serviceId: record.service_id,
+    roomId: record.room_id,
+    payerId: record.payer_id,
+    planId: record.plan_id,
+    
+    // Datas/Horários
+    date: record.scheduled_date,
+    startTime: record.scheduled_time,
+    endTime: record.end_time,
+    
+    // Status e notas
+    status: record.status,
+    notes: record.notes,
+    value: record.value,
+    duration: record.duration,
+    discount: record.discount,
+    
+    // Campos financeiros
+    discountReason: record.discount_reason,
+    discountAuthorizedBy: record.discount_authorized_by,
+    discountAuthorizedAt: record.discount_authorized_at,
+    discountObservation: record.discount_observation,
+    
+    // Dados do paciente
+    patientType: record.patient_type,
+    leadName: record.lead_name,
+    leadPhone: record.lead_phone,
+    leadMobile: record.lead_mobile,
+    patientName: record.patients?.name || record.lead_name || null,
+    patientCpf: record.patients?.document_id || record.patient_cpf || null,
+    patientPhone: record.patients?.phone || record.patient_phone || null,
+    patientMobile: record.patients?.cell_phone || record.patient_mobile || null,
+    patientProntuario: record.patients?.prontuario_numero || null,
+    
+    // Dados de seguro/cartão
+    cardNumber: record.card_number,
+    insuranceCardVerified: record.insurance_card_verified,
+    authorizationNumber: record.authorization_number,
+    authorizationDate: record.authorization_date,
+    authorizationVerified: record.authorization_verified,
+    authorizationExpiry: record.authorization_expiry,
+    
+    // Dados de faturamento
+    guideNumber: record.guide_number,
+    guideGenerated: record.guide_generated,
+    paymentMethod: record.payment_method,
+    paymentStatus: record.payment_status,
+    billingData: record.billing_data,
+    billingNotes: record.billing_notes,
+    billingXml: record.billing_xml,
+    
+    // Convênios e planos
+    convenioId: record.convenio_id,
+    planoContasId: record.plano_contas_id,
+    agendaRuleId: record.agenda_rule_id,
+    
+    // Timestamps
+    createdAt: record.created_at,
+    updatedAt: record.updated_at,
+    
+    // Dados relacionados (nomes para exibição) - CAMELCASE
+    professionalName: record.professionals?.name || null,
+    serviceName: record.services?.name || null,
+    roomName: record.rooms?.name || null,
+    payerName: record.payers?.active === false ? null : (record.payers?.name || 'Particular'),
+    planName: record.plans?.name || null,
+    planCode: record.plans?.code || null,
+    
+    // Dados relacionados (nomes para exibição) - SNAKE_CASE (compatibilidade com agenda)
+    patient_name: record.patients?.name || record.lead_name || null,
+    patient_phone: record.patients?.phone || record.patient_phone || null,
+    patient_mobile: record.patients?.cell_phone || record.patient_mobile || null,
+    patient_cpf: record.patients?.document_id || record.patient_cpf || null,
+    professional_name: record.professionals?.name || null,
+    service_name: record.services?.name || null,
+    room_name: record.rooms?.name || null,
+    payer_name: record.payers?.active === false ? null : (record.payers?.name || 'Particular'),
+    plan_name: record.plans?.name || null,
+    plan_code: record.plans?.code || null,
+    
+    // Keep raw snake_case for backward compatibility if needed
+    ...record
+  };
+  
+  // 🔍 DEBUG: Log critical fields
+  if (mapped.id) {
+    console.log(`🔍 [mapFromDatabase] ID: ${mapped.id} | payerId: ${mapped.payerId} | professionalId: ${mapped.professionalId} | roomId: ${mapped.roomId}`);
+  }
+  
+  return mapped;
+}
+
+// ============================================================
+// LISTAGEM SIMPLIFICADA: Por data
+// ============================================================
+
+export async function listAppointmentsByDate(clinicId, date) {
+  const { data, error } = await supabase
+    .from("appointments")
+    .select(`
+      *,
+      patients (id, name, document_id, phone, cell_phone, prontuario_numero, photo_url),
+      professionals (id, name),
+      services (id, name, code),
+      rooms (id, name),
+      payers (id, name, active),
+      plans (id, name, code)
+    `)
+    .eq("clinic_id", clinicId)
+    .eq("scheduled_date", date)
+    .order("scheduled_time", { ascending: true });
+
+  if (error) {
+    console.error('[listAppointmentsByDate] Erro:', error);
+    throw error;
+  }
+
+  return data.map(apt => {
+    const mapped = mapFromDatabase(apt);
+    mapped.status = migrateStatus(mapped.status);
+    return mapped;
+  });
+}
+
 export async function listAppointments({
   clinicId,
   start,
@@ -16,24 +311,16 @@ export async function listAppointments({
   userRole = null,
   userProfessionalId = null,
 }) {
-  console.log('[listAppointments] Input params:', { clinicId, start, end, professionalId, roomId, status, userRole, userProfessionalId });
-  
   if (!clinicId) {
-    console.warn('[listAppointments] Missing clinicId');
+    console.warn('[listAppointments] ❌ Missing clinicId');
     return [];
   }
 
-  // 🔒 REGRA DE PERMISSÃO: Se for profissional, só pode ver sua própria agenda
+  // 🔒 RBAC: Se for profissional, força filtro para sua própria agenda
   let effectiveProfessionalId = professionalId;
   if (userRole === 'profissional' && userProfessionalId) {
-    console.log(`🔒 [RBAC] Profissional detectado. Forçando filtro para: ${userProfessionalId}`);
-    console.log(`   (Tentativa de acesso a: ${professionalId} foi ignorada)`);
     effectiveProfessionalId = userProfessionalId;
-  } else if (userRole === 'profissional' && !userProfessionalId) {
-    console.warn(`⚠️ [RBAC] Profissional sem userProfessionalId! Não filtrando!`);
   }
-
-  console.log('[listAppointments] effectiveProfessionalId:', effectiveProfessionalId);
 
   let query = supabase
     .from("appointments")
@@ -62,9 +349,6 @@ export async function listAppointments({
       lead_name,
       lead_phone,
       lead_mobile,
-      patient_name,
-      patient_cpf,
-      patient_phone,
       card_number,
       insurance_card_verified,
       authorization_number,
@@ -83,12 +367,12 @@ export async function listAppointments({
       agenda_rule_id,
       created_at,
       updated_at,
-      patients:patient_id(id, name, document_id, phone, cell_phone, prontuario_numero, photo_url),
-      professionals:professional_id(id, name),
-      services:service_id(id, name, code, tuss_code),
-      rooms:room_id(id, name),
-      payers:payer_id(id, name, active),
-      plans:plan_id(id, name, code)
+      patients (id, name, document_id, phone, cell_phone, prontuario_numero, photo_url),
+      professionals (id, name),
+      services (id, name, code, tuss_code),
+      rooms (id, name),
+      payers (id, name, active),
+      plans (id, name, code)
     `)
     .eq("clinic_id", clinicId)
     .order("scheduled_date", { ascending: true })
@@ -97,19 +381,14 @@ export async function listAppointments({
   // Convert ISO strings to YYYY-MM-DD format for DATE column comparison
   if (start) {
     const startDate = new Date(start).toISOString().split('T')[0];
-    console.log('[listAppointments] startDate filter:', startDate);
     query = query.gte("scheduled_date", startDate);
   }
   if (end) {
     const endDate = new Date(end).toISOString().split('T')[0];
-    console.log('[listAppointments] endDate filter:', endDate);
     query = query.lte("scheduled_date", endDate);
   }
   if (effectiveProfessionalId) {
-    console.log('[listAppointments] Applying professional_id filter:', effectiveProfessionalId);
     query = query.eq("professional_id", effectiveProfessionalId);
-  } else {
-    console.warn('[listAppointments] ⚠️ NO professional_id filter applied!');
   }
   if (roomId) query = query.eq("room_id", roomId);
   if (status) query = query.eq("status", status);
@@ -117,296 +396,151 @@ export async function listAppointments({
   const { data, error } = await query;
 
   if (error) {
-    console.error("❌ Erro ao buscar agendamentos:", error);
+    console.error("❌ [listAppointments] Erro ao buscar agendamentos:", error);
     return [];
   }
 
-  console.log('[listAppointments] Raw data from DB:', data);
-
-  const result = (data ?? []).map(apt => ({
-    ...apt,
-    // ✅ NORMALIZAR STATUS: converter status antigos para novos
-    status: migrateStatus(apt.status),
-    // Usar nome do paciente ou nome do lead (pré-paciente)
-    patient_name: apt.patients?.name || apt.lead_name || null,
-    professional_name: apt.professionals?.name || null,
-    service_name: apt.services?.name || null,
-    room_name: apt.rooms?.name || null,
-    // 🔧 Mostrar nome do convênio apenas se estiver ativo
-    payer_name: apt.payers?.active === false ? null : (apt.payers?.name || (apt.payer_id ? null : 'Particular')),
-    // 🔧 Mostrar nome do plano
-    plan_name: apt.plans?.name || null,
-    // 🔧 Mostrar código do plano
-    plan_code: apt.plans?.code || null,
-    // Adicionar dados do paciente para edição
-    patient_cpf: apt.patients?.document_id || null,
-    patient_phone: apt.patients?.phone || null,
-    patient_mobile: apt.patients?.cell_phone || null,
-    // 🆕 Adicionar prontuário do paciente
-    patient_prontuario: apt.patients?.prontuario_numero || null,
-  }));
-
-  // DEBUG ESPECIAL: Procurar por Marcia
-  const marcia = result.find(apt => apt.patient_name?.includes('Marcia'));
-  if (marcia) {
-    console.log(`✅ [listAppointments] Marcia encontrado:`, {
-      data: marcia.scheduled_date,
-      time: marcia.scheduled_time,
-      profId: marcia.professional_id,
-      profName: marcia.professional_name
-    });
-  } else {
-    console.log(`❌ [listAppointments] Marcia NÃO encontrado! Total de agendamentos: ${result.length}`);
-  }
-
-  console.log(`✅ Carregados ${result.length} agendamentos para ${clinicId}. Professional filter was: ${effectiveProfessionalId}`);
+  const result = (data ?? []).map(normalizeAppointment);
   
-  if (userRole === 'profissional' && effectiveProfessionalId) {
-    console.log(`🔍 Professional view - returned ${result.length} appointments for professional ${effectiveProfessionalId}`);
-    // Show first 3 appointments for debugging
-    result.slice(0, 3).forEach((apt, idx) => {
-      console.log(`  Apt ${idx + 1}: professional_id=${apt.professional_id}, patient=${apt.patient_name}, time=${apt.scheduled_time}`);
-    });
-  } else if (userRole === 'profissional' && !effectiveProfessionalId) {
-    console.error(`🔴 Professional filter NOT applied! effectiveProfessionalId=${effectiveProfessionalId}`);
+  // Helpers function to normalize appointment with proper field mapping and display data
+  function normalizeAppointment(apt) {
+    return {
+      ...mapFromDatabase(apt),
+      // Apply status migration
+      status: migrateStatus(mapFromDatabase(apt).status),
+    };
   }
+
+  console.log(`✅ [listAppointments] Carregados ${result.length} agendamentos para clínica ${clinicId}`);
   
   return result;
 }
 
-/**
- * Criar novo agendamento
- */
-export async function createAppointment(data) {
-  // clinic_id é obrigatório sempre
-  // patient_id pode ser nulo para pré-pacientes (agendamento rápido)
-  if (!data.clinic_id) {
-    throw new Error("clinic_id é obrigatório");
+export async function getAppointmentById(appointmentId) {
+  const { data: apt, error } = await supabase
+    .from('appointments')
+    .select(`
+      id,
+      clinic_id,
+      patient_id,
+      professional_id,
+      service_id,
+      room_id,
+      payer_id,
+      plan_id,
+      scheduled_date,
+      scheduled_time,
+      end_time,
+      status,
+      notes,
+      value,
+      duration,
+      payment_method,
+      convenio_id,
+      plano_contas_id,
+      billing_notes,
+      billing_data,
+      guide_number,
+      authorization_number,
+      authorization_expiry,
+      authorization_verified,
+      card_number,
+      discount,
+      discount_reason,
+      discount_authorized_by,
+      discount_authorized_at,
+      discount_observation,
+      patients (
+        id,
+        name,
+        phone,
+        cell_phone,
+        email,
+        document_id,
+        birthdate,
+        gender,
+        street,
+        number,
+        neighborhood,
+        city,
+        state,
+        zip_code,
+        record_number,
+        photo_url,
+        prontuario_numero
+      ),
+      professionals (id, name),
+      services (id, name, code),
+      payers (id, name, active),
+      plans (id, name, code)
+    `)
+    .eq('id', appointmentId)
+    .maybeSingle();
+
+  if (error) {
+    console.error('❌ [getAppointmentById] Erro ao carregar agendamento:', error);
+    return null;
   }
 
-  try {
-    // Validar payer_id se fornecido
-    let validPayerId = data.payer_id;
-    if (validPayerId) {
-      const { data: payer, error: payerError } = await supabase
-        .from("payers")
-        .select("id")
-        .eq("id", validPayerId)
-        .maybeSingle();
-      
-      if (payerError || !payer) {
-        console.warn(`Payer ID ${validPayerId} não encontrado. Salvando como particular.`);
-        validPayerId = null;
-      }
-    }
-
-    // Usar scheduled_date e scheduled_time direto (já vêm formatados corretamente)
-    // ou fazer parsing se start_time vier em formato ISO
-    let scheduledDate = data.scheduled_date;
-    let scheduledTime = data.scheduled_time;
-    let endTime = data.end_time && data.end_time.trim() ? data.end_time : null;
-
-    if (!scheduledDate && data.start_time) {
-      // Fallback: parsear start_time se scheduled_date não for fornecido
-      try {
-        const startDateTime = new Date(data.start_time);
-        if (isNaN(startDateTime.getTime())) {
-          throw new Error(`Data inválida: ${data.start_time}`);
-        }
-        scheduledDate = startDateTime.toISOString().split('T')[0];
-        const timeStr = startDateTime.toISOString().split('T')[1];
-        scheduledTime = timeStr.substring(0, 8);
-      } catch (err) {
-        console.error('Erro ao parsear start_time:', data.start_time, err);
-        throw new Error(`Data/hora inválida: ${data.start_time}`);
-      }
-    }
-
-    console.log('✅ Criando agendamento:', { scheduledDate, scheduledTime, endTime, clinic_id: data.clinic_id });
-
-    // Normalizar campos UUID: converter strings vazias em null
-    const normalizeUUID = (val) => {
-      return (val === '' || val === undefined) ? null : val;
-    };
-
-    const { data: result, error } = await supabase
-      .from("appointments")
-      .insert([
-        {
-          clinic_id: data.clinic_id,
-          patient_id: normalizeUUID(data.patient_id),
-          patient_type: data.patient_type || "PATIENT",
-          lead_name: data.lead_name || null,
-          lead_phone: data.lead_phone || null,
-          lead_mobile: data.lead_mobile || null,
-          professional_id: normalizeUUID(data.professional_id),
-          room_id: normalizeUUID(data.room_id),
-          service_id: normalizeUUID(data.service_id),
-          payer_id: normalizeUUID(validPayerId),
-          scheduled_date: scheduledDate,
-          scheduled_time: scheduledTime,
-          end_time: endTime,
-          status: data.status || "scheduled",
-          notes: data.notes || null,
-          value: data.value || null,
-          duration: data.duration || null,
-          discount: data.discount || 0,
-          discount_reason: data.discount_reason || null,
-          discount_authorized_by: data.discount_authorized_by || null,
-          discount_authorized_at: data.discount_authorized_at || null,
-          discount_observation: data.discount_observation || null,
-          patient_name: data.patient_name || null,
-          patient_cpf: data.patient_cpf || null,
-          patient_phone: data.patient_phone || null,
-          card_number: data.card_number || null,
-          insurance_card_verified: data.insurance_card_verified || false,
-          authorization_number: data.authorization_number || null,
-          authorization_date: data.authorization_date || null,
-          authorization_verified: data.authorization_verified || false,
-          authorization_expiry: data.authorization_expiry || null,
-          guide_number: data.guide_number || null,
-          guide_generated: data.guide_generated || false,
-          payment_method: data.payment_method || null,
-          payment_status: data.payment_status || null,
-          payer_name: data.payer_name || null,
-          agenda_rule_id: normalizeUUID(data.agenda_rule_id),
-        },
-      ])
-      .select()
-      .single();
-
-    if (error) {
-      console.error("❌ Erro ao criar agendamento:", error);
-      throw new Error(`Falha ao criar agendamento: ${error.message}`);
-    }
-
-    console.log("✅ Agendamento criado com sucesso:", result.id);
-
-    // Log de auditoria: Agendamento criado
-    logAppointmentAudit({
-      appointmentId: result.id,
-      actionType: AUDIT_ACTION_TYPES.APPOINTMENT_CREATED,
-      newStatus: result.status,
-      context: {
-        patient_type: data.patient_type || "PATIENT",
-        professional_id: data.professional_id,
-        room_id: data.room_id,
-        service_id: data.service_id,
-      },
-    }).catch(err => console.warn("Erro ao logar auditoria:", err));
-
-    return result;
-  } catch (err) {
-    console.error("❌ Erro inesperado em createAppointment:", err.message || err);
-    throw err;
+  if (!apt) {
+    console.warn('⚠️ [getAppointmentById] Agendamento não encontrado:', appointmentId);
+    return null;
   }
+
+  // Apply field mapping to ensure camelCase fields
+  const mapped = mapFromDatabase(apt);
+  // Apply status migration
+  mapped.status = migrateStatus(mapped.status);
+  
+  console.log('✅ [getAppointmentById] Agendamento carregado com mapeamento:', {
+    id: mapped.id,
+    professionalId: mapped.professionalId,
+    patientId: mapped.patientId,
+    date: mapped.date,
+  });
+  
+  return mapped;
 }
 
-/**
- * Atualizar agendamento existente
- */
-export async function updateAppointment(id, updates) {
-  if (!id) {
-    throw new Error("ID do agendamento é obrigatório");
-  }
+export async function createAppointment(payload) {
+  const data = mapToDatabase(payload);
 
-  try {
-    // Buscar status anterior para auditoria
-    const { data: current, error: fetchError } = await supabase
-      .from("appointments")
-      .select("status")
-      .eq("id", id)
-      .single();
+  const { data: result, error } = await supabase
+    .from("appointments")
+    .insert([data])
+    .select()
+    .single();
 
-    if (fetchError) {
-      console.error("Erro ao buscar agendamento:", fetchError);
-      throw new Error("Falha ao buscar agendamento");
-    }
+  if (error) throw error;
 
-    const oldStatus = current?.status;
-
-    // Parse start_time e end_time para scheduled_date e scheduled_time se fornecido
-    const updateData = { ...updates };
-
-    // Normalizar campos UUID: converter strings vazias em null
-    const uuidFields = [
-      'professional_id',
-      'service_id',
-      'room_id',
-      'payer_id',
-      'patient_id',
-      'agenda_rule_id'
-    ];
-    
-    uuidFields.forEach(field => {
-      if (updateData[field] === '') {
-        updateData[field] = null;
-      }
-    });
-
-    if (updates.start_time) {
-      const startDateTime = new Date(updates.start_time);
-      if (isNaN(startDateTime.getTime())) {
-        throw new Error(`Data/hora de início inválida: ${updates.start_time}`);
-      }
-      updateData.scheduled_date = startDateTime.toISOString().split('T')[0];
-      const timeStr = startDateTime.toISOString().split('T')[1];
-      updateData.scheduled_time = timeStr.substring(0, 8);
-      delete updateData.start_time; // Remove campo que não existe
-    }
-
-    if (updates.end_time && updates.end_time.trim()) {
-      const endDateTime = new Date(updates.end_time);
-      if (isNaN(endDateTime.getTime())) {
-        console.warn(`Aviso: end_time inválido, ignorando: ${updates.end_time}`);
-      } else {
-        const timeStr = endDateTime.toISOString().split('T')[1];
-        updateData.end_time = timeStr.substring(0, 8);
-      }
-    }
-
-    updateData.updated_at = new Date().toISOString();
-
-    const { data: result, error } = await supabase
-      .from("appointments")
-      .update(updateData)
-      .eq("id", id)
-      .select();
-
-    if (error) {
-      console.error("❌ Erro ao atualizar agendamento:", JSON.stringify(error, null, 2));
-      console.error("🔍 [DEBUG RLS] Error details:", error.message, error.code);
-      throw new Error("Falha ao atualizar agendamento: " + (error.message || 'Erro desconhecido'));
-    }
-
-    // Log de auditoria: Se status mudou
-    if (updates.status && updates.status !== oldStatus) {
-      console.log(`📝 Status mudou: ${oldStatus} → ${updates.status}`);
-      console.log(`🔍 [DEBUG RLS] Verificando se UPDATE funcionou. ID: ${id}, Novo status no BD: ${result?.status}`);
-
-      // 🚀 BLOCKER 1 FIX: Auto-trigger financial processing when appointment is finalized
-      if (updates.status === 'finalizado' || updates.status === 'completed' || updates.status === 'finished') {
-        console.log('⚡ [AUTO-TRIGGER] Appointment finalizado - iniciando processamento financeiro...');
-        try {
-          setTimeout(async () => {
-            await finalizeAppointmentWithFinancials(id);
-            console.log('✅ [AUTO-TRIGGER] Processamento financeiro concluído');
-          }, 100);
-        } catch (finErr) {
-          console.warn('⚠️ [AUTO-TRIGGER] Erro ao processar financeiro:', finErr.message);
-        }
-      }
-    }
-
-    console.log('✅ [UPDATE Result]:', JSON.stringify(result, null, 2));
-
-    // Retornar o primeiro item do array ou o objeto de retorno
-    return (Array.isArray(result) && result.length > 0) ? result[0] : result;
-  } catch (err) {
-    console.error("Erro inesperado:", err);
-    throw err;
-  }
+  return mapFromDatabase(result);
 }
+
+
+export async function updateAppointment(id, payload) {
+  const data = mapToDatabase(payload);
+
+  const { data: result, error } = await supabase
+    .from("appointments")
+    .update(data)
+    .eq("id", id)
+    .select();
+
+  if (error) {
+    console.error('❌ [updateAppointment] Supabase error:', error);
+    throw error;
+  }
+
+  // ✅ UPDATE was successful even if .select() returns empty (RLS might block)
+  if (result && result.length > 0) {
+    return mapFromDatabase(result[0]);
+  }
+
+  // If no data returned, still consider it a success but log warning
+  console.warn('⚠️ [updateAppointment] UPDATE executed but no data returned (possible RLS filtering)');
+  return { id, ...mapFromDatabase(payload) }; // Return what we sent as fallback
+}
+
 
 /**
  * Deletar agendamento

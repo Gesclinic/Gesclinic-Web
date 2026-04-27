@@ -1,21 +1,21 @@
-import { supabase } from "@/lib/customSupabaseClient";
+﻿import { supabase } from "@/lib/customSupabaseClient";
 import { normalizeCodeCBHPM } from "@/utils/formatters/formatters";
 
 /**
- * Lista todos os serviços de uma clínica
+ * Lista todos os serviÃ§os de uma clÃ­nica
  * @param {string} clinicId
  * @returns {Promise<Array>}
  */
 export async function listServices(clinicId) {
-  console.log('📋 [listServices] Iniciando com clinicId:', clinicId);
+  console.log('ðŸ“‹ [listServices] Iniciando com clinicId:', clinicId);
   
   if (!clinicId) {
-    console.log('📋 [listServices] Sem clinicId, retornando vazio');
+    console.log('ðŸ“‹ [listServices] Sem clinicId, retornando vazio');
     return [];
   }
   
   try {
-    console.log('📋 [listServices] Executando query para clinic_id ==', clinicId);
+    console.log('ðŸ“‹ [listServices] Executando query para clinic_id ==', clinicId);
     
     const { data, error } = await supabase
       .from("services")
@@ -23,29 +23,29 @@ export async function listServices(clinicId) {
       .eq("clinic_id", clinicId)
       .order("name", { ascending: true });
     
-    console.log('📋 [listServices] Query executada. Resultado:', { count: data?.length || 0, error: error?.message || 'nenhum' });
+    console.log('ðŸ“‹ [listServices] Query executada. Resultado:', { count: data?.length || 0, error: error?.message || 'nenhum' });
     
     if (error) {
-      console.error('📋 [listServices] Erro na query:', error);
+      console.error('ðŸ“‹ [listServices] Erro na query:', error);
       throw error;
     }
     
     return data || [];
   } catch (err) {
-    console.error('📋 [listServices] Erro no try/catch:', err);
+    console.error('ðŸ“‹ [listServices] Erro no try/catch:', err);
     throw err;
   }
 }
 
 /**
- * Cria um novo serviço
+ * Cria um novo serviÃ§o
  * @param {string} clinicId
  * @param {Object} serviceData
  * @returns {Promise<Object>}
  */
 export async function createService(clinicId, serviceData) {
   if (!clinicId || !serviceData.name) {
-    throw new Error("clinic_id e name são obrigatórios");
+    throw new Error("clinic_id e name sÃ£o obrigatÃ³rios");
   }
 
   const { data, error } = await supabase
@@ -79,13 +79,13 @@ export async function createService(clinicId, serviceData) {
 }
 
 /**
- * Atualiza um serviço
+ * Atualiza um serviÃ§o
  * @param {string} serviceId
  * @param {Object} serviceData
  * @returns {Promise<Object>}
  */
 export async function updateService(serviceId, serviceData) {
-  // Normalizar códigos CBHPM/TUSS se fornecidos
+  // Normalizar cÃ³digos CBHPM/TUSS se fornecidos
   const normalizedData = {
     ...serviceData,
     ...(serviceData.code && { code: normalizeCodeCBHPM(serviceData.code) }),
@@ -96,15 +96,19 @@ export async function updateService(serviceId, serviceData) {
     .from("services")
     .update(normalizedData)
     .eq("id", serviceId)
-    .select()
-    .single();
+    .select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
 
   if (error) throw error;
   return data;
 }
 
 /**
- * Deleta um serviço (soft delete via active flag)
+ * Deleta um serviÃ§o (soft delete via active flag)
  * @param {string} serviceId
  * @returns {Promise<Object>}
  */
@@ -113,8 +117,12 @@ export async function deleteService(serviceId) {
     .from("services")
     .update({ active: false })
     .eq("id", serviceId)
-    .select()
-    .single();
+    .select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
 
   if (error) throw error;
   return data;
@@ -122,35 +130,35 @@ export async function deleteService(serviceId) {
 
 /**
  * ============================================================
- * VALIDAÇÃO TISS PARA SERVIÇOS
+ * VALIDAÃ‡ÃƒO TISS PARA SERVIÃ‡OS
  * ============================================================
  */
 
 /**
- * Valida se serviço tem campos obrigatórios para TISS
+ * Valida se serviÃ§o tem campos obrigatÃ³rios para TISS
  * @param {Object} serviceData
  * @returns {Object} { valid: boolean, errors: string[] }
  */
 export function validateServiceForTISS(serviceData) {
   const errors = [];
 
-  // TUSS Code (obrigatório)
+  // TUSS Code (obrigatÃ³rio)
   if (!serviceData.tuss_code) {
-    errors.push("TUSS Code é obrigatório");
+    errors.push("TUSS Code Ã© obrigatÃ³rio");
   } else if (serviceData.tuss_code.length !== 10) {
-    errors.push("TUSS Code deve ter exatamente 10 dígitos");
+    errors.push("TUSS Code deve ter exatamente 10 dÃ­gitos");
   } else if (!/^\d{10}$/.test(serviceData.tuss_code)) {
-    errors.push("TUSS Code deve conter apenas números");
+    errors.push("TUSS Code deve conter apenas nÃºmeros");
   }
 
-  // Type Service (obrigatório)
+  // Type Service (obrigatÃ³rio)
   if (!serviceData.type_service) {
-    errors.push("Tipo de Serviço é obrigatório");
+    errors.push("Tipo de ServiÃ§o Ã© obrigatÃ³rio");
   }
 
   // Guide Type (recomendado)
   if (!serviceData.guide_type) {
-    console.warn("⚠️ Guide Type não definido para serviço");
+    console.warn("âš ï¸ Guide Type nÃ£o definido para serviÃ§o");
   }
 
   return {
@@ -160,24 +168,25 @@ export function validateServiceForTISS(serviceData) {
 }
 
 /**
- * Atualizar serviço com validação TISS
+ * Atualizar serviÃ§o com validaÃ§Ã£o TISS
  * @param {string} serviceId
  * @param {Object} serviceData
  * @returns {Promise<Object>}
  */
 export async function updateServiceWithValidation(serviceId, serviceData) {
-  // Validar se vai ativar sem campos obrigatórios
+  // Validar se vai ativar sem campos obrigatÃ³rios
   if (serviceData.active && !serviceData.tuss_code) {
     throw new Error(
-      "Não é possível ativar serviço sem TUSS Code (obrigatório para TISS)"
+      "NÃ£o Ã© possÃ­vel ativar serviÃ§o sem TUSS Code (obrigatÃ³rio para TISS)"
     );
   }
 
   const validation = validateServiceForTISS(serviceData);
   if (!validation.valid) {
-    console.warn("⚠️ Avisos TISS para serviço:", validation.errors);
+    console.warn("âš ï¸ Avisos TISS para serviÃ§o:", validation.errors);
     // Continua mesmo com avisos, mas registra
   }
 
   return updateService(serviceId, serviceData);
 }
+

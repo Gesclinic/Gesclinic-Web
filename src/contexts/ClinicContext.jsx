@@ -57,7 +57,7 @@ export function ClinicProvider({ children }) {
         .from("clinics")
         .select("id, name, brand_color")
         .eq("id", resolvedClinicId)
-        .single();
+        .maybeSingle();
 
       if (!active) return;
 

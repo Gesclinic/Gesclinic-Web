@@ -152,8 +152,12 @@ export async function atualizarGuia(guiaId, dadosGuia) {
       .from('billing_guides')
       .update(guiaData)
       .eq('id', guiaId)
-      .select()
-      .single();
+      .select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
 
     if (error) {
       throw error;
@@ -207,8 +211,12 @@ export async function atualizarStatusGuia(guiaId, novoStatus) {
         data_atualizacao: new Date().toISOString(),
       })
       .eq('id', guiaId)
-      .select()
-      .single();
+      .select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
 
     if (error) {
       throw error;
@@ -221,38 +229,3 @@ export async function atualizarStatusGuia(guiaId, novoStatus) {
   }
 }
 
-/**
- * Gerar números de guia únicos
- * @param {string} clinicId - ID da clínica
- * @returns {Promise<string>} Número da guia
- */
-export async function gerarNumeroGuia(clinicId) {
-  try {
-    // Buscar última guia para incrementar número
-    const { data, error } = await supabase
-      .from('billing_guides')
-      .select('numero_guia')
-      .eq('clinic_id', clinicId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    let proximoNumero = 1;
-
-    if (data && data.numero_guia) {
-      // Extrair número da última guia (formato: GC001-2025-001)
-      const match = data.numero_guia.match(/(\d+)$/);
-      if (match) {
-        proximoNumero = parseInt(match[1]) + 1;
-      }
-    }
-
-    const ano = new Date().getFullYear();
-    const numeroFormatado = String(proximoNumero).padStart(3, '0');
-    return `GC${numeroFormatado}-${ano}-001`;
-  } catch (error) {
-    console.error('❌ Erro ao gerar número de guia:', error);
-    // Retornar um número genérico em caso de erro
-    return `GC${Date.now()}-001`;
-  }
-}

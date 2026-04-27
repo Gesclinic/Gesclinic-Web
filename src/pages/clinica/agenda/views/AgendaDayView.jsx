@@ -614,11 +614,21 @@ export default function AgendaDayView({
     (async () => {
       try {
         // Buscar status atual do appointment
-        const { data: currentApt } = await supabase
+        const { data: currentApt, error } = await supabase
           .from('appointments')
           .select('status')
           .eq('id', aptId)
-          .single();
+          .maybeSingle();
+
+        if (error) {
+          console.error('❌ Erro ao buscar appointment:', error);
+          throw error;
+        }
+
+        if (!currentApt) {
+          console.warn('⚠️ Appointment não encontrado:', aptId);
+          throw new Error("Agendamento não encontrado ou sem permissão de acesso");
+        }
 
         const isEditing = currentApt?.status === 'at_reception';
         

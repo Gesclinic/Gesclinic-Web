@@ -23,7 +23,7 @@ import {
   FileCode
 } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
-import { criarGuia, atualizarGuia, listarGuias, gerarNumeroGuia, deletarGuia } from '@/lib/guiasApi';
+import { criarGuia, atualizarGuia, listarGuias, gerarNumeroGuia, deletarGuia } from '@/modules/financeiro/services/guiasApi';
 import {
   validateTISSXMLGenerationCascade,
   formatCascadeErrors,
@@ -100,7 +100,7 @@ export default function GuiasConsulta() {
   const fetchGuias = async () => {
     setLoading(true);
     try {
-      const data = await listarGuias(clinicId);
+      const data = await listarGuias();
       setGuias(data);
     } catch (error) {
       console.error('❌ Erro ao buscar guias:', error);
@@ -149,7 +149,7 @@ export default function GuiasConsulta() {
       } else {
         // Criar nova guia
         console.log('➕ Criando nova guia:', formData);
-        const novaGuia = await criarGuia(clinicId, formData);
+        const novaGuia = await criarGuia(formData);
         console.log('✅ Guia criada:', novaGuia);
         toast({
           title: "✅ Guia criada",

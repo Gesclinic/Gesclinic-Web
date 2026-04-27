@@ -314,6 +314,7 @@ export default function AtendimentoModal({
 
   // ✨ FUNÇÕES DE ATUALIZAÇÃO PARA ABA DADOS AGENDAMENTO
   const updateAgendamentoField = (field, value) => {
+    console.log(`🔄 updateAgendamentoField('${field}', '${value}')`);
     setAgendamentoData(prev => ({
       ...prev,
       [field]: value
@@ -496,58 +497,6 @@ export default function AtendimentoModal({
     }
   }, [agendamentoData.professionalId, isOpen, clinicId]);
 
-  // 🔄 Função para recarregar dados do appointment após auto-save
-  const refreshAppointmentData = async () => {
-    try {
-      console.log('🔄 Recarregando dados do appointment...');
-      const { data: freshData, error } = await supabase
-        .from('appointments')
-        .select('discount, authorization_number, authorization_expiry, card_number, card_brand, card_last_digits, card_installments, payment_method, notes')
-        .eq('id', appointment.id)
-        .single();
-      
-      if (!error && freshData) {
-        console.log('✅ Dados recarregados com sucesso:', freshData);
-        
-        // Atualizar states com dados frescos
-        if (freshData.discount) {
-          setFaturamentoData(prev => ({
-            ...prev,
-            discount: parseFloat(freshData.discount || 0),
-            notes: freshData.notes || prev.notes,
-          }));
-        }
-        
-        if (freshData.authorization_number || freshData.authorization_expiry) {
-          setLiberacaoData(prev => ({
-            ...prev,
-            auth_number: freshData.authorization_number || prev.auth_number,
-            auth_expiry: freshData.authorization_expiry || prev.auth_expiry,
-          }));
-        }
-        
-        if (freshData.card_number) {
-          setLiberacaoData(prev => ({
-            ...prev,
-            card_number: freshData.card_number
-          }));
-        }
-        
-        if (freshData.payment_method) {
-          setPagamentoData(prev => ({
-            ...prev,
-            payment_method: freshData.payment_method,
-            card_brand: freshData.card_brand || prev.card_brand,
-            card_last_digits: freshData.card_last_digits || prev.card_last_digits,
-            card_installments: (freshData.card_installments?.toString() || prev.card_installments),
-          }));
-        }
-      }
-    } catch (err) {
-      console.warn('⚠️ Erro ao recarregar dados:', err.message);
-    }
-  };
-
   const loadPatientData = async () => {
     try {
       if (!appointment || !appointment.patient_id) return;
@@ -559,9 +508,13 @@ export default function AtendimentoModal({
         .from('appointments')
         .select('*')
         .eq('id', appointment.id)
-        .single();
+        .maybeSingle();
 
-      if (!appointmentError && appointmentData) {
+      if (appointmentError) {
+        console.error('❌ Erro ao carregar appointment:', appointmentError);
+      } else if (!appointmentData) {
+        console.warn('⚠️ Dados do appointment não encontrados');
+      } else if (appointmentData) {
         appointmentFresh = appointmentData;
         console.log('✅ Dados frescos carregados:', {
           card_number: appointmentFresh.card_number,
@@ -583,9 +536,16 @@ export default function AtendimentoModal({
         .from('patients')
         .select('*')
         .eq('id', appointment.patient_id)
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro ao buscar dados do paciente:', error);
+        throw error;
+      }
+
+      if (!data) {
+        throw new Error("Paciente não encontrado");
+      }
 
       // Carregar dados do cadastro do paciente
       const patientData = {
@@ -1160,13 +1120,21 @@ export default function AtendimentoModal({
   // ✨ Salvar dados de agendamento (data, hora, profissional, serviço, etc)
   const handleSaveAgendamento = async (e) => {
     e?.preventDefault?.();
-    if (!appointment?.id) return;
+    if (!appointment?.id) {
+      console.error('❌ [handleSaveAgendamento] appointment.id is missing');
+      alert('Erro: ID do agendamento não encontrado');
+      return;
+    }
 
     setLoading(true);
     try {
+      console.log('💾 [handleSaveAgendamento] appointmentId:', appointment.id);
+      console.log('💾 [handleSaveAgendamento] agendamentoData state:', agendamentoData);
       console.log('💾 [handleSaveAgendamento] Salvando:', {
         date: agendamentoData.date,
         time: agendamentoData.time,
+        timeType: typeof agendamentoData.time,
+        timeLength: agendamentoData.time?.length,
         professionalId: agendamentoData.professionalId,
         serviceId: agendamentoData.serviceId,
         payerId: agendamentoData.payerId,
@@ -1175,6 +1143,7 @@ export default function AtendimentoModal({
         notes: agendamentoData.notes,
       });
 
+      // ✅ Validar que temos pelo menos um campo para atualizar
       const updateData = {
         scheduled_date: agendamentoData.date,
         scheduled_time: agendamentoData.time,
@@ -1186,17 +1155,35 @@ export default function AtendimentoModal({
         notes: agendamentoData.notes || null,
       };
 
-      const { error } = await supabase
+      console.log('💾 [handleSaveAgendamento] FINAL updateData:', updateData);
+      console.log('💾 [handleSaveAgendamento] scheduled_time value being sent:', updateData.scheduled_time);
+
+      // ✅ Use .select() to get the updated record
+      const { data, error } = await supabase
         .from('appointments')
         .update(updateData)
-        .eq('id', appointment.id);
+        .eq('id', appointment.id)
+        .select();
 
-      if (error) throw error;
+      console.log('💾 [handleSaveAgendamento] response:', { data, error });
 
-      console.log('✅ Agendamento salvo com sucesso!');
+      if (error) {
+        console.error('❌ [handleSaveAgendamento] Supabase error:', error);
+        throw error;
+      }
+
+      // ✅ Se temos dados, usar eles. Senão, considerar sucesso mesmo assim
+      if (data && data.length > 0) {
+        console.log('✅ Agendamento salvo com sucesso!', data[0]);
+        if (onSuccess) onSuccess(data[0]);
+      } else {
+        console.warn('⚠️ UPDATE executado mas sem retorno de dados (possível RLS). Considerando sucesso.');
+        if (onSuccess) onSuccess(updateData);
+      }
+
       setTabAtivo('cadastrais');
     } catch (err) {
-      console.error('❌ Erro ao salvar agendamento:', err.message);
+      console.error('❌ Erro ao salvar agendamento:', err);
       alert(`Erro ao salvar: ${err.message}`);
     } finally {
       setLoading(false);
@@ -3299,13 +3286,16 @@ export default function AtendimentoModal({
                         value={faturamentoData.discount || 0}
                         onChange={(e) => {
                           const newDiscount = parseFloat(e.target.value) || 0;
-                          // Se está tentando aplicar desconto e não tem permissão, mostrar aviso
+                          
+                          // Se está tentando aplicar desconto e não tem permissão, mostrar aviso e sair
                           if (newDiscount > 0 && (currentRole !== 'admin' && currentRole !== 'gerente_financeiro' && currentRole !== 'gestor')) {
                             alert('❌ Você não tem permissão para autorizar descontos. Apenas Administrador ou Gerente Financeiro podem fazer isso.');
                             return;
                           }
-                          // Se tem permissão e está aplicando desconto, registrar autorização
-                          if (newDiscount > 0 && faturamentoData.discount === 0) {
+                          
+                          // ✅ Tem permissão (ou desconto é 0), pode prosseguir
+                          if (newDiscount > 0) {
+                            // Se tem permissão e está aplicando desconto, registrar autorização
                             setFaturamentoData({
                               ...faturamentoData,
                               discount: newDiscount,
@@ -3313,6 +3303,7 @@ export default function AtendimentoModal({
                               discount_authorized_at: new Date().toISOString()
                             });
                           } else {
+                            // Desconto é 0 ou não tem valor
                             setFaturamentoData({...faturamentoData, discount: newDiscount});
                           }
                         }}

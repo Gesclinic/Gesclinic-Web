@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { carregarAgenda } from "../services/agendaService";
+import { listarAgenda } from "@/modules/agenda/services/agenda.api.complex";
 import { mapAgendaPorProfissional } from "@/modules/agenda/services/agendaPorProfissionalMapper";
 import { useClinicContext } from "@/contexts/ClinicContext";
 import { format } from "date-fns";
@@ -13,7 +13,7 @@ export default function AgendaUnificadaTimeline() {
   useEffect(() => {
     if (!clinic?.id) return;
     setLoading(true);
-    carregarAgenda({ clinicId: clinic.id, date }).then((data) => {
+    listarAgenda({ clinicId: clinic.id, date }).then((data) => {
       setGrouped(mapAgendaPorProfissional(data));
       setLoading(false);
     });

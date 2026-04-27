@@ -1,11 +1,9 @@
 
-
-
-
 import { useEffect, useState, useMemo } from "react";
 import { format, parse } from "date-fns";
 import { listAppointments } from "@/lib/appointmentsApi";
 import { mapAgendaItem } from "@/modules/agenda/services/agendaMapper";
+import { atualizarAgendamento } from "@/modules/agenda/services/agenda.api.mutations";
 import { useClinicContext } from "@/contexts/ClinicContext";
 import { useAuth } from "@/contexts/SupabaseAuthContext";
 import { AGENDA_TABS_COLORS } from '../config/agendaTabsColors.config';
@@ -413,7 +411,6 @@ function AgendaUnificada() {
           }}
           onEditSuccess={async (form) => {
             // Chama a função de atualização do agendamento
-            const { atualizarAgendamento } = await import('../services/agendaService');
             const payload = {
               date: form?.startTime ? form.startTime.slice(0, 10) : '',
               startTime: form?.startTime ? form.startTime.slice(11, 16) : '',

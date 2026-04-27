@@ -39,8 +39,12 @@ async function runClinicUpdate(clinicId, patch) {
       .from("clinics")
       .update(sanitizedPatch)
       .eq("id", clinicId)
-      .select("*")
-      .single();
+      .select("*");
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
 
     if (!error) {
       return { data: normalizeClinicRow(data), error: null };
@@ -74,8 +78,12 @@ export async function getClinic(clinicId) {
   const { data, error } = await supabase
     .from("clinics")
     .select("*")
-    .eq("id", clinicId)
-    .single();
+    .eq("id", clinicId);
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
 
   if (error) {
     console.error("[clinic] get error", error);

@@ -18,11 +18,17 @@ export function useAgendaConfig() {
   useEffect(() => {
     async function fetchConfig() {
       if (!clinicId) return;
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("clinics")
         .select("horario_abertura, horario_fechamento, tempo_medio_atendimento, slot_agenda, horario_almoco_inicio, horario_almoco_fim")
         .eq("id", clinicId)
-        .single();
+        .maybeSingle();
+      
+      if (error) {
+        console.error("❌ [useAgendaConfig] Erro ao buscar config:", error.message);
+        return;
+      }
+      
       if (data) {
         setAgendaConfig({
           horario_abertura: data.horario_abertura || "08:00",

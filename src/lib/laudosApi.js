@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/customSupabaseClient';
+﻿import { supabase } from '@/lib/customSupabaseClient';
 
 export async function listLaudos(clinicId) {
   if (!clinicId) return [];
@@ -13,7 +13,7 @@ export async function listLaudos(clinicId) {
 
 export async function createLaudo(clinicId, payload) {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Usuário não autenticado.");
+  if (!user) throw new Error("UsuÃ¡rio nÃ£o autenticado.");
 
   const { data, error } = await supabase
     .from('laudos')
@@ -29,8 +29,12 @@ export async function updateLaudo(id, payload) {
     .from('laudos')
     .update(payload)
     .eq('id', id)
-    .select()
-    .single();
+    .select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
   if (error) throw error;
   return data;
 }

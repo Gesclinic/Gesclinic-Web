@@ -199,11 +199,13 @@ export async function updateAppointment(id, clinicId, payload) {
 
   const { data, error } = await supabase
     .from('appointments')
-    .update(body)
-    .eq('id', id)
-    .eq('clinic_id', clinicId)
-    .select(RETURN_COLUMNS)
-    .single();
+    .update(body).eq('id', id)
+    .eq('clinic_id', clinicId).select(RETURN_COLUMNS);
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
 
   if (error) {
     console.error('Erro ao atualizar agendamento:', error);
@@ -274,8 +276,10 @@ async function getAppointmentById(id, clinicId) {
       plans:plan_id(id, name, code)
     `)
     .eq('id', id)
-    .eq('clinic_id', clinicId)
-    .single();
+    .eq('clinic_id', clinicId);
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
   if (error) throw new Error(`Falha ao ler agendamento: ${error.message}`);
   return data;

@@ -130,29 +130,6 @@ export default function AgendaPage() {
     ensureHolidaysExist();
   }, []);
   
-  // ⚡ SEED de feriados - ATIVA AUTOMATICAMENTE
-  // Garante que feriados nacionais existem no banco antes de carregar agenda
-  // SEED SEMPRE executa - feriados nacionais são compartilhados entre clínicas (clinic_id = null)
-  useEffect(() => {
-    const ensureHolidaysExist = async () => {
-      const currentYear = new Date().getFullYear();
-      
-      console.log(`🌱 [AgendaPage] Garantindo feriados para ${currentYear}. clinicId=${clinicId}, loading=${loadingClinic}`);
-      
-      try {
-        // Passa null para clinic_id - feriados nacionais são compartilhados
-        const seedResult = await seedNationalHolidays(currentYear, null);
-        console.log(`📌 [Seed] Resultado: ${seedResult ? '✅ OK' : '⚠️ FALHOU'}`);
-      } catch (error) {
-        console.error(`❌ [Seed] Erro:`, error);
-      }
-    };
-
-    // IMPORTANTE: Não depender de clinicId estar carregado
-    // Feriados nacionais (clinic_id = null) existem para todo o sistema
-    ensureHolidaysExist();
-  }, []);
-  
   // 🔧 Auto-set Modo Profissional quando profissional logado
   useEffect(() => {
     if (isProfissional) {
@@ -566,10 +543,15 @@ export default function AgendaPage() {
       .select('*')  // Buscar TODOS os campos para debugar
       .eq('id', appointmentIdFromUrl)
       .eq('clinic_id', clinicId)
-      .single()
+      .maybeSingle()
       .then(({ data, error }) => {
         if (error) {
           console.warn('⚠️ [Navigate To Appointment Date] Erro ao buscar appointment:', error.message);
+          return;
+        }
+
+        if (!data) {
+          console.warn('⚠️ [Navigate To Appointment Date] Appointment não encontrado:', appointmentIdFromUrl);
           return;
         }
 

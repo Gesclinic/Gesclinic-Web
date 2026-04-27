@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,7 +20,7 @@ import { useClinicContext } from '@/contexts/ClinicContext';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import Calendar from 'react-calendar';
 import { AlertCircle, CalendarDays, ChevronLeft, ChevronRight, Clock3, Send } from 'lucide-react';
-import { createAppointment, updateAppointment } from '@/lib/appointmentsApi';
+import { createAppointment, updateAppointment, mapFromDatabase } from '@/lib/appointmentsApi';
 import { createPatient, updatePatient } from '@/lib/patientsApi';
 import { uploadPatientPhoto } from '@/lib/patientsApi';
 import { PAYMENT_METHOD_CONFIG, defaultPaymentData, validatePaymentData } from '@/lib/paymentMethodsConfig';
@@ -241,18 +241,36 @@ export default function AppointmentUnitedModal({
               professionals (id, name),
               services (id, name, code),
               payers (id, name),
-              plans (id, name, code)
+              plans (id, name, code),
+              rooms (id, name)
             `)
             .eq('id', appointmentIdToEdit)
             .eq('clinic_id', clinicId)
-            .single();
+            .maybeSingle();
           
           if (error) {
             console.error('❌ Erro ao carregar agendamento:', error);
             setLoadedAppointmentFromId(null);
+          } else if (!apt) {
+            console.warn('⚠️ Agendamento não encontrado:', appointmentIdToEdit);
+            setLoadedAppointmentFromId(null);
           } else {
             console.log('✅ Agendamento carregado via appointmentIdToEdit:', apt);
-            setLoadedAppointmentFromId(apt);
+            // 🚨 DEBUG: Verificar se payer_id e room_id estão sendo trazidos
+            console.log('🚨 [DEBUG] Dados críticos do banco:', {
+              payer_id: apt.payer_id,
+              room_id: apt.room_id,
+              payers: apt.payers,
+              rooms: apt.rooms,
+            });
+            // ✅ Aplicar mapFromDatabase para normalizar campos em camelCase
+            const mappedApt = mapFromDatabase(apt);
+            console.log('📊 [DEBUG] Agendamento após mapFromDatabase:', mappedApt);
+            console.log('🚨 [DEBUG] payerId e roomId após mapFromDatabase:', {
+              payerId: mappedApt.payerId,
+              roomId: mappedApt.roomId,
+            });
+            setLoadedAppointmentFromId(mappedApt);
           }
         } catch (err) {
           console.error('❌ Exceção ao carregar agendamento:', err);
@@ -269,7 +287,7 @@ export default function AppointmentUnitedModal({
   console.log('📋 [AppointmentUnitedModal] MODE e APPOINTMENT:', { mode, hasAppointment: !!appointment, appointmentKeys: appointment ? Object.keys(appointment) : [], hasLoadedFromId: !!loadedAppointmentFromId });
   
   // 🔗 Consolidate appointment from both sources (prop or loaded via ID)
-  const finalAppointment = appointment || loadedAppointmentFromId;
+  const finalAppointment = useMemo(() => appointment || loadedAppointmentFromId, [appointment, loadedAppointmentFromId]);
   
   // 🎯 AVISO VISUAL SE MODE FOR 'new'
   if (isOpen && mode === 'new') {
@@ -556,18 +574,20 @@ export default function AppointmentUnitedModal({
           professionalId: finalAppointment.professional_id || '',
           serviceId: finalAppointment.service_id || '',
           serviceCode: finalAppointment.services?.code || '',
-          payerId: finalAppointment.payer_id || '',
+          payerId: finalAppointment.payerId || finalAppointment.payer_id || '',
           planId: finalAppointment.plan_id || '',
           planCode: finalAppointment.plans?.code || '',
-          roomId: finalAppointment.room_id || '',
+          roomId: finalAppointment.roomId || finalAppointment.room_id || '',
           value: finalAppointment.value?.toString() || '0.00',
           notes: finalAppointment.notes || '',
           status: finalAppointment.status || 'scheduled',
         };
         console.log('📝 [AppointmentUnitedModal] setAgendamentoData com:', newData);
+        console.log('💳 [DEBUG] payerId no newData:', newData.payerId, '| tipo:', typeof newData.payerId);
         console.log('🎬 [IMPORTANTE] STATUS DO AGENDAMENTO:', newData.status);
         console.log('🎬 [BOTÃO VISÍVEL?] status === "at_checkout"?', newData.status === 'at_checkout');
         setAgendamentoData(newData);
+        console.log('💳 [AFTER setAgendamentoData] agendamentoData será:', newData);
         
         // 👤 TAMBÉM CARREGAR DADOS CADASTRAIS DO PACIENTE
         console.log('👤 [AppointmentUnitedModal] Carregando dados cadastrais do paciente');
@@ -631,7 +651,7 @@ export default function AppointmentUnitedModal({
         }));
         
         // 💳 SE FOR PARTICULAR, ADICIONAR CAMPOS ESPECÍFICOS
-        if (checkIsParticular(finalAppointment.payer_id)) {
+        if (checkIsParticular(finalAppointment.payerId || finalAppointment.payer_id)) {
           console.log('💳 [AppointmentUnitedModal] Pagador é particular');
         } else {
           console.log('💳 [AppointmentUnitedModal] Pagador é convênio/empresa');
@@ -734,10 +754,10 @@ export default function AppointmentUnitedModal({
           recordNumber: finalAppointment.record_number || '',
           professionalId: finalAppointment.professional_id || '',
           serviceId: finalAppointment.service_id || '',
-          payerId: finalAppointment.payer_id || '',
+          payerId: finalAppointment.payerId || finalAppointment.payer_id || '',
           planId: finalAppointment.plan_id || '',
           planCode: finalAppointment.plans?.code || '',
-          roomId: finalAppointment.room_id || '',
+          roomId: finalAppointment.roomId || finalAppointment.room_id || '',
           value: finalAppointment.value?.toString() || '0.00',
           notes: finalAppointment.notes || '',
           status: finalAppointment.status || 'scheduled',
@@ -761,7 +781,29 @@ export default function AppointmentUnitedModal({
     }
   }, [isOpen, mode, appointment, loadedAppointmentFromId, finalAppointment]);
 
-  // 💰 Carregar planos de contas
+  // � FIX: Garantir que o payerId seja restaurado quando o agendamento for carregado em modo EDIT
+  useEffect(() => {
+    if (isOpen && mode === 'edit' && finalAppointment && finalAppointment.id) {
+      console.log('🔧 [FIX payerId + planId] Modal aberto em EDIT mode com agendamento carregado');
+      console.log('   finalAppointment.payerId:', finalAppointment.payerId);
+      console.log('   finalAppointment.payer_id:', finalAppointment.payer_id);
+      console.log('   finalAppointment.planId:', finalAppointment.planId);
+      console.log('   finalAppointment.plan_id:', finalAppointment.plan_id);
+      
+      const payerId = finalAppointment.payerId || finalAppointment.payer_id || '';
+      console.log('   → payerId final a ser setado:', payerId);
+      
+      const planId = finalAppointment.planId || finalAppointment.plan_id || '';
+      console.log('   → planId final a ser setado:', planId);
+      setAgendamentoData(prev => ({
+        ...prev,
+        payerId: payerId,
+        planId: planId
+      }));
+    }
+  }, [isOpen, mode, finalAppointment]);
+
+  // �💰 Carregar planos de contas
   useEffect(() => {
     if (!clinicId) return;
     const loadPlans = async () => {
@@ -976,13 +1018,18 @@ export default function AppointmentUnitedModal({
         .from('services')
         .select('id, code, name')
         .eq('id', agendamentoData.serviceId)
-        .single()
+        .maybeSingle()
         .then(({ data, error }) => {
           if (error) {
             console.warn('⚡ [ServiceCode] Erro ao buscar serviço:', error);
             return;
           }
           
+          if (!data) {
+            console.warn('⚡ [ServiceCode] Serviço não encontrado:', agendamentoData.serviceId);
+            return;
+          }
+
           console.log('⚡ [ServiceCode] Serviço encontrado no Supabase:', data);
           if (data?.code) {
             console.log('⚡ [ServiceCode] Atualizando serviceCode com:', data.code);
@@ -1378,6 +1425,16 @@ export default function AppointmentUnitedModal({
 
     try {
       setLoading(true);
+      // 🚨 DEBUG ANTES DO SAVE
+      console.log('🚨 DEBUG SAVE (handleSaveDataOnly)', {
+        payerId: agendamentoData.payerId,
+        roomId: agendamentoData.roomId,
+        payerIdType: typeof agendamentoData.payerId,
+        roomIdType: typeof agendamentoData.roomId,
+        payerIdEmpty: !agendamentoData.payerId,
+        roomIdEmpty: !agendamentoData.roomId,
+      });
+      
       console.log('💾 [SAVE DATA ONLY] Iniciando salvamento...', { id: appointment.id });
       console.log('   ⚠️ [LIBERAÇÃO] liberacaoData COMPLETO:', JSON.stringify(liberacaoData, null, 2));
       console.log('   ⚠️ [LIBERAÇÃO] card_number:', liberacaoData.card_number);
@@ -1426,7 +1483,10 @@ export default function AppointmentUnitedModal({
 
       console.log('   updateData a enviar:', JSON.stringify(updateData, null, 2));
       
-      // 🔴 DEBUG CARD_NUMBER
+      // � Normalizar strings vazias em null para campos UUID
+      
+      
+      // �🔴 DEBUG CARD_NUMBER
       console.log('🔴 [CARD_NUMBER DEBUG ANTES DE ENVIAR]');
       console.log('   liberacaoData.card_number:', liberacaoData.card_number);
       console.log('   updateData.card_number:', updateData.card_number);
@@ -1441,14 +1501,6 @@ export default function AppointmentUnitedModal({
         faturamentoData_plano_contas_id: faturamentoData?.plano_contas_id,
       });
 
-      // Normalizar strings vazias em null
-      const uuidFields = ['professional_id', 'service_id', 'payer_id', 'room_id'];
-      uuidFields.forEach(field => {
-        if (updateData[field] === '') {
-          updateData[field] = null;
-        }
-      });
-
       if (agendamentoData.endTime?.trim()) {
         updateData.end_time = agendamentoData.endTime;
       }
@@ -1456,7 +1508,7 @@ export default function AppointmentUnitedModal({
       console.log('📤 Enviando updateData para API:', JSON.stringify(updateData, null, 2));
       const result = await updateAppointment(appointment.id, updateData);
       
-      // 🔴 VERIFICAR O QUE RETORNOU DO UPDATE
+      // VERIFICAR O QUE RETORNOU DO UPDATE
       console.log('✅ API retornou:', result);
       console.log('🔴 [CARD_NUMBER DEBUG APÓS UPDATE]');
       console.log('   result.card_number:', result?.card_number);
@@ -1466,6 +1518,8 @@ export default function AppointmentUnitedModal({
       console.log('   - payment_method:', updateData.payment_method);
       console.log('   - convenio_id:', updateData.convenio_id);
       console.log('   - plano_contas_id:', updateData.plano_contas_id);
+      console.log('   - payer_id:', updateData.payer_id);
+      console.log('   - room_id:', updateData.room_id);
       console.log('   - card_number:', updateData.card_number);
       console.log('   - authorization_number:', updateData.authorization_number);
       
@@ -1515,10 +1569,12 @@ export default function AppointmentUnitedModal({
           .from('appointments')
           .select('*')
           .eq('id', appointment.id)
-          .single();
+          .maybeSingle();
         
         if (fetchError) {
           console.error('❌ Erro ao recarregar:', fetchError);
+        } else if (!refreshedAppointment) {
+          console.warn('⚠️ Agendamento não encontrado após atualização');
         } else if (refreshedAppointment) {
           console.log('🔄 Agendamento recarregado:', { 
             plano_contas_id: refreshedAppointment.plano_contas_id,
@@ -1580,7 +1636,7 @@ export default function AppointmentUnitedModal({
           }
         ])
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('❌ Erro ao registrar desconto:', error);
@@ -1598,6 +1654,16 @@ export default function AppointmentUnitedModal({
   // Handle saving appointment changes
   const handleSaveChanges = async () => {
     try {
+      // 🚨 DEBUG ANTES DO SAVE
+      console.log('🚨 DEBUG SAVE (handleSaveChanges)', {
+        payerId: agendamentoData.payerId,
+        roomId: agendamentoData.roomId,
+        payerIdType: typeof agendamentoData.payerId,
+        roomIdType: typeof agendamentoData.roomId,
+        payerIdEmpty: !agendamentoData.payerId,
+        roomIdEmpty: !agendamentoData.roomId,
+      });
+      
       console.log('💾 [SAVE INITIATED]', { mode, appointmentId: appointment?.id, currentStatus: agendamentoData.status });
       
       let appointmentId = appointment?.id;
@@ -1689,12 +1755,7 @@ export default function AppointmentUnitedModal({
         };
 
         // Normalizar strings vazias em null para campos UUID
-        const uuidFields = ['professional_id', 'service_id', 'payer_id', 'room_id'];
-        uuidFields.forEach(field => {
-          if (updateData[field] === '') {
-            updateData[field] = null;
-          }
-        });
+        
 
         // ⏰ Só incluir end_time se estiver preenchido
         if (agendamentoData.endTime?.trim()) {
@@ -1707,6 +1768,11 @@ export default function AppointmentUnitedModal({
         
         console.log('✅ Agendamento atualizado com sucesso!');
         console.log('🔍 [DEBUG] Resposta retornada:', JSON.stringify(result, null, 2));
+        console.log('   Valores específicos que foram atualizados:');
+        console.log('   - payer_id:', updateData.payer_id);
+        console.log('   - room_id:', updateData.room_id);
+        console.log('   - professional_id:', updateData.professional_id);
+        console.log('   - service_id:', updateData.service_id);
         
         // 💳 SALVAR DADOS DE FATURAMENTO (se houver)
         if (faturamentoData && (faturamentoData.guide_number || faturamentoData.authorized_value)) {
@@ -1767,7 +1833,7 @@ export default function AppointmentUnitedModal({
             zip_code: cadastralData.zip_code,
           };
           
-          await updatePatient(patientId, patientUpdateData);
+          await updatePatient(patientId, patientUpdateData); window.location.reload();
           console.log('✅ Dados do paciente atualizados com sucesso!');
         } catch (patientErr) {
           console.error('⚠️ Erro ao atualizar paciente:', patientErr);
@@ -2057,11 +2123,17 @@ export default function AppointmentUnitedModal({
                       )}
                     </div>
                     <div>
-                      <Label>🕐 Hora *</Label>
+                      <Label>🕐 Hora * (Atual: {agendamentoData.time})</Label>
                       <Input
                         type="time"
-                        value={agendamentoData.time}
-                        onChange={(e) => updateAgendamentoField('time', e.target.value)}
+                        value={agendamentoData.time || ''}
+                        onChange={(e) => {
+                          console.log('🔴 [TIME INPUT] onChange disparado!');
+                          console.log('   e.target.value:', e.target.value);
+                          console.log('   typeof:', typeof e.target.value);
+                          updateAgendamentoField('time', e.target.value);
+                        }}
+                        onBlur={(e) => console.log('🔵 [TIME INPUT] onBlur - Valor final:', e.target.value)}
                       />
                     </div>
                   </div>
@@ -2080,10 +2152,18 @@ export default function AppointmentUnitedModal({
                       <Label>🚪 Sala</Label>
                       <Select
                         value={agendamentoData.roomId || ''}
-                        onValueChange={(value) => updateAgendamentoField('roomId', value)}
+                        onValueChange={(value) => {
+                          console.log('🚪 [SELECT SALA] Valor selecionado:', value);
+                          console.log('   Room encontrada:', rooms?.find(r => r.id === value));
+                          updateAgendamentoField('roomId', value);
+                        }}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Selecione sala" />
+                          {agendamentoData.roomId && rooms.find(r => r.id === agendamentoData.roomId) ? (
+                            <span>{rooms.find(r => r.id === agendamentoData.roomId)?.name}</span>
+                          ) : (
+                            <SelectValue placeholder="Selecione sala" />
+                          )}
                         </SelectTrigger>
                         <SelectContent>
                           {rooms.map((room) => (
@@ -2420,10 +2500,22 @@ export default function AppointmentUnitedModal({
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label>🏥 Convênio</Label>
+                      {(() => {
+                        console.log('🏥 [RENDER Select Convênio]', {
+                          payerId: agendamentoData.payerId,
+                          type: typeof agendamentoData.payerId,
+                          isEmpty: !agendamentoData.payerId,
+                          payersCount: payers?.length,
+                          selectedPayer: payers?.find(p => p.id === agendamentoData.payerId),
+                          allPayers: payers?.map(p => ({ id: p.id, name: p.name }))
+                        });
+                        return null;
+                      })()}
                       <Select
                         value={agendamentoData.payerId || ''}
                         onValueChange={(value) => {
                           console.log('🏥 [Select] Convênio selecionado:', value);
+                          console.log('   Payer encontrado:', payers?.find(p => p.id === value));
                           updateAgendamentoField('payerId', value);
                         }}
                       >
@@ -2682,7 +2774,7 @@ export default function AppointmentUnitedModal({
                               photo_url: cadastralData.photo_url || null,
                             };
 
-                            await updatePatient(appointment.patient_id, patientUpdateData);
+                            await updatePatient(appointment.patient_id, patientUpdateData); window.location.reload();
                             console.log('✅ Dados cadastrais salvos com sucesso!');
                             alert('✅ Dados cadastrais salvos com sucesso!');
                             setSubmitting(false);
@@ -3797,3 +3889,5 @@ export default function AppointmentUnitedModal({
     </>
   );
 }
+
+

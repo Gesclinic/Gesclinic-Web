@@ -449,8 +449,12 @@ export async function generateProntuarioForPatient(patientId, clinicCode) {
       .from("patients")
       .update({ prontuario_numero: newProntuario })
       .eq("id", patientId)
-      .select()
-      .single();
+      .select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
 
     if (updateError) throw updateError;
 

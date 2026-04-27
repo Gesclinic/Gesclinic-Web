@@ -47,12 +47,17 @@ export const stockCategoriesApi = {
   update: async (id, payload) => {
     // Remove emoji field if present (column doesn't exist in DB)
     const { emoji, ...cleanPayload } = payload;
-    return handleResponse(await supabase
+    const { data, error } = await supabase
       .from('stock_categories')
       .update(cleanPayload)
       .eq('id', id)
-      .select()
-      .single());
+      .select();
+
+    if (error) throw error;
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
   },
   remove: async (id) => {
     return handleResponse(await supabase
@@ -126,8 +131,12 @@ export const stockItemsApi = {
     const { data, error } = await supabase
       .from('stock_items')
       .select('id, name, sku, category_id')
-      .eq('id', id)
-      .single();
+      .eq('id', id);
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
     if (error) throw error;
     return data;
   },
@@ -143,13 +152,14 @@ export const stockItemsApi = {
       max_stock: payload?.max_stock !== '' && payload?.max_stock !== null && payload?.max_stock !== undefined ? parseFloat(payload.max_stock) : null,
       is_active: payload?.is_active ?? true,
     };
-    return handleResponse(
-      await supabase
-        .from('stock_items')
-        .insert({ ...safe, clinic_id: clinicId })
-        .select('id, name, sku')
-        .single()
-    );
+    const { data, error } = await supabase
+      .from('stock_items')
+      .insert({ ...safe, clinic_id: clinicId })
+      .select('id, name, sku');
+
+    if (error) throw error;
+    if (!data || data.length === 0) throw new Error('Record not found');
+    return data[0];
   },
   update: async (id, payload) => {
     // Atualiza apenas campos seguros
@@ -163,14 +173,15 @@ export const stockItemsApi = {
       max_stock: payload?.max_stock !== '' && payload?.max_stock !== null && payload?.max_stock !== undefined ? parseFloat(payload.max_stock) : null,
       is_active: payload?.is_active,
     };
-    return handleResponse(
-      await supabase
-        .from('stock_items')
-        .update(updatePayload)
-        .eq('id', id)
-        .select('id, name, sku')
-        .single()
-    );
+    const { data, error } = await supabase
+      .from('stock_items')
+      .update(updatePayload)
+      .eq('id', id)
+      .select('id, name, sku');
+
+    if (error) throw error;
+    if (!data || data.length === 0) throw new Error('Record not found');
+    return data[0];
   },
   remove: async (id) => {
     return handleResponse(await supabase
@@ -206,9 +217,10 @@ export const stockSuppliersApi = {
     };
     const { data, error } = await supabase
       .from('stock_suppliers')
-      .insert({ ...safe, clinic_id: clinicId })
-      .select()
-      .single();
+      .insert({ ...safe, clinic_id: clinicId }).select();
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
     if (error) throw error;
     return data;
   },
@@ -227,10 +239,12 @@ export const stockSuppliersApi = {
     };
     const { data, error } = await supabase
       .from('stock_suppliers')
-      .update(safe)
-      .eq('id', id)
-      .select()
-      .single();
+      .update(safe).eq('id', id).select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
     if (error) throw error;
     return data;
   },
@@ -253,19 +267,27 @@ export const stockUnitsApi = {
     return data || [];
   },
   create: async (clinicId, payload) => {
-    return handleResponse(await supabase
+    const { data, error } = await supabase
       .from('stock_units')
       .insert({ ...payload, clinic_id: clinicId })
-      .select()
-      .single());
+      .select();
+
+    if (error) throw error;
+    if (!data || data.length === 0) throw new Error('Record not found');
+    return data[0];
   },
   update: async (id, payload) => {
-    return handleResponse(await supabase
+    const { data, error } = await supabase
       .from('stock_units')
       .update(payload)
       .eq('id', id)
-      .select()
-      .single());
+      .select();
+
+    if (error) throw error;
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
   },
   remove: async (id) => {
     return handleResponse(await supabase
@@ -289,22 +311,28 @@ export const stockLocationsApi = {
     const safe = {
       name: payload?.name ?? null,
     };
-    return handleResponse(await supabase
+    const { data, error } = await supabase
       .from('stock_locations')
       .insert({ ...safe, clinic_id: clinicId })
-      .select('id, name')
-      .single());
+      .select('id, name');
+
+    if (error) throw error;
+    if (!data || data.length === 0) throw new Error('Record not found');
+    return data[0];
   },
   update: async (id, payload) => {
     const safe = {
       name: payload?.name,
     };
-    return handleResponse(await supabase
+    const { data, error } = await supabase
       .from('stock_locations')
       .update(safe)
       .eq('id', id)
-      .select('id, name')
-      .single());
+      .select('id, name');
+
+    if (error) throw error;
+    if (!data || data.length === 0) throw new Error('Record not found');
+    return data[0];
   },
   remove: async (id) => {
     return handleResponse(await supabase
@@ -368,10 +396,12 @@ export const stockMovementsApi = {
 
     const { data, error } = await supabase
       .from('stock_movements')
-      .update(safe)
-      .eq('id', id)
-      .select()
-      .single();
+      .update(safe).eq('id', id).select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
 
     if (error) throw error;
     return data;
@@ -393,15 +423,21 @@ export const stockMovementsApi = {
       .from('stock_movements')
       .select('id, notes, ap_bill_id')
       .eq('id', id)
-      .limit(1)
-      .single();
+      .limit(1);
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
     if (res.error && isMissingColumnError(res.error)) {
       res = await supabase
         .from('stock_movements')
         .select('id, notes')
         .eq('id', id)
-        .limit(1)
-        .single();
+        .limit(1);
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
     }
     if (res.error) throw res.error;
     const mv = res.data;
@@ -456,8 +492,10 @@ export const stockRequestsApi = {
     const { data, error } = await supabase
       .from('stock_requests')
       .select('id, clinic_id, created_at, location_id, requested_by, purpose, notes, status, approved_by, approved_at, approval_comment')
-      .eq('id', id)
-      .single();
+      .eq('id', id);
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
     if (error) throw error;
     return data;
   },
@@ -475,9 +513,10 @@ export const stockRequestsApi = {
     };
     const { data: req, error: e1 } = await supabase
       .from('stock_requests')
-      .insert(header)
-      .select()
-      .single();
+      .insert(header).select();
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
     if (e1) throw e1;
 
     const items = (payload?.products || []).map(p => ({
@@ -542,10 +581,12 @@ export const stockRequestsApi = {
   updateStatus: async (id, status) => {
     const { data, error } = await supabase
       .from('stock_requests')
-      .update({ status })
-      .eq('id', id)
-      .select()
-      .single();
+      .update({ status }).eq('id', id).select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
     if (error) throw error;
     return data;
   },
@@ -561,8 +602,12 @@ export const stockRequestsApi = {
       .from('stock_requests')
       .update(payload)
       .eq('id', id)
-      .select()
-      .single();
+      .select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
     if (error) throw error;
     return data;
   },
@@ -626,8 +671,12 @@ export const stockRequestsApi = {
           const { data: it, error: eGet } = await supabase
             .from('stock_request_items')
             .select('id, delivered_qty, qty')
-            .eq('id', l.id || '')
-            .single();
+            .eq('id', l.id || '');
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
           if (!it || eGet) {
             // fallback by request_id + item_id
             const { data: it2, error: e2 } = await supabase
@@ -635,8 +684,10 @@ export const stockRequestsApi = {
               .select('id, delivered_qty, qty')
               .eq('request_id', id)
               .eq('item_id', l.item_id)
-              .limit(1)
-              .single();
+              .limit(1);
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
             if (e2) throw e2;
             const newDelivered = Math.min(parseFloat(it2.qty), parseFloat(it2.delivered_qty || 0) + qty);
             const { error: eUpd } = await supabase
@@ -666,3 +717,6 @@ export const stockRequestsApi = {
     if (error) throw error;
   }
 };
+
+
+

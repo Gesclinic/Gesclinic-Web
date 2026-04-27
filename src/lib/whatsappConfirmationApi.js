@@ -104,8 +104,7 @@ export async function sendAppointmentConfirmation(
     // Atualizar registro com success
     await supabase
       .from('appointment_confirmations')
-      .update({ message_sent_at: new Date().toISOString() })
-      .eq('id', confirmation.id);
+      .update({ message_sent_at: new Date().toISOString() }).eq('id', confirmation.id);
 
     console.log('✅ Confirmação enviada com sucesso:', result);
     return {
@@ -134,10 +133,11 @@ export async function confirmAppointmentByToken(token, status) {
 
     // Buscar confirmação no banco
     const { data: confirmation, error: selectError } = await supabase
-      .from('appointment_confirmations')
-      .select('*')
-      .eq('confirmation_token', token)
-      .single();
+      .from('appointment_confirmations').select('*')
+      .eq('confirmation_token', token);
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
     if (selectError) {
       console.error('❌ Confirmação não encontrada:', selectError);

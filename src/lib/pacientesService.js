@@ -102,9 +102,19 @@ export async function createPaciente(payload) {
 }
 
 export async function updatePaciente(id, payload) {
-  const { data, error } = await supabase.from("patients").update(payload).eq("id", id).select().single();
+  const { data, error } = await supabase
+    .from("patients")
+    .update(payload)
+    .eq("id", id)
+    .select();
+
   if (error) throw error;
-  return data;
+
+  if (!data || data.length === 0) {
+    throw new Error('Paciente não encontrado ou sem permissão');
+  }
+
+  return data[0];
 }
 
 export async function deletePaciente(id) {

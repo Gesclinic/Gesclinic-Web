@@ -188,8 +188,7 @@ export default function SincronizarProfissionais() {
         // Atualizar registro principal com dados mesclados
         const { error: updateError } = await supabase
           .from('professionals')
-          .update(mergedData)
-          .eq('id', selectedId);
+          .update(mergedData).eq('id', selectedId);
 
         if (updateError) {
           throw new Error(`Erro ao atualizar ${keepProf.name}: ${updateError.message}`);
@@ -298,9 +297,10 @@ export default function SincronizarProfissionais() {
               clinic_id: user.clinic_id,
               active: true,
               cpf: user.cpf || null,
-            })
-            .select()
-            .single();
+            }).select();
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
           if (!createError && createdProf) {
             created++;

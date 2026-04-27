@@ -91,18 +91,18 @@ function TimelineColumnas({
                             onClick={() => {
                               const slotData = { date, time, type: 'new' };
                               if (columnType === 'professional') {
-                                slotData.professionalId = key;
+                                slotData.professional_id = key;
                                 console.log('✅ [AgendaTimeline] Novo clique em slot profissional:', {
                                   date,
                                   time,
-                                  professionalId: key,
+                                  professional_id: key,
                                 });
                               } else if (columnType === 'room') {
-                                slotData.roomId = key;
+                                slotData.room_id = key;
                                 console.log('✅ [AgendaTimeline] Novo clique em slot sala:', {
                                   date,
                                   time,
-                                  roomId: key,
+                                  room_id: key,
                                 });
                               }
                               onSlotClick(slotData);
@@ -330,7 +330,7 @@ function TimelineGeral({ timeSlots, appointments, onSlotClick, onCheckin, date, 
             </tr>
           </thead>
           <tbody>
-            {timeSlots.map((time) => {
+            {timeSlots.flatMap((time) => {
               const slotAppointments = appointmentsByTime[time] || [];
               if (slotAppointments.length === 0) {
                 const [year, month, day] = date.split('-').map(Number);
@@ -353,7 +353,7 @@ function TimelineGeral({ timeSlots, appointments, onSlotClick, onCheckin, date, 
                   });
                 }
                 if (!isAvailable) {
-                  return (
+                  return [
                     <tr key={`unavailable-${time}`} className="border-b border-gray-100 bg-gray-50 hover:bg-gray-100 transition">
                       <td className="px-4 py-3 text-sm font-medium text-gray-600">{time}</td>
                       <td colSpan="5" className="px-4 py-3">
@@ -361,65 +361,63 @@ function TimelineGeral({ timeSlots, appointments, onSlotClick, onCheckin, date, 
                       </td>
                       <td className="px-4 py-3"></td>
                     </tr>
-                  );
+                  ];
                 }
-                                      return (
-                                        <tr
-                                          key={`empty-${time}`}
-                                          className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-green-50 hover:to-green-100 cursor-pointer transition group"
-                                        >
-                                          <td className="px-4 py-3 text-sm font-medium text-gray-700">{time}</td>
-                                          <td colSpan="5" className="px-4 py-3">
-                                            <span className="text-sm font-semibold text-green-700">✓ Disponível</span>
-                                          </td>
-                                          <td className="px-4 py-3">
-                                            <>
-                                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button
-                                                  onClick={() => {
-                                                    const slotData = { date, time, type: 'new' };
-                                                    if (filteredProfessionalId) {
-                                                      slotData.professionalId = filteredProfessionalId;
-                                                      console.log('✅ [TimelineGeral] Click com professionalId:', filteredProfessionalId);
-                                                    }
-                                                    onSlotClick(slotData);
-                                                  }}
-                                                  className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition font-medium shadow-md"
-                                                  title="Agendar novo paciente"
-                                                >
-                                                  ➕ Agendar
-                                                </button>
-                                                <button
-                                                  onClick={() => {
-                                                    const slotData = { date, time, type: 'encaixe' };
-                                                    if (filteredProfessionalId) {
-                                                      slotData.professionalId = filteredProfessionalId;
-                                                    }
-                                                    onSlotClick(slotData);
-                                                  }}
-                                                  className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition font-medium shadow-md"
-                                                  title="Encaixar paciente"
-                                                >
-                                                  ⏱️ Encaixar
-                                                </button>
-                                                <button
-                                                  onClick={() => {
-                                                    const slotData = { date, time, type: 'bloquear' };
-                                                    if (filteredProfessionalId) {
-                                                      slotData.professionalId = filteredProfessionalId;
-                                                    }
-                                                    onSlotClick(slotData);
-                                                  }}
-                                                  className="px-2 py-1 bg-gray-600 text-white text-xs rounded hover:bg-gray-700 transition font-medium shadow-md"
-                                                  title="Bloquear horário"
-                                                >
-                                                  🔒 Bloquear
-                                                </button>
-                                              </div>
-                                            </>
-                                          </td>
-                                        </tr>
-                                      );
+                return [
+                  <tr
+                    key={`empty-${time}`}
+                    className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-green-50 hover:to-green-100 cursor-pointer transition group"
+                  >
+                    <td className="px-4 py-3 text-sm font-medium text-gray-700">{time}</td>
+                    <td colSpan="5" className="px-4 py-3">
+                      <span className="text-sm font-semibold text-green-700">✓ Disponível</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => {
+                            const slotData = { date, time, type: 'new' };
+                            if (filteredProfessionalId) {
+                              slotData.professional_id = filteredProfessionalId;
+                              console.log('✅ [TimelineGeral] Click com professional_id:', filteredProfessionalId);
+                            }
+                            onSlotClick(slotData);
+                          }}
+                          className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition font-medium shadow-md"
+                          title="Agendar novo paciente"
+                        >
+                          ➕ Agendar
+                        </button>
+                        <button
+                          onClick={() => {
+                            const slotData = { date, time, type: 'encaixe' };
+                            if (filteredProfessionalId) {
+                              slotData.professional_id = filteredProfessionalId;
+                            }
+                            onSlotClick(slotData);
+                          }}
+                          className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition font-medium shadow-md"
+                          title="Encaixar paciente"
+                        >
+                          ⏱️ Encaixar
+                        </button>
+                        <button
+                          onClick={() => {
+                            const slotData = { date, time, type: 'bloquear' };
+                            if (filteredProfessionalId) {
+                              slotData.professional_id = filteredProfessionalId;
+                            }
+                            onSlotClick(slotData);
+                          }}
+                          className="px-2 py-1 bg-gray-600 text-white text-xs rounded hover:bg-gray-700 transition font-medium shadow-md"
+                          title="Bloquear horário"
+                        >
+                          🔒 Bloquear
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ];
               }
 
               return slotAppointments.map((apt, idx) => (

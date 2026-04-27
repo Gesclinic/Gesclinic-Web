@@ -37,10 +37,10 @@ export const financeAccountsApi = {
         .update({
           ...updates,
           updated_at: new Date().toISOString()
-        })
-        .eq('id', accountId)
-        .select()
-        .single();
+        }).eq('id', accountId).select();
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
       if (error) throw error;
       return data;
@@ -71,8 +71,10 @@ export const financeAccountsApi = {
       const { data, error } = await client
         .from('finance_accounts')
         .select('*')
-        .eq('id', accountId)
-        .single();
+        .eq('id', accountId);
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
       if (error) throw error;
       return data;
@@ -85,10 +87,12 @@ export const financeAccountsApi = {
     try {
       const { data, error } = await client
         .from('finance_accounts')
-        .update({ is_active: false })
-        .eq('id', accountId)
-        .select()
-        .single();
+        .update({ is_active: false }).eq('id', accountId).select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found'); 
+    }
+    return data[0];
 
       if (error) throw error;
       return data;

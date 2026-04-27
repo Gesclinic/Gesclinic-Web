@@ -89,8 +89,7 @@ export async function submitGuideWithOperatorRouting(guideId, clinicId) {
       .update({
         status: "submitted",
         last_submission_at: new Date().toISOString(),
-      })
-      .eq("id", guideId);
+      }).eq("id", guideId);
 
     return {
       success: true,
@@ -124,13 +123,14 @@ async function submitViaHTTPAPI(guideId, clinicId, payer) {
   try {
     // 1. Preparar XML
     const { data: xmlData, error: xmlError } = await supabase
-      .from("tiss_submissions")
-      .select("xml_content")
+      .from("tiss_submissions").select("xml_content")
       .eq("guide_id", guideId)
       .eq("clinic_id", clinicId)
       .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
+      .limit(1);
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
     if (xmlError || !xmlData) {
       // Gerar XML se ainda não existir
@@ -179,8 +179,7 @@ async function submitViaHTTPAPI(guideId, clinicId, payer) {
       .update({
         status: "sent",
         response_data: responseData,
-      })
-      .eq("guide_id", guideId)
+      }).eq("guide_id", guideId)
       .eq("clinic_id", clinicId);
 
     return {
@@ -212,12 +211,13 @@ async function submitViaHTTPSFTP(guideId, clinicId, payer) {
   // Por agora, retornar instrução manual
 
   const xmlData = await supabase
-    .from("tiss_submissions")
-    .select("xml_content")
+    .from("tiss_submissions").select("xml_content")
     .eq("guide_id", guideId)
     .eq("clinic_id", clinicId)
-    .limit(1)
-    .single();
+    .limit(1);
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
   return {
     success: true,
@@ -247,8 +247,10 @@ async function generateForPortalSubmission(guideId, clinicId, payer) {
       .select("xml_content")
       .eq("guide_id", guideId)
       .eq("clinic_id", clinicId)
-      .limit(1)
-      .single();
+      .limit(1);
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
     return {
       success: true,
@@ -325,8 +327,7 @@ export async function handleOperatorWebhook(webhookData) {
           errors,
           guideData,
         },
-      })
-      .eq("id", submissionId);
+      }).eq("id", submissionId);
 
     // 3. Atualizar guia também
     await supabase
@@ -392,8 +393,7 @@ export async function processPendingTISSRetries(clinicId) {
 
     // 1. Buscar submissões que precisam de retry
     const { data: submissions, error } = await supabase
-      .from("tiss_submissions")
-      .select("id, guide_id, attempt_count, status")
+      .from("tiss_submissions").select("id, guide_id, attempt_count, status")
       .eq("clinic_id", clinicId)
       .eq("status", "pending")
       .lt("next_retry_at", now.toISOString())
@@ -459,8 +459,10 @@ async function fetchCompleteGuideData(guideId, clinicId) {
     `
     )
     .eq("id", guideId)
-    .eq("clinic_id", clinicId)
-    .single();
+    .eq("clinic_id", clinicId);
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
   if (error) throw error;
 

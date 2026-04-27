@@ -75,8 +75,12 @@ export async function updateOrcamento(id, payload) {
     .from('orcamentos')
     .update(headerPayload)
     .eq('id', id)
-    .select()
-    .single();
+    .select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
   if (error) throw error;
 
   // 1. Update Items (Delete all and re-insert strategy)
@@ -186,8 +190,12 @@ export async function addOrcamentoItem(orcamentoId, item) {
   const { data, error } = await supabase
     .from('orcamento_itens')
     .insert({ ...item, orcamento_id: orcamentoId })
-    .select()
-    .single();
+    .select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
   if (error) throw error;
   return data;
 }
@@ -197,8 +205,12 @@ export async function updateOrcamentoItem(id, patch) {
     .from('orcamento_itens')
     .update(patch)
     .eq('id', id)
-    .select()
-    .single();
+    .select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
   if (error) throw error;
   return data;
 }

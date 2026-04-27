@@ -28,7 +28,7 @@ export default function NobleHoursSettings({ clinicId, onSave }) {
         .from("clinic_settings")
         .select("noble_hours_config")
         .eq("clinic_id", clinicId)
-        .single();
+        .maybeSingle();
 
       if (error && error.code !== "PGRST116") throw error;
 

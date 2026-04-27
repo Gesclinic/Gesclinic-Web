@@ -390,8 +390,7 @@ export async function submitTISSGuide(guideId, clinicId) {
       .update({
         status: "submitted", // submitted, processing, accepted, rejected
         last_submission_at: new Date().toISOString(),
-      })
-      .eq("id", guideId)
+      }).eq("id", guideId)
       .eq("clinic_id", clinicId);
 
     // 7. Log de auditoria
@@ -421,13 +420,14 @@ export async function submitTISSGuide(guideId, clinicId) {
 export async function getTISSSubmissionStatus(guideId, clinicId) {
   try {
     const { data, error } = await supabase
-      .from("tiss_submissions")
-      .select("id, status, attempt_count, last_attempt_at, response_data, created_at")
+      .from("tiss_submissions").select("id, status, attempt_count, last_attempt_at, response_data, created_at")
       .eq("guide_id", guideId)
       .eq("clinic_id", clinicId)
       .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
+      .limit(1);
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
     if (error && error.code !== "PGRST116") {
       throw error;
@@ -453,8 +453,10 @@ export async function retryTISSSubmission(submissionId, clinicId) {
       .from("tiss_submissions")
       .select("id, guide_id, status, attempt_count, xml_content")
       .eq("id", submissionId)
-      .eq("clinic_id", clinicId)
-      .single();
+      .eq("clinic_id", clinicId);
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
     if (fetchError || !submission) {
       throw new Error("Submissão não encontrada");

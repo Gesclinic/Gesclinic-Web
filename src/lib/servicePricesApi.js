@@ -148,9 +148,7 @@ export async function updateServicePrice(id, data) {
         price: data.price,
         plan: data.plan || null,
         active: data.active,
-      })
-      .eq("id", id)
-      .select();
+      }).eq("id", id).select();
 
     if (error) throw error;
     return result?.[0];
@@ -264,9 +262,10 @@ export async function upsertServicePriceHealthInsurance(clinicId, healthInsuranc
         .update({
           price: parseFloat(valor),
         })
-        .eq("id", existing.id)
-        .select()
-        .single();
+        .eq("id", existing.id).select();
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
       if (error) throw error;
       return data;
@@ -282,8 +281,10 @@ export async function upsertServicePriceHealthInsurance(clinicId, healthInsuranc
             price: parseFloat(valor),
           },
         ])
-        .select()
-        .single();
+        .select();
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
       if (error) throw error;
       return data;

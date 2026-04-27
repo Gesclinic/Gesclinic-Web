@@ -62,11 +62,11 @@ export async function finalizeAppointmentWithFinancials(appointmentId, clinicId)
       .update({
         status: 'attended',
         updated_at: new Date().toISOString(),
-      })
-      .eq('id', appointmentId)
-      .eq('clinic_id', clinicId)
-      .select()
-      .single();
+      }).eq('id', appointmentId)
+      .eq('clinic_id', clinicId).select();
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
     if (updateError) {
       return {
@@ -80,8 +80,10 @@ export async function finalizeAppointmentWithFinancials(appointmentId, clinicId)
       .from('ar_receivables')
       .select('*')
       .eq('appointment_id', appointmentId)
-      .eq('clinic_id', clinicId)
-      .single();
+      .eq('clinic_id', clinicId);
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
     // Step 4: Fetch auto-created TISS guide (if convênio)
     let guideRecord = null;
@@ -90,8 +92,10 @@ export async function finalizeAppointmentWithFinancials(appointmentId, clinicId)
         .from('billing_guides')
         .select('*')
         .eq('appointment_id', appointmentId)
-        .eq('clinic_id', clinicId)
-        .single();
+        .eq('clinic_id', clinicId);
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
       guideRecord = guide;
     }
 
@@ -228,8 +232,7 @@ export async function cancelAppointmentFinancials(appointmentId, clinicId) {
       .update({
         status: 'canceled',
         updated_at: new Date().toISOString(),
-      })
-      .eq('id', appointmentId)
+      }).eq('id', appointmentId)
       .eq('clinic_id', clinicId);
 
     if (updateError) {
@@ -241,11 +244,14 @@ export async function cancelAppointmentFinancials(appointmentId, clinicId) {
 
     // Step 2: Verify AR was soft-deleted
     const { data: arRecord } = await supabase
-      .from('ar_receivables')
-      .select('status')
+      .from('ar_receivables').select('status')
       .eq('appointment_id', appointmentId)
-      .eq('clinic_id', clinicId)
-      .single();
+      .eq('clinic_id', clinicId);
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
 
     return {
       success: true,
@@ -281,8 +287,10 @@ export async function validateFinancialIntegration(appointmentId, clinicId) {
       .from('appointments')
       .select('id, status, total_value, payer_id')
       .eq('id', appointmentId)
-      .eq('clinic_id', clinicId)
-      .single();
+      .eq('clinic_id', clinicId);
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
     // Get AR
     const { data: ar } = await supabase

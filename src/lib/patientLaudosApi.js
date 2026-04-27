@@ -186,10 +186,13 @@ export async function updatePatientLaudo(id, updates) {
     .update({
       ...sanitizePayload(updates),
       updated_at: new Date().toISOString(),
-    })
-    .eq('id', id)
-    .select()
-    .single();
+    }).eq('id', id)
+    .select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
 
   if (error) {
     if (shouldUseLocalFallback(error)) {
@@ -253,9 +256,10 @@ export async function syncLocalPatientLaudos(patientId, clinicId = null) {
           ...sanitizePayload(payload),
           updated_at: new Date().toISOString(),
         },
-      ], { onConflict: 'id' })
-      .select()
-      .single();
+      ], { onConflict: 'id' }).select();
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
     if (error) {
       failedRows.push({ row, error });

@@ -433,8 +433,7 @@ export async function updateHealthInsurance(insuranceId, clinicId, updates) {
     .update(dataWithTimestamp)
     .eq("id", insuranceId)
     .eq("clinic_id", clinicId)
-    .select()
-    .maybeSingle();
+    .select();
 
   if (error) {
     console.error("❌ Erro Supabase UPDATE:", error);
@@ -442,6 +441,10 @@ export async function updateHealthInsurance(insuranceId, clinicId, updates) {
       throw new Error("CNPJ ou código já cadastrado");
     }
     throw new Error(`Falha ao atualizar convênio: ${error.message}`);
+  }
+
+  if (!data || data.length === 0) {
+    throw new Error('Convênio não encontrado ou sem permissão');
   }
 
   console.log("✅ Convênio atualizado com sucesso:", data);

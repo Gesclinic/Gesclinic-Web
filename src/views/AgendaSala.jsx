@@ -1,7 +1,7 @@
 // src/views/AgendaSala.jsx
 import React, { useState } from 'react';
 import { useClinicContext } from '../contexts/useClinicContext';
-import { listarAgenda } from '../services/agendaService';
+import { listarAgenda } from '@/modules/agenda/services/agenda.api.complex';
 import { mapAgendaItem } from '@/modules/agenda/services/agendaMapper';
 import AgendamentoDetalhesModal from '../components/AgendamentoDetalhesModal';
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -54,13 +54,17 @@ export default function Hierarquia(){
         .from('cost_centers')
         .update(update)
         .eq('id', editing.id)
-        .select()
-        .single();
+        .select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
       if (error) throw error;
       setAccounts(prev => prev.map(a => a.id === editing.id ? { ...a, ...data } : a));
       setEditing(null);
       setSearchParams(prev => { const p = new URLSearchParams(prev); p.delete('edit'); return p; });
-      // Voltar para a página anterior (onde iniciou a edição)
+      // Voltar para a pÃ¡gina anterior (onde iniciou a ediÃ§Ã£o)
       navigate(-1);
       toast({ title: 'Centro atualizado!' });
     } catch (e) {
@@ -72,7 +76,7 @@ export default function Hierarquia(){
     <div className="flex items-center justify-between py-1" style={{ paddingLeft: `${level*16}px` }}>
       <div className="flex items-center gap-2">
         <span className="text-sm">{node.name}</span>
-        <span className="text-xs text-gray-500 capitalize">({node.type||'—'})</span>
+        <span className="text-xs text-gray-500 capitalize">({node.type||'â€”'})</span>
       </div>
       <div className="flex items-center gap-1">
         <Button size="sm" variant="ghost" onClick={()=>openEdit(node)}>Editar</Button>
@@ -131,4 +135,5 @@ export default function Hierarquia(){
     </div>
   );
 }
+
 

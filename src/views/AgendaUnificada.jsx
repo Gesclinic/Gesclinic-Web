@@ -1,7 +1,7 @@
 // src/views/AgendaUnificada.jsx
 import React, { useState } from 'react';
 import { useClinicContext } from '../contexts/useClinicContext';
-import { listarAgenda } from '../services/agendaService';
+import { listarAgenda } from '@/modules/agenda/services/agenda.api.complex';
 import { mapAgendaItem } from '@/modules/agenda/services/agendaMapper';
 
 export function AgendaUnificada() {

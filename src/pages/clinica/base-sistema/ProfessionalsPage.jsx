@@ -350,8 +350,7 @@ export function ProfessionalsPage() {
           try {
             const { error: updateUserError } = await supabase
               .from('users')
-              .update({ role: userRole, updated_at: new Date().toISOString() })
-              .eq('id', associatedUser.id);
+              .update({ role: userRole, updated_at: new Date().toISOString() }).eq('id', associatedUser.id);
 
             if (updateUserError) {
               console.warn('⚠️ [PROFISSIONAL] Erro ao atualizar papel do usuário:', updateUserError);
@@ -566,8 +565,7 @@ export function ProfessionalsPage() {
       // Checar se já existe usuário com mesmo email OU CPF na clínica
       console.log('🔎 Checando se email já existe...');
       let { data: existingUserByEmail, error: emailError } = await supabase
-        .from('users')
-        .select('id')
+        .from('users').select('id')
         .eq('email', email)
         .eq('clinic_id', clinicId)
         .maybeSingle();
@@ -657,8 +655,10 @@ export function ProfessionalsPage() {
       const { data: newUser, error: fetchError } = await supabase
         .from('users')
         .select('id, email, full_name, role, clinic_id')
-        .eq('id', userId)
-        .single();
+        .eq('id', userId);
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
       if (fetchError) {
         console.error('❌ Erro ao buscar usuário criado:', fetchError);

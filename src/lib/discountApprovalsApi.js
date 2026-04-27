@@ -51,10 +51,10 @@ const discountApprovalsApi = {
           discount_authorized_by: null,  // ✅ Null indica PENDENTE
           discount_authorized_at: null,  // ✅ Sem data = ainda não aprovado
           updated_at: new Date().toISOString()
-        })
-        .eq('id', appointmentId)
-        .select()
-        .single();
+        }).eq('id', appointmentId).select();
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
       if (updateError) throw updateError;
       return updated;
@@ -176,8 +176,10 @@ const discountApprovalsApi = {
         const { data, error } = await client
           .from('discount_authorizations')
           .select('*')
-          .eq('id', authorizationId)
-          .single();
+          .eq('id', authorizationId);
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
         if (!error && data) return data;
       } catch (e) {
@@ -188,8 +190,10 @@ const discountApprovalsApi = {
         .from('appointments')
         .select('*')
         .eq('id', authorizationId)
-        .gt('discount', 0)
-        .single();
+        .gt('discount', 0);
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
       if (error) throw error;
 
@@ -211,10 +215,12 @@ const discountApprovalsApi = {
       try {
         const { data, error } = await client
           .from('discount_authorizations')
-          .update(updates)
-          .eq('id', authorizationId)
-          .select()
-          .single();
+          .update(updates).eq('id', authorizationId).select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found'); 
+    }
+    return data[0];
 
         if (!error && data) return data;
       } catch (e) {
@@ -227,10 +233,12 @@ const discountApprovalsApi = {
         .update({
           discount: updates.discount_amount || 0,
           discount_reason: updates.discount_reason || null
-        })
-        .eq('id', authorizationId)
-        .select()
-        .single();
+        }).eq('id', authorizationId).select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found'); 
+    }
+    return data[0];
 
       if (error) throw error;
       return data;
@@ -246,10 +254,12 @@ const discountApprovalsApi = {
         .update({
           discount: 0,
           discount_reason: null
-        })
-        .eq('id', appointmentId)
-        .select()
-        .single();
+        }).eq('id', appointmentId).select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found'); 
+    }
+    return data[0];
 
       if (error) throw error;
       return data;
@@ -283,9 +293,10 @@ const discountApprovalsApi = {
           discount_authorized_by: userId,
           discount_authorized_at: new Date().toISOString()
         })
-        .eq('id', appointmentId)
-        .select()
-        .single();
+        .eq('id', appointmentId).select();
+
+if (!data || data.length === 0) { throw new Error('Record not found'); }
+return data[0];
 
       if (error) throw error;
       return data;
@@ -319,10 +330,12 @@ const discountApprovalsApi = {
           discount_reason: null,
           discount_authorized_by: null,
           discount_authorized_at: null
-        })
-        .eq('id', appointmentId)
-        .select()
-        .single();
+        }).eq('id', appointmentId).select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found'); 
+    }
+    return data[0];
 
       if (error) throw error;
       return data;
@@ -356,10 +369,12 @@ const discountApprovalsApi = {
           discount_reason: null,
           discount_authorized_by: null,
           discount_authorized_at: null
-        })
-        .eq('id', appointmentId)
-        .select()
-        .single();
+        }).eq('id', appointmentId).select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found'); 
+    }
+    return data[0];
 
       if (error) throw error;
       return data;
