@@ -1989,32 +1989,58 @@ export default function AtendimentoModal({
 
         {/* Info rápida do agendamento */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-          {console.log('🔍 [AtendimentoModal RENDER] Quick info display:', {
-            scheduledTime: appointment.scheduled_time,
-            startTime: appointment.startTime,
-            professionalName: appointment.professionals?.name,
-            professionalName_camelCase: appointment.professionalName,
-            serviceName: appointment.services?.name,
-            serviceName_camelCase: appointment.serviceName,
-            payerName: appointment.payers?.name,
-            payerName_camelCase: appointment.payerName,
+          {console.log('🔍 [AtendimentoModal RENDER] Quick info:', {
+            appointmentProp: {
+              scheduledTime: appointment.scheduled_time,
+              profName: appointment.professionals?.name,
+              profNameCamel: appointment.professionalName,
+              svcName: appointment.services?.name,
+              svcNameCamel: appointment.serviceName,
+              payerName: appointment.payers?.name,
+              payerNameCamel: appointment.payerName,
+            },
+            agendamentoDataState: {
+              timeFromState: agendamentoData.time,
+              profIdFromState: agendamentoData.professionalId,
+              svcIdFromState: agendamentoData.serviceId,
+              roomIdFromState: agendamentoData.roomId,
+              payerIdFromState: agendamentoData.payerId,
+            },
           })}
           <div className="grid grid-cols-4 gap-2 text-sm">
             <div>
               <p className="text-xs text-gray-600 font-medium">Horário</p>
-              <p className="font-bold text-gray-900">{appointment.scheduled_time?.substring(0, 5) || appointment.startTime?.substring(0, 5) || '-'}</p>
+              <p className="font-bold text-gray-900">{agendamentoData.time || appointment.scheduled_time?.substring(0, 5) || appointment.startTime?.substring(0, 5) || '-'}</p>
             </div>
             <div>
               <p className="text-xs text-gray-600 font-medium">Profissional</p>
-              <p className="font-bold text-gray-900">{appointment.professionals?.name || appointment.professionalName || agendamentoData.professionalId || '-'}</p>
+              <p className="font-bold text-gray-900">
+                {appointment.professionals?.name || 
+                 appointment.professionalName || 
+                 professionals?.find(p => p.id === agendamentoData.professionalId)?.name ||
+                 agendamentoData.professionalId ||
+                 '-'}
+              </p>
             </div>
             <div>
               <p className="text-xs text-gray-600 font-medium">Serviço</p>
-              <p className="font-bold text-gray-900">{appointment.services?.name || appointment.serviceName || agendamentoData.serviceId || '-'}</p>
+              <p className="font-bold text-gray-900">
+                {appointment.services?.name ||
+                 appointment.serviceName ||
+                 services?.find(s => s.id === agendamentoData.serviceId)?.name ||
+                 agendamentoData.serviceId ||
+                 '-'}
+              </p>
             </div>
             <div>
               <p className="text-xs text-gray-600 font-medium">Convênio</p>
-              <p className="font-bold text-gray-900">{appointment.payers?.name || appointment.payerName || agendamentoData.payerId || 'Particular'}</p>
+              <p className="font-bold text-gray-900">
+                {appointment.payers?.name ||
+                 appointment.payerName ||
+                 payers?.find(p => p.id === agendamentoData.payerId)?.name ||
+                 agendamentoData.payerId ||
+                 'Particular'}
+              </p>
             </div>
           </div>
         </div>
