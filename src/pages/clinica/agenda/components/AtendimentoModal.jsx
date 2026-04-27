@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useClinicContext } from '@/contexts/ClinicContext';
@@ -395,127 +395,117 @@ export default function AtendimentoModal({
     }
   }, [isOpen, clinicId]);
 
-  // ✨ CARREGAR DADOS DO APPOINTMENT EXISTENTE PARA A ABA
-  useEffect(() => {
-    if (isOpen && appointment) {
-      console.log('✅ [AtendimentoModal] Carregando dados do appointment existente para aba Dados Agendamento');
-      console.log('📊 [AtendimentoModal] OBJETO COMPLETO DO APPOINTMENT:', appointment);
-      
-      // Log detalhado de todos os campos possíveis
-      console.log('🔍 [AtendimentoModal] Campos disponíveis:', {
-        // Datos normalizados camelCase
-        patientId: appointment.patientId,
-        patient_id: appointment.patient_id,
-        professionalId: appointment.professionalId,
-        professional_id: appointment.professional_id,
-        serviceId: appointment.serviceId,
-        service_id: appointment.service_id,
-        roomId: appointment.roomId,
-        room_id: appointment.room_id,
-        payerId: appointment.payerId,
-        payer_id: appointment.payer_id,
-        // Nomes
-        patientName: appointment.patientName,
-        patient_name: appointment.patient_name,
-        patients_name: appointment.patients?.name,
-        // Datas e horas
-        date: appointment.date,
-        scheduled_date: appointment.scheduled_date,
-        startTime: appointment.startTime,
-        scheduled_time: appointment.scheduled_time,
-        endTime: appointment.endTime,
-        end_time: appointment.end_time,
-        // Outros
-        duration: appointment.duration,
-        value: appointment.value,
-        status: appointment.status,
-      });
-      
-      // Garantir que os campos estão mapeados corretamente (normalizá-los se necessário)
-      const appointmentDate = appointment.date || appointment.scheduled_date || '';
-      const appointmentTime = appointment.startTime || appointment.scheduled_time || '';
-      
-      // Preencher agendamentoData com fallbacks abrangentes
-      const finalData = {
-        patientId: appointment.patientId || appointment.patient_id || '',
-        patientName: appointment.patientName || appointment.patients?.name || appointment.patient_name || appointment.lead_name || '',
-        phone: appointment.patientPhone || appointment.patients?.phone || appointment.patient_phone || appointment.patient_mobile || appointment.celular || appointment.phone || '',
-        date: appointmentDate,
-        time: appointmentTime,
-        duration: appointment.duration || 30,
-        roomId: appointment.roomId || appointment.room_id || '',
-        professionalId: appointment.professionalId || appointment.professional_id || '',
-        serviceId: appointment.serviceId || appointment.service_id || '',
-        // Para serviceCode, procurar em múltiplas fontes
-        serviceCode: appointment.serviceCode || appointment.services?.code || appointment.service_code || appointment.service?.code || appointment.codigo || appointment.code || '',
-        payerId: appointment.payerId || appointment.payer_id || appointment.convenio_id || '',
-        value: appointment.value?.toString() || appointment.valor?.toString() || '',
-        status: appointment.status || 'scheduled',
-        notes: appointment.notes || appointment.observacao || '',
-        endTime: appointment.endTime || appointment.end_time || '',
-      };
-      
-      console.log('📝 [AtendimentoModal] Final agendamentoData:', finalData);
-      setAgendamentoData(finalData);
-      
-      console.log('📝 [AtendimentoModal] AgendamentoData atualizado:', {
-        patientId: appointment.patientId || appointment.patient_id,
-        professionalId: appointment.professionalId || appointment.professional_id,
-        serviceId: appointment.serviceId || appointment.service_id,
-        roomId: appointment.roomId || appointment.room_id,
-        payerId: appointment.payerId || appointment.payer_id,
-        date: appointmentDate,
-        time: appointmentTime,
-      });
+  // ✨ FUNÇÃO HELPER PARA MAPEAR E DEFINIR DADOS DO APPOINTMENT
+  const mapAndSetAppointmentData = useCallback((apt) => {
+    if (!apt) {
+      console.warn('⚠️ [mapAndSetAppointmentData] Appointment é nulo');
+      return;
+    }
+
+    console.log('🔍 [mapAndSetAppointmentData] Mapeando appointment:', apt.id);
+    
+    // Log de todos os campos
+    console.log('🔍 [mapAndSetAppointmentData] Campos disponíveis:', {
+      // IDs normalizados
+      patientId: apt.patientId,
+      patient_id: apt.patient_id,
+      professionalId: apt.professionalId,
+      professional_id: apt.professional_id,
+      serviceId: apt.serviceId,
+      service_id: apt.service_id,
+      roomId: apt.roomId,
+      room_id: apt.room_id,
+      payerId: apt.payerId,
+      payer_id: apt.payer_id,
+      // Relacionamentos
+      patients: apt.patients ? Object.keys(apt.patients) : null,
+      professionals: apt.professionals ? Object.keys(apt.professionals) : null,
+      services: apt.services ? Object.keys(apt.services) : null,
+      rooms: apt.rooms ? Object.keys(apt.rooms) : null,
+      payers: apt.payers ? Object.keys(apt.payers) : null,
+      // Datas e horas
+      date: apt.date,
+      scheduled_date: apt.scheduled_date,
+      startTime: apt.startTime,
+      scheduled_time: apt.scheduled_time,
+      endTime: apt.endTime,
+      end_time: apt.end_time,
+    });
+
+    // Extrair dados com múltiplos fallbacks
+    const appointmentDate = apt.date || apt.scheduled_date || '';
+    const appointmentTime = apt.startTime || apt.scheduled_time || '';
+    
+    const finalData = {
+      patientId: apt.patientId || apt.patient_id || '',
+      patientName: apt.patientName || apt.patients?.name || apt.patient_name || apt.lead_name || '',
+      phone: apt.patientPhone || apt.patients?.phone || apt.patient_phone || apt.patient_mobile || apt.celular || apt.phone || '',
+      date: appointmentDate,
+      time: appointmentTime,
+      duration: apt.duration || 30,
+      roomId: apt.roomId || apt.room_id || '',
+      professionalId: apt.professionalId || apt.professional_id || '',
+      serviceId: apt.serviceId || apt.service_id || '',
+      serviceCode: apt.serviceCode || apt.services?.code || apt.service_code || apt.service?.code || apt.codigo || apt.code || '',
+      payerId: apt.payerId || apt.payer_id || apt.convenio_id || '',
+      value: apt.value?.toString() || apt.valor?.toString() || '',
+      status: apt.status || 'scheduled',
+      notes: apt.notes || apt.observacao || '',
+      endTime: apt.endTime || apt.end_time || '',
+    };
+    
+    console.log('📝 [mapAndSetAppointmentData] Final agendamentoData:', finalData);
+    setAgendamentoData(finalData);
 
       // Preencher cadastralData
       setCadastralData({
-        name: appointment.patients?.name || appointment.patientName || appointment.patient_name || '',
-        document_id: appointment.patients?.document_id || appointment.patientCpf || appointment.patient_cpf || '',
-        birthdate: appointment.patients?.birthdate || '',
-        gender: appointment.patients?.gender || '',
-        phone: appointment.patients?.phone || appointment.patientPhone || appointment.patient_phone || '',
-        cell_phone: appointment.patients?.cell_phone || appointment.patientMobile || appointment.patient_mobile || '',
-        email: appointment.patients?.email || '',
-        street: appointment.patients?.street || '',
-        number: appointment.patients?.number || '',
-        neighborhood: appointment.patients?.neighborhood || '',
-        city: appointment.patients?.city || '',
-        state: appointment.patients?.state || '',
-        zip_code: appointment.patients?.zip_code || '',
+        name: apt.patients?.name || apt.patientName || apt.patient_name || '',
+        document_id: apt.patients?.document_id || apt.patientCpf || apt.patient_cpf || '',
+        birthdate: apt.patients?.birthdate || '',
+        gender: apt.patients?.gender || '',
+        phone: apt.patients?.phone || apt.patientPhone || apt.patient_phone || '',
+        cell_phone: apt.patients?.cell_phone || apt.patientMobile || apt.patient_mobile || '',
+        email: apt.patients?.email || '',
+        street: apt.patients?.street || '',
+        number: apt.patients?.number || '',
+        neighborhood: apt.patients?.neighborhood || '',
+        city: apt.patients?.city || '',
+        state: apt.patients?.state || '',
+        zip_code: apt.patients?.zip_code || '',
       });
 
       // Preencher selectedPatient
-      if (appointment.patients) {
+      if (apt.patients) {
         setSelectedPatient({
-          patientId: appointment.patientId,
-          patientName: appointment.patientName || appointment.patients.name || '',
-          name: appointment.patients.name || '',
-          document_id: appointment.patients.document_id || '',
-          phone: appointment.patients.phone || '',
-          birthdate: appointment.patients.birthdate || '',
-          gender: appointment.patients.gender || '',
-          cell_phone: appointment.patients.cell_phone || '',
-          email: appointment.patients.email || '',
-          street: appointment.patients.street || '',
-          number: appointment.patients.number || '',
-          neighborhood: appointment.patients.neighborhood || '',
-          city: appointment.patients.city || '',
-          state: appointment.patients.state || '',
-          zip_code: appointment.patients.zip_code || '',
+          patientId: apt.patientId || apt.patient_id,
+          patientName: apt.patientName || apt.patients.name || '',
+          name: apt.patients.name || '',
+          document_id: apt.patients.document_id || '',
+          phone: apt.patients.phone || '',
+          birthdate: apt.patients.birthdate || '',
+          gender: apt.patients.gender || '',
+          cell_phone: apt.patients.cell_phone || '',
+          email: apt.patients.email || '',
+          street: apt.patients.street || '',
+          number: apt.patients.number || '',
+          neighborhood: apt.patients.neighborhood || '',
+          city: apt.patients.city || '',
+          state: apt.patients.state || '',
+          zip_code: apt.patients.zip_code || '',
         });
       }
 
       // Carregar schedules do profissional selecionado
-      if (appointment.professionalId) {
+      if (apt.professionalId || apt.professional_id) {
         (async () => {
           try {
             setLoadingProfessionalSchedules(true);
-            console.log('⏰ [AtendimentoModal] Carregando schedules para professional:', appointment.professionalId);
+            const profId = apt.professionalId || apt.professional_id;
+            console.log('⏰ [AtendimentoModal] Carregando schedules para professional:', profId);
             const { data: schedules } = await supabase
               .from('professional_schedules')
               .select('*')
-              .eq('professional_id', appointment.professionalId)
+              .eq('professional_id', profId)
               .eq('clinic_id', clinicId);
             setProfessionalSchedules(schedules || []);
             console.log('✅ [AtendimentoModal] Schedules carregados:', schedules?.length);
@@ -528,15 +518,56 @@ export default function AtendimentoModal({
       }
 
       // Inicializar calendário com a data do agendamento
-      if (appointment.scheduled_date) {
-        const appointmentDate = parseLocalDate(appointment.scheduled_date);
+      if (apt.scheduled_date || apt.date) {
+        const appointmentDateStr = apt.scheduled_date || apt.date;
+        const appointmentDate = parseLocalDate(appointmentDateStr);
         if (appointmentDate) {
           setCalendarActiveStartDate(appointmentDate);
           setCalendarSelectedDate(appointmentDate);
         }
       }
+  }, [clinicId]); // useCallback dependencies
+
+  // ✨ CARREGAR DADOS DO APPOINTMENT EXISTENTE PARA A ABA
+  useEffect(() => {
+    if (isOpen && appointment) {
+      console.log('✅ [AtendimentoModal] Carregando dados frescos do appointment ID:', appointment.id);
+      console.log('📊 [AtendimentoModal] Appointment prop completo:', appointment);
+      
+      (async () => {
+        try {
+          // 🔥 CARREGAR DADOS FRESCOS DA API COM TODOS OS RELACIONAMENTOS
+          console.log('🔄 [AtendimentoModal] Buscando dados frescos do Supabase para ID:', appointment.id);
+          const { data: freshAppointment, error } = await supabase
+            .from('appointments')
+            .select(`
+              *,
+              patients(id, name, phone, cell_phone, email, document_id, birthdate, gender, street, number, neighborhood, city, state, zip_code),
+              professionals(id, name),
+              services(id, name, code),
+              rooms(id, name),
+              payers(id, name)
+            `)
+            .eq('id', appointment.id)
+            .eq('clinic_id', clinicId)
+            .single();
+
+          if (error) {
+            console.warn('⚠️ [AtendimentoModal] Erro ao carregar dados frescos:', error);
+            // Fallback: usar dados do prop com mapeamento local
+            mapAndSetAppointmentData(appointment);
+            return;
+          }
+
+          console.log('✅ [AtendimentoModal] Dados frescos carregados:', freshAppointment);
+          mapAndSetAppointmentData(freshAppointment);
+        } catch (err) {
+          console.warn('❌ [AtendimentoModal] Erro ao buscar dados frescos:', err);
+          mapAndSetAppointmentData(appointment);
+        }
+      })();
     }
-  }, [isOpen, appointment, clinicId]);
+  }, [isOpen, appointment, clinicId, mapAndSetAppointmentData]);
 
   // ✨ CARREGAR SCHEDULES QUANDO PROFISSIONAL MUDA
   useEffect(() => {
