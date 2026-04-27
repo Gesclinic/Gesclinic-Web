@@ -1171,10 +1171,18 @@ export default function AtendimentoModal({
         professional_id: agendamentoData.professionalId,
         service_id: agendamentoData.serviceId,
         payer_id: agendamentoData.payerId || null,
+        room_id: agendamentoData.roomId || null,
         value: parseFloat(agendamentoData.value) || null,
         status: agendamentoData.status || 'agendado',
         notes: agendamentoData.notes || null,
       };
+
+      console.log('💾 [handleSaveAgendamento] Payload completo:', {
+        payer_id: updateData.payer_id,
+        room_id: updateData.room_id,
+        professional_id: updateData.professional_id,
+        service_id: updateData.service_id,
+      });
 
       console.log('💾 [handleSaveAgendamento] FINAL updateData:', updateData);
       console.log('💾 [handleSaveAgendamento] scheduled_time value being sent:', updateData.scheduled_time);
