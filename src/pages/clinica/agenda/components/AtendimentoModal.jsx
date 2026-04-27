@@ -337,6 +337,23 @@ export default function AtendimentoModal({
     }
   }, [isOpen, appointment]);
 
+  // 🔍 DEBUG: Log appointment recebido como prop
+  useEffect(() => {
+    if (appointment) {
+      console.log('📋 [AtendimentoModal] Appointment recebido como prop:', {
+        id: appointment.id,
+        patientName: appointment.patients?.name || appointment.patientName || 'N/A',
+        professionalName: appointment.professionals?.name || appointment.professionalName || 'N/A',
+        serviceName: appointment.services?.name || appointment.serviceName || 'N/A',
+        payerName: appointment.payers?.name || appointment.payerName || 'N/A',
+        hasPatients: !!appointment.patients,
+        hasProfessionals: !!appointment.professionals,
+        hasServices: !!appointment.services,
+        hasPayers: !!appointment.payers,
+      });
+    }
+  }, [appointment]);
+
   // ✨ Carregar dados para ABA DADOS AGENDAMENTO
   useEffect(() => {
     if (isOpen && clinicId) {
@@ -1975,19 +1992,19 @@ export default function AtendimentoModal({
           <div className="grid grid-cols-4 gap-2 text-sm">
             <div>
               <p className="text-xs text-gray-600 font-medium">Horário</p>
-              <p className="font-bold text-gray-900">{appointment.scheduled_time?.substring(0, 5)}</p>
+              <p className="font-bold text-gray-900">{appointment.scheduled_time?.substring(0, 5) || appointment.startTime?.substring(0, 5) || '-'}</p>
             </div>
             <div>
               <p className="text-xs text-gray-600 font-medium">Profissional</p>
-              <p className="font-bold text-gray-900">{appointment.professionals?.name}</p>
+              <p className="font-bold text-gray-900">{appointment.professionals?.name || appointment.professionalName || agendamentoData.professionalId || '-'}</p>
             </div>
             <div>
               <p className="text-xs text-gray-600 font-medium">Serviço</p>
-              <p className="font-bold text-gray-900">{appointment.services?.name}</p>
+              <p className="font-bold text-gray-900">{appointment.services?.name || appointment.serviceName || agendamentoData.serviceId || '-'}</p>
             </div>
             <div>
               <p className="text-xs text-gray-600 font-medium">Convênio</p>
-              <p className="font-bold text-gray-900">{appointment.payers?.name || 'Particular'}</p>
+              <p className="font-bold text-gray-900">{appointment.payers?.name || appointment.payerName || agendamentoData.payerId || 'Particular'}</p>
             </div>
           </div>
         </div>
