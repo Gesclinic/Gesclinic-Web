@@ -171,6 +171,15 @@ function mapToDatabase(payload) {
 export function mapFromDatabase(record) {
   if (!record) return null;
   
+  // 🔍 DEBUG: Log raw data before mapping
+  console.log('📦 [mapFromDatabase] Raw record snake_case:', {
+    patient_id: record.patient_id,
+    professional_id: record.professional_id,
+    service_id: record.service_id,
+    room_id: record.room_id,
+    payer_id: record.payer_id,
+  });
+  
   const mapped = {
     // IDs em camelCase (critical para componentes)
     id: record.id,
@@ -261,10 +270,19 @@ export function mapFromDatabase(record) {
     ...record
   };
   
-  // 🔍 DEBUG: Log critical fields
-  if (mapped.id) {
-    console.log(`🔍 [mapFromDatabase] ID: ${mapped.id} | payerId: ${mapped.payerId} | professionalId: ${mapped.professionalId} | roomId: ${mapped.roomId}`);
-  }
+  // 🔍 DEBUG: Log mapped camelCase data
+  console.log(`✅ [mapFromDatabase] MAPEADO - ID: ${mapped.id}`, {
+    patientId: mapped.patientId,
+    professionalId: mapped.professionalId,
+    serviceId: mapped.serviceId,
+    roomId: mapped.roomId,
+    payerId: mapped.payerId,
+    patientName: mapped.patientName,
+    professionalName: mapped.professionalName,
+    serviceName: mapped.serviceName,
+    roomName: mapped.roomName,
+    payerName: mapped.payerName,
+  });
   
   return mapped;
 }

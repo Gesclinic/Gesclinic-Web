@@ -381,25 +381,44 @@ export default function AtendimentoModal({
   // ✨ CARREGAR DADOS DO APPOINTMENT EXISTENTE PARA A ABA
   useEffect(() => {
     if (isOpen && appointment) {
-      console.log('✅ Carregando dados do appointment existente para aba Dados Agendamento');
+      console.log('✅ [AtendimentoModal] Carregando dados do appointment existente para aba Dados Agendamento');
+      console.log('📊 [AtendimentoModal] Appointment mapeado completo:', {
+        id: appointment.id,
+        patientId: appointment.patientId,
+        professionalId: appointment.professionalId,
+        serviceId: appointment.serviceId,
+        roomId: appointment.roomId,
+        payerId: appointment.payerId,
+        scheduledDate: appointment.date,
+        scheduledTime: appointment.startTime,
+        status: appointment.status,
+      });
       
       // Preencher agendamentoData
       setAgendamentoData({
-        patientId: appointment.patient_id || '',
-        patientName: appointment.patients?.name || appointment.patient_name || '',
-        phone: appointment.patients?.phone || appointment.patient_phone || '',
-        date: appointment.scheduled_date || '',
-        time: appointment.scheduled_time || appointment.start_time?.split('T')[1]?.slice(0, 5) || '',
-        duration: appointment.duration_minutes || appointment.duration || 30,
-        roomId: appointment.room_id || '',
-        professionalId: appointment.professional_id || '',
-        serviceId: appointment.service_id || '',
-        serviceCode: appointment.services?.code || '',
-        payerId: appointment.payer_id || '',
+        patientId: appointment.patientId || '',
+        patientName: appointment.patientName || appointment.patients?.name || '',
+        phone: appointment.patientPhone || appointment.patients?.phone || '',
+        date: appointment.date || '',
+        time: appointment.startTime || appointment.scheduled_time || appointment.start_time?.split('T')[1]?.slice(0, 5) || '',
+        duration: appointment.duration || 30,
+        roomId: appointment.roomId || '',
+        professionalId: appointment.professionalId || '',
+        serviceId: appointment.serviceId || '',
+        serviceCode: appointment.serviceName || appointment.services?.code || '',
+        payerId: appointment.payerId || '',
         value: appointment.value?.toString() || '',
         status: appointment.status || 'scheduled',
         notes: appointment.notes || '',
-        endTime: appointment.end_time || '',
+        endTime: appointment.endTime || '',
+      });
+      
+      console.log('📝 [AtendimentoModal] AgendamentoData atualizado:', {
+        patientId: appointment.patientId,
+        professionalId: appointment.professionalId,
+        serviceId: appointment.serviceId,
+        roomId: appointment.roomId,
+        payerId: appointment.payerId,
       });
 
       // Preencher cadastralData
@@ -422,8 +441,8 @@ export default function AtendimentoModal({
       // Preencher selectedPatient
       if (appointment.patients) {
         setSelectedPatient({
-          patientId: appointment.patient_id,
-          patientName: appointment.patients.name || '',
+          patientId: appointment.patientId,
+          patientName: appointment.patientName || appointment.patients.name || '',
           name: appointment.patients.name || '',
           document_id: appointment.patients.document_id || '',
           phone: appointment.patients.phone || '',
@@ -441,19 +460,20 @@ export default function AtendimentoModal({
       }
 
       // Carregar schedules do profissional selecionado
-      if (appointment.professional_id) {
+      if (appointment.professionalId) {
         (async () => {
           try {
             setLoadingProfessionalSchedules(true);
+            console.log('⏰ [AtendimentoModal] Carregando schedules para professional:', appointment.professionalId);
             const { data: schedules } = await supabase
               .from('professional_schedules')
               .select('*')
-              .eq('professional_id', appointment.professional_id)
+              .eq('professional_id', appointment.professionalId)
               .eq('clinic_id', clinicId);
             setProfessionalSchedules(schedules || []);
-            console.log('✅ Schedules carregados:', schedules?.length);
+            console.log('✅ [AtendimentoModal] Schedules carregados:', schedules?.length);
           } catch (err) {
-            console.warn('⚠️ Erro ao carregar schedules:', err.message);
+            console.warn('⚠️ [AtendimentoModal] Erro ao carregar schedules:', err.message);
           } finally {
             setLoadingProfessionalSchedules(false);
           }
@@ -477,15 +497,16 @@ export default function AtendimentoModal({
       const loadSchedules = async () => {
         try {
           setLoadingProfessionalSchedules(true);
+          console.log('⏰ [AtendimentoModal] Carregando schedules quando profissional muda:', agendamentoData.professionalId);
           const { data: schedules } = await supabase
             .from('professional_schedules')
             .select('*')
             .eq('professional_id', agendamentoData.professionalId)
             .eq('clinic_id', clinicId);
           setProfessionalSchedules(schedules || []);
-          console.log('✅ Schedules do profissional carregados:', schedules?.length);
+          console.log('✅ [AtendimentoModal] Schedules do profissional carregados:', schedules?.length);
         } catch (err) {
-          console.warn('⚠️ Erro ao carregar schedules:', err.message);
+          console.warn('⚠️ [AtendimentoModal] Erro ao carregar schedules:', err.message);
         } finally {
           setLoadingProfessionalSchedules(false);
         }
@@ -499,10 +520,10 @@ export default function AtendimentoModal({
 
   const loadPatientData = async () => {
     try {
-      if (!appointment || !appointment.patient_id) return;
+      if (!appointment || !appointment.patientId) return;
 
       // 🔄 Primeiro, recarregar DATA MAIS RECENTE do appointment do banco
-      console.log('🔄 Carregando dados mais recentes do appointment...');
+      console.log('🔄 [AtendimentoModal] Carregando dados mais recentes do appointment...');
       let appointmentFresh = appointment; // Fallback: usar o appointment original
       const { data: appointmentData, error: appointmentError } = await supabase
         .from('appointments')
@@ -511,12 +532,12 @@ export default function AtendimentoModal({
         .maybeSingle();
 
       if (appointmentError) {
-        console.error('❌ Erro ao carregar appointment:', appointmentError);
+        console.error('❌ [AtendimentoModal] Erro ao carregar appointment:', appointmentError);
       } else if (!appointmentData) {
-        console.warn('⚠️ Dados do appointment não encontrados');
+        console.warn('⚠️ [AtendimentoModal] Dados do appointment não encontrados');
       } else if (appointmentData) {
         appointmentFresh = appointmentData;
-        console.log('✅ Dados frescos carregados:', {
+        console.log('✅ [AtendimentoModal] Dados frescos carregados:', {
           card_number: appointmentFresh.card_number,
           authorization_number: appointmentFresh.authorization_number,
           authorization_expiry: appointmentFresh.authorization_expiry,
@@ -529,17 +550,17 @@ export default function AtendimentoModal({
           notes: appointmentFresh.notes,
         });
       } else {
-        console.warn('⚠️ Usando dados do appointment original (não conseguiu recarregar):', appointmentError?.message);
+        console.warn('⚠️ [AtendimentoModal] Usando dados do appointment original (não conseguiu recarregar):', appointmentError?.message);
       }
 
       const { data, error } = await supabase
         .from('patients')
         .select('*')
-        .eq('id', appointment.patient_id)
+        .eq('id', appointment.patientId)
         .maybeSingle();
 
       if (error) {
-        console.error('❌ Erro ao buscar dados do paciente:', error);
+        console.error('❌ [AtendimentoModal] Erro ao buscar dados do paciente:', error);
         throw error;
       }
 
@@ -874,7 +895,7 @@ export default function AtendimentoModal({
   const isReleasedForProfessional = normalizedAppointmentStatus === SERVICE_STATUSES.AWAITING_PROFESSIONAL;
   const isAppointmentInProgress = normalizedAppointmentStatus === SERVICE_STATUSES.IN_SERVICE;
   const hasClinicalShortcuts = Boolean(
-    appointment?.patient_id &&
+    appointment?.patientId &&
     [SERVICE_STATUSES.AWAITING_PROFESSIONAL, SERVICE_STATUSES.IN_SERVICE, SERVICE_STATUSES.ATTENDED].includes(normalizedAppointmentStatus)
   );
   
@@ -889,13 +910,13 @@ export default function AtendimentoModal({
   };
 
   const handleOpenPatientRecord = () => {
-    if (!appointment?.patient_id) return;
+    if (!appointment?.patientId) return;
 
     onClose();
-    navigate(`/clinica/pacientes/${appointment.patient_id}`, {
+    navigate(`/clinica/pacientes/${appointment.patientId}`, {
       state: {
         appointmentId: appointment.id,
-        appointmentDate: appointment.scheduled_date || null,
+        appointmentDate: appointment.date || null,
         openTab: 'historico',
         fromAgendaClinicalFlow: true,
         canStartAppointment: isReleasedForProfessional,
@@ -1224,8 +1245,8 @@ export default function AtendimentoModal({
         return;
       }
 
-      console.log('📤 Enviando dados cadastrais TISS completos:', {
-        id: appointment.patient_id,
+      console.log('📤 [AtendimentoModal] Enviando dados cadastrais TISS completos:', {
+        id: appointment.patientId,
         name: cadastralData.name,
         document_id: cadastralData.document_id,
         gender: cadastralData.gender,
@@ -1250,12 +1271,12 @@ export default function AtendimentoModal({
           state: cadastralData.state || null,
           zip_code: cadastralData.zip_code || null,
         })
-        .eq('id', appointment.patient_id);
+        .eq('id', appointment.patientId);
 
-      console.log('📥 Resposta do servidor:', { data, error });
+      console.log('📥 [AtendimentoModal] Resposta do servidor:', { data, error });
 
       if (error) {
-        console.error('❌ Detalhes do erro:', error);
+        console.error('❌ [AtendimentoModal] Detalhes do erro:', error);
         throw new Error(error.message || 'Erro ao atualizar paciente');
       }
       
@@ -4371,7 +4392,7 @@ export default function AtendimentoModal({
                 <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
                 <Button
                   type="button"
-                  onClick={() => window.open(`/clinica/pacientes/${appointment?.patient_id}`, '_blank')}
+                  onClick={() => window.open(`/clinica/pacientes/${appointment?.patientId}`, '_blank')}
                   className="bg-gray-600 hover:bg-gray-700 text-white"
                 >
                   <Edit2 size={16} className="mr-2" />
