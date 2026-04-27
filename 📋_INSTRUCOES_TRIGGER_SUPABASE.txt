@@ -1,0 +1,75 @@
+🚀 COMO EXECUTAR O TRIGGER NO SUPABASE
+
+## 📋 PASSO A PASSO
+
+### 1️⃣ Abrir Supabase
+- URL: https://app.supabase.com
+- Selecionar projeto: Gesclinic
+- Menu lateral: SQL Editor
+
+### 2️⃣ Criar Nova Query
+- Clique em: **New Query** (botão azul)
+- Aparecerá uma janela vazia
+
+### 3️⃣ Copiar o SQL
+1. Abra arquivo: **EXECUTE_TRIGGER_v4_AGORA.sql** nesta pasta
+2. Selecione TUDO (Ctrl+A)
+3. Copie (Ctrl+C)
+
+### 4️⃣ Colar no Supabase
+- Cola tudo na janela do SQL Editor (Ctrl+V)
+
+### 5️⃣ Executar
+- Clique no botão **RUN** (canto superior direito, botão azul com ▶️)
+- Espere completar
+
+### 6️⃣ Verificar Resultado
+- Se aparecer ✅ verde = sucesso!
+- Se aparecer erro vermelho = verificar erro e corrigir
+
+---
+
+## ✅ O QUE FOI CORRIGIDO
+
+### Frontend:
+- ✅ Removidas colunas extras da API
+- ✅ Apenas colunas reais: clinic_id, patient_id, professional_id, service_id, room_id, payer_id, scheduled_date, scheduled_time, end_time, status, notes, value
+- ✅ Hard cache refresh (Ctrl+Shift+R) vai limpar qualquer erro
+
+### Backend (Trigger):
+- ✅ Removed SECURITY DEFINER (agora auth.uid() funciona!)
+- ✅ Força clinic_id do usuário autenticado em INSERT
+- ✅ Impede mudança de clinic_id em UPDATE
+- ✅ Índices para performance
+
+---
+
+## 🧪 DEPOIS DE EXECUTAR
+
+1. **Hard Refresh (Importante!)**
+   - Pressione: Ctrl + Shift + R
+
+2. **Testar:**
+   - Ir para: http://localhost:3000/clinica/agenda
+   - Criar novo agendamento
+   - Preencher todos os campos obrigatórios
+   - Clicar "Salvar"
+
+3. **Verificar Console (F12):**
+   - Não deve aparecer: "Sem usuário autenticado"
+   - Deve aparecer: "✅ [createAppointment] Appointment created..."
+
+4. **Se funcionar:**
+   - Parabéns! 🎉 Trigger está ativo!
+   - Agora qualquer agendamento criado terá clinic_id protegido automaticamente
+
+---
+
+## ❓ DÚVIDAS?
+
+Se ainda aparecer erro "Sem usuário autenticado":
+1. Fazer **logout** (menu > Sair)
+2. Fazer **login** novamente
+3. Tentar criar agendamento de novo
+
+Isso garante que a sessão auth está limpa e nova.
