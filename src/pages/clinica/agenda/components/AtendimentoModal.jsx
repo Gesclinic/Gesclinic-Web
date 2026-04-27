@@ -399,15 +399,35 @@ export default function AtendimentoModal({
   useEffect(() => {
     if (isOpen && appointment) {
       console.log('✅ [AtendimentoModal] Carregando dados do appointment existente para aba Dados Agendamento');
-      console.log('📊 [AtendimentoModal] Appointment mapeado completo:', {
-        id: appointment.id,
-        patientId: appointment.patientId || appointment.patient_id,
-        professionalId: appointment.professionalId || appointment.professional_id,
-        serviceId: appointment.serviceId || appointment.service_id,
-        roomId: appointment.roomId || appointment.room_id,
-        payerId: appointment.payerId || appointment.payer_id,
-        date: appointment.date || appointment.scheduled_date,
-        time: appointment.startTime || appointment.scheduled_time,
+      console.log('📊 [AtendimentoModal] OBJETO COMPLETO DO APPOINTMENT:', appointment);
+      
+      // Log detalhado de todos os campos possíveis
+      console.log('🔍 [AtendimentoModal] Campos disponíveis:', {
+        // Datos normalizados camelCase
+        patientId: appointment.patientId,
+        patient_id: appointment.patient_id,
+        professionalId: appointment.professionalId,
+        professional_id: appointment.professional_id,
+        serviceId: appointment.serviceId,
+        service_id: appointment.service_id,
+        roomId: appointment.roomId,
+        room_id: appointment.room_id,
+        payerId: appointment.payerId,
+        payer_id: appointment.payer_id,
+        // Nomes
+        patientName: appointment.patientName,
+        patient_name: appointment.patient_name,
+        patients_name: appointment.patients?.name,
+        // Datas e horas
+        date: appointment.date,
+        scheduled_date: appointment.scheduled_date,
+        startTime: appointment.startTime,
+        scheduled_time: appointment.scheduled_time,
+        endTime: appointment.endTime,
+        end_time: appointment.end_time,
+        // Outros
+        duration: appointment.duration,
+        value: appointment.value,
         status: appointment.status,
       });
       
@@ -415,24 +435,28 @@ export default function AtendimentoModal({
       const appointmentDate = appointment.date || appointment.scheduled_date || '';
       const appointmentTime = appointment.startTime || appointment.scheduled_time || '';
       
-      // Preencher agendamentoData
-      setAgendamentoData({
+      // Preencher agendamentoData com fallbacks abrangentes
+      const finalData = {
         patientId: appointment.patientId || appointment.patient_id || '',
-        patientName: appointment.patientName || appointment.patients?.name || appointment.patient_name || '',
-        phone: appointment.patientPhone || appointment.patients?.phone || appointment.patient_phone || '',
+        patientName: appointment.patientName || appointment.patients?.name || appointment.patient_name || appointment.lead_name || '',
+        phone: appointment.patientPhone || appointment.patients?.phone || appointment.patient_phone || appointment.patient_mobile || appointment.celular || appointment.phone || '',
         date: appointmentDate,
         time: appointmentTime,
         duration: appointment.duration || 30,
         roomId: appointment.roomId || appointment.room_id || '',
         professionalId: appointment.professionalId || appointment.professional_id || '',
         serviceId: appointment.serviceId || appointment.service_id || '',
-        serviceCode: appointment.serviceName || appointment.services?.code || appointment.service_name || appointment.serviceName || '',
-        payerId: appointment.payerId || appointment.payer_id || '',
-        value: appointment.value?.toString() || '',
+        // Para serviceCode, procurar em múltiplas fontes
+        serviceCode: appointment.serviceCode || appointment.services?.code || appointment.service_code || appointment.service?.code || appointment.codigo || appointment.code || '',
+        payerId: appointment.payerId || appointment.payer_id || appointment.convenio_id || '',
+        value: appointment.value?.toString() || appointment.valor?.toString() || '',
         status: appointment.status || 'scheduled',
-        notes: appointment.notes || '',
+        notes: appointment.notes || appointment.observacao || '',
         endTime: appointment.endTime || appointment.end_time || '',
-      });
+      };
+      
+      console.log('📝 [AtendimentoModal] Final agendamentoData:', finalData);
+      setAgendamentoData(finalData);
       
       console.log('📝 [AtendimentoModal] AgendamentoData atualizado:', {
         patientId: appointment.patientId || appointment.patient_id,
