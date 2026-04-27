@@ -1746,15 +1746,19 @@ export default function AppointmentUnitedModal({
    * Garante que apenas campos editáveis sejam alterados
    * @param {Object} sourceData - formData do hook (snake_case)
    * @param {Object} originalData - dados originais do banco (para campos preservados)
+   * @param {String} clinicId - ID da clínica (essencial)
    * @returns {Object} Payload pronto para Supabase
    */
-  const buildPayload = (sourceData, originalData = {}) => {
+  const buildPayload = (sourceData, originalData = {}, clinicId) => {
     const payload = {};
 
     // Apenas copiar campos editáveis
     editableFields.forEach(field => {
       payload[field] = sourceData[field];
     });
+
+    // 🔥 ESSENCIAL: clinic_id DEVE estar no payload
+    payload.clinic_id = clinicId;
 
     // Adicionar timestamp
     payload.updated_at = new Date().toISOString();
@@ -1792,6 +1796,14 @@ export default function AppointmentUnitedModal({
       });
       
       console.log('💾 [SAVE INITIATED]', { mode, appointmentId: appointment?.id, currentStatus: agendamentoData.status });
+      
+      // 🏥 GARANTIR clinic_id ANTES DE QUALQUER OPERACAO
+      const clinicId = currentClinic?.id || session?.user?.clinic_id;
+      console.log('🏥 clinic_id extraído:', clinicId);
+      
+      if (!clinicId) {
+        throw new Error('clinic_id nao encontrado');
+      }
       
       let appointmentId = appointment?.id;
       let patientId = appointment?.patient_id;
