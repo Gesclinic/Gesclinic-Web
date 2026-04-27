@@ -1732,38 +1732,33 @@ export default function AppointmentUnitedModal({
       else if (mode === 'edit' && appointmentId) {
         console.log('💾 Atualizando agendamento...', { id: appointmentId });
         
-        const updateData = {
-          patient_id: agendamentoData.patientId || null,
-          status: agendamentoData.status,
+        // 🔧 FUNÇÃO AUXILIAR: Calcular end_time baseado na hora inicial e duração
+        const calcularEndTime = (startTime, durationMinutes = 30) => {
+          if (!startTime) return null;
+          const startMinutes = timeToMinutes(startTime);
+          const endMinutes = startMinutes + (durationMinutes || 30);
+          return minutesToTime(endMinutes);
+        };
+        
+        const payload = {
           scheduled_date: agendamentoData.date,
           scheduled_time: agendamentoData.time,
-          duration: agendamentoData.duration,
+          end_time: calcularEndTime(agendamentoData.time, agendamentoData.duration),
+          
+          patient_id: agendamentoData.patientId || null,
           professional_id: agendamentoData.professionalId || null,
           service_id: agendamentoData.serviceId || null,
+          
           payer_id: agendamentoData.payerId || null,
           room_id: agendamentoData.roomId || null,
-          value: agendamentoData.value ? parseFloat(agendamentoData.value) : null,
-          discount: pagamentoData.discount ? parseFloat(pagamentoData.discount) : 0,
-          notes: agendamentoData.notes,
-          payment_method: pagamentoData.payment_method || null,
-          convenio_id: faturamentoData?.convenio_id || null,
-          plano_contas_id: faturamentoData?.plano_contas_id || pagamentoData?.plano_contas_id || null,
-          // 📋 DADOS DE LIBERAÇÃO
-          card_number: liberacaoData.card_number || null,
-          authorization_number: liberacaoData.auth_number || null,
-          authorization_expiry: liberacaoData.auth_expiry || null,
-          authorization_verified: liberacaoData.authorized === true,
+          
+          status: agendamentoData.status,
+          notes: agendamentoData.notes || null,
         };
-
-        // Normalizar strings vazias em null para campos UUID
         
+        console.log("🚀 PAYLOAD FINAL:", payload);
 
-        // ⏰ Só incluir end_time se estiver preenchido
-        if (agendamentoData.endTime?.trim()) {
-          updateData.end_time = agendamentoData.endTime;
-        }
-
-        console.log('💾 [DEBUG] UpdateData enviado para API:', JSON.stringify(updateData, null, 2));
+        const updateData = payload;
         
         const result = await updateAppointment(appointmentId, updateData);
         
