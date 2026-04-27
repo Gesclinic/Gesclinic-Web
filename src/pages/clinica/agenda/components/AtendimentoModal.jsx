@@ -401,51 +401,57 @@ export default function AtendimentoModal({
       console.log('✅ [AtendimentoModal] Carregando dados do appointment existente para aba Dados Agendamento');
       console.log('📊 [AtendimentoModal] Appointment mapeado completo:', {
         id: appointment.id,
-        patientId: appointment.patientId,
-        professionalId: appointment.professionalId,
-        serviceId: appointment.serviceId,
-        roomId: appointment.roomId,
-        payerId: appointment.payerId,
-        scheduledDate: appointment.date,
-        scheduledTime: appointment.startTime,
+        patientId: appointment.patientId || appointment.patient_id,
+        professionalId: appointment.professionalId || appointment.professional_id,
+        serviceId: appointment.serviceId || appointment.service_id,
+        roomId: appointment.roomId || appointment.room_id,
+        payerId: appointment.payerId || appointment.payer_id,
+        date: appointment.date || appointment.scheduled_date,
+        time: appointment.startTime || appointment.scheduled_time,
         status: appointment.status,
       });
       
+      // Garantir que os campos estão mapeados corretamente (normalizá-los se necessário)
+      const appointmentDate = appointment.date || appointment.scheduled_date || '';
+      const appointmentTime = appointment.startTime || appointment.scheduled_time || '';
+      
       // Preencher agendamentoData
       setAgendamentoData({
-        patientId: appointment.patientId || '',
-        patientName: appointment.patientName || appointment.patients?.name || '',
-        phone: appointment.patientPhone || appointment.patients?.phone || '',
-        date: appointment.date || '',
-        time: appointment.startTime || appointment.scheduled_time || appointment.start_time?.split('T')[1]?.slice(0, 5) || '',
+        patientId: appointment.patientId || appointment.patient_id || '',
+        patientName: appointment.patientName || appointment.patients?.name || appointment.patient_name || '',
+        phone: appointment.patientPhone || appointment.patients?.phone || appointment.patient_phone || '',
+        date: appointmentDate,
+        time: appointmentTime,
         duration: appointment.duration || 30,
-        roomId: appointment.roomId || '',
-        professionalId: appointment.professionalId || '',
-        serviceId: appointment.serviceId || '',
-        serviceCode: appointment.serviceName || appointment.services?.code || '',
-        payerId: appointment.payerId || '',
+        roomId: appointment.roomId || appointment.room_id || '',
+        professionalId: appointment.professionalId || appointment.professional_id || '',
+        serviceId: appointment.serviceId || appointment.service_id || '',
+        serviceCode: appointment.serviceName || appointment.services?.code || appointment.service_name || appointment.serviceName || '',
+        payerId: appointment.payerId || appointment.payer_id || '',
         value: appointment.value?.toString() || '',
         status: appointment.status || 'scheduled',
         notes: appointment.notes || '',
-        endTime: appointment.endTime || '',
+        endTime: appointment.endTime || appointment.end_time || '',
       });
       
       console.log('📝 [AtendimentoModal] AgendamentoData atualizado:', {
-        patientId: appointment.patientId,
-        professionalId: appointment.professionalId,
-        serviceId: appointment.serviceId,
-        roomId: appointment.roomId,
-        payerId: appointment.payerId,
+        patientId: appointment.patientId || appointment.patient_id,
+        professionalId: appointment.professionalId || appointment.professional_id,
+        serviceId: appointment.serviceId || appointment.service_id,
+        roomId: appointment.roomId || appointment.room_id,
+        payerId: appointment.payerId || appointment.payer_id,
+        date: appointmentDate,
+        time: appointmentTime,
       });
 
       // Preencher cadastralData
       setCadastralData({
-        name: appointment.patients?.name || '',
-        document_id: appointment.patients?.document_id || '',
+        name: appointment.patients?.name || appointment.patientName || appointment.patient_name || '',
+        document_id: appointment.patients?.document_id || appointment.patientCpf || appointment.patient_cpf || '',
         birthdate: appointment.patients?.birthdate || '',
         gender: appointment.patients?.gender || '',
-        phone: appointment.patients?.phone || '',
-        cell_phone: appointment.patients?.cell_phone || '',
+        phone: appointment.patients?.phone || appointment.patientPhone || appointment.patient_phone || '',
+        cell_phone: appointment.patients?.cell_phone || appointment.patientMobile || appointment.patient_mobile || '',
         email: appointment.patients?.email || '',
         street: appointment.patients?.street || '',
         number: appointment.patients?.number || '',
