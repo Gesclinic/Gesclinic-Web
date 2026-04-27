@@ -2,26 +2,23 @@
 export async function atualizarAgendamento(agendamentoId, payload) {
   const {
     date, startTime, endTime, pacienteId,
-    profissionalId, servicoId, salaId, convenioId, planoId, status,
-    observacoes, observacoesInternas
+    profissionalId, servicoId, salaId, convenioId, status,
+    observacoes
   } = payload;
   console.log('[atualizarAgendamento] payload:', payload);
-  const start_time = `${date}T${startTime}`;
-  const end_time = `${date}T${endTime}`;
   const { error } = await supabase
     .from('appointments')
     .update({
-      start_time,
-      end_time,
+      scheduled_date: date,
+      scheduled_time: startTime,
+      end_time: endTime,
       patient_id: pacienteId,
       professional_id: profissionalId || null,
       service_id: servicoId || null,
       room_id: salaId || null,
       payer_id: convenioId !== '' ? convenioId : null,
-      plan_id: planoId !== '' ? planoId : null,
       status,
       notes: observacoes || null,
-      internal_notes: observacoesInternas || null,
     })
     .eq('id', agendamentoId);
   console.log('[atualizarAgendamento] resultado:', { error });
@@ -113,22 +110,20 @@ export async function criarAgendamento(payload) {
   // Monta objeto para tabela appointments
   const {
     clinicId, date, startTime, endTime, pacienteId,
-    profissionalId, servicoId, salaId, convenioId, planoId, status, observacoes
+    profissionalId, servicoId, salaId, convenioId, status, observacoes
   } = payload;
-  const start_time = `${date}T${startTime}`;
-  const end_time = `${date}T${endTime}`;
   const { error } = await supabase
     .from('appointments')
     .insert([{
       clinic_id: clinicId,
-      start_time,
-      end_time,
+      scheduled_date: date,
+      scheduled_time: startTime,
+      end_time: endTime,
       patient_id: pacienteId,
       professional_id: profissionalId || null,
       service_id: servicoId || null,
       room_id: salaId || null,
       payer_id: convenioId || null,
-      plan_id: planoId || null,
       status,
       notes: observacoes || null,
     }]);
@@ -155,19 +150,19 @@ export async function listarAgenda({ clinicId, date }) {
     .from('appointments')
     .select(`
       id,
-      start_time,
+      scheduled_date,
+      scheduled_time,
       end_time,
       status,
       patient:patient_id (*),
       professional:professional_id (*),
       service:service_id (*),
       room:room_id (*),
-      payer:payer_id (*),
-      plan:plan_id (*)
+      payer:payer_id (*)
     `)
     .eq('clinic_id', clinicId)
-    .gte('start_time', start)
-    .lte('start_time', end);
+    .gte('scheduled_date', start)
+    .lte('scheduled_date', end);
 
   // DEBUG: logar resultado para diagnóstico
   console.log('[listarAgenda] params:', { clinicId, date, start, end });
