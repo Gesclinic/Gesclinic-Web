@@ -2516,19 +2516,30 @@ export default function AppointmentUnitedModal({
                       )}
                     </div>
                     <div>
-                      <Label>🕐 Hora * (Atual: {agendamentoData.time})</Label>
+                      <Label>🕐 Hora * (Atual: {agendamentoData.time || formData.scheduled_time})</Label>
                       <Input
                         type="time"
-                        value={agendamentoData.time || ''}
+                        value={agendamentoData.time || formData.scheduled_time || ''}
                         onChange={(e) => {
+                          const newValue = e.target.value;
                           console.log('🔴 [TIME INPUT] onChange disparado!');
-                          console.log('   e.target.value:', e.target.value);
-                          console.log('   typeof:', typeof e.target.value);
+                          console.log('   e.target.value:', newValue);
+                          console.log('   typeof:', typeof newValue);
+                          
+                          // Atualizar AMBOS os estados SIMULTANEAMENTE para garantir sincronização
+                          updateAgendamentoField('time', newValue);
+                          setFormData(prev => {
+                            const updated = { ...prev, scheduled_time: newValue };
+                            console.log('   ✅ formData.scheduled_time agora é:', updated.scheduled_time);
+                            return updated;
+                          });
+                        }}
+                        onBlur={(e) => {
+                          console.log('🔵 [TIME INPUT] onBlur - Valor final:', e.target.value);
+                          // Garantir que ambos os estados têm o valor final
                           updateAgendamentoField('time', e.target.value);
-                          // ETAPA 6: Sincronizar com formData
                           setFormData(prev => ({ ...prev, scheduled_time: e.target.value }));
                         }}
-                        onBlur={(e) => console.log('🔵 [TIME INPUT] onBlur - Valor final:', e.target.value)}
                       />
                     </div>
                   </div>
