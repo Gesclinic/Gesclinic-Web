@@ -2028,6 +2028,25 @@ export default function AppointmentUnitedModal({
 
         console.log('💾 [UPDATE] Iniciando atualização do agendamento', { id: appointmentId });
         console.log('🔍 [UPDATE] formData:', formData);
+        console.log('🔍 [UPDATE] agendamentoData:', agendamentoData);
+        console.log('🔍 [UPDATE] appointment (original):', appointment);
+        
+        // 🔴 DEBUG: Verificar se formData.scheduled_time tem valor
+        console.log('🔴 [DEBUG] formData.scheduled_time:', {
+          valor: formData.scheduled_time,
+          type: typeof formData.scheduled_time,
+          eVazio: !formData.scheduled_time,
+        });
+        console.log('🔴 [DEBUG] agendamentoData.time:', {
+          valor: agendamentoData.time,
+          type: typeof agendamentoData.time,
+          eVazio: !agendamentoData.time,
+        });
+        console.log('🔴 [DEBUG] appointment?.scheduled_time (original):', {
+          valor: appointment?.scheduled_time,
+          type: typeof appointment?.scheduled_time,
+          eVazio: !appointment?.scheduled_time,
+        });
         
         // 🔧 FUNÇÃO AUXILIAR: Calcular end_time baseado na hora inicial e duração
         const calcularEndTime = (startTime, durationMinutes = 30) => {
@@ -2038,6 +2057,32 @@ export default function AppointmentUnitedModal({
         };
         
         // ✅ Construir payload seguro usando formData + dados críticos
+        // 🔴 FALLBACK TRIPLO: formData > agendamentoData > appointment (original)
+        const timeToSave = formData.scheduled_time || agendamentoData.time || appointment?.scheduled_time;
+        const dateToSave = formData.scheduled_date || agendamentoData.date || appointment?.scheduled_date;
+        
+        console.log('🔴 [FALLBACK] timeToSave:', {
+          formData: formData.scheduled_time,
+          agendamentoData: agendamentoData.time,
+          original: appointment?.scheduled_time,
+          final: timeToSave,
+        });
+        console.log('🔴 [FALLBACK] dateToSave:', {
+          formData: formData.scheduled_date,
+          agendamentoData: agendamentoData.date,
+          original: appointment?.scheduled_date,
+          final: dateToSave,
+        });
+        
+        // 🚨 PROTEÇÃO: Se AINDA estiver vazio, algo está muito errado!
+        if (!timeToSave || !dateToSave) {
+          console.error('❌ [CRITICAL] timeToSave ou dateToSave vazio mesmo com fallbacks!', {
+            timeToSave,
+            dateToSave,
+          });
+          throw new Error('ERRO CRÍTICO: Data ou hora não puderam ser determinadas. Tente recarregar a página.');
+        }
+        
         const payload = {
           // 🔧 Campos do formulário (editáveis - de formData)
           patient_id: formData.patient_id || null,
@@ -2045,14 +2090,14 @@ export default function AppointmentUnitedModal({
           service_id: formData.service_id || null,
           payer_id: formData.payer_id || null,
           room_id: formData.room_id || null,
-          scheduled_date: formData.scheduled_date || null,
-          scheduled_time: formData.scheduled_time || null,
+          scheduled_date: dateToSave || null,
+          scheduled_time: timeToSave || null,
           value: formData.value ? parseFloat(formData.value) : null,
           status: formData.status || 'scheduled',
           notes: formData.notes || null,
           
           // 🔐 Campos críticos (mantidos do agendamentoData / pagamentoData)
-          end_time: calcularEndTime(formData.scheduled_time, agendamentoData.duration),
+          end_time: calcularEndTime(timeToSave, agendamentoData.duration),
           duration: agendamentoData.duration || 30,
           discount: pagamentoData.discount ? parseFloat(pagamentoData.discount) : 0,
           discount_reason: agendamentoData.discount_reason || null,
@@ -2063,7 +2108,7 @@ export default function AppointmentUnitedModal({
           updated_at: new Date().toISOString(),
         };
 
-        console.log('📦 [UPDATE] Payload pronto:', {
+        console.log('📦 [UPDATE] Payload FINAL pronto:', {
           patient_id: payload.patient_id,
           professional_id: payload.professional_id,
           service_id: payload.service_id,
@@ -2071,6 +2116,8 @@ export default function AppointmentUnitedModal({
           room_id: payload.room_id,
           scheduled_date: payload.scheduled_date,
           scheduled_time: payload.scheduled_time,
+          timeToSave: timeToSave,
+          dateToSave: dateToSave,
           value: payload.value,
         });
 
