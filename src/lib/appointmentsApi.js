@@ -628,8 +628,15 @@ export async function createAppointment(payload) {
 
 
 export async function updateAppointment(id, payload) {
+  console.log('🔴🔴🔴 [updateAppointment] INICIANDO UPDATE');
+  console.log('   ID:', id);
+  console.log('   Payload recebido:', JSON.stringify(payload, null, 2));
+  
   const data = mapToDatabase(payload);
+  
+  console.log('   Data após mapToDatabase:', JSON.stringify(data, null, 2));
 
+  console.log('📤 [updateAppointment] Enviando UPDATE para Supabase...');
   const { data: result, error } = await supabase
     .from("appointments")
     .update(data)
@@ -644,14 +651,25 @@ export async function updateAppointment(id, payload) {
     `);
 
   if (error) {
-    console.error('❌ [updateAppointment] Supabase error:', error);
+    console.error('❌ [updateAppointment] SUPABASE ERROR:', {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+      fullError: error,
+    });
     throw error;
   }
 
+  console.log('✅ [updateAppointment] UPDATE executado com sucesso!');
+  console.log('   Result length:', result?.length);
+  console.log('   Result:', result);
+
   // ✅ UPDATE was successful even if .select() returns empty (RLS might block)
   if (result && result.length > 0) {
-    console.log('✅ [updateAppointment] Appointment updated com relacionamentos:', {
+    console.log('✅ [updateAppointment] Dados retornados:', {
       appointmentId: result[0]?.id,
+      scheduled_time: result[0]?.scheduled_time,
       patientName: result[0]?.patients?.name,
       professionalName: result[0]?.professionals?.name,
       serviceName: result[0]?.services?.name,
@@ -662,7 +680,8 @@ export async function updateAppointment(id, payload) {
   }
 
   // If no data returned, still consider it a success but log warning
-  console.warn('⚠️ [updateAppointment] UPDATE executed but no data returned (possible RLS filtering)');
+  console.warn('⚠️ [updateAppointment] UPDATE executado mas sem dados retornados (possível RLS)');
+  console.warn('   Retornando fallback com payload original:', payload);
   return { id, ...mapFromDatabase(payload) }; // Return what we sent as fallback
 }
 
