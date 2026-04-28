@@ -906,6 +906,25 @@ export default function AppointmentUnitedModal({
     }
   }, [isOpen, mode, finalAppointment?.id]);
 
+  // 🔄 SYNC: Sincronizar agendamentoData com formData quando formData mudar
+  useEffect(() => {
+    console.log('🔄 [SYNC] Sincronizando agendamentoData com formData');
+    setAgendamentoData(prev => ({
+      ...prev,
+      date: formData.scheduled_date || '',
+      time: formData.scheduled_time || '',
+      professionalId: formData.professional_id || '',
+      serviceId: formData.service_id || '',
+      payerId: formData.payer_id || '',
+      roomId: formData.room_id || '',
+      patientId: formData.patient_id || '',
+      value: formData.value || '0.00',
+      notes: formData.notes || '',
+      status: formData.status || 'scheduled',
+      duration: formData.duration || 30,
+    }));
+  }, [formData.scheduled_date, formData.scheduled_time, formData.professional_id, formData.service_id, formData.payer_id, formData.room_id, formData.patient_id, formData.value, formData.notes, formData.status, formData.duration]);
+
   // �💰 AUTO-FETCH: Buscar valor quando profissional, serviço ou convênio mudar
   // OU quando o valor está vazio/zero (apenas quando há service)
   useEffect(() => {
