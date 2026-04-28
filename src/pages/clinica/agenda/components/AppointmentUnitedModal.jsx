@@ -1563,11 +1563,17 @@ export default function AppointmentUnitedModal({
         ? (pagamentoData?.plano_contas_id || null)
         : (faturamentoData?.plano_contas_id || null);
 
+      // ✅ FIX RACE CONDITION: Capturar hora diretamente do DOM input
+      // Em vez de usar agendamentoData.time (que pode estar atrasada)
+      const timeInputElement = document.querySelector('input[type="time"]');
+      const finalScheduledTime = timeInputElement?.value || agendamentoData.time || '';
+      console.log('✅ [FIX HORA] Usando finalScheduledTime do DOM:', finalScheduledTime);
+
       const updateData = {
         patient_id: agendamentoData.patientId || null,
         status: agendamentoData.status,
         scheduled_date: agendamentoData.date,
-        scheduled_time: agendamentoData.time,
+        scheduled_time: finalScheduledTime,
         duration: agendamentoData.duration,
         professional_id: agendamentoData.professionalId || null,
         service_id: agendamentoData.serviceId || null,
@@ -2020,8 +2026,20 @@ export default function AppointmentUnitedModal({
           finalPatientId = newPatient.id;
         }
 
+        // ✅ FIX RACE CONDITION para CREATE: Capturar hora do DOM
+        const timeInputForCreate = document.querySelector('input[type="time"]');
+        const finalTimeForCreate = timeInputForCreate?.value || formData.scheduled_time || '';
+        
+        // Atualizar formData com o tempo correto do DOM
+        const formDataWithDOMTime = {
+          ...formData,
+          scheduled_time: finalTimeForCreate,
+        };
+        
+        console.log('✅ [CREATE FIX HORA] Usando tempo do DOM:', finalTimeForCreate);
+
         // ✅ Construir payload limpo usando buildCreatePayload
-        const newAppointmentData = buildCreatePayload(formData, finalPatientId);
+        const newAppointmentData = buildCreatePayload(formDataWithDOMTime, finalPatientId);
 
         console.log('📦 [CREATE] Payload enviando:', JSON.stringify(newAppointmentData, null, 2));
 
