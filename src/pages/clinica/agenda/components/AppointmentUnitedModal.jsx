@@ -906,26 +906,27 @@ export default function AppointmentUnitedModal({
     }
   }, [isOpen, mode, finalAppointment?.id]);
 
-  // 🔄 SYNC: Sincronizar agendamentoData com formData (apenas quando dados críticos mudam)
+  // 🔄 SYNC: Sincronizar agendamentoData com formData (sem guard condition para evitar race conditions)
   useEffect(() => {
-    // Apenas sincronizar se formData tem dados (não está vazio)
-    if (formData.scheduled_date || formData.professional_id || formData.service_id) {
-      console.log('🔄 [SYNC] Sincronizando agendamentoData com formData');
-      setAgendamentoData(prev => ({
-        ...prev,
-        date: formData.scheduled_date || prev.date || '',
-        time: formData.scheduled_time || prev.time || '',
-        professionalId: formData.professional_id || prev.professionalId || '',
-        serviceId: formData.service_id || prev.serviceId || '',
-        payerId: formData.payer_id || prev.payerId || '',
-        roomId: formData.room_id || prev.roomId || '',
-        patientId: formData.patient_id || prev.patientId || '',
-        value: formData.value || prev.value || '0.00',
-        notes: formData.notes || prev.notes || '',
-        status: formData.status || prev.status || 'scheduled',
-        duration: formData.duration || prev.duration || 30,
-      }));
-    }
+    console.log('🔄 [SYNC] Sincronizando agendamentoData com formData', {
+      scheduled_date: formData.scheduled_date,
+      professional_id: formData.professional_id,
+      service_id: formData.service_id,
+    });
+    setAgendamentoData(prev => ({
+      ...prev,
+      date: formData.scheduled_date || prev.date || '',
+      time: formData.scheduled_time || prev.time || '',
+      professionalId: formData.professional_id || prev.professionalId || '',
+      serviceId: formData.service_id || prev.serviceId || '',
+      payerId: formData.payer_id || prev.payerId || '',
+      roomId: formData.room_id || prev.roomId || '',
+      patientId: formData.patient_id || prev.patientId || '',
+      value: formData.value || prev.value || '0.00',
+      notes: formData.notes || prev.notes || '',
+      status: formData.status || prev.status || 'scheduled',
+      duration: formData.duration || prev.duration || 30,
+    }));
   }, [formData]);
 
   // �💰 AUTO-FETCH: Buscar valor quando profissional, serviço ou convênio mudar
