@@ -906,24 +906,27 @@ export default function AppointmentUnitedModal({
     }
   }, [isOpen, mode, finalAppointment?.id]);
 
-  // 🔄 SYNC: Sincronizar agendamentoData com formData quando formData mudar
+  // 🔄 SYNC: Sincronizar agendamentoData com formData (apenas quando dados críticos mudam)
   useEffect(() => {
-    console.log('🔄 [SYNC] Sincronizando agendamentoData com formData');
-    setAgendamentoData(prev => ({
-      ...prev,
-      date: formData.scheduled_date || '',
-      time: formData.scheduled_time || '',
-      professionalId: formData.professional_id || '',
-      serviceId: formData.service_id || '',
-      payerId: formData.payer_id || '',
-      roomId: formData.room_id || '',
-      patientId: formData.patient_id || '',
-      value: formData.value || '0.00',
-      notes: formData.notes || '',
-      status: formData.status || 'scheduled',
-      duration: formData.duration || 30,
-    }));
-  }, [formData.scheduled_date, formData.scheduled_time, formData.professional_id, formData.service_id, formData.payer_id, formData.room_id, formData.patient_id, formData.value, formData.notes, formData.status, formData.duration]);
+    // Apenas sincronizar se formData tem dados (não está vazio)
+    if (formData.scheduled_date || formData.professional_id || formData.service_id) {
+      console.log('🔄 [SYNC] Sincronizando agendamentoData com formData');
+      setAgendamentoData(prev => ({
+        ...prev,
+        date: formData.scheduled_date || prev.date || '',
+        time: formData.scheduled_time || prev.time || '',
+        professionalId: formData.professional_id || prev.professionalId || '',
+        serviceId: formData.service_id || prev.serviceId || '',
+        payerId: formData.payer_id || prev.payerId || '',
+        roomId: formData.room_id || prev.roomId || '',
+        patientId: formData.patient_id || prev.patientId || '',
+        value: formData.value || prev.value || '0.00',
+        notes: formData.notes || prev.notes || '',
+        status: formData.status || prev.status || 'scheduled',
+        duration: formData.duration || prev.duration || 30,
+      }));
+    }
+  }, [formData]);
 
   // �💰 AUTO-FETCH: Buscar valor quando profissional, serviço ou convênio mudar
   // OU quando o valor está vazio/zero (apenas quando há service)
