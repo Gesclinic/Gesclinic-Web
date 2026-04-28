@@ -1590,6 +1590,12 @@ export default function AppointmentUnitedModal({
         authorization_verified: liberacaoData.authorized === true,
       };
 
+      console.log('🔥🔥🔥 [CRÍTICO] VERIFICAÇÃO DE HORA ANTES DO UPDATE 🔥🔥🔥');
+      console.log('   agendamentoData.time:', agendamentoData.time);
+      console.log('   updateData.scheduled_time:', updateData.scheduled_time);
+      console.log('   Hora está sendo enviada? ', Boolean(updateData.scheduled_time));
+      console.log('🔥🔥🔥 FIM DA VERIFICAÇÃO 🔥🔥🔥');
+
       console.log('   updateData a enviar:', JSON.stringify(updateData, null, 2));
       
       // � Normalizar strings vazias em null para campos UUID
@@ -1960,6 +1966,12 @@ export default function AppointmentUnitedModal({
         scheduled_time: agendamentoData.time,
         value: agendamentoData.value,
       });
+      
+      // 🔴 CAPTURA SÍNCRONA DO INPUT TIME - EVITAR RACE CONDITION
+      const timeInputElement = document.querySelector('input[type="time"]');
+      const timeFromDOM = timeInputElement?.value || '';
+      console.log('🔴🔴🔴 [SYNC CAPTURE] Valor time do DOM:', timeFromDOM, 'vs agendamentoData:', agendamentoData.time);
+      
       console.log('═══════════════════════════════════════════════');
 
       // �🚨 DEBUG ANTES DO SAVE
@@ -2522,20 +2534,27 @@ export default function AppointmentUnitedModal({
                         value={agendamentoData.time || formData.scheduled_time || ''}
                         onChange={(e) => {
                           const newValue = e.target.value;
-                          console.log('🔴 [TIME INPUT] onChange disparado!');
-                          console.log('   e.target.value:', newValue);
-                          console.log('   typeof:', typeof newValue);
+                          console.log('═══════════════════════════════════════════════════════════════');
+                          console.log('🔴 [TIME INPUT onChange] *** MUDANÇA DE HORA DETECTADA ***');
+                          console.log('═══════════════════════════════════════════════════════════════');
+                          console.log('   INPUT VALUE NOVO:', newValue);
+                          console.log('   ANTERIOR agendamentoData.time:', agendamentoData.time);
+                          console.log('   ANTERIOR formData.scheduled_time:', formData.scheduled_time);
                           
                           // Atualizar AMBOS os estados SIMULTANEAMENTE para garantir sincronização
                           updateAgendamentoField('time', newValue);
+                          console.log('   ✅ updateAgendamentoField("time", ' + newValue + ') CHAMADO');
+                          
                           setFormData(prev => {
                             const updated = { ...prev, scheduled_time: newValue };
-                            console.log('   ✅ formData.scheduled_time agora é:', updated.scheduled_time);
+                            console.log('   ✅ formData.scheduled_time ATUALIZADO PARA:', updated.scheduled_time);
+                            console.log('   NOVO STATE formData:', updated);
                             return updated;
                           });
+                          console.log('═══════════════════════════════════════════════════════════════');
                         }}
                         onBlur={(e) => {
-                          console.log('🔵 [TIME INPUT] onBlur - Valor final:', e.target.value);
+                          console.log('🔵 [TIME INPUT onBlur] Valor final após perder foco:', e.target.value);
                           // Garantir que ambos os estados têm o valor final
                           updateAgendamentoField('time', e.target.value);
                           setFormData(prev => ({ ...prev, scheduled_time: e.target.value }));

@@ -664,6 +664,7 @@ export async function updateAppointment(id, payload) {
   console.log('✅ [updateAppointment] UPDATE executado com sucesso!');
   console.log('   Result length:', result?.length);
   console.log('   Result:', result);
+  console.log('🔥 [CRITICAL] scheduled_time na resposta:', result?.[0]?.scheduled_time);
 
   // ✅ UPDATE was successful even if .select() returns empty (RLS might block)
   if (result && result.length > 0) {
@@ -681,6 +682,7 @@ export async function updateAppointment(id, payload) {
 
   // If no data returned, still consider it a success but log warning
   console.warn('⚠️ [updateAppointment] UPDATE executado mas sem dados retornados (possível RLS)');
+  console.warn('   ⚠️⚠️⚠️ POTENCIAL PROBLEMA: RLS bloqueou a SELECT após UPDATE! ⚠️⚠️⚠️');
   console.warn('   Retornando fallback com payload original:', payload);
   return { id, ...mapFromDatabase(payload) }; // Return what we sent as fallback
 }

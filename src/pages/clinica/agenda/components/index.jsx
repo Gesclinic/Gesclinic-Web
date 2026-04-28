@@ -1254,7 +1254,7 @@ export default function AgendaIndex() {
             setModalNovoOpen(false);
             setAppointmentIdToEdit(null);
             setNovoAgendamentoInfo(null);
-            loadAppointments();
+            await loadAppointments();
             return;
           }
           
