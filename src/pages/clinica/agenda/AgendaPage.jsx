@@ -1166,18 +1166,8 @@ export default function AgendaPage() {
     }
   }, [agendaMode]);
 
-  // Loading states
-  if (loadingClinic || !clinic) {
-    console.log('⏳ [AgendaPage] AINDA EM LOADING:', { loadingClinic, clinic: !!clinic });
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div>
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 text-center">Carregando clínica... (loadingClinic={loadingClinic.toString()}, clinic={!!clinic})</p>
-        </div>
-      </div>
-    );
-  }
+  // ✅ Permite renderizar mesmo carregando (dados virão via hooks)
+  // não precisamos de guard aqui
 
   console.log('✅ [AgendaPage] CARREGADO COM SUCESSO');
 
@@ -1191,19 +1181,13 @@ export default function AgendaPage() {
   console.log('║ clinicId:', clinicId);
   console.log('╚═══════════════════════════════════════════════════════════════╝');
   
-  // 🔒 Guard: Aguardar clinicId estar disponível
-  if (loadingClinic || !clinicId) {
+  // 🔒 Guard: Se ainda não tem clinicId E não está carregando, mostrar erro
+  if (!clinicId && !loadingClinic && !authLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-red-50 to-orange-100">
         <div className="text-center">
-          <div className="mb-4">
-            <div className="inline-block animate-spin">
-              <div className="h-12 w-12 border-4 border-blue-300 border-t-blue-600 rounded-full"></div>
-            </div>
-          </div>
-          <p className="text-lg font-semibold text-gray-700 mb-2">Verificando configuração...</p>
-          <p className="text-sm text-gray-500">Clínica: {clinicId ? '✅ Carregada' : '⏳ Carregando'}</p>
-          <p className="text-sm text-gray-500">Auth: {authLoading ? '⏳ Carregando' : '✅ Pronto'}</p>
+          <p className="text-lg font-semibold text-gray-700 mb-2">❌ Clínica não encontrada</p>
+          <p className="text-sm text-gray-500">Contate o administrador</p>
         </div>
       </div>
     );
