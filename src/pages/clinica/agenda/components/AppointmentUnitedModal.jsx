@@ -1909,6 +1909,12 @@ export default function AppointmentUnitedModal({
   // Handle saving appointment changes
   const handleSaveChanges = async () => {
     try {
+      // Block save if service not available for selected payer
+      if (agendamentoData.serviceId && agendamentoData.payerId && !servicePayerValidation.isValid) {
+        alert('OPERACAO BLOQUEADA\n\nServico nao disponivel para este convenio.\n\nSelecione outro convenio ou servico.');
+        return;
+      }
+
       // � DEBUG ETAPA 6: Verificar formData
       console.log('═══════════════════════════════════════════════');
       console.log('🔧 [ETAPA 6] handleSaveChanges DISPARADO');
