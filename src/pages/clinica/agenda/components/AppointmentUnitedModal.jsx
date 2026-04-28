@@ -906,13 +906,10 @@ export default function AppointmentUnitedModal({
     }
   }, [isOpen, mode, finalAppointment?.id]);
 
-  // 🔄 SYNC: Sincronizar agendamentoData com formData (sem guard condition para evitar race conditions)
+  // 🔄 SYNC: Sincronizar agendamentoData com formData quando mudam dados significativos
+  // Usar apenas campos chave para evitar loops infinitos com price fetching
   useEffect(() => {
-    console.log('🔄 [SYNC] Sincronizando agendamentoData com formData', {
-      scheduled_date: formData.scheduled_date,
-      professional_id: formData.professional_id,
-      service_id: formData.service_id,
-    });
+    console.log('🔄 [SYNC] Sincronizando agendamentoData com formData');
     setAgendamentoData(prev => ({
       ...prev,
       date: formData.scheduled_date || prev.date || '',
@@ -927,7 +924,18 @@ export default function AppointmentUnitedModal({
       status: formData.status || prev.status || 'scheduled',
       duration: formData.duration || prev.duration || 30,
     }));
-  }, [formData]);
+  }, [
+    formData.scheduled_date,
+    formData.scheduled_time,
+    formData.professional_id,
+    formData.service_id,
+    formData.payer_id,
+    formData.room_id,
+    formData.patient_id,
+    formData.notes,
+    formData.status,
+    formData.duration,
+  ]); // Excluir 'value' da dependency para evitar loop com price fetching
 
   // �💰 AUTO-FETCH: Buscar valor quando profissional, serviço ou convênio mudar
   // OU quando o valor está vazio/zero (apenas quando há service)
