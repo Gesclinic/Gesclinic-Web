@@ -721,3 +721,58 @@ export async function deleteAppointment(id) {
     throw err;
   }
 }
+
+
+/**
+ * Valida se um serviço está disponível para um convênio específico
+ * Consulta a tabela service_prices para verificar o mapeamento
+ * @param {string} serviceId - UUID do serviço
+ * @param {string} payerId - UUID do convênio (payer)
+ * @param {string} clinicId - UUID da clínica
+ * @returns {Promise<{available: boolean, price?: number, coPayment?: number}>}
+ */
+export async function validateServicePayerAvailability(serviceId, payerId, clinicId) {
+  if (!serviceId || !payerId || !clinicId) {
+    console.warn('⚠️ [validateServicePayerAvailability] Parâmetros incompletos:', {
+      serviceId: !!serviceId,
+      payerId: !!payerId,
+      clinicId: !!clinicId
+    });
+    return { available: false };
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('service_prices')
+      .select('id, price, co_pay, active')
+      .eq('service_id', serviceId)
+      .eq('payer_id', payerId)
+      .eq('clinic_id', clinicId)
+      .eq('active', true)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      // PGRST116 = no rows found (não é um erro real)
+      console.error('❌ [validateServicePayerAvailability] Erro ao consultar service_prices:', error);
+      return { available: false };
+    }
+
+    const available = !!data;
+    console.log('🔍 [validateServicePayerAvailability] Resultado:', {
+      serviceId,
+      payerId,
+      available,
+      price: data?.price,
+      coPayment: data?.co_pay
+    });
+
+    return {
+      available,
+      price: data?.price,
+      coPayment: data?.co_pay
+    };
+  } catch (err) {
+    console.error('❌ [validateServicePayerAvailability] Erro inesperado:', err);
+    return { available: false };
+  }
+}

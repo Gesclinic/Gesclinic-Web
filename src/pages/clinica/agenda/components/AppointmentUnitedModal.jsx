@@ -20,7 +20,7 @@ import { useClinicContext } from '@/contexts/ClinicContext';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import Calendar from 'react-calendar';
 import { AlertCircle, CalendarDays, ChevronLeft, ChevronRight, Clock3, Send } from 'lucide-react';
-import { createAppointment, updateAppointment, mapFromDatabase } from '@/lib/appointmentsApi';
+import { createAppointment, updateAppointment, mapFromDatabase, validateServicePayerAvailability } from '@/lib/appointmentsApi';
 import { createPatient, updatePatient } from '@/lib/patientsApi';
 import { uploadPatientPhoto } from '@/lib/patientsApi';
 import { PAYMENT_METHOD_CONFIG, defaultPaymentData, validatePaymentData } from '@/lib/paymentMethodsConfig';
@@ -406,6 +406,15 @@ export default function AppointmentUnitedModal({
 
   // Dados de Pagamento (com estrutura completa)
   const [pagamentoData, setPagamentoData] = useState(defaultPaymentData);
+
+  // ✅ Estado de Validação: Serviço x Convênio
+  // Valida se o serviço selecionado está disponível para o convênio escolhido
+  const [servicePayerValidation, setServicePayerValidation] = useState({
+    isValid: true, // true = serviço disponível | false = não disponível
+    checking: false, // em processo de validação
+    price: null, // preço do serviço para o convênio
+    coPayment: null // copagamento
+  });
 
   // 🔍 FUNÇÃO HELPER PARA DETECTAR SE É PAYER "PARTICULAR"
   // Verifica se é particular pelo ID ('particular') OU pelo nome do payer ('Particular')
@@ -2780,6 +2789,36 @@ export default function AppointmentUnitedModal({
                           const serviceCode = selectedService?.code || selectedService?.codigo || selectedService?.service_code || selectedService?.id || '';
                           console.log('💊 [DEBUG] Final serviceCode:', serviceCode);
                           updateAgendamentoField('serviceCode', serviceCode);
+
+                          // ✅ VALIDAR SE ESTE SERVIÇO ESTÁ DISPONÍVEL NO CONVÊNIO SELECIONADO
+                          if (agendamentoData.payerId && value && clinicId) {
+                            (async () => {
+                              setServicePayerValidation(prev => ({ ...prev, checking: true }));
+                              const result = await validateServicePayerAvailability(
+                                value,
+                                agendamentoData.payerId,
+                                clinicId
+                              );
+                              setServicePayerValidation({
+                                isValid: result.available,
+                                checking: false,
+                                price: result.price,
+                                coPayment: result.coPayment
+                              });
+                              
+                              if (!result.available) {
+                                console.warn('⚠️ Serviço não está disponível para este convênio!');
+                              }
+                            })();
+                          } else {
+                            // Reset validation se não houver convênio selecionado
+                            setServicePayerValidation({
+                              isValid: true,
+                              checking: false,
+                              price: null,
+                              coPayment: null
+                            });
+                          }
                         }}
                       >
                         <SelectTrigger>
@@ -2831,6 +2870,28 @@ export default function AppointmentUnitedModal({
                           console.log('   Payer encontrado:', payers?.find(p => p.id === value));
                           updateAgendamentoField('payerId', value);
                           setFormData(prev => ({ ...prev, payer_id: value }));
+
+                          // ✅ VALIDAR SE SERVIÇO ESTÁ DISPONÍVEL NESTE CONVÊNIO
+                          if (agendamentoData.serviceId && value && clinicId) {
+                            (async () => {
+                              setServicePayerValidation(prev => ({ ...prev, checking: true }));
+                              const result = await validateServicePayerAvailability(
+                                agendamentoData.serviceId,
+                                value,
+                                clinicId
+                              );
+                              setServicePayerValidation({
+                                isValid: result.available,
+                                checking: false,
+                                price: result.price,
+                                coPayment: result.coPayment
+                              });
+                              
+                              if (!result.available) {
+                                console.warn('⚠️ Serviço não está disponível para este convênio!');
+                              }
+                            })();
+                          }
                         }}
                       >
                         <SelectTrigger>
@@ -2848,6 +2909,17 @@ export default function AppointmentUnitedModal({
                           ))}
                         </SelectContent>
                       </Select>
+                      {/* ⚠️ AVISO: Serviço não disponível para este convênio */}
+                      {agendamentoData.payerId && agendamentoData.serviceId && !servicePayerValidation.isValid && (
+                        <div className="mt-2 p-2 bg-red-50 border border-red-300 rounded flex items-start gap-2">
+                          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                          <div className="text-sm text-red-700">
+                            <strong>⚠️ Atenção:</strong> Este serviço não está cadastrado na tabela de preços para o convênio "{payers.find(p => p.id === agendamentoData.payerId)?.name}". 
+                            <br />
+                            <span className="text-xs">Você pode prosseguir, mas deverá informar o valor manualmente.</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                     <div>
                       <Label>💰 Valor (R$)</Label>
