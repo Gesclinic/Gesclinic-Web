@@ -1082,6 +1082,7 @@ export default function AgendaIndex() {
             viewMode={viewMode}
             appointments={filteredAppointments}
             clinicId={clinicId}
+            onRefreshAppointments={loadAppointments}
           />
         </div>
       ) : agendaMode === 'sala' ? (
@@ -1243,7 +1244,7 @@ export default function AgendaIndex() {
         professionals={professionals}
         services={services}
         payers={payers}
-        onCreated={(appointmentData) => {
+        onCreated={async (appointmentData) => {
           console.log(' [ModalCriarAgendamento] onCreated CHAMADO');
           console.log(' Dados recebidos:', appointmentData);
           console.log(' Current date state:', date);
@@ -1287,7 +1288,7 @@ export default function AgendaIndex() {
           setAppointmentIdToEdit(null);
           setNovoAgendamentoInfo(null);
           // ✅ RECARREGAR AGENDAMENTOS DO SERVIDOR após salvar/editar
-          loadAppointments();
+          await loadAppointments();
         }}
       />
 

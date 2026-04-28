@@ -81,7 +81,8 @@ const isTimeSlotAvailable = (professionalId, dayOfWeek, timeString, schedules) =
 export default function AgendaPorProfissional({ 
   initialDate = null, 
   appointments = [],
-  clinicId = null
+  clinicId = null,
+  onRefreshAppointments = null
 }) {
   // 🔍 DEBUG: Log incoming props immediately
   console.log(`\n🔍 [AgendaPorProfissional] PROPS RECEBIDOS:`, {
@@ -144,11 +145,16 @@ export default function AgendaPorProfissional({
 
   // ✅ Callback para salvar agendamento
   const handleSaveAppointment = useCallback(async (formData) => {
-    // AppointmentUnitedModal irá chacar isso ao salvar
-    // Aqui você pode adicionar lógica adicional se necessário
+    // Limpar seleção
     setSelectedSlot(null);
     setSelectedSlotData(null);
-  }, []);
+    
+    // 🔄 Recarregar agendamentos após salvar
+    if (onRefreshAppointments) {
+      console.log('🔄 [AgendaPorProfissional] Recarregando agendamentos após save...');
+      await onRefreshAppointments();
+    }
+  }, [onRefreshAppointments]);
 
   // ✅ Carregar dados completos do agendamento quando selectedSlot muda
   useEffect(() => {
