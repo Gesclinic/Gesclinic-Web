@@ -2293,12 +2293,21 @@ export default function AppointmentUnitedModal({
       // 🎉 SUCESSO: Chamar callbacks e fechar
       if (mode === 'edit' || mode === 'new') {
         console.log('📌 Chamando onSuccess...');
-        onSuccess?.();
+        
+        // ✨ FORÇA REFRESCAMENTO IMEDIATO: Aguardar um pouco para garantir que dados estão no DB
+        // Depois chamar o callback externo que deve refrrescar a agenda
+        setTimeout(() => {
+          console.log('⏰ [REFRESH TIMER] Executando onSuccess callback após delay de 500ms...');
+          onSuccess?.();
+        }, 500);
+        
         console.log('📌 Fechando modal...');
         handleCloseModal();
       } else if (mode === 'reception') {
         console.log('📌 Modo recepção: Aguardando ação do usuário...');
-        onSuccess?.();
+        setTimeout(() => {
+          onSuccess?.();
+        }, 300);
       }
       
       return true;
