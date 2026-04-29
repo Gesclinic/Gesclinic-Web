@@ -58,8 +58,19 @@ export default function ModalCriarAgendamento({
   const isModalOpen = open === true ? true : isOpen;
   
   // 📋 PASSO 3: Consolidate appointment from BOTH sources (prop or loaded via ID)
-  // Prioridade: data (passed from parent) > loadedAppointment > appointment
-  const finalAppointment = useMemo(() => data || loadedAppointment || appointment, [data, loadedAppointment, appointment]);
+  // 🚨 IMPORTANTE: Em modo EDIT (appointmentIdToEdit), SEMPRE usar loadedAppointment do banco
+  // Isso garante que os dados mais recentes sejam usados, evitando dados stale do cache
+  // Prioridade: 
+  //   - Em EDIT: loadedAppointment (do banco) ou appointment prop
+  //   - Em NEW: data (passed from parent) > appointment prop
+  const finalAppointment = useMemo(() => {
+    if (appointmentIdToEdit) {
+      // Em modo EDIT, priorizar dados do banco (loadedAppointment)
+      return loadedAppointment || appointment;
+    }
+    // Em modo NEW, priorizar data prop
+    return data || loadedAppointment || appointment;
+  }, [appointmentIdToEdit, data, loadedAppointment, appointment]);
   
   // 🔍 DEBUG: QUAL SOURCE ESTÁ SENDO USADO?
   console.log('📋 [ModalCriarAgendamento] Consolidando appointment:', {
@@ -168,11 +179,23 @@ export default function ModalCriarAgendamento({
   
   // Handler de sucesso que chama o callback correto
   const handleSuccess = (appointmentData) => {
+    console.log('✅ [ModalCriarAgendamento handleSuccess] Agendamento salvo!', {
+      modo: determinedMode,
+      temOnCreated: !!onCreated,
+      temOnEditCompleted: !!onEditCompleted,
+      temOnSuccess: !!onSuccess,
+    });
+    
+    // 🔄 Em modo EDIT, também chamar onCreated para recarregar a agenda
+    // (onCreated é o callback que recarrega a agenda no AgendaIndex)
     if (onCreated) {
+      console.log('   📌 Chamando onCreated (funciona para CREATE e EDIT)');
       onCreated(appointmentData);
     } else if (onEditCompleted) {
+      console.log('   📌 Chamando onEditCompleted');
       onEditCompleted(appointmentData);
     } else if (onSuccess) {
+      console.log('   📌 Chamando onSuccess');
       onSuccess(appointmentData);
     }
     handleClose();
