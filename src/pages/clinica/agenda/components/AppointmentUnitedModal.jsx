@@ -908,8 +908,16 @@ export default function AppointmentUnitedModal({
 
   // 🔄 SYNC: Sincronizar agendamentoData com formData quando mudam dados significativos
   // Usar apenas campos chave para evitar loops infinitos com price fetching
+  // 🚨 IMPORTANTE: Apenas sincronizar em modo NEW/CREATE, não em EDIT (onde formData pode estar vazio)
   useEffect(() => {
-    console.log('🔄 [SYNC] Sincronizando agendamentoData com formData');
+    // ✅ Em modo EDIT ou RECEPTION, NOT sincronizar - pois formData vem vazio do hook
+    // e vai sobrescrever os dados já carregados de finalAppointment
+    if (mode === 'edit' || mode === 'reception') {
+      console.log('🔄 [SYNC] Pulando sincronização - modo:', mode);
+      return;
+    }
+
+    console.log('🔄 [SYNC] Sincronizando agendamentoData com formData (modo:', mode, ')');
     setAgendamentoData(prev => ({
       ...prev,
       date: formData.scheduled_date || prev.date || '',
@@ -925,6 +933,7 @@ export default function AppointmentUnitedModal({
       duration: formData.duration || prev.duration || 30,
     }));
   }, [
+    mode,
     formData.scheduled_date,
     formData.scheduled_time,
     formData.professional_id,
@@ -2061,48 +2070,46 @@ export default function AppointmentUnitedModal({
         console.log('🔍 [UPDATE] agendamentoData:', agendamentoData);
         console.log('🔍 [UPDATE] appointment (original):', appointment);
         
-        // 🔴 DEBUG: Verificar se formData.scheduled_time tem valor
-        console.log('🔴 [DEBUG] formData.scheduled_time:', {
-          valor: formData.scheduled_time,
-          type: typeof formData.scheduled_time,
-          eVazio: !formData.scheduled_time,
-        });
-        console.log('🔴 [DEBUG] agendamentoData.time:', {
-          valor: agendamentoData.time,
-          type: typeof agendamentoData.time,
-          eVazio: !agendamentoData.time,
-        });
-        console.log('🔴 [DEBUG] appointment?.scheduled_time (original):', {
-          valor: appointment?.scheduled_time,
-          type: typeof appointment?.scheduled_time,
-          eVazio: !appointment?.scheduled_time,
-        });
+        // 🔴 ETAPA CRÍTICA: GARANTIR QUE formData ESTÁ SINCRONIZADO COM agendamentoData
+        // Em modo EDIT, agendamentoData tem as mudanças em tempo real do usuário
+        // formData pode estar desatualizado, então sincronizamos antes de salvar
+        console.log('═══════════════════════════════════════════════');
+        console.log('🔄 [PRE-SAVE SYNC] Sincronizando formData com agendamentoData');
+        console.log('═══════════════════════════════════════════════');
         
-        // 🔧 FUNÇÃO AUXILIAR: Calcular end_time baseado na hora inicial e duração
-        const calcularEndTime = (startTime, durationMinutes = 30) => {
-          if (!startTime) return null;
-          const startMinutes = timeToMinutes(startTime);
-          const endMinutes = startMinutes + (durationMinutes || 30);
-          return minutesToTime(endMinutes);
+        // ✅ ATUALIZAR formData COM TODOS OS VALORES DE agendamentoData
+        const syncedFormData = {
+          ...formData,
+          patient_id: agendamentoData.patientId || null,
+          professional_id: agendamentoData.professionalId || null,
+          service_id: agendamentoData.serviceId || null,
+          payer_id: agendamentoData.payerId || null,
+          room_id: agendamentoData.roomId || null,
+          scheduled_date: agendamentoData.date || null,
+          scheduled_time: agendamentoData.time || null, // ✅ SEMPRE usar agendamentoData.time
+          value: agendamentoData.value ? parseFloat(agendamentoData.value) : null,
+          status: agendamentoData.status || 'scheduled',
+          notes: agendamentoData.notes || null,
+          duration: agendamentoData.duration || 30,
         };
         
-        // ✅ Construir payload seguro usando formData + dados críticos
-        // 🔴 FALLBACK TRIPLO: formData > agendamentoData > appointment (original)
-        const timeToSave = formData.scheduled_time || agendamentoData.time || appointment?.scheduled_time;
-        const dateToSave = formData.scheduled_date || agendamentoData.date || appointment?.scheduled_date;
+        console.log('✅ [PRE-SAVE SYNC] syncedFormData completo:', {
+          scheduled_date: syncedFormData.scheduled_date,
+          scheduled_time: syncedFormData.scheduled_time,
+          patient_id: syncedFormData.patient_id,
+          professional_id: syncedFormData.professional_id,
+          service_id: syncedFormData.service_id,
+          payer_id: syncedFormData.payer_id,
+          room_id: syncedFormData.room_id,
+          value: syncedFormData.value,
+        });
         
-        console.log('🔴 [FALLBACK] timeToSave:', {
-          formData: formData.scheduled_time,
-          agendamentoData: agendamentoData.time,
-          original: appointment?.scheduled_time,
-          final: timeToSave,
-        });
-        console.log('🔴 [FALLBACK] dateToSave:', {
-          formData: formData.scheduled_date,
-          agendamentoData: agendamentoData.date,
-          original: appointment?.scheduled_date,
-          final: dateToSave,
-        });
+        // 🔴 USAR syncedFormData em vez de formData para evitar desincronização
+        const timeToSave = syncedFormData.scheduled_time || agendamentoData.time || appointment?.scheduled_time;
+        const dateToSave = syncedFormData.scheduled_date || agendamentoData.date || appointment?.scheduled_date;
+        
+        console.log('🔴 [FINAL] timeToSave:', timeToSave, '| dateToSave:', dateToSave);
+        console.log('═══════════════════════════════════════════════');
         
         // 🚨 PROTEÇÃO: Se AINDA estiver vazio, algo está muito errado!
         if (!timeToSave || !dateToSave) {
@@ -2114,17 +2121,17 @@ export default function AppointmentUnitedModal({
         }
         
         const payload = {
-          // 🔧 Campos do formulário (editáveis - de formData)
-          patient_id: formData.patient_id || null,
-          professional_id: formData.professional_id || null,
-          service_id: formData.service_id || null,
-          payer_id: formData.payer_id || null,
-          room_id: formData.room_id || null,
+          // 🔧 Campos do formulário (editáveis - usar syncedFormData que está sincronizado com agendamentoData)
+          patient_id: syncedFormData.patient_id || null,
+          professional_id: syncedFormData.professional_id || null,
+          service_id: syncedFormData.service_id || null,
+          payer_id: syncedFormData.payer_id || null,
+          room_id: syncedFormData.room_id || null,
           scheduled_date: dateToSave || null,
           scheduled_time: timeToSave || null,
-          value: formData.value ? parseFloat(formData.value) : null,
-          status: formData.status || 'scheduled',
-          notes: formData.notes || null,
+          value: syncedFormData.value ? parseFloat(syncedFormData.value) : null,
+          status: syncedFormData.status || 'scheduled',
+          notes: syncedFormData.notes || null,
           
           // 🔐 Campos críticos (mantidos do agendamentoData / pagamentoData)
           end_time: calcularEndTime(timeToSave, agendamentoData.duration),
@@ -2152,15 +2159,18 @@ export default function AppointmentUnitedModal({
         });
 
         const updateData = payload;
+        console.log('═══════════════════════════════════════════════');
+        console.log('🚀 [UPDATE START] Chamando updateAppointment com ID:', appointmentId);
+        console.log('   Dados que serão salvos:', updateData);
+        console.log('═══════════════════════════════════════════════');
+        
         const result = await updateAppointment(appointmentId, updateData);
         
-        console.log('✅ [UPDATE] Agendamento atualizado com sucesso!');
-        console.log('🔍 [UPDATE] Valores atualizados:', {
-          payer_id: updateData.payer_id,
-          room_id: updateData.room_id,
-          professional_id: updateData.professional_id,
-          service_id: updateData.service_id,
-        });
+        console.log('═══════════════════════════════════════════════');
+        console.log('✅ [UPDATE SUCCESS] Agendamento atualizado no banco!');
+        console.log('🔍 [UPDATE RESPONSE]:', result);
+        console.log('   scheduled_time atualizado para:', result?.scheduled_time || updateData.scheduled_time);
+        console.log('═══════════════════════════════════════════════');
         
         // 💳 SALVAR DADOS DE FATURAMENTO (se houver)
         if (faturamentoData && (faturamentoData.guide_number || faturamentoData.authorized_value)) {
