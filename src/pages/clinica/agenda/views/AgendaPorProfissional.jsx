@@ -381,9 +381,10 @@ export default function AgendaPorProfissional({
                   </td>
                   {profissionaisFiltrados.map(prof => {
                     const apt = agendamentosFiltrados.find(a => {
-                      const aptDate = a.scheduled_date || (a.startTime ? format(a.startTime, 'yyyy-MM-dd') : null);
+                      // 🚨 FIX: Use scheduled_date directly without fallback to startTime (startTime is string "HH:MM:SS", not Date)
+                      const aptDate = a.scheduled_date || null;
                       // ✅ FIX: Strip seconds from scheduled_time (09:00:00 → 09:00)
-                      const aptTime = (a.scheduled_time || '').substring(0, 5) || (a.startTime ? format(a.startTime, 'HH:mm') : null);
+                      const aptTime = (a.scheduled_time || '').substring(0, 5) || null;
                       const aptProfId = a.professional_id || a.professionalId;
                       
                       const matches = aptDate === date && aptTime === horario && String(aptProfId) === String(prof.id);
@@ -676,8 +677,9 @@ export default function AgendaPorProfissional({
                 const targetProfId = profissionaisFiltrados.length === 1 ? profissionaisFiltrados[0]?.id : undefined;
                 
                 const apt = agendamentosFiltrados.find(a => {
-                  const aptDate = a.scheduled_date || (a.startTime ? format(a.startTime, 'yyyy-MM-dd') : null);
-                  const aptTime = (a.scheduled_time || '').substring(0, 5) || (a.startTime ? format(a.startTime, 'HH:mm') : null);
+                  // 🚨 FIX: Use scheduled_date directly without fallback to startTime (startTime is string "HH:MM:SS", not Date)
+                  const aptDate = a.scheduled_date || null;
+                  const aptTime = (a.scheduled_time || '').substring(0, 5) || null;
                   const aptProfId = a.professional_id || a.professionalId;
                   
                   // Se for admin sem profissional selecionado, mostrar TODOS os agendamentos
@@ -894,7 +896,8 @@ export default function AgendaPorProfissional({
                     {dayAppointments.length > 0 ? (
                       <div className="w-full text-center">
                         {dayAppointments.slice(0, 2).map(apt => {
-                          const aptTime = (apt.scheduled_time || '').substring(0, 5) || (apt.startTime ? format(apt.startTime, 'HH:mm') : '?');
+                          // 🚨 FIX: Use scheduled_time directly without fallback to startTime (startTime is string "HH:MM:SS", not Date)
+                          const aptTime = (apt.scheduled_time || '').substring(0, 5) || '?';
                           return (
                             <div 
                               key={apt.id} 
