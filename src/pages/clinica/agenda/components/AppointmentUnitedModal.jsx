@@ -8,6 +8,8 @@ import {
   SelectValue,
   SelectContent,
   SelectItem,
+  SelectGroup,
+  SelectLabel,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -20,7 +22,7 @@ import { useClinicContext } from '@/contexts/ClinicContext';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import Calendar from 'react-calendar';
 import { AlertCircle, CalendarDays, ChevronLeft, ChevronRight, Clock3, Send } from 'lucide-react';
-import { createAppointment, updateAppointment, mapFromDatabase, validateServicePayerAvailability } from '@/lib/appointmentsApi';
+import { createAppointment, updateAppointment, mapFromDatabase } from '@/lib/appointmentsApi';
 import { createPatient, updatePatient } from '@/lib/patientsApi';
 import { uploadPatientPhoto } from '@/lib/patientsApi';
 import { PAYMENT_METHOD_CONFIG, defaultPaymentData, validatePaymentData } from '@/lib/paymentMethodsConfig';
@@ -34,6 +36,7 @@ import {
   getFormattedStatus
 } from '@/lib/appointmentStatusConstants';
 import PaymentMethodFields from './PaymentMethodFields';
+import PaymentSplitFields from './PaymentSplitFields';
 import PatientSearchOrCreate from './PatientSearchOrCreate';
 import PhotoCapture from '@/components/PhotoCapture';
 import { TISSSubmissionDialog } from '@/components/TISSSubmissionDialog';
@@ -407,22 +410,127 @@ export default function AppointmentUnitedModal({
   // Dados de Pagamento (com estrutura completa)
   const [pagamentoData, setPagamentoData] = useState(defaultPaymentData);
 
-  // ✅ Estado de Validação: Serviço x Convênio
-  // Valida se o serviço selecionado está disponível para o convênio escolhido
-  const [servicePayerValidation, setServicePayerValidation] = useState({
-    isValid: true, // true = serviço disponível | false = não disponível
-    checking: false, // em processo de validação
-    price: null, // preço do serviço para o convênio
-    coPayment: null // copagamento
+  // � Estado para habilitar/desabilitar múltiplos pagamentos
+  const [enableMultiplePayments, setEnableMultiplePayments] = useState(false);
+
+  // Estado para splits de pagamento (multiplas formas)
+  const [pagamentoSplits, setPagamentoSplits] = useState([]);
+
+  // Estado para formulario de novo split - com campos específicos por método
+  const [splitFormData, setSplitFormData] = useState({ 
+    payment_method: "DINHEIRO", 
+    value: "",
+    // Cartão
+    card_brand: "",
+    card_number: "",
+    card_expiry: "",
+    card_last4: "",
+    card_holder: "",
+    installments: "1",
+    card_installment_dates: "",  // NOVO: datas das parcelas (pipe-separated)
+    // PIX
+    pix_key: "",
+    pix_key_type: "cpf",
+    pix_transaction_id: "",
+    // Cheque
+    cheque_bank: "",
+    cheque_agency: "",
+    cheque_account: "",
+    cheque_number: "",
+    cheque_due_date: "",
+    // Transferência/Depósito
+    bank_name: "",
+    bank_agency: "",
+    bank_account: "",
+    transfer_type: "DOC",
+    // Boleto
+    boleto_number: "",
+    // Data de vencimento (genérico para todos)
+    payment_due_date: "",
+    // Observações
+    observation: ""
   });
 
-  // 🔍 FUNÇÃO HELPER PARA DETECTAR SE É PAYER "PARTICULAR"
+  // �🔍 FUNÇÃO HELPER PARA DETECTAR SE É PAYER "PARTICULAR"
   // Verifica se é particular pelo ID ('particular') OU pelo nome do payer ('Particular')
   const checkIsParticular = (payerId) => {
     if (!payerId) return true;
     if (payerId === 'particular') return true;
     const foundPayer = payers.find(p => p.id === payerId);
     return foundPayer?.name === 'Particular';
+  };
+
+  // FUNÇÕES PARA MÚLTIPLOS PAGAMENTOS
+  const addPaymentSplit = () => {
+    if (!splitFormData.value || parseFloat(splitFormData.value) <= 0) {
+      alert('Por favor, insira um valor válido');
+      return;
+    }
+    
+    // Validações específicas por método de pagamento
+    if (splitFormData.payment_method === 'CARTAO' && !splitFormData.card_number) {
+      alert('Por favor, insira o número do cartão');
+      return;
+    }
+    if (splitFormData.payment_method === 'PIX' && !splitFormData.pix_key) {
+      alert('Por favor, insira a chave PIX');
+      return;
+    }
+    if (splitFormData.payment_method === 'CHEQUE' && !splitFormData.cheque_number) {
+      alert('Por favor, insira o número do cheque');
+      return;
+    }
+    
+    const totalAtual = pagamentoSplits.reduce((sum, split) => sum + parseFloat(split.value || 0), 0);
+    const desconto = parseFloat(pagamentoData.discount || 0);
+    const valorTotal = parseFloat(agendamentoData.value || 0) - desconto;
+    if (totalAtual + parseFloat(splitFormData.value) > valorTotal) {
+      alert(`Valor com desconto é R$ ${valorTotal.toFixed(2)}. Valor total não pode exceder este valor.`);
+      return;
+    }
+    
+    const newSplit = { 
+      ...splitFormData, 
+      id: Date.now(),
+      created_at: new Date().toISOString()
+    };
+    
+    setPagamentoSplits([...pagamentoSplits, newSplit]);
+    resetSplitFormData();
+  };
+
+  const removePaymentSplit = (id) => {
+    setPagamentoSplits(pagamentoSplits.filter(split => split.id !== id));
+  };
+
+  // Limpar formulário de split
+  const resetSplitFormData = () => {
+    setSplitFormData({
+      payment_method: "DINHEIRO",
+      value: "",
+      card_brand: "",
+      card_number: "",
+      card_expiry: "",
+      card_last4: "",
+      card_holder: "",
+      installments: "1",
+      card_installment_dates: "",
+      pix_key: "",
+      pix_key_type: "cpf",
+      pix_transaction_id: "",
+      cheque_bank: "",
+      cheque_agency: "",
+      cheque_account: "",
+      cheque_number: "",
+      cheque_due_date: "",
+      bank_name: "",
+      bank_agency: "",
+      bank_account: "",
+      transfer_type: "DOC",
+      boleto_number: "",
+      payment_due_date: "",
+      observation: ""
+    });
   };
 
   // Inicializar/resetar dados ao abrir
@@ -669,23 +777,53 @@ export default function AppointmentUnitedModal({
         // 💳 INICIALIZAR DADOS DE PAGAMENTO (para particular E convênio)
         console.log('💳 [AppointmentUnitedModal] Carregando dados de pagamento');
         console.log('   discount:', finalAppointment.discount);
-        console.log('   payment_method:', finalAppointment.payment_method);
-        console.log('   discount_reason:', finalAppointment.discount_reason);
+        console.log('   paymentMethod:', finalAppointment.paymentMethod);
+        console.log('   discountReason:', finalAppointment.discountReason);
         
         setPagamentoData(prev => ({
           ...defaultPaymentData,
-          payment_method: finalAppointment.payment_method || 'DINHEIRO',
+          payment_method: finalAppointment.paymentMethod || 'DINHEIRO',
           discount: finalAppointment.discount ? parseFloat(finalAppointment.discount).toFixed(2) : '0.00',
-          discount_reason: finalAppointment.discount_reason || '',
-          discount_authorized_by: finalAppointment.discount_authorized_by || null,
-          discount_authorized_at: finalAppointment.discount_authorized_at || null,
-          discount_observation: finalAppointment.discount_observation || '',
-          plano_contas_id: finalAppointment.plano_contas_id || '',
+          discount_reason: finalAppointment.discountReason || '',
+          discount_authorized_by: finalAppointment.discountAuthorizedBy || null,
+          discount_authorized_at: finalAppointment.discountAuthorizedAt || null,
+          discount_observation: finalAppointment.discountObservation || '',
+          plano_contas_id: finalAppointment.planoContasId || '',
           dinheiro: {
             ...defaultPaymentData.dinheiro,
             value_received: finalAppointment.value?.toString() || '0.00',
           }
         }));
+        
+        // 💳 CARREGAR MÚLTIPLOS PAGAMENTOS (payment_splits)
+        console.log('💳 [AppointmentUnitedModal] Carregando múltiplos pagamentos');
+        console.log('   payment_splits:', finalAppointment.payment_splits);
+        
+        if (finalAppointment.payment_splits && Array.isArray(finalAppointment.payment_splits)) {
+          try {
+            const splits = typeof finalAppointment.payment_splits === 'string'
+              ? JSON.parse(finalAppointment.payment_splits)
+              : finalAppointment.payment_splits;
+            
+            if (splits.length > 0) {
+              console.log('✅ [AppointmentUnitedModal] Splits carregados:', splits);
+              setPagamentoSplits(splits);
+              setEnableMultiplePayments(true);
+            } else {
+              console.log('⚠️ [AppointmentUnitedModal] payment_splits está vazio');
+              setPagamentoSplits([]);
+              setEnableMultiplePayments(false);
+            }
+          } catch (err) {
+            console.warn('⚠️ Erro ao desserializar payment_splits:', err);
+            setPagamentoSplits([]);
+            setEnableMultiplePayments(false);
+          }
+        } else {
+          console.log('⚠️ [AppointmentUnitedModal] payment_splits é null/undefined');
+          setPagamentoSplits([]);
+          setEnableMultiplePayments(false);
+        }
         
         // 💳 SE FOR PARTICULAR, ADICIONAR CAMPOS ESPECÍFICOS
         if (checkIsParticular(finalAppointment.payerId || finalAppointment.payer_id)) {
@@ -905,46 +1043,6 @@ export default function AppointmentUnitedModal({
       console.log('   formData atual:', formData);
     }
   }, [isOpen, mode, finalAppointment?.id]);
-
-  // 🔄 SYNC: Sincronizar agendamentoData com formData quando mudam dados significativos
-  // Usar apenas campos chave para evitar loops infinitos com price fetching
-  // 🚨 IMPORTANTE: Apenas sincronizar em modo NEW/CREATE, não em EDIT (onde formData pode estar vazio)
-  useEffect(() => {
-    // ✅ Em modo EDIT ou RECEPTION, NOT sincronizar - pois formData vem vazio do hook
-    // e vai sobrescrever os dados já carregados de finalAppointment
-    if (mode === 'edit' || mode === 'reception') {
-      console.log('🔄 [SYNC] Pulando sincronização - modo:', mode);
-      return;
-    }
-
-    console.log('🔄 [SYNC] Sincronizando agendamentoData com formData (modo:', mode, ')');
-    setAgendamentoData(prev => ({
-      ...prev,
-      date: formData.scheduled_date || prev.date || '',
-      time: formData.scheduled_time || prev.time || '',
-      professionalId: formData.professional_id || prev.professionalId || '',
-      serviceId: formData.service_id || prev.serviceId || '',
-      payerId: formData.payer_id || prev.payerId || '',
-      roomId: formData.room_id || prev.roomId || '',
-      patientId: formData.patient_id || prev.patientId || '',
-      value: formData.value || prev.value || '0.00',
-      notes: formData.notes || prev.notes || '',
-      status: formData.status || prev.status || 'scheduled',
-      duration: formData.duration || prev.duration || 30,
-    }));
-  }, [
-    mode,
-    formData.scheduled_date,
-    formData.scheduled_time,
-    formData.professional_id,
-    formData.service_id,
-    formData.payer_id,
-    formData.room_id,
-    formData.patient_id,
-    formData.notes,
-    formData.status,
-    formData.duration,
-  ]); // Excluir 'value' da dependency para evitar loop com price fetching
 
   // �💰 AUTO-FETCH: Buscar valor quando profissional, serviço ou convênio mudar
   // OU quando o valor está vazio/zero (apenas quando há service)
@@ -1572,25 +1670,45 @@ export default function AppointmentUnitedModal({
         ? (pagamentoData?.plano_contas_id || null)
         : (faturamentoData?.plano_contas_id || null);
 
-      // ✅ FIX RACE CONDITION: Capturar hora diretamente do DOM input
-      // Em vez de usar agendamentoData.time (que pode estar atrasada)
-      const timeInputElement = document.querySelector('input[type="time"]');
-      const finalScheduledTime = timeInputElement?.value || agendamentoData.time || '';
-      console.log('✅ [FIX HORA] Usando finalScheduledTime do DOM:', finalScheduledTime);
+      // 🔍 Determinar se desconto foi solicitado ou removido
+      const discountValue = pagamentoData.discount ? parseFloat(pagamentoData.discount) : 0;
+      const originalDiscountValue = appointment?.discount ? parseFloat(appointment.discount) : 0;
+      // ✅ CORRIGIDO: Usar valores de pagamentoData (estado atual) ao invés de appointment (banco de dados)
+      const currentDiscountRequestedAt = pagamentoData.discount_requested_at || appointment?.discount_requested_at;
+      const currentDiscountRequestedBy = pagamentoData.discount_requested_by || appointment?.discount_requested_by;
+
+      // Lógica para salvar dados de solicitação (mesma que em handleSaveChanges)
+      let discountRequestData = {};
+      
+      if (discountValue > 0) {
+        // ✅ Se houver desconto, sempre usar os valores do estado (que podem ter sido atualizados pelo botão)
+        discountRequestData = {
+          discount_requested_by: currentDiscountRequestedBy || null,
+          discount_requested_at: currentDiscountRequestedAt || null,
+          discount_requested_by_name: pagamentoData.discount_requested_by_name || user?.email || null, // ✅ NOVO: Armazena nome do usuário
+        };
+      } else {
+        discountRequestData = {
+          discount_requested_by: null,
+          discount_requested_at: null,
+          discount_requested_by_name: null,
+        };
+      }
 
       const updateData = {
         patient_id: agendamentoData.patientId || null,
         status: agendamentoData.status,
         scheduled_date: agendamentoData.date,
-        scheduled_time: finalScheduledTime,
+        scheduled_time: agendamentoData.time,
         duration: agendamentoData.duration,
         professional_id: agendamentoData.professionalId || null,
         service_id: agendamentoData.serviceId || null,
         payer_id: agendamentoData.payerId || null,
         room_id: agendamentoData.roomId || null,
         value: agendamentoData.value ? parseFloat(agendamentoData.value) : null,
-        discount: pagamentoData.discount ? parseFloat(pagamentoData.discount) : 0,
+        discount: discountValue,
         discount_reason: pagamentoData.discount_reason || null,
+        ...discountRequestData,
         discount_authorized_by: pagamentoData.discount_authorized_by || null,
         discount_authorized_at: pagamentoData.discount_authorized_at || null,
         discount_observation: pagamentoData.discount_observation || null,
@@ -1598,18 +1716,14 @@ export default function AppointmentUnitedModal({
         payment_method: pagamentoData.payment_method || null,
         convenio_id: faturamentoData?.convenio_id || null,
         plano_contas_id: planoContasValue,
-        // 📋 DADOS DE LIBERAÇÃO
+        // � MÚLTIPLOS PAGAMENTOS
+        payment_splits: enableMultiplePayments && pagamentoSplits.length > 0 ? JSON.stringify(pagamentoSplits) : null,
+        // �📋 DADOS DE LIBERAÇÃO
         card_number: liberacaoData.card_number || null,
         authorization_number: liberacaoData.auth_number || null,
         authorization_expiry: liberacaoData.auth_expiry || null,
         authorization_verified: liberacaoData.authorized === true,
       };
-
-      console.log('🔥🔥🔥 [CRÍTICO] VERIFICAÇÃO DE HORA ANTES DO UPDATE 🔥🔥🔥');
-      console.log('   agendamentoData.time:', agendamentoData.time);
-      console.log('   updateData.scheduled_time:', updateData.scheduled_time);
-      console.log('   Hora está sendo enviada? ', Boolean(updateData.scheduled_time));
-      console.log('🔥🔥🔥 FIM DA VERIFICAÇÃO 🔥🔥🔥');
 
       console.log('   updateData a enviar:', JSON.stringify(updateData, null, 2));
       
@@ -1781,192 +1895,9 @@ export default function AppointmentUnitedModal({
     }
   };
 
-  // ════════════════════════════════════════════════════════════════
-  // 🔧 ETAPA 6: REFACTORED SAVE LOGIC WITH FORMDATA
-  // ════════════════════════════════════════════════════════════════
-
-  /**
-   * ETAPA 1 - VALIDAÇÃO: Valida formData antes do save
-   * @param {Object} data - dados do formulário
-   * @returns {Object} resultado da validação { valid, errors }
-   */
-  const validateFormData = (data) => {
-    const errors = [];
-
-    // Campos obrigatórios
-    if (!data.professional_id) errors.push('Profissional é obrigatório');
-    if (!data.service_id) errors.push('Serviço é obrigatório');
-    if (!data.scheduled_date) errors.push('Data é obrigatória');
-    if (!data.scheduled_time) errors.push('Hora é obrigatória');
-    if (!data.payer_id) errors.push('Convênio é obrigatório');
-    if (!data.room_id) errors.push('Sala é obrigatória');
-    if (!data.plano_contas_id) errors.push('Plano de contas é obrigatório');
-
-    console.log('🔍 VALIDAÇÃO FORMDATA FINAL:', {
-      patient_id: data.patient_id || null,
-      professional_id: data.professional_id || null,
-      service_id: data.service_id || null,
-      payer_id: data.payer_id || null,
-      room_id: data.room_id || null,
-      plano_contas_id: data.plano_contas_id || null,
-      scheduled_date: data.scheduled_date || null,
-      scheduled_time: data.scheduled_time || null,
-      value: data.value || null,
-      status: data.status || null,
-      notes: data.notes || null,
-    });
-
-    if (errors.length > 0) {
-      console.error('❌ ERROS DE VALIDAÇÃO:', errors);
-    }
-
-    return {
-      valid: errors.length === 0,
-      errors
-    };
-  };
-
-  /**
-   * ETAPA 2 - NORMALIZAÇÃO: Converte campos vazios para null
-   * Garante que string vazia se torna null, não undefined
-   * @param {Object} data - dados a normalizar
-   * @returns {Object} dados normalizados
-   */
-  const normalizePayload = (data) => {
-    return {
-      patient_id: data.patient_id || null,
-      professional_id: data.professional_id || null,
-      service_id: data.service_id || null,
-      payer_id: data.payer_id || null,
-      room_id: data.room_id || null,
-      plano_contas_id: data.plano_contas_id || null,
-      scheduled_date: data.scheduled_date || null,
-      scheduled_time: data.scheduled_time || null,
-      value: data.value ? parseFloat(data.value) : null,
-      status: data.status || 'scheduled',
-      notes: data.notes || null,
-      duration: data.duration ? parseInt(data.duration) : 30,
-      end_time: data.end_time || null,
-      lead_name: data.lead_name || null,
-      lead_phone: data.lead_phone || null,
-      patient_type: data.patient_type || 'PATIENT',
-    };
-  };
-
-  /**
-   * Campos editáveis pelo usuário no formulário
-   * Qualquer outro campo é considerado crítico e não deve ser alterado
-   */
-  const editableFields = [
-    'patient_id',
-    'professional_id',
-    'service_id',
-    'payer_id',
-    'room_id',
-    'scheduled_date',
-    'scheduled_time',
-    'value',
-    'status',
-    'notes'
-  ];
-
-  /**
-   * Constrói payload seguro para CREATE/UPDATE
-   * Garante que apenas campos editáveis sejam alterados
-   * @param {Object} sourceData - formData do hook (snake_case)
-   * @param {Object} originalData - dados originais do banco (para campos preservados)
-   * @param {String} clinicId - ID da clínica (essencial)
-   * @returns {Object} Payload pronto para Supabase
-   */
-  const buildPayload = (sourceData, originalData = {}, clinicId) => {
-    const payload = {};
-
-    // Apenas copiar campos editáveis
-    editableFields.forEach(field => {
-      payload[field] = sourceData[field];
-    });
-
-    // 🔥 ESSENCIAL: clinic_id DEVE estar no payload
-    payload.clinic_id = clinicId;
-
-    // Adicionar timestamp
-    payload.updated_at = new Date().toISOString();
-
-    return payload;
-  };
-
-  /**
-   * ETAPA 3 - CREATE: Constrói payload para INSERT
-   * Usa APENAS formData, sem dependências de outros state objects
-   * @param {Object} formData - dados do formulário (normalizado)
-   * @param {String} finalPatientId - ID do paciente (pode ser null para leads)
-   * @returns {Object} Payload pronto para Supabase
-   */
-  const buildCreatePayload = (formData, finalPatientId) => {
-    // 🔥 NORMALIZAR PRIMEIRO
-    const normalized = normalizePayload(formData);
-
-    // 🔥 CONSTRUIR PAYLOAD COM APENAS formData
-    const payload = {
-      clinic_id: clinicId,
-      patient_id: finalPatientId,
-      patient_type: finalPatientId ? 'PATIENT' : 'LEAD',
-      lead_name: !finalPatientId ? formData.lead_name : null,
-      lead_phone: !finalPatientId ? formData.lead_phone : null,
-      
-      // Campos do formulário (TODOS de formData normalizado)
-      professional_id: normalized.professional_id,
-      service_id: normalized.service_id,
-      payer_id: normalized.payer_id,
-      room_id: normalized.room_id,
-      plano_contas_id: normalized.plano_contas_id,
-      scheduled_date: normalized.scheduled_date,
-      scheduled_time: normalized.scheduled_time,
-      end_time: normalized.end_time,
-      value: normalized.value,
-      notes: normalized.notes,
-      
-      // Campos críticos
-      status: normalized.status,
-      duration: normalized.duration,
-      discount: 0,
-      payment_method: null,
-      
-      created_at: new Date().toISOString(),
-    };
-
-    // ✅ VALIDAÇÃO: Garantir que clinic_id não é undefined
-    if (!payload.clinic_id) {
-      throw new Error('❌ clinic_id é obrigatório e não pode estar vazio');
-    }
-
-    console.log('📦 PAYLOAD CREATE (100% FORMDATA):', JSON.stringify({
-      clinic_id: payload.clinic_id,
-      patient_id: payload.patient_id,
-      patient_type: payload.patient_type,
-      professional_id: payload.professional_id,
-      service_id: payload.service_id,
-      payer_id: payload.payer_id,
-      room_id: payload.room_id,
-      plano_contas_id: payload.plano_contas_id,
-      scheduled_date: payload.scheduled_date,
-      scheduled_time: payload.scheduled_time,
-      value: payload.value,
-      duration: payload.duration,
-    }, null, 2));
-
-    return payload;
-  };
-
   // Handle saving appointment changes
   const handleSaveChanges = async () => {
     try {
-      // Block save if service not available for selected payer
-      if (agendamentoData.serviceId && agendamentoData.payerId && !servicePayerValidation.isValid) {
-        alert('OPERACAO BLOQUEADA\n\nServico nao disponivel para este convenio.\n\nSelecione outro convenio ou servico.');
-        return;
-      }
-
       // � DEBUG ETAPA 6: Verificar formData
       console.log('═══════════════════════════════════════════════');
       console.log('🔧 [ETAPA 6] handleSaveChanges DISPARADO');
@@ -1981,12 +1912,6 @@ export default function AppointmentUnitedModal({
         scheduled_time: agendamentoData.time,
         value: agendamentoData.value,
       });
-      
-      // 🔴 CAPTURA SÍNCRONA DO INPUT TIME - EVITAR RACE CONDITION
-      const timeInputElement = document.querySelector('input[type="time"]');
-      const timeFromDOM = timeInputElement?.value || '';
-      console.log('🔴🔴🔴 [SYNC CAPTURE] Valor time do DOM:', timeFromDOM, 'vs agendamentoData:', agendamentoData.time);
-      
       console.log('═══════════════════════════════════════════════');
 
       // �🚨 DEBUG ANTES DO SAVE
@@ -2001,176 +1926,170 @@ export default function AppointmentUnitedModal({
       
       console.log('💾 [SAVE INITIATED]', { mode, appointmentId: appointment?.id, currentStatus: agendamentoData.status });
       
-      // 🏥 GARANTIR clinic_id ANTES DE QUALQUER OPERACAO
-      console.log('🏥 clinicId extraído do contexto:', clinicId);
-      
-      if (!clinicId) {
-        console.error('❌ clinicId não encontrado');
-        alert('Erro: clínica não identificada. Faça login novamente.');
-        return;
-      }
-      
       let appointmentId = appointment?.id;
       let patientId = appointment?.patient_id;
 
-      // 📝 MODO NOVO: Criar novo agendamento (usando formData)
+      // 📝 MODO NOVO: Criar novo agendamento
       if (mode === 'new') {
-        console.log('📝 [CREATE] Iniciando criação de novo agendamento');
-        console.log('🔍 [CREATE] formData:', formData);
+        console.log('📝 Criando novo agendamento...', { 
+          data: agendamentoData.date, 
+          tempo: agendamentoData.time 
+        });
 
-        let finalPatientId = formData.patient_id || null;
+        let finalPatientId = agendamentoData.patientId || null;
 
         // 👤 SE NENHUM PACIENTE SELECIONADO, CRIAR NOVO PACIENTE COM DADOS BÁSICOS
-        if (!formData.patient_id && agendamentoData.patientName?.trim()) {
-          console.log('👤 Criando novo paciente automaticamente...');
+        if (!agendamentoData.patientId && agendamentoData.patientName?.trim()) {
+          console.log('👤 Criando novo paciente automaticamente...', {
+            name: agendamentoData.patientName,
+            phone: agendamentoData.phone,
+            birthdate: cadastralData.birthdate,
+          });
 
           const newPatientData = {
             name: agendamentoData.patientName,
             phone: agendamentoData.phone,
             birthdate: cadastralData.birthdate || null,
+            // Deixar os outros campos em branco para preenchimento posterior
           };
 
           const newPatient = await createPatient(clinicId, newPatientData);
-          console.log('✅ Novo paciente criado!', newPatient.id);
+          console.log('✅ Novo paciente criado!', newPatient);
           finalPatientId = newPatient.id;
         }
 
-        // ✅ FIX RACE CONDITION para CREATE: Capturar hora do DOM
-        const timeInputForCreate = document.querySelector('input[type="time"]');
-        const finalTimeForCreate = timeInputForCreate?.value || formData.scheduled_time || '';
-        
-        // Atualizar formData com o tempo correto do DOM
-        const formDataWithDOMTime = {
-          ...formData,
-          scheduled_time: finalTimeForCreate,
+        // 🔍 Determinar se desconto foi solicitado (novo desconto)
+        const discountValue = pagamentoData.discount ? parseFloat(pagamentoData.discount) : 0;
+        const discountRequested = discountValue > 0 ? {
+          discount_requested_by: user?.id || null,
+          discount_requested_at: new Date().toISOString(),
+          discount_requested_by_name: user?.user_metadata?.name || user?.email || null, // ✅ NOVO: Armazenar nome/email do usuário
+        } : {
+          discount_requested_by: null,
+          discount_requested_at: null,
+          discount_requested_by_name: null,
         };
-        
-        console.log('✅ [CREATE FIX HORA] Usando tempo do DOM:', finalTimeForCreate);
 
-        // ✅ Construir payload limpo usando buildCreatePayload
-        const newAppointmentData = buildCreatePayload(formDataWithDOMTime, finalPatientId);
-
-        console.log('📦 [CREATE] Payload enviando:', JSON.stringify(newAppointmentData, null, 2));
-
-        const createdAppointment = await createAppointment(newAppointmentData);
-        console.log('✅ Novo agendamento criado!', createdAppointment.id);
-        
-        appointmentId = createdAppointment.id;
-        patientId = createdAppointment.patient_id;
-      }
-      // ✏️ MODO EDITAR: Atualizar agendamento existente (usando formData)
-      else if (mode === 'edit') {
-        // 🔐 PROTEÇÃO: Verificar ID do agendamento
-        if (!appointmentId) {
-          throw new Error('⚠️ ID do agendamento não encontrado. Não é possível atualizar.');
-        }
-
-        console.log('💾 [UPDATE] Iniciando atualização do agendamento', { id: appointmentId });
-        console.log('🔍 [UPDATE] formData:', formData);
-        console.log('🔍 [UPDATE] agendamentoData:', agendamentoData);
-        console.log('🔍 [UPDATE] appointment (original):', appointment);
-        
-        // 🔴 ETAPA CRÍTICA: GARANTIR QUE formData ESTÁ SINCRONIZADO COM agendamentoData
-        // Em modo EDIT, agendamentoData tem as mudanças em tempo real do usuário
-        // formData pode estar desatualizado, então sincronizamos antes de salvar
-        console.log('═══════════════════════════════════════════════');
-        console.log('🔄 [PRE-SAVE SYNC] Sincronizando formData com agendamentoData');
-        console.log('═══════════════════════════════════════════════');
-        
-        // ✅ ATUALIZAR formData COM TODOS OS VALORES DE agendamentoData
-        const syncedFormData = {
-          ...formData,
-          patient_id: agendamentoData.patientId || null,
+        const newAppointmentData = {
+          clinic_id: clinicId,
+          patient_id: finalPatientId,
+          patient_type: finalPatientId ? 'PATIENT' : 'LEAD',
+          lead_name: !finalPatientId ? agendamentoData.patientName : null,
+          lead_phone: !finalPatientId ? agendamentoData.phone : null,
           professional_id: agendamentoData.professionalId || null,
           service_id: agendamentoData.serviceId || null,
           payer_id: agendamentoData.payerId || null,
           room_id: agendamentoData.roomId || null,
-          scheduled_date: agendamentoData.date || null,
-          scheduled_time: agendamentoData.time || null, // ✅ SEMPRE usar agendamentoData.time
+          scheduled_date: agendamentoData.date,
+          scheduled_time: agendamentoData.time,
+          end_time: agendamentoData.endTime?.trim() ? agendamentoData.endTime : null,
+          status: 'scheduled',
+          notes: agendamentoData.notes,
           value: agendamentoData.value ? parseFloat(agendamentoData.value) : null,
-          status: agendamentoData.status || 'scheduled',
-          notes: agendamentoData.notes || null,
-          duration: agendamentoData.duration || 30,
+          discount: discountValue,
+          discount_reason: agendamentoData.discount_reason || null,
+          ...discountRequested,
+          duration: agendamentoData.duration,
+          payment_method: pagamentoData.payment_method || null,
+          convenio_id: faturamentoData?.convenio_id || null,
+          plano_contas_id: faturamentoData?.plano_contas_id || pagamentoData?.plano_contas_id || null,
+          payment_splits: enableMultiplePayments && pagamentoSplits.length > 0 ? JSON.stringify(pagamentoSplits) : null,
+        };
+
+        const createdAppointment = await createAppointment(newAppointmentData);
+        console.log('✅ Novo agendamento criado com sucesso!', createdAppointment);
+        
+        appointmentId = createdAppointment.id;
+        patientId = createdAppointment.patient_id;
+      }
+      // ✏️ MODO EDITAR: Atualizar agendamento existente
+      else if (mode === 'edit' && appointmentId) {
+        console.log('💾 Atualizando agendamento...', { id: appointmentId });
+        
+        const calcularEndTime = (startTime, durationMinutes = 30) => {
+          if (!startTime) return null;
+          const startMinutes = timeToMinutes(startTime);
+          const endMinutes = startMinutes + (durationMinutes || 30);
+          return minutesToTime(endMinutes);
         };
         
-        console.log('✅ [PRE-SAVE SYNC] syncedFormData completo:', {
-          scheduled_date: syncedFormData.scheduled_date,
-          scheduled_time: syncedFormData.scheduled_time,
-          patient_id: syncedFormData.patient_id,
-          professional_id: syncedFormData.professional_id,
-          service_id: syncedFormData.service_id,
-          payer_id: syncedFormData.payer_id,
-          room_id: syncedFormData.room_id,
-          value: syncedFormData.value,
-        });
+        // 🔍 Determinar se desconto foi solicitado ou removido
+        const discountValue = pagamentoData.discount ? parseFloat(pagamentoData.discount) : 0;
+        const originalDiscountValue = appointment?.discount ? parseFloat(appointment.discount) : 0;
+        // ✅ CORRIGIDO: Usar valores de pagamentoData (estado atual) ao invés de appointment (banco de dados)
+        const currentDiscountRequestedAt = pagamentoData.discount_requested_at || appointment?.discount_requested_at;
+        const currentDiscountRequestedBy = pagamentoData.discount_requested_by || appointment?.discount_requested_by;
+        const currentDiscountRequestedByName = pagamentoData.discount_requested_by_name || appointment?.discount_requested_by_name;
+
+        // Lógica para salvar dados de solicitação (mesma que em handleSaveDataOnly)
+        let discountRequestData = {};
         
-        // 🔴 USAR syncedFormData em vez de formData para evitar desincronização
-        const timeToSave = syncedFormData.scheduled_time || agendamentoData.time || appointment?.scheduled_time;
-        const dateToSave = syncedFormData.scheduled_date || agendamentoData.date || appointment?.scheduled_date;
-        
-        console.log('🔴 [FINAL] timeToSave:', timeToSave, '| dateToSave:', dateToSave);
-        console.log('═══════════════════════════════════════════════');
-        
-        // 🚨 PROTEÇÃO: Se AINDA estiver vazio, algo está muito errado!
-        if (!timeToSave || !dateToSave) {
-          console.error('❌ [CRITICAL] timeToSave ou dateToSave vazio mesmo com fallbacks!', {
-            timeToSave,
-            dateToSave,
-          });
-          throw new Error('ERRO CRÍTICO: Data ou hora não puderam ser determinadas. Tente recarregar a página.');
+        if (discountValue > 0) {
+          // ✅ Se houver desconto, sempre usar os valores do estado (que podem ter sido atualizados pelo botão)
+          discountRequestData = {
+            discount_requested_by: currentDiscountRequestedBy || null,
+            discount_requested_at: currentDiscountRequestedAt || null,
+            discount_requested_by_name: currentDiscountRequestedByName || user?.user_metadata?.name || user?.email || null, // ✅ NOVO: Armazena nome do usuário
+          };
+          console.log('📋 [DESCONTO ATIVO] Salvando dados de solicitação:', discountRequestData);
+        } else {
+          // Desconto removido: limpar dados de solicitação
+          discountRequestData = {
+            discount_requested_by: null,
+            discount_requested_at: null,
+            discount_requested_by_name: null,
+          };
+          console.log('📋 [DESCONTO REMOVIDO] Limpando dados de solicitação');
         }
         
         const payload = {
-          // 🔧 Campos do formulário (editáveis - usar syncedFormData que está sincronizado com agendamentoData)
-          patient_id: syncedFormData.patient_id || null,
-          professional_id: syncedFormData.professional_id || null,
-          service_id: syncedFormData.service_id || null,
-          payer_id: syncedFormData.payer_id || null,
-          room_id: syncedFormData.room_id || null,
-          scheduled_date: dateToSave || null,
-          scheduled_time: timeToSave || null,
-          value: syncedFormData.value ? parseFloat(syncedFormData.value) : null,
-          status: syncedFormData.status || 'scheduled',
-          notes: syncedFormData.notes || null,
-          
-          // 🔐 Campos críticos (mantidos do agendamentoData / pagamentoData)
-          end_time: calcularEndTime(timeToSave, agendamentoData.duration),
+          scheduled_date: agendamentoData.date,
+          scheduled_time: agendamentoData.time,
+          end_time: calcularEndTime(agendamentoData.time, agendamentoData.duration),
           duration: agendamentoData.duration || 30,
-          discount: pagamentoData.discount ? parseFloat(pagamentoData.discount) : 0,
+          
+          patient_id: agendamentoData.patientId || null,
+          professional_id: agendamentoData.professionalId || null,
+          service_id: agendamentoData.serviceId || null,
+          
+          payer_id: agendamentoData.payerId || null,
+          room_id: agendamentoData.roomId || null,
+          
+          value: agendamentoData.value ? parseFloat(agendamentoData.value) : null,
+          discount: discountValue,
           discount_reason: agendamentoData.discount_reason || null,
+          ...discountRequestData,
           discount_authorized_by: agendamentoData.discount_authorized_by || null,
           discount_authorized_at: agendamentoData.discount_authorized_at || null,
           discount_observation: agendamentoData.discount_observation || null,
+          
           payment_method: pagamentoData.payment_method || null,
-          updated_at: new Date().toISOString(),
+          payment_splits: enableMultiplePayments && pagamentoSplits.length > 0 ? JSON.stringify(pagamentoSplits) : null,
+          
+          status: agendamentoData.status,
+          notes: agendamentoData.notes || null,
         };
-
-        console.log('📦 [UPDATE] Payload FINAL pronto:', {
-          patient_id: payload.patient_id,
-          professional_id: payload.professional_id,
-          service_id: payload.service_id,
-          payer_id: payload.payer_id,
-          room_id: payload.room_id,
-          scheduled_date: payload.scheduled_date,
-          scheduled_time: payload.scheduled_time,
-          timeToSave: timeToSave,
-          dateToSave: dateToSave,
-          value: payload.value,
-        });
+        
+        console.log("🚀 PAYLOAD COMPLETO PARA UPDATE:", payload);
+        console.log('💾 Campos do payload:', Object.keys(payload));
+        console.log('   - date:', payload.scheduled_date);
+        console.log('   - time:', payload.scheduled_time);
+        console.log('   - payer_id:', payload.payer_id);
+        console.log('   - room_id:', payload.room_id);
+        console.log('   - value:', payload.value);
+        console.log('   - duration:', payload.duration);
 
         const updateData = payload;
-        console.log('═══════════════════════════════════════════════');
-        console.log('🚀 [UPDATE START] Chamando updateAppointment com ID:', appointmentId);
-        console.log('   Dados que serão salvos:', updateData);
-        console.log('═══════════════════════════════════════════════');
         
         const result = await updateAppointment(appointmentId, updateData);
         
-        console.log('═══════════════════════════════════════════════');
-        console.log('✅ [UPDATE SUCCESS] Agendamento atualizado no banco!');
-        console.log('🔍 [UPDATE RESPONSE]:', result);
-        console.log('   scheduled_time atualizado para:', result?.scheduled_time || updateData.scheduled_time);
-        console.log('═══════════════════════════════════════════════');
+        console.log('✅ Agendamento atualizado com sucesso!');
+        console.log('🔍 [DEBUG] Resposta retornada:', JSON.stringify(result, null, 2));
+        console.log('   Valores específicos que foram atualizados:');
+        console.log('   - payer_id:', updateData.payer_id);
+        console.log('   - room_id:', updateData.room_id);
+        console.log('   - professional_id:', updateData.professional_id);
+        console.log('   - service_id:', updateData.service_id);
         
         // 💳 SALVAR DADOS DE FATURAMENTO (se houver)
         if (faturamentoData && (faturamentoData.guide_number || faturamentoData.authorized_value)) {
@@ -2303,21 +2222,12 @@ export default function AppointmentUnitedModal({
       // 🎉 SUCESSO: Chamar callbacks e fechar
       if (mode === 'edit' || mode === 'new') {
         console.log('📌 Chamando onSuccess...');
-        
-        // ✨ FORÇA REFRESCAMENTO IMEDIATO: Aguardar um pouco para garantir que dados estão no DB
-        // Depois chamar o callback externo que deve refrrescar a agenda
-        setTimeout(() => {
-          console.log('⏰ [REFRESH TIMER] Executando onSuccess callback após delay de 500ms...');
-          onSuccess?.();
-        }, 500);
-        
+        onSuccess?.();
         console.log('📌 Fechando modal...');
         handleCloseModal();
       } else if (mode === 'reception') {
         console.log('📌 Modo recepção: Aguardando ação do usuário...');
-        setTimeout(() => {
-          onSuccess?.();
-        }, 300);
+        onSuccess?.();
       }
       
       return true;
@@ -2351,11 +2261,6 @@ export default function AppointmentUnitedModal({
     console.log('     - Services:', services?.length);
     console.log('     - Payers:', payers?.length);
     console.log('     - Selected Patient:', !!selectedPatient);
-  }
-
-  // 🔐 PROTEÇÃO: Garantir que clinicId existe
-  if (!clinicId) {
-    return <div className="p-4 text-center">Carregando clínica...</div>;
   }
 
   return (
@@ -2507,11 +2412,7 @@ export default function AppointmentUnitedModal({
                           <Input
                             placeholder="Nome"
                             value={agendamentoData.patientName}
-                            onChange={(e) => {
-                              updateAgendamentoField('patientName', e.target.value);
-                              // ETAPA 6: Sincronizar com formData
-                              setFormData(prev => ({ ...prev, lead_name: e.target.value }));
-                            }}
+                            onChange={(e) => updateAgendamentoField('patientName', e.target.value)}
                             className="mt-1"
                           />
                         </div>
@@ -2529,11 +2430,7 @@ export default function AppointmentUnitedModal({
                           <Input
                             placeholder="Telefone"
                             value={agendamentoData.phone}
-                            onChange={(e) => {
-                              updateAgendamentoField('phone', e.target.value);
-                              // ETAPA 6: Sincronizar com formData
-                              setFormData(prev => ({ ...prev, lead_phone: e.target.value }));
-                            }}
+                            onChange={(e) => updateAgendamentoField('phone', e.target.value)}
                             className="mt-1"
                           />
                         </div>
@@ -2547,11 +2444,7 @@ export default function AppointmentUnitedModal({
                       <Input
                         type="date"
                         value={agendamentoData.date}
-                        onChange={(e) => {
-                          updateAgendamentoField('date', e.target.value);
-                          // ETAPA 6: Sincronizar com formData
-                          setFormData(prev => ({ ...prev, scheduled_date: e.target.value }));
-                        }}
+                        onChange={(e) => updateAgendamentoField('date', e.target.value)}
                       />
                       {agendamentoData.date && selectedDateBlockedByHoliday && (
                         <p className="mt-2 text-xs text-red-700">
@@ -2565,37 +2458,17 @@ export default function AppointmentUnitedModal({
                       )}
                     </div>
                     <div>
-                      <Label>🕐 Hora * (Atual: {agendamentoData.time || formData.scheduled_time})</Label>
+                      <Label>🕐 Hora * (Atual: {agendamentoData.time})</Label>
                       <Input
                         type="time"
-                        value={agendamentoData.time || formData.scheduled_time || ''}
+                        value={agendamentoData.time || ''}
                         onChange={(e) => {
-                          const newValue = e.target.value;
-                          console.log('═══════════════════════════════════════════════════════════════');
-                          console.log('🔴 [TIME INPUT onChange] *** MUDANÇA DE HORA DETECTADA ***');
-                          console.log('═══════════════════════════════════════════════════════════════');
-                          console.log('   INPUT VALUE NOVO:', newValue);
-                          console.log('   ANTERIOR agendamentoData.time:', agendamentoData.time);
-                          console.log('   ANTERIOR formData.scheduled_time:', formData.scheduled_time);
-                          
-                          // Atualizar AMBOS os estados SIMULTANEAMENTE para garantir sincronização
-                          updateAgendamentoField('time', newValue);
-                          console.log('   ✅ updateAgendamentoField("time", ' + newValue + ') CHAMADO');
-                          
-                          setFormData(prev => {
-                            const updated = { ...prev, scheduled_time: newValue };
-                            console.log('   ✅ formData.scheduled_time ATUALIZADO PARA:', updated.scheduled_time);
-                            console.log('   NOVO STATE formData:', updated);
-                            return updated;
-                          });
-                          console.log('═══════════════════════════════════════════════════════════════');
-                        }}
-                        onBlur={(e) => {
-                          console.log('🔵 [TIME INPUT onBlur] Valor final após perder foco:', e.target.value);
-                          // Garantir que ambos os estados têm o valor final
+                          console.log('🔴 [TIME INPUT] onChange disparado!');
+                          console.log('   e.target.value:', e.target.value);
+                          console.log('   typeof:', typeof e.target.value);
                           updateAgendamentoField('time', e.target.value);
-                          setFormData(prev => ({ ...prev, scheduled_time: e.target.value }));
                         }}
+                        onBlur={(e) => console.log('🔵 [TIME INPUT] onBlur - Valor final:', e.target.value)}
                       />
                     </div>
                   </div>
@@ -2607,11 +2480,7 @@ export default function AppointmentUnitedModal({
                         type="number"
                         min="5"
                         value={agendamentoData.duration}
-                        onChange={(e) => {
-                          updateAgendamentoField('duration', parseInt(e.target.value) || 30);
-                          // ETAPA 6: Sincronizar com formData
-                          setFormData(prev => ({ ...prev, duration: parseInt(e.target.value) || 30 }));
-                        }}
+                        onChange={(e) => updateAgendamentoField('duration', parseInt(e.target.value) || 30)}
                       />
                     </div>
                     <div>
@@ -2669,8 +2538,6 @@ export default function AppointmentUnitedModal({
                       onValueChange={(value) => {
                         console.log('👥 [Select] Profissional selecionado:', value);
                         updateAgendamentoField('professionalId', value);
-                        // ETAPA 6: Sincronizar com formData
-                        setFormData(prev => ({ ...prev, professional_id: value }));
                       }}
                     >
                       <SelectTrigger>
@@ -2940,36 +2807,6 @@ export default function AppointmentUnitedModal({
                           const serviceCode = selectedService?.code || selectedService?.codigo || selectedService?.service_code || selectedService?.id || '';
                           console.log('💊 [DEBUG] Final serviceCode:', serviceCode);
                           updateAgendamentoField('serviceCode', serviceCode);
-
-                          // ✅ VALIDAR SE ESTE SERVIÇO ESTÁ DISPONÍVEL NO CONVÊNIO SELECIONADO
-                          if (agendamentoData.payerId && value && clinicId) {
-                            (async () => {
-                              setServicePayerValidation(prev => ({ ...prev, checking: true }));
-                              const result = await validateServicePayerAvailability(
-                                value,
-                                agendamentoData.payerId,
-                                clinicId
-                              );
-                              setServicePayerValidation({
-                                isValid: result.available,
-                                checking: false,
-                                price: result.price,
-                                coPayment: result.coPayment
-                              });
-                              
-                              if (!result.available) {
-                                console.warn('⚠️ Serviço não está disponível para este convênio!');
-                              }
-                            })();
-                          } else {
-                            // Reset validation se não houver convênio selecionado
-                            setServicePayerValidation({
-                              isValid: true,
-                              checking: false,
-                              price: null,
-                              coPayment: null
-                            });
-                          }
                         }}
                       >
                         <SelectTrigger>
@@ -3021,28 +2858,6 @@ export default function AppointmentUnitedModal({
                           console.log('   Payer encontrado:', payers?.find(p => p.id === value));
                           updateAgendamentoField('payerId', value);
                           setFormData(prev => ({ ...prev, payer_id: value }));
-
-                          // ✅ VALIDAR SE SERVIÇO ESTÁ DISPONÍVEL NESTE CONVÊNIO
-                          if (agendamentoData.serviceId && value && clinicId) {
-                            (async () => {
-                              setServicePayerValidation(prev => ({ ...prev, checking: true }));
-                              const result = await validateServicePayerAvailability(
-                                agendamentoData.serviceId,
-                                value,
-                                clinicId
-                              );
-                              setServicePayerValidation({
-                                isValid: result.available,
-                                checking: false,
-                                price: result.price,
-                                coPayment: result.coPayment
-                              });
-                              
-                              if (!result.available) {
-                                console.warn('⚠️ Serviço não está disponível para este convênio!');
-                              }
-                            })();
-                          }
                         }}
                       >
                         <SelectTrigger>
@@ -3060,17 +2875,6 @@ export default function AppointmentUnitedModal({
                           ))}
                         </SelectContent>
                       </Select>
-                      {/* ⚠️ AVISO: Serviço não disponível para este convênio */}
-                      {agendamentoData.payerId && agendamentoData.serviceId && !servicePayerValidation.isValid && (
-                        <div className="mt-2 p-2 bg-red-50 border border-red-300 rounded flex items-start gap-2">
-                          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                          <div className="text-sm text-red-700">
-                            <strong>⚠️ Atenção:</strong> Este serviço não está cadastrado na tabela de preços para o convênio "{payers.find(p => p.id === agendamentoData.payerId)?.name}". 
-                            <br />
-                            <span className="text-xs">Você pode prosseguir, mas deverá informar o valor manualmente.</span>
-                          </div>
-                        </div>
-                      )}
                     </div>
                     <div>
                       <Label>💰 Valor (R$)</Label>
@@ -3079,11 +2883,7 @@ export default function AppointmentUnitedModal({
                         step="0.01"
                         min="0"
                         value={agendamentoData.value}
-                        onChange={(e) => {
-                          updateAgendamentoField('value', e.target.value);
-                          // ETAPA 6: Sincronizar com formData
-                          setFormData(prev => ({ ...prev, value: e.target.value }));
-                        }}
+                        onChange={(e) => updateAgendamentoField('value', e.target.value)}
                       />
                     </div>
                   </div>
@@ -3095,8 +2895,6 @@ export default function AppointmentUnitedModal({
                       onValueChange={(value) => {
                         console.log('🔹 [Status] Alterando status para:', value);
                         updateAgendamentoField('status', value);
-                        // ETAPA 6: Sincronizar com formData
-                        setFormData(prev => ({ ...prev, status: value }));
                       }}
                     >
                       <SelectTrigger>
@@ -3120,11 +2918,7 @@ export default function AppointmentUnitedModal({
                     <Textarea
                       placeholder="Observações importantes..."
                       value={agendamentoData.notes}
-                      onChange={(e) => {
-                        updateAgendamentoField('notes', e.target.value);
-                        // ETAPA 6: Sincronizar com formData
-                        setFormData(prev => ({ ...prev, notes: e.target.value }));
-                      }}
+                      onChange={(e) => updateAgendamentoField('notes', e.target.value)}
                     />
                   </div>
                 </div>
@@ -3563,11 +3357,7 @@ export default function AppointmentUnitedModal({
                     <Label>📊 Plano de Contas *</Label>
                     <Select
                       value={faturamentoData.plano_contas_id || ''}
-                      onValueChange={(value) => {
-                        updateFaturamentoField('plano_contas_id', value);
-                        // ETAPA 6: Sincronizar com formData
-                        setFormData(prev => ({ ...prev, plano_contas_id: value }));
-                      }}
+                      onValueChange={(value) => updateFaturamentoField('plano_contas_id', value)}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o plano de contas" />
@@ -3704,6 +3494,247 @@ export default function AppointmentUnitedModal({
                     <p className="text-sm font-semibold text-orange-900">💳 Dados de Pagamento</p>
                   </div>
 
+                  {/* ✅ CHECKBOX: Habilitar Múltiplos Pagamentos */}
+                  <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={enableMultiplePayments}
+                        onChange={(e) => setEnableMultiplePayments(e.target.checked)}
+                        className="w-5 h-5 text-blue-600 cursor-pointer"
+                      />
+                      <div className="flex-1">
+                        <p className="font-semibold text-gray-900">
+                          {enableMultiplePayments ? '✅ Múltiplos Pagamentos Habilitados' : '⏳ Pagamento Único'}
+                        </p>
+                        <p className="text-xs text-gray-600">
+                          {enableMultiplePayments 
+                            ? 'Você pode dividir o pagamento em várias formas (Cartão, PIX, Dinheiro, etc)'
+                            : 'Clique para habilitar e dividir o pagamento em múltiplas formas'
+                          }
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+
+                  {/* INTERFACE PARA MÚLTIPLOS PAGAMENTOS */}
+                  {enableMultiplePayments && (
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-400 rounded-lg p-4 space-y-4">
+                      <div>
+                        <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                          <span className="text-2xl">💳</span>
+                          Adicionar Forma de Pagamento
+                        </h3>
+                        {/* Informação sobre saldo com desconto */}
+                        {(() => {
+                          const desconto = parseFloat(pagamentoData.discount || 0);
+                          const valorOriginal = parseFloat(agendamentoData.value || 0);
+                          const valorComDesconto = valorOriginal - desconto;
+                          const totalPago = pagamentoSplits.reduce((s, p) => s + parseFloat(p.value || 0), 0);
+                          const saldoRestante = valorComDesconto - totalPago;
+                          
+                          return (
+                            <div className="mt-2 p-2 bg-white rounded border border-blue-200">
+                              <p className="text-xs text-gray-600">
+                                💰 Saldo a receber: <span className="font-bold text-blue-900">R$ {saldoRestante.toFixed(2)}</span>
+                                {desconto > 0 && (
+                                  <span className="text-yellow-700 ml-2">(Original R$ {valorOriginal.toFixed(2)} - Desconto R$ {desconto.toFixed(2)})</span>
+                                )}
+                              </p>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                      
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <Label className="text-xs font-semibold">Método de Pagamento</Label>
+                          <Select 
+                            value={splitFormData.payment_method} 
+                            onValueChange={(value) => setSplitFormData({...splitFormData, payment_method: value})}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="DINHEIRO">💵 Dinheiro</SelectItem>
+                              <SelectItem value="CARTAO">💳 Cartão</SelectItem>
+                              <SelectItem value="PIX">📱 PIX</SelectItem>
+                              <SelectItem value="CHEQUE">📝 Cheque</SelectItem>
+                              <SelectItem value="BOLETO">🏦 Boleto</SelectItem>
+                              <SelectItem value="DOC">🏦 DOC</SelectItem>
+                              <SelectItem value="TED">⚡ TED</SelectItem>
+                              <SelectItem value="DEPOSITO">💰 Depósito</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label className="text-xs font-semibold">Valor (R$)</Label>
+                          <Input 
+                            type="number" 
+                            step="0.01" 
+                            min="0" 
+                            placeholder="0.00"
+                            value={splitFormData.value}
+                            onChange={(e) => setSplitFormData({...splitFormData, value: e.target.value})}
+                            className="h-9"
+                          />
+                        </div>
+
+                        <div className="flex items-end">
+                          <button
+                            type="button"
+                            onClick={addPaymentSplit}
+                            className="w-full h-9 px-4 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition text-sm"
+                          >
+                            ➕ Adicionar
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Campos específicos do método de pagamento */}
+                      {splitFormData.payment_method !== 'DINHEIRO' && (
+                        <PaymentSplitFields 
+                          method={splitFormData.payment_method}
+                          formData={splitFormData}
+                          onFieldChange={(field, value) => setSplitFormData({...splitFormData, [field]: value})}
+                        />
+                      )}
+
+                      {/* RESUMO DE PAGAMENTOS */}
+                      <div className="bg-white rounded-lg p-3 border border-gray-200 space-y-2">
+                        <p className="font-semibold text-sm text-gray-900">📊 Pagamentos Adicionados</p>
+                        
+                        {pagamentoSplits.length === 0 ? (
+                          <p className="text-xs text-gray-500 italic">Nenhum pagamento adicionado ainda</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {pagamentoSplits.map((split) => {
+                              const metodosMap = {
+                                'DINHEIRO': '💵 Dinheiro',
+                                'CARTAO': '💳 Cartão',
+                                'PIX': '📱 PIX',
+                                'CHEQUE': '📝 Cheque',
+                                'BOLETO': '🏦 Boleto',
+                                'DOC': '🏦 DOC',
+                                'TED': '⚡ TED',
+                                'DEPOSITO': '💰 Depósito',
+                              };
+                              
+                              // Renderizar detalhes específicos do pagamento
+                              const renderSplitDetails = () => {
+                                const details = [];
+                                
+                                if (split.payment_method === 'CARTAO') {
+                                  if (split.card_brand) details.push(`${split.card_brand} ${split.card_last4 ? '***' + split.card_last4 : ''}`);
+                                  if (split.installments && split.installments !== '1') details.push(`${split.installments}x`);
+                                }
+                                else if (split.payment_method === 'PIX') {
+                                  if (split.pix_key) details.push(`Chave: ${split.pix_key.substring(0, 20)}...`);
+                                }
+                                else if (split.payment_method === 'CHEQUE') {
+                                  if (split.cheque_number) details.push(`Cheque: ${split.cheque_number}`);
+                                  if (split.cheque_bank) details.push(split.cheque_bank);
+                                }
+                                else if (split.payment_method === 'BOLETO') {
+                                  if (split.boleto_number) details.push(`Boleto: ${split.boleto_number.substring(0, 20)}...`);
+                                }
+                                else if (['DOC', 'TED', 'DEPOSITO'].includes(split.payment_method)) {
+                                  if (split.bank_name) details.push(split.bank_name);
+                                  if (split.bank_account) details.push(`Conta: ${split.bank_account}`);
+                                }
+                                
+                                return details;
+                              };
+                              
+                              const details = renderSplitDetails();
+                              
+                              return (
+                                <div key={split.id} className="bg-gray-50 p-3 rounded border border-gray-200 hover:bg-gray-100 transition">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="font-semibold text-sm text-gray-900">
+                                      {metodosMap[split.payment_method] || split.payment_method}
+                                    </span>
+                                    <span className="text-sm font-bold text-green-600">
+                                      R$ {parseFloat(split.value || 0).toFixed(2)}
+                                    </span>
+                                  </div>
+                                  
+                                  {details.length > 0 && (
+                                    <p className="text-xs text-gray-600 mb-2">
+                                      {details.join(' • ')}
+                                    </p>
+                                  )}
+                                  
+                                  <div className="flex justify-end">
+                                    <button
+                                      type="button"
+                                      onClick={() => removePaymentSplit(split.id)}
+                                      className="text-red-600 hover:text-red-800 text-xs font-bold hover:underline transition"
+                                    >
+                                      ✕ Remover
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* GRID DE CÁLCULO COM DESCONTO */}
+                        {(() => {
+                          const desconto = parseFloat(pagamentoData.discount || 0);
+                          const valorOriginal = parseFloat(agendamentoData.value || 0);
+                          const valorComDesconto = valorOriginal - desconto;
+                          const totalPago = pagamentoSplits.reduce((s, p) => s + parseFloat(p.value || 0), 0);
+                          const saldo = valorComDesconto - totalPago;
+                          
+                          return (
+                            <div className="mt-3 pt-2 border-t border-gray-200 space-y-2">
+                              {/* Linha 1: Valores */}
+                              <div className="grid grid-cols-4 gap-2 text-xs">
+                                <div className="bg-blue-50 p-2 rounded text-center">
+                                  <p className="text-gray-600 font-semibold text-xs">Valor Original</p>
+                                  <p className="text-blue-900 font-bold text-sm">R$ {valorOriginal.toFixed(2)}</p>
+                                </div>
+                                {desconto > 0 && (
+                                  <div className="bg-yellow-50 p-2 rounded text-center">
+                                    <p className="text-gray-600 font-semibold text-xs">Desconto</p>
+                                    <p className="text-yellow-900 font-bold text-sm">-R$ {desconto.toFixed(2)}</p>
+                                  </div>
+                                )}
+                                <div className={`p-2 rounded text-center ${desconto > 0 ? 'col-span-1' : 'col-span-2'} bg-purple-50`}>
+                                  <p className="text-gray-600 font-semibold text-xs">Total a Pagar</p>
+                                  <p className="text-purple-900 font-bold text-sm">R$ {valorComDesconto.toFixed(2)}</p>
+                                </div>
+                                <div className="bg-green-50 p-2 rounded text-center">
+                                  <p className="text-gray-600 font-semibold text-xs">Já Pago</p>
+                                  <p className="text-green-900 font-bold text-sm">R$ {totalPago.toFixed(2)}</p>
+                                </div>
+                              </div>
+                              {/* Linha 2: Saldo e Status */}
+                              <div className="grid grid-cols-2 gap-2 text-xs">
+                                <div className="bg-orange-50 p-2 rounded text-center">
+                                  <p className="text-gray-600 font-semibold">Saldo Restante</p>
+                                  <p className={`font-bold text-sm ${saldo <= 0 ? 'text-green-900' : 'text-orange-900'}`}>
+                                    R$ {saldo.toFixed(2)}
+                                  </p>
+                                </div>
+                                <div className="bg-gray-50 p-2 rounded text-center">
+                                  <p className="text-gray-600 font-semibold">Status</p>
+                                  <p className={`font-bold text-sm ${Math.abs(saldo) < 0.01 ? 'text-green-600' : 'text-orange-600'}`}>
+                                    {Math.abs(saldo) < 0.01 ? '✓ Completo' : '⚠️ Incompleto'}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  )}
+
                   <div>
                     <Label>Forma de Pagamento *</Label>
                     <Select
@@ -3730,11 +3761,7 @@ export default function AppointmentUnitedModal({
                     <Label>📊 Plano de Contas *</Label>
                     <Select
                       value={pagamentoData.plano_contas_id || ''}
-                      onValueChange={(value) => {
-                        updatePagamentoField('plano_contas_id', value);
-                        // ETAPA 6: Sincronizar com formData
-                        setFormData(prev => ({ ...prev, plano_contas_id: value }));
-                      }}
+                      onValueChange={(value) => updatePagamentoField('plano_contas_id', value)}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o plano de contas" />
@@ -3757,95 +3784,249 @@ export default function AppointmentUnitedModal({
                         step="0.01"
                         min="0"
                         value={agendamentoData.value}
-                        onChange={(e) => {
-                          updateAgendamentoField('value', e.target.value);
-                          // ETAPA 6: Sincronizar com formData
-                          setFormData(prev => ({ ...prev, value: e.target.value }));
-                        }}
+                        onChange={(e) => updateAgendamentoField('value', e.target.value)}
                       />
                     </div>
                   </div>
 
-                  {/* SEÇÃO DE DESCONTO - COM AUTORIZAÇÃO */}
-                  {parseFloat(pagamentoData.discount || 0) > 0 && (
-                    <div className="bg-yellow-50 border-l-4 border-yellow-500 rounded-lg p-4 space-y-3">
-                      <div className="font-bold text-yellow-900">⚠️ Desconto Aplicado</div>
-                      
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label>Valor do Desconto (R$) *</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={pagamentoData.discount}
-                            onChange={(e) => updatePagamentoField('discount', e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label>Motivo do Desconto *</Label>
-                          <Select
-                            value={pagamentoData.discount_reason || ''}
-                            onValueChange={(value) => updatePagamentoField('discount_reason', value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione motivo" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="cortesia">Cortesia</SelectItem>
-                              <SelectItem value="promocao">Promoção</SelectItem>
-                              <SelectItem value="primeira_consulta">Primeira Consulta</SelectItem>
-                              <SelectItem value="indicacao">Indicação</SelectItem>
-                              <SelectItem value="fidelidade">Fidelidade</SelectItem>
-                              <SelectItem value="erro_cobranca">Erro de Cobrança</SelectItem>
-                              <SelectItem value="dificuldade_financeira">Dificuldade Financeira</SelectItem>
-                              <SelectItem value="outros">Outros</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
+                  {/* SEÇÃO DE DESCONTO - COM AUTORIZAÇÃO - SEMPRE VISÍVEL */}
+                  <div className={`rounded-lg p-4 space-y-3 ${
+                    parseFloat(pagamentoData.discount || 0) > 0 
+                      ? 'bg-yellow-50 border-l-4 border-yellow-500'
+                      : 'bg-gray-50 border border-gray-200'
+                  }`}>
+                    <div className="font-bold">
+                      {parseFloat(pagamentoData.discount || 0) > 0 
+                        ? <span className="text-yellow-900">⚠️ Desconto Aplicado</span>
+                        : <span className="text-gray-900">💬 Desconto e Observações</span>
+                      }
+                    </div>
 
+                    {/* AVISO: Desconto Autorizado - Campos Protegidos */}
+                    {pagamentoData.discount_authorized_by && parseFloat(pagamentoData.discount || 0) > 0 && (
+                      <div className="bg-blue-50 border border-blue-300 rounded p-3">
+                        <p className="text-sm text-blue-900 font-semibold mb-2">
+                          🔒 Campos Protegidos - Desconto Já Autorizado
+                        </p>
+                        <div className="text-xs text-blue-700 mb-3 space-y-1">
+                          <p>
+                            <strong>Autorizado por:</strong> {(() => {
+                              const authorized = professionals.find(p => p.id === pagamentoData.discount_authorized_by);
+                              return authorized ? authorized.name : 'Administrador do Sistema';
+                            })()}
+                          </p>
+                          {pagamentoData.discount_authorized_at && (
+                            <p>
+                              <strong>Data e Hora:</strong> {new Date(pagamentoData.discount_authorized_at).toLocaleDateString('pt-BR')} às {new Date(pagamentoData.discount_authorized_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          )}
+                          <p className="mt-2">
+                            Para alterar os valores, você deve primeiro remover a autorização.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={async (e) => {
+                            e.preventDefault();
+                            console.log('🔘 [RemoveAuthorization] Botão clicado');
+                            
+                            const confirmRemove = window.confirm(
+                              '⚠️ Tem certeza que deseja remover a autorização deste desconto?\n\nIsso permitirá editar os valores, mas a autorização será cancelada no sistema.'
+                            );
+                            
+                            console.log('📋 [RemoveAuthorization] Confirmação:', confirmRemove);
+                            if (!confirmRemove) {
+                              console.log('⏭️  [RemoveAuthorization] Usuário cancelou');
+                              return;
+                            }
+                            
+                            try {
+                              console.log('🔄 [RemoveAuthorization] Iniciando remoção...');
+                              setLoading(true);
+                              
+                              const appointmentId = appointment?.id;
+                              console.log('📍 [RemoveAuthorization] Appointment ID:', appointmentId);
+                              
+                              if (!appointmentId) {
+                                throw new Error('ID do agendamento não encontrado');
+                              }
+                              
+                              // Atualizar campos locais primeiro
+                              console.log('✏️  [RemoveAuthorization] Atualizando campos locais');
+                              updatePagamentoField('discount_authorized_by', null);
+                              updatePagamentoField('discount_authorized_at', null);
+                              
+                              // Atualizar no banco de dados
+                              console.log('💾 [RemoveAuthorization] Atualizando banco de dados');
+                              const result = await updateAppointment(appointmentId, {
+                                discountAuthorizedBy: null,
+                                discountAuthorizedAt: null
+                              });
+                              console.log('✅ [RemoveAuthorization] Resultado:', result);
+                              
+                              setLoading(false);
+                              alert('✅ Autorização removida com sucesso!\n\nOs campos estão desbloqueados para edição.');
+                            } catch (error) {
+                              setLoading(false);
+                              console.error('❌ [RemoveAuthorization] Erro:', error);
+                              console.error('Stack:', error.stack);
+                              alert(`❌ Erro ao remover autorização:\n\n${error.message}`);
+                            }
+                          }}
+                          disabled={loading}
+                          className="text-xs bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-3 py-1 rounded transition font-semibold"
+                        >
+                          {loading ? '⏳ Removendo...' : '🔓 Remover Autorização para Alterar'}
+                        </button>
+                      </div>
+                    )}
+                    
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label>Observações sobre Desconto</Label>
-                        <Textarea
-                          placeholder="Justificativa ou detalhes adicionais..."
-                          value={pagamentoData.discount_observation || ''}
-                          onChange={(e) => updatePagamentoField('discount_observation', e.target.value)}
-                          rows={2}
+                        <Label>Valor do Desconto (R$)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={pagamentoData.discount || 0}
+                          onChange={(e) => updatePagamentoField('discount', e.target.value)}
+                          placeholder="0.00"
+                          disabled={pagamentoData.discount_authorized_by && parseFloat(pagamentoData.discount || 0) > 0}
+                          className={pagamentoData.discount_authorized_by && parseFloat(pagamentoData.discount || 0) > 0 ? 'bg-gray-100 cursor-not-allowed' : ''}
                         />
                       </div>
+                      <div>
+                        <Label>Motivo do Desconto</Label>
+                        <Select
+                          value={pagamentoData.discount_reason || ''}
+                          onValueChange={(value) => updatePagamentoField('discount_reason', value)}
+                          disabled={pagamentoData.discount_authorized_by && parseFloat(pagamentoData.discount || 0) > 0}
+                        >
+                          <SelectTrigger className={pagamentoData.discount_authorized_by && parseFloat(pagamentoData.discount || 0) > 0 ? 'bg-gray-100 cursor-not-allowed' : ''}>
+                            <SelectValue placeholder="Selecione motivo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              <SelectLabel className="text-blue-600 font-bold">📊 MOTIVOS COMERCIAIS</SelectLabel>
+                              <SelectItem value="promocao">🎁 Promoção</SelectItem>
+                              <SelectItem value="primeira_consulta">✨ Primeira Consulta</SelectItem>
+                              <SelectItem value="indicacao">👥 Indicação/Referência</SelectItem>
+                              <SelectItem value="fidelidade">⭐ Fidelidade/Cliente Recorrente</SelectItem>
+                              <SelectItem value="desconto_grupo">👨‍👩‍👧‍👦 Desconto Grupo/Pacote</SelectItem>
+                            </SelectGroup>
 
-                      <div className="bg-red-50 border border-red-200 rounded p-3">
-                        <p className="text-sm text-red-900 font-semibold">
-                          🔒 Este desconto requer autorização de administrador
-                        </p>
-                        <p className="text-xs text-red-700 mt-1">
-                          O desconto será registrado e enviado para aprovação
-                        </p>
+                            <SelectGroup>
+                              <SelectLabel className="text-green-600 font-bold">🏥 MOTIVOS DO PACIENTE</SelectLabel>
+                              <SelectItem value="dificuldade_financeira">💰 Dificuldade Financeira</SelectItem>
+                              <SelectItem value="cortesia_medica">🏥 Cortesia Médica/Profissional</SelectItem>
+                              <SelectItem value="cortesia_administrativo">📋 Cortesia Administrativa</SelectItem>
+                            </SelectGroup>
+
+                            <SelectGroup>
+                              <SelectLabel className="text-orange-600 font-bold">⚙️ MOTIVOS OPERACIONAIS</SelectLabel>
+                              <SelectItem value="erro_cobranca">❌ Erro de Cobrança/Faturamento</SelectItem>
+                              <SelectItem value="correcao_sistema">🔧 Correção de Sistema</SelectItem>
+                              <SelectItem value="ajuste_convenio">🏪 Ajuste Convênio</SelectItem>
+                            </SelectGroup>
+
+                            <SelectGroup>
+                              <SelectLabel className="text-purple-600 font-bold">📅 MOTIVOS CRONOLÓGICOS</SelectLabel>
+                              <SelectItem value="feriado">🎉 Feriado/Data Especial</SelectItem>
+                              <SelectItem value="agendamento_bloqueado">🚫 Liberação de Agendamento Bloqueado</SelectItem>
+                            </SelectGroup>
+
+                            <SelectGroup>
+                              <SelectLabel className="text-gray-600 font-bold">📝 OUTROS</SelectLabel>
+                              <SelectItem value="cancelamento_anterior">↩️ Compensação Cancelamento Anterior</SelectItem>
+                              <SelectItem value="cortesia_outros">💝 Cortesia Especial</SelectItem>
+                              <SelectItem value="outros">📝 Outros Motivos</SelectItem>
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
-                  )}
 
-                  {/* BOTÃO PARA APLICAR DESCONTO */}
-                  {(!pagamentoData.discount || parseFloat(pagamentoData.discount) === 0) && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => updatePagamentoField('discount', '0.01')}
-                      className="w-full border-yellow-500 text-yellow-700 hover:bg-yellow-50"
-                    >
-                      ➕ Aplicar Desconto
-                    </Button>
-                  )}
+                    <div>
+                      <Label>Observações sobre Desconto</Label>
+                      <Textarea
+                        placeholder="Justificativa ou detalhes adicionais..."
+                        value={pagamentoData.discount_observation || ''}
+                        onChange={(e) => updatePagamentoField('discount_observation', e.target.value)}
+                        rows={2}
+                        disabled={pagamentoData.discount_authorized_by && parseFloat(pagamentoData.discount || 0) > 0}
+                        className={pagamentoData.discount_authorized_by && parseFloat(pagamentoData.discount || 0) > 0 ? 'bg-gray-100 cursor-not-allowed' : ''}
+                      />
+                    </div>
 
-                  {/* Componente dinâmico de campos de pagamento */}
-                  <PaymentMethodFields
-                    paymentMethod={pagamentoData.payment_method}
-                    paymentData={pagamentoData}
-                    bankAccounts={[]} // TODO: fetch from API
-                    onFieldChange={handlePaymentFieldChange}
-                    onCalculateChange={handleCalculateChange}
-                  />
+                    {/* Mostrar status de autorização apenas se há desconto */}
+                    {parseFloat(pagamentoData.discount || 0) > 0 && (
+                      <>
+                        {pagamentoData.discount_authorized_by ? (
+                          <div className="bg-green-50 border border-green-200 rounded p-3">
+                            <p className="text-sm text-green-900 font-semibold">
+                              ✅ Desconto Autorizado
+                            </p>
+                            {pagamentoData.discount_authorized_at && (
+                              <p className="text-xs text-green-700 mt-1">
+                                Autorizado em: {new Date(pagamentoData.discount_authorized_at).toLocaleDateString('pt-BR')}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <div className="bg-red-50 border border-red-200 rounded p-3">
+                              <p className="text-sm text-red-900 font-semibold">
+                                🔒 Este desconto requer autorização de administrador
+                              </p>
+                              <p className="text-xs text-red-700 mt-1">
+                                O desconto será registrado e enviado para aprovação
+                              </p>
+                            </div>
+                            
+                            {/* Botão para submeter desconto para autorização */}
+                            {pagamentoData.discount_requested_at ? (
+                              <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                                <p className="text-sm text-blue-900 font-semibold">
+                                  📋 Desconto já foi solicitado
+                                </p>
+                                <p className="text-xs text-blue-700 mt-1">
+                                  Solicitado em: {new Date(pagamentoData.discount_requested_at).toLocaleDateString('pt-BR')}
+                                </p>
+                              </div>
+                            ) : (
+                              <Button
+                                onClick={async () => {
+                                  try {
+                                    setLoading(true);
+                                    console.log('📤 Enviando desconto para autorização...');
+                                    
+                                    // Atualizar os campos de solicitação
+                                    updatePagamentoField('discount_requested_at', new Date().toISOString());
+                                    updatePagamentoField('discount_requested_by', user?.id);
+                                    updatePagamentoField('discount_requested_by_name', user?.user_metadata?.name || user?.email); // ✅ NOVO: Armazenar nome do usuário
+                                    
+                                    alert('✅ Desconto enviado para autorização!\n\nVocê pode acompanhar em Financeiro > Autorização de Descontos');
+                                    setLoading(false);
+                                  } catch (error) {
+                                    setLoading(false);
+                                    alert(`❌ Erro ao enviar desconto: ${error.message}`);
+                                    console.error('Erro:', error);
+                                  }
+                                }}
+                                disabled={loading}
+                                className="w-full bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white"
+                              >
+                                {loading ? '⏳ Enviando...' : '📤 Solicitar Autorização de Desconto'}
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+
+                  {/* NOTA: Campos de método de pagamento específicos foram removidos desta seção.
+                       Use a seção de "Múltiplos Pagamentos" para registrar pagamentos com detalhes específicos. */}
 
                   {/* RESUMO FINANCEIRO */}
                   <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-300 rounded-lg p-4 space-y-2 mt-6">
