@@ -8,6 +8,8 @@ import {
   SelectValue,
   SelectContent,
   SelectItem,
+  SelectGroup,
+  SelectLabel,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -3354,14 +3356,41 @@ export default function AppointmentUnitedModal({
                               <SelectValue placeholder="Selecione motivo" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="cortesia">Cortesia</SelectItem>
-                              <SelectItem value="promocao">Promoção</SelectItem>
-                              <SelectItem value="primeira_consulta">Primeira Consulta</SelectItem>
-                              <SelectItem value="indicacao">Indicação</SelectItem>
-                              <SelectItem value="fidelidade">Fidelidade</SelectItem>
-                              <SelectItem value="erro_cobranca">Erro de Cobrança</SelectItem>
-                              <SelectItem value="dificuldade_financeira">Dificuldade Financeira</SelectItem>
-                              <SelectItem value="outros">Outros</SelectItem>
+                              <SelectGroup>
+                                <SelectLabel className="text-blue-600 font-bold">📊 MOTIVOS COMERCIAIS</SelectLabel>
+                                <SelectItem value="promocao">🎁 Promoção</SelectItem>
+                                <SelectItem value="primeira_consulta">✨ Primeira Consulta</SelectItem>
+                                <SelectItem value="indicacao">👥 Indicação/Referência</SelectItem>
+                                <SelectItem value="fidelidade">⭐ Fidelidade/Cliente Recorrente</SelectItem>
+                                <SelectItem value="desconto_grupo">👨‍👩‍👧‍👦 Desconto Grupo/Pacote</SelectItem>
+                              </SelectGroup>
+
+                              <SelectGroup>
+                                <SelectLabel className="text-green-600 font-bold">🏥 MOTIVOS DO PACIENTE</SelectLabel>
+                                <SelectItem value="dificuldade_financeira">💰 Dificuldade Financeira</SelectItem>
+                                <SelectItem value="cortesia_medica">🏥 Cortesia Médica/Profissional</SelectItem>
+                                <SelectItem value="cortesia_administrativo">📋 Cortesia Administrativa</SelectItem>
+                              </SelectGroup>
+
+                              <SelectGroup>
+                                <SelectLabel className="text-orange-600 font-bold">⚙️ MOTIVOS OPERACIONAIS</SelectLabel>
+                                <SelectItem value="erro_cobranca">❌ Erro de Cobrança/Faturamento</SelectItem>
+                                <SelectItem value="correcao_sistema">🔧 Correção de Sistema</SelectItem>
+                                <SelectItem value="ajuste_convenio">🏪 Ajuste Convênio</SelectItem>
+                              </SelectGroup>
+
+                              <SelectGroup>
+                                <SelectLabel className="text-purple-600 font-bold">📅 MOTIVOS CRONOLÓGICOS</SelectLabel>
+                                <SelectItem value="feriado">🎉 Feriado/Data Especial</SelectItem>
+                                <SelectItem value="agendamento_bloqueado">🚫 Liberação de Agendamento Bloqueado</SelectItem>
+                              </SelectGroup>
+
+                              <SelectGroup>
+                                <SelectLabel className="text-gray-600 font-bold">📝 OUTROS</SelectLabel>
+                                <SelectItem value="cancelamento_anterior">↩️ Compensação Cancelamento Anterior</SelectItem>
+                                <SelectItem value="cortesia_outros">💝 Cortesia Especial</SelectItem>
+                                <SelectItem value="outros">📝 Outros Motivos</SelectItem>
+                              </SelectGroup>
                             </SelectContent>
                           </Select>
                         </div>
@@ -3377,13 +3406,51 @@ export default function AppointmentUnitedModal({
                         />
                       </div>
 
-                      <div className="bg-red-50 border border-red-200 rounded p-3">
-                        <p className="text-sm text-red-900 font-semibold">
-                          🔒 Este desconto requer autorização de administrador
-                        </p>
-                        <p className="text-xs text-red-700 mt-1">
-                          O desconto será registrado e enviado para aprovação
-                        </p>
+                      <div className="space-y-3">
+                        <div className="bg-red-50 border border-red-200 rounded p-3">
+                          <p className="text-sm text-red-900 font-semibold">
+                            🔒 Este desconto requer autorização de administrador
+                          </p>
+                          <p className="text-xs text-red-700 mt-1">
+                            O desconto será registrado e enviado para aprovação
+                          </p>
+                        </div>
+                        
+                        {/* Botão para submeter desconto para autorização */}
+                        {pagamentoData.discount_requested_at ? (
+                          <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                            <p className="text-sm text-blue-900 font-semibold">
+                              📋 Desconto já foi solicitado
+                            </p>
+                            <p className="text-xs text-blue-700 mt-1">
+                              Solicitado em: {new Date(pagamentoData.discount_requested_at).toLocaleDateString('pt-BR')}
+                            </p>
+                          </div>
+                        ) : (
+                          <Button
+                            onClick={async () => {
+                              try {
+                                setLoading(true);
+                                console.log('📤 Enviando desconto para autorização...');
+                                
+                                // Atualizar os campos de solicitação
+                                updatePagamentoField('discount_requested_at', new Date().toISOString());
+                                updatePagamentoField('discount_requested_by', user?.id);
+                                
+                                alert('✅ Desconto enviado para autorização!\n\nVocê pode acompanhar em Financeiro > Autorização de Descontos');
+                                setLoading(false);
+                              } catch (error) {
+                                setLoading(false);
+                                alert(`❌ Erro ao enviar desconto: ${error.message}`);
+                                console.error('Erro:', error);
+                              }
+                            }}
+                            disabled={loading}
+                            className="w-full bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white"
+                          >
+                            {loading ? '⏳ Enviando...' : '📤 Solicitar Autorização de Desconto'}
+                          </Button>
+                        )}
                       </div>
                     </div>
                   )}

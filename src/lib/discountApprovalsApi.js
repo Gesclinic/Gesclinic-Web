@@ -454,6 +454,115 @@ return data[0];
       cancelled: 'bg-gray-100 text-gray-800'
     };
     return colors[status] || 'bg-gray-100 text-gray-800';
+  },
+
+  // ==================== APPROVE/REJECT AUTHORIZATIONS ====================
+  async approveDiscountAuthorization(authorizationId, appointmentId, approvedByUserId) {
+    try {
+      const now = new Date().toISOString();
+
+      // Tentar atualizar em discount_authorizations se existir
+      try {
+        const { data, error } = await client
+          .from('discount_authorizations')
+          .update({
+            status: 'approved',
+            approved_at: now,
+            approved_by: approvedByUserId
+          })
+          .eq('id', authorizationId)
+          .select()
+          .single();
+
+        if (!error && data) {
+          // Também atualizar appointment com a data de aprovação
+          if (appointmentId) {
+            await client
+              .from('appointments')
+              .update({
+                discount_authorized_at: now,
+                discount_authorized_by: approvedByUserId
+              })
+              .eq('id', appointmentId);
+          }
+          return data;
+        }
+      } catch (e) {
+        // Tabela não existe
+      }
+
+      // Fallback: atualizar apenas appointment
+      const { data, error } = await client
+        .from('appointments')
+        .update({
+          discount_authorized_at: now,
+          discount_authorized_by: approvedByUserId
+        })
+        .eq('id', appointmentId || authorizationId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      throw new Error(`Erro ao aprovar autorização: ${err.message}`);
+    }
+  },
+
+  async rejectDiscountAuthorization(authorizationId, appointmentId, rejectionReason = '') {
+    try {
+      const now = new Date().toISOString();
+
+      // Tentar atualizar em discount_authorizations se existir
+      try {
+        const { data, error } = await client
+          .from('discount_authorizations')
+          .update({
+            status: 'rejected',
+            rejected_at: now,
+            rejection_reason: rejectionReason
+          })
+          .eq('id', authorizationId)
+          .select()
+          .single();
+
+        if (!error && data) {
+          // Também limpar desconto no appointment
+          if (appointmentId) {
+            await client
+              .from('appointments')
+              .update({
+                discount: 0,
+                discount_reason: null,
+                discount_authorized_by: null,
+                discount_authorized_at: null
+              })
+              .eq('id', appointmentId);
+          }
+          return data;
+        }
+      } catch (e) {
+        // Tabela não existe
+      }
+
+      // Fallback: limpar desconto no appointment
+      const { data, error } = await client
+        .from('appointments')
+        .update({
+          discount: 0,
+          discount_reason: null,
+          discount_authorized_by: null,
+          discount_authorized_at: null
+        })
+        .eq('id', appointmentId || authorizationId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      throw new Error(`Erro ao rejeitar autorização: ${err.message}`);
+    }
   }
 };
 

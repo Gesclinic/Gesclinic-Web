@@ -27,6 +27,23 @@ import { getStatusStyle } from '@/utils/helpers/getStatusStyle';
  * - onViewDetails: (appointmentId) => void - ver detalhes (painel lateral)
  * - filteredProfessionalId: string - ID do profissional filtrado (opcional)
  */
+// ✅ Helper: Validar se um valor é uma data válida
+const isValidDate = (date) => {
+  if (!date) return false;
+  if (date instanceof Date) {
+    return !isNaN(date.getTime());
+  }
+  if (typeof date === 'string') {
+    try {
+      const parsed = parseISO(date);
+      return !isNaN(parsed.getTime());
+    } catch {
+      return false;
+    }
+  }
+  return false;
+};
+
 export default function AgendaMonthView({
   date,
   appointments = [],
@@ -417,7 +434,17 @@ export default function AgendaMonthView({
                       // Quando tem agendamentos (até 2 exibidos)
                       <div className="w-full text-center">
                         {dayAppts.slice(0, 2).map(apt => {
-                          const aptTime = (apt.scheduled_time || '').substring(0, 5) || (apt.startTime ? format(apt.startTime, 'HH:mm') : '?');
+                          // ✅ Validar antes de formatar data
+                          let aptTime = (apt.scheduled_time || '').substring(0, 5);
+                          if (!aptTime && isValidDate(apt.startTime)) {
+                            try {
+                              aptTime = format(apt.startTime, 'HH:mm');
+                            } catch {
+                              aptTime = '?';
+                            }
+                          }
+                          if (!aptTime) aptTime = '?';
+                          
                           const fullName = apt.patient_name || 'Paciente';
                           const nameParts = fullName.split(' ').filter(p => p.length > 0);
                           const displayName = nameParts.length > 1

@@ -300,6 +300,14 @@ export function getMenuItems(role = "admin") {
           featurePath: "financeiro.caixa_gerencial",
         },
         {
+          id: "financeiro.autorizacoes_descontos",
+          label: "Autorização de Descontos",
+          icon: "ShieldCheck",
+          path: "/clinica/financeiro/autorizacoes-descontos",
+          roles: ["admin", "gestor"],
+          featurePath: "financeiro.autorizacoes_descontos",
+        },
+        {
           id: "financeiro.estrutura",
           label: "Estrutura Financeira",
           icon: "Settings2",

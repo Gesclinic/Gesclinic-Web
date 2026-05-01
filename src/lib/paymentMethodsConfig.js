@@ -196,10 +196,10 @@ export const defaultPaymentData = {
   // DESCONTO - com autorização
   discount: '0.00',
   discount_reason: '', // Motivo do desconto
+  discount_requested_at: null, // Data/hora do envio para autorização
   discount_authorized_by: null, // ID do admin que autorizou
   discount_authorized_at: null, // Data/hora da autorização
-  discount_observation: '', // Observações sobre o desconto
-  
+  discount_observation: '', // Observações sobre o desconto,
   // PLANO DE CONTAS (Faturamento)
   plano_contas_id: '',
   

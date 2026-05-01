@@ -318,3 +318,134 @@ export async function deleteServicePriceHealthInsurance(clinicId, healthInsuranc
     throw error;
   }
 }
+
+// ============================================================
+// PRICE CACHING & ENRICHMENT FUNCTIONS
+// ============================================================
+
+let priceCache = {};
+
+/**
+ * Buscar preço de um serviço para um convênio específico
+ * Usa cache em memória para evitar queries repetidas
+ * @param {string} payerId - ID do convênio/payer
+ * @param {string} serviceId - ID do serviço
+ * @returns {Promise<number>} Preço do serviço ou 0 se não encontrado
+ */
+export const getServicePrice = async (payerId, serviceId) => {
+  if (!payerId || !serviceId) {
+    console.warn('⚠️ [getServicePrice] payerId ou serviceId ausentes:', { payerId, serviceId });
+    return 0;
+  }
+
+  const cacheKey = `${payerId}-${serviceId}`;
+  
+  // Verificar cache
+  if (priceCache[cacheKey] !== undefined) {
+    console.log(`✅ [Cache] Preço encontrado para ${cacheKey}: R$ ${priceCache[cacheKey]}`);
+    return priceCache[cacheKey];
+  }
+
+  try {
+    const { data, error } = await customSupabaseClient
+      .from('service_prices')
+      .select('price')
+      .eq('payer_id', payerId)
+      .eq('service_id', serviceId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // Não encontrado - é ok
+        priceCache[cacheKey] = 0;
+        return 0;
+      }
+      throw error;
+    }
+
+    const price = parseFloat(data?.price || 0);
+    priceCache[cacheKey] = price;
+    console.log(`✅ [getServicePrice] Preço encontrado para payer: ${payerId}, service: ${serviceId} = R$ ${price}`);
+    return price;
+  } catch (err) {
+    console.error(`❌ [getServicePrice] Erro ao buscar preço para payer: ${payerId}, service: ${serviceId}`, err);
+    return 0;
+  }
+};
+
+/**
+ * Buscar preços em lote para múltiplas combinações de payer+service
+ * @param {Array<{payerId, serviceId}>} combinations - Array de combinações a buscar
+ * @returns {Promise<Object>} Mapa de preços { "payerId-serviceId": price }
+ */
+export const getServicePricesBatch = async (combinations = []) => {
+  const priceMap = {};
+  
+  // Filtrar apenas combinações que não estão em cache
+  const notCached = combinations.filter(combo => {
+    const key = `${combo.payerId}-${combo.serviceId}`;
+    if (priceCache[key] !== undefined) {
+      priceMap[key] = priceCache[key];
+      return false;
+    }
+    return true;
+  });
+
+  if (notCached.length === 0) {
+    console.log('✅ [Batch] Todos os preços estão em cache');
+    return priceMap;
+  }
+
+  console.log(`💹 [Batch] Carregando ${notCached.length} preços de service_prices...`);
+
+  try {
+    for (const { payerId, serviceId } of notCached) {
+      const price = await getServicePrice(payerId, serviceId);
+      const key = `${payerId}-${serviceId}`;
+      priceMap[key] = price;
+    }
+    
+    console.log(`✅ [Batch] ${notCached.length} preços carregados com sucesso`);
+    return priceMap;
+  } catch (err) {
+    console.error('❌ [Batch] Erro ao carregar preços em lote:', err);
+    return priceMap; // Retorna o mapa parcial mesmo com erro
+  }
+};
+
+/**
+ * Limpar cache de preços (útil para refresh)
+ */
+export const clearPriceCache = () => {
+  console.log('🔄 Limpando cache de preços');
+  priceCache = {};
+};
+
+/**
+ * Enriquecer múltiplos agendamentos com preços
+ * Se value for 0 ou null, busca na tabela service_prices baseado em payer_id + service_id
+ * @param {Array<Object>} appointments - Array de agendamentos
+ * @returns {Promise<Array<Object>>} Agendamentos com values atualizados
+ */
+export const enrichAppointmentsWithPrices = async (appointments = []) => {
+  if (appointments.length === 0) return appointments;
+
+  // Extrair combinações únicas que precisam de preço
+  const combinations = appointments
+    .filter(apt => !apt.value || parseFloat(apt.value) === 0)
+    .map(apt => ({ payerId: apt.payer_id, serviceId: apt.service_id }))
+    .filter((combo, idx, arr) => 
+      arr.findIndex(x => x.payerId === combo.payerId && x.serviceId === combo.serviceId) === idx
+    );
+
+  // Buscar preços em lote
+  const priceMap = await getServicePricesBatch(combinations);
+
+  // Atualizar agendamentos com preços
+  return appointments.map(apt => ({
+    ...apt,
+    value: apt.value && parseFloat(apt.value) > 0 
+      ? apt.value 
+      : priceMap[`${apt.payer_id}-${apt.service_id}`] || 0
+  }));
+};

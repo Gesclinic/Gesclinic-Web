@@ -63,6 +63,7 @@ import CentroCustosAnalises from "@/pages/clinica/financeiro/custos/Analises";
 import CentroCustosConfig from "@/pages/clinica/financeiro/custos/Config";
 import FinanceConciliacaoBancaria from "@/pages/clinica/financeiro/ConciliacaoBancaria";
 import FinanceAutomacaoFinanceira from "@/pages/clinica/financeiro/AutomacaoFinanceira";
+import AutorizacaoDescontos from "@/pages/clinica/financeiro/AutorizacaoDescontos";
 import DashboardDRE from "@/pages/clinica/financeiro/DashboardDRE";
 import CaixaIndividual from "@/pages/clinica/financeiro/CaixaIndividual";
 import CaixaGerencial from "@/pages/clinica/financeiro/CaixaGerencial";
@@ -417,6 +418,7 @@ export default function AppRoutes() {
           <Route path="financeiro/automacao" element={<FinanceAutomacaoFinanceira />} />
           <Route path="financeiro/automacoes" element={<Navigate to="/clinica/financeiro/automacao" replace />} />
           <Route path="automacoes" element={<Navigate to="/clinica/financeiro/automacao" replace />} />
+          <Route path="financeiro/autorizacoes-descontos" element={<AutorizacaoDescontos />} />
           <Route path="financeiro/repasse/*" element={<RepasseMedicoLayout />}>
             <Route index element={<Navigate to="?tab=visao-geral" replace />} />
             <Route path="visao-geral" element={<RepasseMedicoPage />} />

@@ -141,8 +141,8 @@ function mapToDatabase(payload) {
     service_id: payload.serviceId || payload.service_id,
     room_id: payload.roomId || payload.room_id,
     payer_id: payload.payerId || payload.payer_id,
-
-    // 📅 Datas/Horários (aceitar ambos camelCase e snake_case)
+    plan_id: payload.planId || payload.plan_id,
+    plano_contas_id: payload.plano_contas_id || payload.planosContasId || payload.planAccountId || null,
     scheduled_date: payload.date || payload.scheduled_date,
     scheduled_time: payload.time || payload.startTime || payload.scheduled_time,
     end_time: payload.endTime || payload.end_time,
@@ -150,7 +150,29 @@ function mapToDatabase(payload) {
     // 📊 Status e valores
     status: payload.status || "scheduled",
     notes: payload.notes || null,
-    value: payload.value ? parseFloat(payload.value) : 0,
+    value: payload.value ? parseFloat(payload.value) : null,
+    duration: payload.duration || 30,
+    
+    // 💳 Cartão e autorização
+    card_number: payload.card_number || payload.cardNumber || null,
+    card_verified: payload.card_verified !== undefined ? payload.card_verified : false,
+    authorization_number: payload.authorization_number || payload.authorizationNumber || null,
+    authorization_expiry: payload.authorization_expiry || payload.authorizationExpiry || null,
+    guide_number: payload.guide_number || payload.guideNumber || null,
+    
+    // 📋 Faturamento e desconto
+    discount: payload.discount !== undefined ? parseFloat(payload.discount) : 0,
+    discount_reason: payload.discount_reason || payload.discountReason || null,
+    discount_requested_at: payload.discount_requested_at || payload.discountRequestedAt || null,
+    discount_requested_by: payload.discount_requested_by || payload.discountRequestedBy || null,
+    discount_authorized_by: payload.discount_authorized_by || payload.discountAuthorizedBy || null,
+    discount_authorized_at: payload.discount_authorized_at || payload.discountAuthorizedAt || null,
+    discount_rejected_by: payload.discount_rejected_by || payload.discountRejectedBy || null,
+    discount_rejected_at: payload.discount_rejected_at || payload.discountRejectedAt || null,
+    discount_observation: payload.discount_observation || payload.discountObservation || null,
+    payment_method: payload.payment_method || payload.paymentMethod || null,
+    billing_data: typeof payload.billing_data === 'string' ? payload.billing_data : (payload.billing_data ? JSON.stringify(payload.billing_data) : null),
+    billing_notes: payload.billing_notes || payload.billingNotes || null,
   };
 }
 
@@ -191,8 +213,10 @@ export function mapFromDatabase(record) {
     
     // Datas/Horários
     date: record.scheduled_date,
-    startTime: record.scheduled_time,
-    endTime: record.end_time,
+    startTime: extractTime(record.scheduled_time),
+    time: extractTime(record.scheduled_time),
+    endTime: extractTime(record.end_time),
+    end_time: extractTime(record.end_time),
     
     // Status e notas
     status: record.status,
@@ -203,8 +227,12 @@ export function mapFromDatabase(record) {
     
     // Campos financeiros
     discountReason: record.discount_reason,
+    discountRequestedAt: record.discount_requested_at,
+    discountRequestedBy: record.discount_requested_by,
     discountAuthorizedBy: record.discount_authorized_by,
     discountAuthorizedAt: record.discount_authorized_at,
+    discountRejectedBy: record.discount_rejected_by,
+    discountRejectedAt: record.discount_rejected_at,
     discountObservation: record.discount_observation,
     
     // Dados do paciente
@@ -270,6 +298,7 @@ export function mapFromDatabase(record) {
     payer_name: record.payers?.active === false ? null : (record.payers?.name || 'Particular'),
     plan_name: record.plans?.name || null,
     plan_code: record.plans?.code || null,
+    plano_contas_id: record.plano_contas_id || null,
   };
   
   // 🔍 DEBUG: Log mapped camelCase data
@@ -683,8 +712,40 @@ export async function updateAppointment(id, payload) {
   // If no data returned, still consider it a success but log warning
   console.warn('⚠️ [updateAppointment] UPDATE executado mas sem dados retornados (possível RLS)');
   console.warn('   ⚠️⚠️⚠️ POTENCIAL PROBLEMA: RLS bloqueou a SELECT após UPDATE! ⚠️⚠️⚠️');
-  console.warn('   Retornando fallback com payload original:', payload);
-  return { id, ...mapFromDatabase(payload) }; // Return what we sent as fallback
+  console.warn('   ✅ [FIX v2] Construindo resposta mapeada corretamente do payload original');
+  
+  // ✅ FIX v2: Se payload contém snake_case, mapear para frontend format
+  // Se payload contém camelCase, usar como está
+  const responseData = {
+    id,
+    // Campos em camelCase (para frontend)
+    clinicId: payload.clinicId || payload.clinic_id,
+    patientId: payload.patientId || payload.patient_id,
+    professionalId: payload.professionalId || payload.professional_id,
+    serviceId: payload.serviceId || payload.service_id,
+    roomId: payload.roomId || payload.room_id,
+    payerId: payload.payerId || payload.payer_id,
+    planId: payload.planId || payload.plan_id,
+    planoContasId: payload.plano_contas_id,
+    date: payload.date || payload.scheduled_date,
+    startTime: extractTime(payload.startTime || payload.scheduled_time || payload.time),
+    time: extractTime(payload.startTime || payload.scheduled_time || payload.time),
+    endTime: extractTime(payload.endTime || payload.end_time),
+    end_time: extractTime(payload.endTime || payload.end_time),
+    status: payload.status || 'scheduled',
+    notes: payload.notes,
+    value: payload.value,
+    duration: payload.duration,
+    discount: payload.discount,
+    card_number: payload.card_number || payload.cardNumber,
+    authorization_number: payload.authorization_number || payload.authorizationNumber,
+    guide_number: payload.guide_number || payload.guideNumber,
+    // Spread para preservar qualquer outro campo
+    ...payload,
+  };
+  
+  console.warn('   Retornando resposta fallback mapeada:', responseData);
+  return responseData;
 }
 
 
