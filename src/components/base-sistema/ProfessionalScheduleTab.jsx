@@ -8,7 +8,7 @@ import * as professionalScheduleApi from '@/lib/professionalScheduleApi';
 import * as roomsApi from '@/lib/roomsApi';
 import * as healthInsurancesApi from '@/lib/healthInsurancesApi';
 import { DatePickerCalendar } from '@/components/ui/DatePickerCalendar';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
 import { Trash2, Edit2, X } from 'lucide-react';
 import { DAYS_OF_WEEK } from '@/lib/selectConstants';
 

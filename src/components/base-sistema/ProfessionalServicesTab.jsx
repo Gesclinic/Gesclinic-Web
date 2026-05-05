@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import * as professionalServicesApi from '@/lib/professionalServicesApi';
 import * as servicesApi from '@/lib/servicesApi';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
 import { Trash2, Edit2, X, Clock, Award } from 'lucide-react';
 import { normalizeCodeCBHPM } from '@/utils/formatters/formatters';
 
