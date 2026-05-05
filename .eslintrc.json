@@ -115,7 +115,13 @@
     "constructor-super": "error",
     "no-this-before-super": "error",
     "no-duplicate-imports": "error",
-    "sort-imports": "off"
+    "sort-imports": "off",
+    "no-empty": [
+      "error",
+      {
+        "allowEmptyCatch": true
+      }
+    ]
   },
   "settings": {
     "react": {
