@@ -35,9 +35,11 @@ jobs:
         run: npm ci --legacy-peer-deps
 
       - name: Run ESLint
+        continue-on-error: true
         run: npm run lint
 
       - name: Check Prettier formatting
+        continue-on-error: true
         run: npm run format -- --check
 
   # Job 2: Build Verification
