@@ -7,7 +7,7 @@
 import { supabase } from '@/lib/customSupabaseClient';
 import * as appointmentsApi from '@/lib/appointmentsApi';
 import * as healthInsurancesApi from '@/lib/healthInsurancesApi';
-import * as servicepricesApi from '@/lib/servicepricesApi';
+import * as servicepricesApi from '@/lib/servicePricesApi';
 import * as professionalServicesApi from '@/lib/professionalServicesApi';
 
 /**

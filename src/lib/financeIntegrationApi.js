@@ -5,7 +5,7 @@
 // Funções auxiliares para cálculos financeiros integrados
 
 import * as revenueRulesApi from '@/lib/revenueRulesApi';
-import * as servicepricesApi from '@/lib/servicepricesApi';
+import * as servicepricesApi from '@/lib/servicePricesApi';
 import * as healthInsurancesApi from '@/lib/healthInsurancesApi';
 import { supabase } from '@/lib/customSupabaseClient';
 
