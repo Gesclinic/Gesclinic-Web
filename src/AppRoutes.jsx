@@ -22,7 +22,6 @@ import ForceLogoutPage from '@/pages/ForceLogoutPage';
 import DiagnosticsPage from '@/pages/DiagnosticsPage';
 
 // Clínica
-import Dashboard from '@/pages/clinica/financeiro/DashboardFinanceiro';
 import GeraisConfig from '@/pages/clinica/configuracoes/GeraisConfig';
 import PerfisUsuarioConfig from '@/pages/clinica/configuracoes/PerfisUsuarioConfig';
 import PermissoesConfig from '@/pages/clinica/configuracoes/PermissoesConfig';
@@ -46,7 +45,7 @@ import EstoqueInventario from '@/pages/clinica/estoque/Inventario';
 import EstoqueRelatorios from '@/pages/clinica/estoque/Relatorios';
 import DashboardEstoque from '@/pages/clinica/estoque/DashboardEstoque';
 
-// Financeiro
+// Financeiro - removed duplicate Dashboard import, using FinanceDashboard instead
 import FinanceDashboard from '@/pages/clinica/financeiro/DashboardFinanceiro';
 import FinanceContasPagar from '@/pages/clinica/financeiro/ContasPagar';
 import FinanceNovaConta from '@/pages/clinica/financeiro/NovaConta';
@@ -304,7 +303,7 @@ export default function AppRoutes() {
         {/* 🔴 CLÍNICA */}
         <Route path="/clinica" element={<AppLayout />}>
           {/* DASHBOARD */}
-          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="dashboard" element={<FinanceDashboard />} />
           <Route path="dashboard/atendimentos" element={<DashboardAtendimentos />} />
           <Route path="dashboard/financeiro" element={<DashboardFinanceiro />} />
           <Route path="dashboard/faturamento" element={<DashboardFaturamento />} />
