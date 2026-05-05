@@ -4,12 +4,25 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
-import { 
-  PieChart, 
-  Download, 
+import {
+  PieChart,
+  Download,
   Calendar,
   DollarSign,
   TrendingUp,
@@ -19,7 +32,7 @@ import {
   Search,
   BarChart3,
   Activity,
-  Zap
+  Zap,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 
@@ -32,7 +45,9 @@ export default function RelatorioProducaoPeriodo() {
   const { clinicId } = useAuth();
   const [relatorioData, setRelatorioData] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [dataInicial, setDataInicial] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]);
+  const [dataInicial, setDataInicial] = useState(
+    new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+  );
   const [dataFinal, setDataFinal] = useState(new Date().toISOString().split('T')[0]);
   const [agrupamento, setAgrupamento] = useState('diario');
   const [comparacao, setComparacao] = useState('periodo_anterior');
@@ -45,58 +60,58 @@ export default function RelatorioProducaoPeriodo() {
         dia_semana: 'Quinta-feira',
         total_atendimentos: 45,
         total_procedimentos: 78,
-        valor_bruto: 12850.00,
-        valor_desconto: 642.50,
-        valor_liquido: 12207.50,
+        valor_bruto: 12850.0,
+        valor_desconto: 642.5,
+        valor_liquido: 12207.5,
         numero_profissionais: 8,
         horas_funcionamento: 10,
         produtividade_hora: 1220.75,
-        ticket_medio: 285.50,
+        ticket_medio: 285.5,
         crescimento_dia_anterior: 8.5,
         principais_convenios: [
-          { nome: 'Unimed', atendimentos: 18, valor: 5400.00 },
-          { nome: 'Bradesco', atendimentos: 12, valor: 3600.00 },
-          { nome: 'Particular', atendimentos: 10, valor: 3000.00 }
-        ]
+          { nome: 'Unimed', atendimentos: 18, valor: 5400.0 },
+          { nome: 'Bradesco', atendimentos: 12, valor: 3600.0 },
+          { nome: 'Particular', atendimentos: 10, valor: 3000.0 },
+        ],
       },
       {
         periodo: '2025-01-29',
         dia_semana: 'Quarta-feira',
         total_atendimentos: 42,
         total_procedimentos: 68,
-        valor_bruto: 11550.00,
-        valor_desconto: 577.50,
-        valor_liquido: 10972.50,
+        valor_bruto: 11550.0,
+        valor_desconto: 577.5,
+        valor_liquido: 10972.5,
         numero_profissionais: 7,
         horas_funcionamento: 9,
         produtividade_hora: 1219.17,
-        ticket_medio: 275.00,
+        ticket_medio: 275.0,
         crescimento_dia_anterior: -5.2,
         principais_convenios: [
-          { nome: 'Unimed', atendimentos: 16, valor: 4800.00 },
-          { nome: 'SulAmérica', atendimentos: 14, valor: 4200.00 },
-          { nome: 'Particular', atendimentos: 8, valor: 2400.00 }
-        ]
+          { nome: 'Unimed', atendimentos: 16, valor: 4800.0 },
+          { nome: 'SulAmérica', atendimentos: 14, valor: 4200.0 },
+          { nome: 'Particular', atendimentos: 8, valor: 2400.0 },
+        ],
       },
       {
         periodo: '2025-01-28',
         dia_semana: 'Terça-feira',
         total_atendimentos: 38,
         total_procedimentos: 62,
-        valor_bruto: 10450.00,
-        valor_desconto: 522.50,
-        valor_liquido: 9927.50,
+        valor_bruto: 10450.0,
+        valor_desconto: 522.5,
+        valor_liquido: 9927.5,
         numero_profissionais: 6,
         horas_funcionamento: 8,
         produtividade_hora: 1240.94,
-        ticket_medio: 275.00,
+        ticket_medio: 275.0,
         crescimento_dia_anterior: 12.3,
         principais_convenios: [
-          { nome: 'Bradesco', atendimentos: 15, valor: 4500.00 },
-          { nome: 'Unimed', atendimentos: 12, valor: 3600.00 },
-          { nome: 'Amil', atendimentos: 8, valor: 2400.00 }
-        ]
-      }
+          { nome: 'Bradesco', atendimentos: 15, valor: 4500.0 },
+          { nome: 'Unimed', atendimentos: 12, valor: 3600.0 },
+          { nome: 'Amil', atendimentos: 8, valor: 2400.0 },
+        ],
+      },
     ],
     semanal: [
       {
@@ -105,14 +120,14 @@ export default function RelatorioProducaoPeriodo() {
         data_fim: '2025-01-31',
         total_atendimentos: 210,
         total_procedimentos: 365,
-        valor_bruto: 58750.00,
-        valor_desconto: 2937.50,
-        valor_liquido: 55812.50,
+        valor_bruto: 58750.0,
+        valor_desconto: 2937.5,
+        valor_liquido: 55812.5,
         dias_funcionamento: 5,
-        media_diaria: 11162.50,
+        media_diaria: 11162.5,
         crescimento_semana_anterior: 15.3,
-        melhor_dia: { dia: 'Quinta-feira', valor: 12207.50 },
-        pior_dia: { dia: 'Segunda-feira', valor: 8950.00 }
+        melhor_dia: { dia: 'Quinta-feira', valor: 12207.5 },
+        pior_dia: { dia: 'Segunda-feira', valor: 8950.0 },
       },
       {
         periodo: 'Semana 4/2025',
@@ -120,48 +135,48 @@ export default function RelatorioProducaoPeriodo() {
         data_fim: '2025-01-24',
         total_atendimentos: 185,
         total_procedimentos: 320,
-        valor_bruto: 51250.00,
-        valor_desconto: 2562.50,
-        valor_liquido: 48687.50,
+        valor_bruto: 51250.0,
+        valor_desconto: 2562.5,
+        valor_liquido: 48687.5,
         dias_funcionamento: 5,
-        media_diaria: 9737.50,
+        media_diaria: 9737.5,
         crescimento_semana_anterior: -8.2,
-        melhor_dia: { dia: 'Sexta-feira', valor: 11500.00 },
-        pior_dia: { dia: 'Segunda-feira', valor: 7800.00 }
-      }
+        melhor_dia: { dia: 'Sexta-feira', valor: 11500.0 },
+        pior_dia: { dia: 'Segunda-feira', valor: 7800.0 },
+      },
     ],
     mensal: [
       {
         periodo: 'Janeiro/2025',
         total_atendimentos: 890,
         total_procedimentos: 1450,
-        valor_bruto: 245750.00,
-        valor_desconto: 12287.50,
-        valor_liquido: 233462.50,
+        valor_bruto: 245750.0,
+        valor_desconto: 12287.5,
+        valor_liquido: 233462.5,
         dias_funcionamento: 22,
         media_diaria: 10612.39,
         crescimento_mes_anterior: 22.5,
-        melhor_semana: { semana: 'Semana 3', valor: 65200.00 },
-        pior_semana: { semana: 'Semana 1', valor: 42800.00 },
-        meta_mensal: 220000.00,
-        atingimento_meta: 106.1
+        melhor_semana: { semana: 'Semana 3', valor: 65200.0 },
+        pior_semana: { semana: 'Semana 1', valor: 42800.0 },
+        meta_mensal: 220000.0,
+        atingimento_meta: 106.1,
       },
       {
         periodo: 'Dezembro/2024',
         total_atendimentos: 725,
         total_procedimentos: 1180,
-        valor_bruto: 200450.00,
-        valor_desconto: 10022.50,
-        valor_liquido: 190427.50,
+        valor_bruto: 200450.0,
+        valor_desconto: 10022.5,
+        valor_liquido: 190427.5,
         dias_funcionamento: 20,
         media_diaria: 9521.38,
         crescimento_mes_anterior: 8.7,
-        melhor_semana: { semana: 'Semana 2', valor: 55800.00 },
-        pior_semana: { semana: 'Semana 4', valor: 38200.00 },
-        meta_mensal: 200000.00,
-        atingimento_meta: 95.2
-      }
-    ]
+        melhor_semana: { semana: 'Semana 2', valor: 55800.0 },
+        pior_semana: { semana: 'Semana 4', valor: 38200.0 },
+        meta_mensal: 200000.0,
+        atingimento_meta: 95.2,
+      },
+    ],
   };
 
   useEffect(() => {
@@ -177,9 +192,9 @@ export default function RelatorioProducaoPeriodo() {
     } catch (error) {
       console.error('Erro ao buscar relatório:', error);
       toast({
-        title: "Erro",
-        description: "Não foi possível carregar o relatório.",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Não foi possível carregar o relatório.',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -189,11 +204,21 @@ export default function RelatorioProducaoPeriodo() {
   const exportarCSV = () => {
     try {
       let csvContent;
-      
+
       if (agrupamento === 'diario') {
         csvContent = [
-          ['Data', 'Dia da Semana', 'Atendimentos', 'Procedimentos', 'Valor Bruto', 'Desconto', 'Valor Líquido', 'Ticket Médio', 'Crescimento %'],
-          ...relatorioData.map(item => [
+          [
+            'Data',
+            'Dia da Semana',
+            'Atendimentos',
+            'Procedimentos',
+            'Valor Bruto',
+            'Desconto',
+            'Valor Líquido',
+            'Ticket Médio',
+            'Crescimento %',
+          ],
+          ...relatorioData.map((item) => [
             item.periodo,
             item.dia_semana,
             item.total_atendimentos,
@@ -202,13 +227,24 @@ export default function RelatorioProducaoPeriodo() {
             item.valor_desconto.toFixed(2),
             item.valor_liquido.toFixed(2),
             item.ticket_medio.toFixed(2),
-            item.crescimento_dia_anterior.toFixed(1) + '%'
-          ])
-        ].map(row => row.join(',')).join('\n');
+            item.crescimento_dia_anterior.toFixed(1) + '%',
+          ]),
+        ]
+          .map((row) => row.join(','))
+          .join('\n');
       } else if (agrupamento === 'semanal') {
         csvContent = [
-          ['Semana', 'Início', 'Fim', 'Atendimentos', 'Procedimentos', 'Valor Líquido', 'Média Diária', 'Crescimento %'],
-          ...relatorioData.map(item => [
+          [
+            'Semana',
+            'Início',
+            'Fim',
+            'Atendimentos',
+            'Procedimentos',
+            'Valor Líquido',
+            'Média Diária',
+            'Crescimento %',
+          ],
+          ...relatorioData.map((item) => [
             item.periodo,
             item.data_inicio,
             item.data_fim,
@@ -216,22 +252,34 @@ export default function RelatorioProducaoPeriodo() {
             item.total_procedimentos,
             item.valor_liquido.toFixed(2),
             item.media_diaria.toFixed(2),
-            item.crescimento_semana_anterior.toFixed(1) + '%'
-          ])
-        ].map(row => row.join(',')).join('\n');
+            item.crescimento_semana_anterior.toFixed(1) + '%',
+          ]),
+        ]
+          .map((row) => row.join(','))
+          .join('\n');
       } else {
         csvContent = [
-          ['Mês', 'Atendimentos', 'Procedimentos', 'Valor Líquido', 'Meta', 'Atingimento %', 'Crescimento %'],
-          ...relatorioData.map(item => [
+          [
+            'Mês',
+            'Atendimentos',
+            'Procedimentos',
+            'Valor Líquido',
+            'Meta',
+            'Atingimento %',
+            'Crescimento %',
+          ],
+          ...relatorioData.map((item) => [
             item.periodo,
             item.total_atendimentos,
             item.total_procedimentos,
             item.valor_liquido.toFixed(2),
             item.meta_mensal.toFixed(2),
             item.atingimento_meta.toFixed(1) + '%',
-            item.crescimento_mes_anterior.toFixed(1) + '%'
-          ])
-        ].map(row => row.join(',')).join('\n');
+            item.crescimento_mes_anterior.toFixed(1) + '%',
+          ]),
+        ]
+          .map((row) => row.join(','))
+          .join('\n');
       }
 
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -241,14 +289,14 @@ export default function RelatorioProducaoPeriodo() {
       link.click();
 
       toast({
-        title: "Exportação concluída",
-        description: "Relatório exportado para CSV com sucesso."
+        title: 'Exportação concluída',
+        description: 'Relatório exportado para CSV com sucesso.',
       });
     } catch (error) {
       toast({
-        title: "Erro na exportação",
-        description: "Não foi possível exportar o relatório.",
-        variant: "destructive"
+        title: 'Erro na exportação',
+        description: 'Não foi possível exportar o relatório.',
+        variant: 'destructive',
       });
     }
   };
@@ -256,62 +304,81 @@ export default function RelatorioProducaoPeriodo() {
   const exportarExcel = async () => {
     try {
       console.log('Exportando para Excel:', relatorioData);
-      
+
       toast({
-        title: "Exportação iniciada",
-        description: "Relatório Excel será baixado em instantes."
+        title: 'Exportação iniciada',
+        description: 'Relatório Excel será baixado em instantes.',
       });
     } catch (error) {
       toast({
-        title: "Erro na exportação",
-        description: "Não foi possível exportar para Excel.",
-        variant: "destructive"
+        title: 'Erro na exportação',
+        description: 'Não foi possível exportar para Excel.',
+        variant: 'destructive',
       });
     }
   };
 
   const getTotalGeral = () => {
-    return relatorioData.reduce((acc, item) => ({
-      total_atendimentos: acc.total_atendimentos + item.total_atendimentos,
-      total_procedimentos: acc.total_procedimentos + item.total_procedimentos,
-      valor_bruto: acc.valor_bruto + (item.valor_bruto || 0),
-      valor_desconto: acc.valor_desconto + (item.valor_desconto || 0),
-      valor_liquido: acc.valor_liquido + item.valor_liquido
-    }), {
-      total_atendimentos: 0,
-      total_procedimentos: 0,
-      valor_bruto: 0,
-      valor_desconto: 0,
-      valor_liquido: 0
-    });
+    return relatorioData.reduce(
+      (acc, item) => ({
+        total_atendimentos: acc.total_atendimentos + item.total_atendimentos,
+        total_procedimentos: acc.total_procedimentos + item.total_procedimentos,
+        valor_bruto: acc.valor_bruto + (item.valor_bruto || 0),
+        valor_desconto: acc.valor_desconto + (item.valor_desconto || 0),
+        valor_liquido: acc.valor_liquido + item.valor_liquido,
+      }),
+      {
+        total_atendimentos: 0,
+        total_procedimentos: 0,
+        valor_bruto: 0,
+        valor_desconto: 0,
+        valor_liquido: 0,
+      },
+    );
   };
 
   const getCrescimentoBadge = (crescimento) => {
     if (crescimento > 10) {
-      return <Badge variant="default" className="text-green-600 gap-1">
-        <TrendingUp className="w-3 h-3" />
-        +{crescimento.toFixed(1)}%
-      </Badge>;
+      return (
+        <Badge variant="default" className="text-green-600 gap-1">
+          <TrendingUp className="w-3 h-3" />+{crescimento.toFixed(1)}%
+        </Badge>
+      );
     } else if (crescimento > 0) {
-      return <Badge variant="secondary" className="text-blue-600 gap-1">
-        <TrendingUp className="w-3 h-3" />
-        +{crescimento.toFixed(1)}%
-      </Badge>;
+      return (
+        <Badge variant="secondary" className="text-blue-600 gap-1">
+          <TrendingUp className="w-3 h-3" />+{crescimento.toFixed(1)}%
+        </Badge>
+      );
     } else {
-      return <Badge variant="destructive" className="gap-1">
-        <TrendingDown className="w-3 h-3" />
-        {crescimento.toFixed(1)}%
-      </Badge>;
+      return (
+        <Badge variant="destructive" className="gap-1">
+          <TrendingDown className="w-3 h-3" />
+          {crescimento.toFixed(1)}%
+        </Badge>
+      );
     }
   };
 
   const getMetaBadge = (atingimento) => {
     if (atingimento >= 100) {
-      return <Badge variant="default" className="text-green-600">Meta Atingida</Badge>;
+      return (
+        <Badge variant="default" className="text-green-600">
+          Meta Atingida
+        </Badge>
+      );
     } else if (atingimento >= 90) {
-      return <Badge variant="secondary" className="text-blue-600">Próximo da Meta</Badge>;
+      return (
+        <Badge variant="secondary" className="text-blue-600">
+          Próximo da Meta
+        </Badge>
+      );
     } else {
-      return <Badge variant="outline" className="text-orange-600">Abaixo da Meta</Badge>;
+      return (
+        <Badge variant="outline" className="text-orange-600">
+          Abaixo da Meta
+        </Badge>
+      );
     }
   };
 
@@ -389,7 +456,9 @@ export default function RelatorioProducaoPeriodo() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="periodo_anterior">Período Anterior</SelectItem>
-                  <SelectItem value="mesmo_periodo_ano_anterior">Mesmo Período Ano Passado</SelectItem>
+                  <SelectItem value="mesmo_periodo_ano_anterior">
+                    Mesmo Período Ano Passado
+                  </SelectItem>
                   <SelectItem value="media_historica">Média Histórica</SelectItem>
                 </SelectContent>
               </Select>
@@ -409,7 +478,12 @@ export default function RelatorioProducaoPeriodo() {
           <CardContent className="pt-6">
             <div className="text-2xl font-bold">{relatorioData.length}</div>
             <p className="text-sm text-muted-foreground">
-              Períodos {agrupamento === 'diario' ? 'Analisados' : agrupamento === 'semanal' ? 'Semanas' : 'Meses'}
+              Períodos{' '}
+              {agrupamento === 'diario'
+                ? 'Analisados'
+                : agrupamento === 'semanal'
+                  ? 'Semanas'
+                  : 'Meses'}
             </p>
           </CardContent>
         </Card>
@@ -440,10 +514,14 @@ export default function RelatorioProducaoPeriodo() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-blue-600">
-              R$ {relatorioData.length > 0 ? (totais.valor_liquido / relatorioData.length).toFixed(2) : '0.00'}
+              R${' '}
+              {relatorioData.length > 0
+                ? (totais.valor_liquido / relatorioData.length).toFixed(2)
+                : '0.00'}
             </div>
             <p className="text-sm text-muted-foreground">
-              Média por {agrupamento === 'diario' ? 'Dia' : agrupamento === 'semanal' ? 'Semana' : 'Mês'}
+              Média por{' '}
+              {agrupamento === 'diario' ? 'Dia' : agrupamento === 'semanal' ? 'Semana' : 'Mês'}
             </p>
           </CardContent>
         </Card>
@@ -486,9 +564,7 @@ export default function RelatorioProducaoPeriodo() {
                     <TableCell className="text-right font-semibold text-green-600">
                       R$ {item.valor_liquido.toFixed(2)}
                     </TableCell>
-                    <TableCell className="text-right">
-                      R$ {item.ticket_medio.toFixed(2)}
-                    </TableCell>
+                    <TableCell className="text-right">R$ {item.ticket_medio.toFixed(2)}</TableCell>
                     <TableCell className="text-right">
                       <div>R$ {item.produtividade_hora.toFixed(2)}</div>
                       <div className="text-xs text-muted-foreground">
@@ -535,7 +611,8 @@ export default function RelatorioProducaoPeriodo() {
                     <TableCell className="font-semibold">{item.periodo}</TableCell>
                     <TableCell>
                       <div className="text-sm">
-                        {new Date(item.data_inicio).toLocaleDateString('pt-BR')} até<br/>
+                        {new Date(item.data_inicio).toLocaleDateString('pt-BR')} até
+                        <br />
                         {new Date(item.data_fim).toLocaleDateString('pt-BR')}
                       </div>
                     </TableCell>
@@ -546,9 +623,7 @@ export default function RelatorioProducaoPeriodo() {
                     <TableCell className="text-right font-semibold text-green-600">
                       R$ {item.valor_liquido.toFixed(2)}
                     </TableCell>
-                    <TableCell className="text-right">
-                      R$ {item.media_diaria.toFixed(2)}
-                    </TableCell>
+                    <TableCell className="text-right">R$ {item.media_diaria.toFixed(2)}</TableCell>
                     <TableCell className="text-center">
                       <div className="text-sm">
                         <div className="font-medium">{item.melhor_dia.dia}</div>
@@ -600,9 +675,7 @@ export default function RelatorioProducaoPeriodo() {
                     <TableCell className="text-right font-semibold text-green-600">
                       R$ {item.valor_liquido.toFixed(2)}
                     </TableCell>
-                    <TableCell className="text-right">
-                      R$ {item.meta_mensal.toFixed(2)}
-                    </TableCell>
+                    <TableCell className="text-right">R$ {item.meta_mensal.toFixed(2)}</TableCell>
                     <TableCell className="text-center">
                       <div className="space-y-1">
                         {getMetaBadge(item.atingimento_meta)}
@@ -652,7 +725,9 @@ export default function RelatorioProducaoPeriodo() {
                     </TableHeader>
                     <TableBody>
                       {dia.principais_convenios.map((convenio, index) => {
-                        const participacao = ((convenio.valor / dia.valor_liquido) * 100).toFixed(1);
+                        const participacao = ((convenio.valor / dia.valor_liquido) * 100).toFixed(
+                          1,
+                        );
                         return (
                           <TableRow key={index}>
                             <TableCell className="font-medium">{convenio.nome}</TableCell>
@@ -689,4 +764,3 @@ export default function RelatorioProducaoPeriodo() {
     </div>
   );
 }
-

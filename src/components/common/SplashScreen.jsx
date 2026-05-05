@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function SplashScreen() {
   const [isVisible, setIsVisible] = useState(false);
@@ -17,7 +17,9 @@ export default function SplashScreen() {
         <div className="w-16 h-16 flex items-center justify-center rounded-full bg-blue-100 border-4 border-blue-200 animate-spin">
           <span className="text-blue-700 dark:text-blue-300 font-bold text-2xl">G</span>
         </div>
-        <h1 className="text-xl font-semibold text-gray-700 dark:text-gray-200 mt-6">Gesclinic Web</h1>
+        <h1 className="text-xl font-semibold text-gray-700 dark:text-gray-200 mt-6">
+          Gesclinic Web
+        </h1>
       </div>
     );
   }
@@ -35,12 +37,12 @@ export default function SplashScreen() {
           className="w-20 h-20 flex items-center justify-center rounded-full bg-blue-100 border-4 border-blue-200 shadow-md"
           animate={{
             rotate: [0, 360],
-            borderColor: ["#1A5B8A", "#5DB053", "#1A5B8A"],
+            borderColor: ['#1A5B8A', '#5DB053', '#1A5B8A'],
           }}
           transition={{
             duration: 3,
             repeat: Infinity,
-            ease: "easeInOut",
+            ease: 'easeInOut',
           }}
         >
           <motion.span

@@ -15,13 +15,16 @@ export function usePatient(patientId) {
     let cancelled = false;
 
     try {
-      let { data, error } = await supabase
+      const { data, error } = await supabase
         .from('patients')
-        .select('id, full_name, name, record_number, cpf, birth_date, email, phone, payer_id, plan_id, insurance_id_number, responsible_name, responsible_relationship, sexo')
+        .select(
+          'id, full_name, name, record_number, cpf, birth_date, email, phone, payer_id, plan_id, insurance_id_number, responsible_name, responsible_relationship, sexo',
+        )
         .eq('id', patientId)
         .single();
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows found
+      if (error && error.code !== 'PGRST116') {
+        // PGRST116 = no rows found
         throw error;
       }
 
@@ -33,7 +36,7 @@ export function usePatient(patientId) {
         setPatient(data || null);
       }
     } catch (error) {
-      console.error("Error fetching patient:", error);
+      console.error('Error fetching patient:', error);
       if (!cancelled) {
         setPatient(null);
       }

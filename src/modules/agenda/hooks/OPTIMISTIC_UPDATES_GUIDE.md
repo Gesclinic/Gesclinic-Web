@@ -28,36 +28,38 @@ const { data: agendamentos } = useAgenda({ clinicId, date });
 ### 2. Renderizar com Indicador Visual
 
 ```jsx
-{agendamentos?.map((item) => (
-  <div
-    key={item.id}
-    style={{
-      opacity: item.__optimistic ? 0.6 : 1,
-      transition: 'opacity 200ms ease-in-out',
-      position: 'relative',
-    }}
-  >
-    {/* Conteúdo do agendamento */}
-    <h3>{item.paciente}</h3>
-    <p>{item.startTime}</p>
+{
+  agendamentos?.map((item) => (
+    <div
+      key={item.id}
+      style={{
+        opacity: item.__optimistic ? 0.6 : 1,
+        transition: 'opacity 200ms ease-in-out',
+        position: 'relative',
+      }}
+    >
+      {/* Conteúdo do agendamento */}
+      <h3>{item.paciente}</h3>
+      <p>{item.startTime}</p>
 
-    {/* Indicador Visual */}
-    {item.__optimistic && (
-      <span
-        style={{
-          position: 'absolute',
-          top: 0,
-          right: 0,
-          fontSize: '12px',
-          color: '#999',
-          fontStyle: 'italic',
-        }}
-      >
-        ⏳ Salvando...
-      </span>
-    )}
-  </div>
-))}
+      {/* Indicador Visual */}
+      {item.__optimistic && (
+        <span
+          style={{
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            fontSize: '12px',
+            color: '#999',
+            fontStyle: 'italic',
+          }}
+        >
+          ⏳ Salvando...
+        </span>
+      )}
+    </div>
+  ));
+}
 ```
 
 ### 3. Opção: Badge com Animação
@@ -169,13 +171,17 @@ for (let i = 0; i < 5; i++) {
 ## Troubleshooting
 
 **Problema**: Item otimista desaparece após sucesso
+
 - **Solução**: Verificar se onSettled está invalidando corretamente
 
 **Problema**: Múltiplos itens otimistas com mesmo ID
+
 - **Solução**: crypto.randomUUID() garante unicidade; verificar se está sendo usado
 
 **Problema**: Rollback não restaura dados
+
 - **Solução**: Verificar se context.previous é passado corretamente em onError
 
 **Problema**: Flicker visual
+
 - **Solução**: placeholderData nas queries mantém dados anteriores durante refetch

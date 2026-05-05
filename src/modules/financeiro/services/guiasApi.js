@@ -1,8 +1,13 @@
-import { supabase } from "@/lib/customSupabaseClient";
-import * as Sentry from "@sentry/react";
-import { mapGuiaToDatabase, mapGuiaFromDatabase, mapGuiasFromDatabase, sanitizePayload } from "@/lib/mappers";
-import { validateGuiaPayload, validateClinicId } from "@/lib/validators";
-import { getClinicContext } from "@/lib/getClinicContext";
+import { supabase } from '@/lib/customSupabaseClient';
+import * as Sentry from '@sentry/react';
+import {
+  mapGuiaToDatabase,
+  mapGuiaFromDatabase,
+  mapGuiasFromDatabase,
+  sanitizePayload,
+} from '@/lib/mappers';
+import { validateGuiaPayload, validateClinicId } from '@/lib/validators';
+import { getClinicContext } from '@/lib/getClinicContext';
 
 /**
  * ⚙️ FUNÇÃO UTILITÁRIA: Buscar clinic_id do banco
@@ -14,15 +19,15 @@ import { getClinicContext } from "@/lib/getClinicContext";
 async function getClinicId() {
   try {
     const context = await getClinicContext();
-    
-    console.debug("✅ [getClinicId] Autenticação OK:", {
+
+    console.debug('✅ [getClinicId] Autenticação OK:', {
       userId: context.userId,
-      clinicId: context.clinicId
+      clinicId: context.clinicId,
     });
 
     return context;
   } catch (err) {
-    console.error("❌ [getClinicId] Falha geral:", err.message);
+    console.error('❌ [getClinicId] Falha geral:', err.message);
     throw err;
   }
 }
@@ -35,31 +40,33 @@ async function getClinicId() {
  */
 export async function listarGuias() {
   try {
-    console.log("📋 [GUIAS] Iniciando listagem");
+    console.log('📋 [GUIAS] Iniciando listagem');
 
     // Passo 1: Obter clinic_id do banco
     const { clinicId, userId } = await getClinicId();
 
-    console.log("🔎 [GUIAS] DEBUG:", {
+    console.log('🔎 [GUIAS] DEBUG:', {
       userId,
-      clinicId
+      clinicId,
     });
 
     // Passo 2: Buscar guias (RLS controla acesso)
     const { data, error } = await supabase
-      .from("billing_guides")
-      .select("*")
-      .order("data_criacao", { ascending: false });
+      .from('billing_guides')
+      .select('*')
+      .order('data_criacao', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
 
     const response = mapGuiasFromDatabase(data || []);
-    console.log("✅ [GUIAS] Listagem OK:", response.length, "guias");
+    console.log('✅ [GUIAS] Listagem OK:', response.length, 'guias');
     return response;
   } catch (err) {
-    console.error("❌ [GUIAS] Erro ao listar:", err.message);
+    console.error('❌ [GUIAS] Erro ao listar:', err.message);
     Sentry.captureException(err, {
-      tags: { action: "list_guides" }
+      tags: { action: 'list_guides' },
     });
     return [];
   }
@@ -72,32 +79,34 @@ export async function listarGuias() {
  */
 export async function listarGuiasAtivas() {
   try {
-    console.log("📋 [GUIAS-ATIVAS] Iniciando listagem");
+    console.log('📋 [GUIAS-ATIVAS] Iniciando listagem');
 
     // Passo 1: Obter clinic_id do banco
     const { clinicId, userId } = await getClinicId();
 
-    console.log("🔎 [GUIAS-ATIVAS] DEBUG:", {
+    console.log('🔎 [GUIAS-ATIVAS] DEBUG:', {
       userId,
-      clinicId
+      clinicId,
     });
 
     // Passo 2: Buscar guias ativas (RLS controla acesso)
     const { data, error } = await supabase
-      .from("billing_guides")
-      .select("*")
-      .eq("ativa", true)
-      .order("data_criacao", { ascending: false });
+      .from('billing_guides')
+      .select('*')
+      .eq('ativa', true)
+      .order('data_criacao', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
 
     const response = mapGuiasFromDatabase(data || []);
-    console.log("✅ [GUIAS-ATIVAS] Listagem OK:", response.length);
+    console.log('✅ [GUIAS-ATIVAS] Listagem OK:', response.length);
     return response;
   } catch (err) {
-    console.error("❌ [GUIAS-ATIVAS] Erro ao listar:", err.message);
+    console.error('❌ [GUIAS-ATIVAS] Erro ao listar:', err.message);
     Sentry.captureException(err, {
-      tags: { action: "list_active_guides" }
+      tags: { action: 'list_active_guides' },
     });
     return [];
   }
@@ -111,40 +120,44 @@ export async function listarGuiasAtivas() {
  */
 export async function obterGuia(guiaId) {
   try {
-    if (!guiaId) throw new Error("guiaId é obrigatório");
+    if (!guiaId) {
+      throw new Error('guiaId é obrigatório');
+    }
 
-    console.log("🔍 [GUIA] Buscando guia:", guiaId);
+    console.log('🔍 [GUIA] Buscando guia:', guiaId);
 
     // Passo 1: Obter clinic_id do banco
     const { clinicId, userId } = await getClinicId();
 
-    console.log("🔎 [GUIA] DEBUG:", {
+    console.log('🔎 [GUIA] DEBUG:', {
       userId,
       clinicId,
-      guiaId
+      guiaId,
     });
 
     // Passo 2: Buscar guia (RLS controla acesso)
     const { data, error } = await supabase
-      .from("billing_guides")
-      .select("*")
-      .eq("id", guiaId)
+      .from('billing_guides')
+      .select('*')
+      .eq('id', guiaId)
       .maybeSingle();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
 
     if (!data) {
-      console.warn("⚠️ [GUIA] Guia não encontrado:", guiaId);
-      throw new Error("Guia não encontrado ou sem permissão de acesso");
+      console.warn('⚠️ [GUIA] Guia não encontrado:', guiaId);
+      throw new Error('Guia não encontrado ou sem permissão de acesso');
     }
 
     const response = mapGuiaFromDatabase(data);
-    console.log("✅ [GUIA] Encontrada:", guiaId);
+    console.log('✅ [GUIA] Encontrada:', guiaId);
     return response;
   } catch (err) {
-    console.error("❌ [GUIA] Erro ao buscar:", err.message);
+    console.error('❌ [GUIA] Erro ao buscar:', err.message);
     Sentry.captureException(err, {
-      tags: { action: "get_guide", guide_id: guiaId }
+      tags: { action: 'get_guide', guide_id: guiaId },
     });
     throw err;
   }
@@ -159,15 +172,15 @@ export async function obterGuia(guiaId) {
  */
 export async function criarGuia(payload) {
   try {
-    console.log("➕ [GUIA-CREATE] Iniciando criação");
+    console.log('➕ [GUIA-CREATE] Iniciando criação');
 
     // Passo 1: Obter clinic_id do banco
     const { clinicId, userId } = await getClinicId();
 
-    console.log("🔎 [GUIA-CREATE] DEBUG:", {
+    console.log('🔎 [GUIA-CREATE] DEBUG:', {
       userId,
       clinicId,
-      tipoGuia: payload?.tipo_guia
+      tipoGuia: payload?.tipo_guia,
     });
 
     // Passo 2: Validar payload
@@ -181,28 +194,30 @@ export async function criarGuia(payload) {
 
     // Passo 5: Inserir
     const { data, error } = await supabase
-      .from("billing_guides")
+      .from('billing_guides')
       .insert([dbPayload])
       .select()
       .maybeSingle();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
 
     if (!data) {
-      throw new Error("Falha ao inserir guia — nenhum dado retornado");
+      throw new Error('Falha ao inserir guia — nenhum dado retornado');
     }
 
     const response = mapGuiaFromDatabase(data);
-    console.log("✅ [GUIA-CREATE] Sucesso:", response.id);
-    Sentry.captureMessage("Guia de faturamento criada", "info", {
-      tags: { action: "create_guide", clinic_id: clinicId }
+    console.log('✅ [GUIA-CREATE] Sucesso:', response.id);
+    Sentry.captureMessage('Guia de faturamento criada', 'info', {
+      tags: { action: 'create_guide', clinic_id: clinicId },
     });
 
     return response;
   } catch (err) {
-    console.error("❌ [GUIA-CREATE] Erro:", err.message);
+    console.error('❌ [GUIA-CREATE] Erro:', err.message);
     Sentry.captureException(err, {
-      tags: { action: "create_guide_error", clinic_id: payload?.clinic_id }
+      tags: { action: 'create_guide_error', clinic_id: payload?.clinic_id },
     });
     throw err;
   }
@@ -217,18 +232,20 @@ export async function criarGuia(payload) {
  */
 export async function atualizarGuia(guiaId, payload) {
   try {
-    if (!guiaId) throw new Error("guiaId é obrigatório");
+    if (!guiaId) {
+      throw new Error('guiaId é obrigatório');
+    }
 
-    console.log("✏️ [GUIA-UPDATE] Iniciando atualização:", guiaId);
+    console.log('✏️ [GUIA-UPDATE] Iniciando atualização:', guiaId);
 
     // Passo 1: Obter clinic_id do banco
     const { clinicId, userId } = await getClinicId();
 
-    console.log("🔎 [GUIA-UPDATE] DEBUG:", {
+    console.log('🔎 [GUIA-UPDATE] DEBUG:', {
       userId,
       clinicId,
       guiaId,
-      updateDataKeys: Object.keys(payload)
+      updateDataKeys: Object.keys(payload),
     });
 
     // Passo 2: Validar payload
@@ -243,30 +260,32 @@ export async function atualizarGuia(guiaId, payload) {
 
     // Passo 5: Atualizar (RLS controla acesso)
     const { data, error } = await supabase
-      .from("billing_guides")
+      .from('billing_guides')
       .update(updateData)
-      .eq("id", guiaId)
+      .eq('id', guiaId)
       .select()
       .maybeSingle();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
 
     if (!data) {
-      console.warn("⚠️ [GUIA-UPDATE] Nenhum registro atualizado — RLS ou ID inválido");
-      throw new Error("Guia não encontrado ou sem permissão de acesso");
+      console.warn('⚠️ [GUIA-UPDATE] Nenhum registro atualizado — RLS ou ID inválido');
+      throw new Error('Guia não encontrado ou sem permissão de acesso');
     }
 
     const response = mapGuiaFromDatabase(data);
-    console.log("✅ [GUIA-UPDATE] Sucesso:", guiaId);
-    Sentry.captureMessage("Guia de faturamento atualizada", "info", {
-      tags: { action: "update_guide", clinic_id: clinicId }
+    console.log('✅ [GUIA-UPDATE] Sucesso:', guiaId);
+    Sentry.captureMessage('Guia de faturamento atualizada', 'info', {
+      tags: { action: 'update_guide', clinic_id: clinicId },
     });
 
     return response;
   } catch (err) {
-    console.error("❌ [GUIA-UPDATE] Erro:", err.message);
+    console.error('❌ [GUIA-UPDATE] Erro:', err.message);
     Sentry.captureException(err, {
-      tags: { action: "update_guide_error", clinic_id: payload?.clinic_id }
+      tags: { action: 'update_guide_error', clinic_id: payload?.clinic_id },
     });
     throw err;
   }
@@ -279,37 +298,38 @@ export async function atualizarGuia(guiaId, payload) {
  */
 export async function deletarGuia(guiaId) {
   try {
-    if (!guiaId) throw new Error("guiaId é obrigatório");
+    if (!guiaId) {
+      throw new Error('guiaId é obrigatório');
+    }
 
-    console.log("🗑️ [GUIA-DELETE] Iniciando deleção:", guiaId);
+    console.log('🗑️ [GUIA-DELETE] Iniciando deleção:', guiaId);
 
     // Passo 1: Obter clinic_id do banco
     const { clinicId, userId } = await getClinicId();
 
-    console.log("🔎 [GUIA-DELETE] DEBUG:", {
+    console.log('🔎 [GUIA-DELETE] DEBUG:', {
       userId,
       clinicId,
-      guiaId
+      guiaId,
     });
 
     // Passo 2: Deletar (RLS controla acesso)
-    const { error } = await supabase
-      .from("billing_guides")
-      .delete()
-      .eq("id", guiaId);
+    const { error } = await supabase.from('billing_guides').delete().eq('id', guiaId);
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
 
-    console.log("✅ [GUIA-DELETE] Sucesso:", guiaId);
-    Sentry.captureMessage("Guia de faturamento deletada", "info", {
-      tags: { action: "delete_guide", clinic_id: clinicId }
+    console.log('✅ [GUIA-DELETE] Sucesso:', guiaId);
+    Sentry.captureMessage('Guia de faturamento deletada', 'info', {
+      tags: { action: 'delete_guide', clinic_id: clinicId },
     });
 
     return { success: true };
   } catch (err) {
-    console.error("❌ [GUIA-DELETE] Erro:", err.message);
+    console.error('❌ [GUIA-DELETE] Erro:', err.message);
     Sentry.captureException(err, {
-      tags: { action: "delete_guide_error", guide_id: guiaId }
+      tags: { action: 'delete_guide_error', guide_id: guiaId },
     });
     throw err;
   }

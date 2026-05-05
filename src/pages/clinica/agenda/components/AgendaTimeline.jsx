@@ -24,13 +24,15 @@ function TimelineColumnas({
     return (
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden p-8 text-center">
         <p className="text-gray-600 text-lg font-medium">
-          {columnType === 'professional' 
+          {columnType === 'professional'
             ? '👤 Nenhum profissional com agendamentos para esta data.'
             : columnType === 'room'
-            ? '🏢 Nenhuma sala com agendamentos para esta data.'
-            : '📋 Nenhum agendamento para esta data.'}
+              ? '🏢 Nenhuma sala com agendamentos para esta data.'
+              : '📋 Nenhum agendamento para esta data.'}
         </p>
-        <p className="text-gray-400 text-sm mt-2">Selecione um horário acima para criar um novo agendamento.</p>
+        <p className="text-gray-400 text-sm mt-2">
+          Selecione um horário acima para criar um novo agendamento.
+        </p>
       </div>
     );
   }
@@ -60,14 +62,18 @@ function TimelineColumnas({
           </thead>
           <tbody>
             {timeSlots.map((time) => (
-              <tr key={`row-${time}`} className="border-b border-gray-100 hover:bg-gray-50 transition">
+              <tr
+                key={`row-${time}`}
+                className="border-b border-gray-100 hover:bg-gray-50 transition"
+              >
                 <td className="px-4 py-3 text-sm font-medium text-gray-700 sticky left-0 bg-white z-10">
                   {time}
                 </td>
                 {Object.entries(groups).map(([key, group]) => {
                   const slotAppointments = group.appointments.filter(
                     (apt) =>
-                      (apt.scheduled_time?.substring(0, 5) || apt.start_time?.substring(0, 5)) === time
+                      (apt.scheduled_time?.substring(0, 5) || apt.start_time?.substring(0, 5)) ===
+                      time,
                   );
 
                   return (
@@ -78,39 +84,93 @@ function TimelineColumnas({
                       <div className="flex flex-col gap-2">
                         {slotAppointments.length > 0 ? (
                           slotAppointments.map((apt) => (
-                            <AgendaSlot
+                            <div
                               key={apt.id}
-                              appointment={apt}
-                              onSlotClick={() => onSlotClick({ ...apt, type: 'view' })}
-                              onCheckin={() => onCheckin(apt)}
-                              compact={true}
-                            />
+                              className="cursor-pointer"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                console.log(
+                                  '✏️ [TimelineColumnas SLOT OCUPADO] Clique detectado:',
+                                  {
+                                    paciente: apt.patient_name,
+                                    horario: time,
+                                    profissional_id:
+                                      columnType === 'professional' ? key : apt.professional_id,
+                                    apt_id: apt.id,
+                                  },
+                                );
+                                onSlotClick({ ...apt, type: 'view' });
+                              }}
+                            >
+                              <AgendaSlot
+                                appointment={apt}
+                                onSlotClick={(slotData) => {
+                                  console.log(
+                                    '🎯 [AgendaSlot interna] onSlotClick chamado com:',
+                                    slotData,
+                                  );
+                                  onSlotClick(slotData);
+                                }}
+                                onCheckin={() => {
+                                  e.preventDefault?.();
+                                  e.stopPropagation?.();
+                                  onCheckin(apt);
+                                }}
+                                compact={true}
+                              />
+                            </div>
                           ))
                         ) : (
                           <button
-                            onClick={() => {
+                            onClick={(e) => {
+                              console.log('🖱️ [TimelineColumnas SLOT VAZIO] onClick disparado:', {
+                                target: e.currentTarget.tagName,
+                                type: e.type,
+                              });
+                              e.preventDefault();
+                              e.stopPropagation();
                               const slotData = { date, time, type: 'new' };
                               if (columnType === 'professional') {
                                 slotData.professional_id = key;
-                                console.log('✅ [AgendaTimeline] Novo clique em slot profissional:', {
-                                  date,
-                                  time,
-                                  professional_id: key,
-                                });
+                                console.log(
+                                  '✅ [TimelineColumnas SLOT VAZIO] Novo clique - Profissional:',
+                                  {
+                                    date,
+                                    time,
+                                    professional_id: key,
+                                  },
+                                );
                               } else if (columnType === 'room') {
                                 slotData.room_id = key;
-                                console.log('✅ [AgendaTimeline] Novo clique em slot sala:', {
-                                  date,
-                                  time,
-                                  room_id: key,
-                                });
+                                console.log(
+                                  '✅ [TimelineColumnas SLOT VAZIO] Novo clique - Sala:',
+                                  {
+                                    date,
+                                    time,
+                                    room_id: key,
+                                  },
+                                );
+                              } else {
+                                console.log(
+                                  '✅ [TimelineColumnas SLOT VAZIO] Novo clique - Genérico:',
+                                  {
+                                    date,
+                                    time,
+                                  },
+                                );
                               }
                               onSlotClick(slotData);
                             }}
-                            className="px-3 py-2 text-xs font-medium text-green-600 border border-green-300 rounded hover:bg-green-50 transition"
-                            title="Agendar neste horário"
+                            onMouseDown={(e) => {
+                              // Capture também no mousedown para ser mais agressivo
+                              e.preventDefault();
+                              e.stopPropagation();
+                            }}
+                            className="px-3 py-2 text-xs font-medium text-green-600 border border-green-300 rounded hover:bg-green-50 transition w-full text-left"
+                            title="Clique para agendar neste horário"
                           >
-                            + Agendar
+                            ➕ Agendar
                           </button>
                         )}
                       </div>
@@ -128,7 +188,7 @@ function TimelineColumnas({
 
 /**
  * AgendaTimeline - Grade de horários com diferentes modos de renderização
- * 
+ *
  * Props:
  * - viewMode: 'geral' | 'profissional' | 'sala'
  * - date: string (ISO date)
@@ -169,16 +229,16 @@ export default function AgendaTimeline({
     if (viewMode === 'profissional') {
       // Agrupar por profissional
       if (metadata.professionals && metadata.professionals.length > 0) {
-        metadata.professionals.forEach(prof => {
+        metadata.professionals.forEach((prof) => {
           groups[prof.id] = {
             name: prof.name,
-            appointments: appointments.filter(apt => apt.professional_id === prof.id),
+            appointments: appointments.filter((apt) => apt.professional_id === prof.id),
           };
         });
       } else {
         // Fallback: se não houver profissionais, extrair dos agendamentos
         const uniqueProfessionals = {};
-        appointments.forEach(apt => {
+        appointments.forEach((apt) => {
           if (apt.professional_id && !uniqueProfessionals[apt.professional_id]) {
             uniqueProfessionals[apt.professional_id] = {
               id: apt.professional_id,
@@ -186,26 +246,26 @@ export default function AgendaTimeline({
             };
           }
         });
-        Object.values(uniqueProfessionals).forEach(prof => {
+        Object.values(uniqueProfessionals).forEach((prof) => {
           groups[prof.id] = {
             name: prof.name,
-            appointments: appointments.filter(apt => apt.professional_id === prof.id),
+            appointments: appointments.filter((apt) => apt.professional_id === prof.id),
           };
         });
       }
     } else if (viewMode === 'sala') {
       // Agrupar por sala
       if (metadata.rooms && metadata.rooms.length > 0) {
-        metadata.rooms.forEach(room => {
+        metadata.rooms.forEach((room) => {
           groups[room.id] = {
             name: room.name,
-            appointments: appointments.filter(apt => apt.room_id === room.id),
+            appointments: appointments.filter((apt) => apt.room_id === room.id),
           };
         });
       } else {
         // Fallback: se não houver salas, extrair dos agendamentos
         const uniqueRooms = {};
-        appointments.forEach(apt => {
+        appointments.forEach((apt) => {
           if (apt.room_id && !uniqueRooms[apt.room_id]) {
             uniqueRooms[apt.room_id] = {
               id: apt.room_id,
@@ -213,10 +273,10 @@ export default function AgendaTimeline({
             };
           }
         });
-        Object.values(uniqueRooms).forEach(room => {
+        Object.values(uniqueRooms).forEach((room) => {
           groups[room.id] = {
             name: room.name,
-            appointments: appointments.filter(apt => apt.room_id === room.id),
+            appointments: appointments.filter((apt) => apt.room_id === room.id),
           };
         });
       }
@@ -241,7 +301,16 @@ export default function AgendaTimeline({
 
   // Renderizar de acordo com o modo
   if (viewMode === 'geral') {
-    return <TimelineGeral timeSlots={timeSlots} appointments={appointments} onSlotClick={onSlotClick} onCheckin={onCheckin} date={date} filteredProfessionalId={filteredProfessionalId} />;
+    return (
+      <TimelineGeral
+        timeSlots={timeSlots}
+        appointments={appointments}
+        onSlotClick={onSlotClick}
+        onCheckin={onCheckin}
+        date={date}
+        filteredProfessionalId={filteredProfessionalId}
+      />
+    );
   } else if (viewMode === 'profissional') {
     return (
       <TimelineColumnas
@@ -276,9 +345,14 @@ export default function AgendaTimeline({
 /**
  * TimelineGeral - Visualização em lista única de todos os agendamentos
  */
-function TimelineGeral({ timeSlots, appointments, onSlotClick, onCheckin, date, filteredProfessionalId }) {
-
-
+function TimelineGeral({
+  timeSlots,
+  appointments,
+  onSlotClick,
+  onCheckin,
+  date,
+  filteredProfessionalId,
+}) {
   const [professionalSchedules, setProfessionalSchedules] = React.useState([]);
   // Recebe o profissional filtrado via appointments (todos do mesmo prof) ou metadata
   // Usa o filtro explicitamente passado
@@ -286,9 +360,13 @@ function TimelineGeral({ timeSlots, appointments, onSlotClick, onCheckin, date, 
 
   React.useEffect(() => {
     async function fetchSchedules() {
-      if (!appointments || appointments.length === 0) return;
+      if (!appointments || appointments.length === 0) {
+        return;
+      }
       const clinicId = appointments[0]?.clinic_id;
-      if (!clinicId) return;
+      if (!clinicId) {
+        return;
+      }
       try {
         const res = await import('@/lib/professionalScheduleApi');
         const schedules = await res.getProfessionalSchedules(clinicId);
@@ -302,13 +380,15 @@ function TimelineGeral({ timeSlots, appointments, onSlotClick, onCheckin, date, 
 
   const appointmentsByTime = React.useMemo(() => {
     const map = {};
-    appointments.forEach(apt => {
+    appointments.forEach((apt) => {
       const time = apt.scheduled_time?.substring(0, 5) || apt.start_time?.substring(0, 5);
       if (!time) {
         console.warn('⚠️ Agendamento sem horário:', apt.id, apt);
         return;
       }
-      if (!map[time]) map[time] = [];
+      if (!map[time]) {
+        map[time] = [];
+      }
       map[time].push(apt);
     });
     return map;
@@ -320,13 +400,19 @@ function TimelineGeral({ timeSlots, appointments, onSlotClick, onCheckin, date, 
         <table className="w-full">
           <thead>
             <tr className="border-b-2 border-gray-300 bg-gradient-to-b from-gray-50 to-white">
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-20">Horário</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-20">
+                Horário
+              </th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Paciente</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Profissional</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                Profissional
+              </th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Serviço</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Sala</th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-80">Ações</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-80">
+                Ações
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -339,13 +425,19 @@ function TimelineGeral({ timeSlots, appointments, onSlotClick, onCheckin, date, 
                 let isAvailable = true;
                 // Se houver filtro de profissional, só mostrar disponível se o profissional tem disponibilidade
                 if (filteredProfessionalId) {
-                  isAvailable = professionalSchedules.some(sch => {
-                    if (!sch.active) return false;
-                    if (sch.professional_id !== filteredProfessionalId) return false;
-                    if (sch.day_of_week !== dayOfWeek) return false;
-                    const [slotHour, slotMinute] = time.split(":").map(Number);
-                    const [startHour, startMinute] = sch.start_time.split(":").map(Number);
-                    const [endHour, endMinute] = sch.end_time.split(":").map(Number);
+                  isAvailable = professionalSchedules.some((sch) => {
+                    if (!sch.active) {
+                      return false;
+                    }
+                    if (sch.professional_id !== filteredProfessionalId) {
+                      return false;
+                    }
+                    if (sch.day_of_week !== dayOfWeek) {
+                      return false;
+                    }
+                    const [slotHour, slotMinute] = time.split(':').map(Number);
+                    const [startHour, startMinute] = sch.start_time.split(':').map(Number);
+                    const [endHour, endMinute] = sch.end_time.split(':').map(Number);
                     const slotMinutes = slotHour * 60 + slotMinute;
                     const startMinutes = startHour * 60 + startMinute;
                     const endMinutes = endHour * 60 + endMinute;
@@ -354,13 +446,16 @@ function TimelineGeral({ timeSlots, appointments, onSlotClick, onCheckin, date, 
                 }
                 if (!isAvailable) {
                   return [
-                    <tr key={`unavailable-${time}`} className="border-b border-gray-100 bg-gray-50 hover:bg-gray-100 transition">
+                    <tr
+                      key={`unavailable-${time}`}
+                      className="border-b border-gray-100 bg-gray-50 hover:bg-gray-100 transition"
+                    >
                       <td className="px-4 py-3 text-sm font-medium text-gray-600">{time}</td>
                       <td colSpan="5" className="px-4 py-3">
                         <span className="text-sm font-black text-gray-600">🔒 Indisponível</span>
                       </td>
                       <td className="px-4 py-3"></td>
-                    </tr>
+                    </tr>,
                   ];
                 }
                 return [
@@ -379,7 +474,10 @@ function TimelineGeral({ timeSlots, appointments, onSlotClick, onCheckin, date, 
                             const slotData = { date, time, type: 'new' };
                             if (filteredProfessionalId) {
                               slotData.professional_id = filteredProfessionalId;
-                              console.log('✅ [TimelineGeral] Click com professional_id:', filteredProfessionalId);
+                              console.log(
+                                '✅ [TimelineGeral] Click com professional_id:',
+                                filteredProfessionalId,
+                              );
                             }
                             onSlotClick(slotData);
                           }}
@@ -416,7 +514,7 @@ function TimelineGeral({ timeSlots, appointments, onSlotClick, onCheckin, date, 
                         </button>
                       </div>
                     </td>
-                  </tr>
+                  </tr>,
                 ];
               }
 
@@ -435,35 +533,44 @@ function TimelineGeral({ timeSlots, appointments, onSlotClick, onCheckin, date, 
                   <td className="px-4 py-3 text-sm text-gray-700">{apt.service_name}</td>
                   <td className="px-4 py-3 text-sm text-gray-700">{apt.room_name}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-block px-2 py-1 text-xs font-bold rounded ${getStatusBadgeColor(apt.status)}`}>
+                    <span
+                      className={`inline-block px-2 py-1 text-xs font-bold rounded ${getStatusBadgeColor(apt.status)}`}
+                    >
                       {getStatusLabel(apt.status)}
                     </span>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity flex-wrap">
                       {/* Recepção: check-in para início do fluxo ou atalho clínico quando já liberado */}
-                      {(apt.status === 'confirmado' || apt.status === 'a_confirmar' || apt.status === 'presente' || [
-                        SERVICE_STATUSES.AWAITING_PROFESSIONAL,
-                        SERVICE_STATUSES.IN_SERVICE,
-                        SERVICE_STATUSES.ATTENDED,
-                      ].includes(migrateStatus(apt.status))) && (
+                      {(apt.status === 'confirmado' ||
+                        apt.status === 'a_confirmar' ||
+                        apt.status === 'presente' ||
+                        [
+                          SERVICE_STATUSES.AWAITING_PROFESSIONAL,
+                          SERVICE_STATUSES.IN_SERVICE,
+                          SERVICE_STATUSES.ATTENDED,
+                        ].includes(migrateStatus(apt.status))) && (
                         <button
                           onClick={() => onCheckin(apt)}
                           className="px-3 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 transition font-medium shadow-md whitespace-nowrap"
-                          title={[
-                            SERVICE_STATUSES.AWAITING_PROFESSIONAL,
-                            SERVICE_STATUSES.IN_SERVICE,
-                            SERVICE_STATUSES.ATTENDED,
-                          ].includes(migrateStatus(apt.status))
-                            ? 'Abrir prontuário ou atendimento'
-                            : 'Check-in do paciente'}
+                          title={
+                            [
+                              SERVICE_STATUSES.AWAITING_PROFESSIONAL,
+                              SERVICE_STATUSES.IN_SERVICE,
+                              SERVICE_STATUSES.ATTENDED,
+                            ].includes(migrateStatus(apt.status))
+                              ? 'Abrir prontuário ou atendimento'
+                              : 'Check-in do paciente'
+                          }
                         >
                           {[
                             SERVICE_STATUSES.AWAITING_PROFESSIONAL,
                             SERVICE_STATUSES.IN_SERVICE,
                             SERVICE_STATUSES.ATTENDED,
                           ].includes(migrateStatus(apt.status))
-                            ? (migrateStatus(apt.status) === SERVICE_STATUSES.AWAITING_PROFESSIONAL ? '📝 Prontuário' : '👨‍⚕️ Atendimento')
+                            ? migrateStatus(apt.status) === SERVICE_STATUSES.AWAITING_PROFESSIONAL
+                              ? '📝 Prontuário'
+                              : '👨‍⚕️ Atendimento'
                             : '📋 Check-in'}
                         </button>
                       )}
@@ -518,82 +625,81 @@ function TimelineGeral({ timeSlots, appointments, onSlotClick, onCheckin, date, 
  */
 function getStatusBgColor(status) {
   switch (status) {
-    case 'confirmado':
-      return 'bg-green-50';
-    case 'a_confirmar':
-      return 'bg-yellow-50';
-    case 'presente':
-      return 'bg-blue-50';
-    case 'pronto_atendimento':
-      return 'bg-lime-50';
-    case 'em_atendimento':
-      return 'bg-indigo-50';
-    case 'finalizado':
-      return 'bg-emerald-50';
-    case 'faltou':
-      return 'bg-red-50';
-    case 'cancelado':
-      return 'bg-orange-50';
-    case 'encaixe':
-      return 'bg-cyan-50';
-    case 'bloqueado':
-      return 'bg-slate-50';
-    default:
-      return 'bg-gray-50';
+  case 'confirmado':
+    return 'bg-green-50';
+  case 'a_confirmar':
+    return 'bg-yellow-50';
+  case 'presente':
+    return 'bg-blue-50';
+  case 'pronto_atendimento':
+    return 'bg-lime-50';
+  case 'em_atendimento':
+    return 'bg-indigo-50';
+  case 'finalizado':
+    return 'bg-emerald-50';
+  case 'faltou':
+    return 'bg-red-50';
+  case 'cancelado':
+    return 'bg-orange-50';
+  case 'encaixe':
+    return 'bg-cyan-50';
+  case 'bloqueado':
+    return 'bg-slate-50';
+  default:
+    return 'bg-gray-50';
   }
 }
 
 function getStatusBadgeColor(status) {
   switch (status) {
-    case 'confirmado':
-      return 'bg-green-100 text-green-800';
-    case 'a_confirmar':
-      return 'bg-yellow-100 text-yellow-800';
-    case 'presente':
-      return 'bg-blue-100 text-blue-800';
-    case 'pronto_atendimento':
-      return 'bg-lime-100 text-lime-800';
-    case 'em_atendimento':
-      return 'bg-indigo-100 text-indigo-800';
-    case 'finalizado':
-      return 'bg-emerald-100 text-emerald-800';
-    case 'faltou':
-      return 'bg-red-100 text-red-800';
-    case 'cancelado':
-      return 'bg-orange-100 text-orange-800';
-    case 'encaixe':
-      return 'bg-cyan-100 text-cyan-800';
-    case 'bloqueado':
-      return 'bg-slate-100 text-slate-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
+  case 'confirmado':
+    return 'bg-green-100 text-green-800';
+  case 'a_confirmar':
+    return 'bg-yellow-100 text-yellow-800';
+  case 'presente':
+    return 'bg-blue-100 text-blue-800';
+  case 'pronto_atendimento':
+    return 'bg-lime-100 text-lime-800';
+  case 'em_atendimento':
+    return 'bg-indigo-100 text-indigo-800';
+  case 'finalizado':
+    return 'bg-emerald-100 text-emerald-800';
+  case 'faltou':
+    return 'bg-red-100 text-red-800';
+  case 'cancelado':
+    return 'bg-orange-100 text-orange-800';
+  case 'encaixe':
+    return 'bg-cyan-100 text-cyan-800';
+  case 'bloqueado':
+    return 'bg-slate-100 text-slate-800';
+  default:
+    return 'bg-gray-100 text-gray-800';
   }
 }
 
 function getStatusLabel(status) {
   switch (status) {
-    case 'confirmado':
-      return '✓ Confirmado';
-    case 'a_confirmar':
-      return '⚠ A Confirmar';
-    case 'presente':
-      return '📍 Presente';
-    case 'pronto_atendimento':
-      return '🟢 Pronto para Atendimento';
-    case 'em_atendimento':
-      return '👨‍⚕️ Em Atendimento';
-    case 'finalizado':
-      return '✓ Finalizado';
-    case 'faltou':
-      return '✕ Faltou';
-    case 'cancelado':
-      return '✕ Cancelado';
-    case 'encaixe':
-      return '⚡ Encaixe';
-    case 'bloqueado':
-      return '🔒 Bloqueado';
-    default:
-      return status;
+  case 'confirmado':
+    return '✓ Confirmado';
+  case 'a_confirmar':
+    return '⚠ A Confirmar';
+  case 'presente':
+    return '📍 Presente';
+  case 'pronto_atendimento':
+    return '🟢 Pronto para Atendimento';
+  case 'em_atendimento':
+    return '👨‍⚕️ Em Atendimento';
+  case 'finalizado':
+    return '✓ Finalizado';
+  case 'faltou':
+    return '✕ Faltou';
+  case 'cancelado':
+    return '✕ Cancelado';
+  case 'encaixe':
+    return '⚡ Encaixe';
+  case 'bloqueado':
+    return '🔒 Bloqueado';
+  default:
+    return status;
   }
 }
-

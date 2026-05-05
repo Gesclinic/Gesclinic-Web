@@ -1,24 +1,24 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
-import AgendaToolbar from "../../agenda/components/AgendaToolbar";
-import AgendaCalendar from "../../agenda/components/AgendaCalendar";
-import AgendaTable from "../../agenda/components/AgendaTable";
-import AgendaSidePanel from "../../agenda/components/AgendaSidePanel";
-import ModalCriarAgendamento from "../../agenda/components/ModalCriarAgendamento";
+import AgendaToolbar from '../../agenda/components/AgendaToolbar';
+import AgendaCalendar from '../../agenda/components/AgendaCalendar';
+import AgendaTable from '../../agenda/components/AgendaTable';
+import AgendaSidePanel from '../../agenda/components/AgendaSidePanel';
+import ModalCriarAgendamento from '../../agenda/components/ModalCriarAgendamento';
 
-import { listAppointments } from "@/lib/appointmentsApi";
-import { listServices } from "@/lib/servicesApi";
-import { listPayers } from "@/lib/payersApi";
-import { supabase } from "@/lib/customSupabaseClient";
-import { useClinicContext } from "@/contexts/ClinicContext";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
+import { listAppointments } from '@/lib/appointmentsApi';
+import { listServices } from '@/lib/servicesApi';
+import { listPayers } from '@/lib/payersApi';
+import { supabase } from '@/lib/customSupabaseClient';
+import { useClinicContext } from '@/contexts/ClinicContext';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
 
 // Tipos de visualização
 const VIEW_MODE = {
-  CALENDAR: "calendar",
-  LIST: "list",
-  KANBAN: "kanban",
+  CALENDAR: 'calendar',
+  LIST: 'list',
+  KANBAN: 'kanban',
 };
 
 export default function AgendaLayout({ children }) {
@@ -30,7 +30,7 @@ export default function AgendaLayout({ children }) {
   // ESTADOS PRINCIPAIS
   // =========================================================================
   const [viewMode, setViewMode] = useState(VIEW_MODE.CALENDAR);
-  const [calendarView, setCalendarView] = useState("day");
+  const [calendarView, setCalendarView] = useState('day');
 
   const [appointments, setAppointments] = useState([]);
   const [professionals, setProfessionals] = useState([]);
@@ -54,7 +54,7 @@ export default function AgendaLayout({ children }) {
     dateEnd: new Date(),
     professionalId: null,
     roomId: null,
-    query: "",
+    query: '',
     payerId: null,
     serviceId: null,
     status: null,
@@ -78,27 +78,29 @@ export default function AgendaLayout({ children }) {
         ctxProfessionals.map((p) => ({
           id: p.id,
           name: p.name,
-          color: p.color || "#145B8A",
-        }))
+          color: p.color || '#145B8A',
+        })),
       );
       return;
     }
 
-    if (!clinic?.id) return;
+    if (!clinic?.id) {
+      return;
+    }
 
     const { data } = await supabase
-      .from("professionals")
-      .select("id, name, color, active")
-      .eq("clinic_id", clinic.id)
-      .eq("active", true);
+      .from('professionals')
+      .select('id, name, color, active')
+      .eq('clinic_id', clinic.id)
+      .eq('active', true);
 
     if (data) {
       setProfessionals(
         data.map((p) => ({
           id: p.id,
           name: p.name,
-          color: p.color || "#145B8A",
-        }))
+          color: p.color || '#145B8A',
+        })),
       );
     }
   }, [clinic?.id, ctxProfessionals]);
@@ -107,7 +109,9 @@ export default function AgendaLayout({ children }) {
   // CARREGA SERVIÇOS
   // =========================================================================
   const loadServices = useCallback(async () => {
-    if (!clinic?.id) return;
+    if (!clinic?.id) {
+      return;
+    }
 
     try {
       const data = await listServices({ clinicId: clinic.id });
@@ -123,7 +127,9 @@ export default function AgendaLayout({ children }) {
   // CARREGA CONVÊNIOS
   // =========================================================================
   const loadPayers = useCallback(async () => {
-    if (!clinic?.id) return;
+    if (!clinic?.id) {
+      return;
+    }
 
     try {
       const data = await listPayers({ clinicId: clinic.id });
@@ -157,7 +163,7 @@ export default function AgendaLayout({ children }) {
     };
 
     window.addEventListener('openNewAppointment', handleOpenNewAppointment);
-    
+
     return () => {
       window.removeEventListener('openNewAppointment', handleOpenNewAppointment);
     };
@@ -167,7 +173,9 @@ export default function AgendaLayout({ children }) {
   // CARREGA AGENDAMENTOS
   // =========================================================================
   const loadAppointments = useCallback(async () => {
-    if (!filters.clinicId) return;
+    if (!filters.clinicId) {
+      return;
+    }
 
     setLoading(true);
 
@@ -179,12 +187,12 @@ export default function AgendaLayout({ children }) {
         .select('id, name')
         .eq('email', user.email)
         .eq('clinic_id', filters.clinicId);
-      
+
       if (allProfs?.length > 1) {
         console.warn(`⚠️ [DUPLICATA] ${allProfs.length} profissionais com email ${user.email}`);
         allProfs.forEach((p, i) => console.log(`  [${i}] ${p.id} - ${p.name}`));
       }
-      
+
       if (allProfs?.length === 1) {
         userProfessionalId = allProfs[0].id;
         console.log('✅ [RBAC] Profissional detectado. Professional ID:', userProfessionalId);
@@ -221,9 +229,9 @@ export default function AgendaLayout({ children }) {
     setPanelData(appointment);
 
     const { data } = await supabase
-      .from("appointment_notification_logs")
-      .select("*")
-      .eq("appointment_id", appointment.id);
+      .from('appointment_notification_logs')
+      .select('*')
+      .eq('appointment_id', appointment.id);
 
     setLogs(data || []);
   };
@@ -238,7 +246,7 @@ export default function AgendaLayout({ children }) {
   // ATUALIZA STATUS
   // =========================================================================
   const updateStatus = async (item, status) => {
-    await supabase.from("appointments").update({ status }).eq("id", item.id);
+    await supabase.from('appointments').update({ status }).eq('id', item.id);
     loadAppointments();
   };
 
@@ -267,6 +275,31 @@ export default function AgendaLayout({ children }) {
         loading={loading}
         onSelectEvent={openPanel}
         onCreateAtSlot={(info) => {
+          console.log('📅 [onCreateAtSlot] Payload recebido:', info);
+
+          // ✅ Extrair data e hora do objeto do FullCalendar
+          const dateObj = info.date || new Date();
+          const formattedDate = new Date(dateObj).toLocaleDateString('pt-BR');
+          const displayTime = new Date(dateObj).toLocaleTimeString('pt-BR', {
+            hour: '2-digit',
+            minute: '2-digit',
+          });
+          const professionalName = 'Profissional a definir';
+
+          console.log('📋 Valores extraídos:', { formattedDate, displayTime, professionalName });
+
+          const confirmed = window.confirm(
+            'Deseja criar novo agendamento?\n\n' +
+              `📅 Data: ${formattedDate}\n` +
+              `🕐 Horário: ${displayTime}\n` +
+              `👨‍⚕️ Profissional: ${professionalName}\n\n` +
+              'Clique em OK para continuar...',
+          );
+
+          if (!confirmed) {
+            return;
+          }
+
           setNovoAgendamentoInfo(info);
           setModalNovoOpen(true);
         }}
@@ -279,7 +312,6 @@ export default function AgendaLayout({ children }) {
   // =========================================================================
   return (
     <div className="flex flex-col w-full h-full overflow-hidden">
-
       {/* TOOLBAR PREMIUM */}
       <AgendaToolbar
         viewMode={viewMode}
@@ -299,9 +331,7 @@ export default function AgendaLayout({ children }) {
       </div>
 
       {/* CHILDREN — usado pelas views premium */}
-      {children && (
-        <div className="w-full bg-white border-t shadow-inner p-6">{children}</div>
-      )}
+      {children && <div className="w-full bg-white border-t shadow-inner p-6">{children}</div>}
 
       {/* PAINEL LATERAL */}
       <AgendaSidePanel
@@ -309,8 +339,8 @@ export default function AgendaLayout({ children }) {
         onClose={closePanel}
         data={panelData}
         logs={logs}
-        onConfirm={(a) => updateStatus(a, "confirmed")}
-        onCancel={(a) => updateStatus(a, "canceled")}
+        onConfirm={(a) => updateStatus(a, 'confirmed')}
+        onCancel={(a) => updateStatus(a, 'canceled')}
       />
 
       {/* MODAL NOVO AGENDAMENTO */}
@@ -327,4 +357,3 @@ export default function AgendaLayout({ children }) {
     </div>
   );
 }
-

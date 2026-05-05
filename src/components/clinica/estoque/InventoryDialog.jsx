@@ -1,48 +1,55 @@
-import React, { useEffect, useState } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import LocationSelect from "./LocationSelect";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
-import { X } from "lucide-react";
+import React, { useEffect, useState } from 'react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import LocationSelect from './LocationSelect';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { X } from 'lucide-react';
 
 export default function InventoryDialog({ open, onOpenChange, onSubmit, clinicId }) {
   const { user } = useAuth();
   const [form, setForm] = useState({
-    date: "",
-    locationId: "",
-    location_name: "",
-    conducted_by: "",
-    reason: "",
-    notes: "",
+    date: '',
+    locationId: '',
+    location_name: '',
+    conducted_by: '',
+    reason: '',
+    notes: '',
   });
 
   useEffect(() => {
     if (!open) {
-      setForm({ date: "", locationId: "", location_name: "", conducted_by: "", reason: "", notes: "" });
+      setForm({
+        date: '',
+        locationId: '',
+        location_name: '',
+        conducted_by: '',
+        reason: '',
+        notes: '',
+      });
     } else {
-      const today = new Date().toISOString().split("T")[0];
-      const conductor = user?.email || user?.user_metadata?.name || "";
+      const today = new Date().toISOString().split('T')[0];
+      const conductor = user?.email || user?.user_metadata?.name || '';
       setForm((f) => ({ ...f, date: f.date || today, conducted_by: conductor }));
     }
   }, [open, user]);
 
   const submit = (e) => {
     e.preventDefault();
-    console.log("Form state before submit:", form);
-    if (!form.locationId || form.locationId.trim() === "") {
-      alert("❌ Selecione o local de estoque");
+    console.log('Form state before submit:', form);
+    if (!form.locationId || form.locationId.trim() === '') {
+      alert('❌ Selecione o local de estoque');
       return;
     }
-    if (!form.reason || form.reason.trim() === "") {
-      alert("❌ Selecione o motivo do inventário");
+    if (!form.reason || form.reason.trim() === '') {
+      alert('❌ Selecione o motivo do inventário');
       return;
     }
-    if (!form.date || form.date.trim() === "") {
-      alert("❌ Selecione a data do inventário");
+    if (!form.date || form.date.trim() === '') {
+      alert('❌ Selecione a data do inventário');
       return;
     }
-    console.log("Submitting form:", form);
+    console.log('Submitting form:', form);
     onSubmit(form);
   };
 
@@ -55,17 +62,25 @@ export default function InventoryDialog({ open, onOpenChange, onSubmit, clinicId
             <span className="text-3xl">📊</span>
             <div>
               <h2 className="text-lg font-bold">Novo Inventário de Estoque</h2>
-              <p className="text-purple-100 text-sm">Registre contagem e verificação de materiais</p>
+              <p className="text-purple-100 text-sm">
+                Registre contagem e verificação de materiais
+              </p>
             </div>
           </div>
-          <button onClick={() => onOpenChange(false)} className="p-1 hover:bg-purple-700 rounded transition">
+          <button
+            onClick={() => onOpenChange(false)}
+            className="p-1 hover:bg-purple-700 rounded transition"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* CONTENT */}
-        <form id="inventory-form" onSubmit={submit} className="flex-1 overflow-y-auto px-6 pt-6 pb-2 space-y-5">
-        
+        <form
+          id="inventory-form"
+          onSubmit={submit}
+          className="flex-1 overflow-y-auto px-6 pt-6 pb-2 space-y-5"
+        >
           {/* SEÇÃO 1: INFORMAÇÕES BÁSICAS */}
           <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-5 mb-5">
             <div className="flex items-center gap-2">
@@ -75,10 +90,12 @@ export default function InventoryDialog({ open, onOpenChange, onSubmit, clinicId
                 <p className="text-sm text-gray-600">Data e localização do inventário</p>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Data do Inventário *</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Data do Inventário *
+                </label>
                 <input
                   type="date"
                   value={form.date}
@@ -88,23 +105,27 @@ export default function InventoryDialog({ open, onOpenChange, onSubmit, clinicId
                 />
                 <p className="text-xs text-gray-500">Quando o inventário foi realizado</p>
               </div>
-              
+
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Local de Estoque *</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Local de Estoque *
+                </label>
                 {clinicId ? (
                   <LocationSelect
                     clinicId={clinicId}
                     value={form.location_name}
                     locationId={form.locationId}
                     onChange={(d) => {
-                      console.log("LocationSelect onChange:", d);
+                      console.log('LocationSelect onChange:', d);
                       setForm({ ...form, locationId: d.locationId, location_name: d.location });
                     }}
                     hideLabel
                     required
                   />
                 ) : (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">⚠️ Clínica não carregada</div>
+                  <div className="p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+                    ⚠️ Clínica não carregada
+                  </div>
                 )}
                 <p className="text-xs text-gray-500">Segmento de estoque inventariado</p>
               </div>
@@ -134,7 +155,9 @@ export default function InventoryDialog({ open, onOpenChange, onSubmit, clinicId
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Motivo do Inventário *</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Motivo do Inventário *
+                </label>
                 <select
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
                   value={form.reason}
@@ -150,7 +173,9 @@ export default function InventoryDialog({ open, onOpenChange, onSubmit, clinicId
                   <option value="transferencia">📦 Antes de transferência</option>
                   <option value="outro">📌 Outro motivo</option>
                 </select>
-                <p className="text-xs text-gray-500">Razão pela qual o inventário está sendo realizado</p>
+                <p className="text-xs text-gray-500">
+                  Razão pela qual o inventário está sendo realizado
+                </p>
               </div>
             </div>
           </div>
@@ -167,15 +192,26 @@ export default function InventoryDialog({ open, onOpenChange, onSubmit, clinicId
 
             <div className="space-y-3">
               <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-purple-50 transition">
-                <input type="radio" name="scope" value="completo" defaultChecked className="w-4 h-4 text-purple-600" />
+                <input
+                  type="radio"
+                  name="scope"
+                  value="completo"
+                  defaultChecked
+                  className="w-4 h-4 text-purple-600"
+                />
                 <div>
                   <span className="font-medium text-gray-900">Inventário Completo</span>
                   <p className="text-xs text-gray-600">Contar todos os itens no local</p>
                 </div>
               </label>
-              
+
               <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-purple-50 transition">
-                <input type="radio" name="scope" value="parcial" className="w-4 h-4 text-purple-600" />
+                <input
+                  type="radio"
+                  name="scope"
+                  value="parcial"
+                  className="w-4 h-4 text-purple-600"
+                />
                 <div>
                   <span className="font-medium text-gray-900">Inventário Parcial</span>
                   <p className="text-xs text-gray-600">Contar itens específicos ou categoria</p>
@@ -183,10 +219,17 @@ export default function InventoryDialog({ open, onOpenChange, onSubmit, clinicId
               </label>
 
               <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-purple-50 transition">
-                <input type="radio" name="scope" value="spot_check" className="w-4 h-4 text-purple-600" />
+                <input
+                  type="radio"
+                  name="scope"
+                  value="spot_check"
+                  className="w-4 h-4 text-purple-600"
+                />
                 <div>
                   <span className="font-medium text-gray-900">Verificação Rápida</span>
-                  <p className="text-xs text-gray-600">Amostragem e verificação de itens críticos</p>
+                  <p className="text-xs text-gray-600">
+                    Amostragem e verificação de itens críticos
+                  </p>
                 </div>
               </label>
             </div>
@@ -203,7 +246,9 @@ export default function InventoryDialog({ open, onOpenChange, onSubmit, clinicId
             </div>
 
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">Notas adicionais (opcional)</label>
+              <label className="block text-sm font-medium text-gray-700">
+                Notas adicionais (opcional)
+              </label>
               <textarea
                 value={form.notes}
                 onChange={(e) => setForm({ ...form, notes: e.target.value })}
@@ -214,8 +259,7 @@ export default function InventoryDialog({ open, onOpenChange, onSubmit, clinicId
               <p className="text-xs text-gray-500">Máximo 500 caracteres</p>
             </div>
           </div>
-
-          </form>
+        </form>
 
         {/* FOOTER */}
         <div className="flex gap-3 justify-end px-6 py-4 border-t border-gray-200 bg-gray-50">

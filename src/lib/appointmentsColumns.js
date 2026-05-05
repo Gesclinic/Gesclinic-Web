@@ -2,11 +2,11 @@
 
 // Colunas “seguras” (apenas as da tabela `appointments`)
 export const APPOINTMENT_COLUMNS_SAFE =
-  "id,clinic_id,patient_id,professional_id,service_id,room_id,payer_id,value,scheduled_date,scheduled_time,end_time,status,notes";
+  'id,clinic_id,patient_id,professional_id,service_id,room_id,payer_id,value,scheduled_date,scheduled_time,end_time,status,notes';
 
 // Colunas com os JOINS necessários (tudo em uma linha, sem comentários)
 export const APPOINTMENT_COLUMNS_WITH_NAMES =
-  "id,clinic_id,patient_id,professional_id,service_id,room_id,payer_id,value,scheduled_date,scheduled_time,end_time,status,notes,duration,patient:patients!appointments_patient_id_fkey(id,name,document_id,phone),professional:professionals(id,name),service:services(id,name),room:rooms(id,name),payer:payers(id,name)";
+  'id,clinic_id,patient_id,professional_id,service_id,room_id,payer_id,value,scheduled_date,scheduled_time,end_time,status,notes,duration,patient:patients!appointments_patient_id_fkey(id,name,document_id,phone),professional:professionals(id,name),service:services(id,name),room:rooms(id,name),payer:payers(id,name)';
 
 /**
  * “Achata” os campos vindos pelos joins para o formato usado na UI,
@@ -23,20 +23,14 @@ export function attachDisplayNames(row = {}) {
     row?.chart_number ??
     null;
 
-  const professional_name =
-    row?.professional?.name ?? row?.professional_name ?? null;
+  const professional_name = row?.professional?.name ?? row?.professional_name ?? null;
 
-  const service_name =
-    row?.service?.name ?? row?.service_name ?? null;
+  const service_name = row?.service?.name ?? row?.service_name ?? null;
 
   // payer: quando não há convênio (payer_id null), exibir "Particular"
-  const payer_name =
-    row?.payer?.name ??
-    row?.payer_name ??
-    (row?.payer_id ? null : "Particular");
+  const payer_name = row?.payer?.name ?? row?.payer_name ?? (row?.payer_id ? null : 'Particular');
 
-  const plan_name =
-    row?.plan?.name ?? row?.plan_name ?? null;
+  const plan_name = row?.plan?.name ?? row?.plan_name ?? null;
 
   // duração (min) — prioriza a do agendamento, depois a do serviço
   let duration_min = null;
@@ -59,11 +53,7 @@ export function attachDisplayNames(row = {}) {
   }
 
   // observação: prioriza a da appointment, fallback para a do profissional
-  const observation =
-    row?.notes ??
-    row?.professional?.schedule_notes ??
-    row?.observation ??
-    null;
+  const observation = row?.notes ?? row?.professional?.schedule_notes ?? row?.observation ?? null;
 
   const result = {
     ...row,
@@ -75,7 +65,7 @@ export function attachDisplayNames(row = {}) {
     plan_name,
     duration_min,
     observation,
-    duration_label: duration_min != null ? `${duration_min} min` : "—",
+    duration_label: duration_min != null ? `${duration_min} min` : '—',
   };
   return result;
 }

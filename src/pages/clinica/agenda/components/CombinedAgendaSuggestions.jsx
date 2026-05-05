@@ -1,10 +1,10 @@
 /**
  * AgendaSuggestions - Extended with Financial Priority
- * 
+ *
  * Componente integrado que combina:
  * 1. Sugestões inteligentes de encaixe (SLOT_LIVRE, NO_SHOW, etc)
  * 2. Sugestões de prioridade financeira (score-based)
- * 
+ *
  * Mostra ambos os tipos de sugestão lado-a-lado ou em abas
  */
 
@@ -36,16 +36,18 @@ export function CombinedAgendaSuggestions({
 
   // Stats financeiros
   const financialStats = useMemo(() => {
-    if (!financialSuggestions.length) return null;
+    if (!financialSuggestions.length) {
+      return null;
+    }
 
     return {
       total: financialSuggestions.length,
       totalValue: financialSuggestions.reduce((sum, s) => sum + (s.valor_estimado || 0), 0),
       averageScore: Math.round(
-        financialSuggestions.reduce((sum, s) => sum + s.score_financeiro, 0) / 
-        financialSuggestions.length
+        financialSuggestions.reduce((sum, s) => sum + s.score_financeiro, 0) /
+          financialSuggestions.length,
       ),
-      topScore: Math.max(...financialSuggestions.map(s => s.score_financeiro || 0)),
+      topScore: Math.max(...financialSuggestions.map((s) => s.score_financeiro || 0)),
     };
   }, [financialSuggestions]);
 
@@ -92,7 +94,9 @@ export function CombinedAgendaSuggestions({
                   </div>
                   <div>
                     <p className="text-xs text-gray-600">Score Médio</p>
-                    <p className="text-lg font-bold text-yellow-700">{financialStats.averageScore}</p>
+                    <p className="text-lg font-bold text-yellow-700">
+                      {financialStats.averageScore}
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-600">Melhor Score</p>
@@ -190,4 +194,3 @@ export function CombinedAgendaSuggestions({
 }
 
 export default CombinedAgendaSuggestions;
-

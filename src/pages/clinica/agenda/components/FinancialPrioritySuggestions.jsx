@@ -1,8 +1,8 @@
 /**
  * Financial Priority Suggestions Component
- * 
+ *
  * Componente React que exibe sugestões ranqueadas por prioridade financeira
- * 
+ *
  * Features:
  * - Lista ordenada por score financeiro
  * - Exibe score, valor, tipo, justificativa
@@ -13,10 +13,10 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { 
-  TrendingUp, 
-  DollarSign, 
-  Clock, 
+import {
+  TrendingUp,
+  DollarSign,
+  Clock,
   AlertCircle,
   ChevronDown,
   ChevronUp,
@@ -24,10 +24,7 @@ import {
   X,
   Eye,
 } from 'lucide-react';
-import { 
-  PRIORITY_LEVELS,
-  SERVICE_TYPES,
-} from '../../../lib/financialPriorityApi';
+import { PRIORITY_LEVELS, SERVICE_TYPES } from '../../../lib/financialPriorityApi';
 
 // ============================================================================
 // CONSTANTS
@@ -103,9 +100,7 @@ function FinancialSuggestionCard({
   // Layout compacto
   if (compact) {
     return (
-      <div 
-        className={`p-3 border rounded-lg ${colors.bg} ${colors.border} mb-2`}
-      >
+      <div className={`p-3 border rounded-lg ${colors.bg} ${colors.border} mb-2`}>
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
@@ -116,17 +111,11 @@ function FinancialSuggestionCard({
                 {suggestion.prioridade}
               </span>
             </div>
-            <p className="text-xs text-gray-600 mb-1">
-              {suggestion.service_name}
-            </p>
-            <p className="text-xs text-gray-500">
-              R$ {suggestion.valor_estimado.toFixed(2)}
-            </p>
+            <p className="text-xs text-gray-600 mb-1">{suggestion.service_name}</p>
+            <p className="text-xs text-gray-500">R$ {suggestion.valor_estimado.toFixed(2)}</p>
           </div>
           <div className="text-right flex-shrink-0">
-            <div className={`text-lg font-bold ${colors.icon}`}>
-              {suggestion.score_financeiro}
-            </div>
+            <div className={`text-lg font-bold ${colors.icon}`}>{suggestion.score_financeiro}</div>
             <p className="text-xs text-gray-500">score</p>
           </div>
         </div>
@@ -154,25 +143,21 @@ function FinancialSuggestionCard({
 
   // Layout expandido
   return (
-    <div 
-      className={`border rounded-lg ${colors.bg} ${colors.border} mb-3 overflow-hidden`}
-    >
+    <div className={`border rounded-lg ${colors.bg} ${colors.border} mb-3 overflow-hidden`}>
       {/* Header - Sempre visível */}
       <div className="p-4 cursor-pointer" onClick={() => setExpanded(!expanded)}>
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             {/* Ranking + Prioridade */}
             <div className="flex items-center gap-3 mb-2">
-              <div className={`flex-shrink-0 w-10 h-10 rounded-full ${colors.bg} border-2 ${colors.border} flex items-center justify-center`}>
+              <div
+                className={`flex-shrink-0 w-10 h-10 rounded-full ${colors.bg} border-2 ${colors.border} flex items-center justify-center`}
+              >
                 <TrendingUp className={`w-5 h-5 ${colors.icon}`} />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900">
-                  {suggestion.patient_name}
-                </h3>
-                <p className="text-sm text-gray-600">
-                  {suggestion.service_name}
-                </p>
+                <h3 className="font-semibold text-gray-900">{suggestion.patient_name}</h3>
+                <p className="text-sm text-gray-600">{suggestion.service_name}</p>
               </div>
             </div>
 
@@ -186,9 +171,7 @@ function FinancialSuggestionCard({
               </div>
               <div className="flex items-center gap-1">
                 <Clock className="w-4 h-4 text-blue-600" />
-                <span className="text-gray-700">
-                  {suggestion.duracao_minutos}min
-                </span>
+                <span className="text-gray-700">{suggestion.duracao_minutos}min</span>
               </div>
               <div className="flex items-center gap-1">
                 {showFullScore ? (
@@ -210,9 +193,7 @@ function FinancialSuggestionCard({
             </div>
 
             {/* Justificativa */}
-            <p className="text-xs text-gray-600 mt-2">
-              💡 {suggestion.justificativa}
-            </p>
+            <p className="text-xs text-gray-600 mt-2">💡 {suggestion.justificativa}</p>
           </div>
 
           {/* Expandir/Colapsar */}
@@ -258,9 +239,17 @@ function FinancialSuggestionCard({
           <div className="mb-3 pb-3 border-b border-gray-200">
             <h4 className="text-xs font-bold text-gray-700 mb-2">DETALHES DO SERVIÇO</h4>
             <div className="space-y-1 text-xs">
-              <p><span className="text-gray-600">Tipo:</span> {SERVICE_TYPE_LABELS[suggestion.service_type] || suggestion.service_type}</p>
-              <p><span className="text-gray-600">Paciente:</span> {suggestion.patient_name}</p>
-              <p><span className="text-gray-600">No-shows histórico:</span> {suggestion.no_show_historico}</p>
+              <p>
+                <span className="text-gray-600">Tipo:</span>{' '}
+                {SERVICE_TYPE_LABELS[suggestion.service_type] || suggestion.service_type}
+              </p>
+              <p>
+                <span className="text-gray-600">Paciente:</span> {suggestion.patient_name}
+              </p>
+              <p>
+                <span className="text-gray-600">No-shows histórico:</span>{' '}
+                {suggestion.no_show_historico}
+              </p>
             </div>
           </div>
 
@@ -268,9 +257,18 @@ function FinancialSuggestionCard({
           <div className="mb-3 pb-3 border-b border-gray-200">
             <h4 className="text-xs font-bold text-gray-700 mb-2">ANÁLISE FINANCEIRA</h4>
             <div className="space-y-1 text-xs">
-              <p><span className="text-gray-600">Receita/hora:</span> R$ {((suggestion.valor_estimado / (suggestion.duracao_minutos / 60))).toFixed(2)}</p>
-              <p><span className="text-gray-600">Margem %:</span> {((suggestion.margem_estimada / suggestion.valor_estimado) * 100).toFixed(0)}%</p>
-              <p><span className="text-gray-600">Confiabilidade:</span> {suggestion.no_show_historico === 0 ? '✅ Excelente' : '⚠️ Com histórico'}</p>
+              <p>
+                <span className="text-gray-600">Receita/hora:</span> R${' '}
+                {(suggestion.valor_estimado / (suggestion.duracao_minutos / 60)).toFixed(2)}
+              </p>
+              <p>
+                <span className="text-gray-600">Margem %:</span>{' '}
+                {((suggestion.margem_estimada / suggestion.valor_estimado) * 100).toFixed(0)}%
+              </p>
+              <p>
+                <span className="text-gray-600">Confiabilidade:</span>{' '}
+                {suggestion.no_show_historico === 0 ? '✅ Excelente' : '⚠️ Com histórico'}
+              </p>
             </div>
           </div>
 
@@ -319,7 +317,7 @@ export function FinancialPrioritySuggestions({
 
   // Filtrar sugestões ignoradas
   const visibleSuggestions = useMemo(() => {
-    return suggestions.filter(s => !ignoredIds.has(s.id));
+    return suggestions.filter((s) => !ignoredIds.has(s.id));
   }, [suggestions, ignoredIds]);
 
   // Agrupar por prioridade
@@ -330,7 +328,7 @@ export function FinancialPrioritySuggestions({
       [PRIORITY_LEVELS.BAIXA]: [],
     };
 
-    visibleSuggestions.forEach(s => {
+    visibleSuggestions.forEach((s) => {
       result[s.prioridade]?.push(s);
     });
 
@@ -338,7 +336,7 @@ export function FinancialPrioritySuggestions({
   }, [visibleSuggestions]);
 
   const handleIgnore = async (suggestion) => {
-    setIgnoredIds(prev => new Set([...prev, suggestion.id]));
+    setIgnoredIds((prev) => new Set([...prev, suggestion.id]));
     if (onIgnore) {
       await onIgnore(suggestion);
     }
@@ -349,9 +347,7 @@ export function FinancialPrioritySuggestions({
     return (
       <div className={`text-center py-8 px-4 ${className}`}>
         <AlertCircle className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-        <p className="text-gray-500 font-medium">
-          Nenhuma sugestão financeira disponível
-        </p>
+        <p className="text-gray-500 font-medium">Nenhuma sugestão financeira disponível</p>
         <p className="text-gray-400 text-sm">
           Quando houver pacientes em lista de espera, as melhores oportunidades aparecerão aqui.
         </p>
@@ -387,7 +383,7 @@ export function FinancialPrioritySuggestions({
       <div className={className}>
         <h3 className="font-bold text-gray-900 mb-3">💰 Top Oportunidades Financeiras</h3>
         <div className="space-y-0">
-          {visibleSuggestions.slice(0, 5).map(suggestion => (
+          {visibleSuggestions.slice(0, 5).map((suggestion) => (
             <FinancialSuggestionCard
               key={suggestion.id}
               suggestion={suggestion}
@@ -415,7 +411,8 @@ export function FinancialPrioritySuggestions({
           💰 Sugestões Inteligentes por Prioridade Financeira
         </h2>
         <p className="text-sm text-gray-600">
-          {visibleSuggestions.length} oportunidade{visibleSuggestions.length !== 1 ? 's' : ''} encontrada{visibleSuggestions.length !== 1 ? 's' : ''}
+          {visibleSuggestions.length} oportunidade{visibleSuggestions.length !== 1 ? 's' : ''}{' '}
+          encontrada{visibleSuggestions.length !== 1 ? 's' : ''}
         </p>
       </div>
 
@@ -426,7 +423,7 @@ export function FinancialPrioritySuggestions({
             🔴 ALTA PRIORIDADE ({grouped[PRIORITY_LEVELS.ALTA].length})
           </h3>
           <div>
-            {grouped[PRIORITY_LEVELS.ALTA].map(suggestion => (
+            {grouped[PRIORITY_LEVELS.ALTA].map((suggestion) => (
               <FinancialSuggestionCard
                 key={suggestion.id}
                 suggestion={suggestion}
@@ -446,7 +443,7 @@ export function FinancialPrioritySuggestions({
             🟡 MÉDIA PRIORIDADE ({grouped[PRIORITY_LEVELS.MEDIA].length})
           </h3>
           <div>
-            {grouped[PRIORITY_LEVELS.MEDIA].map(suggestion => (
+            {grouped[PRIORITY_LEVELS.MEDIA].map((suggestion) => (
               <FinancialSuggestionCard
                 key={suggestion.id}
                 suggestion={suggestion}
@@ -466,7 +463,7 @@ export function FinancialPrioritySuggestions({
             🔵 BAIXA PRIORIDADE ({grouped[PRIORITY_LEVELS.BAIXA].length})
           </h3>
           <div>
-            {grouped[PRIORITY_LEVELS.BAIXA].map(suggestion => (
+            {grouped[PRIORITY_LEVELS.BAIXA].map((suggestion) => (
               <FinancialSuggestionCard
                 key={suggestion.id}
                 suggestion={suggestion}
@@ -483,4 +480,3 @@ export function FinancialPrioritySuggestions({
 }
 
 export default FinancialPrioritySuggestions;
-

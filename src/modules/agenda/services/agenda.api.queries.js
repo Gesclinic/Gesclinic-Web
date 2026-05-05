@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/customSupabaseClient";
+import { supabase } from '@/lib/customSupabaseClient';
 
 // Lista serviços vinculados ao profissional
 export async function listarServicosPorProfissional({ profissionalId }) {
@@ -6,7 +6,7 @@ export async function listarServicosPorProfissional({ profissionalId }) {
     .from('professional_services')
     .select('service:service_id(id, name, duration)')
     .eq('professional_id', profissionalId);
-  return (data || []).map(ps => ps.service);
+  return (data || []).map((ps) => ps.service);
 }
 
 // Lista salas da clínica
@@ -27,7 +27,7 @@ export async function listarProfissionais({ clinicId }) {
     .eq('clinic_id', clinicId)
     .eq('active', true)
     .order('name', { ascending: true }); // If 'name' does not exist, change to 'full_name' or another valid column
-  return (data || []).filter(p => p.active);
+  return (data || []).filter((p) => p.active);
 }
 
 // Lista planos vinculados ao convênio
@@ -65,18 +65,21 @@ export async function listarConvenios({ clinicId }) {
 export async function buscarAgendamentoPorId(agendamentoId) {
   try {
     // Verificar autenticação
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
-      throw new Error("Usuário não autenticado");
+      throw new Error('Usuário não autenticado');
     }
 
     if (!agendamentoId) {
-      throw new Error("agendamentoId é obrigatório");
+      throw new Error('agendamentoId é obrigatório');
     }
 
     const { data, error } = await supabase
       .from('appointments')
-      .select(`
+      .select(
+        `
         *,
         patient:patient_id (id, name, record_number, phone, email, cpf),
         professional:professional_id (id, name, specialty),
@@ -87,20 +90,23 @@ export async function buscarAgendamentoPorId(agendamentoId) {
         updated_at,
         notes,
         internal_notes
-      `)
+      `,
+      )
       .eq('id', agendamentoId)
       .maybeSingle();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
 
     if (!data) {
-      console.warn("⚠️ Agendamento não encontrado:", agendamentoId);
-      throw new Error("Agendamento não encontrado ou sem permissão de acesso");
+      console.warn('⚠️ Agendamento não encontrado:', agendamentoId);
+      throw new Error('Agendamento não encontrado ou sem permissão de acesso');
     }
 
     return { data, error: null };
   } catch (err) {
-    console.error("❌ Erro ao buscar agendamento:", err.message);
+    console.error('❌ Erro ao buscar agendamento:', err.message);
     return { data: null, error: err };
   }
 }

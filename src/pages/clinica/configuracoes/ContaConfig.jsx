@@ -1,12 +1,12 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import PlanoDeContas from "@/pages/clinica/configuracoes/PlanoDeContas";
-import BankAccountsManager from "@/pages/clinica/configuracoes/BankAccountsManager";
-import RepassesRulesManager from "@/pages/clinica/configuracoes/RepassesRulesManager";
-import PageLayout from "@/components/ui/PageLayout";
-import { useBreadcrumbs } from "@/hooks/useBreadcrumbs";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import PlanoDeContas from '@/pages/clinica/configuracoes/PlanoDeContas';
+import BankAccountsManager from '@/pages/clinica/configuracoes/BankAccountsManager';
+import RepassesRulesManager from '@/pages/clinica/configuracoes/RepassesRulesManager';
+import PageLayout from '@/components/ui/PageLayout';
+import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 
 export default function ContaConfig() {
   const { tab } = useParams();
@@ -14,9 +14,9 @@ export default function ContaConfig() {
   const currentTab = tab || 'plano-contas';
 
   const breadcrumbs = useBreadcrumbs([
-    { label: "Clínica", path: "/clinica" },
-    { label: "Configurações", path: "/clinica/configuracoes" },
-    { label: "Contas" }
+    { label: 'Clínica', path: '/clinica' },
+    { label: 'Configurações', path: '/clinica/configuracoes' },
+    { label: 'Contas' },
   ]);
 
   const handleTabChange = (value) => {
@@ -66,4 +66,3 @@ export default function ContaConfig() {
     </PageLayout>
   );
 }
-

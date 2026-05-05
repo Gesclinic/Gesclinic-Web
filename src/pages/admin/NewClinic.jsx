@@ -59,9 +59,9 @@ export default function NewClinic() {
       finalValue = formatPhone(value);
     }
 
-    setForm(prev => ({
+    setForm((prev) => ({
       ...prev,
-      [name]: finalValue
+      [name]: finalValue,
     }));
     setError('');
   };
@@ -69,10 +69,10 @@ export default function NewClinic() {
   const formatCNPJ = (value) => {
     // Remove tudo que não é número
     const cleaned = value.replace(/\D/g, '');
-    
+
     // Limita a 14 números
     const truncated = cleaned.slice(0, 14);
-    
+
     // Formata no padrão XX.XXX.XXX/XXXX-XX
     if (truncated.length <= 2) {
       return truncated;
@@ -90,10 +90,10 @@ export default function NewClinic() {
   const formatPhone = (value) => {
     // Remove tudo que não é número
     const cleaned = value.replace(/\D/g, '');
-    
+
     // Limita a 11 números
     const truncated = cleaned.slice(0, 11);
-    
+
     // Se tem 11 dígitos, é celular: (XX) 9 XXXX-XXXX
     // Se tem 10 dígitos, é fixo: (XX) XXXX-XXXX
     if (truncated.length <= 2) {
@@ -105,7 +105,7 @@ export default function NewClinic() {
     } else if (truncated.length === 11) {
       return `(${truncated.slice(0, 2)}) ${truncated.slice(2, 3)} ${truncated.slice(3, 7)}-${truncated.slice(7)}`;
     }
-    
+
     return truncated;
   };
 
@@ -121,7 +121,7 @@ export default function NewClinic() {
         .eq('status', 'active')
         .eq('clinic_type', 'matriz')
         .order('name', { ascending: true });
-      
+
       setClinicas(data || []);
     } catch (error) {
       console.error('Erro ao carregar clínicas:', error);
@@ -143,8 +143,14 @@ export default function NewClinic() {
   const generateClinicCode = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     const part1 = 'GESCL';
-    const part2 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-    const part3 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    const part2 = Array.from(
+      { length: 4 },
+      () => chars[Math.floor(Math.random() * chars.length)],
+    ).join('');
+    const part3 = Array.from(
+      { length: 4 },
+      () => chars[Math.floor(Math.random() * chars.length)],
+    ).join('');
     return `${part1}-${part2}-${part3}`;
   };
 
@@ -277,11 +283,13 @@ export default function NewClinic() {
             locale: form.locale,
             settings: form.settings,
             created_at: new Date().toISOString(),
-          }
+          },
         ])
         .select();
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        throw insertError;
+      }
 
       setMessage(`✓ Clínica ${form.name} criada com sucesso!`);
 
@@ -297,8 +305,10 @@ export default function NewClinic() {
     setLoading(false);
   };
 
-  const inputClassName = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[hsl(var(--primary))] focus:ring-4 focus:ring-[hsl(var(--primary))]/10';
-  const iconInputClassName = 'w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[hsl(var(--primary))] focus:ring-4 focus:ring-[hsl(var(--primary))]/10';
+  const inputClassName =
+    'w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[hsl(var(--primary))] focus:ring-4 focus:ring-[hsl(var(--primary))]/10';
+  const iconInputClassName =
+    'w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[hsl(var(--primary))] focus:ring-4 focus:ring-[hsl(var(--primary))]/10';
   const selectedParentClinic = clinicas.find((clinic) => clinic.id === form.parent_clinic_id);
 
   return (
@@ -323,7 +333,8 @@ export default function NewClinic() {
             <div>
               <h1 className="text-4xl font-bold tracking-tight text-slate-950">Nova Clínica</h1>
               <p className="mt-2 max-w-2xl text-sm text-slate-600">
-                Cadastre a unidade com identidade fiscal, localização e vínculo estrutural em um fluxo mais claro para revisão.
+                Cadastre a unidade com identidade fiscal, localização e vínculo estrutural em um
+                fluxo mais claro para revisão.
               </p>
             </div>
           </div>
@@ -336,11 +347,19 @@ export default function NewClinic() {
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Tipo</p>
-            <p className="mt-2 text-lg font-bold text-slate-900">{form.clinic_type === 'filial' ? 'Filial' : 'Matriz'}</p>
+            <p className="mt-2 text-lg font-bold text-slate-900">
+              {form.clinic_type === 'filial' ? 'Filial' : 'Matriz'}
+            </p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Status</p>
-            <p className="mt-2 text-lg font-bold text-slate-900">{form.status === 'active' ? 'Ativa' : form.status === 'inactive' ? 'Inativa' : 'Suspensa'}</p>
+            <p className="mt-2 text-lg font-bold text-slate-900">
+              {form.status === 'active'
+                ? 'Ativa'
+                : form.status === 'inactive'
+                  ? 'Inativa'
+                  : 'Suspensa'}
+            </p>
           </div>
         </div>
       </div>
@@ -373,37 +392,74 @@ export default function NewClinic() {
                 </span>
                 Identidade da Clínica
               </CardTitle>
-              <CardDescription>Dados principais para identificação jurídica e operacional da unidade.</CardDescription>
+              <CardDescription>
+                Dados principais para identificação jurídica e operacional da unidade.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-8 p-6">
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                 <div className="space-y-2 md:col-span-2">
                   <label className="text-sm font-semibold text-slate-700">Nome da Clínica *</label>
-                  <input type="text" name="name" value={form.name} onChange={handleChange} className={inputClassName} placeholder="Ex: Clínica Odontológica Silva LTDA" />
+                  <input
+                    type="text"
+                    name="name"
+                    value={form.name}
+                    onChange={handleChange}
+                    className={inputClassName}
+                    placeholder="Ex: Clínica Odontológica Silva LTDA"
+                  />
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <label className="text-sm font-semibold text-slate-700">Nome Fantasia *</label>
-                  <input type="text" name="fantasy_name" value={form.fantasy_name} onChange={handleChange} className={inputClassName} placeholder="Ex: Clínica Silva" />
+                  <input
+                    type="text"
+                    name="fantasy_name"
+                    value={form.fantasy_name}
+                    onChange={handleChange}
+                    className={inputClassName}
+                    placeholder="Ex: Clínica Silva"
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700">CNPJ *</label>
                   <div className="relative">
                     <FileText className="absolute left-3 top-3.5 h-5 w-5 text-slate-400" />
-                    <input type="text" name="cnpj" value={form.cnpj} onChange={handleChange} className={iconInputClassName} placeholder="12.345.678/0001-90" />
+                    <input
+                      type="text"
+                      name="cnpj"
+                      value={form.cnpj}
+                      onChange={handleChange}
+                      className={iconInputClassName}
+                      placeholder="12.345.678/0001-90"
+                    />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700">E-mail *</label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-3.5 h-5 w-5 text-slate-400" />
-                    <input type="email" name="email" value={form.email} onChange={handleChange} className={iconInputClassName} placeholder="contato@clinica.com.br" />
+                    <input
+                      type="email"
+                      name="email"
+                      value={form.email}
+                      onChange={handleChange}
+                      className={iconInputClassName}
+                      placeholder="contato@clinica.com.br"
+                    />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700">Telefone</label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-3.5 h-5 w-5 text-slate-400" />
-                    <input type="tel" name="phone" value={form.phone} onChange={handleChange} className={iconInputClassName} placeholder="(11) 98765-4321" />
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={form.phone}
+                      onChange={handleChange}
+                      className={iconInputClassName}
+                      placeholder="(11) 98765-4321"
+                    />
                   </div>
                 </div>
               </div>
@@ -418,27 +474,58 @@ export default function NewClinic() {
                 </span>
                 Localização e Estrutura
               </CardTitle>
-              <CardDescription>Defina onde a clínica opera e como ela se encaixa na estrutura matriz/filial.</CardDescription>
+              <CardDescription>
+                Defina onde a clínica opera e como ela se encaixa na estrutura matriz/filial.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-8 p-6">
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-slate-700">Endereço</label>
-                <input type="text" name="address" value={form.address} onChange={handleChange} className={inputClassName} placeholder="Rua exemplo, 123" />
+                <input
+                  type="text"
+                  name="address"
+                  value={form.address}
+                  onChange={handleChange}
+                  className={inputClassName}
+                  placeholder="Rua exemplo, 123"
+                />
               </div>
               <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700">Cidade *</label>
-                  <input type="text" name="city" value={form.city} onChange={handleChange} className={inputClassName} placeholder="São Paulo" />
+                  <input
+                    type="text"
+                    name="city"
+                    value={form.city}
+                    onChange={handleChange}
+                    className={inputClassName}
+                    placeholder="São Paulo"
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700">Estado</label>
-                  <input type="text" name="state" value={form.state} onChange={handleChange} maxLength="2" className={inputClassName} placeholder="SP" />
+                  <input
+                    type="text"
+                    name="state"
+                    value={form.state}
+                    onChange={handleChange}
+                    maxLength="2"
+                    className={inputClassName}
+                    placeholder="SP"
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700">CEP</label>
                   <div className="relative">
                     <MapPin className="absolute left-3 top-3.5 h-5 w-5 text-slate-400" />
-                    <input type="text" name="zipcode" value={form.zipcode} onChange={handleChange} className={iconInputClassName} placeholder="01310-100" />
+                    <input
+                      type="text"
+                      name="zipcode"
+                      value={form.zipcode}
+                      onChange={handleChange}
+                      className={iconInputClassName}
+                      placeholder="01310-100"
+                    />
                   </div>
                 </div>
               </div>
@@ -446,14 +533,24 @@ export default function NewClinic() {
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700">Tipo de Clínica *</label>
-                  <select name="clinic_type" value={form.clinic_type} onChange={handleChange} className={inputClassName}>
+                  <select
+                    name="clinic_type"
+                    value={form.clinic_type}
+                    onChange={handleChange}
+                    className={inputClassName}
+                  >
                     <option value="matriz">Matriz</option>
                     <option value="filial">Filial</option>
                   </select>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700">Status</label>
-                  <select name="status" value={form.status} onChange={handleChange} className={inputClassName}>
+                  <select
+                    name="status"
+                    value={form.status}
+                    onChange={handleChange}
+                    className={inputClassName}
+                  >
                     <option value="active">Ativa</option>
                     <option value="inactive">Inativa</option>
                     <option value="suspended">Suspensa</option>
@@ -464,10 +561,17 @@ export default function NewClinic() {
               {form.clinic_type === 'filial' && (
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700">Clínica Matriz *</label>
-                  <select name="parent_clinic_id" value={form.parent_clinic_id || ''} onChange={handleChange} className={inputClassName}>
+                  <select
+                    name="parent_clinic_id"
+                    value={form.parent_clinic_id || ''}
+                    onChange={handleChange}
+                    className={inputClassName}
+                  >
                     <option value="">Selecione a clínica matriz...</option>
                     {clinicas.map((clinic) => (
-                      <option key={clinic.id} value={clinic.id}>{clinic.name}</option>
+                      <option key={clinic.id} value={clinic.id}>
+                        {clinic.name}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -484,19 +588,33 @@ export default function NewClinic() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="rounded-2xl bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Clínica</p>
-                <p className="mt-2 font-semibold text-slate-900">{form.fantasy_name || form.name || 'Nome não preenchido'}</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Clínica
+                </p>
+                <p className="mt-2 font-semibold text-slate-900">
+                  {form.fantasy_name || form.name || 'Nome não preenchido'}
+                </p>
                 <p className="mt-1 text-sm text-slate-600">{form.email || 'Email não informado'}</p>
               </div>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
                 <div className="rounded-2xl border border-slate-200 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Estrutura</p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">{form.clinic_type === 'filial' ? 'Filial' : 'Matriz'}</p>
-                  <p className="mt-1 text-xs text-slate-500">{selectedParentClinic?.name || 'Sem matriz vinculada'}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Estrutura
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-slate-900">
+                    {form.clinic_type === 'filial' ? 'Filial' : 'Matriz'}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {selectedParentClinic?.name || 'Sem matriz vinculada'}
+                  </p>
                 </div>
                 <div className="rounded-2xl border border-slate-200 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Localização</p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">{form.city || 'Cidade não informada'}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Localização
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-slate-900">
+                    {form.city || 'Cidade não informada'}
+                  </p>
                   <p className="mt-1 text-xs text-slate-500">{form.state || 'UF não informada'}</p>
                 </div>
               </div>
@@ -511,10 +629,28 @@ export default function NewClinic() {
 
           <Card className="rounded-3xl border-slate-200 shadow-sm">
             <CardContent className="space-y-3 p-6">
-              <button type="submit" disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[hsl(var(--primary))] px-4 py-3.5 font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50">
-                {loading ? <><Loader2 className="h-5 w-5 animate-spin" />Criando...</> : <><Save className="h-5 w-5" />Criar Clínica</>}
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[hsl(var(--primary))] px-4 py-3.5 font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Criando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-5 w-5" />
+                    Criar Clínica
+                  </>
+                )}
               </button>
-              <button type="button" onClick={() => navigate('/clinica/administracao/clinicas')} className="w-full rounded-2xl border border-slate-200 px-4 py-3 font-medium text-slate-700 transition hover:bg-slate-50">
+              <button
+                type="button"
+                onClick={() => navigate('/clinica/administracao/clinicas')}
+                className="w-full rounded-2xl border border-slate-200 px-4 py-3 font-medium text-slate-700 transition hover:bg-slate-50"
+              >
                 Cancelar
               </button>
             </CardContent>

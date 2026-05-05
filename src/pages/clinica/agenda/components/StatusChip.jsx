@@ -2,11 +2,11 @@ import React from 'react';
 
 /**
  * StatusChip - Ultra-compacto com emojis semânticos + cores
- * 
+ *
  * Versão otimizada para Agenda:
  * - Modo ultra-compacto (padrão): apenas emoji colorido (8x8px)
  * - Modo texto: emoji + label em chip pequeno
- * 
+ *
  * Props:
  * - status: 'disponivel' | 'confirmado' | 'aguardando' | 'falta' | 'cancelado' | 'bloqueado' | 'concluído' | 'agendado'
  * - size: 'sm' (8px) | 'md' (12px) | 'lg' (16px) - padrão: 'sm'
@@ -104,4 +104,3 @@ export default function StatusChip({ status, size = 'sm', compact = true }) {
     </span>
   );
 }
-

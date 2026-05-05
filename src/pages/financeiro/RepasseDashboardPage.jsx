@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { dashboardRepasseMedico } from '@/lib/medicalRepasseApi';
 import { useClinicContext } from '@/contexts/ClinicContext';
@@ -21,7 +20,9 @@ const RepasseDashboardPage = () => {
   }, [clinicId, mes, ano]);
 
   const carregarDashboard = async () => {
-    if (!clinicId) return;
+    if (!clinicId) {
+      return;
+    }
 
     setLoading(true);
     setErro(null);
@@ -49,7 +50,9 @@ const RepasseDashboardPage = () => {
   };
 
   const calcularMargemLucro = (total, repasse) => {
-    if (!total || total === 0) return 0;
+    if (!total || total === 0) {
+      return 0;
+    }
     return ((total - repasse) / total) * 100;
   };
 
@@ -83,9 +86,7 @@ const RepasseDashboardPage = () => {
         <div className="bg-white p-6 rounded-lg shadow mb-6">
           <div className="flex gap-4 items-end">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Mês
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Mês</label>
               <select
                 value={mes}
                 onChange={(e) => setMes(Number(e.target.value))}
@@ -99,9 +100,7 @@ const RepasseDashboardPage = () => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Ano
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Ano</label>
               <input
                 type="number"
                 value={ano}
@@ -218,7 +217,7 @@ const RepasseDashboardPage = () => {
                           </td>
                           <td className="px-6 py-4 text-right text-sm font-medium text-green-600">
                             {formatarPercentual(
-                              calcularMargemLucro(prof.totalLiquido, prof.totalRepasse)
+                              calcularMargemLucro(prof.totalLiquido, prof.totalRepasse),
                             )}
                           </td>
                         </tr>
@@ -240,8 +239,8 @@ const RepasseDashboardPage = () => {
                     <span className="font-semibold">
                       {dashboard.porProfissional.length > 0
                         ? formatarMoeda(
-                            dashboard.totais.totalLiquido / dashboard.porProfissional.length
-                          )
+                          dashboard.totais.totalLiquido / dashboard.porProfissional.length,
+                        )
                         : 'N/A'}
                     </span>
                   </div>
@@ -250,13 +249,10 @@ const RepasseDashboardPage = () => {
                     <span className="font-semibold">
                       {dashboard.porProfissional.length > 0
                         ? formatarPercentual(
-                            dashboard.porProfissional.reduce((sum, p) => {
-                              return (
-                                sum +
-                                calcularMargemLucro(p.totalLiquido, p.totalRepasse)
-                              );
-                            }, 0) / dashboard.porProfissional.length
-                          )
+                          dashboard.porProfissional.reduce((sum, p) => {
+                            return sum + calcularMargemLucro(p.totalLiquido, p.totalRepasse);
+                          }, 0) / dashboard.porProfissional.length,
+                        )
                         : 'N/A'}
                     </span>
                   </div>
@@ -269,9 +265,7 @@ const RepasseDashboardPage = () => {
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600">Profissionais:</span>
-                    <span className="font-semibold">
-                      {dashboard.porProfissional.length}
-                    </span>
+                    <span className="font-semibold">{dashboard.porProfissional.length}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600">Período:</span>

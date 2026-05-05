@@ -3,7 +3,9 @@ import { Upload, Loader2 } from 'lucide-react';
 
 export default function Branding() {
   const [logoDataUrl, setLogoDataUrl] = useState(() => localStorage.getItem('clinicLogo') || '');
-  const [clinicName, setClinicName] = useState(() => localStorage.getItem('clinicName') || 'Sua Clínica');
+  const [clinicName, setClinicName] = useState(
+    () => localStorage.getItem('clinicName') || 'Sua Clínica',
+  );
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -18,7 +20,7 @@ export default function Branding() {
 
   const updateHeaderLogo = useCallback((logoUrl) => {
     const clinicLogos = document.querySelectorAll('[data-clinic-logo]');
-    clinicLogos.forEach(logo => {
+    clinicLogos.forEach((logo) => {
       if (logoUrl) {
         logo.src = logoUrl;
         logo.style.display = 'block';
@@ -30,57 +32,65 @@ export default function Branding() {
 
   const updateHeaderName = useCallback((name) => {
     const clinicNames = document.querySelectorAll('[data-clinic-name]');
-    clinicNames.forEach(nameElement => {
+    clinicNames.forEach((nameElement) => {
       nameElement.textContent = name;
     });
   }, []);
 
-  const handleFileSelect = useCallback((event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      showToast('Erro', 'Por favor, selecione apenas arquivos de imagem.');
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      showToast('Erro', 'A imagem deve ter no máximo 5MB.');
-      return;
-    }
-
-    setLoading(true);
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const dataUrl = e.target.result;
-        setLogoDataUrl(dataUrl);
-        localStorage.setItem('clinicLogo', dataUrl);
-        updateHeaderLogo(dataUrl);
-        showToast('Sucesso', 'Logo atualizada com sucesso!');
-      } catch (error) {
-        console.error('Erro ao processar imagem:', error);
-        showToast('Erro', 'Erro ao processar a imagem.');
-      } finally {
-        setLoading(false);
+  const handleFileSelect = useCallback(
+    (event) => {
+      const file = event.target.files[0];
+      if (!file) {
+        return;
       }
-    };
 
-    reader.onerror = () => {
-      showToast('Erro', 'Erro ao ler o arquivo.');
-      setLoading(false);
-    };
+      if (!file.type.startsWith('image/')) {
+        showToast('Erro', 'Por favor, selecione apenas arquivos de imagem.');
+        return;
+      }
 
-    reader.readAsDataURL(file);
-  }, [updateHeaderLogo]);
+      if (file.size > 5 * 1024 * 1024) {
+        showToast('Erro', 'A imagem deve ter no máximo 5MB.');
+        return;
+      }
 
-  const handleNameChange = useCallback((event) => {
-    const newName = event.target.value;
-    setClinicName(newName);
-    localStorage.setItem('clinicName', newName);
-    updateHeaderName(newName);
-  }, [updateHeaderName]);
+      setLoading(true);
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const dataUrl = e.target.result;
+          setLogoDataUrl(dataUrl);
+          localStorage.setItem('clinicLogo', dataUrl);
+          updateHeaderLogo(dataUrl);
+          showToast('Sucesso', 'Logo atualizada com sucesso!');
+        } catch (error) {
+          console.error('Erro ao processar imagem:', error);
+          showToast('Erro', 'Erro ao processar a imagem.');
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      reader.onerror = () => {
+        showToast('Erro', 'Erro ao ler o arquivo.');
+        setLoading(false);
+      };
+
+      reader.readAsDataURL(file);
+    },
+    [updateHeaderLogo],
+  );
+
+  const handleNameChange = useCallback(
+    (event) => {
+      const newName = event.target.value;
+      setClinicName(newName);
+      localStorage.setItem('clinicName', newName);
+      updateHeaderName(newName);
+    },
+    [updateHeaderName],
+  );
 
   const removeLogo = useCallback(() => {
     setLogoDataUrl('');
@@ -110,33 +120,34 @@ export default function Branding() {
             <div className="p-6">
               <div className="space-y-4">
                 <div className="flex items-center justify-center w-full">
-                  <label 
-                    htmlFor="logo-upload" 
+                  <label
+                    htmlFor="logo-upload"
                     className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors duration-200"
                   >
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                       {loading ? (
                         <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
                       ) : logoDataUrl ? (
-                        <img 
-                          src={logoDataUrl} 
-                          alt="Logo da clínica" 
+                        <img
+                          src={logoDataUrl}
+                          alt="Logo da clínica"
                           className="max-w-full max-h-48 object-contain"
                         />
                       ) : (
                         <>
                           <Upload className="w-12 h-12 text-gray-400 mb-4" />
                           <p className="mb-2 text-sm text-gray-500">
-                            <span className="font-semibold">Clique para fazer upload</span> ou arraste e solte
+                            <span className="font-semibold">Clique para fazer upload</span> ou
+                            arraste e solte
                           </p>
                           <p className="text-xs text-gray-500">PNG, JPG, JPEG (Máx. 5MB)</p>
                         </>
                       )}
                     </div>
-                    <input 
-                      id="logo-upload" 
-                      type="file" 
-                      className="hidden" 
+                    <input
+                      id="logo-upload"
+                      type="file"
+                      className="hidden"
                       accept="image/*"
                       onChange={handleFileSelect}
                       ref={fileInputRef}
@@ -176,7 +187,10 @@ export default function Branding() {
             <div className="p-6">
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="clinic-name" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label
+                    htmlFor="clinic-name"
+                    className="block text-sm font-medium text-gray-700 mb-2"
+                  >
                     Nome da Clínica
                   </label>
                   <input
@@ -191,16 +205,18 @@ export default function Branding() {
 
                 {/* Preview */}
                 <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="text-sm font-medium text-gray-700 mb-3">Pré-visualização do Cabeçalho</h3>
+                  <h3 className="text-sm font-medium text-gray-700 mb-3">
+                    Pré-visualização do Cabeçalho
+                  </h3>
                   <div className="bg-white rounded-md p-4 border border-gray-200 flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <div className="text-blue-600 font-bold text-lg">Gesclinic Web</div>
                     </div>
                     <div className="flex items-center space-x-3">
                       {logoDataUrl && (
-                        <img 
-                          src={logoDataUrl} 
-                          alt="Logo preview" 
+                        <img
+                          src={logoDataUrl}
+                          alt="Logo preview"
                           className="w-8 h-8 object-contain"
                         />
                       )}
@@ -227,4 +243,3 @@ export default function Branding() {
     </div>
   );
 }
-

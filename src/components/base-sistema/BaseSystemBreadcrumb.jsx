@@ -5,37 +5,37 @@
 // Reforça a estrutura conceitual do sistema
 // ============================================================
 
-import React from "react";
-import { useNavigate } from "react-router-dom";
-import { ChevronRight, Home } from "lucide-react";
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ChevronRight, Home } from 'lucide-react';
 
 /**
  * Configuração das categorias e suas cores/ícones
  */
 const CATEGORY_CONFIG = {
-  "cadastros-estruturais": {
-    title: "Cadastros Estruturais",
-    icon: "📋",
-    color: "blue",
-    bgColor: "bg-blue-50",
-    textColor: "text-blue-700",
-    borderColor: "border-blue-200",
+  'cadastros-estruturais': {
+    title: 'Cadastros Estruturais',
+    icon: '📋',
+    color: 'blue',
+    bgColor: 'bg-blue-50',
+    textColor: 'text-blue-700',
+    borderColor: 'border-blue-200',
   },
-  "regras-operacionais": {
-    title: "Regras Operacionais",
-    icon: "⚙️",
-    color: "amber",
-    bgColor: "bg-amber-50",
-    textColor: "text-amber-700",
-    borderColor: "border-amber-200",
+  'regras-operacionais': {
+    title: 'Regras Operacionais',
+    icon: '⚙️',
+    color: 'amber',
+    bgColor: 'bg-amber-50',
+    textColor: 'text-amber-700',
+    borderColor: 'border-amber-200',
   },
-  "parametros-financeiros": {
-    title: "Parâmetros Financeiros",
-    icon: "💰",
-    color: "green",
-    bgColor: "bg-green-50",
-    textColor: "text-green-700",
-    borderColor: "border-green-200",
+  'parametros-financeiros': {
+    title: 'Parâmetros Financeiros',
+    icon: '💰',
+    color: 'green',
+    bgColor: 'bg-green-50',
+    textColor: 'text-green-700',
+    borderColor: 'border-green-200',
   },
 };
 
@@ -46,12 +46,12 @@ const CATEGORY_CONFIG = {
  * @param {React.ReactNode} icon - Ícone da página (opcional)
  */
 export default function BaseSystemBreadcrumb({
-  category = "cadastros-estruturais",
-  pageTitle = "",
+  category = 'cadastros-estruturais',
+  pageTitle = '',
   icon = null,
 }) {
   const navigate = useNavigate();
-  const config = CATEGORY_CONFIG[category] || CATEGORY_CONFIG["cadastros-estruturais"];
+  const config = CATEGORY_CONFIG[category] || CATEGORY_CONFIG['cadastros-estruturais'];
 
   return (
     <div
@@ -62,7 +62,7 @@ export default function BaseSystemBreadcrumb({
     >
       {/* Home Icon */}
       <button
-        onClick={() => navigate("/clinica/base-sistema")}
+        onClick={() => navigate('/clinica/base-sistema')}
         className={`hover:opacity-70 transition-opacity ${config.textColor}`}
         title="Ir para Base do Sistema"
       >
@@ -84,9 +84,7 @@ export default function BaseSystemBreadcrumb({
       {pageTitle && (
         <div className="flex items-center gap-2">
           {icon && <span className="text-lg">{icon}</span>}
-          <span className={`text-sm font-semibold ${config.textColor}`}>
-            {pageTitle}
-          </span>
+          <span className={`text-sm font-semibold ${config.textColor}`}>{pageTitle}</span>
         </div>
       )}
     </div>
@@ -98,22 +96,34 @@ export default function BaseSystemBreadcrumb({
  * Pode ser importado para validação ou lookup
  */
 export const PAGES_BY_CATEGORY = {
-  "cadastros-estruturais": [
-    { path: "/clinica/base-sistema/servicos", title: "Serviços", icon: "🩺" },
-    { path: "/clinica/base-sistema/profissionais", title: "Profissionais", icon: "👥" },
-    { path: "/clinica/base-sistema/convenios", title: "Convênios", icon: "🏥" },
-    { path: "/clinica/base-sistema/salas", title: "Salas", icon: "🚪" },
-    { path: "/clinica/base-sistema/recursos", title: "Recursos", icon: "📦" },
+  'cadastros-estruturais': [
+    { path: '/clinica/base-sistema/servicos', title: 'Serviços', icon: '🩺' },
+    { path: '/clinica/base-sistema/profissionais', title: 'Profissionais', icon: '👥' },
+    { path: '/clinica/base-sistema/convenios', title: 'Convênios', icon: '🏥' },
+    { path: '/clinica/base-sistema/salas', title: 'Salas', icon: '🚪' },
+    { path: '/clinica/base-sistema/recursos', title: 'Recursos', icon: '📦' },
   ],
-  "regras-operacionais": [
-    { path: "/clinica/base-sistema/professional-services", title: "Profissionais × Serviços", icon: "🔗" },
-    { path: "/clinica/base-sistema/profissional-payer", title: "Profissionais × Convênios", icon: "👤💼" },
-    { path: "/clinica/base-sistema/agenda-rules", title: "Regras da Agenda", icon: "📅" },
-    { path: "/clinica/base-sistema/room-resources", title: "Salas × Serviços", icon: "⚡" },
+  'regras-operacionais': [
+    {
+      path: '/clinica/base-sistema/professional-services',
+      title: 'Profissionais × Serviços',
+      icon: '🔗',
+    },
+    {
+      path: '/clinica/base-sistema/profissional-payer',
+      title: 'Profissionais × Convênios',
+      icon: '👤💼',
+    },
+    { path: '/clinica/base-sistema/agenda-rules', title: 'Regras da Agenda', icon: '📅' },
+    { path: '/clinica/base-sistema/room-resources', title: 'Salas × Serviços', icon: '⚡' },
   ],
-  "parametros-financeiros": [
-    { path: "/clinica/base-sistema/service-prices", title: "Tabela de Preços", icon: "💵" },
-    { path: "/clinica/base-sistema/professional-schedule", title: "Valores por Convênio", icon: "📈" },
-    { path: "/clinica/base-sistema/revenue-rules", title: "Regras de Repasse", icon: "📊" },
+  'parametros-financeiros': [
+    { path: '/clinica/base-sistema/service-prices', title: 'Tabela de Preços', icon: '💵' },
+    {
+      path: '/clinica/base-sistema/professional-schedule',
+      title: 'Valores por Convênio',
+      icon: '📈',
+    },
+    { path: '/clinica/base-sistema/revenue-rules', title: 'Regras de Repasse', icon: '📊' },
   ],
 };

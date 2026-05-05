@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { Bell, Check, Loader2, Volume2, VolumeX } from "lucide-react";
-import { supabase } from "@/lib/customSupabaseClient";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import React, { useState, useEffect, useCallback } from 'react';
+import { Bell, Check, Loader2, Volume2, VolumeX } from 'lucide-react';
+import { supabase } from '@/lib/customSupabaseClient';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 /**
  * 🔔 Painel de Notificações com Realtime + Som opcional
@@ -19,18 +19,20 @@ export default function NotificationPanel() {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(() => {
-    return localStorage.getItem("gesclinic-sound-enabled") !== "false";
+    return localStorage.getItem('gesclinic-sound-enabled') !== 'false';
   });
 
-  const notificationSound = new Audio("/sounds/notify.mp3");
+  const notificationSound = new Audio('/sounds/notify.mp3');
 
   /**
    * 🔹 Busca notificações recentes
    */
   const fetchNotifications = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      return;
+    }
     setLoading(true);
-    const { data, error } = await supabase.rpc("list_recent_notifications", {
+    const { data, error } = await supabase.rpc('list_recent_notifications', {
       p_user_id: user.id,
       p_clinic_id: clinicId,
       p_limit: 10,
@@ -47,7 +49,7 @@ export default function NotificationPanel() {
    * 🔹 Marca uma notificação como lida
    */
   const markAsRead = async (notificationId) => {
-    await supabase.rpc("mark_notification_as_read", {
+    await supabase.rpc('mark_notification_as_read', {
       p_notification_id: notificationId,
       p_user_id: user.id,
     });
@@ -58,30 +60,32 @@ export default function NotificationPanel() {
    * 🔹 Listener Realtime para notificações novas
    */
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      return;
+    }
 
     fetchNotifications(); // carrega na montagem inicial
 
     const channel = supabase
-      .channel("realtime:notifications")
+      .channel('realtime:notifications')
       .on(
-        "postgres_changes",
+        'postgres_changes',
         {
-          event: "*",
-          schema: "public",
-          table: "notifications",
+          event: '*',
+          schema: 'public',
+          table: 'notifications',
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
-          console.log("📡 Atualização em tempo real:", payload.eventType);
+          console.log('📡 Atualização em tempo real:', payload.eventType);
 
           // Somente toca som se for nova notificação
-          if (payload.eventType === "INSERT" && soundEnabled) {
+          if (payload.eventType === 'INSERT' && soundEnabled) {
             notificationSound.play().catch(() => {});
           }
 
           fetchNotifications();
-        }
+        },
       )
       .subscribe();
 
@@ -95,7 +99,9 @@ export default function NotificationPanel() {
    */
   const togglePanel = async () => {
     setOpen((prev) => !prev);
-    if (!open) await fetchNotifications();
+    if (!open) {
+      await fetchNotifications();
+    }
   };
 
   /**
@@ -104,7 +110,7 @@ export default function NotificationPanel() {
   const toggleSound = () => {
     const newValue = !soundEnabled;
     setSoundEnabled(newValue);
-    localStorage.setItem("gesclinic-sound-enabled", String(newValue));
+    localStorage.setItem('gesclinic-sound-enabled', String(newValue));
   };
 
   return (
@@ -127,18 +133,14 @@ export default function NotificationPanel() {
         <Card className="absolute right-0 mt-2 w-80 shadow-xl border z-50 bg-white animate-in fade-in slide-in-from-top-2">
           <CardContent className="p-0 max-h-96 overflow-y-auto">
             <div className="flex justify-between items-center p-3 border-b bg-gray-50">
-              <span className="font-semibold text-sm text-gray-700">
-                Notificações
-              </span>
+              <span className="font-semibold text-sm text-gray-700">Notificações</span>
               <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6"
                   onClick={toggleSound}
-                  title={
-                    soundEnabled ? "Desativar som de notificações" : "Ativar som"
-                  }
+                  title={soundEnabled ? 'Desativar som de notificações' : 'Ativar som'}
                 >
                   {soundEnabled ? (
                     <Volume2 className="w-4 h-4 text-gray-600" />
@@ -160,22 +162,18 @@ export default function NotificationPanel() {
                   <li
                     key={n.id}
                     className={cn(
-                      "p-3 flex justify-between gap-2 transition cursor-pointer",
-                      !n.read_at
-                        ? "bg-blue-50/40 hover:bg-blue-50"
-                        : "hover:bg-gray-50"
+                      'p-3 flex justify-between gap-2 transition cursor-pointer',
+                      !n.read_at ? 'bg-blue-50/40 hover:bg-blue-50' : 'hover:bg-gray-50',
                     )}
                     onClick={() => markAsRead(n.id)}
                   >
                     <div>
                       <p className="font-medium text-sm text-gray-800">
-                        {n.title || "Notificação"}
+                        {n.title || 'Notificação'}
                       </p>
-                      <p className="text-xs text-gray-600 line-clamp-2">
-                        {n.message}
-                      </p>
+                      <p className="text-xs text-gray-600 line-clamp-2">{n.message}</p>
                       <p className="text-[10px] text-gray-400 mt-1">
-                        {new Date(n.created_at).toLocaleString("pt-BR")}
+                        {new Date(n.created_at).toLocaleString('pt-BR')}
                       </p>
                     </div>
                     {!n.read_at && (

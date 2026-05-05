@@ -39,10 +39,12 @@ export default function Register() {
         .eq('active', true)
         .order('price_monthly', { ascending: true });
 
-      if (error) throw error;
-      
+      if (error) {
+        throw error;
+      }
+
       // Update or add Enterprise plan with correct pricing
-      const enterpriseIndex = data.findIndex(p => p.slug === 'enterprise');
+      const enterpriseIndex = data.findIndex((p) => p.slug === 'enterprise');
       const enterprisePlan = {
         name: 'Plano Enterprise',
         slug: 'enterprise',
@@ -57,9 +59,9 @@ export default function Register() {
           financeiro: true,
           estoque: true,
           relatorios: true,
-          custom_branding: true
+          custom_branding: true,
         },
-        active: true
+        active: true,
       };
 
       if (enterpriseIndex !== -1) {
@@ -67,10 +69,10 @@ export default function Register() {
       } else {
         data.push({
           id: 'enterprise-custom',
-          ...enterprisePlan
+          ...enterprisePlan,
         });
       }
-      
+
       setPlans(data);
     } catch (error) {
       showToast('Erro ao carregar planos', 'error');
@@ -136,7 +138,9 @@ export default function Register() {
         password: formData.adminPassword,
       });
 
-      if (authError) throw authError;
+      if (authError) {
+        throw authError;
+      }
 
       if (!authData.user) {
         throw new Error('Erro ao criar usuário');
@@ -146,24 +150,21 @@ export default function Register() {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const token = authData.session?.access_token;
 
-      const response = await fetch(
-        `${supabaseUrl}/functions/v1/create-clinic-from-signup`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            userId: authData.user.id,
-            clinicName: formData.clinicName,
-            clinicCnpj: formData.clinicCnpj,
-            planId: selectedPlan.id,
-            adminName: formData.adminName,
-            adminEmail: formData.adminEmail,
-          }),
-        }
-      );
+      const response = await fetch(`${supabaseUrl}/functions/v1/create-clinic-from-signup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          userId: authData.user.id,
+          clinicName: formData.clinicName,
+          clinicCnpj: formData.clinicCnpj,
+          planId: selectedPlan.id,
+          adminName: formData.adminName,
+          adminEmail: formData.adminEmail,
+        }),
+      });
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -176,11 +177,15 @@ export default function Register() {
         password: formData.adminPassword,
       });
 
-      if (signInError) throw signInError;
+      if (signInError) {
+        throw signInError;
+      }
 
       showToast('Clínica criada com sucesso! Redirecionando para pagamento...', 'success');
       // Redirecionar para checkout com o plano selecionado
-      navigate(`/checkout?planId=${selectedPlan.id}&clinicName=${encodeURIComponent(formData.clinicName)}`);
+      navigate(
+        `/checkout?planId=${selectedPlan.id}&clinicName=${encodeURIComponent(formData.clinicName)}`,
+      );
     } catch (error) {
       console.error('Signup error:', error);
       showToast(error.message || 'Erro ao realizar cadastro', 'error');
@@ -204,12 +209,8 @@ export default function Register() {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">
-              Escolha seu Plano
-            </h1>
-            <p className="text-xl text-gray-600">
-              Selecione o melhor plano para sua clínica
-            </p>
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">Escolha seu Plano</h1>
+            <p className="text-xl text-gray-600">Selecione o melhor plano para sua clínica</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6 mb-8">
@@ -254,12 +255,8 @@ export default function Register() {
                     </div>
                   )}
 
-                  <h3 className="text-2xl font-bold text-gray-900 mb-1">
-                    {plan.name}
-                  </h3>
-                  <p className="text-gray-600 text-sm mb-6">
-                    {plan.description}
-                  </p>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-1">{plan.name}</h3>
+                  <p className="text-gray-600 text-sm mb-6">{plan.description}</p>
 
                   <div className="mb-6">
                     {plan.price_monthly ? (
@@ -275,9 +272,7 @@ export default function Register() {
                         </p>
                       </>
                     ) : (
-                      <div className="text-lg font-semibold text-gray-900">
-                        Preço sob consulta
-                      </div>
+                      <div className="text-lg font-semibold text-gray-900">Preço sob consulta</div>
                     )}
                   </div>
 
@@ -377,7 +372,9 @@ export default function Register() {
                           </li>
                           <li className="flex items-start">
                             <span className="text-green-500 mr-3 font-bold">✔</span>
-                            <span className="text-sm text-gray-700">Integrações personalizadas</span>
+                            <span className="text-sm text-gray-700">
+                              Integrações personalizadas
+                            </span>
                           </li>
                           <li className="flex items-start">
                             <span className="text-green-500 mr-3 font-bold">✔</span>
@@ -401,8 +398,8 @@ export default function Register() {
                       isEnterprise
                         ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg hover:shadow-xl'
                         : isProfessional
-                        ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg hover:shadow-xl'
-                        : 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg hover:shadow-xl'
+                          ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg hover:shadow-xl'
+                          : 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg hover:shadow-xl'
                     }`}
                   >
                     Escolher Plano
@@ -437,9 +434,7 @@ export default function Register() {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
         <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-8">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Criar Conta
-            </h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Criar Conta</h1>
             <p className="text-gray-600">
               Plano: <span className="font-semibold">{selectedPlan?.name}</span>
             </p>
@@ -454,41 +449,31 @@ export default function Register() {
               <input
                 type="text"
                 value={formData.clinicName}
-                onChange={(e) =>
-                  setFormData({ ...formData, clinicName: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, clinicName: e.target.value })}
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                   formErrors.clinicName ? 'border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="Ex: Clínica Vida"
               />
               {formErrors.clinicName && (
-                <p className="text-red-500 text-sm mt-1">
-                  {formErrors.clinicName}
-                </p>
+                <p className="text-red-500 text-sm mt-1">{formErrors.clinicName}</p>
               )}
             </div>
 
             {/* CNPJ */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                CNPJ *
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">CNPJ *</label>
               <input
                 type="text"
                 value={formData.clinicCnpj}
-                onChange={(e) =>
-                  setFormData({ ...formData, clinicCnpj: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, clinicCnpj: e.target.value })}
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                   formErrors.clinicCnpj ? 'border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="00.000.000/0000-00"
               />
               {formErrors.clinicCnpj && (
-                <p className="text-red-500 text-sm mt-1">
-                  {formErrors.clinicCnpj}
-                </p>
+                <p className="text-red-500 text-sm mt-1">{formErrors.clinicCnpj}</p>
               )}
             </div>
 
@@ -500,64 +485,48 @@ export default function Register() {
               <input
                 type="text"
                 value={formData.adminName}
-                onChange={(e) =>
-                  setFormData({ ...formData, adminName: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, adminName: e.target.value })}
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                   formErrors.adminName ? 'border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="João da Silva"
               />
               {formErrors.adminName && (
-                <p className="text-red-500 text-sm mt-1">
-                  {formErrors.adminName}
-                </p>
+                <p className="text-red-500 text-sm mt-1">{formErrors.adminName}</p>
               )}
             </div>
 
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email *
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
               <input
                 type="email"
                 value={formData.adminEmail}
-                onChange={(e) =>
-                  setFormData({ ...formData, adminEmail: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, adminEmail: e.target.value })}
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                   formErrors.adminEmail ? 'border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="seu@email.com"
               />
               {formErrors.adminEmail && (
-                <p className="text-red-500 text-sm mt-1">
-                  {formErrors.adminEmail}
-                </p>
+                <p className="text-red-500 text-sm mt-1">{formErrors.adminEmail}</p>
               )}
             </div>
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Senha *
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Senha *</label>
               <input
                 type="password"
                 value={formData.adminPassword}
-                onChange={(e) =>
-                  setFormData({ ...formData, adminPassword: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, adminPassword: e.target.value })}
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                   formErrors.adminPassword ? 'border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="Mínimo 8 caracteres"
               />
               {formErrors.adminPassword && (
-                <p className="text-red-500 text-sm mt-1">
-                  {formErrors.adminPassword}
-                </p>
+                <p className="text-red-500 text-sm mt-1">{formErrors.adminPassword}</p>
               )}
             </div>
 
@@ -576,16 +545,12 @@ export default function Register() {
                   })
                 }
                 className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  formErrors.adminPasswordConfirm
-                    ? 'border-red-500'
-                    : 'border-gray-300'
+                  formErrors.adminPasswordConfirm ? 'border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="Confirme sua senha"
               />
               {formErrors.adminPasswordConfirm && (
-                <p className="text-red-500 text-sm mt-1">
-                  {formErrors.adminPasswordConfirm}
-                </p>
+                <p className="text-red-500 text-sm mt-1">{formErrors.adminPasswordConfirm}</p>
               )}
             </div>
 
@@ -594,18 +559,12 @@ export default function Register() {
               <input
                 type="checkbox"
                 checked={formData.agreeTerms}
-                onChange={(e) =>
-                  setFormData({ ...formData, agreeTerms: e.target.checked })
-                }
+                onChange={(e) => setFormData({ ...formData, agreeTerms: e.target.checked })}
                 className="mt-1 mr-3"
               />
               <label className="text-sm text-gray-600">
                 Concordo com os{' '}
-                <button
-                  type="button"
-                  className="text-blue-600 hover:underline"
-                  onClick={() => {}}
-                >
+                <button type="button" className="text-blue-600 hover:underline" onClick={() => {}}>
                   termos de uso
                 </button>
                 <span className="text-red-500">*</span>

@@ -2,28 +2,28 @@
  * ============================================
  * ConveniosTab - Aba de Convênios
  * ============================================
- * 
+ *
  * Listagem e edição de convênios do paciente com design moderno
  * Sem rota própria - parte do PatientDetailPage
  */
 
-import React, { useEffect, useState } from "react";
-import { useToast } from "@/components/ui/use-toast";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { motion } from "framer-motion";
-import { Plus, Edit, Trash2, Heart, Calendar, CreditCard } from "lucide-react";
+import React, { useEffect, useState } from 'react';
+import { useToast } from '@/components/ui/use-toast';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { motion } from 'framer-motion';
+import { Plus, Edit, Trash2, Heart, Calendar, CreditCard } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export default function ConveniosTab({ patientId, patientData, updatePatientData }) {
   const { toast } = useToast();
@@ -31,9 +31,9 @@ export default function ConveniosTab({ patientId, patientData, updatePatientData
   const [loading, setLoading] = useState(false);
   const [showConvenioDialog, setShowConvenioDialog] = useState(false);
   const [convenioData, setConvenioData] = useState({
-    name: "",
-    membershipNumber: "",
-    expiryDate: "",
+    name: '',
+    membershipNumber: '',
+    expiryDate: '',
     isPrimary: false,
   });
 
@@ -49,9 +49,9 @@ export default function ConveniosTab({ patientId, patientData, updatePatientData
       setConvenios([]);
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Falha ao carregar convênios",
-        variant: "destructive",
+        title: 'Erro',
+        description: 'Falha ao carregar convênios',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -61,8 +61,8 @@ export default function ConveniosTab({ patientId, patientData, updatePatientData
   const handleDelete = (id) => {
     setConvenios(convenios.filter((c) => c.id !== id));
     toast({
-      title: "Sucesso",
-      description: "Convênio removido",
+      title: 'Sucesso',
+      description: 'Convênio removido',
     });
   };
 
@@ -73,9 +73,9 @@ export default function ConveniosTab({ patientId, patientData, updatePatientData
       !convenioData.expiryDate
     ) {
       toast({
-        title: "Erro",
-        description: "Preencha todos os campos obrigatórios",
-        variant: "destructive",
+        title: 'Erro',
+        description: 'Preencha todos os campos obrigatórios',
+        variant: 'destructive',
       });
       return;
     }
@@ -90,14 +90,14 @@ export default function ConveniosTab({ patientId, patientData, updatePatientData
     setConvenios([novoConvenio, ...convenios]);
     setShowConvenioDialog(false);
     setConvenioData({
-      name: "",
-      membershipNumber: "",
-      expiryDate: "",
+      name: '',
+      membershipNumber: '',
+      expiryDate: '',
       isPrimary: false,
     });
     toast({
-      title: "Sucesso",
-      description: "Convênio adicionado com sucesso",
+      title: 'Sucesso',
+      description: 'Convênio adicionado com sucesso',
     });
   };
 
@@ -108,14 +108,14 @@ export default function ConveniosTab({ patientId, patientData, updatePatientData
   };
 
   return (
-    <motion.div 
+    <motion.div
       className="space-y-6"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
       {/* Cabeçalho com Botão Adicionar */}
-      <motion.div 
+      <motion.div
         className="flex justify-between items-start gap-4"
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -123,9 +123,7 @@ export default function ConveniosTab({ patientId, patientData, updatePatientData
       >
         <div className="flex-1">
           <h3 className="text-lg font-semibold text-gray-900">Convênios</h3>
-          <p className="text-sm text-gray-500 mt-1">
-            Gerenciar convênios e planos de saúde
-          </p>
+          <p className="text-sm text-gray-500 mt-1">Gerenciar convênios e planos de saúde</p>
         </div>
         <Button
           className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-sm hover:shadow-md transition-all duration-200 whitespace-nowrap"
@@ -172,7 +170,7 @@ export default function ConveniosTab({ patientId, patientData, updatePatientData
           </Card>
         </motion.div>
       ) : (
-        <motion.div 
+        <motion.div
           className="space-y-3"
           variants={{
             hidden: { opacity: 0 },
@@ -193,37 +191,39 @@ export default function ConveniosTab({ patientId, patientData, updatePatientData
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.05, duration: 0.3 }}
             >
-              <Card className={`border-0 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border-l-4 ${isExpired(convenio.expiryDate) ? 'border-red-500 bg-red-50' : 'border-green-500 bg-green-50'}`}>
+              <Card
+                className={`border-0 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden border-l-4 ${isExpired(convenio.expiryDate) ? 'border-red-500 bg-red-50' : 'border-green-500 bg-green-50'}`}
+              >
                 <CardContent className="pt-6">
                   <div className="flex justify-between items-start gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <h4 className="font-semibold text-gray-900 text-lg">
-                          {convenio.name}
-                        </h4>
+                        <h4 className="font-semibold text-gray-900 text-lg">{convenio.name}</h4>
                         {convenio.isPrimary && (
-                          <Badge className="bg-blue-100 text-blue-800 text-xs">
-                            Principal
-                          </Badge>
+                          <Badge className="bg-blue-100 text-blue-800 text-xs">Principal</Badge>
                         )}
                       </div>
-                      
+
                       <div className="space-y-2 mt-3">
                         <div className="flex items-center gap-2 text-gray-600">
                           <CreditCard className="w-4 h-4 text-gray-400" />
                           <span className="text-sm">
-                            Matrícula: <span className="font-medium text-gray-900">{convenio.membershipNumber}</span>
+                            Matrícula:{' '}
+                            <span className="font-medium text-gray-900">
+                              {convenio.membershipNumber}
+                            </span>
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <Calendar className="w-4 h-4 text-gray-400" />
                           <span className="text-sm text-gray-600">
-                            Válido até: <span className="font-medium text-gray-900">{new Date(convenio.expiryDate).toLocaleDateString('pt-BR')}</span>
+                            Válido até:{' '}
+                            <span className="font-medium text-gray-900">
+                              {new Date(convenio.expiryDate).toLocaleDateString('pt-BR')}
+                            </span>
                           </span>
                           {isExpired(convenio.expiryDate) && (
-                            <Badge className="bg-red-100 text-red-800 text-xs ml-2">
-                              Vencido
-                            </Badge>
+                            <Badge className="bg-red-100 text-red-800 text-xs ml-2">Vencido</Badge>
                           )}
                         </div>
                       </div>
@@ -263,63 +263,70 @@ export default function ConveniosTab({ patientId, patientData, updatePatientData
           </DialogHeader>
           <div className="flex-1 overflow-y-auto px-6 py-6">
             <div className="space-y-5">
-            <div>
-              <Label htmlFor="name" className="text-sm font-medium text-gray-700">Nome do Convênio <span className="text-red-500">*</span></Label>
-              <Input
-                id="name"
-                placeholder="Ex: Unimed, Bradesco Saúde, etc"
-                value={convenioData.name}
-                onChange={(e) =>
-                  setConvenioData({ ...convenioData, name: e.target.value })
-                }
-                className="border-gray-200 focus:border-red-500 focus:ring-1 focus:ring-red-500 mt-1.5"
-              />
-            </div>
-            <div>
-              <Label htmlFor="membership" className="text-sm font-medium text-gray-700">Número de Matrícula <span className="text-red-500">*</span></Label>
-              <Input
-                id="membership"
-                placeholder="Ex: 123456789"
-                value={convenioData.membershipNumber}
-                onChange={(e) =>
-                  setConvenioData({
-                    ...convenioData,
-                    membershipNumber: e.target.value,
-                  })
-                }
-                className="border-gray-200 focus:border-red-500 focus:ring-1 focus:ring-red-500 mt-1.5"
-              />
-            </div>
-            <div>
-              <Label htmlFor="expiry" className="text-sm font-medium text-gray-700">Data de Validade <span className="text-red-500">*</span></Label>
-              <Input
-                id="expiry"
-                type="date"
-                value={convenioData.expiryDate}
-                onChange={(e) =>
-                  setConvenioData({
-                    ...convenioData,
-                    expiryDate: e.target.value,
-                  })
-                }
-                className="border-gray-200 focus:border-red-500 focus:ring-1 focus:ring-red-500 mt-1.5"
-              />
-            </div>
-            <div className="flex items-center gap-3 pt-2">
-              <Checkbox
-                id="primary"
-                checked={convenioData.isPrimary}
-                onCheckedChange={(checked) =>
-                  setConvenioData({
-                    ...convenioData,
-                    isPrimary: checked,
-                  })
-                }
-              />
-              <Label htmlFor="primary" className="text-sm text-gray-700 font-medium cursor-pointer">
-                Este é o convênio principal
-              </Label>
-            </div>
+              <div>
+                <Label htmlFor="name" className="text-sm font-medium text-gray-700">
+                  Nome do Convênio <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="name"
+                  placeholder="Ex: Unimed, Bradesco Saúde, etc"
+                  value={convenioData.name}
+                  onChange={(e) => setConvenioData({ ...convenioData, name: e.target.value })}
+                  className="border-gray-200 focus:border-red-500 focus:ring-1 focus:ring-red-500 mt-1.5"
+                />
+              </div>
+              <div>
+                <Label htmlFor="membership" className="text-sm font-medium text-gray-700">
+                  Número de Matrícula <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="membership"
+                  placeholder="Ex: 123456789"
+                  value={convenioData.membershipNumber}
+                  onChange={(e) =>
+                    setConvenioData({
+                      ...convenioData,
+                      membershipNumber: e.target.value,
+                    })
+                  }
+                  className="border-gray-200 focus:border-red-500 focus:ring-1 focus:ring-red-500 mt-1.5"
+                />
+              </div>
+              <div>
+                <Label htmlFor="expiry" className="text-sm font-medium text-gray-700">
+                  Data de Validade <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="expiry"
+                  type="date"
+                  value={convenioData.expiryDate}
+                  onChange={(e) =>
+                    setConvenioData({
+                      ...convenioData,
+                      expiryDate: e.target.value,
+                    })
+                  }
+                  className="border-gray-200 focus:border-red-500 focus:ring-1 focus:ring-red-500 mt-1.5"
+                />
+              </div>
+              <div className="flex items-center gap-3 pt-2">
+                <Checkbox
+                  id="primary"
+                  checked={convenioData.isPrimary}
+                  onCheckedChange={(checked) =>
+                    setConvenioData({
+                      ...convenioData,
+                      isPrimary: checked,
+                    })
+                  }
+                />
+                <Label
+                  htmlFor="primary"
+                  className="text-sm text-gray-700 font-medium cursor-pointer"
+                >
+                  Este é o convênio principal
+                </Label>
+              </div>
             </div>
           </div>
           <DialogFooter className="gap-3 border-t border-gray-200 px-6 pb-6 pt-6 bg-white">

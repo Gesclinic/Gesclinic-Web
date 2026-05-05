@@ -19,16 +19,20 @@ import {
   migrateStatus,
   canTransitionTo,
 } from '@/lib/appointmentStatusConstants';
-import { getClinicTimeSlots, getProfessionalAvailableSlots, getAvailableProfessionalsForDay } from '@/lib/agendaUtils';
+import {
+  getClinicTimeSlots,
+  getProfessionalAvailableSlots,
+  getAvailableProfessionalsForDay,
+} from '@/lib/agendaUtils';
 import { useClinicContext } from '@/contexts/ClinicContext';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 
 /**
  * AgendaDayView - Visualização diária da agenda
- * 
+ *
  * Layout: Lista vertical por horário
  * Colunas (ordem fixa): HORÁRIO | PACIENTE | SERVIÇO | PROFISSIONAL | SALA | STATUS
- * 
+ *
  * Props:
  * - appointments: array - agendamentos do dia
  * - onBookSlot: (slot) => void - agendar novo
@@ -40,12 +44,12 @@ import { useAuth } from '@/contexts/SupabaseAuthContext';
 // ✅ CONFIGURAÇÃO CENTRALIZADA DE COLUNAS
 const GRID_COLUMNS = {
   horario: 1,
-  paciente: 2,     // ✅ Reduzido de 3 para melhor uso de espaço
-  contato: 2,      // ✅ Telefone completo
+  paciente: 2, // ✅ Reduzido de 3 para melhor uso de espaço
+  contato: 2, // ✅ Telefone completo
   servico: 1,
-  convenio: 2,     // ✅ Convênio completo
+  convenio: 2, // ✅ Convênio completo
   profissional: 2, // ✅ Aumentado de 1 para melhor visibilidade
-  status: 2,       // ✅ Status legível
+  status: 2, // ✅ Status legível
   // Total = 12 para grid-cols-12 (SALA removida)
 };
 
@@ -56,7 +60,10 @@ const getFirstAndLastName = (fullName) => {
   if (!fullName) {
     return 'Paciente';
   }
-  const names = fullName.trim().split(' ').filter(n => n.length > 0);
+  const names = fullName
+    .trim()
+    .split(' ')
+    .filter((n) => n.length > 0);
   if (names.length === 1) {
     return names[0];
   }
@@ -111,27 +118,51 @@ const getAppointmentActionConfig = (apt, currentRole) => {
 
 // ✅ RENDERIZADOR DE HEADERS (reutilizável)
 const renderGridHeader = () => (
-  <div className="border-b border-gray-200 bg-white flex-shrink-0 sticky top-0 z-10 w-full" style={{ background: '#e7f3ff' }}>
+  <div
+    className="border-b border-gray-200 bg-white flex-shrink-0 sticky top-0 z-10 w-full"
+    style={{ background: '#e7f3ff' }}
+  >
     <div className="grid grid-cols-12 gap-0 h-12 w-full">
-      <div className={`${getColSpanClass('horario')} px-3 py-3 text-sm text-gray-700 uppercase select-none font-bold flex items-center justify-center border-r border-gray-200 w-full`} style={{ color: '#0052cc', fontSize: '13px', fontWeight: 700 }}>
+      <div
+        className={`${getColSpanClass('horario')} px-3 py-3 text-sm text-gray-700 uppercase select-none font-bold flex items-center justify-center border-r border-gray-200 w-full`}
+        style={{ color: '#0052cc', fontSize: '13px', fontWeight: 700 }}
+      >
         Horário
       </div>
-      <div className={`${getColSpanClass('paciente')} px-3 py-3 text-sm text-gray-700 uppercase select-none font-bold flex items-center justify-center border-r border-gray-200 w-full`} style={{ color: '#0052cc', fontSize: '13px', fontWeight: 700 }}>
+      <div
+        className={`${getColSpanClass('paciente')} px-3 py-3 text-sm text-gray-700 uppercase select-none font-bold flex items-center justify-center border-r border-gray-200 w-full`}
+        style={{ color: '#0052cc', fontSize: '13px', fontWeight: 700 }}
+      >
         Paciente
       </div>
-      <div className={`${getColSpanClass('contato')} px-3 py-3 text-sm text-gray-700 uppercase select-none font-bold flex items-center justify-center border-r border-gray-200 w-full`} style={{ color: '#0052cc', fontSize: '13px', fontWeight: 700 }}>
+      <div
+        className={`${getColSpanClass('contato')} px-3 py-3 text-sm text-gray-700 uppercase select-none font-bold flex items-center justify-center border-r border-gray-200 w-full`}
+        style={{ color: '#0052cc', fontSize: '13px', fontWeight: 700 }}
+      >
         Contato
       </div>
-      <div className={`${getColSpanClass('servico')} px-3 py-3 text-sm text-gray-700 uppercase select-none font-bold flex items-center justify-center border-r border-gray-200 w-full`} style={{ color: '#0052cc', fontSize: '13px', fontWeight: 700 }}>
+      <div
+        className={`${getColSpanClass('servico')} px-3 py-3 text-sm text-gray-700 uppercase select-none font-bold flex items-center justify-center border-r border-gray-200 w-full`}
+        style={{ color: '#0052cc', fontSize: '13px', fontWeight: 700 }}
+      >
         Serviço
       </div>
-      <div className={`${getColSpanClass('convenio')} px-3 py-3 text-sm text-gray-700 uppercase select-none font-bold flex items-center justify-center border-r border-gray-200 w-full`} style={{ color: '#0052cc', fontSize: '13px', fontWeight: 700 }}>
+      <div
+        className={`${getColSpanClass('convenio')} px-3 py-3 text-sm text-gray-700 uppercase select-none font-bold flex items-center justify-center border-r border-gray-200 w-full`}
+        style={{ color: '#0052cc', fontSize: '13px', fontWeight: 700 }}
+      >
         Convênio
       </div>
-      <div className={`${getColSpanClass('profissional')} px-3 py-3 text-sm text-gray-700 uppercase select-none font-bold flex items-center justify-center border-r border-gray-200 w-full`} style={{ color: '#0052cc', fontSize: '13px', fontWeight: 700 }}>
+      <div
+        className={`${getColSpanClass('profissional')} px-3 py-3 text-sm text-gray-700 uppercase select-none font-bold flex items-center justify-center border-r border-gray-200 w-full`}
+        style={{ color: '#0052cc', fontSize: '13px', fontWeight: 700 }}
+      >
         Profissional
       </div>
-      <div className={`${getColSpanClass('status')} px-3 py-3 text-sm text-gray-700 uppercase select-none font-bold flex items-center justify-center border-r border-gray-200 w-full`} style={{ color: '#0052cc', fontSize: '13px', fontWeight: 700 }}>
+      <div
+        className={`${getColSpanClass('status')} px-3 py-3 text-sm text-gray-700 uppercase select-none font-bold flex items-center justify-center border-r border-gray-200 w-full`}
+        style={{ color: '#0052cc', fontSize: '13px', fontWeight: 700 }}
+      >
         Status
       </div>
     </div>
@@ -139,19 +170,51 @@ const renderGridHeader = () => (
 );
 
 // ✅ RENDERIZADOR DE SLOT VAZIO (disponível)
-const renderEmptySlot = (time, isCurrentTime, isHolidayBlocked, isOptionalHoliday, onBookSlot, apt, currentDate, profNamesDisplay) => (
-  <div className="grid grid-cols-12 gap-0 h-14 items-center w-full border-b border-gray-100" style={{ background: '#fafaf9' }}>
-    <div className="col-span-1 px-3 py-3 text-sm font-bold border-r border-gray-200 flex items-center justify-center" style={{ color: '#0052cc', fontSize: '12px', fontWeight: 600, background: '#f8f9fa' }}>
+const renderEmptySlot = (
+  time,
+  isCurrentTime,
+  isHolidayBlocked,
+  isOptionalHoliday,
+  onBookSlot,
+  apt,
+  currentDate,
+  profNamesDisplay,
+) => (
+  <div
+    className="grid grid-cols-12 gap-0 h-14 items-center w-full border-b border-gray-100"
+    style={{ background: '#fafaf9' }}
+  >
+    <div
+      className="col-span-1 px-3 py-3 text-sm font-bold border-r border-gray-200 flex items-center justify-center"
+      style={{ color: '#0052cc', fontSize: '12px', fontWeight: 600, background: '#f8f9fa' }}
+    >
       {time}
-      {isCurrentTime && <span className="inline-block w-2 h-2 rounded-full bg-blue-600 animate-pulse ml-1" />}
+      {isCurrentTime && (
+        <span className="inline-block w-2 h-2 rounded-full bg-blue-600 animate-pulse ml-1" />
+      )}
     </div>
-    <div className="col-span-2 px-3 py-3 flex items-center justify-center text-sm font-black border-r border-gray-200 text-center" style={{ color: '#10b981', fontSize: '12px', cursor: isHolidayBlocked ? 'not-allowed' : 'pointer' }} onClick={() => { if (!isHolidayBlocked) onBookSlot({ time, date: currentDate || apt?.date }); }}>
+    <div
+      className="col-span-2 px-3 py-3 flex items-center justify-center text-sm font-black border-r border-gray-200 text-center"
+      style={{
+        color: '#10b981',
+        fontSize: '12px',
+        cursor: isHolidayBlocked ? 'not-allowed' : 'pointer',
+      }}
+      onClick={() => {
+        if (!isHolidayBlocked) {
+          onBookSlot({ time, date: currentDate || apt?.date });
+        }
+      }}
+    >
       ➕ Clique para agendar
     </div>
     <div className="col-span-2 px-3 py-3 border-r border-gray-200" />
     <div className="col-span-1 px-3 py-3 border-r border-gray-200" />
     <div className="col-span-2 px-3 py-3 border-r border-gray-200" />
-    <div className="col-span-2 px-3 py-3 flex items-center justify-center text-sm font-medium border-r border-gray-200 truncate" style={{ color: '#10b981', fontSize: '12px' }}>
+    <div
+      className="col-span-2 px-3 py-3 flex items-center justify-center text-sm font-medium border-r border-gray-200 truncate"
+      style={{ color: '#10b981', fontSize: '12px' }}
+    >
       {profNamesDisplay || ''}
     </div>
     <div className="col-span-2 px-3 py-3 border-r border-gray-200" />
@@ -159,12 +222,31 @@ const renderEmptySlot = (time, isCurrentTime, isHolidayBlocked, isOptionalHolida
 );
 
 // ✅ RENDERIZADOR DE SLOT OCUPADO (com dados)
-const renderOccupiedSlot = (apt, time, isCurrentTime, late, statusLabel, getStatusBgColor, isHovered, onEditAppointment, handleContextMenu, handleOpenAtendimento, currentRole) => {
+const renderOccupiedSlot = (
+  apt,
+  time,
+  isCurrentTime,
+  late,
+  statusLabel,
+  getStatusBgColor,
+  isHovered,
+  onEditAppointment,
+  handleContextMenu,
+  handleOpenAtendimento,
+  currentRole,
+) => {
   const statusStyle = getStatusStyle(statusLabel) || { background: '#fef3c7', color: '#854D0E' };
   const statusBgColor = statusStyle.background || '#fef3c7';
   const actionConfig = getAppointmentActionConfig(apt, currentRole);
-  console.log('🎨 [renderOccupiedSlot] Status:', statusLabel, '| Background:', statusBgColor, '| Full:', statusStyle);
-  
+  console.log(
+    '🎨 [renderOccupiedSlot] Status:',
+    statusLabel,
+    '| Background:',
+    statusBgColor,
+    '| Full:',
+    statusStyle,
+  );
+
   // 🔍 DEBUG: Se for agendamento das 8h, mostrar dados
   if (time && time.includes('08:')) {
     console.log('🕐 [renderOccupiedSlot] RENDERIZANDO 8h:', {
@@ -183,15 +265,23 @@ const renderOccupiedSlot = (apt, time, isCurrentTime, late, statusLabel, getStat
       professional_professional: apt.professional,
     });
   }
-  
+
   return (
-    <div className="grid grid-cols-12 gap-0 h-14 items-center w-full border-b border-gray-100" style={{ background: statusBgColor }}>
-      <div className="col-span-1 px-3 text-sm font-semibold border-r border-gray-200 flex items-center justify-center" style={{ color: '#0052cc', fontSize: '12px', fontWeight: 600, background: statusBgColor }}>
+    <div
+      className="grid grid-cols-12 gap-0 h-14 items-center w-full border-b border-gray-100"
+      style={{ background: statusBgColor }}
+    >
+      <div
+        className="col-span-1 px-3 text-sm font-semibold border-r border-gray-200 flex items-center justify-center"
+        style={{ color: '#0052cc', fontSize: '12px', fontWeight: 600, background: statusBgColor }}
+      >
         {time}
-        {isCurrentTime && <span className="inline-block w-2 h-2 rounded-full bg-blue-600 animate-pulse ml-1" />}
+        {isCurrentTime && (
+          <span className="inline-block w-2 h-2 rounded-full bg-blue-600 animate-pulse ml-1" />
+        )}
       </div>
       <div className="col-span-2 px-3 border-r border-gray-200 flex items-center justify-center min-w-0 w-full">
-        <div 
+        <div
           className="text-sm font-bold group-hover:font-black transition-all truncate text-center cursor-pointer hover:underline"
           style={{ color: statusStyle.color }}
           title={apt.patient_name || apt.paciente || apt.patient || '—'}
@@ -200,22 +290,40 @@ const renderOccupiedSlot = (apt, time, isCurrentTime, late, statusLabel, getStat
         </div>
       </div>
       <div className="col-span-2 px-3 border-r border-gray-200 flex items-center justify-center min-w-0 w-full">
-        <div className="text-xs text-gray-600 group-hover:text-gray-700 transition-colors truncate" style={{ fontSize: '11px' }}>
-          {apt.patient_phone || apt.telefone || apt.phone || apt.patient_mobile || apt.celular || apt.mobile || '—'}
+        <div
+          className="text-xs text-gray-600 group-hover:text-gray-700 transition-colors truncate"
+          style={{ fontSize: '11px' }}
+        >
+          {apt.patient_phone ||
+            apt.telefone ||
+            apt.phone ||
+            apt.patient_mobile ||
+            apt.celular ||
+            apt.mobile ||
+            '—'}
         </div>
       </div>
       <div className="col-span-1 px-3 border-r border-gray-200 flex items-center justify-center min-w-0 w-full">
-        <div className="text-xs text-gray-600 group-hover:text-gray-700 transition-colors truncate" style={{ fontSize: '11px' }}>
+        <div
+          className="text-xs text-gray-600 group-hover:text-gray-700 transition-colors truncate"
+          style={{ fontSize: '11px' }}
+        >
           {apt.service_name || apt.serviço || apt.service || '—'}
         </div>
       </div>
       <div className="col-span-2 px-3 border-r border-gray-200 flex items-center justify-center min-w-0 w-full">
-        <div className="text-xs text-gray-600 group-hover:text-gray-700 transition-colors truncate" style={{ fontSize: '11px' }}>
+        <div
+          className="text-xs text-gray-600 group-hover:text-gray-700 transition-colors truncate"
+          style={{ fontSize: '11px' }}
+        >
           {apt.payer_name || apt.convênio || apt.healthplan || apt.plano || 'Particular'}
         </div>
       </div>
       <div className="col-span-2 px-3 border-r border-gray-200 flex items-center justify-center min-w-0 w-full">
-        <div className="text-xs text-gray-600 group-hover:text-gray-700 transition-colors truncate text-center" style={{ fontSize: '11px' }}>
+        <div
+          className="text-xs text-gray-600 group-hover:text-gray-700 transition-colors truncate text-center"
+          style={{ fontSize: '11px' }}
+        >
           {apt.professional_name || apt.profissional || apt.professional || '—'}
         </div>
       </div>
@@ -252,8 +360,11 @@ export default function AgendaDayView({
   services = [], // 🆕 Lista de serviços
   payers = [], // 🆕 Lista de convênios
 }) {
-  console.log('🎬 [AgendaDayView] RENDERIZANDO com appointments:', { count: appointments.length, data: appointments });
-  
+  console.log('🎬 [AgendaDayView] RENDERIZANDO com appointments:', {
+    count: appointments.length,
+    data: appointments,
+  });
+
   // ✅ WRAPPER PARA CONFIRMAR NOVO AGENDAMENTO
   const handleBookSlotWithConfirm = (slotData) => {
     const dateParts = (slotData.date || date).split('-');
@@ -262,24 +373,28 @@ export default function AgendaDayView({
     const displayTime = slotData.time || '09:00';
     const professionalName = 'Profissional a definir';
 
-    console.log('📅 [AgendaDayView] handleBookSlotWithConfirm:', { formattedDate, displayTime, slotData });
+    console.log('📅 [AgendaDayView] handleBookSlotWithConfirm:', {
+      formattedDate,
+      displayTime,
+      slotData,
+    });
 
     const confirmed = window.confirm(
-      `Deseja criar novo agendamento?\n\n` +
-      `📅 Data: ${formattedDate}\n` +
-      `🕐 Horário: ${displayTime}\n` +
-      `👨‍⚕️ Profissional: ${professionalName}\n\n` +
-      `Clique em OK para continuar...`
+      'Deseja criar novo agendamento?\n\n' +
+        `📅 Data: ${formattedDate}\n` +
+        `🕐 Horário: ${displayTime}\n` +
+        `👨‍⚕️ Profissional: ${professionalName}\n\n` +
+        'Clique em OK para continuar...',
     );
 
     if (confirmed) {
       onBookSlot(slotData);
     }
   };
-  
+
   // 🔍 DEBUG: Mostrar específico agendamento das 8h
   if (appointments.length > 0) {
-    const apt8h = appointments.find(a => {
+    const apt8h = appointments.find((a) => {
       const time = a.scheduled_time || a.start_time || a.time || '';
       return time.includes('08:');
     });
@@ -294,26 +409,26 @@ export default function AgendaDayView({
       console.log('   status:', apt8h.status);
     }
   }
-  
+
   const [currentTime, setCurrentTime] = useState(new Date());
   const [hoveredRow, setHoveredRow] = useState(null);
   const [contextMenu, setContextMenu] = useState(null);
   const [holiday, setHoliday] = useState(null);
   const [overrideHoliday, setOverrideHoliday] = useState(false);
-  
+
   // 📋 Estado para AtendimentoModal (TISS)
   const [atendimentoModalOpen, setAtendimentoModalOpen] = useState(false);
   const [atendimentoModalAppointment, setAtendimentoModalAppointment] = useState(null);
-  
+
   // 🆕 Estado LOCAL para appointments - isso vai ser atualizado via Realtime
   const [localAppointments, setLocalAppointments] = useState([]);
-  
+
   // 🆕 Quando appointments prop muda, atualizar state local
   useEffect(() => {
     console.log('📥 [AgendaDayView] Appointments prop recebidas:', appointments?.length);
     setLocalAppointments(appointments || []);
   }, [appointments]);
-  
+
   // 🆕 Estado para disponibilidade de profissionais
   const [professionalAvailability, setProfessionalAvailability] = useState({}); // { professionalId: [horários] }
   const [professionalsMap, setProfessionalsMap] = useState({}); // 🆕 { profId: { id, name } }
@@ -327,7 +442,8 @@ export default function AgendaDayView({
   const isBlockedHoliday = holiday?.is_blocked === true && holiday?.is_mandatory !== false;
   const isOptionalHoliday = holiday?.is_mandatory === false;
   const isHolidayBlocked = isBlockedHoliday && !overrideHoliday;
-  const isAdmin = currentRole === 'admin' || currentRole === 'gestor' || currentRole === 'administrator';
+  const isAdmin =
+    currentRole === 'admin' || currentRole === 'gestor' || currentRole === 'administrator';
 
   // Atualizar hora atual a cada minuto
   useEffect(() => {
@@ -362,7 +478,7 @@ export default function AgendaDayView({
       if (!date) {
         return;
       }
-      
+
       try {
         const clinicId = clinic?.id || null;
         const result = await checkMultipleDates([date], clinicId);
@@ -409,22 +525,38 @@ export default function AgendaDayView({
 
         if (filteredProfessionalId) {
           // Se há profissional filtrado, carregar apenas aquele
-          console.log('🔍 [AgendaDayView] Carregando disponibilidade do profissional filtrado:', filteredProfessionalId);
+          console.log(
+            '🔍 [AgendaDayView] Carregando disponibilidade do profissional filtrado:',
+            filteredProfessionalId,
+          );
           const slots = await getProfessionalAvailableSlots(filteredProfessionalId, date);
           availability[filteredProfessionalId] = slots;
         } else {
           // ✅ NOVO: Buscar TODOS os profissionais disponíveis para o dia
           // 🔒 Se é profissional logado, usar apenas ele
-          const profIdToUse = userRole?.toLowerCase?.() === 'profissional' ? userProfessionalId : null;
-          console.log('🔍 [AgendaDayView] Buscando profissionais disponíveis para:', date, 'userProf:', profIdToUse);
-          const availableProfessionals = await getAvailableProfessionalsForDay(date, null, profIdToUse);
-          
+          const profIdToUse =
+            userRole?.toLowerCase?.() === 'profissional' ? userProfessionalId : null;
+          console.log(
+            '🔍 [AgendaDayView] Buscando profissionais disponíveis para:',
+            date,
+            'userProf:',
+            profIdToUse,
+          );
+          const availableProfessionals = await getAvailableProfessionalsForDay(
+            date,
+            null,
+            profIdToUse,
+          );
+
           // Converter para formato { profId: slots }
-          availableProfessionals.forEach(prof => {
+          availableProfessionals.forEach((prof) => {
             availability[prof.id] = prof.available_slots;
           });
 
-          console.log('✅ [AgendaDayView] Profissionais disponíveis carregados:', availableProfessionals);
+          console.log(
+            '✅ [AgendaDayView] Profissionais disponíveis carregados:',
+            availableProfessionals,
+          );
         }
 
         setProfessionalAvailability(availability);
@@ -461,7 +593,7 @@ export default function AgendaDayView({
 
         // Montar mapa { profId: { id, name } }
         const map = {};
-        profs.forEach(prof => {
+        profs.forEach((prof) => {
           map[prof.id] = { id: prof.id, name: prof.name };
         });
 
@@ -485,10 +617,11 @@ export default function AgendaDayView({
     const groups = {};
     localAppointments.forEach((apt) => {
       // CORRIGIDO: Adicionar 'scheduled_time' ao fallback
-      const time = apt.horário || apt.time || apt.start_time || apt.scheduled_time || timeSlots[0] || '08:00';
+      const time =
+        apt.horário || apt.time || apt.start_time || apt.scheduled_time || timeSlots[0] || '08:00';
       // Normalizar para HH:MM (remover :SS se houver)
       const normalizedTime = typeof time === 'string' ? time.substring(0, 5) : '08:00';
-      
+
       if (!groups[normalizedTime]) {
         groups[normalizedTime] = [];
       }
@@ -498,7 +631,7 @@ export default function AgendaDayView({
   }, [localAppointments, timeSlots]);
   const sortedTimes = useMemo(() => {
     // ✅ Usar timeSlots configurados da clínica, preenchendo com dados existentes
-    return timeSlots.map(slot => slot);
+    return timeSlots.map((slot) => slot);
   }, [timeSlots]);
 
   /**
@@ -509,7 +642,7 @@ export default function AgendaDayView({
   const renderLinesToShow = useMemo(() => {
     if (filteredProfessionalId) {
       // Com filtro: usar a abordagem usual - uma linha por hora
-      return sortedTimes.map(time => ({
+      return sortedTimes.map((time) => ({
         key: time,
         time,
         professionalId: filteredProfessionalId,
@@ -518,7 +651,7 @@ export default function AgendaDayView({
     } else {
       // SEM filtro: uma linha por (hora + profissional disponível)
       const lines = [];
-      sortedTimes.forEach(time => {
+      sortedTimes.forEach((time) => {
         // Encontrar profissionais disponíveis neste horário (inline)
         const availableProfs = [];
         Object.entries(professionalAvailability).forEach(([profId, slots]) => {
@@ -527,10 +660,10 @@ export default function AgendaDayView({
             availableProfs.push({ id: profId, name: profName });
           }
         });
-        
+
         // Se há profissionais disponíveis, renderizar uma linha por profissional
         if (availableProfs.length > 0) {
-          availableProfs.forEach(prof => {
+          availableProfs.forEach((prof) => {
             lines.push({
               key: `${time}__${prof.id}`,
               time,
@@ -558,8 +691,12 @@ export default function AgendaDayView({
   // Verificar se agendamento está atrasado
   const isLate = (apt) => {
     const aptTime = apt.horário || apt.time || apt.start_time || apt.scheduled_time || '00:00';
-    return apt.status === 'falta' || 
-           (apt.status === 'confirmado' && aptTime < currentTimeStr && (apt.paciente || apt.patient_name));
+    return (
+      apt.status === 'falta' ||
+      (apt.status === 'confirmado' &&
+        aptTime < currentTimeStr &&
+        (apt.paciente || apt.patient_name))
+    );
   };
 
   // ✅ Usar STATUS_CONFIG do sistema centralizado
@@ -585,11 +722,11 @@ export default function AgendaDayView({
     if (typeof horarioExtraido === 'string' && horarioExtraido.length > 5) {
       horarioExtraido = horarioExtraido.substring(0, 5); // HH:MM
     }
-    
+
     // Mapear status antigos para novos (backward compatibility)
     let status = apt.status || BOOKING_STATUSES.SCHEDULED;
     status = migrateStatus(status); // Usa STATUS_MIGRATION_MAP
-    
+
     return {
       ...apt,
       paciente: apt.paciente || apt.patient_name || apt.patient || '—',
@@ -661,12 +798,12 @@ export default function AgendaDayView({
 
   const handleCheckIn = (aptId, financialData = {}) => {
     console.log('✅ [CHECK-IN] Iniciando...', aptId, { financialData });
-    
+
     if (!aptId) {
       alert('❌ Erro: ID não encontrado');
       return;
     }
-    
+
     (async () => {
       try {
         // Buscar status atual do appointment
@@ -687,7 +824,7 @@ export default function AgendaDayView({
         }
 
         const isEditing = currentApt?.status === 'at_reception';
-        
+
         // 1️⃣ Atualizar status apenas se for novo check-in
         if (!isEditing) {
           console.log('📍 [CHECK-IN] Atualizando status para Na Recepção...');
@@ -695,13 +832,13 @@ export default function AgendaDayView({
             .from('appointments')
             .update({ status: 'at_reception' })
             .eq('id', aptId);
-          
+
           if (statusError) {
             console.error('❌ Erro ao atualizar status:', statusError.message);
             alert(`❌ ${statusError.message}`);
             return;
           }
-          
+
           console.log('✅ Status atualizado para Na Recepção');
         } else {
           console.log('📝 [CHECK-IN] Modo edição - atualizando apenas dados financeiros');
@@ -711,21 +848,28 @@ export default function AgendaDayView({
         if (Object.keys(financialData).length > 0) {
           console.log('💰 [CHECK-IN] Processando dados financeiros...');
           const { saveCheckInFinancialData } = await import('@/lib/financialCheckInApi');
-          
+
           const financialResult = await saveCheckInFinancialData(aptId, financialData);
-          
+
           if (financialResult.error) {
-            console.error('⚠️ Aviso: Erro ao processar dados financeiros:', financialResult.message);
+            console.error(
+              '⚠️ Aviso: Erro ao processar dados financeiros:',
+              financialResult.message,
+            );
           } else {
             console.log('✅ Dados financeiros processados:', financialResult);
-            
+
             if (isEditing) {
               alert('✅ Check-in atualizado com sucesso!');
             } else {
               if (financialResult.type === 'receivable') {
-                alert(`✅ Check-in realizado!\n\n💳 Conta a Receber criada com sucesso!\n\nID: ${financialResult.data.receivable_id}`);
+                alert(
+                  `✅ Check-in realizado!\n\n💳 Conta a Receber criada com sucesso!\n\nID: ${financialResult.data.receivable_id}`,
+                );
               } else if (financialResult.type === 'billing_guide') {
-                alert(`✅ Check-in realizado!\n\n🏥 Guia de Faturamento criada!\n\nAguardando processamento para envio ao convênio.\nID: ${financialResult.data.invoice_id}`);
+                alert(
+                  `✅ Check-in realizado!\n\n🏥 Guia de Faturamento criada!\n\nAguardando processamento para envio ao convênio.\nID: ${financialResult.data.invoice_id}`,
+                );
               } else if (financialResult.type === 'courtesy') {
                 alert('✅ Check-in realizado!\n\n🎁 Atendimento marcado como cortesia.');
               }
@@ -738,15 +882,15 @@ export default function AgendaDayView({
             alert('✅ Paciente marcado na recepção!');
           }
         }
-        
+
         // Fechar drawer
         setDrawerOpen(false);
         console.log('📭 Drawer fechado');
-        
+
         // Aguardar para Supabase propagar
         console.log('⏳ Aguardando para Supabase propagar...');
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
         // Recarregar agenda
         console.log('🔄 Recarregando agenda...');
         if (typeof onEditAppointment === 'function') {
@@ -782,17 +926,14 @@ export default function AgendaDayView({
     if (confirm('Tem certeza que deseja CANCELAR este agendamento?')) {
       (async () => {
         try {
-          const { error } = await supabase
-            .from('appointments')
-            .delete()
-            .eq('id', aptId);
-          
+          const { error } = await supabase.from('appointments').delete().eq('id', aptId);
+
           if (error) {
             console.error('❌ Erro ao deletar:', error);
             alert('Erro ao deletar agendamento');
             return;
           }
-          
+
           console.log('✅ Agendamento deletado com sucesso');
           setDrawerOpen(false);
           onEditAppointment?.();
@@ -813,13 +954,15 @@ export default function AgendaDayView({
     <div className="h-full w-full flex flex-col bg-white relative">
       {/* ✅ Banner de Feriado com Bloqueio - Mostrar apenas se bloqueado ou com override */}
       {isHolidayDay && (isBlockedHoliday || overrideHoliday) && (
-        <div className={`mb-3 rounded-md border p-3 text-sm ${
-          isHolidayBlocked
-            ? 'border-red-200 bg-red-50 text-red-700'
-            : isOptionalHoliday
-              ? 'border-blue-200 bg-blue-50 text-blue-700'
-              : 'border-yellow-200 bg-yellow-50 text-yellow-700'
-        }`}>
+        <div
+          className={`mb-3 rounded-md border p-3 text-sm ${
+            isHolidayBlocked
+              ? 'border-red-200 bg-red-50 text-red-700'
+              : isOptionalHoliday
+                ? 'border-blue-200 bg-blue-50 text-blue-700'
+                : 'border-yellow-200 bg-yellow-50 text-yellow-700'
+          }`}
+        >
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <span className="text-lg">
@@ -827,7 +970,9 @@ export default function AgendaDayView({
               </span>
               <div>
                 <strong>Feriado:</strong> {holiday.name}
-                {isOptionalHoliday && <span className="ml-2 text-xs bg-blue-100 px-2 py-0.5 rounded">FACULTATIVO</span>}
+                {isOptionalHoliday && (
+                  <span className="ml-2 text-xs bg-blue-100 px-2 py-0.5 rounded">FACULTATIVO</span>
+                )}
                 <br />
                 {isHolidayBlocked ? (
                   <span className="text-xs">Agenda bloqueada automaticamente (obrigatório)</span>
@@ -838,7 +983,7 @@ export default function AgendaDayView({
                 )}
               </div>
             </div>
-            
+
             {/* Botão de Liberação para Admins (apenas feriados obrigatórios) */}
             {isAdmin && isBlockedHoliday && !overrideHoliday && (
               <button
@@ -871,240 +1016,317 @@ export default function AgendaDayView({
 
       {/* Conteúdo Scrollável */}
       <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
-        {renderLinesToShow && renderLinesToShow.length > 0 && renderLinesToShow.map((lineInfo) => {
-          const { time, professionalId, type } = lineInfo;
-          
-          // Filtrar agendamentos para este tempo E profissional
-          let appointmentsForLine = [];
-          if (type === 'single-prof') {
-            // Com filtro: todos os agendamentos do horário
-            appointmentsForLine = groupedByTime[time] || [];
-          } else {
-            // Sem filtro: apenas agendamentos do profissional específico neste horário
-            const allApptsForTime = groupedByTime[time] || [];
-            appointmentsForLine = allApptsForTime.filter(apt => 
-              (apt.professional_id === professionalId || apt.professionalId === professionalId),
-            );
-          }
-          const appointmentsForTime = appointmentsForLine;
-          
-          // Se não tem agendamento, mostrar hora livre (ou bloqueado se feriado)
-          if (appointmentsForTime.length === 0) {
-            // 🆕 Verificar disponibilidade DO PROFISSIONAL DESTA LINHA para este horário
-            let isAvailable = true;
-            
-            if (type === 'single-prof' && filteredProfessionalId) {
-              // Com filtro: APENAS esse profissional pode agendar
-              const availableSlots = professionalAvailability[filteredProfessionalId] || [];
-              isAvailable = availableSlots.length > 0 && availableSlots.includes(time);
-              console.log(`📅 [AgendaDayView] Prof ${filteredProfessionalId} em ${time}: slots=${availableSlots.join(',')} → ${isAvailable ? '✅ livre' : '❌ bloqueado'}`);
-            } else if (type === 'multi-prof' && professionalId) {
-              // SEM filtro, com profissional nesta linha: verificar disponibilidade DESTE profissional
-              const availableSlots = professionalAvailability[professionalId] || [];
-              isAvailable = availableSlots.length > 0 && availableSlots.includes(time);
-              console.log(`📅 [AgendaDayView] Multi-prof ${professionalId} em ${time}: slots=${availableSlots.join(',')} → ${isAvailable ? '✅ livre' : '❌ bloqueado'}`);
+        {renderLinesToShow &&
+          renderLinesToShow.length > 0 &&
+          renderLinesToShow.map((lineInfo) => {
+            const { time, professionalId, type } = lineInfo;
+
+            // Filtrar agendamentos para este tempo E profissional
+            let appointmentsForLine = [];
+            if (type === 'single-prof') {
+              // Com filtro: todos os agendamentos do horário
+              appointmentsForLine = groupedByTime[time] || [];
             } else {
-              // SEM filtro, sem profissional nesta linha: mostrar verde de qualquer forma
-              isAvailable = true;
-            }
-
-            // Se está bloqueado por feriado, renderizar bloqueado
-            if (isHolidayBlocked) {
-              return (
-                <div
-                  key={lineInfo.key}
-                  id={`hour-${time.split(':')[0]}`}
-                  className="grid grid-cols-12 gap-0 border-b border-gray-100 h-14 cursor-not-allowed"
-                  style={{ background: '#f3f3f3' }}
-                  title="Agenda bloqueada - Feriado"
-                >
-                  <div className="col-span-1 px-3 py-3 flex items-center justify-center text-sm font-semibold border-r border-gray-200" style={{ color: '#0052cc', fontSize: '12px', fontWeight: 600, background: '#f8f9fa' }}>
-                    {time}
-                  </div>
-                  <div className="col-span-11 px-4 py-3 flex items-center text-sm font-black border-r border-gray-200" style={{ color: '#9ca3af' }}>
-                    🔒 Feriado – agenda bloqueada
-                  </div>
-                </div>
+              // Sem filtro: apenas agendamentos do profissional específico neste horário
+              const allApptsForTime = groupedByTime[time] || [];
+              appointmentsForLine = allApptsForTime.filter(
+                (apt) =>
+                  apt.professional_id === professionalId || apt.professionalId === professionalId,
               );
             }
+            const appointmentsForTime = appointmentsForLine;
 
-            // 🆕 Se profissional não está disponível neste horário, bloquear
-            if (!isAvailable) {
-              return (
-                <div
-                  key={lineInfo.key}
-                  id={`hour-${time.split(':')[0]}`}
-                  className="grid grid-cols-12 gap-0 border-b border-gray-100 h-14 cursor-not-allowed"
-                  style={{ background: '#f3f3f3' }}
-                  title="Profissional indisponível neste horário"
-                >
-                  <div className="col-span-1 px-3 py-3 flex items-center justify-center text-sm font-semibold border-r border-gray-200" style={{ color: '#0052cc', fontSize: '12px', fontWeight: 600, background: '#f8f9fa' }}>
-                    {time}
+            // Se não tem agendamento, mostrar hora livre (ou bloqueado se feriado)
+            if (appointmentsForTime.length === 0) {
+              // 🆕 Verificar disponibilidade DO PROFISSIONAL DESTA LINHA para este horário
+              let isAvailable = true;
+
+              if (type === 'single-prof' && filteredProfessionalId) {
+                // Com filtro: APENAS esse profissional pode agendar
+                const availableSlots = professionalAvailability[filteredProfessionalId] || [];
+                isAvailable = availableSlots.length > 0 && availableSlots.includes(time);
+                console.log(
+                  `📅 [AgendaDayView] Prof ${filteredProfessionalId} em ${time}: slots=${availableSlots.join(',')} → ${isAvailable ? '✅ livre' : '❌ bloqueado'}`,
+                );
+              } else if (type === 'multi-prof' && professionalId) {
+                // SEM filtro, com profissional nesta linha: verificar disponibilidade DESTE profissional
+                const availableSlots = professionalAvailability[professionalId] || [];
+                isAvailable = availableSlots.length > 0 && availableSlots.includes(time);
+                console.log(
+                  `📅 [AgendaDayView] Multi-prof ${professionalId} em ${time}: slots=${availableSlots.join(',')} → ${isAvailable ? '✅ livre' : '❌ bloqueado'}`,
+                );
+              } else {
+                // SEM filtro, sem profissional nesta linha: mostrar verde de qualquer forma
+                isAvailable = true;
+              }
+
+              // Se está bloqueado por feriado, renderizar bloqueado
+              if (isHolidayBlocked) {
+                return (
+                  <div
+                    key={lineInfo.key}
+                    id={`hour-${time.split(':')[0]}`}
+                    className="grid grid-cols-12 gap-0 border-b border-gray-100 h-14 cursor-not-allowed"
+                    style={{ background: '#f3f3f3' }}
+                    title="Agenda bloqueada - Feriado"
+                  >
+                    <div
+                      className="col-span-1 px-3 py-3 flex items-center justify-center text-sm font-semibold border-r border-gray-200"
+                      style={{
+                        color: '#0052cc',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        background: '#f8f9fa',
+                      }}
+                    >
+                      {time}
+                    </div>
+                    <div
+                      className="col-span-11 px-4 py-3 flex items-center text-sm font-black border-r border-gray-200"
+                      style={{ color: '#9ca3af' }}
+                    >
+                      🔒 Feriado – agenda bloqueada
+                    </div>
                   </div>
-                  <div className="col-span-11 px-4 py-3 flex items-center text-sm font-black border-r border-gray-200" style={{ color: '#9ca3af' }}>
-                    🔒 Horário não disponível para este profissional
+                );
+              }
+
+              // 🆕 Se profissional não está disponível neste horário, bloquear
+              if (!isAvailable) {
+                return (
+                  <div
+                    key={lineInfo.key}
+                    id={`hour-${time.split(':')[0]}`}
+                    className="grid grid-cols-12 gap-0 border-b border-gray-100 h-14 cursor-not-allowed"
+                    style={{ background: '#f3f3f3' }}
+                    title="Profissional indisponível neste horário"
+                  >
+                    <div
+                      className="col-span-1 px-3 py-3 flex items-center justify-center text-sm font-semibold border-r border-gray-200"
+                      style={{
+                        color: '#0052cc',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        background: '#f8f9fa',
+                      }}
+                    >
+                      {time}
+                    </div>
+                    <div
+                      className="col-span-11 px-4 py-3 flex items-center text-sm font-black border-r border-gray-200"
+                      style={{ color: '#9ca3af' }}
+                    >
+                      🔒 Horário não disponível para este profissional
+                    </div>
                   </div>
-                </div>
-              );
-            }
+                );
+              }
 
-            // Caso contrário, renderizar normalmente (disponível)
-            const availableProfs = getAvailableProfessionalsForTime(time);
-            const profNamesDisplay = type === 'multi-prof' && professionalId 
-              ? professionalsMap[professionalId]?.name || professionalId
-              : availableProfs.map(p => p.name).join(', ');
-            
-            return (
-              <div
-                key={lineInfo.key}
-                id={`hour-${time.split(':')[0]}`}
-                className="grid grid-cols-12 gap-0 border-b border-gray-100 h-14 cursor-pointer transition-all"
-                onClick={() => {
-                  const slotData = { time, date };
-                  if (type === 'single-prof' && filteredProfessionalId) {
-                    slotData.professionalId = filteredProfessionalId;
-                  } else if (type === 'multi-prof' && professionalId) {
-                    slotData.professionalId = professionalId;
-                  }
-                  handleBookSlotWithConfirm(slotData);
-                }}
-                style={{ background: '#fafaf9' }}
-              >
-                {/* Horário */}
-                <div className="col-span-1 px-3 py-3 flex items-center justify-center text-sm font-bold border-r border-gray-200" style={{ color: '#0052cc', fontSize: '12px', fontWeight: 600, background: '#f8f9fa' }}>
-                  {time}
-                </div>
-                
-                {/* Paciente - Ícone + Text */}
-                <div className="col-span-2 px-3 py-3 flex items-center justify-center text-sm font-black border-r border-gray-200 text-center" style={{ color: '#10b981', fontSize: '12px' }}>
-                  ➕ Clique para agendar
-                </div>
-                
-                {/* Contato - vazio */}
-                <div className="col-span-2 px-3 py-3 border-r border-gray-200" />
-                
-                {/* Serviço - vazio */}
-                <div className="col-span-1 px-3 py-3 border-r border-gray-200" />
-                
-                {/* Convênio - vazio */}
-                <div className="col-span-2 px-3 py-3 border-r border-gray-200" />
-                
-                {/* Profissional - Nomes dos disponíveis */}
-                <div className="col-span-2 px-3 py-3 flex items-center justify-center text-sm font-medium border-r border-gray-200 truncate" style={{ color: '#10b981', fontSize: '12px' }}>
-                  {profNamesDisplay || ''}
-                </div>
-                
-                {/* Status - vazio */}
-                <div className="col-span-2 px-3 py-3 border-r border-gray-200" />
-              </div>
-            );
-          }
-
-          return appointmentsForTime.map((apt, idx) => {
-            // CORRIGIDO: Verificar se tem paciente usando todos os possíveis nomes de campo
-            const isOccupied = apt.paciente || apt.patient || apt.patient_name;
-            const status = apt.status || 'disponivel';
-            const statusLabel = apt.status || 'confirmado';
-            const isCurrentTime = time === currentTimeStr;
-            const late = isLate(apt);
-            const statusColor = getStatusBgColor(statusLabel);
-            const rowId = `${lineInfo.key}-${idx}`;
-            const isHovered = hoveredRow === rowId;
-            
-            // 🔍 DEBUG: Verificar que apt tem um ID válido
-            console.log('🔍 [AgendaDayView] apt objeto no loop:', {
-              temId: !!apt.id,
-              aptId: apt.id,
-              appointmentId: apt.appointment_id,
-              aptStatus: apt.status,
-              statusLabel: statusLabel,
-              temPaciente: !!isOccupied,
-              pacienteName: apt.paciente || apt.patient_name || 'SEM NOME',
-            });
-            
-            // 🆕 Verificar disponibilidade do profissional para este horário
-            // Se há filtro de profissional ativo, usar APENAS aquele profissional
-            const profId = filteredProfessionalId || apt.professional_id || apt.professionalId;
-            const availableSlots = professionalAvailability[profId] || [];
-            
-            // Se há profissional filtrado E não há slots cadastrados, bloquear
-            // Se há profissional E há slots, verificar se o horário está na lista
-            const isProfessionalAvailable = 
-              !profId || 
-              (availableSlots.length > 0 && availableSlots.includes(time));
-
-            if (!isOccupied) {
-              // SLOT LIVRE
+              // Caso contrário, renderizar normalmente (disponível)
               const availableProfs = getAvailableProfessionalsForTime(time);
-              const profNamesDisplay = type === 'multi-prof' && filteredProfessionalId
-                ? professionalsMap[filteredProfessionalId]?.name || filteredProfessionalId
-                : availableProfs.map(p => p.name).join(', ');
-              
+              const profNamesDisplay =
+                type === 'multi-prof' && professionalId
+                  ? professionalsMap[professionalId]?.name || professionalId
+                  : availableProfs.map((p) => p.name).join(', ');
+
               return (
                 <div
-                  key={rowId}
-                  onMouseEnter={() => setHoveredRow(rowId)}
-                  onMouseLeave={() => setHoveredRow(null)}
-                  className={`group border-b border-gray-100 transition-all ${
-                    isHolidayBlocked || !isProfessionalAvailable
-                      ? 'bg-gray-100 cursor-not-allowed'
-                      : `hover:bg-green-50/60 cursor-pointer ${
-                        isCurrentTime ? 'bg-blue-100/40' : isOptionalHoliday ? 'bg-blue-50/40' : 'bg-white'
-                      }`
-                  }`}
+                  key={lineInfo.key}
+                  id={`hour-${time.split(':')[0]}`}
+                  className="grid grid-cols-12 gap-0 border-b border-gray-100 h-14 cursor-pointer transition-all"
                   onClick={() => {
-                    const slotData = { 
-                      time, 
-                      date,
-                      professional_id: filteredProfessionalId || apt.professional_id || apt.professionalId,
-                      room_id: apt.room_id || apt.roomId,
-                    };
+                    const slotData = { time, date };
+                    if (type === 'single-prof' && filteredProfessionalId) {
+                      slotData.professionalId = filteredProfessionalId;
+                    } else if (type === 'multi-prof' && professionalId) {
+                      slotData.professionalId = professionalId;
+                    }
                     handleBookSlotWithConfirm(slotData);
                   }}
-                  onContextMenu={(e) => !isHolidayBlocked && isProfessionalAvailable && handleContextMenu(e, apt)}
-                  title={!isProfessionalAvailable ? 'Profissional indisponível neste horário' : ''}
+                  style={{ background: '#fafaf9' }}
                 >
-                  {renderEmptySlot(time, isCurrentTime, isHolidayBlocked || !isProfessionalAvailable, isOptionalHoliday, handleBookSlotWithConfirm, apt, date, profNamesDisplay)}
-                </div>
-              );
-            } else {
-              // SLOT OCUPADO
-              return (
-                <div
-                  key={rowId}
-                  onMouseEnter={() => setHoveredRow(rowId)}
-                  onMouseLeave={() => setHoveredRow(null)}
-                  className={`group border-b border-gray-100 hover:bg-blue-50/80 hover:shadow-md transition-all cursor-pointer ${
-                    late ? 'border-l-4 border-l-red-500 bg-red-50/30' : ''
-                  } ${isCurrentTime ? 'bg-blue-100/50' : 'bg-white'}`}
-                  onClick={(e) => {
-                    console.log('🖱️ [AgendaDayView] CLIQUE SIMPLES na célula!');
-                    console.log('   apt.id:', apt?.id);
-                    handleContextMenu(e, apt);
-                  }}
-                  onDoubleClick={() => {
-                    console.log('🖱️ [AgendaDayView] DUPLO CLIQUE na célula!');
-                    console.log('   apt.id:', apt?.id);
-                    console.log('   onEditAppointment type:', typeof onEditAppointment);
-                    console.log('   CHAMANDO onEditAppointment(apt.id...)');
-                    if (typeof onEditAppointment === 'function') {
-                      onEditAppointment(apt.id);
-                    } else {
-                      console.error('❌ onEditAppointment NÃO É UMA FUNÇÃO!', typeof onEditAppointment);
-                    }
-                  }}
-                  onContextMenu={(e) => {
-                    console.log('🖱️ [AgendaDayView] CLIQUE DIREITO na célula!');
-                    console.log('   apt.id:', apt?.id);
-                    handleContextMenu(e, apt);
-                  }}
-                >
-                  {renderOccupiedSlot(apt, time, isCurrentTime, late, statusLabel, getStatusBgColor, isHovered, onEditAppointment, handleContextMenu, handleOpenAtendimento, currentRole)}
+                  {/* Horário */}
+                  <div
+                    className="col-span-1 px-3 py-3 flex items-center justify-center text-sm font-bold border-r border-gray-200"
+                    style={{
+                      color: '#0052cc',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      background: '#f8f9fa',
+                    }}
+                  >
+                    {time}
+                  </div>
+
+                  {/* Paciente - Ícone + Text */}
+                  <div
+                    className="col-span-2 px-3 py-3 flex items-center justify-center text-sm font-black border-r border-gray-200 text-center"
+                    style={{ color: '#10b981', fontSize: '12px' }}
+                  >
+                    ➕ Clique para agendar
+                  </div>
+
+                  {/* Contato - vazio */}
+                  <div className="col-span-2 px-3 py-3 border-r border-gray-200" />
+
+                  {/* Serviço - vazio */}
+                  <div className="col-span-1 px-3 py-3 border-r border-gray-200" />
+
+                  {/* Convênio - vazio */}
+                  <div className="col-span-2 px-3 py-3 border-r border-gray-200" />
+
+                  {/* Profissional - Nomes dos disponíveis */}
+                  <div
+                    className="col-span-2 px-3 py-3 flex items-center justify-center text-sm font-medium border-r border-gray-200 truncate"
+                    style={{ color: '#10b981', fontSize: '12px' }}
+                  >
+                    {profNamesDisplay || ''}
+                  </div>
+
+                  {/* Status - vazio */}
+                  <div className="col-span-2 px-3 py-3 border-r border-gray-200" />
                 </div>
               );
             }
-          });
-        })}
+
+            return appointmentsForTime.map((apt, idx) => {
+              // CORRIGIDO: Verificar se tem paciente usando todos os possíveis nomes de campo
+              const isOccupied = apt.paciente || apt.patient || apt.patient_name;
+              const status = apt.status || 'disponivel';
+              const statusLabel = apt.status || 'confirmado';
+              const isCurrentTime = time === currentTimeStr;
+              const late = isLate(apt);
+              const statusColor = getStatusBgColor(statusLabel);
+              const rowId = `${lineInfo.key}-${idx}`;
+              const isHovered = hoveredRow === rowId;
+
+              // 🔍 DEBUG: Verificar que apt tem um ID válido
+              console.log('🔍 [AgendaDayView] apt objeto no loop:', {
+                temId: !!apt.id,
+                aptId: apt.id,
+                appointmentId: apt.appointment_id,
+                aptStatus: apt.status,
+                statusLabel: statusLabel,
+                temPaciente: !!isOccupied,
+                pacienteName: apt.paciente || apt.patient_name || 'SEM NOME',
+              });
+
+              // 🆕 Verificar disponibilidade do profissional para este horário
+              // Se há filtro de profissional ativo, usar APENAS aquele profissional
+              const profId = filteredProfessionalId || apt.professional_id || apt.professionalId;
+              const availableSlots = professionalAvailability[profId] || [];
+
+              // Se há profissional filtrado E não há slots cadastrados, bloquear
+              // Se há profissional E há slots, verificar se o horário está na lista
+              const isProfessionalAvailable =
+                !profId || (availableSlots.length > 0 && availableSlots.includes(time));
+
+              if (!isOccupied) {
+                // SLOT LIVRE
+                const availableProfs = getAvailableProfessionalsForTime(time);
+                const profNamesDisplay =
+                  type === 'multi-prof' && filteredProfessionalId
+                    ? professionalsMap[filteredProfessionalId]?.name || filteredProfessionalId
+                    : availableProfs.map((p) => p.name).join(', ');
+
+                return (
+                  <div
+                    key={rowId}
+                    onMouseEnter={() => setHoveredRow(rowId)}
+                    onMouseLeave={() => setHoveredRow(null)}
+                    className={`group border-b border-gray-100 transition-all ${
+                      isHolidayBlocked || !isProfessionalAvailable
+                        ? 'bg-gray-100 cursor-not-allowed'
+                        : `hover:bg-green-50/60 cursor-pointer ${
+                          isCurrentTime
+                            ? 'bg-blue-100/40'
+                            : isOptionalHoliday
+                              ? 'bg-blue-50/40'
+                              : 'bg-white'
+                        }`
+                    }`}
+                    onClick={() => {
+                      const slotData = {
+                        time,
+                        date,
+                        professional_id:
+                          filteredProfessionalId || apt.professional_id || apt.professionalId,
+                        room_id: apt.room_id || apt.roomId,
+                      };
+                      handleBookSlotWithConfirm(slotData);
+                    }}
+                    onContextMenu={(e) =>
+                      !isHolidayBlocked && isProfessionalAvailable && handleContextMenu(e, apt)
+                    }
+                    title={
+                      !isProfessionalAvailable ? 'Profissional indisponível neste horário' : ''
+                    }
+                  >
+                    {renderEmptySlot(
+                      time,
+                      isCurrentTime,
+                      isHolidayBlocked || !isProfessionalAvailable,
+                      isOptionalHoliday,
+                      handleBookSlotWithConfirm,
+                      apt,
+                      date,
+                      profNamesDisplay,
+                    )}
+                  </div>
+                );
+              } else {
+                // SLOT OCUPADO
+                return (
+                  <div
+                    key={rowId}
+                    onMouseEnter={() => setHoveredRow(rowId)}
+                    onMouseLeave={() => setHoveredRow(null)}
+                    className={`group border-b border-gray-100 hover:bg-blue-50/80 hover:shadow-md transition-all cursor-pointer ${
+                      late ? 'border-l-4 border-l-red-500 bg-red-50/30' : ''
+                    } ${isCurrentTime ? 'bg-blue-100/50' : 'bg-white'}`}
+                    onClick={(e) => {
+                      console.log('🖱️ [AgendaDayView] CLIQUE SIMPLES na célula!');
+                      console.log('   apt.id:', apt?.id);
+                      handleContextMenu(e, apt);
+                    }}
+                    onDoubleClick={() => {
+                      console.log('🖱️ [AgendaDayView] DUPLO CLIQUE na célula!');
+                      console.log('   apt.id:', apt?.id);
+                      console.log('   onEditAppointment type:', typeof onEditAppointment);
+                      console.log('   CHAMANDO onEditAppointment(apt.id...)');
+                      if (typeof onEditAppointment === 'function') {
+                        onEditAppointment(apt.id);
+                      } else {
+                        console.error(
+                          '❌ onEditAppointment NÃO É UMA FUNÇÃO!',
+                          typeof onEditAppointment,
+                        );
+                      }
+                    }}
+                    onContextMenu={(e) => {
+                      console.log('🖱️ [AgendaDayView] CLIQUE DIREITO na célula!');
+                      console.log('   apt.id:', apt?.id);
+                      handleContextMenu(e, apt);
+                    }}
+                  >
+                    {renderOccupiedSlot(
+                      apt,
+                      time,
+                      isCurrentTime,
+                      late,
+                      statusLabel,
+                      getStatusBgColor,
+                      isHovered,
+                      onEditAppointment,
+                      handleContextMenu,
+                      handleOpenAtendimento,
+                      currentRole,
+                    )}
+                  </div>
+                );
+              }
+            });
+          })}
       </div>
 
       {/* Menu de Contexto */}
@@ -1128,16 +1350,22 @@ export default function AgendaDayView({
                 console.log('🖱️ [AgendaDayView] Botão Editar do MENU CLICADO!');
                 console.log('   contextMenu.appointment COMPLETO:', contextMenu.appointment);
                 console.log('   contextMenu.appointment.id:', contextMenu.appointment?.id);
-                console.log('   contextMenu.appointment[\'id\']:', contextMenu.appointment?.['id']);
-                console.log('   Todos os campos do appointment:', Object.keys(contextMenu.appointment || {}));
-              
+                console.log("   contextMenu.appointment['id']:", contextMenu.appointment?.['id']);
+                console.log(
+                  '   Todos os campos do appointment:',
+                  Object.keys(contextMenu.appointment || {}),
+                );
+
                 const appointmentId = contextMenu.appointment?.id;
                 console.log('   appointmentId extraído:', appointmentId);
                 console.log('   typeof appointmentId:', typeof appointmentId);
                 console.log('   onEditAppointment type:', typeof onEditAppointment);
-              
+
                 if (appointmentId && typeof onEditAppointment === 'function') {
-                  console.log('✅ [AgendaDayView] CHAMANDO onEditAppointment COM ID:', appointmentId);
+                  console.log(
+                    '✅ [AgendaDayView] CHAMANDO onEditAppointment COM ID:',
+                    appointmentId,
+                  );
                   onEditAppointment(appointmentId);
                 } else {
                   console.error('❌ [AgendaDayView] NÃO PODE CHAMAR onEditAppointment!', {
@@ -1152,7 +1380,7 @@ export default function AgendaDayView({
               className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2"
             >
               <Edit className="w-4 h-4" />
-            Editar (ou duplo clique)
+              Editar (ou duplo clique)
             </button>
 
             {/* Opção para RECEPÇÃO - Atendimento com dados financeiros */}
@@ -1164,7 +1392,7 @@ export default function AgendaDayView({
                 }}
                 className="w-full text-left px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 transition-colors flex items-center gap-2 border-t border-gray-100"
               >
-              📋 Atendimento (TISS)
+                📋 Atendimento (TISS)
               </button>
             )}
 
@@ -1173,20 +1401,22 @@ export default function AgendaDayView({
               <button
                 onClick={() => {
                   navigate(`/clinica/pacientes/${contextMenu.appointment.patient_id}`, {
-                    state: { 
+                    state: {
                       appointmentId: contextMenu.appointment.id,
                       appointmentTime: contextMenu.appointment.scheduled_time,
                       appointmentDate: contextMenu.appointment.scheduled_date || null,
                       openTab: 'historico',
                       fromAgendaClinicalFlow: true,
-                      canStartAppointment: migrateStatus(contextMenu.appointment.status) === SERVICE_STATUSES.AWAITING_PROFESSIONAL,
+                      canStartAppointment:
+                        migrateStatus(contextMenu.appointment.status) ===
+                        SERVICE_STATUSES.AWAITING_PROFESSIONAL,
                     },
                   });
                   setContextMenu(null);
                 }}
                 className="w-full text-left px-3 py-2 text-sm text-green-600 hover:bg-green-50 transition-colors flex items-center gap-2 border-t border-gray-100"
               >
-              📝 Abrir Prontuário
+                📝 Abrir Prontuário
               </button>
             )}
 
@@ -1198,7 +1428,7 @@ export default function AgendaDayView({
               className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2 border-t border-gray-100"
             >
               <Eye className="w-4 h-4" />
-            Detalhes
+              Detalhes
             </button>
 
             {contextMenu.appointment.paciente && (
@@ -1209,14 +1439,12 @@ export default function AgendaDayView({
                 }}
                 className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors border-t border-gray-100"
               >
-              ❌ Marcar como Falta
+                ❌ Marcar como Falta
               </button>
             )}
           </div>
         </>
       )}
-
-
 
       {/* 📋 AtendimentoModal - TISS Compliant Check-in (from AgendaDayView) */}
       <AtendimentoModal
@@ -1229,4 +1457,3 @@ export default function AgendaDayView({
     </div>
   );
 }
-

@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { listOrcamentoItens, getOrcamentoDetails } from '@/lib/orcamentosApi';
@@ -23,15 +27,15 @@ export default function OrcamentoDialog({
     if (open && isEdit && initialData?.id) {
       setFetchingItems(true);
       getOrcamentoDetails(initialData.id)
-        .then(details => {
-          setFullData({ 
-            ...initialData, 
+        .then((details) => {
+          setFullData({
+            ...initialData,
             items: details.items,
             extraProfessionals: details.extraProfessionals,
-            extraMaterials: details.extraMaterials
+            extraMaterials: details.extraMaterials,
           });
         })
-        .catch(err => console.error("Failed to load items", err))
+        .catch((err) => console.error('Failed to load items', err))
         .finally(() => setFetchingItems(false));
     } else if (open && !isEdit) {
       setFullData(null);
@@ -51,7 +55,7 @@ export default function OrcamentoDialog({
             <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
           </div>
         ) : (
-          <OrcamentoForm 
+          <OrcamentoForm
             clinicId={clinicId}
             initialData={fullData}
             onCancel={() => onOpenChange(false)}

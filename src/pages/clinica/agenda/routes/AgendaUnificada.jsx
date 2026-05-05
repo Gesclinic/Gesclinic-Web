@@ -1,38 +1,34 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
 
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-
-export default function ModalCriarAgendamento({
-  open,
-  onOpenChange,
-  data,
-  onSubmit,
-}) {
+export default function ModalCriarAgendamento({ open, onOpenChange, data, onSubmit }) {
   /**
    * 🧠 ESTADO INTERNO
    * evita erro quando data ainda não existe
    */
   const [form, setForm] = useState({
-    date: "",
-    time: "",
-    paciente: "",
-    telefone: "",
+    date: '',
+    time: '',
+    paciente: '',
+    telefone: '',
     profissional: null,
     servico: null,
-    billingType: "PARTICULAR",
+    billingType: 'PARTICULAR',
     plano: null,
-    observacoes: "",
+    observacoes: '',
   });
 
   /**
@@ -41,15 +37,15 @@ export default function ModalCriarAgendamento({
   useEffect(() => {
     if (data) {
       setForm({
-        date: data.date || "",
-        time: data.time || "",
-        paciente: data.paciente || "",
-        telefone: data.telefone || "",
+        date: data.date || '',
+        time: data.time || '',
+        paciente: data.paciente || '',
+        telefone: data.telefone || '',
         profissional: data.profissional || null,
         servico: data.servico || null,
-        billingType: data.billingType || "PARTICULAR",
+        billingType: data.billingType || 'PARTICULAR',
         plano: data.plano || null,
-        observacoes: data.observacoes || "",
+        observacoes: data.observacoes || '',
       });
     }
   }, [data]);
@@ -62,7 +58,9 @@ export default function ModalCriarAgendamento({
     onSubmit(form);
   }
 
-  if (!data) return null; // 🛑 segurança total
+  if (!data) {
+    return null;
+  } // 🛑 segurança total
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -72,29 +70,28 @@ export default function ModalCriarAgendamento({
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto px-6 py-6">
+          {/* DATA / HORA */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Data</Label>
+              <Input
+                type="date"
+                value={form.date}
+                onChange={(e) => updateField('date', e.target.value)}
+              />
+            </div>
 
-        {/* DATA / HORA */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label>Data</Label>
-            <Input
-              type="date"
-              value={form.date}
-              onChange={(e) => updateField("date", e.target.value)}
-            />
+            <div>
+              <Label>Hora</Label>
+              <Input
+                type="time"
+                value={form.time}
+                onChange={(e) => updateField('time', e.target.value)}
+              />
+            </div>
           </div>
 
-          <div>
-            <Label>Hora</Label>
-            <Input
-              type="time"
-              value={form.time}
-              onChange={(e) => updateField("time", e.target.value)}
-            />
-          </div>
-        </div>
-
-        {/* PACIENTE */}
+          {/* PACIENTE */}
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -102,7 +99,7 @@ export default function ModalCriarAgendamento({
             <Input
               placeholder="Nome do paciente"
               value={form.paciente}
-              onChange={(e) => updateField("paciente", e.target.value)}
+              onChange={(e) => updateField('paciente', e.target.value)}
             />
           </div>
 
@@ -111,7 +108,7 @@ export default function ModalCriarAgendamento({
             <Input
               placeholder="WhatsApp"
               value={form.telefone}
-              onChange={(e) => updateField("telefone", e.target.value)}
+              onChange={(e) => updateField('telefone', e.target.value)}
             />
           </div>
         </div>
@@ -121,8 +118,8 @@ export default function ModalCriarAgendamento({
           <div>
             <Label>Profissional</Label>
             <Select
-              value={form.profissional || ""}
-              onValueChange={(v) => updateField("profissional", v)}
+              value={form.profissional || ''}
+              onValueChange={(v) => updateField('profissional', v)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione" />
@@ -135,10 +132,7 @@ export default function ModalCriarAgendamento({
 
           <div>
             <Label>Serviço</Label>
-            <Select
-              value={form.servico || ""}
-              onValueChange={(v) => updateField("servico", v)}
-            >
+            <Select value={form.servico || ''} onValueChange={(v) => updateField('servico', v)}>
               <SelectTrigger>
                 <SelectValue placeholder="Consulta / Exame" />
               </SelectTrigger>
@@ -153,10 +147,7 @@ export default function ModalCriarAgendamento({
         <div className="grid grid-cols-2 gap-4">
           <div>
             <Label>Convênio</Label>
-            <Select
-              value={form.billingType}
-              onValueChange={(v) => updateField("billingType", v)}
-            >
+            <Select value={form.billingType} onValueChange={(v) => updateField('billingType', v)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -169,10 +160,7 @@ export default function ModalCriarAgendamento({
 
           <div>
             <Label>Plano</Label>
-            <Select
-              value={form.plano || ""}
-              onValueChange={(v) => updateField("plano", v)}
-            >
+            <Select value={form.plano || ''} onValueChange={(v) => updateField('plano', v)}>
               <SelectTrigger>
                 <SelectValue placeholder="Opcional" />
               </SelectTrigger>
@@ -189,25 +177,19 @@ export default function ModalCriarAgendamento({
           <Textarea
             placeholder="Observações clínicas ou administrativas"
             value={form.observacoes}
-            onChange={(e) => updateField("observacoes", e.target.value)}
+            onChange={(e) => updateField('observacoes', e.target.value)}
           />
         </div>
 
         {/* AÇÕES */}
         <div className="flex justify-end gap-3 pt-4">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
 
-          <Button onClick={handleSubmit}>
-            Criar Agendamento
-          </Button>
+          <Button onClick={handleSubmit}>Criar Agendamento</Button>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
-

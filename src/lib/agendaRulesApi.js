@@ -3,7 +3,7 @@
 // API - Regras de Agendamento
 // ============================================================
 
-import { customSupabaseClient as supabase } from "@/lib/customSupabaseClient";
+import { customSupabaseClient as supabase } from '@/lib/customSupabaseClient';
 
 /**
  * Lista todas as regras de agenda de uma clínica
@@ -12,8 +12,9 @@ import { customSupabaseClient as supabase } from "@/lib/customSupabaseClient";
  */
 export async function listAgendaRules(clinicId) {
   const { data, error } = await supabase
-    .from("agenda_rules")
-    .select(`
+    .from('agenda_rules')
+    .select(
+      `
       id,
       service_id,
       default_duration_minutes,
@@ -27,12 +28,15 @@ export async function listAgendaRules(clinicId) {
       requires_clinic_confirmation,
       active,
       services(code, name)
-    `)
-    .eq("clinic_id", clinicId)
-    .eq("active", true)
-    .order("services(name)", { ascending: true });
+    `,
+    )
+    .eq('clinic_id', clinicId)
+    .eq('active', true)
+    .order('services(name)', { ascending: true });
 
-  if (error) throw new Error(`Falha ao listar regras: ${error.message}`);
+  if (error) {
+    throw new Error(`Falha ao listar regras: ${error.message}`);
+  }
   return data ?? [];
 }
 
@@ -44,8 +48,9 @@ export async function listAgendaRules(clinicId) {
  */
 export async function getAgendaRule(serviceId, clinicId) {
   const { data, error } = await supabase
-    .from("agenda_rules")
-    .select(`
+    .from('agenda_rules')
+    .select(
+      `
       id,
       service_id,
       default_duration_minutes,
@@ -58,12 +63,15 @@ export async function getAgendaRule(serviceId, clinicId) {
       max_per_day,
       requires_clinic_confirmation,
       active
-    `)
-    .eq("service_id", serviceId)
-    .eq("clinic_id", clinicId)
+    `,
+    )
+    .eq('service_id', serviceId)
+    .eq('clinic_id', clinicId)
     .maybeSingle();
 
-  if (error) throw new Error(`Falha ao obter regra: ${error.message}`);
+  if (error) {
+    throw new Error(`Falha ao obter regra: ${error.message}`);
+  }
   return data;
 }
 
@@ -89,18 +97,18 @@ export async function createAgendaRule(serviceId, clinicId, data) {
 
   // Verificar se já existe
   const existing = await supabase
-    .from("agenda_rules")
-    .select("id")
-    .eq("service_id", serviceId)
-    .eq("clinic_id", clinicId)
+    .from('agenda_rules')
+    .select('id')
+    .eq('service_id', serviceId)
+    .eq('clinic_id', clinicId)
     .maybeSingle();
 
   if (existing.data) {
-    throw new Error("Regra de agenda para este serviço já existe");
+    throw new Error('Regra de agenda para este serviço já existe');
   }
 
   const { data: rule, error } = await supabase
-    .from("agenda_rules")
+    .from('agenda_rules')
     .insert([
       {
         service_id: serviceId,
@@ -120,7 +128,9 @@ export async function createAgendaRule(serviceId, clinicId, data) {
     .select()
     .maybeSingle();
 
-  if (error) throw new Error(`Falha ao criar regra: ${error.message}`);
+  if (error) {
+    throw new Error(`Falha ao criar regra: ${error.message}`);
+  }
   return rule;
 }
 
@@ -133,19 +143,21 @@ export async function createAgendaRule(serviceId, clinicId, data) {
  */
 export async function updateAgendaRule(serviceId, clinicId, updates) {
   const { data, error } = await supabase
-    .from("agenda_rules")
+    .from('agenda_rules')
     .update(updates)
-    .eq("service_id", serviceId)
-    .eq("clinic_id", clinicId)
+    .eq('service_id', serviceId)
+    .eq('clinic_id', clinicId)
     .select();
 
-  if (error) throw new Error(`Falha ao atualizar regra: ${error.message}`);
-  
+  if (error) {
+    throw new Error(`Falha ao atualizar regra: ${error.message}`);
+  }
+
   // Handle array response (query may return 0+ rows, not 1)
   if (!data || data.length === 0) {
     throw new Error('Regra não encontrada');
   }
-  
+
   return data[0]; // Return first match (or consider filtering by id if exists)
 }
 
@@ -157,19 +169,21 @@ export async function updateAgendaRule(serviceId, clinicId, updates) {
  */
 export async function deactivateAgendaRule(serviceId, clinicId) {
   const { data, error } = await supabase
-    .from("agenda_rules")
+    .from('agenda_rules')
     .update({ active: false })
-    .eq("service_id", serviceId)
-    .eq("clinic_id", clinicId)
+    .eq('service_id', serviceId)
+    .eq('clinic_id', clinicId)
     .select();
 
-  if (error) throw new Error(`Falha ao desativar regra: ${error.message}`);
-  
+  if (error) {
+    throw new Error(`Falha ao desativar regra: ${error.message}`);
+  }
+
   // Handle array response
   if (!data || data.length === 0) {
     throw new Error('Regra não encontrada');
   }
-  
+
   return data[0];
 }
 
@@ -187,7 +201,7 @@ export async function validateSchedulingByRules(serviceId, clinicId, scheduledDa
   if (!rule) {
     return {
       valid: false,
-      errors: ["Nenhuma regra de agendamento definida para este serviço"],
+      errors: ['Nenhuma regra de agendamento definida para este serviço'],
     };
   }
 
@@ -196,19 +210,19 @@ export async function validateSchedulingByRules(serviceId, clinicId, scheduledDa
 
   // Validar min_days_in_advance
   if (daysFromNow < rule.min_days_in_advance) {
-    errors.push(
-      `Deve agendar com pelo menos ${rule.min_days_in_advance} dia(s) de antecedência`
-    );
+    errors.push(`Deve agendar com pelo menos ${rule.min_days_in_advance} dia(s) de antecedência`);
   }
 
   // Validar max_days_in_future
   if (rule.max_days_in_future && daysFromNow > rule.max_days_in_future) {
-    errors.push(`Não é possível agendar com mais de ${rule.max_days_in_future} dias de antecedência`);
+    errors.push(
+      `Não é possível agendar com mais de ${rule.max_days_in_future} dias de antecedência`,
+    );
   }
 
   // Validar same_day_booking
   if (daysFromNow === 0 && !rule.allow_same_day_booking) {
-    errors.push("Não é permitido agendar para o mesmo dia");
+    errors.push('Não é permitido agendar para o mesmo dia');
   }
 
   return {
@@ -238,7 +252,7 @@ export async function getDefaultDuration(serviceId, clinicId) {
  */
 export async function calculateEndTime(startTime, serviceId, clinicId) {
   const durationMinutes = await getDefaultDuration(serviceId, clinicId);
-  
+
   // Handle string time format (HH:MM) or Date object
   let startDate;
   if (typeof startTime === 'string') {
@@ -249,7 +263,7 @@ export async function calculateEndTime(startTime, serviceId, clinicId) {
   } else {
     startDate = startTime;
   }
-  
+
   return new Date(startDate.getTime() + durationMinutes * 60000);
 }
 
@@ -269,14 +283,16 @@ export async function getRemainingSlots(serviceId, clinicId, date) {
 
   // Contar agendamentos confirmados para este dia
   const { count, error } = await supabase
-    .from("appointments")
-    .select("id", { count: "exact" })
-    .eq("service_id", serviceId)
-    .eq("clinic_id", clinicId)
-    .eq("scheduled_date", date)
-    .in("status", ["scheduled", "confirmed", "in_progress"]);
+    .from('appointments')
+    .select('id', { count: 'exact' })
+    .eq('service_id', serviceId)
+    .eq('clinic_id', clinicId)
+    .eq('scheduled_date', date)
+    .in('status', ['scheduled', 'confirmed', 'in_progress']);
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
   return Math.max(0, rule.max_per_day - (count || 0));
 }
@@ -288,12 +304,14 @@ export async function getRemainingSlots(serviceId, clinicId, date) {
  */
 export async function countAgendaRules(clinicId) {
   const { count, error } = await supabase
-    .from("agenda_rules")
-    .select("id", { count: "exact" })
-    .eq("clinic_id", clinicId)
-    .eq("active", true);
+    .from('agenda_rules')
+    .select('id', { count: 'exact' })
+    .eq('clinic_id', clinicId)
+    .eq('active', true);
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
   return count || 0;
 }
 
@@ -304,17 +322,19 @@ export async function countAgendaRules(clinicId) {
  */
 export async function listServicesWithoutRules(clinicId) {
   const { data, error } = await supabase
-    .from("services")
-    .select("id, code, name")
-    .eq("clinic_id", clinicId)
-    .eq("active", true)
+    .from('services')
+    .select('id, code, name')
+    .eq('clinic_id', clinicId)
+    .eq('active', true)
     .not(
-      "id",
-      "in",
-      `(SELECT service_id FROM agenda_rules WHERE clinic_id = '${clinicId}' AND active = true)`
+      'id',
+      'in',
+      `(SELECT service_id FROM agenda_rules WHERE clinic_id = '${clinicId}' AND active = true)`,
     );
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
   return data ?? [];
 }
 

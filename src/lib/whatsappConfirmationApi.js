@@ -10,7 +10,8 @@ function generateToken() {
 }
 
 // Configuração da Evolution API
-const EVOLUTION_API_URL = process.env.VITE_EVOLUTION_API_URL || 'http://localhost:8080/message/sendText';
+const EVOLUTION_API_URL =
+  process.env.VITE_EVOLUTION_API_URL || 'http://localhost:8080/message/sendText';
 const EVOLUTION_API_KEY = process.env.VITE_EVOLUTION_API_KEY || '';
 const EVOLUTION_INSTANCE = process.env.VITE_EVOLUTION_INSTANCE || '';
 const APP_URL = process.env.VITE_APP_URL || 'http://localhost:3000';
@@ -33,7 +34,7 @@ export async function sendAppointmentConfirmation(
   patientName,
   appointmentDate,
   appointmentTime,
-  professionalName
+  professionalName,
 ) {
   try {
     // Validar dados
@@ -43,7 +44,7 @@ export async function sendAppointmentConfirmation(
 
     // Gerar token único para confirmação
     const confirmationToken = generateToken();
-    
+
     // Criar registro de confirmação no banco
     const { data: confirmation, error: insertError } = await supabase
       .from('appointment_confirmations')
@@ -63,7 +64,7 @@ export async function sendAppointmentConfirmation(
 
     // Formatar telefone para WhatsApp (remover caracteres especiais)
     const normalizedPhone = patientPhone.replace(/\D/g, '');
-    
+
     // Criar links de confirmação
     const confirmLink = `${APP_URL}/clinica/agendamento/confirmar/${confirmationToken}?status=confirmed`;
     const rejectLink = `${APP_URL}/clinica/agendamento/confirmar/${confirmationToken}?status=rejected`;
@@ -84,7 +85,7 @@ export async function sendAppointmentConfirmation(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${EVOLUTION_API_KEY}`,
+        Authorization: `Bearer ${EVOLUTION_API_KEY}`,
       },
       body: JSON.stringify({
         number: normalizedPhone,
@@ -100,11 +101,12 @@ export async function sendAppointmentConfirmation(
     }
 
     const result = await response.json();
-    
+
     // Atualizar registro com success
     await supabase
       .from('appointment_confirmations')
-      .update({ message_sent_at: new Date().toISOString() }).eq('id', confirmation.id);
+      .update({ message_sent_at: new Date().toISOString() })
+      .eq('id', confirmation.id);
 
     console.log('✅ Confirmação enviada com sucesso:', result);
     return {
@@ -133,11 +135,14 @@ export async function confirmAppointmentByToken(token, status) {
 
     // Buscar confirmação no banco
     const { data: confirmation, error: selectError } = await supabase
-      .from('appointment_confirmations').select('*')
+      .from('appointment_confirmations')
+      .select('*')
       .eq('confirmation_token', token);
 
-if (!data || data.length === 0) { throw new Error('Record not found'); }
-return data[0];
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
 
     if (selectError) {
       console.error('❌ Confirmação não encontrada:', selectError);
@@ -203,7 +208,8 @@ export async function getAppointmentsNeedingConfirmation(clinicId) {
     // Buscar agendamentos sem confirmação
     const { data: appointments, error } = await supabase
       .from('appointments')
-      .select(`
+      .select(
+        `
         id,
         clinic_id,
         patient_id,
@@ -213,7 +219,8 @@ export async function getAppointmentsNeedingConfirmation(clinicId) {
         patient:patients(name, phone),
         professional:professionals(name),
         appointment_confirmations(confirmed)
-      `)
+      `,
+      )
       .eq('clinic_id', clinicId)
       .eq('scheduled_date', tomorrowStr)
       .eq('status', 'scheduled');
@@ -223,8 +230,9 @@ export async function getAppointmentsNeedingConfirmation(clinicId) {
     }
 
     // Filtrar apenas os sem confirmação
-    const needsConfirmation = appointments.filter(apt => {
-      const hasConfirmation = apt.appointment_confirmations && apt.appointment_confirmations.length > 0;
+    const needsConfirmation = appointments.filter((apt) => {
+      const hasConfirmation =
+        apt.appointment_confirmations && apt.appointment_confirmations.length > 0;
       return !hasConfirmation;
     });
 
@@ -262,7 +270,7 @@ export async function sendBatchConfirmations(clinicId) {
           apt.patient.name,
           apt.scheduled_date,
           apt.scheduled_time,
-          apt.professional?.name || 'Profissional'
+          apt.professional?.name || 'Profissional',
         );
         results.sent++;
       } catch (error) {
@@ -274,7 +282,7 @@ export async function sendBatchConfirmations(clinicId) {
       }
 
       // Aguardar 1 segundo entre envios para não sobrecarregar a API
-      await new Promise(r => setTimeout(r, 1000));
+      await new Promise((r) => setTimeout(r, 1000));
     }
 
     console.log('✅ Batch concluído:', results);

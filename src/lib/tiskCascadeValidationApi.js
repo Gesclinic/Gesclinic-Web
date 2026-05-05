@@ -4,7 +4,7 @@
 // Valida o fluxo completo: Agenda → Faturamento → XML
 // ============================================================
 
-import { customSupabaseClient as supabase } from "@/lib/customSupabaseClient";
+import { customSupabaseClient as supabase } from '@/lib/customSupabaseClient';
 
 /**
  * Valida se um profissional está vinculado a um serviço
@@ -17,14 +17,14 @@ import { customSupabaseClient as supabase } from "@/lib/customSupabaseClient";
 export async function validateProfessionalServiceLinkage(professionalId, serviceId, clinicId) {
   try {
     const { data, error } = await supabase
-      .from("professional_services")
-      .select("id, active")
-      .eq("professional_id", professionalId)
-      .eq("service_id", serviceId)
-      .eq("clinic_id", clinicId)
+      .from('professional_services')
+      .select('id, active')
+      .eq('professional_id', professionalId)
+      .eq('service_id', serviceId)
+      .eq('clinic_id', clinicId)
       .maybeSingle();
 
-    if (error && error.code !== "PGRST116") {
+    if (error && error.code !== 'PGRST116') {
       throw new Error(`Erro ao validar vínculo: ${error.message}`);
     }
 
@@ -38,13 +38,14 @@ export async function validateProfessionalServiceLinkage(professionalId, service
     if (!data.active) {
       return {
         valid: false,
-        error: `Vínculo entre profissional e serviço está inativo. Ative em Profissionais > Serviços.`,
+        error:
+          'Vínculo entre profissional e serviço está inativo. Ative em Profissionais > Serviços.',
       };
     }
 
     return { valid: true, error: null };
   } catch (err) {
-    console.error("[validateProfessionalServiceLinkage]", err);
+    console.error('[validateProfessionalServiceLinkage]', err);
     return { valid: false, error: `Erro ao validar vínculo: ${err.message}` };
   }
 }
@@ -61,21 +62,22 @@ export async function validateProfessionalServiceLinkage(professionalId, service
 export async function validateProfessionalCredentialAtPayer(professionalId, payerId, clinicId) {
   try {
     const { data, error } = await supabase
-      .from("professional_payers")
-      .select("id, credential_number, active")
-      .eq("professional_id", professionalId)
-      .eq("payer_id", payerId)
-      .eq("clinic_id", clinicId)
+      .from('professional_payers')
+      .select('id, credential_number, active')
+      .eq('professional_id', professionalId)
+      .eq('payer_id', payerId)
+      .eq('clinic_id', clinicId)
       .maybeSingle();
 
-    if (error && error.code !== "PGRST116") {
+    if (error && error.code !== 'PGRST116') {
       throw new Error(`Erro ao validar credencial: ${error.message}`);
     }
 
     if (!data) {
       return {
         valid: false,
-        error: `⚠️ CRÍTICO: Profissional não credenciado nesta operadora. Cadastre a credencial em Convênios > Profissionais. SEM ISTO, O PAGAMENTO SERÁ 100% REJEITADO.`,
+        error:
+          '⚠️ CRÍTICO: Profissional não credenciado nesta operadora. Cadastre a credencial em Convênios > Profissionais. SEM ISTO, O PAGAMENTO SERÁ 100% REJEITADO.',
         credentialNumber: null,
       };
     }
@@ -83,15 +85,17 @@ export async function validateProfessionalCredentialAtPayer(professionalId, paye
     if (!data.active) {
       return {
         valid: false,
-        error: `Credencial do profissional nesta operadora está inativa. Ative em Convênios > Profissionais.`,
+        error:
+          'Credencial do profissional nesta operadora está inativa. Ative em Convênios > Profissionais.',
         credentialNumber: null,
       };
     }
 
-    if (!data.credential_number || data.credential_number.trim() === "") {
+    if (!data.credential_number || data.credential_number.trim() === '') {
       return {
         valid: false,
-        error: `⚠️ CRÍTICO: Número de credencial vazio. Preencha em Convênios > Profissionais. OBRIGATÓRIO para faturamento.`,
+        error:
+          '⚠️ CRÍTICO: Número de credencial vazio. Preencha em Convênios > Profissionais. OBRIGATÓRIO para faturamento.',
         credentialNumber: null,
       };
     }
@@ -102,7 +106,7 @@ export async function validateProfessionalCredentialAtPayer(professionalId, paye
       credentialNumber: data.credential_number,
     };
   } catch (err) {
-    console.error("[validateProfessionalCredentialAtPayer]", err);
+    console.error('[validateProfessionalCredentialAtPayer]', err);
     return {
       valid: false,
       error: `Erro ao validar credencial: ${err.message}`,
@@ -120,22 +124,22 @@ export async function validateProfessionalCredentialAtPayer(professionalId, paye
 export function validateServiceTISSCompleteness(service) {
   const errors = [];
 
-  if (!service.tuss_code || service.tuss_code.trim() === "") {
-    errors.push("TUSS Code (10 dígitos) é obrigatório para faturamento");
+  if (!service.tuss_code || service.tuss_code.trim() === '') {
+    errors.push('TUSS Code (10 dígitos) é obrigatório para faturamento');
   } else if (!/^\d{10}$/.test(service.tuss_code.trim())) {
     errors.push(`TUSS Code inválido: "${service.tuss_code}" (deve ter exatamente 10 dígitos)`);
   }
 
-  if (!service.type_service || service.type_service.trim() === "") {
-    errors.push("Tipo de Serviço é obrigatório");
+  if (!service.type_service || service.type_service.trim() === '') {
+    errors.push('Tipo de Serviço é obrigatório');
   }
 
-  if (!service.guide_type || service.guide_type.trim() === "") {
-    errors.push("Tipo de Guia é obrigatório");
+  if (!service.guide_type || service.guide_type.trim() === '') {
+    errors.push('Tipo de Guia é obrigatório');
   }
 
-  if (!service.unit_measure || service.unit_measure.trim() === "") {
-    errors.push("Unidade de Medida é obrigatória");
+  if (!service.unit_measure || service.unit_measure.trim() === '') {
+    errors.push('Unidade de Medida é obrigatória');
   }
 
   return {
@@ -153,24 +157,22 @@ export function validateServiceTISSCompleteness(service) {
 export function validateProfessionalTISSCompleteness(professional) {
   const errors = [];
 
-  if (!professional.cbo_code || professional.cbo_code.trim() === "") {
-    errors.push("CBO Code (6 dígitos) é obrigatório para faturamento");
+  if (!professional.cbo_code || professional.cbo_code.trim() === '') {
+    errors.push('CBO Code (6 dígitos) é obrigatório para faturamento');
   } else if (!/^\d{6}$/.test(professional.cbo_code.trim())) {
-    errors.push(
-      `CBO Code inválido: "${professional.cbo_code}" (deve ter exatamente 6 dígitos)`
-    );
+    errors.push(`CBO Code inválido: "${professional.cbo_code}" (deve ter exatamente 6 dígitos)`);
   }
 
-  if (!professional.council_type || professional.council_type.trim() === "") {
-    errors.push("Órgão Regulador (CBO, CRFA, CRM, etc) é obrigatório");
+  if (!professional.council_type || professional.council_type.trim() === '') {
+    errors.push('Órgão Regulador (CBO, CRFA, CRM, etc) é obrigatório');
   }
 
-  if (!professional.council_number || professional.council_number.trim() === "") {
-    errors.push("Número de Registro é obrigatório");
+  if (!professional.council_number || professional.council_number.trim() === '') {
+    errors.push('Número de Registro é obrigatório');
   }
 
-  if (!professional.council_state || professional.council_state.trim() === "") {
-    errors.push("Estado (UF) de Registro é obrigatório");
+  if (!professional.council_state || professional.council_state.trim() === '') {
+    errors.push('Estado (UF) de Registro é obrigatório');
   } else if (!/^[A-Z]{2}$/.test(professional.council_state.trim())) {
     errors.push(`UF inválido: "${professional.council_state}" (deve ser 2 letras maiúsculas)`);
   }
@@ -191,26 +193,26 @@ export function validatePayerTISSCompleteness(payer) {
   const errors = [];
 
   // Verifica se é operadora privada (não está em lista de governos)
-  const governmentPayers = ["SUS", "INSS", "governo", "saude"];
+  const governmentPayers = ['SUS', 'INSS', 'governo', 'saude'];
   const isPrivate =
     !payer.type || !governmentPayers.some((g) => payer.type.toLowerCase().includes(g));
 
-  if (isPrivate && (!payer.registration_ans || payer.registration_ans.trim() === "")) {
-    errors.push("Código ANS é obrigatório para operadoras privadas");
+  if (isPrivate && (!payer.registration_ans || payer.registration_ans.trim() === '')) {
+    errors.push('Código ANS é obrigatório para operadoras privadas');
   }
 
-  if (payer.registration_ans && payer.registration_ans.trim() !== "") {
+  if (payer.registration_ans && payer.registration_ans.trim() !== '') {
     if (!/^\d{6,9}$/.test(payer.registration_ans.trim())) {
       errors.push(`Código ANS inválido: "${payer.registration_ans}" (deve ser 6-9 dígitos)`);
     }
   }
 
   if (payer.tiss_pattern !== true && payer.tiss_pattern !== false) {
-    errors.push("Padrão TISS deve ser ativado (sim/não)");
+    errors.push('Padrão TISS deve ser ativado (sim/não)');
   }
 
-  if (!payer.guide_format || payer.guide_format.trim() === "") {
-    errors.push("Formato de Guia é obrigatório (Consulta/SADT/Internação)");
+  if (!payer.guide_format || payer.guide_format.trim() === '') {
+    errors.push('Formato de Guia é obrigatório (Consulta/SADT/Internação)');
   }
 
   return {
@@ -230,7 +232,7 @@ export async function validateAppointmentCascade(appointmentData) {
   const errors = [];
 
   if (!professionalId || !serviceId || !clinicId) {
-    errors.push("Profissional, Serviço e Clínica são obrigatórios");
+    errors.push('Profissional, Serviço e Clínica são obrigatórios');
     return { valid: false, errors };
   }
 
@@ -238,7 +240,7 @@ export async function validateAppointmentCascade(appointmentData) {
   const linkageValidation = await validateProfessionalServiceLinkage(
     professionalId,
     serviceId,
-    clinicId
+    clinicId,
   );
   if (!linkageValidation.valid) {
     errors.push(linkageValidation.error);
@@ -249,7 +251,7 @@ export async function validateAppointmentCascade(appointmentData) {
     const credentialValidation = await validateProfessionalCredentialAtPayer(
       professionalId,
       payerId,
-      clinicId
+      clinicId,
     );
     if (!credentialValidation.valid) {
       errors.push(credentialValidation.error);
@@ -274,37 +276,31 @@ export function validateTISSXMLGenerationCascade(guideData) {
 
   // Validação 1: Serviço
   if (!service) {
-    errors.push("Serviço não encontrado");
+    errors.push('Serviço não encontrado');
   } else {
     const serviceValidation = validateServiceTISSCompleteness(service);
     if (!serviceValidation.valid) {
-      errors.push(
-        `Serviço incompleto: ${serviceValidation.errors.join("; ")}`
-      );
+      errors.push(`Serviço incompleto: ${serviceValidation.errors.join('; ')}`);
     }
   }
 
   // Validação 2: Profissional
   if (!professional) {
-    errors.push("Profissional não encontrado");
+    errors.push('Profissional não encontrado');
   } else {
     const profValidation = validateProfessionalTISSCompleteness(professional);
     if (!profValidation.valid) {
-      errors.push(
-        `Profissional incompleto: ${profValidation.errors.join("; ")}`
-      );
+      errors.push(`Profissional incompleto: ${profValidation.errors.join('; ')}`);
     }
   }
 
   // Validação 3: Operadora
   if (!payer) {
-    errors.push("Operadora não encontrada");
+    errors.push('Operadora não encontrada');
   } else {
     const payerValidation = validatePayerTISSCompleteness(payer);
     if (!payerValidation.valid) {
-      errors.push(
-        `Operadora incompleta: ${payerValidation.errors.join("; ")}`
-      );
+      errors.push(`Operadora incompleta: ${payerValidation.errors.join('; ')}`);
     }
   }
 
@@ -321,10 +317,8 @@ export function validateTISSXMLGenerationCascade(guideData) {
  */
 export function formatCascadeErrors(errors) {
   if (!Array.isArray(errors) || errors.length === 0) {
-    return "Erro desconhecido";
+    return 'Erro desconhecido';
   }
 
-  return errors
-    .map((err, i) => `${i + 1}. ${err}`)
-    .join("\n");
+  return errors.map((err, i) => `${i + 1}. ${err}`).join('\n');
 }

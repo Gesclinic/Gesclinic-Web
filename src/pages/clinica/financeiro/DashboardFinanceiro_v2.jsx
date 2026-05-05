@@ -1,7 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { supabase } from '@/lib/customSupabaseClient';
-import { TrendingUp, TrendingDown, DollarSign, Users, Building2, Percent, RefreshCw, Download } from 'lucide-react';
+import {
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  Users,
+  Building2,
+  Percent,
+  RefreshCw,
+  Download,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function CashboardFinanceiro() {
@@ -12,12 +21,14 @@ export default function CashboardFinanceiro() {
     resultado: 0,
     receitaParticular: 0,
     receitaConvenio: 0,
-    repasse: 0
+    repasse: 0,
   });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (clinicId) loadData();
+    if (clinicId) {
+      loadData();
+    }
   }, [clinicId]);
 
   const loadData = async () => {
@@ -31,11 +42,11 @@ export default function CashboardFinanceiro() {
 
       if (!error && data) {
         const receita = data
-          .filter(m => m.type === 'entrada')
+          .filter((m) => m.type === 'entrada')
           .reduce((acc, m) => acc + (m.amount || 0), 0);
-        
+
         const despesas = data
-          .filter(m => m.type === 'saida')
+          .filter((m) => m.type === 'saida')
           .reduce((acc, m) => acc + (m.amount || 0), 0);
 
         setSummary({
@@ -44,7 +55,7 @@ export default function CashboardFinanceiro() {
           resultado: receita - despesas,
           receitaParticular: receita * 0.6,
           receitaConvenio: receita * 0.4,
-          repasse: receita * 0.3
+          repasse: receita * 0.3,
         });
       }
     } catch (err) {
@@ -54,7 +65,7 @@ export default function CashboardFinanceiro() {
     }
   };
 
-  const formatCurrency = (value) => 
+  const formatCurrency = (value) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
   const Card = ({ title, value, icon: Icon, color }) => (
@@ -77,7 +88,9 @@ export default function CashboardFinanceiro() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold text-slate-900">Dashboard Financeiro</h1>
-            <p className="text-slate-600 mt-2">Gestão consolidada de fluxo de caixa (últimos 30 dias)</p>
+            <p className="text-slate-600 mt-2">
+              Gestão consolidada de fluxo de caixa (últimos 30 dias)
+            </p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={loadData} disabled={loading}>
@@ -105,7 +118,9 @@ export default function CashboardFinanceiro() {
             title="Resultado Líquido"
             value={summary.resultado}
             icon={DollarSign}
-            color={summary.resultado >= 0 ? 'from-blue-500 to-indigo-600' : 'from-orange-500 to-red-600'}
+            color={
+              summary.resultado >= 0 ? 'from-blue-500 to-indigo-600' : 'from-orange-500 to-red-600'
+            }
           />
           <Card
             title="Receita Particular"
@@ -134,7 +149,8 @@ export default function CashboardFinanceiro() {
             <div className="p-4 bg-slate-50 rounded-lg">
               <p className="text-sm text-slate-600">Margem de Lucro</p>
               <p className="text-xl font-bold text-slate-900">
-                {summary.receita > 0 ? ((summary.resultado / summary.receita) * 100).toFixed(1) : 0}%
+                {summary.receita > 0 ? ((summary.resultado / summary.receita) * 100).toFixed(1) : 0}
+                %
               </p>
             </div>
             <div className="p-4 bg-slate-50 rounded-lg">

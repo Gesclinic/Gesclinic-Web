@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useClinicContext } from "@/contexts/useClinicContext";
+import { useEffect, useState } from 'react';
+import { useClinicContext } from '@/contexts/useClinicContext';
 
 // Hook para buscar períodos de indisponibilidade da agenda
 export default function useAgendaIndisponibilidade({ professionalId, roomId }) {
@@ -9,7 +9,9 @@ export default function useAgendaIndisponibilidade({ professionalId, roomId }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!clinic?.id) return;
+    if (!clinic?.id) {
+      return;
+    }
     setLoading(true);
     // TODO: Buscar indisponibilidades reais do backend
     setTimeout(() => {

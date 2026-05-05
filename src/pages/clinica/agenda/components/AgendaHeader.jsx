@@ -7,7 +7,7 @@ import { Calendar, ChevronUp, ChevronDown } from 'lucide-react';
 
 /**
  * AgendaHeader - Topo da Agenda com navegação de data e botão de novo agendamento
- * 
+ *
  * Props:
  * - date: string (ISO date)
  * - onDateChange: (date) => void
@@ -34,18 +34,23 @@ export default function AgendaHeader({
   onSendWhatsApp,
   whatsappLoading = false,
 }) {
-  console.log('🔍 [AgendaHeader] onSendWhatsApp recebido:', onSendWhatsApp, 'whatsappLoading:', whatsappLoading);
-  
+  console.log(
+    '🔍 [AgendaHeader] onSendWhatsApp recebido:',
+    onSendWhatsApp,
+    'whatsappLoading:',
+    whatsappLoading,
+  );
+
   // ⚠️ IMPORTANTE: new Date("2026-01-14") trata como UTC! Precisa parsear como data LOCAL
   const [year, month, day] = date.split('-').map(Number);
   const dateObj = new Date(year, month - 1, day);
-  
+
   // Formata corretamente usando toLocaleDateString
   const weekday = dateObj.toLocaleDateString('pt-BR', { weekday: 'long' });
   const dayNum = dateObj.getDate();
   const monthName = dateObj.toLocaleDateString('pt-BR', { month: 'long' });
   const yearNum = dateObj.getFullYear();
-  
+
   const formattedDate = `${weekday}, ${dayNum} de ${monthName} de ${yearNum}`;
   const titleDate = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
 
@@ -105,13 +110,13 @@ export default function AgendaHeader({
             >
               <ChevronUp className="w-5 h-5" />
             </button>
-            
+
             {/* Display de data CUSTOMIZADO - SEM INPUT NATIVO */}
             <div className="flex items-center gap-2 px-4 py-2 border-l border-r border-gray-300 min-w-[140px] justify-center">
               <Calendar className="w-5 h-5 text-gray-400" />
               <span className="text-sm font-medium text-gray-900">{date}</span>
             </div>
-            
+
             {/* Botão próximo (próximo dia) */}
             <button
               onClick={onNextDay}
@@ -152,4 +157,3 @@ export default function AgendaHeader({
     </div>
   );
 }
-

@@ -1,6 +1,6 @@
 // src/pages/clinica/agenda/layout/AgendaLayout.jsx
-import React from "react";
-import { Outlet } from "react-router-dom";
+import React from 'react';
+import { Outlet } from 'react-router-dom';
 
 export default function AgendaLayout() {
   return (
@@ -11,4 +11,3 @@ export default function AgendaLayout() {
     </div>
   );
 }
-

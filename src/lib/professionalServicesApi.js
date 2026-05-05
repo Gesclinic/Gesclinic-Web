@@ -3,7 +3,7 @@
 // API - Vínculo Profissional x Serviço
 // ============================================================
 
-import { customSupabaseClient as supabase } from "@/lib/customSupabaseClient";
+import { customSupabaseClient as supabase } from '@/lib/customSupabaseClient';
 
 /**
  * Lista todos os profissionais vinculados a um serviço
@@ -13,8 +13,9 @@ import { customSupabaseClient as supabase } from "@/lib/customSupabaseClient";
  */
 export async function listProfessionalsByService(serviceId, clinicId) {
   const { data, error } = await supabase
-    .from("professional_services")
-    .select(`
+    .from('professional_services')
+    .select(
+      `
       id,
       professional_id,
       service_id,
@@ -22,13 +23,16 @@ export async function listProfessionalsByService(serviceId, clinicId) {
       duration_minutes_override,
       active,
       professionals(id, name, email, specialization)
-    `)
-    .eq("service_id", serviceId)
-    .eq("clinic_id", clinicId)
-    .eq("active", true)
-    .order("professionals(name)", { ascending: true });
+    `,
+    )
+    .eq('service_id', serviceId)
+    .eq('clinic_id', clinicId)
+    .eq('active', true)
+    .order('professionals(name)', { ascending: true });
 
-  if (error) throw new Error(`Falha ao listar profissionais: ${error.message}`);
+  if (error) {
+    throw new Error(`Falha ao listar profissionais: ${error.message}`);
+  }
   return data ?? [];
 }
 
@@ -40,8 +44,9 @@ export async function listProfessionalsByService(serviceId, clinicId) {
  */
 export async function listServicesByProfessional(professionalId, clinicId) {
   const { data, error } = await supabase
-    .from("professional_services")
-    .select(`
+    .from('professional_services')
+    .select(
+      `
       id,
       professional_id,
       service_id,
@@ -49,13 +54,16 @@ export async function listServicesByProfessional(professionalId, clinicId) {
       duration_minutes_override,
       active,
       services(id, code, name, duration_minutes, active)
-    `)
-    .eq("professional_id", professionalId)
-    .eq("clinic_id", clinicId)
-    .eq("active", true)
-    .order("services(name)", { ascending: true });
+    `,
+    )
+    .eq('professional_id', professionalId)
+    .eq('clinic_id', clinicId)
+    .eq('active', true)
+    .order('services(name)', { ascending: true });
 
-  if (error) throw new Error(`Falha ao listar serviços: ${error.message}`);
+  if (error) {
+    throw new Error(`Falha ao listar serviços: ${error.message}`);
+  }
   return data ?? [];
 }
 
@@ -67,16 +75,11 @@ export async function listServicesByProfessional(professionalId, clinicId) {
  * @param {Object} options - { competenceLevel, durationMinutesOverride }
  * @returns {Promise<Object>}
  */
-export async function linkProfessionalService(
-  professionalId,
-  serviceId,
-  clinicId,
-  options = {}
-) {
-  const { competence_level = "standard", duration_minutes_override = null } = options;
+export async function linkProfessionalService(professionalId, serviceId, clinicId, options = {}) {
+  const { competence_level = 'standard', duration_minutes_override = null } = options;
 
   const { data, error } = await supabase
-    .from("professional_services")
+    .from('professional_services')
     .insert([
       {
         professional_id: professionalId,
@@ -91,8 +94,8 @@ export async function linkProfessionalService(
     .maybeSingle();
 
   if (error) {
-    if (error.code === "23505") {
-      throw new Error("Este profissional já está vinculado a este serviço");
+    if (error.code === '23505') {
+      throw new Error('Este profissional já está vinculado a este serviço');
     }
     throw new Error(`Falha ao vincular profissional: ${error.message}`);
   }
@@ -107,21 +110,19 @@ export async function linkProfessionalService(
  * @param {string} clinicId
  * @returns {Promise<Object>}
  */
-export async function unlinkProfessionalService(
-  professionalId,
-  serviceId,
-  clinicId
-) {
+export async function unlinkProfessionalService(professionalId, serviceId, clinicId) {
   const { data, error } = await supabase
-    .from("professional_services")
+    .from('professional_services')
     .update({ active: false, updated_at: new Date() })
-    .eq("professional_id", professionalId)
-    .eq("service_id", serviceId)
-    .eq("clinic_id", clinicId)
+    .eq('professional_id', professionalId)
+    .eq('service_id', serviceId)
+    .eq('clinic_id', clinicId)
     .select()
     .maybeSingle();
 
-  if (error) throw new Error(`Falha ao desvincar: ${error.message}`);
+  if (error) {
+    throw new Error(`Falha ao desvincar: ${error.message}`);
+  }
   return data;
 }
 
@@ -133,25 +134,22 @@ export async function unlinkProfessionalService(
  * @param {Object} updates
  * @returns {Promise<Object>}
  */
-export async function updateProfessionalService(
-  professionalId,
-  serviceId,
-  clinicId,
-  updates = {}
-) {
+export async function updateProfessionalService(professionalId, serviceId, clinicId, updates = {}) {
   const { data, error } = await supabase
-    .from("professional_services")
+    .from('professional_services')
     .update({
       ...updates,
       updated_at: new Date(),
     })
-    .eq("professional_id", professionalId)
-    .eq("service_id", serviceId)
-    .eq("clinic_id", clinicId)
+    .eq('professional_id', professionalId)
+    .eq('service_id', serviceId)
+    .eq('clinic_id', clinicId)
     .select()
     .maybeSingle();
 
-  if (error) throw new Error(`Falha ao atualizar vínculo: ${error.message}`);
+  if (error) {
+    throw new Error(`Falha ao atualizar vínculo: ${error.message}`);
+  }
   return data;
 }
 
@@ -164,15 +162,17 @@ export async function updateProfessionalService(
  */
 export async function canProfessionalServe(professionalId, serviceId, clinicId) {
   const { data, error } = await supabase
-    .from("professional_services")
-    .select("id")
-    .eq("professional_id", professionalId)
-    .eq("service_id", serviceId)
-    .eq("clinic_id", clinicId)
-    .eq("active", true)
+    .from('professional_services')
+    .select('id')
+    .eq('professional_id', professionalId)
+    .eq('service_id', serviceId)
+    .eq('clinic_id', clinicId)
+    .eq('active', true)
     .maybeSingle();
 
-  if (error) throw new Error(`Erro ao validar vínculo: ${error.message}`);
+  if (error) {
+    throw new Error(`Erro ao validar vínculo: ${error.message}`);
+  }
   return !!data;
 }
 
@@ -185,11 +185,11 @@ export async function canProfessionalServe(professionalId, serviceId, clinicId) 
  */
 export async function getServiceDuration(professionalId, serviceId, clinicId) {
   const { data: psData } = await supabase
-    .from("professional_services")
-    .select("duration_minutes_override")
-    .eq("professional_id", professionalId)
-    .eq("service_id", serviceId)
-    .eq("clinic_id", clinicId)
+    .from('professional_services')
+    .select('duration_minutes_override')
+    .eq('professional_id', professionalId)
+    .eq('service_id', serviceId)
+    .eq('clinic_id', clinicId)
     .maybeSingle();
 
   if (psData?.duration_minutes_override) {
@@ -198,10 +198,10 @@ export async function getServiceDuration(professionalId, serviceId, clinicId) {
 
   // Fallback para duração padrão do serviço
   const { data: serviceData } = await supabase
-    .from("services")
-    .select("duration_minutes")
-    .eq("id", serviceId)
-    .eq("clinic_id", clinicId)
+    .from('services')
+    .select('duration_minutes')
+    .eq('id', serviceId)
+    .eq('clinic_id', clinicId)
     .maybeSingle();
 
   return serviceData?.duration_minutes || 30;
@@ -215,13 +215,15 @@ export async function getServiceDuration(professionalId, serviceId, clinicId) {
  */
 export async function validateServiceHasProfessionals(serviceId, clinicId) {
   const { count, error } = await supabase
-    .from("professional_services")
-    .select("id", { count: "exact" })
-    .eq("service_id", serviceId)
-    .eq("clinic_id", clinicId)
-    .eq("active", true);
+    .from('professional_services')
+    .select('id', { count: 'exact' })
+    .eq('service_id', serviceId)
+    .eq('clinic_id', clinicId)
+    .eq('active', true);
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
   return {
     valid: (count || 0) > 0,
@@ -236,8 +238,9 @@ export async function validateServiceHasProfessionals(serviceId, clinicId) {
  */
 export async function getAllProfessionalServices(clinicId) {
   const { data, error } = await supabase
-    .from("professional_services")
-    .select(`
+    .from('professional_services')
+    .select(
+      `
       id,
       professional_id,
       service_id,
@@ -246,11 +249,14 @@ export async function getAllProfessionalServices(clinicId) {
       active,
       professionals(name, specialization),
       services(code, name)
-    `)
-    .eq("clinic_id", clinicId)
-    .eq("active", true);
+    `,
+    )
+    .eq('clinic_id', clinicId)
+    .eq('active', true);
 
-  if (error) throw new Error(`Falha ao listar vínculos: ${error.message}`);
+  if (error) {
+    throw new Error(`Falha ao listar vínculos: ${error.message}`);
+  }
   return data ?? [];
 }
 
@@ -259,8 +265,9 @@ export async function getAllProfessionalServices(clinicId) {
  */
 export async function getProfessionalServicesByProfessional(professionalId) {
   const { data, error } = await supabase
-    .from("professional_services")
-    .select(`
+    .from('professional_services')
+    .select(
+      `
       id,
       professional_id,
       service_id,
@@ -268,11 +275,14 @@ export async function getProfessionalServicesByProfessional(professionalId) {
       duration_minutes_override,
       active,
       services(id, name, code)
-    `)
-    .eq("professional_id", professionalId)
-    .eq("active", true);
+    `,
+    )
+    .eq('professional_id', professionalId)
+    .eq('active', true);
 
-  if (error) throw new Error(`Falha ao listar serviços do profissional: ${error.message}`);
+  if (error) {
+    throw new Error(`Falha ao listar serviços do profissional: ${error.message}`);
+  }
   return data ?? [];
 }
 
@@ -284,26 +294,26 @@ export async function getProfessionalServicesByProfessional(professionalId) {
  */
 export async function createProfessionalService(clinicId, data) {
   const { data: result, error } = await supabase
-    .from("professional_services")
+    .from('professional_services')
     .insert([
       {
         clinic_id: clinicId,
         professional_id: data.professional_id,
         service_id: data.service_id,
         active: data.active ?? true,
-        competence_level: "standard",
+        competence_level: 'standard',
       },
     ])
     .select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
+  if (!data || data.length === 0) {
+    throw new Error('Record not found');
+  }
+  return data[0];
 
   if (error) {
-    if (error.code === "23505") {
-      throw new Error("Este profissional já possui este serviço registrado");
+    if (error.code === '23505') {
+      throw new Error('Este profissional já possui este serviço registrado');
     }
     throw new Error(`Falha ao criar vínculo: ${error.message}`);
   }
@@ -319,22 +329,26 @@ export async function createProfessionalService(clinicId, data) {
  */
 export async function updateProfessionalServiceById(id, data) {
   const { data: result, error } = await supabase
-    .from("professional_services")
+    .from('professional_services')
     .update({
       professional_id: data.professional_id,
       service_id: data.service_id,
       active: data.active ?? true,
       duration_minutes_override: data.duration_minutes_override ?? null,
-      competence_level: data.competence_level ?? "standard",
+      competence_level: data.competence_level ?? 'standard',
       // NOTE: updated_at is automatically handled by the database trigger
-    }).eq("id", id).select();
+    })
+    .eq('id', id)
+    .select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found'); 
-    }
-    return data[0];
+  if (!data || data.length === 0) {
+    throw new Error('Record not found');
+  }
+  return data[0];
 
-  if (error) throw new Error(`Falha ao atualizar vínculo: ${error.message}`);
+  if (error) {
+    throw new Error(`Falha ao atualizar vínculo: ${error.message}`);
+  }
   return result;
 }
 
@@ -344,12 +358,11 @@ export async function updateProfessionalServiceById(id, data) {
  * @returns {Promise<boolean>}
  */
 export async function deleteProfessionalService(id) {
-  const { error } = await supabase
-    .from("professional_services")
-    .delete()
-    .eq("id", id);
+  const { error } = await supabase.from('professional_services').delete().eq('id', id);
 
-  if (error) throw new Error(`Falha ao deletar vínculo: ${error.message}`);
+  if (error) {
+    throw new Error(`Falha ao deletar vínculo: ${error.message}`);
+  }
   return true;
 }
 

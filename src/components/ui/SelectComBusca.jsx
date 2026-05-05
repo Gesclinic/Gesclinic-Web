@@ -4,12 +4,12 @@
 // Uso: Quando há 50+ itens para selecionar
 // ============================================================
 
-import React, { useState, useRef, useEffect } from "react";
-import { ChevronDown, Search, X } from "lucide-react";
+import React, { useState, useRef, useEffect } from 'react';
+import { ChevronDown, Search, X } from 'lucide-react';
 
 /**
  * SelectComBusca - Select dropdown com funcionalidade de busca
- * 
+ *
  * Props:
  * - label (string): Texto da label
  * - placeholder (string): Placeholder do input
@@ -21,7 +21,7 @@ import { ChevronDown, Search, X } from "lucide-react";
  * - searchThreshold (number): Número de itens para mostrar busca (default: 20)
  * - showEmpty (bool): Mostrar opção vazia (default: true)
  * - emptyLabel (string): Texto da opção vazia (default: "Selecione...")
- * 
+ *
  * Exemplo:
  * <SelectComBusca
  *   label="Serviço"
@@ -34,7 +34,7 @@ import { ChevronDown, Search, X } from "lucide-react";
  */
 export function SelectComBusca({
   label,
-  placeholder = "Buscar...",
+  placeholder = 'Buscar...',
   options = [],
   value,
   onChange,
@@ -42,11 +42,11 @@ export function SelectComBusca({
   required = false,
   searchThreshold = 20,
   showEmpty = true,
-  emptyLabel = "Selecione...",
+  emptyLabel = 'Selecione...',
   description = null,
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
   const containerRef = useRef(null);
   const searchInputRef = useRef(null);
 
@@ -56,10 +56,10 @@ export function SelectComBusca({
   // Filtrar opções por busca
   const filtered = showSearch
     ? options.filter(
-        (opt) =>
-          opt.name.toLowerCase().includes(search.toLowerCase()) ||
-          (opt.description && opt.description.toLowerCase().includes(search.toLowerCase()))
-      )
+      (opt) =>
+        opt.name.toLowerCase().includes(search.toLowerCase()) ||
+          (opt.description && opt.description.toLowerCase().includes(search.toLowerCase())),
+    )
     : options;
 
   // Fechar dropdown ao clicar fora
@@ -70,8 +70,8 @@ export function SelectComBusca({
       }
     }
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   // Focar input de busca quando abre
@@ -88,13 +88,13 @@ export function SelectComBusca({
   const handleSelect = (optionId) => {
     onChange(optionId);
     setIsOpen(false);
-    setSearch("");
+    setSearch('');
   };
 
   const handleClear = (e) => {
     e.stopPropagation();
     onChange(null);
-    setSearch("");
+    setSearch('');
   };
 
   return (
@@ -115,22 +115,17 @@ export function SelectComBusca({
           flex items-center justify-between
           text-left transition
           focus:outline-none focus:ring-2 focus:ring-blue-500
-          ${disabled ? "bg-gray-100 cursor-not-allowed opacity-50" : "bg-white hover:bg-gray-50"}
-          ${isOpen ? "ring-2 ring-blue-500 border-blue-500" : "border-gray-300"}
+          ${disabled ? 'bg-gray-100 cursor-not-allowed opacity-50' : 'bg-white hover:bg-gray-50'}
+          ${isOpen ? 'ring-2 ring-blue-500 border-blue-500' : 'border-gray-300'}
         `}
       >
-        <span className={selectedOption ? "text-gray-900" : "text-gray-500"}>
-          {selectedLabel}
-        </span>
+        <span className={selectedOption ? 'text-gray-900' : 'text-gray-500'}>{selectedLabel}</span>
         <div className="flex items-center gap-1">
           {value && !disabled && (
-            <X
-              className="w-4 h-4 text-gray-400 hover:text-gray-600"
-              onClick={handleClear}
-            />
+            <X className="w-4 h-4 text-gray-400 hover:text-gray-600" onClick={handleClear} />
           )}
           <ChevronDown
-            className={`w-4 h-4 text-gray-400 transition ${isOpen ? "rotate-180" : ""}`}
+            className={`w-4 h-4 text-gray-400 transition ${isOpen ? 'rotate-180' : ''}`}
           />
         </div>
       </button>
@@ -170,7 +165,7 @@ export function SelectComBusca({
                   className={`
                     w-full px-3 py-2 text-left text-sm hover:bg-blue-50
                     transition
-                    ${!value ? "bg-blue-50 text-blue-600 font-medium" : "text-gray-700"}
+                    ${!value ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-700'}
                   `}
                 >
                   {emptyLabel}
@@ -186,7 +181,7 @@ export function SelectComBusca({
                     className={`
                       w-full px-3 py-2 text-left text-sm hover:bg-blue-50
                       transition
-                      ${value === option.id ? "bg-blue-50 text-blue-600 font-medium" : "text-gray-700"}
+                      ${value === option.id ? 'bg-blue-50 text-blue-600 font-medium' : 'text-gray-700'}
                     `}
                   >
                     <div>{option.name}</div>
@@ -207,8 +202,8 @@ export function SelectComBusca({
           <div className="px-3 py-2 border-t text-xs text-gray-500 bg-gray-50">
             {showSearch && filtered.length > 0 && (
               <>
-                Mostrando <strong>{filtered.length}</strong> de{" "}
-                <strong>{options.length}</strong> itens
+                Mostrando <strong>{filtered.length}</strong> de <strong>{options.length}</strong>{' '}
+                itens
               </>
             )}
             {!showSearch && (

@@ -1,7 +1,7 @@
 // src/lib/repasseEmailApi.js
 /**
  * Notificações por Email para Repasse de Médicos
- * 
+ *
  * Suportado:
  * - SendGrid
  * - AWS SES
@@ -16,9 +16,8 @@ import { supabase } from './customSupabaseClient';
  */
 export async function salvarConfiguracaoEmail(clinicId, config) {
   try {
-    const { data, error } = await supabase
-      .from('clinic_email_settings')
-      .upsert([
+    const { data, error } = await supabase.from('clinic_email_settings').upsert(
+      [
         {
           clinic_id: clinicId,
           provedor: config.provedor, // 'sendgrid', 'aws_ses', 'mailgun', 'smtp'
@@ -28,10 +27,14 @@ export async function salvarConfiguracaoEmail(clinicId, config) {
           template_id: config.template_id, // para SendGrid
           configurado: true,
           created_at: new Date().toISOString(),
-        }
-      ], { onConflict: ['clinic_id'] });
+        },
+      ],
+      { onConflict: ['clinic_id'] },
+    );
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     console.log('✅ Configuração de email salva');
     return data;
   } catch (err) {
@@ -52,7 +55,9 @@ export async function obterConfiguracaoEmail(clinicId) {
       .eq('configurado', true)
       .single();
 
-    if (error && error.code !== 'PGRST116') throw error;
+    if (error && error.code !== 'PGRST116') {
+      throw error;
+    }
     return data || null;
   } catch (err) {
     console.error('❌ Erro ao obter configuração:', err);
@@ -66,7 +71,7 @@ export async function obterConfiguracaoEmail(clinicId) {
 export async function enviarNotificacaoRepasse(repasse, profissional, clinic) {
   try {
     const config = await obterConfiguracaoEmail(clinic.id);
-    
+
     if (!config?.configurado) {
       console.warn('⚠️  Email não configurado para a clínica');
       return null;
@@ -76,20 +81,29 @@ export async function enviarNotificacaoRepasse(repasse, profissional, clinic) {
     const emailData = {
       destinatario: profissional.email,
       assunto: `Seu Repasse de ${repasse.periodo_inicio} a ${repasse.periodo_fim} está disponível`,
-      
+
       // Template HTML
       html: gerarTemplateRepasseHTML({
         nome: profissional.name,
         periodo: `${repasse.periodo_inicio} a ${repasse.periodo_fim}`,
-        valor_bruto: repasse.valor_bruto?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-        valor_desconto: repasse.valor_desconto?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-        valor_profissional: repasse.valor_profissional?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+        valor_bruto: repasse.valor_bruto?.toLocaleString('pt-BR', {
+          style: 'currency',
+          currency: 'BRL',
+        }),
+        valor_desconto: repasse.valor_desconto?.toLocaleString('pt-BR', {
+          style: 'currency',
+          currency: 'BRL',
+        }),
+        valor_profissional: repasse.valor_profissional?.toLocaleString('pt-BR', {
+          style: 'currency',
+          currency: 'BRL',
+        }),
         porcentagem: repasse.porcentagem_profissional,
         clinica: clinic.name,
         logo: clinic.logo_url,
         status: repasse.status,
       }),
-      
+
       // Texto simples (fallback)
       texto: `Olá ${profissional.name},\n\nSeu repasse de ${repasse.periodo_inicio} a ${repasse.periodo_fim} está disponível.\n\nValor: R$ ${repasse.valor_profissional?.toFixed(2)}\n\nClínica: ${clinic.name}`,
     };
@@ -97,20 +111,20 @@ export async function enviarNotificacaoRepasse(repasse, profissional, clinic) {
     // Enviar através do provedor configurado
     let resultado;
     switch (config.provedor) {
-      case 'sendgrid':
-        resultado = await enviarSendGrid(config, emailData);
-        break;
-      case 'aws_ses':
-        resultado = await enviarAWSSES(config, emailData);
-        break;
-      case 'mailgun':
-        resultado = await enviarMailgun(config, emailData);
-        break;
-      case 'smtp':
-        resultado = await enviarSMTP(config, emailData);
-        break;
-      default:
-        throw new Error(`Provedor desconhecido: ${config.provedor}`);
+    case 'sendgrid':
+      resultado = await enviarSendGrid(config, emailData);
+      break;
+    case 'aws_ses':
+      resultado = await enviarAWSSES(config, emailData);
+      break;
+    case 'mailgun':
+      resultado = await enviarMailgun(config, emailData);
+      break;
+    case 'smtp':
+      resultado = await enviarSMTP(config, emailData);
+      break;
+    default:
+      throw new Error(`Provedor desconhecido: ${config.provedor}`);
     }
 
     // Registrar envio no banco
@@ -138,14 +152,16 @@ async function enviarSendGrid(config, emailData) {
     const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${config.chave_api}`,
+        Authorization: `Bearer ${config.chave_api}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        personalizations: [{
-          to: [{ email: emailData.destinatario }],
-          subject: emailData.assunto,
-        }],
+        personalizations: [
+          {
+            to: [{ email: emailData.destinatario }],
+            subject: emailData.assunto,
+          },
+        ],
         from: {
           email: config.email_remetente,
           name: config.nome_remetente,
@@ -206,7 +222,7 @@ async function enviarMailgun(config, emailData) {
     const response = await fetch(`https://api.mailgun.net/v3/${domain}/messages`, {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${btoa(`api:${key}`)}`,
+        Authorization: `Basic ${btoa(`api:${key}`)}`,
       },
       body: formData,
     });
@@ -332,23 +348,23 @@ function gerarTemplateRepasseHTML(dados) {
  */
 async function registrarEnvioEmail(repasseId, profissionalId, clinicId, dados) {
   try {
-    const { error } = await supabase
-      .from('repasse_emails_enviados')
-      .insert([
-        {
-          repasse_id: repasseId,
-          professional_id: profissionalId,
-          clinic_id: clinicId,
-          provedor: dados.provedor,
-          destinatario: dados.destinatario,
-          assunto: dados.assunto,
-          status: dados.status,
-          resposta: dados.resposta,
-          created_at: new Date().toISOString(),
-        }
-      ]);
+    const { error } = await supabase.from('repasse_emails_enviados').insert([
+      {
+        repasse_id: repasseId,
+        professional_id: profissionalId,
+        clinic_id: clinicId,
+        provedor: dados.provedor,
+        destinatario: dados.destinatario,
+        assunto: dados.assunto,
+        status: dados.status,
+        resposta: dados.resposta,
+        created_at: new Date().toISOString(),
+      },
+    ]);
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
   } catch (err) {
     console.error('❌ Erro ao registrar envio:', err);
   }
@@ -370,7 +386,9 @@ export async function enviarNotificacoesEmLote(repassos, clinic) {
       }
     }
 
-    console.log(`✅ ${resultados.filter(r => r.status === 'enviado').length}/${repassos.length} emails enviados`);
+    console.log(
+      `✅ ${resultados.filter((r) => r.status === 'enviado').length}/${repassos.length} emails enviados`,
+    );
     return resultados;
   } catch (err) {
     console.error('❌ Erro ao enviar lote:', err);
@@ -398,7 +416,9 @@ export async function obterHistoricoEmails(clinicId, professionalId = null, dias
     }
 
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data || [];
   } catch (err) {
     console.error('❌ Erro ao obter histórico:', err);
@@ -417,7 +437,9 @@ export async function reenviaremail(repasseId) {
       .eq('id', repasseId)
       .single();
 
-    if (erroRepasse) throw erroRepasse;
+    if (erroRepasse) {
+      throw erroRepasse;
+    }
 
     const resultado = await enviarNotificacaoRepasse(repasse, repasse.professional, repasse.clinic);
     console.log('✅ Email reenviado com sucesso');

@@ -1,25 +1,27 @@
-const META_START = "[[GESCLINIC_RX_META]]";
-const META_END = "[[/GESCLINIC_RX_META]]";
+const META_START = '[[GESCLINIC_RX_META]]';
+const META_END = '[[/GESCLINIC_RX_META]]';
 
 function sanitizeMetadata(metadata = {}) {
   return Object.fromEntries(
-    Object.entries(metadata).filter(([, value]) => value !== undefined && value !== null && value !== "")
+    Object.entries(metadata).filter(
+      ([, value]) => value !== undefined && value !== null && value !== '',
+    ),
   );
 }
 
-export function buildPrescriptionObservations(notes = "", metadata = {}) {
-  const normalizedNotes = (notes || "").trim();
+export function buildPrescriptionObservations(notes = '', metadata = {}) {
+  const normalizedNotes = (notes || '').trim();
   const normalizedMetadata = sanitizeMetadata(metadata);
 
   if (!Object.keys(normalizedMetadata).length) {
     return normalizedNotes;
   }
 
-  return `${META_START}${JSON.stringify(normalizedMetadata)}${META_END}${normalizedNotes ? `\n${normalizedNotes}` : ""}`;
+  return `${META_START}${JSON.stringify(normalizedMetadata)}${META_END}${normalizedNotes ? `\n${normalizedNotes}` : ''}`;
 }
 
-export function parsePrescriptionObservations(rawValue = "") {
-  const raw = rawValue || "";
+export function parsePrescriptionObservations(rawValue = '') {
+  const raw = rawValue || '';
 
   if (!raw.startsWith(META_START)) {
     return { metadata: {}, notes: raw };
@@ -39,6 +41,6 @@ export function parsePrescriptionObservations(rawValue = "") {
   }
 }
 
-export function stripPrescriptionObservations(rawValue = "") {
+export function stripPrescriptionObservations(rawValue = '') {
   return parsePrescriptionObservations(rawValue).notes;
 }

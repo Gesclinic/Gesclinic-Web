@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
-import { getCurrentUserPermissions } from "@/api/permissionsApi";
-import { useClinic } from "@/contexts/useClinicContext";
+import { useEffect, useState } from 'react';
+import { getCurrentUserPermissions } from '@/api/permissionsApi';
+import { useClinic } from '@/contexts/useClinicContext';
 
 export function usePermissions() {
   const { clinic } = useClinic();
@@ -8,7 +8,9 @@ export function usePermissions() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!clinic) return;
+    if (!clinic) {
+      return;
+    }
 
     async function load() {
       setLoading(true);

@@ -1,41 +1,60 @@
 /**  🔥 PATIENT DIALOG COM CAMPO GÊNERO PADRONIZADO  */
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { fetchPayersForSelect, fetchPlansForSelect, checkPatientExists, uploadPatientPhoto } from "@/lib/patientsApi";
-import { useToast } from "@/components/ui/use-toast";
-import { NONE } from "@/lib/selectUtils";
-import { supabase } from "@/lib/customSupabaseClient";
-import PhotoUploadWebcam from "@/components/PhotoUploadWebcam";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  fetchPayersForSelect,
+  fetchPlansForSelect,
+  checkPatientExists,
+  uploadPatientPhoto,
+} from '@/lib/patientsApi';
+import { useToast } from '@/components/ui/use-toast';
+import { NONE } from '@/lib/selectUtils';
+import { supabase } from '@/lib/customSupabaseClient';
+import PhotoUploadWebcam from '@/components/PhotoUploadWebcam';
 
 // ----------------- HELPERS -----------------
 
 const toDateInput = (v) => {
-  if (!v) return "";
-  if (typeof v === "string" && v.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
-    const [dd, mm, yyyy] = v.split("/");
-    return `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
+  if (!v) {
+    return '';
+  }
+  if (typeof v === 'string' && v.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+    const [dd, mm, yyyy] = v.split('/');
+    return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
   }
   const d = new Date(v);
-  if (isNaN(+d)) return "";
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  if (isNaN(+d)) {
+    return '';
+  }
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-const onlyDigits = (v) => (typeof v === "string" ? v.replace(/\D+/g, "") : "");
-const normalizeEmail = (v) =>
-  typeof v === "string" && v.trim() ? v.trim().toLowerCase() : "";
+const onlyDigits = (v) => (typeof v === 'string' ? v.replace(/\D+/g, '') : '');
+const normalizeEmail = (v) => (typeof v === 'string' && v.trim() ? v.trim().toLowerCase() : '');
 
 const formatCpfView = (raw) => {
   const v = onlyDigits(raw).slice(0, 11);
   return v
-    .replace(/^(\d{3})(\d)/, "$1.$2")
-    .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
-    .replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d{1,2})$/, "$1.$2.$3-$4");
+    .replace(/^(\d{3})(\d)/, '$1.$2')
+    .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+    .replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d{1,2})$/, '$1.$2.$3-$4');
 };
 
 // ----------------- COMPONENTE -----------------
@@ -48,41 +67,40 @@ export default function PatientDialog({
   loading = false,
   clinicId,
 }) {
-
   const isEdit = !!initialData?.id;
   const { toast } = useToast();
 
   // Campos principais
-  const [fullName, setFullName] = useState("");
-  const [cpfView, setCpfView] = useState("");
-  const [birthdate, setBirthdate] = useState("");
+  const [fullName, setFullName] = useState('');
+  const [cpfView, setCpfView] = useState('');
+  const [birthdate, setBirthdate] = useState('');
 
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
 
   // Foto
-  const [photoUrl, setPhotoUrl] = useState("");
+  const [photoUrl, setPhotoUrl] = useState('');
   const [photoFile, setPhotoFile] = useState(null);
 
   // Gênero (padronizado)
-  const [gender, setGender] = useState("Outro");
+  const [gender, setGender] = useState('Outro');
 
-  const [recordNumber, setRecordNumber] = useState("");
+  const [recordNumber, setRecordNumber] = useState('');
 
-  const [responsibleName, setResponsibleName] = useState("");
-  const [responsibleRelationship, setResponsibleRelationship] = useState("");
+  const [responsibleName, setResponsibleName] = useState('');
+  const [responsibleRelationship, setResponsibleRelationship] = useState('');
 
   const [payerId, setPayerId] = useState(NONE);
   const [planId, setPlanId] = useState(NONE);
-  const [insuranceIdNumber, setInsuranceIdNumber] = useState("");
+  const [insuranceIdNumber, setInsuranceIdNumber] = useState('');
 
   // Endereço
-  const [street, setStreet] = useState("");
-  const [number, setNumber] = useState("");
-  const [neighborhood, setNeighborhood] = useState("");
-  const [zip, setZip] = useState("");
-  const [city, setCity] = useState("");
-  const [uf, setUf] = useState("");
+  const [street, setStreet] = useState('');
+  const [number, setNumber] = useState('');
+  const [neighborhood, setNeighborhood] = useState('');
+  const [zip, setZip] = useState('');
+  const [city, setCity] = useState('');
+  const [uf, setUf] = useState('');
 
   const [submitting, setSubmitting] = useState(false);
 
@@ -92,32 +110,36 @@ export default function PatientDialog({
   // ----------------- Próximo número de prontuário -----------------
 
   const fetchNextRecordNumber = useCallback(async () => {
-    if (!clinicId) return "01";
+    if (!clinicId) {
+      return '01';
+    }
 
     const { data } = await supabase
-      .from("patients")
-      .select("record_number")
-      .eq("clinic_id", clinicId);
+      .from('patients')
+      .select('record_number')
+      .eq('clinic_id', clinicId);
 
-    const nums = (data || [])
-      .map(p => parseInt(p.record_number, 10))
-      .filter(n => !isNaN(n));
+    const nums = (data || []).map((p) => parseInt(p.record_number, 10)).filter((n) => !isNaN(n));
 
     const next = nums.length ? Math.max(...nums) + 1 : 1;
-    return String(next).padStart(2, "0");
+    return String(next).padStart(2, '0');
   }, [clinicId]);
 
   // ----------------- Filtros de planos -----------------
 
   const filteredPlans = useMemo(() => {
-    if (payerId === NONE) return [];
+    if (payerId === NONE) {
+      return [];
+    }
     return plans.filter((p) => String(p.payer_id) === String(payerId));
   }, [payerId, plans]);
 
   // ----------------- Carregar convênios -----------------
 
   const loadRefs = useCallback(async () => {
-    if (!clinicId) return;
+    if (!clinicId) {
+      return;
+    }
 
     try {
       const [payersData, plansData] = await Promise.all([
@@ -131,68 +153,72 @@ export default function PatientDialog({
   }, [clinicId]);
 
   useEffect(() => {
-    if (open) loadRefs();
+    if (open) {
+      loadRefs();
+    }
   }, [open, loadRefs]);
 
   // ----------------- Load inicial -----------------
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
 
     if (initialData) {
-      setFullName(initialData?.full_name || initialData?.full_name || "");
-      setCpfView(formatCpfView(initialData?.cpf || ""));
+      setFullName(initialData?.full_name || initialData?.full_name || '');
+      setCpfView(formatCpfView(initialData?.cpf || ''));
       setBirthdate(toDateInput(initialData?.birth_date));
 
-      setEmail(initialData?.email ?? "");
-      setPhone(initialData?.phone ?? "");
-      setRecordNumber(initialData?.record_number ?? "");
-      setPhotoUrl(initialData?.photo_url || "");
+      setEmail(initialData?.email ?? '');
+      setPhone(initialData?.phone ?? '');
+      setRecordNumber(initialData?.record_number ?? '');
+      setPhotoUrl(initialData?.photo_url || '');
       setPhotoFile(null);
 
       // GÊNERO
-      setGender(initialData?.gender || "Outro");
+      setGender(initialData?.gender || 'Outro');
 
-      setResponsibleName(initialData?.responsible_name ?? "");
-      setResponsibleRelationship(initialData?.responsible_relationship ?? "");
+      setResponsibleName(initialData?.responsible_name ?? '');
+      setResponsibleRelationship(initialData?.responsible_relationship ?? '');
 
       setPayerId(initialData?.payer_id ?? NONE);
       setPlanId(initialData?.plan_id ?? NONE);
-      setInsuranceIdNumber(initialData?.insurance_id_number ?? "");
+      setInsuranceIdNumber(initialData?.insurance_id_number ?? '');
 
-      setStreet(initialData?.street ?? "");
-      setNumber(initialData?.number ?? "");
-      setNeighborhood(initialData?.neighborhood ?? "");
-      setZip(initialData?.zip_code ?? "");
-      setCity(initialData?.city ?? "");
-      setUf(initialData?.state ?? "");
+      setStreet(initialData?.street ?? '');
+      setNumber(initialData?.number ?? '');
+      setNeighborhood(initialData?.neighborhood ?? '');
+      setZip(initialData?.zip_code ?? '');
+      setCity(initialData?.city ?? '');
+      setUf(initialData?.state ?? '');
     } else {
-      setFullName("");
-      setCpfView("");
-      setBirthdate("");
+      setFullName('');
+      setCpfView('');
+      setBirthdate('');
 
-      setEmail("");
-      setPhone("");
-      setPhotoUrl("");
+      setEmail('');
+      setPhone('');
+      setPhotoUrl('');
       setPhotoFile(null);
 
       fetchNextRecordNumber().then(setRecordNumber);
 
-      setGender("Outro");
+      setGender('Outro');
 
-      setResponsibleName("");
-      setResponsibleRelationship("");
+      setResponsibleName('');
+      setResponsibleRelationship('');
 
       setPayerId(NONE);
       setPlanId(NONE);
-      setInsuranceIdNumber("");
+      setInsuranceIdNumber('');
 
-      setStreet("");
-      setNumber("");
-      setNeighborhood("");
-      setZip("");
-      setCity("");
-      setUf("");
+      setStreet('');
+      setNumber('');
+      setNeighborhood('');
+      setZip('');
+      setCity('');
+      setUf('');
     }
 
     setSubmitting(false);
@@ -203,27 +229,27 @@ export default function PatientDialog({
   // ----------------- Helpers -----------------
 
   const sanitize = (v) => {
-    if (typeof v === "string") {
+    if (typeof v === 'string') {
       const t = v.trim();
-      return t === "" ? null : t;
+      return t === '' ? null : t;
     }
     return v ?? null;
   };
 
   const validate = () => {
     if (!fullName.trim()) {
-      toast({ variant: "destructive", title: "O nome completo é obrigatório." });
+      toast({ variant: 'destructive', title: 'O nome completo é obrigatório.' });
       return false;
     }
 
     const cpf = onlyDigits(cpfView);
     if (!cpf || cpf.length !== 11) {
-      toast({ variant: "destructive", title: "Informe um CPF válido" });
+      toast({ variant: 'destructive', title: 'Informe um CPF válido' });
       return false;
     }
 
     if (!birthdate) {
-      toast({ variant: "destructive", title: "Data de nascimento obrigatória." });
+      toast({ variant: 'destructive', title: 'Data de nascimento obrigatória.' });
       return false;
     }
 
@@ -234,7 +260,9 @@ export default function PatientDialog({
 
   const handleSubmit = async (e) => {
     e?.preventDefault?.();
-    if (!validate() || disabled) return;
+    if (!validate() || disabled) {
+      return;
+    }
 
     setSubmitting(true);
 
@@ -248,8 +276,12 @@ export default function PatientDialog({
         try {
           finalPhotoUrl = await uploadPatientPhoto(photoFile);
         } catch (err) {
-          console.error("Erro no upload da foto:", err);
-          toast({ variant: "destructive", title: "Erro ao salvar foto", description: "A foto não pôde ser salva, mas tentaremos salvar os dados." });
+          console.error('Erro no upload da foto:', err);
+          toast({
+            variant: 'destructive',
+            title: 'Erro ao salvar foto',
+            description: 'A foto não pôde ser salva, mas tentaremos salvar os dados.',
+          });
           // Não impede o salvamento dos dados, apenas avisa
         }
       }
@@ -258,8 +290,8 @@ export default function PatientDialog({
         const exists = await checkPatientExists({ clinicId, cpf });
         if (exists) {
           toast({
-            variant: "destructive",
-            title: "CPF já cadastrado na clínica.",
+            variant: 'destructive',
+            title: 'CPF já cadastrado na clínica.',
           });
           setSubmitting(false);
           return;
@@ -296,7 +328,6 @@ export default function PatientDialog({
       };
 
       await onSubmit?.(payload);
-
     } finally {
       setSubmitting(false);
     }
@@ -308,17 +339,11 @@ export default function PatientDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="app-dialog-shell app-dialog-shell--content app-dialog-shell--wide">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Editar Paciente" : "Novo Paciente"}</DialogTitle>
-          <DialogDescription>
-            Preencha os dados obrigatórios (*)
-          </DialogDescription>
+          <DialogTitle>{isEdit ? 'Editar Paciente' : 'Novo Paciente'}</DialogTitle>
+          <DialogDescription>Preencha os dados obrigatórios (*)</DialogDescription>
         </DialogHeader>
 
-        <form
-          className="space-y-4 max-h-[70vh] overflow-y-auto p-1"
-          onSubmit={handleSubmit}
-        >
-
+        <form className="space-y-4 max-h-[70vh] overflow-y-auto p-1" onSubmit={handleSubmit}>
           {/* FOTO */}
           <div className="flex justify-center mb-4">
             <PhotoUploadWebcam
@@ -385,12 +410,7 @@ export default function PatientDialog({
 
             <div>
               <Label>Nº Prontuário</Label>
-              <Input
-                value={recordNumber}
-                readOnly
-                disabled
-                placeholder="Gerado automaticamente"
-              />
+              <Input value={recordNumber} readOnly disabled placeholder="Gerado automaticamente" />
             </div>
           </div>
 
@@ -413,11 +433,7 @@ export default function PatientDialog({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <Label>Telefone</Label>
-              <Input
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                disabled={disabled}
-              />
+              <Input value={phone} onChange={(e) => setPhone(e.target.value)} disabled={disabled} />
             </div>
 
             <div>
@@ -473,7 +489,6 @@ export default function PatientDialog({
             <h3 className="text-md font-semibold mb-2">Convênio</h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-
               <div>
                 <Label>Convênio</Label>
                 <Select
@@ -499,11 +514,7 @@ export default function PatientDialog({
 
               <div>
                 <Label>Plano</Label>
-                <Select
-                  value={planId}
-                  onValueChange={setPlanId}
-                  disabled={payerId === NONE}
-                >
+                <Select value={planId} onValueChange={setPlanId} disabled={payerId === NONE}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecionar..." />
                   </SelectTrigger>
@@ -554,7 +565,6 @@ export default function PatientDialog({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
-
               <div>
                 <Label>Bairro</Label>
                 <Input
@@ -587,11 +597,7 @@ export default function PatientDialog({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
               <div>
                 <Label>Cidade</Label>
-                <Input
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  disabled={disabled}
-                />
+                <Input value={city} onChange={(e) => setCity(e.target.value)} disabled={disabled} />
               </div>
             </div>
           </div>
@@ -607,10 +613,9 @@ export default function PatientDialog({
             </Button>
 
             <Button type="submit" disabled={disabled}>
-              {isEdit ? "Salvar alterações" : "Criar paciente"}
+              {isEdit ? 'Salvar alterações' : 'Criar paciente'}
             </Button>
           </DialogFooter>
-
         </form>
       </DialogContent>
     </Dialog>

@@ -10,7 +10,9 @@ import {
 } from '@/components/ui/select';
 
 export const PaymentSplitFields = ({ method, formData, onFieldChange }) => {
-  if (!method) return null;
+  if (!method) {
+    return null;
+  }
 
   const handleChange = (field, value) => {
     onFieldChange(field, value);
@@ -24,7 +26,7 @@ export const PaymentSplitFields = ({ method, formData, onFieldChange }) => {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs font-semibold">Bandeira *</Label>
-              <Select 
+              <Select
                 value={formData.card_brand || ''}
                 onValueChange={(value) => handleChange('card_brand', value)}
               >
@@ -126,12 +128,16 @@ export const PaymentSplitFields = ({ method, formData, onFieldChange }) => {
               <div className="space-y-2">
                 {Array.from({ length: parseInt(formData.installments || 1) }, (_, i) => {
                   const installmentNum = i + 1;
-                  const datesArray = (formData.card_installment_dates || '').split('|').filter(d => d);
+                  const datesArray = (formData.card_installment_dates || '')
+                    .split('|')
+                    .filter((d) => d);
                   const currentDate = datesArray[i] || '';
-                  
+
                   return (
                     <div key={i} className="grid grid-cols-3 gap-2 items-end">
-                      <Label className="text-xs font-semibold col-span-1">Parcela {installmentNum}</Label>
+                      <Label className="text-xs font-semibold col-span-1">
+                        Parcela {installmentNum}
+                      </Label>
                       <Input
                         type="date"
                         value={currentDate}
@@ -157,7 +163,7 @@ export const PaymentSplitFields = ({ method, formData, onFieldChange }) => {
         <>
           <div>
             <Label className="text-xs font-semibold">Tipo de Chave PIX *</Label>
-            <Select 
+            <Select
               value={formData.pix_key_type || 'cpf'}
               onValueChange={(value) => handleChange('pix_key_type', value)}
             >

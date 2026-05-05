@@ -1,4 +1,4 @@
-import { customSupabaseClient } from "./customSupabaseClient";
+import { customSupabaseClient } from './customSupabaseClient';
 
 /**
  * Professional Payer API
@@ -11,15 +11,17 @@ import { customSupabaseClient } from "./customSupabaseClient";
 export async function getProfessionalPayers(clinicId) {
   try {
     const { data, error } = await customSupabaseClient
-      .from("professional_payers")
-      .select("*")
-      .eq("clinic_id", clinicId)
-      .order("created_at", { ascending: false });
+      .from('professional_payers')
+      .select('*')
+      .eq('clinic_id', clinicId)
+      .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data || [];
   } catch (error) {
-    console.error("Error fetching professional payers:", error);
+    console.error('Error fetching professional payers:', error);
     throw error;
   }
 }
@@ -30,7 +32,7 @@ export async function getProfessionalPayers(clinicId) {
 export async function createProfessionalPayer(clinicId, data) {
   try {
     const { data: result, error } = await customSupabaseClient
-      .from("professional_payers")
+      .from('professional_payers')
       .insert([
         {
           clinic_id: clinicId,
@@ -40,10 +42,12 @@ export async function createProfessionalPayer(clinicId, data) {
       ])
       .select();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return result?.[0];
   } catch (error) {
-    console.error("Error creating professional payer:", error);
+    console.error('Error creating professional payer:', error);
     throw error;
   }
 }
@@ -54,17 +58,19 @@ export async function createProfessionalPayer(clinicId, data) {
 export async function updateProfessionalPayer(id, data) {
   try {
     const { data: result, error } = await customSupabaseClient
-      .from("professional_payers")
+      .from('professional_payers')
       .update({
         payer_id: data.payer_id,
       })
-      .eq("id", id)
+      .eq('id', id)
       .select();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return result?.[0];
   } catch (error) {
-    console.error("Error updating professional payer:", error);
+    console.error('Error updating professional payer:', error);
     throw error;
   }
 }
@@ -74,15 +80,14 @@ export async function updateProfessionalPayer(id, data) {
  */
 export async function deleteProfessionalPayer(id) {
   try {
-    const { error } = await customSupabaseClient
-      .from("professional_payers")
-      .delete()
-      .eq("id", id);
+    const { error } = await customSupabaseClient.from('professional_payers').delete().eq('id', id);
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return true;
   } catch (error) {
-    console.error("Error deleting professional payer:", error);
+    console.error('Error deleting professional payer:', error);
     throw error;
   }
 }

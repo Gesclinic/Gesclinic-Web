@@ -1,33 +1,37 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { ChevronDown, Plus, X } from "lucide-react";
-import { stockCategoriesApi } from "@/lib/stockApi";
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { ChevronDown, Plus, X } from 'lucide-react';
+import { stockCategoriesApi } from '@/lib/stockApi';
 
 export default function CategorySelect({ clinicId, value, onChange, hideLabel = false }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
 
   const loadCategories = useCallback(async () => {
-    if (!clinicId) return [];
+    if (!clinicId) {
+      return [];
+    }
     setLoading(true);
     try {
       const data = await stockCategoriesApi.list(clinicId);
       setItems(data || []);
       return data || [];
     } catch (e) {
-      console.error("Erro ao carregar categorias:", e);
+      console.error('Erro ao carregar categorias:', e);
       return [];
     } finally {
       setLoading(false);
     }
   }, [clinicId]);
 
-  useEffect(() => { loadCategories(); }, [loadCategories]);
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
 
   useEffect(() => {
     const onFocus = async () => {
@@ -35,7 +39,9 @@ export default function CategorySelect({ clinicId, value, onChange, hideLabel = 
       const data = await loadCategories();
       const pendingName = localStorage.getItem('gc_cat_pending');
       if (pendingName) {
-        const found = (data || []).find(c => (c.name || '').toLowerCase() === pendingName.toLowerCase());
+        const found = (data || []).find(
+          (c) => (c.name || '').toLowerCase() === pendingName.toLowerCase(),
+        );
         if (found) {
           handleSelect(found);
         }
@@ -52,7 +58,7 @@ export default function CategorySelect({ clinicId, value, onChange, hideLabel = 
         try {
           const msg = JSON.parse(e.newValue);
           const data = await loadCategories();
-          const found = (data || []).find(c => c.id === msg.id);
+          const found = (data || []).find((c) => c.id === msg.id);
           if (found) {
             handleSelect(found);
           }
@@ -63,13 +69,12 @@ export default function CategorySelect({ clinicId, value, onChange, hideLabel = 
     return () => window.removeEventListener('storage', onStorage);
   }, [loadCategories]);
 
-  const selected = useMemo(
-    () => items.find((c) => c.id === value) || null,
-    [items, value]
-  );
+  const selected = useMemo(() => items.find((c) => c.id === value) || null, [items, value]);
 
   const filtered = useMemo(() => {
-    if (!search) return items;
+    if (!search) {
+      return items;
+    }
     const t = search.toLowerCase();
     return items.filter((c) => c.name?.toLowerCase().includes(t));
   }, [items, search]);
@@ -77,11 +82,13 @@ export default function CategorySelect({ clinicId, value, onChange, hideLabel = 
   const handleSelect = (cat) => {
     onChange(cat?.id || null);
     setOpen(false);
-    setSearch("");
+    setSearch('');
   };
 
   const handleCreate = async () => {
-    if (!search?.trim()) return;
+    if (!search?.trim()) {
+      return;
+    }
     setCreating(true);
     try {
       const created = await stockCategoriesApi.create(clinicId, { name: search.trim() });
@@ -89,7 +96,7 @@ export default function CategorySelect({ clinicId, value, onChange, hideLabel = 
       setItems((prev) => [newItem, ...prev]);
       handleSelect(newItem);
     } catch (e) {
-      console.error("Erro ao criar categoria:", e);
+      console.error('Erro ao criar categoria:', e);
     } finally {
       setCreating(false);
     }
@@ -104,8 +111,11 @@ export default function CategorySelect({ clinicId, value, onChange, hideLabel = 
           <Input
             id="category_id"
             placeholder="Selecione ou crie uma categoria..."
-            value={open ? search : (selected?.name || "")}
-            onChange={(e) => { setSearch(e.target.value); setOpen(true); }}
+            value={open ? search : selected?.name || ''}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setOpen(true);
+            }}
             onFocus={() => setOpen(true)}
             disabled={loading}
             autoComplete="off"
@@ -120,7 +130,13 @@ export default function CategorySelect({ clinicId, value, onChange, hideLabel = 
           </button>
         </div>
         {value && (
-          <Button type="button" variant="outline" size="sm" onClick={clearSelection} title="Limpar categoria">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={clearSelection}
+            title="Limpar categoria"
+          >
             <X className="h-4 w-4" />
           </Button>
         )}
@@ -128,7 +144,12 @@ export default function CategorySelect({ clinicId, value, onChange, hideLabel = 
           type="button"
           variant="outline"
           size="sm"
-          onClick={() => { if (search?.trim()) localStorage.setItem('gc_cat_pending', search.trim()); window.open('/clinica/estoque/categorias', '_blank'); }}
+          onClick={() => {
+            if (search?.trim()) {
+              localStorage.setItem('gc_cat_pending', search.trim());
+            }
+            window.open('/clinica/estoque/categorias', '_blank');
+          }}
           title="Abrir cadastro de categorias em nova aba"
         >
           <Plus className="h-4 w-4" />
@@ -143,16 +164,27 @@ export default function CategorySelect({ clinicId, value, onChange, hideLabel = 
             <div className="p-2">
               <div className="text-sm text-gray-500 px-2 py-2">Nenhuma categoria encontrada.</div>
               {!!search?.trim() && (
-                <Button type="button" className="w-full flex items-center gap-2" onClick={handleCreate} disabled={creating}>
+                <Button
+                  type="button"
+                  className="w-full flex items-center gap-2"
+                  onClick={handleCreate}
+                  disabled={creating}
+                >
                   <Plus className="h-4 w-4" /> Criar "{search.trim()}"
                 </Button>
               )}
             </div>
           ) : (
             <>
-              {!!search?.trim() && !items.some(i => i.name?.toLowerCase() === search.trim().toLowerCase()) && (
+              {!!search?.trim() &&
+                !items.some((i) => i.name?.toLowerCase() === search.trim().toLowerCase()) && (
                 <div className="p-2 border-b">
-                  <Button type="button" className="w-full flex items-center gap-2" onClick={handleCreate} disabled={creating}>
+                  <Button
+                    type="button"
+                    className="w-full flex items-center gap-2"
+                    onClick={handleCreate}
+                    disabled={creating}
+                  >
                     <Plus className="h-4 w-4" /> Criar "{search.trim()}"
                   </Button>
                 </div>

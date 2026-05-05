@@ -1,11 +1,11 @@
 /**
  * AgendaIndicators.jsx
- * 
+ *
  * 📊 INDICADORES DA AGENDA
- * 
+ *
  * Dashboard com cards de indicadores operacionais, financeiros e de tempo.
  * Atualiza em tempo real baseado em mudanças na agenda.
- * 
+ *
  * Props:
  * - clinicId: string (UUID)
  * - date: string (YYYY-MM-DD) - default: today
@@ -14,7 +14,7 @@
  * - onAlertsChange: function - callback quando alertas mudam
  */
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   TrendingUp,
   AlertCircle,
@@ -27,7 +27,7 @@ import {
   RefreshCw,
   ChevronDown,
   ChevronUp,
-} from "lucide-react";
+} from 'lucide-react';
 import {
   getAgendaIndicators,
   getProfessionalIndicators,
@@ -35,13 +35,13 @@ import {
   getHealthStatus,
   formatIndicators,
   getStatusColor,
-} from "@/lib/indicatorsApi";
+} from '@/lib/indicatorsApi';
 
 const AgendaIndicators = ({
   clinicId,
-  date = new Date().toISOString().split("T")[0],
+  date = new Date().toISOString().split('T')[0],
   professionalId = null,
-  currentRole = "profissional",
+  currentRole = 'profissional',
   onAlertsChange = null,
 }) => {
   const [indicators, setIndicators] = useState(null);
@@ -53,12 +53,8 @@ const AgendaIndicators = ({
   const [lastUpdate, setLastUpdate] = useState(null);
 
   // Controle de permissões
-  const canViewFullIndicators = ["admin", "gestor"].includes(
-    currentRole?.toLowerCase?.()
-  );
-  const canViewFinancialIndicators = ["admin", "gestor"].includes(
-    currentRole?.toLowerCase?.()
-  );
+  const canViewFullIndicators = ['admin', 'gestor'].includes(currentRole?.toLowerCase?.());
+  const canViewFinancialIndicators = ['admin', 'gestor'].includes(currentRole?.toLowerCase?.());
 
   // Fetch indicadores
   const fetchIndicators = async () => {
@@ -69,11 +65,7 @@ const AgendaIndicators = ({
       let data;
       if (professionalId && !canViewFullIndicators) {
         // Profissional vê apenas seus próprios indicadores
-        data = await getProfessionalIndicators(
-          clinicId,
-          professionalId,
-          date
-        );
+        data = await getProfessionalIndicators(clinicId, professionalId, date);
       } else {
         // Gestor/Admin vê indicadores completos
         data = await getAgendaIndicators(clinicId, date, professionalId);
@@ -106,14 +98,14 @@ const AgendaIndicators = ({
           meta_dia: 5000,
           percentual_meta_atingida: 0,
           tempo_medio_checkin_minutos: 0,
-          status: 'normal'
+          status: 'normal',
         };
         setIndicators(emptyIndicators);
         setAlerts([]);
         setLastUpdate(new Date());
       }
     } catch (err) {
-      console.error("Erro ao buscar indicadores:", err);
+      console.error('Erro ao buscar indicadores:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -141,14 +133,14 @@ const AgendaIndicators = ({
   const getColor = (metric, value) => {
     const color = getStatusColor(metric, value);
     switch (color) {
-      case "green":
-        return "text-green-600 bg-green-50";
-      case "yellow":
-        return "text-yellow-600 bg-yellow-50";
-      case "red":
-        return "text-red-600 bg-red-50";
-      default:
-        return "text-gray-600 bg-gray-50";
+    case 'green':
+      return 'text-green-600 bg-green-50';
+    case 'yellow':
+      return 'text-yellow-600 bg-yellow-50';
+    case 'red':
+      return 'text-red-600 bg-red-50';
+    default:
+      return 'text-gray-600 bg-gray-50';
     }
   };
 
@@ -163,28 +155,24 @@ const AgendaIndicators = ({
     );
   }
 
-  const healthStatus = indicators ? getHealthStatus(indicators) : "unknown";
+  const healthStatus = indicators ? getHealthStatus(indicators) : 'unknown';
   const statusColor =
-    healthStatus === "critical"
-      ? "border-red-200 bg-red-50"
-      : healthStatus === "warning"
-        ? "border-yellow-200 bg-yellow-50"
-        : "border-green-200 bg-green-50";
+    healthStatus === 'critical'
+      ? 'border-red-200 bg-red-50'
+      : healthStatus === 'warning'
+        ? 'border-yellow-200 bg-yellow-50'
+        : 'border-green-200 bg-green-50';
 
   return (
     <div className="space-y-4">
       {/* Header com Refresh */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">
-            📊 Indicadores da Agenda
-          </h3>
+          <h3 className="text-lg font-semibold text-gray-900">📊 Indicadores da Agenda</h3>
           <p className="text-xs text-gray-500 mt-1">
-            Data: {new Date(date).toLocaleDateString("pt-BR")}
+            Data: {new Date(date).toLocaleDateString('pt-BR')}
             {lastUpdate && (
-              <span className="ml-2">
-                • Atualizado: {lastUpdate.toLocaleTimeString("pt-BR")}
-              </span>
+              <span className="ml-2">• Atualizado: {lastUpdate.toLocaleTimeString('pt-BR')}</span>
             )}
           </p>
         </div>
@@ -194,9 +182,7 @@ const AgendaIndicators = ({
           className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
           title="Atualizar indicadores"
         >
-          <RefreshCw
-            className={`w-5 h-5 text-gray-600 ${refreshing ? "animate-spin" : ""}`}
-          />
+          <RefreshCw className={`w-5 h-5 text-gray-600 ${refreshing ? 'animate-spin' : ''}`} />
         </button>
       </div>
 
@@ -207,30 +193,26 @@ const AgendaIndicators = ({
             <div
               key={idx}
               className={`border-l-4 p-3 rounded cursor-pointer transition ${
-                alert.severity === "high"
-                  ? "border-red-500 bg-red-50"
-                  : alert.severity === "medium"
-                    ? "border-yellow-500 bg-yellow-50"
-                    : "border-blue-500 bg-blue-50"
+                alert.severity === 'high'
+                  ? 'border-red-500 bg-red-50'
+                  : alert.severity === 'medium'
+                    ? 'border-yellow-500 bg-yellow-50'
+                    : 'border-blue-500 bg-blue-50'
               }`}
-              onClick={() =>
-                setExpandedAlert(expandedAlert === idx ? null : idx)
-              }
+              onClick={() => setExpandedAlert(expandedAlert === idx ? null : idx)}
             >
               <div className="flex items-start gap-2">
                 <div className="mt-0.5">
-                  {alert.severity === "high" ? (
+                  {alert.severity === 'high' ? (
                     <AlertCircle className="w-4 h-4 text-red-600" />
-                  ) : alert.severity === "medium" ? (
+                  ) : alert.severity === 'medium' ? (
                     <AlertCircle className="w-4 h-4 text-yellow-600" />
                   ) : (
                     <CheckCircle className="w-4 h-4 text-blue-600" />
                   )}
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">
-                    {alert.message}
-                  </p>
+                  <p className="text-sm font-medium text-gray-900">{alert.message}</p>
                   {expandedAlert === idx && (
                     <p className="text-xs text-gray-600 mt-1">
                       Métrica: {alert.metric} | Valor: {alert.value}
@@ -252,19 +234,15 @@ const AgendaIndicators = ({
       {indicators && formatted && (
         <div className="space-y-4">
           {/* Status Geral */}
-          <div
-            className={`border rounded-lg p-4 ${statusColor} flex items-center justify-between`}
-          >
+          <div className={`border rounded-lg p-4 ${statusColor} flex items-center justify-between`}>
             <div>
-              <p className="text-sm font-medium text-gray-700">
-                Status Geral da Agenda
-              </p>
+              <p className="text-sm font-medium text-gray-700">Status Geral da Agenda</p>
               <p className="text-xl font-bold mt-1">
-                {healthStatus === "healthy"
-                  ? "✅ Saudável"
-                  : healthStatus === "warning"
-                    ? "⚠️ Atenção"
-                    : "🚨 Crítico"}
+                {healthStatus === 'healthy'
+                  ? '✅ Saudável'
+                  : healthStatus === 'warning'
+                    ? '⚠️ Atenção'
+                    : '🚨 Crítico'}
               </p>
             </div>
             <TrendingUp className="w-8 h-8 opacity-50" />
@@ -279,7 +257,7 @@ const AgendaIndicators = ({
               unit="%"
               metric="taxa_ocupacao_percent"
               icon={Calendar}
-              color={getColor("taxa_ocupacao_percent", formatted.ocupacao.value)}
+              color={getColor('taxa_ocupacao_percent', formatted.ocupacao.value)}
             />
 
             {/* Total de Agendamentos */}
@@ -288,7 +266,7 @@ const AgendaIndicators = ({
               value={formatted.agendamentos.value}
               metric="total_agendamentos"
               icon={CheckCircle}
-              color={getColor("total_agendamentos", formatted.agendamentos.value)}
+              color={getColor('total_agendamentos', formatted.agendamentos.value)}
             />
 
             {/* Confirmados */}
@@ -306,7 +284,7 @@ const AgendaIndicators = ({
               value={formatted.faltas.value}
               metric="faltas"
               icon={XCircle}
-              color={getColor("faltas", formatted.faltas.value)}
+              color={getColor('faltas', formatted.faltas.value)}
             />
 
             {/* Encaixes */}
@@ -344,10 +322,7 @@ const AgendaIndicators = ({
                 unit={formatted.tempo_checkin.suffix}
                 metric="tempo_medio_checkin_minutos"
                 icon={Clock}
-                color={getColor(
-                  "tempo_medio_checkin_minutos",
-                  formatted.tempo_checkin.value
-                )}
+                color={getColor('tempo_medio_checkin_minutos', formatted.tempo_checkin.value)}
               />
             )}
           </div>
@@ -365,7 +340,7 @@ const AgendaIndicators = ({
                   value={`R$ ${formatted.receita_dia.value.toFixed(2)}`}
                   metric="receita_estimada"
                   icon={DollarSign}
-                  color={getColor("receita_estimada", formatted.receita_dia.value)}
+                  color={getColor('receita_estimada', formatted.receita_dia.value)}
                   noBigFont
                 />
 
@@ -396,10 +371,7 @@ const AgendaIndicators = ({
                   unit="%"
                   metric="percentual_meta_atingida"
                   icon={TrendingUp}
-                  color={getColor(
-                    "percentual_meta_atingida",
-                    formatted.percentual_meta.value
-                  )}
+                  color={getColor('percentual_meta_atingida', formatted.percentual_meta.value)}
                 />
               </div>
             </div>
@@ -407,9 +379,7 @@ const AgendaIndicators = ({
 
           {/* Slots Summary */}
           <div className="border-t pt-4">
-            <h4 className="text-sm font-semibold text-gray-700 mb-3">
-              📅 Resumo de Slots
-            </h4>
+            <h4 className="text-sm font-semibold text-gray-700 mb-3">📅 Resumo de Slots</h4>
             <div className="flex items-center gap-2 text-sm">
               <div className="flex-1">
                 <div className="flex justify-between mb-1">
@@ -423,9 +393,7 @@ const AgendaIndicators = ({
                     className="bg-green-600 h-2 rounded-full transition-all"
                     style={{
                       width: `${
-                        (formatted.slots_ocupados.value /
-                          formatted.total_slots.value) *
-                        100
+                        (formatted.slots_ocupados.value / formatted.total_slots.value) * 100
                       }%`,
                     }}
                   />
@@ -449,27 +417,13 @@ const AgendaIndicators = ({
 /**
  * Card individual de indicador
  */
-function Card({
-  title,
-  value,
-  unit = "",
-  metric,
-  icon: Icon,
-  color,
-  noBigFont = false,
-}) {
+function Card({ title, value, unit = '', metric, icon: Icon, color, noBigFont = false }) {
   return (
-    <div
-      className={`rounded-lg p-3 border border-gray-200 ${color} transition-all`}
-    >
+    <div className={`rounded-lg p-3 border border-gray-200 ${color} transition-all`}>
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <p className="text-xs text-gray-600 font-medium truncate">{title}</p>
-          <p
-            className={`mt-1 font-semibold ${
-              noBigFont ? "text-sm" : "text-2xl"
-            } text-gray-900`}
-          >
+          <p className={`mt-1 font-semibold ${noBigFont ? 'text-sm' : 'text-2xl'} text-gray-900`}>
             {value}
             {unit && <span className="text-xs ml-1">{unit}</span>}
           </p>
@@ -481,4 +435,3 @@ function Card({
 }
 
 export default AgendaIndicators;
-

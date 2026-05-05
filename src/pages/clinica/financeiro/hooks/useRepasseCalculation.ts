@@ -35,14 +35,15 @@ export function useRepasseCalculation() {
             professional_id: config.professional_id,
             commission_percentage: config.commission_percentage || 0,
             commission_type: config.commission_type || 'percentage',
-            min_value: config.min_value
+            min_value: config.min_value,
           });
         });
       }
 
       setReprises(reprisesMap);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao carregar configurações de repasse';
+      const errorMessage =
+        err instanceof Error ? err.message : 'Erro ao carregar configurações de repasse';
       console.warn('Repasse config não encontrada, usando valores padrão:', errorMessage);
       setError(null); // Don't show error if table doesn't exist
     } finally {
@@ -53,14 +54,14 @@ export function useRepasseCalculation() {
   const calculateRepasse = (
     professionalId: string,
     servicePrice: number,
-    discount: number = 0
+    discount: number = 0,
   ): {
     commission: number;
     netValue: number;
     description: string;
   } => {
     const config = reprises.get(professionalId);
-    
+
     if (!config) {
       // Default: 30% commission if no config found
       const defaultCommission = 0.3;
@@ -69,7 +70,7 @@ export function useRepasseCalculation() {
       return {
         commission: Math.round(commission * 100) / 100,
         netValue,
-        description: `Repasse padrão 30%`
+        description: `Repasse padrão 30%`,
       };
     }
 
@@ -93,8 +94,8 @@ export function useRepasseCalculation() {
         config.commission_type === 'percentage'
           ? `Repasse ${config.commission_percentage}%`
           : `Repasse R$ ${config.commission_percentage.toLocaleString('pt-BR', {
-              minimumFractionDigits: 2
-            })}`
+              minimumFractionDigits: 2,
+            })}`,
     };
   };
 
@@ -103,6 +104,6 @@ export function useRepasseCalculation() {
     loading,
     error,
     fetchProfessionalReprises,
-    calculateRepasse
+    calculateRepasse,
   };
 }

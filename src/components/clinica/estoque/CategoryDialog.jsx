@@ -7,7 +7,27 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { X } from 'lucide-react';
 
-const EMOJI_OPTIONS = ['📦', '💊', '🩺', '🧬', '🏥', '🧪', '🔬', '⚕️', '🚑', '💉', '🩹', '🧴', '🧼', '🧻', '👩‍⚕️', '🏨', '🛏️', '📋', '🗂️'];
+const EMOJI_OPTIONS = [
+  '📦',
+  '💊',
+  '🩺',
+  '🧬',
+  '🏥',
+  '🧪',
+  '🔬',
+  '⚕️',
+  '🚑',
+  '💉',
+  '🩹',
+  '🧴',
+  '🧼',
+  '🧻',
+  '👩‍⚕️',
+  '🏨',
+  '🛏️',
+  '📋',
+  '🗂️',
+];
 const COLOR_OPTIONS = [
   { label: 'Azul', value: '#3b82f6' },
   { label: 'Vermelho', value: '#ef4444' },
@@ -24,7 +44,7 @@ export default function CategoryDialog({
   onOpenChange,
   onSubmit,
   initialData = null,
-  entityName = 'Categoria'
+  entityName = 'Categoria',
 }) {
   const [formData, setFormData] = useState({
     name: '',
@@ -32,7 +52,7 @@ export default function CategoryDialog({
     code: '',
     emoji: '📦',
     color: '#3b82f6',
-    is_active: true
+    is_active: true,
   });
 
   useEffect(() => {
@@ -44,7 +64,7 @@ export default function CategoryDialog({
         code: initialData.code || '',
         emoji: initialData.emoji || '📦',
         color: initialData.color || '#3b82f6',
-        is_active: initialData.is_active !== false
+        is_active: initialData.is_active !== false,
       });
     } else {
       setFormData({
@@ -53,7 +73,7 @@ export default function CategoryDialog({
         code: '',
         emoji: '📦',
         color: '#3b82f6',
-        is_active: true
+        is_active: true,
       });
     }
   }, [initialData, open]);
@@ -67,13 +87,15 @@ export default function CategoryDialog({
         .replace(/[\u0300-\u036f]/g, '')
         .replace(/\s+/g, '_')
         .replace(/[^a-z0-9_]/g, '');
-      setFormData(prev => ({ ...prev, code }));
+      setFormData((prev) => ({ ...prev, code }));
     }
   }, [formData.name, initialData]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.name.trim()) return;
+    if (!formData.name.trim()) {
+      return;
+    }
 
     const payload = {
       ...formData,
@@ -92,17 +114,26 @@ export default function CategoryDialog({
           <div className="flex items-center gap-3">
             <span className="text-3xl">🏷️</span>
             <div>
-              <h2 className="text-lg font-bold">{initialData ? '✏️ Editar Categoria' : '➕ Nova Categoria'}</h2>
+              <h2 className="text-lg font-bold">
+                {initialData ? '✏️ Editar Categoria' : '➕ Nova Categoria'}
+              </h2>
               <p className="text-blue-100 text-sm">Configure os dados da categoria de estoque</p>
             </div>
           </div>
-          <button onClick={() => onOpenChange(false)} className="p-1 hover:bg-blue-700 rounded transition">
+          <button
+            onClick={() => onOpenChange(false)}
+            className="p-1 hover:bg-blue-700 rounded transition"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content */}
-        <form id="category-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 pt-6 pb-2 space-y-5">
+        <form
+          id="category-form"
+          onSubmit={handleSubmit}
+          className="flex-1 overflow-y-auto px-6 pt-6 pb-2 space-y-5"
+        >
           {/* SEÇÃO 1: IDENTIDADE */}
           <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-5 mb-5">
             <div className="flex items-center gap-3 border-b pb-4">
@@ -172,7 +203,9 @@ export default function CategoryDialog({
             <div className="grid grid-cols-2 gap-5">
               {/* Emoji */}
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-3">Ícone/Emoji</label>
+                <label className="block text-sm font-semibold text-gray-900 mb-3">
+                  Ícone/Emoji
+                </label>
                 <div className="grid grid-cols-5 gap-2 border border-gray-200 rounded-lg p-3">
                   {EMOJI_OPTIONS.map((emoji) => (
                     <button
@@ -194,7 +227,9 @@ export default function CategoryDialog({
 
               {/* Cor */}
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-3">Cor da Categoria</label>
+                <label className="block text-sm font-semibold text-gray-900 mb-3">
+                  Cor da Categoria
+                </label>
                 <div className="space-y-2 border border-gray-200 rounded-lg p-3">
                   {COLOR_OPTIONS.map((option) => (
                     <button
@@ -207,10 +242,7 @@ export default function CategoryDialog({
                           : 'bg-gray-50 border border-gray-200 hover:bg-gray-100'
                       }`}
                     >
-                      <div
-                        className="w-6 h-6 rounded"
-                        style={{ backgroundColor: option.value }}
-                      />
+                      <div className="w-6 h-6 rounded" style={{ backgroundColor: option.value }} />
                       <span className="text-sm font-medium text-gray-700">{option.label}</span>
                     </button>
                   ))}
@@ -223,7 +255,9 @@ export default function CategoryDialog({
             <div className="mt-4 p-4 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 flex items-center gap-3 justify-center">
               <span style={{ fontSize: '32px' }}>{formData.emoji}</span>
               <div>
-                <p className="text-sm font-semibold text-gray-900">{formData.name || 'Categoria'}</p>
+                <p className="text-sm font-semibold text-gray-900">
+                  {formData.name || 'Categoria'}
+                </p>
                 <div
                   className="inline-block px-3 py-1 rounded-full text-xs font-semibold text-white"
                   style={{ backgroundColor: formData.color }}
@@ -251,7 +285,10 @@ export default function CategoryDialog({
                 onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
               />
               <div className="flex-1">
-                <label htmlFor="is_active" className="text-sm font-semibold text-gray-900 cursor-pointer block">
+                <label
+                  htmlFor="is_active"
+                  className="text-sm font-semibold text-gray-900 cursor-pointer block"
+                >
                   {formData.is_active ? '🟢 Categoria Ativa' : '⚪ Categoria Inativa'}
                 </label>
                 <p className="text-xs text-gray-600 mt-1">
@@ -260,7 +297,9 @@ export default function CategoryDialog({
                     : 'Categoria indisponível - não aparecerá em seleções'}
                 </p>
               </div>
-              <span className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap ${formData.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-300 text-gray-800'}`}>
+              <span
+                className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap ${formData.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-300 text-gray-800'}`}
+              >
                 {formData.is_active ? 'ATIVA' : 'INATIVA'}
               </span>
             </div>

@@ -4,17 +4,17 @@
 // Manter como backup para Salas × Recursos futuramente
 // ============================================================
 
-import React, { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
-import { useClinicContext } from "@/contexts/ClinicContext";
-import BaseSystemHeader from "@/components/layout/BaseSystemHeader";
-import { Alert } from "@/components/layout/BaseSystemAlert";
-import EmptyState from "@/components/layout/EmptyState";
-import * as roomsApi from "@/lib/roomsApi";
-import * as servicesApi from "@/lib/servicesApi";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Plus, Edit2, Trash2, X } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useClinicContext } from '@/contexts/ClinicContext';
+import BaseSystemHeader from '@/components/layout/BaseSystemHeader';
+import { Alert } from '@/components/layout/BaseSystemAlert';
+import EmptyState from '@/components/layout/EmptyState';
+import * as roomsApi from '@/lib/roomsApi';
+import * as servicesApi from '@/lib/servicesApi';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Plus, Edit2, Trash2, X } from 'lucide-react';
 
 export function RoomResourcesPage() {
   const { user, isAuthenticated } = useAuth();
@@ -28,8 +28,8 @@ export function RoomResourcesPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
-    room_id: "",
-    service_id: "",
+    room_id: '',
+    service_id: '',
     active: true,
   });
   const [submitting, setSubmitting] = useState(false);
@@ -54,8 +54,8 @@ export function RoomResourcesPage() {
       setRooms(Array.isArray(roomsData) ? roomsData : []);
       setServices(Array.isArray(servicesData) ? servicesData : []);
     } catch (err) {
-      setError(err.message || "Erro ao carregar dados");
-      console.error("Erro:", err);
+      setError(err.message || 'Erro ao carregar dados');
+      console.error('Erro:', err);
     } finally {
       setLoading(false);
     }
@@ -63,7 +63,7 @@ export function RoomResourcesPage() {
 
   const handleNew = () => {
     setEditingId(null);
-    setFormData({ room_id: "", service_id: "", active: true });
+    setFormData({ room_id: '', service_id: '', active: true });
     setShowForm(true);
     setError(null);
   };
@@ -71,8 +71,8 @@ export function RoomResourcesPage() {
   const handleEdit = (assignment) => {
     setEditingId(assignment.id);
     setFormData({
-      room_id: assignment.room_id || "",
-      service_id: assignment.service_id || "",
+      room_id: assignment.room_id || '',
+      service_id: assignment.service_id || '',
       active: assignment.active !== false,
     });
     setShowForm(true);
@@ -82,21 +82,29 @@ export function RoomResourcesPage() {
   const closeForm = () => {
     setShowForm(false);
     setEditingId(null);
-    setFormData({ room_id: "", service_id: "", active: true });
+    setFormData({ room_id: '', service_id: '', active: true });
     setSubmitting(false);
   };
 
   const handleCloseWithCheck = () => {
     const hasData = Object.entries(formData).some(([key, value]) => {
-      if (typeof value === "string") return value.trim() !== "";
-      if (typeof value === "number") return value !== 0;
-      if (typeof value === "boolean") return value !== true;
-      if (Array.isArray(value)) return value.length > 0;
+      if (typeof value === 'string') {
+        return value.trim() !== '';
+      }
+      if (typeof value === 'number') {
+        return value !== 0;
+      }
+      if (typeof value === 'boolean') {
+        return value !== true;
+      }
+      if (Array.isArray(value)) {
+        return value.length > 0;
+      }
       return false;
     });
 
     if (hasData) {
-      if (window.confirm("Tem certeza que deseja sair? As alterações não salvas serão perdidas.")) {
+      if (window.confirm('Tem certeza que deseja sair? As alterações não salvas serão perdidas.')) {
         closeForm();
       }
     } else {
@@ -106,11 +114,11 @@ export function RoomResourcesPage() {
 
   const validateForm = () => {
     if (!formData.room_id.trim()) {
-      setError("Sala é obrigatória");
+      setError('Sala é obrigatória');
       return false;
     }
     if (!formData.service_id.trim()) {
-      setError("Serviço é obrigatório");
+      setError('Serviço é obrigatório');
       return false;
     }
 
@@ -118,11 +126,11 @@ export function RoomResourcesPage() {
       (a) =>
         a.id !== editingId &&
         a.room_id === formData.room_id &&
-        a.service_id === formData.service_id
+        a.service_id === formData.service_id,
     );
 
     if (isDuplicate) {
-      setError("Esse recurso já está atribuído a essa sala");
+      setError('Esse recurso já está atribuído a essa sala');
       return false;
     }
 
@@ -147,11 +155,7 @@ export function RoomResourcesPage() {
       };
 
       if (editingId) {
-        setAssignments(
-          assignments.map((a) =>
-            a.id === editingId ? { ...a, ...dataToSave } : a
-          )
-        );
+        setAssignments(assignments.map((a) => (a.id === editingId ? { ...a, ...dataToSave } : a)));
       } else {
         const newAssignment = {
           id: Date.now().toString(),
@@ -162,8 +166,8 @@ export function RoomResourcesPage() {
 
       closeForm();
     } catch (err) {
-      setError(err.message || "Erro ao salvar atribuição");
-      console.error("Erro:", err);
+      setError(err.message || 'Erro ao salvar atribuição');
+      console.error('Erro:', err);
     } finally {
       setSubmitting(false);
     }
@@ -171,7 +175,9 @@ export function RoomResourcesPage() {
 
   const handleDelete = async (id) => {
     const assignment = assignments.find((a) => a.id === id);
-    if (!assignment) return;
+    if (!assignment) {
+      return;
+    }
 
     const room = rooms.find((r) => r.id === assignment.room_id);
     const service = services.find((s) => s.id === assignment.service_id);
@@ -184,17 +190,17 @@ export function RoomResourcesPage() {
       setError(null);
       setAssignments(assignments.filter((a) => a.id !== id));
     } catch (err) {
-      setError(err.message || "Erro ao deletar atribuição");
-      console.error("Erro:", err);
+      setError(err.message || 'Erro ao deletar atribuição');
+      console.error('Erro:', err);
     }
   };
 
   const getRoomName = (id) => {
-    return rooms.find((r) => r.id === id)?.name || "Desconhecida";
+    return rooms.find((r) => r.id === id)?.name || 'Desconhecida';
   };
 
   const getServiceName = (id) => {
-    return services.find((s) => s.id === id)?.name || "Desconhecido";
+    return services.find((s) => s.id === id)?.name || 'Desconhecido';
   };
 
   if (loading) {
@@ -216,14 +222,7 @@ export function RoomResourcesPage() {
       />
 
       {/* ALERTA */}
-      {error && (
-        <Alert
-          type="error"
-          title="Aviso"
-          message={error}
-          onClose={() => setError(null)}
-        />
-      )}
+      {error && <Alert type="error" title="Aviso" message={error} onClose={() => setError(null)} />}
 
       {rooms.length === 0 || services.length === 0 ? (
         <EmptyState
@@ -256,26 +255,15 @@ export function RoomResourcesPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-gray-50">
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                        Sala
-                      </th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                        Serviço
-                      </th>
-                      <th className="text-center py-3 px-4 font-semibold text-gray-700">
-                        Status
-                      </th>
-                      <th className="text-center py-3 px-4 font-semibold text-gray-700">
-                        Ações
-                      </th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Sala</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Serviço</th>
+                      <th className="text-center py-3 px-4 font-semibold text-gray-700">Status</th>
+                      <th className="text-center py-3 px-4 font-semibold text-gray-700">Ações</th>
                     </tr>
                   </thead>
                   <tbody>
                     {assignments.map((assignment) => (
-                      <tr
-                        key={assignment.id}
-                        className="border-b hover:bg-gray-50 transition"
-                      >
+                      <tr key={assignment.id} className="border-b hover:bg-gray-50 transition">
                         <td className="py-3 px-4 font-medium text-gray-900">
                           {getRoomName(assignment.room_id)}
                         </td>
@@ -286,11 +274,11 @@ export function RoomResourcesPage() {
                           <span
                             className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
                               assignment.active
-                                ? "bg-green-100 text-green-800"
-                                : "bg-gray-100 text-gray-800"
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-800'
                             }`}
                           >
-                            {assignment.active ? "Ativo" : "Inativo"}
+                            {assignment.active ? 'Ativo' : 'Inativo'}
                           </span>
                         </td>
                         <td className="py-3 px-4 flex justify-center gap-2">
@@ -331,79 +319,78 @@ export function RoomResourcesPage() {
               >
                 <X size={20} />
               </button>
-              <CardHeader className="border-b shrink-0" style={{flexShrink: 0}}>
-                <CardTitle>
-                  {editingId ? "Editar Serviço" : "Novo Serviço"}
-                </CardTitle>
+              <CardHeader className="border-b shrink-0" style={{ flexShrink: 0 }}>
+                <CardTitle>{editingId ? 'Editar Serviço' : 'Novo Serviço'}</CardTitle>
               </CardHeader>
               <CardContent className="app-modal-body p-6 modal-content-scroll">
-                <form id="room-resources-form" onSubmit={handleSubmit} className="space-y-4" style={{flex: 1, overflow: "visible"}}>
-                  <div style={{flex: 1, overflowY: "auto", paddingRight: "8px"}}>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Sala <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={formData.room_id}
-                    onChange={(e) =>
-                      setFormData({ ...formData, room_id: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                    disabled={submitting}
-                    autoFocus
-                  >
-                    <option value="">Selecione uma sala</option>
-                    {rooms.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <form
+                  id="room-resources-form"
+                  onSubmit={handleSubmit}
+                  className="space-y-4"
+                  style={{ flex: 1, overflow: 'visible' }}
+                >
+                  <div style={{ flex: 1, overflowY: 'auto', paddingRight: '8px' }}>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Sala <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={formData.room_id}
+                        onChange={(e) => setFormData({ ...formData, room_id: e.target.value })}
+                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                        disabled={submitting}
+                        autoFocus
+                      >
+                        <option value="">Selecione uma sala</option>
+                        {rooms.map((r) => (
+                          <option key={r.id} value={r.id}>
+                            {r.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Serviço <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={formData.service_id}
-                    onChange={(e) =>
-                      setFormData({ ...formData, service_id: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                    disabled={submitting}
-                  >
-                    <option value="">Selecione um serviço</option>
-                    {services.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Serviço <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={formData.service_id}
+                        onChange={(e) => setFormData({ ...formData, service_id: e.target.value })}
+                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                        disabled={submitting}
+                      >
+                        <option value="">Selecione um serviço</option>
+                        {services.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="active"
-                    checked={formData.active}
-                    onChange={(e) =>
-                      setFormData({ ...formData, active: e.target.checked })
-                    }
-                    className="rounded border-gray-300"
-                    disabled={submitting}
-                  />
-                  <label htmlFor="active" className="text-sm font-medium text-gray-700">
-                    Ativo
-                  </label>
-                </div>
-
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="active"
+                        checked={formData.active}
+                        onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
+                        className="rounded border-gray-300"
+                        disabled={submitting}
+                      />
+                      <label htmlFor="active" className="text-sm font-medium text-gray-700">
+                        Ativo
+                      </label>
+                    </div>
                   </div>
                 </form>
               </CardContent>
-              <div style={{flexShrink: 0}} className="border-t bg-white px-6 py-4 flex gap-3 justify-end">
+              <div
+                style={{ flexShrink: 0 }}
+                className="border-t bg-white px-6 py-4 flex gap-3 justify-end"
+              >
                 <Button
                   type="button"
                   onClick={handleCloseWithCheck}
@@ -418,7 +405,7 @@ export function RoomResourcesPage() {
                   className="bg-blue-600 hover:bg-blue-700"
                   disabled={submitting}
                 >
-                  {submitting ? "Salvando..." : editingId ? "Atualizar" : "Criar/Adicionar"}
+                  {submitting ? 'Salvando...' : editingId ? 'Atualizar' : 'Criar/Adicionar'}
                 </Button>
               </div>
             </Card>
@@ -428,4 +415,3 @@ export function RoomResourcesPage() {
     </div>
   );
 }
-

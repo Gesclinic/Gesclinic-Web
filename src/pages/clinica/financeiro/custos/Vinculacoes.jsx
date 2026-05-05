@@ -2,11 +2,18 @@ import React, { useState } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
 
-export default function Vinculacoes(){
+export default function Vinculacoes() {
   const [rows, setRows] = useState([]);
-  const addRow = () => setRows(prev => [...prev, { item:'', center:'', priority:1, active:true }]);
+  const addRow = () =>
+    setRows((prev) => [...prev, { item: '', center: '', priority: 1, active: true }]);
   return (
     <Tabs defaultValue="servicos" className="space-y-3">
       <TabsList>
@@ -17,8 +24,13 @@ export default function Vinculacoes(){
       </TabsList>
       <TabsContent value="servicos">
         <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-600">Defina regras para aplicar centro de custo automaticamente quando um serviço for lançado.</div>
-          <Button size="sm" onClick={addRow}>Adicionar Regra</Button>
+          <div className="text-sm text-gray-600">
+            Defina regras para aplicar centro de custo automaticamente quando um serviço for
+            lançado.
+          </div>
+          <Button size="sm" onClick={addRow}>
+            Adicionar Regra
+          </Button>
         </div>
         <div className="mt-2 border rounded-md overflow-hidden">
           <table className="w-full text-sm">
@@ -31,7 +43,7 @@ export default function Vinculacoes(){
               </tr>
             </thead>
             <tbody>
-              {rows.map((r,idx)=>(
+              {rows.map((r, idx) => (
                 <tr key={idx} className="border-t">
                   <td className="p-2">—</td>
                   <td className="p-2">—</td>
@@ -39,17 +51,28 @@ export default function Vinculacoes(){
                   <td className="p-2">{r.active ? 'Automática' : 'Inativa'}</td>
                 </tr>
               ))}
-              {rows.length===0 && (
-                <tr><td className="p-4 text-center text-gray-500" colSpan={4}>Nenhuma regra ainda.</td></tr>
+              {rows.length === 0 && (
+                <tr>
+                  <td className="p-4 text-center text-gray-500" colSpan={4}>
+                    Nenhuma regra ainda.
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
         </div>
       </TabsContent>
-      <TabsContent value="profissionais"><div className="text-sm text-gray-600">Defina regras por profissional (em breve).</div></TabsContent>
-      <TabsContent value="convenios"><div className="text-sm text-gray-600">Defina regras por convênio (em breve).</div></TabsContent>
-      <TabsContent value="despesas"><div className="text-sm text-gray-600">Defina regras automáticas para despesas (em breve).</div></TabsContent>
+      <TabsContent value="profissionais">
+        <div className="text-sm text-gray-600">Defina regras por profissional (em breve).</div>
+      </TabsContent>
+      <TabsContent value="convenios">
+        <div className="text-sm text-gray-600">Defina regras por convênio (em breve).</div>
+      </TabsContent>
+      <TabsContent value="despesas">
+        <div className="text-sm text-gray-600">
+          Defina regras automáticas para despesas (em breve).
+        </div>
+      </TabsContent>
     </Tabs>
   );
 }
-

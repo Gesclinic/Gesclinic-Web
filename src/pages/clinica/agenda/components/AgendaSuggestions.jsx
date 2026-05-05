@@ -1,8 +1,8 @@
 /**
  * AgendaSuggestions.jsx
- * 
+ *
  * 💡 COMPONENTE DE SUGESTÕES INTELIGENTES
- * 
+ *
  * Exibe sugestões de encaixe com ações contextuais:
  * - Cards com ícones por tipo
  * - Destaque visual por prioridade
@@ -10,7 +10,7 @@
  * - Integração com lista de espera
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   AlertCircle,
   Clock,
@@ -21,8 +21,8 @@ import {
   AlertTriangle,
   CheckCircle,
   Zap,
-} from "lucide-react";
-import { generateEncaixeSuggestions, logSuggestionAction } from "@/lib/agendaSuggestionsApi";
+} from 'lucide-react';
+import { generateEncaixeSuggestions, logSuggestionAction } from '@/lib/agendaSuggestionsApi';
 
 const SUGGESTION_TYPE_ICONS = {
   SLOT_LIVRE: Clock,
@@ -33,22 +33,22 @@ const SUGGESTION_TYPE_ICONS = {
 
 const PRIORITY_COLORS = {
   ALTA: {
-    bg: "bg-red-50",
-    border: "border-red-200",
-    badge: "bg-red-100 text-red-800",
-    button: "bg-red-500 hover:bg-red-600",
+    bg: 'bg-red-50',
+    border: 'border-red-200',
+    badge: 'bg-red-100 text-red-800',
+    button: 'bg-red-500 hover:bg-red-600',
   },
   MEDIA: {
-    bg: "bg-yellow-50",
-    border: "border-yellow-200",
-    badge: "bg-yellow-100 text-yellow-800",
-    button: "bg-yellow-500 hover:bg-yellow-600",
+    bg: 'bg-yellow-50',
+    border: 'border-yellow-200',
+    badge: 'bg-yellow-100 text-yellow-800',
+    button: 'bg-yellow-500 hover:bg-yellow-600',
   },
   BAIXA: {
-    bg: "bg-blue-50",
-    border: "border-blue-200",
-    badge: "bg-blue-100 text-blue-800",
-    button: "bg-blue-500 hover:bg-blue-600",
+    bg: 'bg-blue-50',
+    border: 'border-blue-200',
+    badge: 'bg-blue-100 text-blue-800',
+    button: 'bg-blue-500 hover:bg-blue-600',
   },
 };
 
@@ -66,7 +66,9 @@ export default function AgendaSuggestions({
 
   // Carregar sugestões quando data ou clinicId mudam
   useEffect(() => {
-    if (!clinicId || !date) return;
+    if (!clinicId || !date) {
+      return;
+    }
 
     const loadSuggestions = async () => {
       setLoading(true);
@@ -74,7 +76,7 @@ export default function AgendaSuggestions({
         const data = await generateEncaixeSuggestions(clinicId, date);
         setSuggestions(data);
       } catch (err) {
-        console.error("Erro ao carregar sugestões:", err);
+        console.error('Erro ao carregar sugestões:', err);
       } finally {
         setLoading(false);
       }
@@ -85,13 +87,13 @@ export default function AgendaSuggestions({
 
   // Verificar permissões
   const canViewSuggestions =
-    userRole === "recepcion" || userRole === "gestor" || userRole === "admin";
+    userRole === 'recepcion' || userRole === 'gestor' || userRole === 'admin';
 
-  if (!canViewSuggestions) return null;
+  if (!canViewSuggestions) {
+    return null;
+  }
 
-  const visibleSuggestions = suggestions.filter(
-    (_, idx) => !ignoredSuggestions.has(idx)
-  );
+  const visibleSuggestions = suggestions.filter((_, idx) => !ignoredSuggestions.has(idx));
 
   if (loading) {
     return (
@@ -112,12 +114,12 @@ export default function AgendaSuggestions({
   }
 
   return (
-    <div className={`space-y-3 ${compact ? "max-h-96 overflow-y-auto" : ""}`}>
+    <div className={`space-y-3 ${compact ? 'max-h-96 overflow-y-auto' : ''}`}>
       <div className="flex items-center gap-2 mb-4">
         <Zap className="w-5 h-5 text-amber-500" />
         <h3 className="font-semibold text-gray-900">Sugestões Inteligentes</h3>
         <span className="text-sm font-medium text-gray-500">
-          {visibleSuggestions.length} oportunidade{visibleSuggestions.length !== 1 ? "s" : ""}
+          {visibleSuggestions.length} oportunidade{visibleSuggestions.length !== 1 ? 's' : ''}
         </span>
       </div>
 
@@ -128,15 +130,11 @@ export default function AgendaSuggestions({
           index={idx}
           colors={PRIORITY_COLORS[suggestion.prioridade]}
           icon={SUGGESTION_TYPE_ICONS[suggestion.type]}
-          onAction={(action) =>
-            handleSuggestionAction(suggestion, action, idx)
-          }
+          onAction={(action) => handleSuggestionAction(suggestion, action, idx)}
           onIgnore={() => handleIgnoreSuggestion(idx)}
           expanded={expandedCard === idx}
-          onToggleExpand={() =>
-            setExpandedCard(expandedCard === idx ? null : idx)
-          }
-          canExecute={userRole === "recepcion" || userRole === "gestor"}
+          onToggleExpand={() => setExpandedCard(expandedCard === idx ? null : idx)}
+          canExecute={userRole === 'recepcion' || userRole === 'gestor'}
         />
       ))}
     </div>
@@ -165,7 +163,7 @@ export default function AgendaSuggestions({
       newIgnored.add(idx);
       setIgnoredSuggestions(newIgnored);
     } catch (err) {
-      console.error("Erro ao executar ação de sugestão:", err);
+      console.error('Erro ao executar ação de sugestão:', err);
     }
   }
 
@@ -179,7 +177,7 @@ export default function AgendaSuggestions({
     logSuggestionAction({
       suggestionType: suggestion.type,
       clinicId,
-      action: "IGNORADA",
+      action: 'IGNORADA',
     }).catch(console.error);
   }
 }
@@ -199,9 +197,9 @@ function SuggestionCard({
   index,
 }) {
   const priorityLabel = {
-    ALTA: "🔴 Alta",
-    MEDIA: "🟡 Média",
-    BAIXA: "🔵 Baixa",
+    ALTA: '🔴 Alta',
+    MEDIA: '🟡 Média',
+    BAIXA: '🔵 Baixa',
   };
 
   return (
@@ -209,7 +207,7 @@ function SuggestionCard({
       className={`
         border-l-4 rounded-lg p-4 transition-all cursor-pointer
         ${colors.bg} ${colors.border} border
-        ${expanded ? "ring-2 ring-offset-2 ring-gray-400" : ""}
+        ${expanded ? 'ring-2 ring-offset-2 ring-gray-400' : ''}
       `}
       onClick={onToggleExpand}
     >
@@ -232,13 +230,11 @@ function SuggestionCard({
           </div>
 
           {/* Mensagem principal */}
-          <p className="text-sm text-gray-700 leading-relaxed">
-            {suggestion.mensagem}
-          </p>
+          <p className="text-sm text-gray-700 leading-relaxed">{suggestion.mensagem}</p>
 
           {/* Horário e Profissional */}
           <div className="flex gap-4 mt-2 text-xs text-gray-600">
-            {suggestion.horario && suggestion.horario !== "Dia inteiro" && (
+            {suggestion.horario && suggestion.horario !== 'Dia inteiro' && (
               <span className="flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5" />
                 {suggestion.horario}
@@ -261,9 +257,7 @@ function SuggestionCard({
             onToggleExpand();
           }}
         >
-          <ChevronRight
-            className={`w-5 h-5 transition-transform ${expanded ? "rotate-90" : ""}`}
-          />
+          <ChevronRight className={`w-5 h-5 transition-transform ${expanded ? 'rotate-90' : ''}`} />
         </button>
       </div>
 
@@ -274,16 +268,26 @@ function SuggestionCard({
           {suggestion.metadata && (
             <div className="bg-white bg-opacity-50 rounded p-2 text-xs text-gray-600 space-y-1">
               {suggestion.metadata.waitlistSize && (
-                <p>👥 <strong>{suggestion.metadata.waitlistSize}</strong> pacientes na fila</p>
+                <p>
+                  👥 <strong>{suggestion.metadata.waitlistSize}</strong> pacientes na fila
+                </p>
               )}
               {suggestion.metadata.occupancyRate !== undefined && (
-                <p>📊 Taxa de ocupação: <strong>{(suggestion.metadata.occupancyRate * 100).toFixed(0)}%</strong></p>
+                <p>
+                  📊 Taxa de ocupação:{' '}
+                  <strong>{(suggestion.metadata.occupancyRate * 100).toFixed(0)}%</strong>
+                </p>
               )}
               {suggestion.metadata.estimatedRevenue && (
-                <p>💰 Receita estimada: <strong>R$ {suggestion.metadata.estimatedRevenue.toFixed(2)}</strong></p>
+                <p>
+                  💰 Receita estimada:{' '}
+                  <strong>R$ {suggestion.metadata.estimatedRevenue.toFixed(2)}</strong>
+                </p>
               )}
               {suggestion.metadata.appointmentsToday !== undefined && (
-                <p>📅 Atendimentos hoje: <strong>{suggestion.metadata.appointmentsToday}</strong></p>
+                <p>
+                  📅 Atendimentos hoje: <strong>{suggestion.metadata.appointmentsToday}</strong>
+                </p>
               )}
             </div>
           )}
@@ -333,12 +337,12 @@ function SuggestionCard({
  */
 function getTitleByType(type) {
   const titles = {
-    SLOT_LIVRE: "💫 Horário Nobre Disponível",
-    NO_SHOW: "⚠️ Falta Confirmada",
-    PROFISSIONAL_OCIOSO: "😴 Profissional Ocioso",
-    AGENDA_CRITICA: "🚨 Agenda Crítica",
+    SLOT_LIVRE: '💫 Horário Nobre Disponível',
+    NO_SHOW: '⚠️ Falta Confirmada',
+    PROFISSIONAL_OCIOSO: '😴 Profissional Ocioso',
+    AGENDA_CRITICA: '🚨 Agenda Crítica',
   };
-  return titles[type] || "Sugestão";
+  return titles[type] || 'Sugestão';
 }
 
 /**
@@ -346,13 +350,13 @@ function getTitleByType(type) {
  */
 function getLabelByAction(action) {
   const labels = {
-    VER_LISTA_ESPERA: "Ver Lista de Espera",
-    CRIAR_ENCAIXE: "Criar Encaixe",
-    CONTATAR_PACIENTE: "Contatar Paciente",
-    OTIMIZAR_AGENDA: "Otimizar Agenda",
-    IGNORAR: "Ignorar",
+    VER_LISTA_ESPERA: 'Ver Lista de Espera',
+    CRIAR_ENCAIXE: 'Criar Encaixe',
+    CONTATAR_PACIENTE: 'Contatar Paciente',
+    OTIMIZAR_AGENDA: 'Otimizar Agenda',
+    IGNORAR: 'Ignorar',
   };
-  return labels[action] || "Executar";
+  return labels[action] || 'Executar';
 }
 
 /**
@@ -360,10 +364,9 @@ function getLabelByAction(action) {
  */
 function getColorByPriority(priority) {
   const colors = {
-    ALTA: "#dc2626",
-    MEDIA: "#ea8c2f",
-    BAIXA: "#2563eb",
+    ALTA: '#dc2626',
+    MEDIA: '#ea8c2f',
+    BAIXA: '#2563eb',
   };
-  return colors[priority] || "#6b7280";
+  return colors[priority] || '#6b7280';
 }
-

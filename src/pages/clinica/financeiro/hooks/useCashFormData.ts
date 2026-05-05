@@ -35,7 +35,7 @@ export const useCashFormData = (clinicId: string) => {
 
   const fetchPatients = useCallback(async () => {
     if (!clinicId) return;
-    
+
     try {
       const { data, error } = await supabase
         .from('patients')
@@ -52,7 +52,7 @@ export const useCashFormData = (clinicId: string) => {
 
   const fetchProfessionals = useCallback(async () => {
     if (!clinicId) return;
-    
+
     try {
       const { data, error } = await supabase
         .from('professionals')
@@ -69,7 +69,7 @@ export const useCashFormData = (clinicId: string) => {
 
   const fetchServices = useCallback(async () => {
     if (!clinicId) return;
-    
+
     try {
       const { data, error } = await supabase
         .from('services')
@@ -86,7 +86,7 @@ export const useCashFormData = (clinicId: string) => {
 
   const fetchPayers = useCallback(async () => {
     if (!clinicId) return;
-    
+
     try {
       const { data, error } = await supabase
         .from('payers')
@@ -104,12 +104,7 @@ export const useCashFormData = (clinicId: string) => {
   const fetchAllData = useCallback(async () => {
     setLoading(true);
     try {
-      await Promise.all([
-        fetchPatients(),
-        fetchProfessionals(),
-        fetchServices(),
-        fetchPayers()
-      ]);
+      await Promise.all([fetchPatients(), fetchProfessionals(), fetchServices(), fetchPayers()]);
     } finally {
       setLoading(false);
     }
@@ -125,6 +120,6 @@ export const useCashFormData = (clinicId: string) => {
     fetchProfessionals,
     fetchServices,
     fetchPayers,
-    fetchAllData
+    fetchAllData,
   };
 };

@@ -1,39 +1,45 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/lib/customSupabaseClient";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/components/ui/use-toast";
+import React, { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/lib/customSupabaseClient';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useToast } from '@/components/ui/use-toast';
 // import { Loader2, PlusCircle, Trash2 } from "lucide-react";
 const Loader2 = () => <span>Loading...</span>;
 const PlusCircle = () => <span>+</span>;
 const Trash2 = () => <span>Del</span>;
-import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import ServiceManager from "./ServiceManager";
+import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import ServiceManager from './ServiceManager';
 import {
   upsertProfessionalSchedules,
   upsertProfessionalPayers,
   getProfessionalDetails,
   createProfessional,
   updateProfessional,
-} from "@/lib/professionalsApi";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
+} from '@/lib/professionalsApi';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
 
 /* -------------------------------
  * DIAS DA SEMANA
  * ------------------------------- */
 const weekDays = [
-  { id: 1, name: "Segunda-feira" },
-  { id: 2, name: "Terça-feira" },
-  { id: 3, name: "Quarta-feira" },
-  { id: 4, name: "Quinta-feira" },
-  { id: 5, name: "Sexta-feira" },
-  { id: 6, name: "Sábado" },
-  { id: 7, name: "Domingo" },
+  { id: 1, name: 'Segunda-feira' },
+  { id: 2, name: 'Terça-feira' },
+  { id: 3, name: 'Quarta-feira' },
+  { id: 4, name: 'Quinta-feira' },
+  { id: 5, name: 'Sexta-feira' },
+  { id: 6, name: 'Sábado' },
+  { id: 7, name: 'Domingo' },
 ];
 
 /* -------------------------------
@@ -43,7 +49,13 @@ function SchedulesTab({ schedules, setSchedules }) {
   const addSchedule = () => {
     setSchedules([
       ...schedules,
-      { weekday: 1, start_time: "08:00", end_time: "18:00", appointment_duration: 30, active: true },
+      {
+        weekday: 1,
+        start_time: '08:00',
+        end_time: '18:00',
+        appointment_duration: 30,
+        active: true,
+      },
     ]);
   };
 
@@ -68,7 +80,7 @@ function SchedulesTab({ schedules, setSchedules }) {
             <Label>Dia da Semana</Label>
             <Select
               value={String(schedule.weekday)}
-              onValueChange={(value) => handleScheduleChange(index, "weekday", parseInt(value, 10))}
+              onValueChange={(value) => handleScheduleChange(index, 'weekday', parseInt(value, 10))}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione o dia" />
@@ -86,16 +98,16 @@ function SchedulesTab({ schedules, setSchedules }) {
             <Label>Início</Label>
             <Input
               type="time"
-              value={schedule.start_time || ""}
-              onChange={(e) => handleScheduleChange(index, "start_time", e.target.value)}
+              value={schedule.start_time || ''}
+              onChange={(e) => handleScheduleChange(index, 'start_time', e.target.value)}
             />
           </div>
           <div>
             <Label>Fim</Label>
             <Input
               type="time"
-              value={schedule.end_time || ""}
-              onChange={(e) => handleScheduleChange(index, "end_time", e.target.value)}
+              value={schedule.end_time || ''}
+              onChange={(e) => handleScheduleChange(index, 'end_time', e.target.value)}
             />
           </div>
           <div>
@@ -104,17 +116,12 @@ function SchedulesTab({ schedules, setSchedules }) {
               type="number"
               value={schedule.appointment_duration || 30}
               onChange={(e) =>
-                handleScheduleChange(index, "appointment_duration", parseInt(e.target.value, 10))
+                handleScheduleChange(index, 'appointment_duration', parseInt(e.target.value, 10))
               }
             />
           </div>
           <div className="flex items-end">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => removeSchedule(index)}
-            >
+            <Button type="button" variant="ghost" size="icon" onClick={() => removeSchedule(index)}>
               <Trash2 className="h-4 w-4 text-red-500" />
             </Button>
           </div>
@@ -168,9 +175,9 @@ function PayersTab({ professionalPayers, setProfessionalPayers, allPayers }) {
  * FORMULÁRIO PRINCIPAL
  * ------------------------------- */
 export default function ProfessionalForm({ professionalId: propProfessionalId, onSave, onClose }) {
-  console.log("🚀 === PROFESSIONAL FORM MONTADO ===");
-  console.log("🚀 propProfessionalId:", propProfessionalId);
-  console.log("🚀 Tipo propProfessionalId:", typeof propProfessionalId);
+  console.log('🚀 === PROFESSIONAL FORM MONTADO ===');
+  console.log('🚀 propProfessionalId:', propProfessionalId);
+  console.log('🚀 Tipo propProfessionalId:', typeof propProfessionalId);
 
   const { clinicId } = useAuth();
   const [professionalId, setProfessionalId] = useState(propProfessionalId);
@@ -179,38 +186,36 @@ export default function ProfessionalForm({ professionalId: propProfessionalId, o
 
   // Detectar mudanças no propProfessionalId
   useEffect(() => {
-    console.log("🔄 useEffect propProfessionalId mudou:", propProfessionalId);
+    console.log('🔄 useEffect propProfessionalId mudou:', propProfessionalId);
     setProfessionalId(propProfessionalId);
   }, [propProfessionalId]);
-  const [activeTab, setActiveTab] = useState("personal");
+  const [activeTab, setActiveTab] = useState('personal');
   const [formData, setFormData] = useState({
-    name: "",
-    specialty: "",
-    crm: "",
-    uf: "",
-    rqe: "",
-    email: "",
-    phone: "",
-    address: "",
-    city: "",
-    state: "",
-    schedule_notes: "",
+    name: '',
+    specialty: '',
+    crm: '',
+    uf: '',
+    rqe: '',
+    email: '',
+    phone: '',
+    address: '',
+    city: '',
+    state: '',
+    schedule_notes: '',
     active: true,
-    color: "#d1d5db",
+    color: '#d1d5db',
   });
 
   // CRM/UF HANDLERS
   const handleCrmChange = (idx, field, value) => {
     setFormData((prev) => {
-      const crms = prev.crms.map((item, i) =>
-        i === idx ? { ...item, [field]: value } : item
-      );
+      const crms = prev.crms.map((item, i) => (i === idx ? { ...item, [field]: value } : item));
       return { ...prev, crms };
     });
   };
 
   const handleAddCrm = () => {
-    setFormData((prev) => ({ ...prev, crms: [...prev.crms, { crm: "", uf: "" }] }));
+    setFormData((prev) => ({ ...prev, crms: [...prev.crms, { crm: '', uf: '' }] }));
   };
 
   const handleRemoveCrm = (idx) => {
@@ -220,14 +225,14 @@ export default function ProfessionalForm({ professionalId: propProfessionalId, o
   // Forçar sempre abrir na aba "Dados Pessoais" quando for edição
   useEffect(() => {
     if (professionalId) {
-      setActiveTab("personal");
+      setActiveTab('personal');
     }
   }, [professionalId]);
 
   // Debug simplificado do formData
   useEffect(() => {
     if (formData.name) {
-      console.log("✅ Dados carregados:", formData.name);
+      console.log('✅ Dados carregados:', formData.name);
     }
   }, [formData.name]);
   const [schedules, setSchedules] = useState([]);
@@ -237,16 +242,16 @@ export default function ProfessionalForm({ professionalId: propProfessionalId, o
   // Debug otimizado dos schedules e payers
   useEffect(() => {
     if (schedules.length > 0) {
-      console.log("📅 Horários carregados:", schedules.length);
+      console.log('📅 Horários carregados:', schedules.length);
     }
   }, [schedules]);
 
   useEffect(() => {
     if (allPayers.length > 0) {
-      console.log("💰 Convênios disponíveis:", allPayers.length);
+      console.log('💰 Convênios disponíveis:', allPayers.length);
     }
     if (professionalPayers.length > 0) {
-      console.log("💰 Convênios selecionados:", professionalPayers.length);
+      console.log('💰 Convênios selecionados:', professionalPayers.length);
     }
   }, [professionalPayers, allPayers]);
   const { toast } = useToast();
@@ -256,27 +261,27 @@ export default function ProfessionalForm({ professionalId: propProfessionalId, o
    * ------------------------------- */
   const loadDependencies = useCallback(async () => {
     if (!clinicId) {
-      console.log("⚠️ ClinicId não disponível para carregar convênios");
+      console.log('⚠️ ClinicId não disponível para carregar convênios');
       return;
     }
-    
+
     try {
       const { data, error } = await supabase
-        .from("payers")
-        .select("id, name")
-        .eq("clinic_id", clinicId)
-        .order("name");
-        
+        .from('payers')
+        .select('id, name')
+        .eq('clinic_id', clinicId)
+        .order('name');
+
       if (error) {
-        console.warn("⚠️ Erro ao carregar convênios:", error.message);
+        console.warn('⚠️ Erro ao carregar convênios:', error.message);
         // Não mostrar toast para não interromper o fluxo
         setAllPayers([]);
       } else {
         setAllPayers(data || []);
-        console.log("✅ Convênios disponíveis:", data?.length || 0);
+        console.log('✅ Convênios disponíveis:', data?.length || 0);
       }
     } catch (err) {
-      console.warn("⚠️ Falha ao carregar convênios:", err.message);
+      console.warn('⚠️ Falha ao carregar convênios:', err.message);
       setAllPayers([]);
       // Continuar sem convênios - não é crítico para o funcionamento do formulário
     }
@@ -286,106 +291,103 @@ export default function ProfessionalForm({ professionalId: propProfessionalId, o
    * CARREGAR PROFISSIONAL
    * ------------------------------- */
   const loadProfessional = useCallback(async () => {
-    console.log("🎯 === LOAD PROFESSIONAL SUPER SIMPLES ===");
-    console.log("🎯 ProfessionalId:", professionalId);
-    
+    console.log('🎯 === LOAD PROFESSIONAL SUPER SIMPLES ===');
+    console.log('🎯 ProfessionalId:', professionalId);
+
     if (!professionalId) {
-      console.log("🎯 Sem ID, modo criação");
+      console.log('🎯 Sem ID, modo criação');
       return;
     }
 
     setLoading(true);
-    
+
     // BUSCA DIRETA E SIMPLES NO SUPABASE
     try {
-      console.log("🎯 Fazendo busca direta no Supabase...");
-      
+      console.log('🎯 Fazendo busca direta no Supabase...');
+
       const { data, error } = await supabase
-        .from("professionals")
-        .select("*")
-        .eq("id", professionalId)
+        .from('professionals')
+        .select('*')
+        .eq('id', professionalId)
         .single();
 
-      console.log("🎯 Resultado direto:", { data, error });
+      console.log('🎯 Resultado direto:', { data, error });
 
       if (error) {
-        console.error("❌ Erro na busca:", error);
+        console.error('❌ Erro na busca:', error);
         throw error;
       }
 
       if (data) {
-        console.log("✅ DADOS ENCONTRADOS:", data);
-        console.log("✅ Nome:", data.name);
-        console.log("✅ Email:", data.email);
-        console.log("✅ CRM:", data.crm);
-        
+        console.log('✅ DADOS ENCONTRADOS:', data);
+        console.log('✅ Nome:', data.name);
+        console.log('✅ Email:', data.email);
+        console.log('✅ CRM:', data.crm);
+
         // SETAR FORMDATA DIRETAMENTE
         const formDataToSet = {
-          name: data.name || "",
-          specialty: data.specialty || "",
-          crm: data.crm || "",
-          uf: data.uf || data.state || "",
-          rqe: data.rqe || "",
-          email: data.email || "",
-          phone: data.phone || "",
-          address: data.address || "",
-          city: data.city || "",
-          state: data.state || "",
-          schedule_notes: data.schedule_notes || "",
+          name: data.name || '',
+          specialty: data.specialty || '',
+          crm: data.crm || '',
+          uf: data.uf || data.state || '',
+          rqe: data.rqe || '',
+          email: data.email || '',
+          phone: data.phone || '',
+          address: data.address || '',
+          city: data.city || '',
+          state: data.state || '',
+          schedule_notes: data.schedule_notes || '',
           active: data.active !== undefined ? data.active : true,
-          color: data.color || "#d1d5db",
+          color: data.color || '#d1d5db',
         };
         setFormData(formDataToSet);
-        
+
         // BUSCAR SCHEDULES E PAYERS EM PARALELO PARA MELHOR PERFORMANCE
-        console.log("🎯 Buscando dados relacionados...");
-        
+        console.log('🎯 Buscando dados relacionados...');
+
         const [schedulesResult, payersResult] = await Promise.all([
           supabase
-            .from("professional_schedules")
-            .select("*")
-            .eq("professional_id", professionalId)
-            .order("weekday"),
-          supabase
-            .from("professional_payers")
-            .select("*")
-            .eq("professional_id", professionalId)
+            .from('professional_schedules')
+            .select('*')
+            .eq('professional_id', professionalId)
+            .order('weekday'),
+          supabase.from('professional_payers').select('*').eq('professional_id', professionalId),
         ]);
-        
+
         // Processar schedules
         if (!schedulesResult.error && schedulesResult.data) {
           setSchedules(schedulesResult.data);
-          console.log("📅 Horários carregados:", schedulesResult.data.length);
+          console.log('📅 Horários carregados:', schedulesResult.data.length);
         } else if (schedulesResult.error) {
-          console.warn("⚠️ Erro ao carregar horários:", schedulesResult.error.message);
+          console.warn('⚠️ Erro ao carregar horários:', schedulesResult.error.message);
         }
-        
+
         // Processar payers
         if (!payersResult.error && payersResult.data) {
           setProfessionalPayers(payersResult.data);
-          console.log("💰 Convênios carregados:", payersResult.data.length);
+          console.log('💰 Convênios carregados:', payersResult.data.length);
         } else if (payersResult.error) {
-          console.warn("⚠️ Erro ao carregar convênios:", payersResult.error.message);
+          console.warn('⚠️ Erro ao carregar convênios:', payersResult.error.message);
         }
-        
-        console.log("✅ Profissional carregado com sucesso");
-        
+
+        console.log('✅ Profissional carregado com sucesso');
       } else {
-        console.warn("⚠️ Nenhum dado encontrado para o profissional");
-        toast({ 
-          title: "Aviso", 
-          description: "Profissional não encontrado ou dados incompletos.", 
-          variant: "destructive" 
+        console.warn('⚠️ Nenhum dado encontrado para o profissional');
+        toast({
+          title: 'Aviso',
+          description: 'Profissional não encontrado ou dados incompletos.',
+          variant: 'destructive',
         });
-        if (onClose) onClose();
+        if (onClose) {
+          onClose();
+        }
       }
-      
     } catch (error) {
-      console.error("❌ Erro fatal:", error);
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
+      console.error('❌ Erro fatal:', error);
+      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     } finally {
       setLoading(false);
-      console.log("🎯 === LOAD FINALIZADO ===");
+      console.log('🎯 === LOAD FINALIZADO ===');
     }
   }, [professionalId, toast, onClose]);
 
@@ -396,11 +398,10 @@ export default function ProfessionalForm({ professionalId: propProfessionalId, o
   useEffect(() => {
     loadDependencies();
     // Só carregar profissional se o ID existir e não for null/undefined
-    if (professionalId && professionalId !== "null" && professionalId !== "undefined") {
+    if (professionalId && professionalId !== 'null' && professionalId !== 'undefined') {
       loadProfessional();
     }
   }, [professionalId, loadDependencies, loadProfessional]);
-
 
   /* -------------------------------
    * EVENTOS DO FORM
@@ -417,85 +418,86 @@ export default function ProfessionalForm({ professionalId: propProfessionalId, o
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
-  
-    console.log("🎯 === FORM SUBMIT INICIADO ===");
-    console.log("🎯 ProfessionalId:", professionalId);
-    console.log("🎯 ClinicId:", clinicId);
-    console.log("🎯 FormData:", formData);
-    console.log("🎯 É edição?", !!professionalId);
-  
+
+    console.log('🎯 === FORM SUBMIT INICIADO ===');
+    console.log('🎯 ProfessionalId:', professionalId);
+    console.log('🎯 ClinicId:', clinicId);
+    console.log('🎯 FormData:', formData);
+    console.log('🎯 É edição?', !!professionalId);
+
     try {
       let profData;
       if (professionalId) {
-        console.log("🔄 Atualizando profissional existente...");
+        console.log('🔄 Atualizando profissional existente...');
         profData = await updateProfessional(professionalId, { ...formData });
       } else {
-        console.log("➕ Criando novo profissional...");
+        console.log('➕ Criando novo profissional...');
         profData = await createProfessional(clinicId, { ...formData });
       }
-  
-      console.log("✅ Dados do profissional salvos:", profData);
+
+      console.log('✅ Dados do profissional salvos:', profData);
       const currentProfessionalId = profData?.id;
-  
+
       if (!currentProfessionalId) {
-        throw new Error("Não foi possível obter o ID do profissional após salvar.");
+        throw new Error('Não foi possível obter o ID do profissional após salvar.');
       }
-  
+
       if (!professionalId) {
         setProfessionalId(currentProfessionalId);
       }
-  
-      console.log("🔄 === SALVANDO HORÁRIOS E CONVÊNIOS ===");
-      console.log("🔄 CurrentProfessionalId:", currentProfessionalId);
-      console.log("🔄 ClinicId:", clinicId);
-      console.log("🔄 Schedules para salvar:", schedules);
-      console.log("🔄 Quantidade schedules:", schedules?.length || 0);
-      console.log("🔄 ProfessionalPayers para salvar:", professionalPayers);
-      console.log("🔄 Quantidade payers:", professionalPayers?.length || 0);
-      
+
+      console.log('🔄 === SALVANDO HORÁRIOS E CONVÊNIOS ===');
+      console.log('🔄 CurrentProfessionalId:', currentProfessionalId);
+      console.log('🔄 ClinicId:', clinicId);
+      console.log('🔄 Schedules para salvar:', schedules);
+      console.log('🔄 Quantidade schedules:', schedules?.length || 0);
+      console.log('🔄 ProfessionalPayers para salvar:', professionalPayers);
+      console.log('🔄 Quantidade payers:', professionalPayers?.length || 0);
+
       await Promise.all([
         upsertProfessionalSchedules(currentProfessionalId, clinicId, schedules),
         upsertProfessionalPayers(currentProfessionalId, clinicId, professionalPayers),
       ]);
-      
-      console.log("✅ Horários e convênios salvos com sucesso!");
-  
-      console.log("✅ Profissional salvo completamente!");
+
+      console.log('✅ Horários e convênios salvos com sucesso!');
+
+      console.log('✅ Profissional salvo completamente!');
       toast({
-        title: "Sucesso!",
-        description: `Profissional ${professionalId ? "atualizado" : "cadastrado"} com sucesso.`,
+        title: 'Sucesso!',
+        description: `Profissional ${professionalId ? 'atualizado' : 'cadastrado'} com sucesso.`,
       });
-  
-      if (onSave) onSave(profData);
-  
+
+      if (onSave) {
+        onSave(profData);
+      }
     } catch (error) {
-      console.error("❌ Erro ao salvar profissional:", error);
+      console.error('❌ Erro ao salvar profissional:', error);
       toast({
-        title: "Erro ao salvar profissional",
+        title: 'Erro ao salvar profissional',
         description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
     } finally {
       setSaving(false);
-      console.log("🎯 === FORM SUBMIT FINALIZADO ===");
+      console.log('🎯 === FORM SUBMIT FINALIZADO ===');
     }
   };
 
   /* -------------------------------
    * RENDERIZAÇÃO
    * ------------------------------- */
-  console.log("🎨 Renderizando ProfessionalForm...");
-  
+  console.log('🎨 Renderizando ProfessionalForm...');
+
   return (
     <Card className="w-full max-w-3xl mx-auto border-0 shadow-none">
       <CardHeader>
-        <CardTitle>{professionalId ? "Editar Profissional" : "Novo Profissional"}</CardTitle>
+        <CardTitle>{professionalId ? 'Editar Profissional' : 'Novo Profissional'}</CardTitle>
       </CardHeader>
       <CardContent>
         {loading ? (
           <div className="flex items-center justify-center py-10 text-muted-foreground">
-            <Loader2 className="h-5 w-5 animate-spin mr-2" /> 
-            {professionalId ? "Carregando dados do profissional..." : "Preparando formulário..."}
+            <Loader2 className="h-5 w-5 animate-spin mr-2" />
+            {professionalId ? 'Carregando dados do profissional...' : 'Preparando formulário...'}
           </div>
         ) : (
           <form onSubmit={handleSubmit}>
@@ -503,13 +505,13 @@ export default function ProfessionalForm({ professionalId: propProfessionalId, o
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="personal">Dados Pessoais</TabsTrigger>
                 <TabsTrigger value="services">
-                  Serviços {professionalId ? "" : "(Salve primeiro)"}
+                  Serviços {professionalId ? '' : '(Salve primeiro)'}
                 </TabsTrigger>
                 <TabsTrigger value="schedules">
-                  Horários {schedules.length > 0 ? `(${schedules.length})` : ""}
+                  Horários {schedules.length > 0 ? `(${schedules.length})` : ''}
                 </TabsTrigger>
                 <TabsTrigger value="payers">
-                  Convênios {professionalPayers.length > 0 ? `(${professionalPayers.length})` : ""}
+                  Convênios {professionalPayers.length > 0 ? `(${professionalPayers.length})` : ''}
                 </TabsTrigger>
               </TabsList>
 
@@ -523,25 +525,57 @@ export default function ProfessionalForm({ professionalId: propProfessionalId, o
                     <div className="flex flex-row gap-2 items-end mb-2 md:mb-0">
                       <div>
                         <Label htmlFor="crm">Nº Conselho/CRM</Label>
-                        <Input id="crm" name="crm" value={formData.crm || ""} onChange={handleChange} />
+                        <Input
+                          id="crm"
+                          name="crm"
+                          value={formData.crm || ''}
+                          onChange={handleChange}
+                        />
                       </div>
                       <div>
                         <Label htmlFor="uf">UF</Label>
-                        <Input id="uf" name="uf" value={formData.uf || ""} onChange={e => setFormData(prev => ({ ...prev, uf: e.target.value.toUpperCase().slice(0,2) }))} maxLength={2} className="uppercase" />
+                        <Input
+                          id="uf"
+                          name="uf"
+                          value={formData.uf || ''}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              uf: e.target.value.toUpperCase().slice(0, 2),
+                            }))
+                          }
+                          maxLength={2}
+                          className="uppercase"
+                        />
                       </div>
                     </div>
                     <div className="flex-1">
                       <Label htmlFor="rqe">RQE (Registro de Especialista)</Label>
-                      <Input id="rqe" name="rqe" value={formData.rqe || ""} onChange={handleChange} />
+                      <Input
+                        id="rqe"
+                        name="rqe"
+                        value={formData.rqe || ''}
+                        onChange={handleChange}
+                      />
                     </div>
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="schedule_notes">Observações da Agenda</Label>
-                  <Textarea id="schedule_notes" name="schedule_notes" value={formData.schedule_notes || ""} onChange={handleChange} placeholder="Ex: Atende somente com hora marcada..." />
+                  <Textarea
+                    id="schedule_notes"
+                    name="schedule_notes"
+                    value={formData.schedule_notes || ''}
+                    onChange={handleChange}
+                    placeholder="Ex: Atende somente com hora marcada..."
+                  />
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Checkbox id="active" checked={formData.active} onCheckedChange={handleCheckboxChange} />
+                  <Checkbox
+                    id="active"
+                    checked={formData.active}
+                    onCheckedChange={handleCheckboxChange}
+                  />
                   <Label htmlFor="active">Profissional ativo</Label>
                 </div>
               </TabsContent>
@@ -579,7 +613,7 @@ export default function ProfessionalForm({ professionalId: propProfessionalId, o
                     <Loader2 className="h-4 w-4 animate-spin mr-2" /> Salvando...
                   </>
                 ) : (
-                  "Salvar"
+                  'Salvar'
                 )}
               </Button>
             </div>

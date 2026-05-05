@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback } from 'react';
 
 export function useToast() {
   const toast = useCallback(({ title, description, variant }) => {

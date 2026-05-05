@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 
 export default function AgendaViewModeSelector({ mode, onChange }) {
   return (
@@ -6,15 +6,21 @@ export default function AgendaViewModeSelector({ mode, onChange }) {
       <button
         className={`px-3 py-1 rounded ${mode === 'dia' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
         onClick={() => onChange('dia')}
-      >Dia</button>
+      >
+        Dia
+      </button>
       <button
         className={`px-3 py-1 rounded ${mode === 'semana' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
         onClick={() => onChange('semana')}
-      >Semana</button>
+      >
+        Semana
+      </button>
       <button
         className={`px-3 py-1 rounded ${mode === 'mes' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
         onClick={() => onChange('mes')}
-      >Mês</button>
+      >
+        Mês
+      </button>
     </div>
   );
 }

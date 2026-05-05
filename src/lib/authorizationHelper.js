@@ -1,9 +1,9 @@
 /**
  * authorizationHelper.js
- * 
+ *
  * Sistema de Controle de Acesso (RBAC) para Gesclinic
  * Define permissões por role e fornece função de verificação
- * 
+ *
  * Roles disponíveis:
  * - admin: Acesso completo
  * - gestor: Gerente de clínica (quase tudo exceto deletar usuários)
@@ -25,25 +25,25 @@ const PERMISSIONS = {
     'agendamento:deletar': true,
     'agendamento:confirmar-presenca': true,
     'agendamento:visualizar': true,
-    
+
     // Configurações
     'config:editar': true,
     'config:visualizar': true,
-    
+
     // Relatórios
     'relatorio:gerar': true,
     'relatorio:exportar': true,
-    
+
     // Usuários
     'usuario:criar': true,
     'usuario:editar': true,
     'usuario:deletar': true,
     'usuario:visualizar': true,
-    
+
     // Auditoria
     'auditoria:visualizar': true,
     'auditoria:exportar': true,
-    
+
     // Financeiro
     'financeiro:editar': true,
     'financeiro:visualizar': true,
@@ -57,25 +57,25 @@ const PERMISSIONS = {
     'agendamento:deletar': true,
     'agendamento:confirmar-presenca': true,
     'agendamento:visualizar': true,
-    
+
     // Configurações
     'config:editar': true,
     'config:visualizar': true,
-    
+
     // Relatórios
     'relatorio:gerar': true,
     'relatorio:exportar': true,
-    
+
     // Usuários
     'usuario:criar': true,
     'usuario:editar': true,
     'usuario:deletar': false, // Não pode deletar usuários
     'usuario:visualizar': true,
-    
+
     // Auditoria
     'auditoria:visualizar': true,
     'auditoria:exportar': false, // Não pode exportar
-    
+
     // Financeiro
     'financeiro:editar': true,
     'financeiro:visualizar': true,
@@ -89,25 +89,25 @@ const PERMISSIONS = {
     'agendamento:deletar': false,
     'agendamento:confirmar-presenca': true, // Pode confirmar presença
     'agendamento:visualizar': true, // Pode visualizar seus agendamentos
-    
+
     // Configurações
     'config:editar': false,
     'config:visualizar': false,
-    
+
     // Relatórios
     'relatorio:gerar': false,
     'relatorio:exportar': false,
-    
+
     // Usuários
     'usuario:criar': false,
     'usuario:editar': false,
     'usuario:deletar': false,
     'usuario:visualizar': false,
-    
+
     // Auditoria
     'auditoria:visualizar': false,
     'auditoria:exportar': false,
-    
+
     // Financeiro
     'financeiro:editar': false,
     'financeiro:visualizar': false,
@@ -121,21 +121,21 @@ const PERMISSIONS = {
     'agendamento:deletar': false,
     'agendamento:confirmar-presenca': true,
     'agendamento:visualizar': true,
-    
+
     'config:editar': false,
     'config:visualizar': false,
-    
+
     'relatorio:gerar': false,
     'relatorio:exportar': false,
-    
+
     'usuario:criar': false,
     'usuario:editar': false,
     'usuario:deletar': false,
     'usuario:visualizar': false,
-    
+
     'auditoria:visualizar': false,
     'auditoria:exportar': false,
-    
+
     'financeiro:editar': false,
     'financeiro:visualizar': false,
   },
@@ -148,25 +148,25 @@ const PERMISSIONS = {
     'agendamento:deletar': false, // NÃO pode deletar
     'agendamento:confirmar-presenca': false, // NÃO pode confirmar
     'agendamento:visualizar': true, // Pode visualizar
-    
+
     // Configurações
     'config:editar': false,
     'config:visualizar': false,
-    
+
     // Relatórios
     'relatorio:gerar': false,
     'relatorio:exportar': false,
-    
+
     // Usuários
     'usuario:criar': false,
     'usuario:editar': false,
     'usuario:deletar': false,
     'usuario:visualizar': false,
-    
+
     // Auditoria
     'auditoria:visualizar': false,
     'auditoria:exportar': false,
-    
+
     // Financeiro
     'financeiro:editar': false,
     'financeiro:visualizar': false,
@@ -179,11 +179,11 @@ const PERMISSIONS = {
 
 /**
  * Verifica se um usuário tem permissão para uma ação
- * 
+ *
  * @param {Object} user - Objeto do usuário com propriedades { id, role, clinic_id, etc }
  * @param {string} action - Identificador da ação (ex: 'agendamento:criar')
  * @returns {boolean} true se tem permissão, false caso contrário
- * 
+ *
  * @example
  * const user = { id: '123', role: 'recepcao' };
  * if (can(user, 'agendamento:criar')) {
@@ -192,13 +192,19 @@ const PERMISSIONS = {
  */
 export function can(user, action) {
   // Validações básicas
-  if (!user) return false;
-  if (!user.role) return false;
-  if (!action || typeof action !== 'string') return false;
+  if (!user) {
+    return false;
+  }
+  if (!user.role) {
+    return false;
+  }
+  if (!action || typeof action !== 'string') {
+    return false;
+  }
 
   // Buscar permissões do role
   const rolePermissions = PERMISSIONS[user.role];
-  
+
   // Se role não existe, negar tudo
   if (!rolePermissions) {
     console.warn(`[RBAC] Role desconhecido: ${user.role}`);
@@ -262,15 +268,17 @@ export function isReceptionist(user) {
  * @param {Object} user - Objeto do usuário
  * @param {Array<string>} actions - Array de ações
  * @returns {boolean}
- * 
+ *
  * @example
  * if (canAll(user, ['agendamento:criar', 'agendamento:editar'])) {
  *   // User tem AMBAS as permissões
  * }
  */
 export function canAll(user, actions) {
-  if (!Array.isArray(actions)) return false;
-  return actions.every(action => can(user, action));
+  if (!Array.isArray(actions)) {
+    return false;
+  }
+  return actions.every((action) => can(user, action));
 }
 
 /**
@@ -278,15 +286,17 @@ export function canAll(user, actions) {
  * @param {Object} user - Objeto do usuário
  * @param {Array<string>} actions - Array de ações
  * @returns {boolean}
- * 
+ *
  * @example
  * if (canAny(user, ['agendamento:editar', 'agendamento:deletar'])) {
  *   // User tem pelo menos UMA das permissões
  * }
  */
 export function canAny(user, actions) {
-  if (!Array.isArray(actions)) return false;
-  return actions.some(action => can(user, action));
+  if (!Array.isArray(actions)) {
+    return false;
+  }
+  return actions.some((action) => can(user, action));
 }
 
 // ============================================================
@@ -301,25 +311,25 @@ export const ALL_PERMISSIONS = [
   'agendamento:deletar',
   'agendamento:confirmar-presenca',
   'agendamento:visualizar',
-  
+
   // Configurações
   'config:editar',
   'config:visualizar',
-  
+
   // Relatórios
   'relatorio:gerar',
   'relatorio:exportar',
-  
+
   // Usuários
   'usuario:criar',
   'usuario:editar',
   'usuario:deletar',
   'usuario:visualizar',
-  
+
   // Auditoria
   'auditoria:visualizar',
   'auditoria:exportar',
-  
+
   // Financeiro
   'financeiro:editar',
   'financeiro:visualizar',
@@ -331,11 +341,11 @@ export const ALL_PERMISSIONS = [
 
 export function getPermissionMatrix() {
   const matrix = {};
-  
-  Object.keys(PERMISSIONS).forEach(role => {
+
+  Object.keys(PERMISSIONS).forEach((role) => {
     matrix[role] = PERMISSIONS[role];
   });
-  
+
   return matrix;
 }
 
@@ -354,12 +364,14 @@ export function getPermissionsByRole(role) {
  * @returns {Object} Relatório formatado
  */
 export function getPermissionReport(user) {
-  if (!user || !user.role) return null;
-  
+  if (!user || !user.role) {
+    return null;
+  }
+
   const permissions = PERMISSIONS[user.role];
   const allowed = [];
   const denied = [];
-  
+
   Object.entries(permissions).forEach(([action, allowed_flag]) => {
     if (allowed_flag) {
       allowed.push(action);
@@ -367,7 +379,7 @@ export function getPermissionReport(user) {
       denied.push(action);
     }
   });
-  
+
   return {
     role: user.role,
     totalPermissions: allowed.length,

@@ -16,23 +16,26 @@ export function clearClinicContextCache() {
 
 /**
  * ✅ OBTER CONTEXTO DA CLÍNICA
- * 
+ *
  * Retorna:
  * - userId: ID do usuário autenticado
  * - clinicId: ID da clínica vinculada ao usuário
- * 
+ *
  * Processo:
  * 1. Valida autenticação (JWT válido)
  * 2. Verifica cache
  * 3. Busca clinic_id do banco
  * 4. Cacheia resultado
- * 
+ *
  * @returns {Promise<{userId: string, clinicId: string}>}
  * @throws {Error} Se não autenticado ou sem vínculo com clínica
  */
 export async function getClinicContext() {
   // 🔐 ETAPA 1: VALIDAR AUTENTICAÇÃO
-  const { data: { user }, error } = await supabase.auth.getUser();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
 
   if (error || !user) {
     console.error('❌ [getClinicContext] Usuário não autenticado');
@@ -72,7 +75,7 @@ export async function getClinicContext() {
   // 💾 ETAPA 4: CACHEAR RESULTADO
   cachedClinicContext = {
     userId: user.id,
-    clinicId: data.clinic_id
+    clinicId: data.clinic_id,
   };
 
   console.log('✅ [getClinicContext] Contexto carregado:', cachedClinicContext);

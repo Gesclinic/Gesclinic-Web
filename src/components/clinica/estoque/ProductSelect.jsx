@@ -1,26 +1,36 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ChevronDown, X } from "lucide-react";
-import { stockItemsApi } from "@/lib/stockApi";
+import React, { useState, useEffect, useMemo } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { ChevronDown, X } from 'lucide-react';
+import { stockItemsApi } from '@/lib/stockApi';
 
-export default function ProductSelect({ clinicId, value, itemId, onChange, required = false, hideLabel = false, disabled = false }) {
+export default function ProductSelect({
+  clinicId,
+  value,
+  itemId,
+  onChange,
+  required = false,
+  hideLabel = false,
+  disabled = false,
+}) {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
-    if (!clinicId) return;
-    
+    if (!clinicId) {
+      return;
+    }
+
     const loadProducts = async () => {
       setLoading(true);
       try {
         const data = await stockItemsApi.list(clinicId);
         setProducts(data || []);
       } catch (error) {
-        console.error("Erro ao carregar produtos:", error);
+        console.error('Erro ao carregar produtos:', error);
       } finally {
         setLoading(false);
       }
@@ -30,15 +40,16 @@ export default function ProductSelect({ clinicId, value, itemId, onChange, requi
   }, [clinicId]);
 
   const filteredProducts = useMemo(() => {
-    if (!search) return products;
+    if (!search) {
+      return products;
+    }
     const term = search.toLowerCase();
-    return products.filter(p => 
-      p.name?.toLowerCase().includes(term) || 
-      p.sku?.toLowerCase().includes(term)
+    return products.filter(
+      (p) => p.name?.toLowerCase().includes(term) || p.sku?.toLowerCase().includes(term),
     );
   }, [products, search]);
 
-  const selectedProduct = products.find(p => p.id === itemId);
+  const selectedProduct = products.find((p) => p.id === itemId);
 
   const handleSelect = (product) => {
     // Passa também a categoria e saldo disponível (quando retornado pelo RPC)
@@ -50,12 +61,12 @@ export default function ProductSelect({ clinicId, value, itemId, onChange, requi
       unit_symbol: product.unit_symbol,
     });
     setOpen(false);
-    setSearch("");
+    setSearch('');
   };
 
   const handleClear = () => {
-    onChange({ product: "", itemId: "" });
-    setSearch("");
+    onChange({ product: '', itemId: '' });
+    setSearch('');
   };
 
   const innerContent = (
@@ -87,12 +98,7 @@ export default function ProductSelect({ clinicId, value, itemId, onChange, requi
             </button>
           </div>
           {itemId && !disabled && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleClear}
-            >
+            <Button type="button" variant="outline" size="sm" onClick={handleClear}>
               <X className="h-4 w-4" />
             </Button>
           )}
@@ -101,14 +107,10 @@ export default function ProductSelect({ clinicId, value, itemId, onChange, requi
         {open && !disabled && (
           <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-64 overflow-y-auto">
             {loading ? (
-              <div className="p-3 text-center text-sm text-gray-500">
-                Carregando produtos...
-              </div>
+              <div className="p-3 text-center text-sm text-gray-500">Carregando produtos...</div>
             ) : filteredProducts.length === 0 ? (
               <div className="p-3 text-center text-sm text-gray-500">
-                {products.length === 0
-                  ? "Nenhum produto cadastrado"
-                  : "Nenhum produto encontrado"}
+                {products.length === 0 ? 'Nenhum produto cadastrado' : 'Nenhum produto encontrado'}
               </div>
             ) : (
               filteredProducts.map((product) => (
@@ -117,16 +119,14 @@ export default function ProductSelect({ clinicId, value, itemId, onChange, requi
                   type="button"
                   onClick={() => handleSelect(product)}
                   className={`w-full text-left px-4 py-2.5 hover:bg-blue-50 border-b last:border-b-0 ${
-                    itemId === product.id ? "bg-blue-100" : ""
+                    itemId === product.id ? 'bg-blue-100' : ''
                   }`}
                 >
                   <div className="font-medium text-sm">{product.name}</div>
-                  {product.sku && (
-                    <div className="text-xs text-gray-500">SKU: {product.sku}</div>
-                  )}
+                  {product.sku && <div className="text-xs text-gray-500">SKU: {product.sku}</div>}
                   {product.total_balance !== undefined && (
                     <div className="text-xs text-gray-500">
-                      Saldo: {product.total_balance} {product.unit_symbol || ""}
+                      Saldo: {product.total_balance} {product.unit_symbol || ''}
                     </div>
                   )}
                 </button>
@@ -148,9 +148,7 @@ export default function ProductSelect({ clinicId, value, itemId, onChange, requi
     innerContent
   ) : (
     <div className="space-y-2">
-      <Label htmlFor="product">
-        Produto {required && <span className="text-red-500">*</span>}
-      </Label>
+      <Label htmlFor="product">Produto {required && <span className="text-red-500">*</span>}</Label>
       {innerContent}
     </div>
   );

@@ -4,22 +4,41 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  FileDown, 
-  Upload, 
-  AlertTriangle, 
-  CheckCircle, 
+import {
+  FileDown,
+  Upload,
+  AlertTriangle,
+  CheckCircle,
   XCircle,
   Eye,
   Download,
   RefreshCw,
   Calendar,
-  FileX
+  FileX,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 
@@ -36,7 +55,7 @@ export default function RetornosRecibos() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
-  
+
   // Form state para upload de retorno
   const [uploadFile, setUploadFile] = useState(null);
   const [convenioRetorno, setConvenioRetorno] = useState('');
@@ -55,10 +74,10 @@ export default function RetornosRecibos() {
       total_aceitas: 6,
       total_glosadas: 2,
       total_rejeitadas: 0,
-      valor_aceito: 900.00,
-      valor_glosado: 300.00,
+      valor_aceito: 900.0,
+      valor_glosado: 300.0,
       status: 'Processado',
-      observacoes: 'Processamento concluído com sucesso'
+      observacoes: 'Processamento concluído com sucesso',
     },
     {
       id: 'RT002',
@@ -72,11 +91,11 @@ export default function RetornosRecibos() {
       total_aceitas: 20,
       total_glosadas: 1,
       total_rejeitadas: 1,
-      valor_aceito: 3000.00,
-      valor_glosado: 150.00,
+      valor_aceito: 3000.0,
+      valor_glosado: 150.0,
       status: 'Processado',
-      observacoes: '1 guia rejeitada por erro de preenchimento'
-    }
+      observacoes: '1 guia rejeitada por erro de preenchimento',
+    },
   ];
 
   const mockGuiasProcessadas = [
@@ -86,11 +105,11 @@ export default function RetornosRecibos() {
       numero_guia: 'GC001-2025-001',
       paciente_nome: 'Maria Silva Santos',
       codigo_cbhpm: '40101012',
-      valor_solicitado: 150.00,
-      valor_aprovado: 150.00,
+      valor_solicitado: 150.0,
+      valor_aprovado: 150.0,
       status_processamento: 'Aceita',
       motivo_glosa: null,
-      observacoes: 'Aprovada integralmente'
+      observacoes: 'Aprovada integralmente',
     },
     {
       id: 'GP002',
@@ -98,11 +117,11 @@ export default function RetornosRecibos() {
       numero_guia: 'GC002-2025-001',
       paciente_nome: 'Pedro Santos Lima',
       codigo_cbhpm: '40301010',
-      valor_solicitado: 80.00,
-      valor_aprovado: 60.00,
+      valor_solicitado: 80.0,
+      valor_aprovado: 60.0,
       status_processamento: 'Glosada Parcial',
       motivo_glosa: 'Valor acima da tabela do convênio',
-      observacoes: 'Redução de 25% do valor'
+      observacoes: 'Redução de 25% do valor',
     },
     {
       id: 'GP003',
@@ -110,12 +129,12 @@ export default function RetornosRecibos() {
       numero_guia: 'GC003-2025-001',
       paciente_nome: 'Ana Costa Silva',
       codigo_cbhpm: '40201020',
-      valor_solicitado: 200.00,
-      valor_aprovado: 0.00,
+      valor_solicitado: 200.0,
+      valor_aprovado: 0.0,
       status_processamento: 'Glosada Total',
       motivo_glosa: 'Procedimento não coberto pelo plano',
-      observacoes: 'Verificar cobertura do plano do paciente'
-    }
+      observacoes: 'Verificar cobertura do plano do paciente',
+    },
   ];
 
   useEffect(() => {
@@ -132,14 +151,14 @@ export default function RetornosRecibos() {
       //   .select('*')
       //   .eq('clinic_id', clinicId)
       //   .order('data_importacao', { ascending: false });
-      
+
       setRetornos(mockRetornos);
     } catch (error) {
       console.error('Erro ao buscar retornos:', error);
       toast({
-        title: "Erro",
-        description: "Não foi possível carregar os retornos.",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Não foi possível carregar os retornos.',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -157,23 +176,23 @@ export default function RetornosRecibos() {
 
   const handleUploadRetorno = async (e) => {
     e.preventDefault();
-    
+
     if (!uploadFile || !convenioRetorno) {
       toast({
-        title: "Dados incompletos",
-        description: "Selecione um arquivo e o convênio.",
-        variant: "destructive"
+        title: 'Dados incompletos',
+        description: 'Selecione um arquivo e o convênio.',
+        variant: 'destructive',
       });
       return;
     }
 
     try {
       console.log('Fazendo upload do retorno:', uploadFile.name, convenioRetorno);
-      
+
       // Simular processamento do arquivo XML
       toast({
-        title: "Arquivo importado",
-        description: `Retorno do ${convenioRetorno} importado com sucesso.`
+        title: 'Arquivo importado',
+        description: `Retorno do ${convenioRetorno} importado com sucesso.`,
       });
 
       setIsUploadDialogOpen(false);
@@ -183,9 +202,9 @@ export default function RetornosRecibos() {
       fetchGuiasProcessadas();
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Não foi possível processar o arquivo.",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Não foi possível processar o arquivo.',
+        variant: 'destructive',
       });
     }
   };
@@ -195,9 +214,9 @@ export default function RetornosRecibos() {
     if (file) {
       if (!file.name.toLowerCase().endsWith('.xml')) {
         toast({
-          title: "Arquivo inválido",
-          description: "Selecione apenas arquivos XML.",
-          variant: "destructive"
+          title: 'Arquivo inválido',
+          description: 'Selecione apenas arquivos XML.',
+          variant: 'destructive',
         });
         return;
       }
@@ -207,14 +226,18 @@ export default function RetornosRecibos() {
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      'Processado': { variant: 'default', color: 'text-green-600', icon: CheckCircle },
-      'Erro': { variant: 'destructive', color: 'text-red-600', icon: XCircle },
-      'Processando': { variant: 'secondary', color: 'text-blue-600', icon: RefreshCw }
+      Processado: { variant: 'default', color: 'text-green-600', icon: CheckCircle },
+      Erro: { variant: 'destructive', color: 'text-red-600', icon: XCircle },
+      Processando: { variant: 'secondary', color: 'text-blue-600', icon: RefreshCw },
     };
 
-    const config = statusConfig[status] || { variant: 'outline', color: 'text-gray-600', icon: AlertTriangle };
+    const config = statusConfig[status] || {
+      variant: 'outline',
+      color: 'text-gray-600',
+      icon: AlertTriangle,
+    };
     const Icon = config.icon;
-    
+
     return (
       <Badge variant={config.variant} className={`${config.color} gap-1`}>
         <Icon className="w-3 h-3" />
@@ -225,14 +248,14 @@ export default function RetornosRecibos() {
 
   const getGuiaStatusBadge = (status) => {
     const statusConfig = {
-      'Aceita': { variant: 'default', color: 'text-green-600' },
+      Aceita: { variant: 'default', color: 'text-green-600' },
       'Glosada Parcial': { variant: 'secondary', color: 'text-yellow-600' },
       'Glosada Total': { variant: 'destructive', color: 'text-red-600' },
-      'Rejeitada': { variant: 'destructive', color: 'text-red-600' }
+      Rejeitada: { variant: 'destructive', color: 'text-red-600' },
     };
 
     const config = statusConfig[status] || { variant: 'outline', color: 'text-gray-600' };
-    
+
     return (
       <Badge variant={config.variant} className={config.color}>
         {status}
@@ -240,19 +263,22 @@ export default function RetornosRecibos() {
     );
   };
 
-  const filteredRetornos = retornos.filter(retorno => {
-    const matchesSearch = retorno.numero_lote.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         retorno.convenio.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         retorno.arquivo_nome.toLowerCase().includes(searchTerm.toLowerCase());
-    
+  const filteredRetornos = retornos.filter((retorno) => {
+    const matchesSearch =
+      retorno.numero_lote.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      retorno.convenio.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      retorno.arquivo_nome.toLowerCase().includes(searchTerm.toLowerCase());
+
     const matchesStatus = statusFilter === 'all' || retorno.status === statusFilter;
-    
+
     return matchesSearch && matchesStatus;
   });
 
-  const filteredGuias = guiasProcessadas.filter(guia => {
-    return guia.numero_guia.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           guia.paciente_nome.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredGuias = guiasProcessadas.filter((guia) => {
+    return (
+      guia.numero_guia.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      guia.paciente_nome.toLowerCase().includes(searchTerm.toLowerCase())
+    );
   });
 
   return (
@@ -284,11 +310,7 @@ export default function RetornosRecibos() {
             <form onSubmit={handleUploadRetorno} className="space-y-4">
               <div>
                 <Label htmlFor="convenio">Convênio</Label>
-                <Select 
-                  value={convenioRetorno}
-                  onValueChange={setConvenioRetorno}
-                  required
-                >
+                <Select value={convenioRetorno} onValueChange={setConvenioRetorno} required>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o convênio" />
                   </SelectTrigger>
@@ -321,9 +343,7 @@ export default function RetornosRecibos() {
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="w-5 h-5 text-blue-600 mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium text-blue-900">
-                      Informações importantes:
-                    </p>
+                    <p className="text-sm font-medium text-blue-900">Informações importantes:</p>
                     <ul className="text-sm text-blue-800 mt-1 list-disc ml-4">
                       <li>Apenas arquivos XML são aceitos</li>
                       <li>O arquivo será processado automaticamente</li>
@@ -334,8 +354,8 @@ export default function RetornosRecibos() {
               </div>
 
               <div className="flex justify-end gap-2 pt-4">
-                <Button 
-                  type="button" 
+                <Button
+                  type="button"
                   variant="outline"
                   onClick={() => {
                     setIsUploadDialogOpen(false);
@@ -345,9 +365,7 @@ export default function RetornosRecibos() {
                 >
                   Cancelar
                 </Button>
-                <Button type="submit">
-                  Importar Retorno
-                </Button>
+                <Button type="submit">Importar Retorno</Button>
               </div>
             </form>
           </DialogContent>
@@ -366,7 +384,7 @@ export default function RetornosRecibos() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-green-600">
-              {guiasProcessadas.filter(g => g.status_processamento === 'Aceita').length}
+              {guiasProcessadas.filter((g) => g.status_processamento === 'Aceita').length}
             </div>
             <p className="text-sm text-muted-foreground">Guias Aceitas</p>
           </CardContent>
@@ -375,7 +393,7 @@ export default function RetornosRecibos() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-yellow-600">
-              {guiasProcessadas.filter(g => g.status_processamento.includes('Glosada')).length}
+              {guiasProcessadas.filter((g) => g.status_processamento.includes('Glosada')).length}
             </div>
             <p className="text-sm text-muted-foreground">Guias Glosadas</p>
           </CardContent>
@@ -384,7 +402,7 @@ export default function RetornosRecibos() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-red-600">
-              {guiasProcessadas.filter(g => g.status_processamento === 'Rejeitada').length}
+              {guiasProcessadas.filter((g) => g.status_processamento === 'Rejeitada').length}
             </div>
             <p className="text-sm text-muted-foreground">Guias Rejeitadas</p>
           </CardContent>
@@ -457,9 +475,7 @@ export default function RetornosRecibos() {
                 <TableBody>
                   {filteredRetornos.map((retorno) => (
                     <TableRow key={retorno.id}>
-                      <TableCell className="font-mono text-sm">
-                        {retorno.numero_lote}
-                      </TableCell>
+                      <TableCell className="font-mono text-sm">{retorno.numero_lote}</TableCell>
                       <TableCell>{retorno.convenio}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -475,9 +491,7 @@ export default function RetornosRecibos() {
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
-                          <div className="text-sm">
-                            Total: {retorno.total_guias_processadas}
-                          </div>
+                          <div className="text-sm">Total: {retorno.total_guias_processadas}</div>
                           <div className="flex gap-1 text-xs">
                             <span className="text-green-600">✓{retorno.total_aceitas}</span>
                             <span className="text-yellow-600">⚠{retorno.total_glosadas}</span>
@@ -497,9 +511,7 @@ export default function RetornosRecibos() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        {getStatusBadge(retorno.status)}
-                      </TableCell>
+                      <TableCell>{getStatusBadge(retorno.status)}</TableCell>
                       <TableCell>
                         <div className="flex gap-2">
                           <Button
@@ -556,9 +568,7 @@ export default function RetornosRecibos() {
                 <TableBody>
                   {filteredGuias.map((guia) => (
                     <TableRow key={guia.id}>
-                      <TableCell className="font-mono text-sm">
-                        {guia.numero_guia}
-                      </TableCell>
+                      <TableCell className="font-mono text-sm">{guia.numero_guia}</TableCell>
                       <TableCell>{guia.paciente_nome}</TableCell>
                       <TableCell>
                         <Badge variant="outline">{guia.codigo_cbhpm}</Badge>
@@ -569,9 +579,7 @@ export default function RetornosRecibos() {
                       <TableCell className="text-right font-semibold">
                         R$ {guia.valor_aprovado.toFixed(2)}
                       </TableCell>
-                      <TableCell>
-                        {getGuiaStatusBadge(guia.status_processamento)}
-                      </TableCell>
+                      <TableCell>{getGuiaStatusBadge(guia.status_processamento)}</TableCell>
                       <TableCell>
                         {guia.motivo_glosa ? (
                           <div className="max-w-xs">
@@ -600,4 +608,3 @@ export default function RetornosRecibos() {
     </div>
   );
 }
-

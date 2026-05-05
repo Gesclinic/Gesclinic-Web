@@ -17,8 +17,22 @@ export default function XMLPage() {
       { id: 2, lote: 'LOT-2025-002', guias: 8, data: '2025-12-19', recibo: 'REC-002' },
     ],
     processamento: [
-      { id: 1, recibo: 'REC-001', lote: 'LOT-2025-001', guias: 10, data: '2025-12-20', status: 'Em processamento' },
-      { id: 2, recibo: 'REC-002', lote: 'LOT-2025-002', guias: 8, data: '2025-12-19', status: 'Processado' },
+      {
+        id: 1,
+        recibo: 'REC-001',
+        lote: 'LOT-2025-001',
+        guias: 10,
+        data: '2025-12-20',
+        status: 'Em processamento',
+      },
+      {
+        id: 2,
+        recibo: 'REC-002',
+        lote: 'LOT-2025-002',
+        guias: 8,
+        data: '2025-12-19',
+        status: 'Processado',
+      },
     ],
   };
 
@@ -28,9 +42,7 @@ export default function XMLPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Envio de XML TISS</h1>
-          <p className="text-gray-600 mt-2">
-            Envie e acompanhe o processamento de arquivos XML
-          </p>
+          <p className="text-gray-600 mt-2">Envie e acompanhe o processamento de arquivos XML</p>
         </div>
         <button className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
           <Upload size={20} />
@@ -43,7 +55,9 @@ export default function XMLPage() {
         <TabsList>
           <TabsTrigger value="pendentes">Pendentes ({mockData.pendentes.length})</TabsTrigger>
           <TabsTrigger value="enviados">Enviados ({mockData.enviados.length})</TabsTrigger>
-          <TabsTrigger value="processamento">Em Processamento ({mockData.processamento.length})</TabsTrigger>
+          <TabsTrigger value="processamento">
+            Em Processamento ({mockData.processamento.length})
+          </TabsTrigger>
         </TabsList>
 
         {/* Pendentes */}
@@ -55,10 +69,15 @@ export default function XMLPage() {
             <CardContent>
               <div className="space-y-4">
                 {mockData.pendentes.map((item) => (
-                  <div key={item.id} className="border rounded-lg p-4 flex justify-between items-center hover:bg-gray-50">
+                  <div
+                    key={item.id}
+                    className="border rounded-lg p-4 flex justify-between items-center hover:bg-gray-50"
+                  >
                     <div>
                       <h3 className="font-semibold text-gray-900">{item.lote}</h3>
-                      <p className="text-sm text-gray-600">{item.guias} guias • {item.data}</p>
+                      <p className="text-sm text-gray-600">
+                        {item.guias} guias • {item.data}
+                      </p>
                       <span className="inline-block mt-2 px-3 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">
                         {item.status}
                       </span>
@@ -82,10 +101,15 @@ export default function XMLPage() {
             <CardContent>
               <div className="space-y-4">
                 {mockData.enviados.map((item) => (
-                  <div key={item.id} className="border rounded-lg p-4 flex justify-between items-center hover:bg-gray-50">
+                  <div
+                    key={item.id}
+                    className="border rounded-lg p-4 flex justify-between items-center hover:bg-gray-50"
+                  >
                     <div>
                       <h3 className="font-semibold text-gray-900">{item.lote}</h3>
-                      <p className="text-sm text-gray-600">{item.guias} guias • Recibo: {item.recibo}</p>
+                      <p className="text-sm text-gray-600">
+                        {item.guias} guias • Recibo: {item.recibo}
+                      </p>
                       <p className="text-xs text-gray-500 mt-1">{item.data}</p>
                     </div>
                     <button className="px-4 py-2 text-blue-600 border border-blue-600 rounded hover:bg-blue-50">
@@ -107,18 +131,25 @@ export default function XMLPage() {
             <CardContent>
               <div className="space-y-4">
                 {mockData.processamento.map((item) => (
-                  <div key={item.id} className="border rounded-lg p-4 flex justify-between items-center hover:bg-gray-50">
+                  <div
+                    key={item.id}
+                    className="border rounded-lg p-4 flex justify-between items-center hover:bg-gray-50"
+                  >
                     <div>
                       <h3 className="font-semibold text-gray-900">{item.recibo}</h3>
-                      <p className="text-sm text-gray-600">{item.lote} • {item.guias} guias</p>
+                      <p className="text-sm text-gray-600">
+                        {item.lote} • {item.guias} guias
+                      </p>
                       <p className="text-xs text-gray-500 mt-1">{item.data}</p>
                     </div>
                     <div className="text-right">
-                      <span className={`inline-block px-3 py-1 text-xs rounded-full ${
-                        item.status === 'Processado'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-blue-100 text-blue-800'
-                      }`}>
+                      <span
+                        className={`inline-block px-3 py-1 text-xs rounded-full ${
+                          item.status === 'Processado'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-blue-100 text-blue-800'
+                        }`}
+                      >
                         {item.status}
                       </span>
                     </div>
@@ -132,4 +163,3 @@ export default function XMLPage() {
     </div>
   );
 }
-

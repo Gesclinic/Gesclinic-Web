@@ -3,12 +3,12 @@
 // Hook para bloquear funcionalidades baseado em config da clínica
 // ============================================================
 
-import { useCallback } from "react";
-import * as baseSystemApi from "@/lib/baseSystemApi";
+import { useCallback } from 'react';
+import * as baseSystemApi from '@/lib/baseSystemApi';
 
 /**
  * Hook que fornece validações para bloquear funcionalidades
- * 
+ *
  * Bloqueios:
  * - Agenda: Sem vínculo profissional-serviço
  * - Check-in: Sem serviço cadastrado
@@ -27,15 +27,16 @@ export function useFeatureBlocker(clinicId) {
       if (!counts.professionalServices || counts.professionalServices === 0) {
         return {
           blocked: true,
-          reason: "� Agenda bloqueada: Configure vinculações em Regras Operacionais > Profissionais × Serviços",
-          action: "base-sistema/professional-services",
+          reason:
+            '� Agenda bloqueada: Configure vinculações em Regras Operacionais > Profissionais × Serviços',
+          action: 'base-sistema/professional-services',
         };
       }
 
       return { blocked: false };
     } catch (error) {
-      console.error("Erro ao validar acesso à agenda:", error);
-      return { blocked: true, reason: "Erro ao validar acesso" };
+      console.error('Erro ao validar acesso à agenda:', error);
+      return { blocked: true, reason: 'Erro ao validar acesso' };
     }
   }, [clinicId]);
 
@@ -51,15 +52,15 @@ export function useFeatureBlocker(clinicId) {
       if (!counts.services || counts.services === 0) {
         return {
           blocked: true,
-          reason: "✅ Check-in bloqueado: Cadastre serviços em Cadastros Estruturais > Serviços",
-          action: "base-sistema/servicos",
+          reason: '✅ Check-in bloqueado: Cadastre serviços em Cadastros Estruturais > Serviços',
+          action: 'base-sistema/servicos',
         };
       }
 
       return { blocked: false };
     } catch (error) {
-      console.error("Erro ao validar acesso ao check-in:", error);
-      return { blocked: true, reason: "Erro ao validar acesso" };
+      console.error('Erro ao validar acesso ao check-in:', error);
+      return { blocked: true, reason: 'Erro ao validar acesso' };
     }
   }, [clinicId]);
 
@@ -75,15 +76,16 @@ export function useFeatureBlocker(clinicId) {
       if (!counts.insurances || counts.insurances === 0) {
         return {
           blocked: true,
-          reason: "� Faturamento bloqueado: Cadastre convênios em Cadastros Estruturais > Convênios (ou configure como clínica particular)",
-          action: "base-sistema/convenios",
+          reason:
+            '� Faturamento bloqueado: Cadastre convênios em Cadastros Estruturais > Convênios (ou configure como clínica particular)',
+          action: 'base-sistema/convenios',
         };
       }
 
       return { blocked: false };
     } catch (error) {
-      console.error("Erro ao validar acesso ao faturamento:", error);
-      return { blocked: true, reason: "Erro ao validar acesso" };
+      console.error('Erro ao validar acesso ao faturamento:', error);
+      return { blocked: true, reason: 'Erro ao validar acesso' };
     }
   }, [clinicId]);
 
@@ -94,19 +96,19 @@ export function useFeatureBlocker(clinicId) {
   const validateFeatureAccess = useCallback(
     async (feature) => {
       switch (feature.toLowerCase()) {
-        case "agenda":
-          return canAccessAgenda();
-        case "checkin":
-        case "check-in":
-          return canAccessCheckIn();
-        case "finance":
-        case "faturamento":
-          return canAccessFinance();
-        default:
-          return { blocked: false };
+      case 'agenda':
+        return canAccessAgenda();
+      case 'checkin':
+      case 'check-in':
+        return canAccessCheckIn();
+      case 'finance':
+      case 'faturamento':
+        return canAccessFinance();
+      default:
+        return { blocked: false };
       }
     },
-    [canAccessAgenda, canAccessCheckIn, canAccessFinance]
+    [canAccessAgenda, canAccessCheckIn, canAccessFinance],
   );
 
   return {

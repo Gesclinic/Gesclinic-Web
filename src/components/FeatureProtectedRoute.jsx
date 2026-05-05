@@ -3,19 +3,19 @@
 // Componente que protege rotas baseado em requisitos de funcionalidade
 // ============================================================
 
-import React, { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
-import { useFeatureBlocker } from "@/hooks/useFeatureBlocker";
-import { FeatureBlockedDialog } from "./FeatureBlockedDialog";
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useFeatureBlocker } from '@/hooks/useFeatureBlocker';
+import { FeatureBlockedDialog } from './FeatureBlockedDialog';
 
 /**
  * Protege uma rota verificando se a funcionalidade está liberada
- * 
+ *
  * @param {React.Component} Component - Componente a renderizar
  * @param {string} feature - Nome da funcionalidade ('agenda', 'checkin', 'finance')
  * @returns {React.Component}
  */
-export function FeatureProtectedRoute({ Component, feature = "agenda" }) {
+export function FeatureProtectedRoute({ Component, feature = 'agenda' }) {
   return function ProtectedRouteComponent(props) {
     const { clinicId } = useAuth();
     const { validateFeatureAccess } = useFeatureBlocker(clinicId);
@@ -39,7 +39,7 @@ export function FeatureProtectedRoute({ Component, feature = "agenda" }) {
           setIsBlocked(false);
         }
       } catch (error) {
-        console.error("Erro ao validar acesso à funcionalidade:", error);
+        console.error('Erro ao validar acesso à funcionalidade:', error);
         setIsBlocked(false);
       } finally {
         setLoading(false);
@@ -78,13 +78,11 @@ export function FeatureProtectedRoute({ Component, feature = "agenda" }) {
 
 /**
  * HOC para envolver um componente com proteção de funcionalidade
- * 
+ *
  * @param {React.Component} Component
  * @param {string} feature
  * @returns {React.Component}
  */
-export function withFeatureProtection(Component, feature = "agenda") {
-  return (props) => (
-    <FeatureProtectedRoute Component={Component} feature={feature} {...props} />
-  );
+export function withFeatureProtection(Component, feature = 'agenda') {
+  return (props) => <FeatureProtectedRoute Component={Component} feature={feature} {...props} />;
 }

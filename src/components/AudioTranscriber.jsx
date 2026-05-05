@@ -2,7 +2,7 @@
  * =============================================
  * AudioTranscriber - Componente para Gravar e Transcrever Áudio
  * =============================================
- * 
+ *
  * Usa Web Speech API para transcrever áudio em tempo real
  * - Grava áudio do microfone
  * - Transcreve automaticamente COM PREVIEW EM TEMPO REAL
@@ -10,102 +10,110 @@
  * - Sem necessidade de API key
  */
 
-import React, { useState, useRef, useEffect } from "react";
-import { Mic, Square, AlertCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
+import React, { useState, useRef, useEffect } from 'react';
+import { Mic, Square, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/use-toast';
 
 export default function AudioTranscriber({ onTranscribe, disabled = false }) {
   const [isRecording, setIsRecording] = useState(false);
-  const [liveText, setLiveText] = useState("");
+  const [liveText, setLiveText] = useState('');
   const [supportedBrowser, setSupportedBrowser] = useState(true);
-  
+
   const recognitionRef = useRef(null);
-  const finalTranscriptRef = useRef("");
+  const finalTranscriptRef = useRef('');
   const { toast } = useToast();
 
   // Configuração inicial do Speech Recognition
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    
+
     if (!SpeechRecognition) {
-      console.warn("⚠️ Web Speech API não suportada neste navegador");
+      console.warn('⚠️ Web Speech API não suportada neste navegador');
       setSupportedBrowser(false);
       return;
     }
 
     setSupportedBrowser(true);
-    
+
     const recognition = new SpeechRecognition();
-    recognition.language = "pt-BR";
+    recognition.language = 'pt-BR';
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
 
     // ========== EVENTOS ==========
     recognition.onstart = () => {
-      console.log("🎤 [ONSTART] Gravação iniciada");
-      finalTranscriptRef.current = "";
-      setLiveText("");
+      console.log('🎤 [ONSTART] Gravação iniciada');
+      finalTranscriptRef.current = '';
+      setLiveText('');
       setIsRecording(true);
-      console.log("✅ Estados atualizados");
+      console.log('✅ Estados atualizados');
     };
 
     recognition.onresult = (event) => {
-      console.log("\n========== ONRESULT ==========");
-      console.log("📊 results.length:", event.results.length);
-      
-      let interim = "";
+      console.log('\n========== ONRESULT ==========');
+      console.log('📊 results.length:', event.results.length);
+
+      let interim = '';
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript;
         const isFinal = event.results[i].isFinal;
-        
+
         console.log(`   [${i}] isFinal=${isFinal}, transcript="${transcript}"`);
-        
+
         if (isFinal) {
-          finalTranscriptRef.current += transcript + " ";
-          console.log("  ✅ FINAL adicionado");
+          finalTranscriptRef.current += transcript + ' ';
+          console.log('  ✅ FINAL adicionado');
         } else {
           interim += transcript;
-          console.log("  📝 INTERIM capturado");
+          console.log('  📝 INTERIM capturado');
         }
       }
 
       const display = finalTranscriptRef.current + interim;
-      console.log("🎬 Display completo:", display);
+      console.log('🎬 Display completo:', display);
       setLiveText(display);
-      console.log("========== ONRESULT END ==========\n");
+      console.log('========== ONRESULT END ==========\n');
     };
 
     recognition.onerror = (event) => {
-      console.error("❌ [ONERROR]:", event.error);
-      
-      let msg = "Erro ao transcrever";
-      if (event.error === "no-speech") msg = "Nenhum áudio detectado";
-      if (event.error === "not-allowed") msg = "Permissão negada";
-      if (event.error === "audio-capture") msg = "Nenhum microfone";
-      if (event.error === "network") msg = "Erro de conexão";
-      
+      console.error('❌ [ONERROR]:', event.error);
+
+      let msg = 'Erro ao transcrever';
+      if (event.error === 'no-speech') {
+        msg = 'Nenhum áudio detectado';
+      }
+      if (event.error === 'not-allowed') {
+        msg = 'Permissão negada';
+      }
+      if (event.error === 'audio-capture') {
+        msg = 'Nenhum microfone';
+      }
+      if (event.error === 'network') {
+        msg = 'Erro de conexão';
+      }
+
       toast({
-        title: "Erro",
+        title: 'Erro',
         description: msg,
-        variant: "destructive",
+        variant: 'destructive',
       });
-      
+
       setIsRecording(false);
-      setLiveText("");
+      setLiveText('');
     };
 
     recognition.onend = () => {
-      console.log("✅ [ONEND] Gravação finalizada");
-      console.log("📝 Text final:", finalTranscriptRef.current);
+      console.log('✅ [ONEND] Gravação finalizada');
+      console.log('📝 Text final:', finalTranscriptRef.current);
       setIsRecording(false);
 
       if (finalTranscriptRef.current.trim()) {
-        console.log("📤 Enviando:", finalTranscriptRef.current.trim());
+        console.log('📤 Enviando:', finalTranscriptRef.current.trim());
         onTranscribe(finalTranscriptRef.current.trim());
-        setLiveText("");
+        setLiveText('');
       }
     };
 
@@ -124,53 +132,53 @@ export default function AudioTranscriber({ onTranscribe, disabled = false }) {
   const handleStartRecording = () => {
     if (!supportedBrowser) {
       toast({
-        title: "Navegador Incompatível",
-        description: "Use Chrome, Edge ou Safari para usar gravação de áudio.",
-        variant: "destructive",
+        title: 'Navegador Incompatível',
+        description: 'Use Chrome, Edge ou Safari para usar gravação de áudio.',
+        variant: 'destructive',
       });
       return;
     }
 
     if (!recognitionRef.current) {
       toast({
-        title: "Erro",
-        description: "Speech Recognition não inicializado",
-        variant: "destructive",
+        title: 'Erro',
+        description: 'Speech Recognition não inicializado',
+        variant: 'destructive',
       });
       return;
     }
 
     if (isRecording) {
-      console.warn("⚠️ Já está gravando");
+      console.warn('⚠️ Já está gravando');
       return;
     }
 
     try {
-      finalTranscriptRef.current = "";
-      setLiveText("");
-      console.log("🎙️ Iniciando gravação...");
+      finalTranscriptRef.current = '';
+      setLiveText('');
+      console.log('🎙️ Iniciando gravação...');
       recognitionRef.current.start();
     } catch (err) {
-      console.error("❌ Erro ao iniciar:", err);
+      console.error('❌ Erro ao iniciar:', err);
       toast({
-        title: "Erro",
-        description: "Erro ao iniciar gravação de áudio",
-        variant: "destructive",
+        title: 'Erro',
+        description: 'Erro ao iniciar gravação de áudio',
+        variant: 'destructive',
       });
     }
   };
 
   const handleStopRecording = () => {
     if (!recognitionRef.current || !isRecording) {
-      console.warn("⚠️ Não está gravando");
+      console.warn('⚠️ Não está gravando');
       return;
     }
 
     try {
-      console.log("⏹️ Parando gravação...");
+      console.log('⏹️ Parando gravação...');
       recognitionRef.current.stop();
     } catch (err) {
-      console.error("❌ Erro ao parar:", err);
+      console.error('❌ Erro ao parar:', err);
     }
   };
 

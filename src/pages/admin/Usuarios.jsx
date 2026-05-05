@@ -15,7 +15,7 @@ import {
   Building,
   Users,
   Loader,
-  ArrowLeft
+  ArrowLeft,
 } from 'lucide-react';
 
 export default function Usuarios({ embedded = false }) {
@@ -33,7 +33,7 @@ export default function Usuarios({ embedded = false }) {
     admin: 0,
     financeiro: 0,
     recepcao: 0,
-    profissional: 0
+    profissional: 0,
   });
 
   useEffect(() => {
@@ -48,17 +48,19 @@ export default function Usuarios({ embedded = false }) {
         .select('id, email, full_name, username, cpf, birthdate, role, created_at, clinic_id')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
       setUsuarios(data || []);
-      
+
       // Calcular estatísticas
       const stats = {
         total: data?.length || 0,
-        admin: data?.filter(u => u.role === 'admin').length || 0,
-        financeiro: data?.filter(u => u.role === 'financeiro').length || 0,
-        recepcao: data?.filter(u => u.role === 'recepcao').length || 0,
-        profissional: data?.filter(u => u.role === 'profissional').length || 0
+        admin: data?.filter((u) => u.role === 'admin').length || 0,
+        financeiro: data?.filter((u) => u.role === 'financeiro').length || 0,
+        recepcao: data?.filter((u) => u.role === 'recepcao').length || 0,
+        profissional: data?.filter((u) => u.role === 'profissional').length || 0,
       };
       setStats(stats);
     } catch (error) {
@@ -66,7 +68,7 @@ export default function Usuarios({ embedded = false }) {
       toast({
         variant: 'destructive',
         title: 'Erro ao carregar usuários',
-        description: error.message || 'Não foi possível buscar os usuários agora.'
+        description: error.message || 'Não foi possível buscar os usuários agora.',
       });
     } finally {
       setLoading(false);
@@ -78,7 +80,7 @@ export default function Usuarios({ embedded = false }) {
       admin: 'bg-red-100 text-red-800',
       financeiro: 'bg-green-100 text-green-800',
       recepcao: 'bg-blue-100 text-blue-800',
-      profissional: 'bg-purple-100 text-purple-800'
+      profissional: 'bg-purple-100 text-purple-800',
     };
     return colors[role] || 'bg-gray-100 text-gray-800';
   };
@@ -88,14 +90,15 @@ export default function Usuarios({ embedded = false }) {
       admin: 'Administrador',
       financeiro: 'Financeiro',
       recepcao: 'Recepção',
-      profissional: 'Profissional'
+      profissional: 'Profissional',
     };
     return labels[role] || role;
   };
 
-  const filteredUsuarios = usuarios.filter(user => {
-    const matchSearch = user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                       user.email?.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredUsuarios = usuarios.filter((user) => {
+    const matchSearch =
+      user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchRole = !filterRole || user.role === filterRole;
     return matchSearch && matchRole;
   });
@@ -106,7 +109,9 @@ export default function Usuarios({ embedded = false }) {
   };
 
   const handleDelete = async () => {
-    if (!usuarioToDelete) return;
+    if (!usuarioToDelete) {
+      return;
+    }
 
     setIsDeleting(true);
 
@@ -119,18 +124,14 @@ export default function Usuarios({ embedded = false }) {
         .single();
 
       // Deletar permissões primeiro
-      await supabase
-        .from('user_permissions')
-        .delete()
-        .eq('user_id', usuarioToDelete.id);
+      await supabase.from('user_permissions').delete().eq('user_id', usuarioToDelete.id);
 
       // Depois deletar o usuário
-      const { error } = await supabase
-        .from('users')
-        .delete()
-        .eq('id', usuarioToDelete.id);
+      const { error } = await supabase.from('users').delete().eq('id', usuarioToDelete.id);
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
       // 🔗 Se era profissional, deletar também de professionals
       if (userData?.role === 'profissional' && userData?.email) {
@@ -140,26 +141,26 @@ export default function Usuarios({ embedded = false }) {
           .delete()
           .eq('email', userData.email)
           .eq('clinic_id', userData.clinic_id);
-        
+
         if (profError) {
           console.warn('⚠️ [INTEGRAÇÃO] Aviso ao deletar profissional:', profError.message);
         } else {
           console.log('✅ [INTEGRAÇÃO] Profissional deletado com sucesso');
         }
       }
-      
+
       // Recarregar dados completos
       await loadUsuarios();
       toast({
         title: 'Usuário excluído',
-        description: `${usuarioToDelete.full_name || 'O usuário selecionado'} foi removido com sucesso.`
+        description: `${usuarioToDelete.full_name || 'O usuário selecionado'} foi removido com sucesso.`,
       });
     } catch (error) {
       console.error('Erro ao deletar usuário:', error);
       toast({
         variant: 'destructive',
         title: 'Erro ao excluir usuário',
-        description: error.message || 'Tente novamente em alguns instantes.'
+        description: error.message || 'Tente novamente em alguns instantes.',
       });
     } finally {
       setIsDeleting(false);
@@ -169,7 +170,9 @@ export default function Usuarios({ embedded = false }) {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return '-';
+    if (!dateString) {
+      return '-';
+    }
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
 
@@ -196,10 +199,19 @@ export default function Usuarios({ embedded = false }) {
               Administração
             </span>
             <div>
-              <h1 className={embedded ? 'text-3xl font-bold tracking-tight text-slate-950' : 'text-4xl font-bold tracking-tight text-slate-950'}>
+              <h1
+                className={
+                  embedded
+                    ? 'text-3xl font-bold tracking-tight text-slate-950'
+                    : 'text-4xl font-bold tracking-tight text-slate-950'
+                }
+              >
                 Usuários
               </h1>
-              <p className="mt-2 max-w-2xl text-sm text-slate-600">Gerencie acessos, perfis e vínculos de forma centralizada no mesmo padrão visual do restante da área administrativa.</p>
+              <p className="mt-2 max-w-2xl text-sm text-slate-600">
+                Gerencie acessos, perfis e vínculos de forma centralizada no mesmo padrão visual do
+                restante da área administrativa.
+              </p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -227,7 +239,9 @@ export default function Usuarios({ embedded = false }) {
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Total
+                </p>
                 <p className="mt-2 text-3xl font-bold text-slate-950">{stats.total}</p>
               </div>
               <Users className="h-10 w-10 text-[hsl(var(--primary))] opacity-20" />
@@ -239,7 +253,9 @@ export default function Usuarios({ embedded = false }) {
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Admin</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Admin
+                </p>
                 <p className="mt-2 text-3xl font-bold text-red-600">{stats.admin}</p>
               </div>
               <Shield className="h-10 w-10 text-red-500 opacity-20" />
@@ -251,7 +267,9 @@ export default function Usuarios({ embedded = false }) {
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Financeiro</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Financeiro
+                </p>
                 <p className="mt-2 text-3xl font-bold text-green-600">{stats.financeiro}</p>
               </div>
               <Building className="h-10 w-10 text-green-500 opacity-20" />
@@ -263,7 +281,9 @@ export default function Usuarios({ embedded = false }) {
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Recepção</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Recepção
+                </p>
                 <p className="mt-2 text-3xl font-bold text-blue-600">{stats.recepcao}</p>
               </div>
               <Users className="h-10 w-10 text-blue-500 opacity-20" />
@@ -275,7 +295,9 @@ export default function Usuarios({ embedded = false }) {
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Profissional</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Profissional
+                </p>
                 <p className="mt-2 text-3xl font-bold text-purple-600">{stats.profissional}</p>
               </div>
               <Users className="h-10 w-10 text-purple-500 opacity-20" />
@@ -287,7 +309,9 @@ export default function Usuarios({ embedded = false }) {
       <Card className="rounded-3xl border-slate-200 shadow-sm">
         <CardHeader className="border-b border-slate-100 bg-slate-50/80">
           <CardTitle className="text-2xl text-slate-950">Filtrar e Buscar</CardTitle>
-          <CardDescription>Refine a lista por nome, email ou perfil para encontrar rapidamente o usuário certo.</CardDescription>
+          <CardDescription>
+            Refine a lista por nome, email ou perfil para encontrar rapidamente o usuário certo.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 p-6">
           <div className="flex flex-wrap gap-3">
@@ -329,7 +353,8 @@ export default function Usuarios({ embedded = false }) {
             )}
           </div>
           <p className="text-sm text-slate-500">
-            {filteredUsuarios.length} usuário{filteredUsuarios.length !== 1 ? 's' : ''} encontrado{filteredUsuarios.length !== 1 ? 's' : ''}
+            {filteredUsuarios.length} usuário{filteredUsuarios.length !== 1 ? 's' : ''} encontrado
+            {filteredUsuarios.length !== 1 ? 's' : ''}
           </p>
         </CardContent>
       </Card>
@@ -337,7 +362,9 @@ export default function Usuarios({ embedded = false }) {
       <Card className="overflow-hidden rounded-3xl border-slate-200 shadow-sm">
         <CardHeader className="border-b border-slate-100 bg-slate-50/80">
           <CardTitle className="text-2xl text-slate-950">Usuários Cadastrados</CardTitle>
-          <CardDescription>Lista completa com dados de acesso e atalhos de manutenção.</CardDescription>
+          <CardDescription>
+            Lista completa com dados de acesso e atalhos de manutenção.
+          </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
@@ -354,18 +381,35 @@ export default function Usuarios({ embedded = false }) {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-100 bg-slate-50 text-left">
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">Nome</th>
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">Login</th>
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">CPF</th>
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">Email</th>
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">Perfil</th>
-                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">Cadastro</th>
-                    <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Ações</th>
+                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Nome
+                    </th>
+                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Login
+                    </th>
+                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      CPF
+                    </th>
+                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Email
+                    </th>
+                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Perfil
+                    </th>
+                    <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Cadastro
+                    </th>
+                    <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Ações
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredUsuarios.map((usuario) => (
-                    <tr key={usuario.id} className="border-b border-slate-100 transition hover:bg-slate-50/80">
+                    <tr
+                      key={usuario.id}
+                      className="border-b border-slate-100 transition hover:bg-slate-50/80"
+                    >
                       <td className="px-6 py-4">
                         <div className="space-y-1">
                           <p className="font-semibold text-slate-900">{usuario.full_name || '-'}</p>
@@ -385,7 +429,9 @@ export default function Usuarios({ embedded = false }) {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getRoleColor(usuario.role)}`}>
+                        <span
+                          className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getRoleColor(usuario.role)}`}
+                        >
                           {getRoleLabel(usuario.role)}
                         </span>
                       </td>
@@ -395,7 +441,9 @@ export default function Usuarios({ embedded = false }) {
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={() => navigate(`/clinica/administracao/usuarios/editar/${usuario.id}`)}
+                            onClick={() =>
+                              navigate(`/clinica/administracao/usuarios/editar/${usuario.id}`)
+                            }
                             className="rounded-xl p-2 text-[hsl(var(--primary))] transition hover:bg-[hsl(var(--primary))]/10"
                             title="Editar"
                           >

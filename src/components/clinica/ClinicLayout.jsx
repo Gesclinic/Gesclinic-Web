@@ -1,5 +1,5 @@
-import * as React from "react";
-import { Outlet, Link } from "react-router-dom";
+import * as React from 'react';
+import { Outlet, Link } from 'react-router-dom';
 
 export default function ClinicLayout() {
   return (
@@ -9,8 +9,12 @@ export default function ClinicLayout() {
           <h2 className="text-lg font-medium">Configurações da Clínica</h2>
           <nav className="space-x-3">
             {/* links relativos para funcionar com HashRouter */}
-            <Link to="/" className="text-sm text-primary">Visão Geral</Link>
-            <Link to="branding" className="text-sm text-primary">Branding</Link>
+            <Link to="/" className="text-sm text-primary">
+              Visão Geral
+            </Link>
+            <Link to="branding" className="text-sm text-primary">
+              Branding
+            </Link>
             {/* adicionar outros links de navegação de clinica aqui */}
           </nav>
         </div>

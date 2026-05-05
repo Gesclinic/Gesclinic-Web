@@ -1,13 +1,13 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import PageLayout from "@/components/ui/PageLayout";
-import { useBreadcrumbs } from "@/hooks/useBreadcrumbs";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import PageLayout from '@/components/ui/PageLayout';
+import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 
 export default function AdminConfig() {
   const breadcrumbs = useBreadcrumbs([
-    { label: "Clínica", path: "/clinica" },
-    { label: "Configurações" },
-    { label: "Administração" }
+    { label: 'Clínica', path: '/clinica' },
+    { label: 'Configurações' },
+    { label: 'Administração' },
   ]);
 
   return (
@@ -42,4 +42,3 @@ export default function AdminConfig() {
     </PageLayout>
   );
 }
-

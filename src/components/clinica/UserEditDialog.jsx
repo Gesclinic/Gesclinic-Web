@@ -10,7 +10,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
 import { Loader2 } from 'lucide-react';
@@ -46,12 +52,12 @@ const UserEditDialog = ({ user, isOpen, onOpenChange, onUserUpdate }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSaving(true);
-    
+
     const { data, error } = await supabase.rpc('admin_update_user_profile', {
-        p_user_id: user.id,
-        p_full_name: formData.full_name,
-        p_role: formData.role,
-        p_status: formData.status,
+      p_user_id: user.id,
+      p_full_name: formData.full_name,
+      p_role: formData.role,
+      p_status: formData.status,
     });
 
     if (error) {
@@ -71,7 +77,9 @@ const UserEditDialog = ({ user, isOpen, onOpenChange, onUserUpdate }) => {
     setIsSaving(false);
   };
 
-  if (!user) return null;
+  if (!user) {
+    return null;
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -113,7 +121,7 @@ const UserEditDialog = ({ user, isOpen, onOpenChange, onUserUpdate }) => {
               </SelectContent>
             </Select>
           </div>
-           <div className="space-y-2">
+          <div className="space-y-2">
             <Label htmlFor="status">Status</Label>
             <Select
               name="status"
@@ -131,7 +139,12 @@ const UserEditDialog = ({ user, isOpen, onOpenChange, onUserUpdate }) => {
             </Select>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSaving}
+            >
               Cancelar
             </Button>
             <Button type="submit" disabled={isSaving}>

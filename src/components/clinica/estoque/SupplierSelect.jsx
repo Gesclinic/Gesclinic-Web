@@ -1,26 +1,36 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ChevronDown, X } from "lucide-react";
-import { stockSuppliersApi } from "@/lib/stockApi";
+import React, { useState, useEffect, useMemo } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { ChevronDown, X } from 'lucide-react';
+import { stockSuppliersApi } from '@/lib/stockApi';
 
-export default function SupplierSelect({ clinicId, value, supplierId, onChange, required = false, reloadKey, hideLabel = false }) {
+export default function SupplierSelect({
+  clinicId,
+  value,
+  supplierId,
+  onChange,
+  required = false,
+  reloadKey,
+  hideLabel = false,
+}) {
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
-    if (!clinicId) return;
-    
+    if (!clinicId) {
+      return;
+    }
+
     const loadSuppliers = async () => {
       setLoading(true);
       try {
         const data = await stockSuppliersApi.list(clinicId);
         setSuppliers(data || []);
       } catch (error) {
-        console.error("Erro ao carregar fornecedores:", error);
+        console.error('Erro ao carregar fornecedores:', error);
       } finally {
         setLoading(false);
       }
@@ -30,25 +40,26 @@ export default function SupplierSelect({ clinicId, value, supplierId, onChange, 
   }, [clinicId, reloadKey]);
 
   const filteredSuppliers = useMemo(() => {
-    if (!search) return suppliers;
+    if (!search) {
+      return suppliers;
+    }
     const term = search.toLowerCase();
-    return suppliers.filter(s => 
-      s.name?.toLowerCase().includes(term) ||
-      s.tax_id?.toLowerCase().includes(term)
+    return suppliers.filter(
+      (s) => s.name?.toLowerCase().includes(term) || s.tax_id?.toLowerCase().includes(term),
     );
   }, [suppliers, search]);
 
-  const selectedSupplier = suppliers.find(s => s.id === supplierId);
+  const selectedSupplier = suppliers.find((s) => s.id === supplierId);
 
   const handleSelect = (supplier) => {
     onChange({ supplier: supplier.name, supplierId: supplier.id });
     setOpen(false);
-    setSearch("");
+    setSearch('');
   };
 
   const handleClear = () => {
-    onChange({ supplier: "", supplierId: "" });
-    setSearch("");
+    onChange({ supplier: '', supplierId: '' });
+    setSearch('');
   };
 
   return (
@@ -85,12 +96,7 @@ export default function SupplierSelect({ clinicId, value, supplierId, onChange, 
             </button>
           </div>
           {supplierId && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleClear}
-            >
+            <Button type="button" variant="outline" size="sm" onClick={handleClear}>
               <X className="h-4 w-4" />
             </Button>
           )}
@@ -105,8 +111,8 @@ export default function SupplierSelect({ clinicId, value, supplierId, onChange, 
             ) : filteredSuppliers.length === 0 ? (
               <div className="p-3 text-center text-sm text-gray-500">
                 {suppliers.length === 0
-                  ? "Nenhum fornecedor cadastrado"
-                  : "Nenhum fornecedor encontrado"}
+                  ? 'Nenhum fornecedor cadastrado'
+                  : 'Nenhum fornecedor encontrado'}
               </div>
             ) : (
               filteredSuppliers.map((supplier) => (
@@ -115,7 +121,7 @@ export default function SupplierSelect({ clinicId, value, supplierId, onChange, 
                   type="button"
                   onClick={() => handleSelect(supplier)}
                   className={`w-full text-left px-4 py-2.5 hover:bg-blue-50 border-b last:border-b-0 ${
-                    supplierId === supplier.id ? "bg-blue-100" : ""
+                    supplierId === supplier.id ? 'bg-blue-100' : ''
                   }`}
                 >
                   <div className="font-medium text-sm">{supplier.name}</div>

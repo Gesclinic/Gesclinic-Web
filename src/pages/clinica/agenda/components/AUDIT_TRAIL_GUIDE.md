@@ -1,6 +1,7 @@
 # 📋 Guia: Auditoria Completa (LGPD Compliant)
 
 ## Objetivo
+
 Registrar todas as alterações de agendamento para rastreabilidade, compliance LGPD e base para relatórios.
 
 ---
@@ -112,7 +113,7 @@ ORDER BY created_at DESC;
 
 ```javascript
 // Última alteração de cada agendamento
-SELECT 
+SELECT
   appointment_id,
   user_email,
   action,
@@ -127,7 +128,7 @@ ORDER BY created_at DESC;
 
 ```javascript
 // Ver exatamente o que mudou
-SELECT 
+SELECT
   old_data->>'status' as status_antes,
   new_data->>'status' as status_depois,
   old_data->>'professional_id' as prof_antes,
@@ -152,20 +153,21 @@ const [showAudit, setShowAudit] = useState(false);
 const [selectedAppointmentId, setSelectedAppointmentId] = useState(null);
 
 // Botão para abrir histórico
-<button onClick={() => {
-  setSelectedAppointmentId(appointmentId);
-  setShowAudit(true);
-}}>
+<button
+  onClick={() => {
+    setSelectedAppointmentId(appointmentId);
+    setShowAudit(true);
+  }}
+>
   📋 Ver Histórico
-</button>
+</button>;
 
 // Modal
-{showAudit && (
-  <AuditTrailModal
-    appointmentId={selectedAppointmentId}
-    onClose={() => setShowAudit(false)}
-  />
-)}
+{
+  showAudit && (
+    <AuditTrailModal appointmentId={selectedAppointmentId} onClose={() => setShowAudit(false)} />
+  );
+}
 ```
 
 ### Opção B: Usar Diretamente em Componentes
@@ -179,7 +181,7 @@ const { data: logs } = await supabase
   .order('created_at', { ascending: false });
 
 // Exibir em tabela/timeline
-logs.forEach(log => {
+logs.forEach((log) => {
   console.log(`${log.user_email} ${log.action} às ${log.created_at}`);
 });
 ```
@@ -253,7 +255,7 @@ WHERE created_at < NOW() - INTERVAL '2 years';
 ### Relatório 1: Atividade por Usuário
 
 ```sql
-SELECT 
+SELECT
   user_email,
   COUNT(*) as total_alteracoes,
   COUNT(CASE WHEN action = 'create' THEN 1 END) as criou,
@@ -268,7 +270,7 @@ ORDER BY total_alteracoes DESC;
 ### Relatório 2: Mudanças de Status
 
 ```sql
-SELECT 
+SELECT
   appointment_id,
   user_email,
   status_changed_from,
@@ -284,7 +286,7 @@ ORDER BY created_at DESC;
 ### Relatório 3: Atividade por Dia
 
 ```sql
-SELECT 
+SELECT
   DATE(created_at) as data,
   COUNT(*) as alteracoes,
   COUNT(DISTINCT user_id) as usuarios_unicos
@@ -326,6 +328,7 @@ ORDER BY data DESC;
 ### Problema: Logs não aparecem
 
 **Checklist:**
+
 - [ ] Migração foi aplicada no Supabase?
 - [ ] Trigger foi criado? `SELECT * FROM pg_trigger WHERE tgname LIKE 'audit%';`
 - [ ] RLS está habilitada? `SELECT * FROM pg_policies WHERE tablename = 'appointment_audit_logs';`
@@ -334,6 +337,7 @@ ORDER BY data DESC;
 ### Problema: Triggers atrasados
 
 **Solução:** Triggers automáticos são síncronos, não devem ter atraso. Se houver:
+
 - Verificar saúde do BD (Supabase Dashboard)
 - Verificar se há locks em `appointments`
 - Aumentar `work_mem` se BD tiver muita carga

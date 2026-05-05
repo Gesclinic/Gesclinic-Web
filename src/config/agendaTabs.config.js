@@ -9,11 +9,11 @@ export const AGENDA_TABS_CONFIG = {
     id: 'admin',
     label: 'Administrador',
     tabs: {
-      dia: true,      // 📅 Dia
-      semana: true,   // 🗓 Semana
-      mes: true,      // 📆 Mês
+      dia: true, // 📅 Dia
+      semana: true, // 🗓 Semana
+      mes: true, // 📆 Mês
     },
-    description: 'Acesso completo a todas as visualizações da agenda'
+    description: 'Acesso completo a todas as visualizações da agenda',
   },
 
   // ========== GESTOR ==========
@@ -25,7 +25,7 @@ export const AGENDA_TABS_CONFIG = {
       semana: true,
       mes: true,
     },
-    description: 'Acesso completo a todas as visualizações da agenda'
+    description: 'Acesso completo a todas as visualizações da agenda',
   },
 
   // ========== RECEPÇÃO ==========
@@ -37,7 +37,7 @@ export const AGENDA_TABS_CONFIG = {
       semana: true,
       mes: true,
     },
-    description: 'Acesso a dia, semana e mês da agenda'
+    description: 'Acesso a dia, semana e mês da agenda',
   },
 
   // ========== PROFISSIONAL ==========
@@ -45,11 +45,11 @@ export const AGENDA_TABS_CONFIG = {
     id: 'profissional',
     label: 'Profissional',
     tabs: {
-      dia: true,      // 📅 Visualizar apenas seu dia
-      semana: true,   // 🗓 Visualizar sua semana
-      mes: true,      // 📆 Visualizar seu mês
+      dia: true, // 📅 Visualizar apenas seu dia
+      semana: true, // 🗓 Visualizar sua semana
+      mes: true, // 📆 Visualizar seu mês
     },
-    description: 'Acesso a visualizações da sua agenda pessoal'
+    description: 'Acesso a visualizações da sua agenda pessoal',
   },
 
   // ========== FINANCEIRO ==========
@@ -61,7 +61,7 @@ export const AGENDA_TABS_CONFIG = {
       semana: true,
       mes: true,
     },
-    description: 'Acesso a visualizações da agenda para análise financeira'
+    description: 'Acesso a visualizações da agenda para análise financeira',
   },
 
   // ========== ESTOQUE ==========
@@ -69,11 +69,11 @@ export const AGENDA_TABS_CONFIG = {
     id: 'estoque',
     label: 'Estoque',
     tabs: {
-      dia: false,     // Sem acesso
-      semana: false,  // Sem acesso
-      mes: false,     // Sem acesso
+      dia: false, // Sem acesso
+      semana: false, // Sem acesso
+      mes: false, // Sem acesso
     },
-    description: 'Este perfil não tem acesso à agenda'
+    description: 'Este perfil não tem acesso à agenda',
   },
 
   // ========== FATURAMENTO ==========
@@ -85,8 +85,8 @@ export const AGENDA_TABS_CONFIG = {
       semana: true,
       mes: true,
     },
-    description: 'Acesso a visualizações da agenda para faturamento'
-  }
+    description: 'Acesso a visualizações da agenda para faturamento',
+  },
 };
 
 /**
@@ -95,8 +95,10 @@ export const AGENDA_TABS_CONFIG = {
  * @returns {object} Configuração de abas do perfil
  */
 export function getAgendaTabsForRole(role) {
-  if (!role) return AGENDA_TABS_CONFIG.recepcao; // Default
-  
+  if (!role) {
+    return AGENDA_TABS_CONFIG.recepcao;
+  } // Default
+
   const config = AGENDA_TABS_CONFIG[role.toLowerCase()];
   return config || AGENDA_TABS_CONFIG.recepcao;
 }
@@ -119,7 +121,7 @@ export function canAccessAgendaTab(role, tabName) {
  */
 export function getAccessibleAgendaTabs(role) {
   const config = getAgendaTabsForRole(role);
-  return Object.keys(config.tabs).filter(tabName => config.tabs[tabName] === true);
+  return Object.keys(config.tabs).filter((tabName) => config.tabs[tabName] === true);
 }
 
 /**
@@ -128,7 +130,7 @@ export function getAccessibleAgendaTabs(role) {
 export const AGENDA_TAB_LABELS = {
   dia: { label: '📅 Dia', icon: '📅', fullLabel: 'Visualização por Dia' },
   semana: { label: '🗓 Semana', icon: '🗓', fullLabel: 'Visualização por Semana' },
-  mes: { label: '📆 Mês', icon: '📆', fullLabel: 'Visualização por Mês' }
+  mes: { label: '📆 Mês', icon: '📆', fullLabel: 'Visualização por Mês' },
 };
 
 /**
@@ -136,11 +138,11 @@ export const AGENDA_TAB_LABELS = {
  * Todos os perfis abrem na aba "Dia" por padrão
  */
 export const DEFAULT_AGENDA_TAB_BY_ROLE = {
-  admin: 'dia',        // Admins vêem dia
-  gestor: 'dia',       // Gestores vêem dia
-  recepcao: 'dia',     // Recepção vê dia
+  admin: 'dia', // Admins vêem dia
+  gestor: 'dia', // Gestores vêem dia
+  recepcao: 'dia', // Recepção vê dia
   profissional: 'dia', // Profissional vê seu dia
-  financeiro: 'dia',   // Financeiro vê dia
-  estoque: 'dia',      // Padrão caso tenham acesso
-  faturamento: 'dia'   // Faturamento vê dia
+  financeiro: 'dia', // Financeiro vê dia
+  estoque: 'dia', // Padrão caso tenham acesso
+  faturamento: 'dia', // Faturamento vê dia
 };

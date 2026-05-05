@@ -24,7 +24,7 @@ export function checkDisponibilidade(horario, profissional, sala, agendamentos, 
   const horarioFim = horarioMinutos + duracao;
 
   // Verificar conflitos com agendamentos existentes
-  const temConflito = agendamentos.some(apt => {
+  const temConflito = agendamentos.some((apt) => {
     // Apenas verificar se é do mesmo profissional e sala
     if (apt.professional_id !== profissional.id || apt.room_id !== sala.id) {
       return false;
@@ -57,7 +57,7 @@ export function getOcupacaoHorario(horario, agendamentos, profissionais = [], sa
   }
 
   // Contar agendamentos naquele horário
-  const agendamentosNaHora = agendamentos.filter(apt => {
+  const agendamentosNaHora = agendamentos.filter((apt) => {
     const horarioApt = apt.start_time?.substring(0, 5);
     return horarioApt === horario;
   }).length;
@@ -80,7 +80,9 @@ export function getOcupacaoHorario(horario, agendamentos, profissionais = [], sa
  */
 export function countConsecutivosLivres(horarioInicio, horarios, profissional, sala, agendamentos) {
   const indexInicio = horarios.indexOf(horarioInicio);
-  if (indexInicio === -1) return 0;
+  if (indexInicio === -1) {
+    return 0;
+  }
 
   let consecutivos = 0;
   for (let i = indexInicio; i < horarios.length; i++) {
@@ -117,19 +119,21 @@ export function suggestEncaixes({
   const suggestions = [];
 
   // Gerar todas as combinações possíveis
-  horarios.forEach(horario => {
-    profissionais.forEach(profissional => {
-      salas.forEach(sala => {
+  horarios.forEach((horario) => {
+    profissionais.forEach((profissional) => {
+      salas.forEach((sala) => {
         // Verificar se está disponível
         const livre = checkDisponibilidade(
           horario,
           profissional,
           sala,
           agendamentos,
-          servico.duracao
+          servico.duracao,
         );
 
-        if (!livre) return;
+        if (!livre) {
+          return;
+        }
 
         // Calcular ocupação do horário
         const ocupacao = getOcupacaoHorario(horario, agendamentos, profissionais, salas);
@@ -140,7 +144,7 @@ export function suggestEncaixes({
           horarios,
           profissional,
           sala,
-          agendamentos
+          agendamentos,
         );
 
         // REGRA DE SCORING (sem IA)
@@ -173,9 +177,7 @@ export function suggestEncaixes({
   });
 
   // Ordenar por score (maior primeiro) e retornar top N
-  return suggestions
-    .sort((a, b) => b.score - a.score)
-    .slice(0, maxSugestoes);
+  return suggestions.sort((a, b) => b.score - a.score).slice(0, maxSugestoes);
 }
 
 /**
@@ -207,7 +209,7 @@ function generateMotivo(ocupacao, consecutivos) {
  * @returns {array} Sugestões filtradas
  */
 export function filterSuggestions(suggestions, filtro = {}) {
-  return suggestions.filter(s => {
+  return suggestions.filter((s) => {
     if (filtro.profissionalId && s.profissional.id !== filtro.profissionalId) {
       return false;
     }

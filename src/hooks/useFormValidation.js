@@ -12,61 +12,74 @@ export function useFormValidation(initialValues = {}, onValidate) {
   const [isDirty, setIsDirty] = useState(false);
 
   // Executa validações para um campo
-  const validateField = useCallback(async (fieldName, fieldValue) => {
-    if (!onValidate) return null;
-
-    setValidating(prev => ({ ...prev, [fieldName]: true }));
-    
-    try {
-      const result = await onValidate(fieldName, fieldValue, values);
-      
-      if (result.error) {
-        setErrors(prev => ({ ...prev, [fieldName]: result.error }));
-      } else {
-        setErrors(prev => {
-          const newErrors = { ...prev };
-          delete newErrors[fieldName];
-          return newErrors;
-        });
+  const validateField = useCallback(
+    async (fieldName, fieldValue) => {
+      if (!onValidate) {
+        return null;
       }
-      
-      return result;
-    } finally {
-      setValidating(prev => ({ ...prev, [fieldName]: false }));
-    }
-  }, [onValidate, values]);
+
+      setValidating((prev) => ({ ...prev, [fieldName]: true }));
+
+      try {
+        const result = await onValidate(fieldName, fieldValue, values);
+
+        if (result.error) {
+          setErrors((prev) => ({ ...prev, [fieldName]: result.error }));
+        } else {
+          setErrors((prev) => {
+            const newErrors = { ...prev };
+            delete newErrors[fieldName];
+            return newErrors;
+          });
+        }
+
+        return result;
+      } finally {
+        setValidating((prev) => ({ ...prev, [fieldName]: false }));
+      }
+    },
+    [onValidate, values],
+  );
 
   // Valida todos os campos
   const validateAll = useCallback(async () => {
-    if (!onValidate) return true;
+    if (!onValidate) {
+      return true;
+    }
 
     const allFields = Object.keys(values);
     const results = await Promise.all(
-      allFields.map(field => validateField(field, values[field]))
+      allFields.map((field) => validateField(field, values[field])),
     );
 
-    return results.every(r => !r?.error);
+    return results.every((r) => !r?.error);
   }, [values, validateField, onValidate]);
 
   // Atualiza um campo
-  const setFieldValue = useCallback((fieldName, value) => {
-    setValues(prev => ({ ...prev, [fieldName]: value }));
-    setIsDirty(true);
-    
-    // Validar o campo se foi tocado
-    if (touched[fieldName]) {
-      validateField(fieldName, value);
-    }
-  }, [touched, validateField]);
+  const setFieldValue = useCallback(
+    (fieldName, value) => {
+      setValues((prev) => ({ ...prev, [fieldName]: value }));
+      setIsDirty(true);
+
+      // Validar o campo se foi tocado
+      if (touched[fieldName]) {
+        validateField(fieldName, value);
+      }
+    },
+    [touched, validateField],
+  );
 
   // Marca um campo como tocado
-  const setFieldTouched = useCallback((fieldName, isTouched = true) => {
-    setTouched(prev => ({ ...prev, [fieldName]: isTouched }));
-    
-    if (isTouched && values[fieldName] !== undefined) {
-      validateField(fieldName, values[fieldName]);
-    }
-  }, [values, validateField]);
+  const setFieldTouched = useCallback(
+    (fieldName, isTouched = true) => {
+      setTouched((prev) => ({ ...prev, [fieldName]: isTouched }));
+
+      if (isTouched && values[fieldName] !== undefined) {
+        validateField(fieldName, values[fieldName]);
+      }
+    },
+    [values, validateField],
+  );
 
   // Reseta o formulário
   const resetForm = useCallback(() => {
@@ -78,7 +91,7 @@ export function useFormValidation(initialValues = {}, onValidate) {
 
   // Status do formulário
   const isValid = useMemo(() => Object.keys(errors).length === 0, [errors]);
-  const isValidating = useMemo(() => Object.values(validating).some(v => v), [validating]);
+  const isValidating = useMemo(() => Object.values(validating).some((v) => v), [validating]);
 
   return {
     values,
@@ -170,7 +183,9 @@ export const validators = {
         sum += parseInt(cpf[i]) * (10 - i);
       }
       let remainder = (sum * 10) % 11;
-      if (remainder === 10 || remainder === 11) remainder = 0;
+      if (remainder === 10 || remainder === 11) {
+        remainder = 0;
+      }
       if (parseInt(cpf[9]) !== remainder) {
         return { error: 'CPF inválido' };
       }
@@ -209,7 +224,9 @@ export function composeValidators(...validatorFns) {
   return (value) => {
     for (const validator of validatorFns) {
       const result = validator(value);
-      if (result.error) return result;
+      if (result.error) {
+        return result;
+      }
     }
     return { error: null };
   };

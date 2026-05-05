@@ -1,21 +1,18 @@
 /**
  * Custom Hook: useAppointmentFinancialAudit
- * 
+ *
  * Hook para gerenciar auditoria financeira de atendimentos
  * com auto-refresh e sincronização
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from 'react';
 import {
   getAppointmentFinancialAuditTrail,
   getAppointmentFinancialSummary,
   checkFinancialDivergences,
-} from "@/lib/auditFinancialApi";
+} from '@/lib/auditFinancialApi';
 
-export function useAppointmentFinancialAudit(
-  appointmentId,
-  options = {}
-) {
+export function useAppointmentFinancialAudit(appointmentId, options = {}) {
   const {
     autoLoad = true,
     refreshInterval = null, // milliseconds
@@ -32,7 +29,9 @@ export function useAppointmentFinancialAudit(
   // Função para carregar auditoria
   const loadAudit = useCallback(
     async (appointmentId) => {
-      if (!appointmentId) return;
+      if (!appointmentId) {
+        return;
+      }
 
       try {
         setLoading(true);
@@ -49,14 +48,16 @@ export function useAppointmentFinancialAudit(
         setDivergences(divergencesList || []);
         setLastFetch(new Date());
       } catch (err) {
-        const errorMsg = err.message || "Erro ao carregar auditoria";
+        const errorMsg = err.message || 'Erro ao carregar auditoria';
         setError(errorMsg);
-        if (onError) onError(errorMsg);
+        if (onError) {
+          onError(errorMsg);
+        }
       } finally {
         setLoading(false);
       }
     },
-    [onError]
+    [onError],
   );
 
   // Auto-load inicial
@@ -68,7 +69,9 @@ export function useAppointmentFinancialAudit(
 
   // Refresh automático periodicamente
   useEffect(() => {
-    if (!refreshInterval || !appointmentId) return;
+    if (!refreshInterval || !appointmentId) {
+      return;
+    }
 
     const interval = setInterval(() => {
       loadAudit(appointmentId);
@@ -78,12 +81,9 @@ export function useAppointmentFinancialAudit(
   }, [refreshInterval, appointmentId, loadAudit]);
 
   // Funções públicas
-  const refresh = useCallback(
-    async () => {
-      await loadAudit(appointmentId);
-    },
-    [appointmentId, loadAudit]
-  );
+  const refresh = useCallback(async () => {
+    await loadAudit(appointmentId);
+  }, [appointmentId, loadAudit]);
 
   return {
     // Data

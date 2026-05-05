@@ -14,9 +14,7 @@ export default function GuiasPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Guias TISS</h1>
-          <p className="text-gray-600 mt-2">
-            Gerencie guias de consulta, internação e SADT
-          </p>
+          <p className="text-gray-600 mt-2">Gerencie guias de consulta, internação e SADT</p>
         </div>
         <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
           <Plus size={20} />
@@ -64,4 +62,3 @@ export default function GuiasPage() {
     </div>
   );
 }
-

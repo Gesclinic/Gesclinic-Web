@@ -4,7 +4,7 @@ import StatusChip from './StatusChip';
 
 /**
  * AgendaGridOptimized - Tabela ultra-premium com densidade máxima
- * 
+ *
  * ✨ Otimizações de UX Premium:
  * 1. Slots livres: Apenas horário + bolinha verde + botão (invisível)
  * 2. Ações flutuantes: Aparecem só no hover, não ocupam coluna
@@ -12,14 +12,14 @@ import StatusChip from './StatusChip';
  * 4. Hierarquia de dados: Paciente principal, Prof/Serviço/Sala secundários
  * 5. Densidade aumentada: Menos espaço vertical, mais horários visíveis
  * 6. Hover claro: Background + cursor pointer + ações visíveis
- * 
+ *
  * 🔥 Melhorias de Ouro:
  * 1. Clique direto no slot livre → abre modal
  * 2. Duplo clique no atendimento → editar
  * 3. Botão direito → menu rápido
  * 4. Indicador de atraso (borda vermelha)
  * 5. Destaque do "horário atual" (linha azul suave)
- * 
+ *
  * Props:
  * - appointments: array de agendamentos
  * - onBookSlot: (slot) => void
@@ -49,7 +49,7 @@ export default function AgendaGridOptimized({
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
-  
+
   // Agrupar por horário para melhor visualização
   const groupedByTime = appointments.reduce((acc, appt) => {
     const time = appt.horário || appt.time || '00:00';
@@ -67,7 +67,10 @@ export default function AgendaGridOptimized({
 
   // Verificar se é atraso (status = falta ou confirmado mas passou da hora)
   const isLate = (appt) => {
-    return appt.status === 'falta' || (appt.status === 'confirmado' && appt.horário < currentTimeStr && appt.paciente);
+    return (
+      appt.status === 'falta' ||
+      (appt.status === 'confirmado' && appt.horário < currentTimeStr && appt.paciente)
+    );
   };
 
   // Handler para clique direito
@@ -133,9 +136,13 @@ export default function AgendaGridOptimized({
                   onContextMenu={(e) => handleContextMenu(e, appt)}
                 >
                   <div className="grid grid-cols-12 gap-0 h-11 items-center px-0.5">
-                    <div className={`col-span-1 px-2 text-sm font-semibold ${isCurrentTime ? 'text-blue-600 font-bold' : 'text-gray-800'}`}>
+                    <div
+                      className={`col-span-1 px-2 text-sm font-semibold ${isCurrentTime ? 'text-blue-600 font-bold' : 'text-gray-800'}`}
+                    >
                       {time}
-                      {isCurrentTime && <span className="ml-1 inline-block w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>}
+                      {isCurrentTime && (
+                        <span className="ml-1 inline-block w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
+                      )}
                     </div>
                     <div className="col-span-2 px-2 flex items-center justify-between pr-3">
                       <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
@@ -170,29 +177,41 @@ export default function AgendaGridOptimized({
               >
                 <div className="grid grid-cols-12 gap-0 h-11 items-center px-0.5">
                   {/* Horário */}
-                  <div className={`col-span-1 px-2 text-sm font-bold ${isCurrentTime ? 'text-blue-600' : 'text-gray-700'}`}>
+                  <div
+                    className={`col-span-1 px-2 text-sm font-bold ${isCurrentTime ? 'text-blue-600' : 'text-gray-700'}`}
+                  >
                     {time}
-                    {isCurrentTime && <span className="ml-1 inline-block w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>}
+                    {isCurrentTime && (
+                      <span className="ml-1 inline-block w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
+                    )}
                   </div>
 
                   {/* Paciente */}
                   <div className="col-span-2 px-2">
-                    <div className="text-sm font-bold text-gray-900 group-hover:text-blue-700 transition-colors truncate">{appt.paciente || appt.patient || '—'}</div>
+                    <div className="text-sm font-bold text-gray-900 group-hover:text-blue-700 transition-colors truncate">
+                      {appt.paciente || appt.patient || '—'}
+                    </div>
                   </div>
 
                   {/* Serviço */}
                   <div className="col-span-2 px-2">
-                    <div className="text-xs text-gray-600 group-hover:text-gray-700 transition-colors truncate">{appt.serviço || appt.service || '—'}</div>
+                    <div className="text-xs text-gray-600 group-hover:text-gray-700 transition-colors truncate">
+                      {appt.serviço || appt.service || '—'}
+                    </div>
                   </div>
 
                   {/* Profissional */}
                   <div className="col-span-2 px-2">
-                    <div className="text-xs text-gray-600 group-hover:text-gray-700 transition-colors truncate">{appt.profissional || appt.professional || '—'}</div>
+                    <div className="text-xs text-gray-600 group-hover:text-gray-700 transition-colors truncate">
+                      {appt.profissional || appt.professional || '—'}
+                    </div>
                   </div>
 
                   {/* Sala */}
                   <div className="col-span-2 px-2">
-                    <div className="text-xs text-gray-600 group-hover:text-gray-700 transition-colors truncate">{appt.sala || appt.room || '—'}</div>
+                    <div className="text-xs text-gray-600 group-hover:text-gray-700 transition-colors truncate">
+                      {appt.sala || appt.room || '—'}
+                    </div>
                   </div>
 
                   {/* Status */}
@@ -223,7 +242,7 @@ export default function AgendaGridOptimized({
                 </div>
               </div>
             );
-          })
+          }),
         )}
       </div>
 
@@ -270,4 +289,3 @@ export default function AgendaGridOptimized({
     </div>
   );
 }
-

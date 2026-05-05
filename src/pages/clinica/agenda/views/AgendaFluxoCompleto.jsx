@@ -1,36 +1,36 @@
 /**
  * AgendaFluxoCompleto.jsx
- * 
+ *
  * 🧠 WRAPPER PRINCIPAL - FLUXO COMPLETO DE ATENDIMENTO
- * 
+ *
  * Este componente:
  * ✅ Detecta o perfil do usuário
  * ✅ Renderiza a view apropriada (Recepção, Profissional, Gestor)
  * ✅ Carrega dados de agendamentos
  * ✅ Controla permissões
  * ✅ Atualiza dados em tempo real
- * 
+ *
  * Fluxo:
  * AGENDAMENTO → RECEPÇÃO (check-in) → PROFISSIONAL (atendimento) → FINALIZADO
  */
 
-import React, { useEffect, useState, useCallback } from "react";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
-import { useClinicContext } from "@/contexts/ClinicContext";
+import React, { useEffect, useState, useCallback } from 'react';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useClinicContext } from '@/contexts/ClinicContext';
 import {
   APPOINTMENT_STATUS,
   AGENDA_MODE,
   getAgendaModeForRole,
   getVisibleStatusByRole,
-} from "@/lib/appointmentStatusEnums";
-import { listAppointments } from "@/lib/appointmentsApi";
+} from '@/lib/appointmentStatusEnums';
+import { listAppointments } from '@/lib/appointmentsApi';
 
 // Views específicas por perfil
-import AgendaRecepcaoView from "./AgendaRecepcaoView";
-import AgendaProfessionalView from "./AgendaProfessionalView";
-import AgendaGestorView from "./AgendaGestorView";
+import AgendaRecepcaoView from './AgendaRecepcaoView';
+import AgendaProfessionalView from './AgendaProfessionalView';
+import AgendaGestorView from './AgendaGestorView';
 
-import { Loader, AlertCircle } from "lucide-react";
+import { Loader, AlertCircle } from 'lucide-react';
 
 export default function AgendaFluxoCompleto() {
   const { user, currentRole, loading: authLoading } = useAuth();
@@ -64,10 +64,8 @@ export default function AgendaFluxoCompleto() {
       }
 
       // Carrega agendamentos de hoje
-      const today = new Date().toISOString().split("T")[0];
-      const tomorrow = new Date(new Date().getTime() + 86400000)
-        .toISOString()
-        .split("T")[0];
+      const today = new Date().toISOString().split('T')[0];
+      const tomorrow = new Date(new Date().getTime() + 86400000).toISOString().split('T')[0];
 
       // 🔒 RBAC: Se for profissional, buscar seu professional_id
       let userProfessionalId = null;
@@ -94,14 +92,12 @@ export default function AgendaFluxoCompleto() {
       });
 
       // Filtra apenas os status visíveis para este perfil
-      const filtered = data.filter((apt) =>
-        visibleStatus.includes(apt.status)
-      );
+      const filtered = data.filter((apt) => visibleStatus.includes(apt.status));
 
       setAppointments(filtered);
     } catch (err) {
-      console.error("Erro ao carregar agendamentos:", err);
-      setError("Erro ao carregar agendamentos. Tente novamente.");
+      console.error('Erro ao carregar agendamentos:', err);
+      setError('Erro ao carregar agendamentos. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -159,12 +155,8 @@ export default function AgendaFluxoCompleto() {
       <div className="h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <AlertCircle className="mx-auto mb-4 text-red-600" size={40} />
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Clínica não configurada
-          </h1>
-          <p className="text-gray-600">
-            Entre em contato com o administrador.
-          </p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Clínica não configurada</h1>
+          <p className="text-gray-600">Entre em contato com o administrador.</p>
         </div>
       </div>
     );
@@ -205,20 +197,18 @@ export default function AgendaFluxoCompleto() {
   // 6️⃣ RENDERIZAR VIEW CORRETA
   // ============================================
 
-  const ViewComponent = {
-    [AGENDA_MODE.RECEPTION]: AgendaRecepcaoView,
-    [AGENDA_MODE.PROFESSIONAL]: AgendaProfessionalView,
-    [AGENDA_MODE.MANAGER]: AgendaGestorView,
-  }[agendaMode] || AgendaRecepcaoView;
+  const ViewComponent =
+    {
+      [AGENDA_MODE.RECEPTION]: AgendaRecepcaoView,
+      [AGENDA_MODE.PROFESSIONAL]: AgendaProfessionalView,
+      [AGENDA_MODE.MANAGER]: AgendaGestorView,
+    }[agendaMode] || AgendaRecepcaoView;
 
   return (
     <ViewComponent
       appointments={appointments}
       onRefresh={handleRefresh}
-      professionalId={
-        agendaMode === AGENDA_MODE.PROFESSIONAL ? user?.id : null
-      }
+      professionalId={agendaMode === AGENDA_MODE.PROFESSIONAL ? user?.id : null}
     />
   );
 }
-

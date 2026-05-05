@@ -12,7 +12,9 @@ export default function AuditTrailModal({ appointmentId, onClose }) {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!appointmentId) return;
+    if (!appointmentId) {
+      return;
+    }
     fetchAuditLogs();
   }, [appointmentId]);
 
@@ -24,7 +26,9 @@ export default function AuditTrailModal({ appointmentId, onClose }) {
         .eq('appointment_id', appointmentId)
         .order('created_at', { ascending: false });
 
-      if (err) throw err;
+      if (err) {
+        throw err;
+      }
       setLogs(data || []);
     } catch (err) {
       console.error('Erro ao buscar auditoria:', err);
@@ -53,7 +57,9 @@ export default function AuditTrailModal({ appointmentId, onClose }) {
   }
 
   function renderChanges(oldData, newData, action) {
-    if (!oldData || !newData) return null;
+    if (!oldData || !newData) {
+      return null;
+    }
 
     const changes = [];
     const oldObj = typeof oldData === 'string' ? JSON.parse(oldData) : oldData;
@@ -82,7 +88,9 @@ export default function AuditTrailModal({ appointmentId, onClose }) {
       }
     });
 
-    if (changes.length === 0) return null;
+    if (changes.length === 0) {
+      return null;
+    }
 
     return (
       <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid #e5e7eb' }}>
@@ -101,7 +109,46 @@ export default function AuditTrailModal({ appointmentId, onClose }) {
 
   if (loading) {
     return (
-      <div style={{
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          background: 'rgba(0,0,0,0.25)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+        }}
+      >
+        <div
+          style={{
+            background: '#fff',
+            borderRadius: 10,
+            minWidth: 600,
+            maxWidth: 800,
+            padding: 32,
+            boxShadow: '0 2px 16px #0002',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+          }}
+        >
+          <h2 style={{ fontWeight: 700, fontSize: 22, marginBottom: 18 }}>
+            📋 Histórico de Auditoria
+          </h2>
+          <div style={{ textAlign: 'center', color: '#888', padding: 32 }}>
+            Carregando histórico...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{
         position: 'fixed',
         top: 0,
         left: 0,
@@ -112,8 +159,10 @@ export default function AuditTrailModal({ appointmentId, onClose }) {
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 1000,
-      }}>
-        <div style={{
+      }}
+    >
+      <div
+        style={{
           background: '#fff',
           borderRadius: 10,
           minWidth: 600,
@@ -122,51 +171,24 @@ export default function AuditTrailModal({ appointmentId, onClose }) {
           boxShadow: '0 2px 16px #0002',
           maxHeight: '90vh',
           overflowY: 'auto',
-        }}>
-          <h2 style={{ fontWeight: 700, fontSize: 22, marginBottom: 18 }}>📋 Histórico de Auditoria</h2>
-          <div style={{ textAlign: 'center', color: '#888', padding: 32 }}>
-            Carregando histórico...
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      width: '100vw',
-      height: '100vh',
-      background: 'rgba(0,0,0,0.25)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000,
-    }}>
-      <div style={{
-        background: '#fff',
-        borderRadius: 10,
-        minWidth: 600,
-        maxWidth: 800,
-        padding: 32,
-        boxShadow: '0 2px 16px #0002',
-        maxHeight: '90vh',
-        overflowY: 'auto',
-      }}>
-        <h2 style={{ fontWeight: 700, fontSize: 22, marginBottom: 24 }}>📋 Histórico de Auditoria</h2>
+        }}
+      >
+        <h2 style={{ fontWeight: 700, fontSize: 22, marginBottom: 24 }}>
+          📋 Histórico de Auditoria
+        </h2>
 
         {error && (
-          <div style={{
-            background: '#fee2e2',
-            border: '1px solid #fca5a5',
-            color: '#991b1b',
-            padding: 12,
-            borderRadius: 6,
-            marginBottom: 16,
-            fontSize: 14,
-          }}>
+          <div
+            style={{
+              background: '#fee2e2',
+              border: '1px solid #fca5a5',
+              color: '#991b1b',
+              padding: 12,
+              borderRadius: 6,
+              marginBottom: 16,
+              fontSize: 14,
+            }}
+          >
             ⚠️ {error}
           </div>
         )}
@@ -187,7 +209,14 @@ export default function AuditTrailModal({ appointmentId, onClose }) {
                   background: '#f9fafb',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: 8,
+                  }}
+                >
                   <div>
                     <span
                       style={{
@@ -209,7 +238,8 @@ export default function AuditTrailModal({ appointmentId, onClose }) {
                 </div>
 
                 <div style={{ fontSize: 13, color: '#555', marginBottom: 8 }}>
-                  <strong>Usuário:</strong> {log.user_email || 'Sistema'} {log.user_role ? `(${log.user_role})` : ''}
+                  <strong>Usuário:</strong> {log.user_email || 'Sistema'}{' '}
+                  {log.user_role ? `(${log.user_role})` : ''}
                 </div>
 
                 {log.status_changed_from && log.status_changed_to && (
@@ -225,7 +255,15 @@ export default function AuditTrailModal({ appointmentId, onClose }) {
                 {log.action === 'update' && renderChanges(log.old_data, log.new_data, log.action)}
 
                 {log.ip_address && (
-                  <div style={{ fontSize: 11, color: '#999', marginTop: 8, paddingTop: 8, borderTop: '1px solid #e5e7eb' }}>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: '#999',
+                      marginTop: 8,
+                      paddingTop: 8,
+                      borderTop: '1px solid #e5e7eb',
+                    }}
+                  >
                     IP: {log.ip_address}
                   </div>
                 )}

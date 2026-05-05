@@ -1,9 +1,16 @@
 // Atualiza agendamento existente
 export async function atualizarAgendamento(agendamentoId, payload) {
   const {
-    date, startTime, endTime, pacienteId,
-    profissionalId, servicoId, salaId, convenioId, status,
-    observacoes
+    date,
+    startTime,
+    endTime,
+    pacienteId,
+    profissionalId,
+    servicoId,
+    salaId,
+    convenioId,
+    status,
+    observacoes,
   } = payload;
   console.log('[atualizarAgendamento] payload:', payload);
   const { error } = await supabase
@@ -22,14 +29,17 @@ export async function atualizarAgendamento(agendamentoId, payload) {
     })
     .eq('id', agendamentoId);
   console.log('[atualizarAgendamento] resultado:', { error });
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
   return true;
 }
 // Busca agendamento por ID (completo, para modal de detalhes)
 export async function buscarAgendamentoPorId(agendamentoId) {
   const { data, error } = await supabase
     .from('appointments')
-    .select(`
+    .select(
+      `
       *,
       patient:patient_id (id, name, phone, email, cpf),
       professional:professional_id (id, name, specialty, register),
@@ -40,7 +50,8 @@ export async function buscarAgendamentoPorId(agendamentoId) {
       updated_at,
       notes,
       internal_notes
-    `)
+    `,
+    )
     .eq('id', agendamentoId)
     .single();
   return { data, error };
@@ -63,7 +74,7 @@ export async function listarProfissionais({ clinicId }) {
     .eq('clinic_id', clinicId)
     .eq('active', true)
     .order('name', { ascending: true });
-  return (data || []).filter(p => p.active);
+  return (data || []).filter((p) => p.active);
 }
 
 // Lista serviços vinculados ao profissional
@@ -72,7 +83,7 @@ export async function listarServicosPorProfissional({ profissionalId }) {
     .from('professional_services')
     .select('service:service_id(id, name, duration)')
     .eq('professional_id', profissionalId);
-  return (data || []).map(ps => ps.service);
+  return (data || []).map((ps) => ps.service);
 }
 
 // Lista salas da clínica
@@ -109,12 +120,20 @@ export async function listarPlanosPorConvenio({ convenioId }) {
 export async function criarAgendamento(payload) {
   // Monta objeto para tabela appointments
   const {
-    clinicId, date, startTime, endTime, pacienteId,
-    profissionalId, servicoId, salaId, convenioId, status, observacoes
+    clinicId,
+    date,
+    startTime,
+    endTime,
+    pacienteId,
+    profissionalId,
+    servicoId,
+    salaId,
+    convenioId,
+    status,
+    observacoes,
   } = payload;
-  const { error } = await supabase
-    .from('appointments')
-    .insert([{
+  const { error } = await supabase.from('appointments').insert([
+    {
       clinic_id: clinicId,
       scheduled_date: date,
       scheduled_time: startTime,
@@ -126,8 +145,11 @@ export async function criarAgendamento(payload) {
       payer_id: convenioId || null,
       status,
       notes: observacoes || null,
-    }]);
-  if (error) throw error;
+    },
+  ]);
+  if (error) {
+    throw error;
+  }
   return true;
 }
 // src/services/agendaService.js
@@ -148,7 +170,8 @@ export async function listarAgenda({ clinicId, date }) {
 
   const { data, error } = await supabase
     .from('appointments')
-    .select(`
+    .select(
+      `
       id,
       scheduled_date,
       scheduled_time,
@@ -159,7 +182,8 @@ export async function listarAgenda({ clinicId, date }) {
       service:service_id (*),
       room:room_id (*),
       payer:payer_id (*)
-    `)
+    `,
+    )
     .eq('clinic_id', clinicId)
     .gte('scheduled_date', start)
     .lte('scheduled_date', end);

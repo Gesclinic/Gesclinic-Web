@@ -1,8 +1,8 @@
-import React, { useState } from "react";
-import { Outlet } from "react-router-dom";
-import Sidebar from "@/components/layout/Sidebar";
-import Navbar from "@/components/layout/Navbar";
-import { useClinicContext } from "@/contexts/useClinicContext.jsx";
+import React, { useState } from 'react';
+import { Outlet } from 'react-router-dom';
+import Sidebar from '@/components/layout/Sidebar';
+import Navbar from '@/components/layout/Navbar';
+import { useClinicContext } from '@/contexts/useClinicContext.jsx';
 
 export default function Layout({ children }) {
   const { clinic } = useClinicContext();

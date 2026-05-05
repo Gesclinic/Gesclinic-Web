@@ -6,11 +6,11 @@
  * - Confirmação e envio
  * - Feedback de progresso
  * - Histórico de submissões
- * 
+ *
  * Data: Abril 10, 2026
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
   AlertCircle,
   CheckCircle,
@@ -20,12 +20,9 @@ import {
   RefreshCw,
   Send,
   XCircle,
-} from "lucide-react";
-import {
-  Alert,
-  AlertDescription,
-} from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+} from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -33,19 +30,19 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+} from '@/components/ui/dialog';
+import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   validateTISSDataCompleteness,
   generateTISSXML,
   downloadTISSXML,
   getTISSSubmissionStatus,
-} from "@/lib/tissApi";
+} from '@/lib/tissApi';
 import {
   submitGuideWithOperatorRouting,
   getRejectedTISSSubmissions,
-} from "@/lib/tissSubmissionServiceApi";
+} from '@/lib/tissSubmissionServiceApi';
 
 export function TISSSubmissionDialog({
   isOpen,
@@ -60,7 +57,7 @@ export function TISSSubmissionDialog({
   const [submissionStatus, setSubmissionStatus] = useState(null);
   const [submissionHistory, setSubmissionHistory] = useState([]);
   const [xmlContent, setXmlContent] = useState(null);
-  const [activeTab, setActiveTab] = useState("validation");
+  const [activeTab, setActiveTab] = useState('validation');
 
   // Ao abrir, validar dados
   useEffect(() => {
@@ -68,7 +65,7 @@ export function TISSSubmissionDialog({
       const validation = validateTISSDataCompleteness(guideData);
       if (!validation.valid) {
         setValidationErrors(validation.errors);
-        setActiveTab("validation");
+        setActiveTab('validation');
       } else {
         setValidationErrors([]);
         // Gerar XML preview
@@ -76,7 +73,7 @@ export function TISSSubmissionDialog({
           const xml = generateTISSXML(guideData);
           setXmlContent(xml);
         } catch (error) {
-          console.error("Erro ao gerar XML:", error);
+          console.error('Erro ao gerar XML:', error);
         }
       }
 
@@ -100,8 +97,10 @@ export function TISSSubmissionDialog({
       const result = await submitGuideWithOperatorRouting(guideId, clinicId);
 
       if (result.success) {
-        setActiveTab("confirmation");
-        if (onSubmitSuccess) onSubmitSuccess();
+        setActiveTab('confirmation');
+        if (onSubmitSuccess) {
+          onSubmitSuccess();
+        }
 
         // Fechar após 3 segundos se sucesso
         setTimeout(() => {
@@ -109,11 +108,11 @@ export function TISSSubmissionDialog({
         }, 3000);
       } else {
         setValidationErrors([result.message]);
-        setActiveTab("validation");
+        setActiveTab('validation');
       }
     } catch (error) {
       setValidationErrors([error.message]);
-      setActiveTab("validation");
+      setActiveTab('validation');
     } finally {
       setSubmitting(false);
     }
@@ -132,15 +131,9 @@ export function TISSSubmissionDialog({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            {submissionStatus === "accepted" && (
-              <CheckCircle className="w-5 h-5 text-green-600" />
-            )}
-            {submissionStatus === "rejected" && (
-              <XCircle className="w-5 h-5 text-red-600" />
-            )}
-            {submissionStatus === "pending" && (
-              <Clock className="w-5 h-5 text-yellow-600" />
-            )}
+            {submissionStatus === 'accepted' && <CheckCircle className="w-5 h-5 text-green-600" />}
+            {submissionStatus === 'rejected' && <XCircle className="w-5 h-5 text-red-600" />}
+            {submissionStatus === 'pending' && <Clock className="w-5 h-5 text-yellow-600" />}
             {!submissionStatus && <Send className="w-5 h-5 text-blue-600" />}
             Enviar Guia TISS
           </DialogTitle>
@@ -148,9 +141,7 @@ export function TISSSubmissionDialog({
             {guideData?.appointment?.guide_number && (
               <>Guia: {guideData.appointment.guide_number}</>
             )}
-            {guideData?.payer?.name && (
-              <> • Operadora: {guideData.payer.name}</>
-            )}
+            {guideData?.payer?.name && <> • Operadora: {guideData.payer.name}</>}
           </DialogDescription>
         </DialogHeader>
 
@@ -169,9 +160,7 @@ export function TISSSubmissionDialog({
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  <div className="font-semibold mb-2">
-                    ⚠️ Dados incompletos para TISS:
-                  </div>
+                  <div className="font-semibold mb-2">⚠️ Dados incompletos para TISS:</div>
                   <ul className="list-disc pl-5 space-y-1">
                     {validationErrors.map((error, i) => (
                       <li key={i} className="text-sm">
@@ -185,8 +174,7 @@ export function TISSSubmissionDialog({
               <Alert className="border-green-600 bg-green-50">
                 <CheckCircle className="h-4 w-4 text-green-600" />
                 <AlertDescription className="text-green-800">
-                  ✅ Todos os dados obrigatórios estão preenchidos.
-                  Guia pronta para envio.
+                  ✅ Todos os dados obrigatórios estão preenchidos. Guia pronta para envio.
                 </AlertDescription>
               </Alert>
             )}
@@ -196,35 +184,23 @@ export function TISSSubmissionDialog({
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-xs text-gray-500 uppercase">Paciente</p>
-                  <p className="font-semibold">
-                    {guideData.patient?.name}
-                  </p>
-                  <p className="text-xs text-gray-600">
-                    CPF: {guideData.patient?.cpf}
-                  </p>
+                  <p className="font-semibold">{guideData.patient?.name}</p>
+                  <p className="text-xs text-gray-600">CPF: {guideData.patient?.cpf}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 uppercase">Profissional</p>
-                  <p className="font-semibold">
-                    {guideData.professional?.name}
-                  </p>
-                  <p className="text-xs text-gray-600">
-                    CBO: {guideData.professional?.cbo_code}
-                  </p>
+                  <p className="font-semibold">{guideData.professional?.name}</p>
+                  <p className="text-xs text-gray-600">CBO: {guideData.professional?.cbo_code}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 uppercase">Serviço</p>
                   <p className="font-semibold">{guideData.service?.name}</p>
-                  <p className="text-xs text-gray-600">
-                    TUSS: {guideData.service?.tuss_code}
-                  </p>
+                  <p className="text-xs text-gray-600">TUSS: {guideData.service?.tuss_code}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 uppercase">Operadora</p>
                   <p className="font-semibold">{guideData.payer?.name}</p>
-                  <p className="text-xs text-gray-600">
-                    ANS: {guideData.payer?.registration_ans}
-                  </p>
+                  <p className="text-xs text-gray-600">ANS: {guideData.payer?.registration_ans}</p>
                 </div>
               </div>
             )}
@@ -249,54 +225,40 @@ export function TISSSubmissionDialog({
                 </div>
               </>
             ) : (
-              <div className="text-center py-8 text-gray-500">
-                Gere o XML na aba de validação
-              </div>
+              <div className="text-center py-8 text-gray-500">Gere o XML na aba de validação</div>
             )}
           </TabsContent>
 
           {/* HISTÓRICO */}
           <TabsContent value="history" className="space-y-4">
-            <div className="text-sm text-gray-600">
-              Últimas submissões desta guia:
-            </div>
+            <div className="text-sm text-gray-600">Últimas submissões desta guia:</div>
             {submissionHistory.length > 0 ? (
               <div className="space-y-2">
                 {submissionHistory.map((item, i) => (
-                  <div
-                    key={i}
-                    className="p-3 border rounded flex items-start gap-3"
-                  >
-                    {item.status === "accepted" && (
+                  <div key={i} className="p-3 border rounded flex items-start gap-3">
+                    {item.status === 'accepted' && (
                       <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
                     )}
-                    {item.status === "rejected" && (
+                    {item.status === 'rejected' && (
                       <XCircle className="w-5 h-5 text-red-600 mt-0.5" />
                     )}
-                    {(item.status === "pending" ||
-                      item.status === "sent") && (
+                    {(item.status === 'pending' || item.status === 'sent') && (
                       <Clock className="w-5 h-5 text-yellow-600 mt-0.5" />
                     )}
                     <div className="flex-1">
-                      <p className="font-semibold text-sm">
-                        {item.status.toUpperCase()}
-                      </p>
+                      <p className="font-semibold text-sm">{item.status.toUpperCase()}</p>
                       <p className="text-xs text-gray-600">
-                        {new Date(item.created_at).toLocaleString("pt-BR")}
+                        {new Date(item.created_at).toLocaleString('pt-BR')}
                       </p>
                       {item.error_message && (
-                        <p className="text-xs text-red-600 mt-1">
-                          ❌ {item.error_message}
-                        </p>
+                        <p className="text-xs text-red-600 mt-1">❌ {item.error_message}</p>
                       )}
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-gray-500">
-                Nenhuma submissão registrada
-              </div>
+              <div className="text-center py-8 text-gray-500">Nenhuma submissão registrada</div>
             )}
           </TabsContent>
 
@@ -306,12 +268,12 @@ export function TISSSubmissionDialog({
               <>
                 <div className="p-4 border rounded bg-blue-50">
                   <p className="text-sm text-blue-900">
-                    <span className="font-semibold">Status Atual:</span>{" "}
+                    <span className="font-semibold">Status Atual:</span>{' '}
                     <span className="uppercase">{submissionStatus}</span>
                   </p>
                 </div>
 
-                {submissionStatus === "accepted" && (
+                {submissionStatus === 'accepted' && (
                   <Alert className="border-green-600 bg-green-50">
                     <CheckCircle className="h-4 w-4 text-green-600" />
                     <AlertDescription className="text-green-800">
@@ -320,17 +282,16 @@ export function TISSSubmissionDialog({
                   </Alert>
                 )}
 
-                {submissionStatus === "rejected" && (
+                {submissionStatus === 'rejected' && (
                   <Alert variant="destructive">
                     <XCircle className="h-4 w-4" />
                     <AlertDescription>
-                      ❌ Guia foi rejeitada pela operadora. Verifique os erros e
-                      reenvie.
+                      ❌ Guia foi rejeitada pela operadora. Verifique os erros e reenvie.
                     </AlertDescription>
                   </Alert>
                 )}
 
-                {submissionStatus === "pending" && (
+                {submissionStatus === 'pending' && (
                   <Alert className="border-yellow-600 bg-yellow-50">
                     <Clock className="h-4 w-4 text-yellow-600" />
                     <AlertDescription className="text-yellow-800">
@@ -340,9 +301,7 @@ export function TISSSubmissionDialog({
                 )}
               </>
             ) : (
-              <div className="text-center py-8 text-gray-500">
-                Nenhuma submissão ainda
-              </div>
+              <div className="text-center py-8 text-gray-500">Nenhuma submissão ainda</div>
             )}
           </TabsContent>
         </Tabs>
@@ -361,7 +320,7 @@ export function TISSSubmissionDialog({
             </Button>
           )}
 
-          {submissionStatus === "rejected" && !hasErrors && (
+          {submissionStatus === 'rejected' && !hasErrors && (
             <Button
               variant="outline"
               size="sm"
@@ -396,7 +355,7 @@ export function TISSSubmissionDialog({
             </Button>
           )}
 
-          {submissionStatus === "accepted" && (
+          {submissionStatus === 'accepted' && (
             <Button variant="outline" onClick={onClose}>
               Fechar
             </Button>

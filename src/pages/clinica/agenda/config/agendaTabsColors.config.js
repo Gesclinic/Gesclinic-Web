@@ -13,7 +13,7 @@ export const AGENDA_TABS_COLORS = {
     fontSize: 13,
     fontWeight: 600,
   },
-  
+
   // Cores para abas INATIVAS
   inactive: {
     backgroundColor: 'transparent',
@@ -22,7 +22,7 @@ export const AGENDA_TABS_COLORS = {
     fontSize: 13,
     fontWeight: 600,
   },
-  
+
   // Cores para CONTAINER de abas
   container: {
     background: '#f0f0f0',
@@ -31,7 +31,7 @@ export const AGENDA_TABS_COLORS = {
     display: 'flex',
     gap: '4px',
   },
-  
+
   // Cores para abas principais (Geral, Profissional, Sala)
   mainTabs: {
     active: {
@@ -53,7 +53,7 @@ export const AGENDA_TABS_COLORS = {
 export const getTabStyle = (isActive, useMainTabsStyle = false) => {
   const colors = useMainTabsStyle ? AGENDA_TABS_COLORS.mainTabs : AGENDA_TABS_COLORS;
   const style = isActive ? colors.active : colors.inactive;
-  
+
   return {
     padding: '8px 12px',
     background: style.backgroundColor,

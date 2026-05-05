@@ -1,6 +1,7 @@
 # 🔐 RBAC - Role-Based Access Control
 
 ## Objetivo
+
 Implementar controle de acesso baseado em papéis (roles) para garantir segurança operacional e evitar erros humanos.
 
 ---
@@ -40,67 +41,67 @@ if (false) → esconde ou desabilita
 
 ### Admin (Acesso Completo) ✅
 
-| Ação | Pode? |
-|------|-------|
-| criar agendamento | ✅ |
-| editar horário | ✅ |
-| editar valor | ✅ |
-| deletar agendamento | ✅ |
-| confirmar presença | ✅ |
-| visualizar | ✅ |
-| editar config | ✅ |
-| criar usuário | ✅ |
-| deletar usuário | ✅ |
-| ver auditoria | ✅ |
-| exportar auditoria | ✅ |
+| Ação                | Pode? |
+| ------------------- | ----- |
+| criar agendamento   | ✅    |
+| editar horário      | ✅    |
+| editar valor        | ✅    |
+| deletar agendamento | ✅    |
+| confirmar presença  | ✅    |
+| visualizar          | ✅    |
+| editar config       | ✅    |
+| criar usuário       | ✅    |
+| deletar usuário     | ✅    |
+| ver auditoria       | ✅    |
+| exportar auditoria  | ✅    |
 
 ### Gestor (Gerente de Clínica)
 
-| Ação | Pode? |
-|------|-------|
-| criar agendamento | ✅ |
-| editar horário | ✅ |
-| editar valor | ❌ |
-| deletar agendamento | ✅ |
-| confirmar presença | ✅ |
-| visualizar | ✅ |
-| editar config | ✅ |
-| criar usuário | ✅ |
-| deletar usuário | ❌ |
-| ver auditoria | ✅ |
-| exportar auditoria | ❌ |
+| Ação                | Pode? |
+| ------------------- | ----- |
+| criar agendamento   | ✅    |
+| editar horário      | ✅    |
+| editar valor        | ❌    |
+| deletar agendamento | ✅    |
+| confirmar presença  | ✅    |
+| visualizar          | ✅    |
+| editar config       | ✅    |
+| criar usuário       | ✅    |
+| deletar usuário     | ❌    |
+| ver auditoria       | ✅    |
+| exportar auditoria  | ❌    |
 
 ### Recepção (Atendimento)
 
-| Ação | Pode? |
-|------|-------|
-| criar agendamento | ✅ |
-| editar horário | ✅ |
-| editar valor | ❌ |
-| deletar agendamento | ❌ |
-| confirmar presença | ❌ |
-| visualizar | ✅ |
-| editar config | ❌ |
-| criar usuário | ❌ |
-| deletar usuário | ❌ |
-| ver auditoria | ❌ |
-| exportar auditoria | ❌ |
+| Ação                | Pode? |
+| ------------------- | ----- |
+| criar agendamento   | ✅    |
+| editar horário      | ✅    |
+| editar valor        | ❌    |
+| deletar agendamento | ❌    |
+| confirmar presença  | ❌    |
+| visualizar          | ✅    |
+| editar config       | ❌    |
+| criar usuário       | ❌    |
+| deletar usuário     | ❌    |
+| ver auditoria       | ❌    |
+| exportar auditoria  | ❌    |
 
 ### Médico/Profissional
 
-| Ação | Pode? |
-|------|-------|
-| criar agendamento | ❌ |
-| editar horário | ❌ |
-| editar valor | ❌ |
-| deletar agendamento | ❌ |
-| confirmar presença | ✅ |
-| visualizar (seus) | ✅ |
-| editar config | ❌ |
-| criar usuário | ❌ |
-| deletar usuário | ❌ |
-| ver auditoria | ❌ |
-| exportar auditoria | ❌ |
+| Ação                | Pode? |
+| ------------------- | ----- |
+| criar agendamento   | ❌    |
+| editar horário      | ❌    |
+| editar valor        | ❌    |
+| deletar agendamento | ❌    |
+| confirmar presença  | ✅    |
+| visualizar (seus)   | ✅    |
+| editar config       | ❌    |
+| criar usuário       | ❌    |
+| deletar usuário     | ❌    |
+| ver auditoria       | ❌    |
+| exportar auditoria  | ❌    |
 
 ---
 
@@ -130,17 +131,11 @@ export function AgendaToolbar() {
 
   return (
     <div>
-      {canCreateAppointment && (
-        <button>➕ Novo Agendamento</button>
-      )}
+      {canCreateAppointment && <button>➕ Novo Agendamento</button>}
 
-      {canEditAppointmentValue && (
-        <button>💰 Editar Valores</button>
-      )}
+      {canEditAppointmentValue && <button>💰 Editar Valores</button>}
 
-      {isAdmin && (
-        <button>⚙️ Configurações</button>
-      )}
+      {isAdmin && <button>⚙️ Configurações</button>}
     </div>
   );
 }
@@ -169,7 +164,7 @@ export function CriarAgendamentoBtn() {
   const { canCreateAppointment } = useAuthorization();
 
   return (
-    <button 
+    <button
       disabled={!canCreateAppointment}
       title={!canCreateAppointment ? 'Permissão negada' : 'Criar novo'}
     >
@@ -224,14 +219,12 @@ export function AgendamentoEditarModal({ appointmentId, onClose }) {
       <form>
         <input placeholder="Horário" /> {/* Sempre habilitado */}
         <input placeholder="Paciente" /> {/* Sempre habilitado */}
-
         {/* Campo de valor: apenas se tem permissão */}
         {canEditAppointmentValue ? (
           <input type="number" placeholder="Valor" />
         ) : (
           <input type="number" placeholder="Valor" disabled />
         )}
-
         <button type="submit">Salvar</button>
       </form>
     </Modal>
@@ -245,30 +238,18 @@ export function AgendamentoEditarModal({ appointmentId, onClose }) {
 import useAuthorization from '@/modules/agenda/hooks/useAuthorization';
 
 export function AgendaToolbar() {
-  const {
-    canCreateAppointment,
-    canDeleteAppointment,
-    canExportReport,
-    isAdmin,
-  } = useAuthorization();
+  const { canCreateAppointment, canDeleteAppointment, canExportReport, isAdmin } =
+    useAuthorization();
 
   return (
     <div className="toolbar">
-      {canCreateAppointment && (
-        <button className="btn-primary">➕ Novo Agendamento</button>
-      )}
+      {canCreateAppointment && <button className="btn-primary">➕ Novo Agendamento</button>}
 
-      {canDeleteAppointment && (
-        <button className="btn-danger">🗑️ Deletar</button>
-      )}
+      {canDeleteAppointment && <button className="btn-danger">🗑️ Deletar</button>}
 
-      {canExportReport && (
-        <button className="btn-secondary">📥 Exportar</button>
-      )}
+      {canExportReport && <button className="btn-secondary">📥 Exportar</button>}
 
-      {isAdmin && (
-        <button className="btn-dark">⚙️ Admin Panel</button>
-      )}
+      {isAdmin && <button className="btn-dark">⚙️ Admin Panel</button>}
     </div>
   );
 }
@@ -330,13 +311,13 @@ if (canNewAction) {
 ```javascript
 // No navegador, console F12
 
-window.__RBAC_DEBUG__.can(user, 'agendamento:criar')
+window.__RBAC_DEBUG__.can(user, 'agendamento:criar');
 // → true/false
 
-window.__RBAC_DEBUG__.getPermissionReport(user)
+window.__RBAC_DEBUG__.getPermissionReport(user);
 // → { role, totalPermissions, allowed, denied, summary }
 
-window.__RBAC_DEBUG__.PERMISSIONS
+window.__RBAC_DEBUG__.PERMISSIONS;
 // → Matriz completa
 ```
 
@@ -408,7 +389,7 @@ expect(can(user, 'agendamento:editar-valor')).toBe(false);
 const user = { id: '123', role: 'admin' };
 
 // Deve retornar true para todas permissões
-ALL_PERMISSIONS.forEach(action => {
+ALL_PERMISSIONS.forEach((action) => {
   expect(can(user, action)).toBe(true);
 });
 ```

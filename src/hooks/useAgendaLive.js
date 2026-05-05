@@ -1,20 +1,20 @@
-import { useEffect } from "react";
-import { supabase } from "@/lib/customSupabaseClient";
+import { useEffect } from 'react';
+import { supabase } from '@/lib/customSupabaseClient';
 
 export function useAgendaLive(onChange) {
   useEffect(() => {
     const channel = supabase
-      .channel("agenda-events")
+      .channel('agenda-events')
       .on(
-        "postgres_changes",
+        'postgres_changes',
         {
-          event: "*",
-          schema: "public",
-          table: "appointments",
+          event: '*',
+          schema: 'public',
+          table: 'appointments',
         },
         (payload) => {
           onChange(payload);
-        }
+        },
       )
       .subscribe();
 

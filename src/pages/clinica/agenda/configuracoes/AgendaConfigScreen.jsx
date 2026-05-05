@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
-import useRooms from "@/hooks/useRooms";
-import { useClinicContext } from "@/contexts/useClinicContext";
-import AgendaIndisponibilidadeForm from "@/components/agenda/AgendaIndisponibilidadeForm";
+import React, { useState, useEffect } from 'react';
+import useRooms from '@/hooks/useRooms';
+import { useClinicContext } from '@/contexts/useClinicContext';
+import AgendaIndisponibilidadeForm from '@/components/agenda/AgendaIndisponibilidadeForm';
 
 // Estrutura inicial para configuração centralizada dos horários e vinculação de salas
 export default function AgendaConfigScreen() {
@@ -12,7 +12,7 @@ export default function AgendaConfigScreen() {
     startHour: 7,
     endHour: 19,
     slotDuration: 30,
-    daysOfWeek: [1,2,3,4,5],
+    daysOfWeek: [1, 2, 3, 4, 5],
     salasVinculadas: [],
   });
 
@@ -24,7 +24,7 @@ export default function AgendaConfigScreen() {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    if (type === "checkbox") {
+    if (type === 'checkbox') {
       setConfig((c) => ({ ...c, [name]: checked }));
     } else {
       setConfig((c) => ({ ...c, [name]: value }));
@@ -42,7 +42,7 @@ export default function AgendaConfigScreen() {
 
   const handleSave = () => {
     // TODO: Salvar configuração no backend
-    alert("Configuração salva!");
+    alert('Configuração salva!');
   };
 
   // Estado para feriados/férias/indisponibilidades
@@ -52,7 +52,7 @@ export default function AgendaConfigScreen() {
 
   const handleAddIndisponibilidade = (item) => {
     if (editIdx !== null) {
-      setIndisponibilidades((prev) => prev.map((v, i) => i === editIdx ? item : v));
+      setIndisponibilidades((prev) => prev.map((v, i) => (i === editIdx ? item : v)));
       setEditIdx(null);
       setEditItem(null);
     } else {
@@ -80,50 +80,84 @@ export default function AgendaConfigScreen() {
       <h2 className="text-xl font-bold mb-4">Configuração de Horários da Agenda</h2>
       <div className="mb-2">
         <label>Início: </label>
-        <input type="number" name="startHour" min={0} max={23} value={config.startHour} onChange={handleChange} className="border px-2 py-1 w-16" />
+        <input
+          type="number"
+          name="startHour"
+          min={0}
+          max={23}
+          value={config.startHour}
+          onChange={handleChange}
+          className="border px-2 py-1 w-16"
+        />
         <span className="ml-2">h</span>
       </div>
       <div className="mb-2">
         <label>Fim: </label>
-        <input type="number" name="endHour" min={0} max={23} value={config.endHour} onChange={handleChange} className="border px-2 py-1 w-16" />
+        <input
+          type="number"
+          name="endHour"
+          min={0}
+          max={23}
+          value={config.endHour}
+          onChange={handleChange}
+          className="border px-2 py-1 w-16"
+        />
         <span className="ml-2">h</span>
       </div>
       <div className="mb-2">
         <label>Duração do slot: </label>
-        <input type="number" name="slotDuration" min={5} max={120} step={5} value={config.slotDuration} onChange={handleChange} className="border px-2 py-1 w-16" />
+        <input
+          type="number"
+          name="slotDuration"
+          min={5}
+          max={120}
+          step={5}
+          value={config.slotDuration}
+          onChange={handleChange}
+          className="border px-2 py-1 w-16"
+        />
         <span className="ml-2">min</span>
       </div>
       <div className="mb-2">
         <label>Dias da semana: </label>
-        {[1,2,3,4,5,6,0].map((d) => (
+        {[1, 2, 3, 4, 5, 6, 0].map((d) => (
           <label key={d} className="ml-2">
             <input
               type="checkbox"
               checked={config.daysOfWeek.includes(d)}
-              onChange={() => setConfig((c) => ({
-                ...c,
-                daysOfWeek: c.daysOfWeek.includes(d)
-                  ? c.daysOfWeek.filter((x) => x !== d)
-                  : [...c.daysOfWeek, d],
-              }))}
+              onChange={() =>
+                setConfig((c) => ({
+                  ...c,
+                  daysOfWeek: c.daysOfWeek.includes(d)
+                    ? c.daysOfWeek.filter((x) => x !== d)
+                    : [...c.daysOfWeek, d],
+                }))
+              }
             />
-            {['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][d]}
+            {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][d]}
           </label>
         ))}
       </div>
       <div className="mb-4">
         <label className="block font-medium mb-1">Salas vinculadas:</label>
-        {rooms && rooms.length > 0 ? rooms.map((r) => (
-          <label key={r.id} className="block ml-2">
-            <input
-              type="checkbox"
-              checked={config.salasVinculadas.includes(r.id)}
-              onChange={() => handleSalasChange(r.id)}
-            /> {r.name}
-          </label>
-        )) : <span className="text-gray-400">Nenhuma sala cadastrada</span>}
+        {rooms && rooms.length > 0 ? (
+          rooms.map((r) => (
+            <label key={r.id} className="block ml-2">
+              <input
+                type="checkbox"
+                checked={config.salasVinculadas.includes(r.id)}
+                onChange={() => handleSalasChange(r.id)}
+              />{' '}
+              {r.name}
+            </label>
+          ))
+        ) : (
+          <span className="text-gray-400">Nenhuma sala cadastrada</span>
+        )}
       </div>
-      <button className="bg-blue-600 text-white px-4 py-2 rounded" onClick={handleSave}>Salvar</button>
+      <button className="bg-blue-600 text-white px-4 py-2 rounded" onClick={handleSave}>
+        Salvar
+      </button>
 
       <hr className="my-6" />
       <h3 className="text-lg font-semibold mb-2">Feriados, Férias e Indisponibilidades</h3>
@@ -132,13 +166,18 @@ export default function AgendaConfigScreen() {
         {indisponibilidades.length === 0 && <li className="text-gray-400">Nenhum registro</li>}
         {indisponibilidades.map((item, idx) => (
           <li key={idx} className="mb-1 text-sm flex items-center gap-2">
-            <span><b>{item.motivo}</b>: {item.inicio} até {item.fim}</span>
-            <button className="text-xs text-blue-600 underline" onClick={() => handleEdit(idx)}>Editar</button>
-            <button className="text-xs text-red-600 underline" onClick={() => handleRemove(idx)}>Remover</button>
+            <span>
+              <b>{item.motivo}</b>: {item.inicio} até {item.fim}
+            </span>
+            <button className="text-xs text-blue-600 underline" onClick={() => handleEdit(idx)}>
+              Editar
+            </button>
+            <button className="text-xs text-red-600 underline" onClick={() => handleRemove(idx)}>
+              Remover
+            </button>
           </li>
         ))}
       </ul>
     </div>
   );
 }
-

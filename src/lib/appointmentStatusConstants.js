@@ -13,15 +13,15 @@
  * Usados pela recepção / call center / agenda
  */
 export const BOOKING_STATUSES = {
-  SCHEDULED: 'scheduled',        // 🗓️ Agendado
-  CONFIRMED_PHONE: 'confirmed_phone',    // ☎️ Confirmado via Telefone
+  SCHEDULED: 'scheduled', // 🗓️ Agendado
+  CONFIRMED_PHONE: 'confirmed_phone', // ☎️ Confirmado via Telefone
   CONFIRMED_WHATSAPP: 'confirmed_whatsapp', // 💬 Confirmado via WhatsApp
-  CONFIRMED: 'confirmed',        // ✅ Confirmado (genérico)
-  AT_RECEPTION: 'at_reception',  // 📍 Na Recepção (Check-in realizado)
-  AT_CHECKOUT: 'at_checkout',    // 🪟 No Guichê (Validação de dados obrigatórios)
-  SQUEEZEIN: 'squeezein',        // 👉 Encaixe
+  CONFIRMED: 'confirmed', // ✅ Confirmado (genérico)
+  AT_RECEPTION: 'at_reception', // 📍 Na Recepção (Check-in realizado)
+  AT_CHECKOUT: 'at_checkout', // 🪟 No Guichê (Validação de dados obrigatórios)
+  SQUEEZEIN: 'squeezein', // 👉 Encaixe
   AWAITING_INSURANCE: 'awaiting_insurance', // 🧡 Aguardando Convênio
-  BLOCKED: 'blocked',            // 🔒 Bloqueado
+  BLOCKED: 'blocked', // 🔒 Bloqueado
 };
 
 /**
@@ -30,17 +30,17 @@ export const BOOKING_STATUSES = {
  */
 export const SERVICE_STATUSES = {
   AWAITING_PROFESSIONAL: 'awaiting_professional', // 👨‍⚕️ Aguardando Profissional
-  IN_SERVICE: 'in_service',      // ⏳ Em Atendimento
-  ATTENDED: 'attended',          // ✔️ Atendido
-  NO_SHOW: 'no_show',            // ❌ Faltou
-  CANCELED: 'canceled',          // 🚫 Cancelado
+  IN_SERVICE: 'in_service', // ⏳ Em Atendimento
+  ATTENDED: 'attended', // ✔️ Atendido
+  NO_SHOW: 'no_show', // ❌ Faltou
+  CANCELED: 'canceled', // 🚫 Cancelado
 };
 
 /**
  * 🟦 Status de Gestão (ações pós atendimento)
  */
 export const MANAGEMENT_STATUSES = {
-  RESCHEDULED: 'rescheduled',    // 📅 Remarcado
+  RESCHEDULED: 'rescheduled', // 📅 Remarcado
 };
 
 /**
@@ -48,12 +48,12 @@ export const MANAGEMENT_STATUSES = {
  * ⚠️ NÃO aparecem no modal de recepção, apenas no módulo Financeiro
  */
 export const FINANCIAL_STATUSES = {
-  AWAITING_BILLING: 'awaiting_billing',  // Aguardando Faturamento
-  BILLED: 'billed',                      // Faturado
-  DENIED: 'denied',                      // Glosado
-  PAID: 'paid',                          // Pago
-  RESUBMITTED: 'resubmitted',           // Reapresentado
-  NOT_BILLABLE: 'not_billable',         // Perda / Não faturável
+  AWAITING_BILLING: 'awaiting_billing', // Aguardando Faturamento
+  BILLED: 'billed', // Faturado
+  DENIED: 'denied', // Glosado
+  PAID: 'paid', // Pago
+  RESUBMITTED: 'resubmitted', // Reapresentado
+  NOT_BILLABLE: 'not_billable', // Perda / Não faturável
 };
 
 /**
@@ -82,18 +82,18 @@ export const APPOINTMENT_STATUSES = {
 // ============================================================================
 
 export const MODAL_VISIBLE_STATUSES = [
-  BOOKING_STATUSES.SCHEDULED,           // 🗓️ Agendado
-  BOOKING_STATUSES.CONFIRMED_PHONE,     // ☎️ Confirmado via Telefone
-  BOOKING_STATUSES.CONFIRMED_WHATSAPP,  // 💬 Confirmado via WhatsApp
-  BOOKING_STATUSES.CONFIRMED,           // ✅ Confirmado
-  BOOKING_STATUSES.AT_RECEPTION,        // 📍 Na Recepção
-  BOOKING_STATUSES.AT_CHECKOUT,         // 🪟 No Guichê
+  BOOKING_STATUSES.SCHEDULED, // 🗓️ Agendado
+  BOOKING_STATUSES.CONFIRMED_PHONE, // ☎️ Confirmado via Telefone
+  BOOKING_STATUSES.CONFIRMED_WHATSAPP, // 💬 Confirmado via WhatsApp
+  BOOKING_STATUSES.CONFIRMED, // ✅ Confirmado
+  BOOKING_STATUSES.AT_RECEPTION, // 📍 Na Recepção
+  BOOKING_STATUSES.AT_CHECKOUT, // 🪟 No Guichê
   SERVICE_STATUSES.AWAITING_PROFESSIONAL, // 👨‍⚕️ Aguardando Profissional
-  SERVICE_STATUSES.IN_SERVICE,          // ⏳ Em Atendimento
-  SERVICE_STATUSES.ATTENDED,            // ✔️ Atendido
-  SERVICE_STATUSES.NO_SHOW,             // ❌ Faltou
-  SERVICE_STATUSES.CANCELED,            // 🚫 Cancelado
-  MANAGEMENT_STATUSES.RESCHEDULED,      // 📅 Remarcado
+  SERVICE_STATUSES.IN_SERVICE, // ⏳ Em Atendimento
+  SERVICE_STATUSES.ATTENDED, // ✔️ Atendido
+  SERVICE_STATUSES.NO_SHOW, // ❌ Faltou
+  SERVICE_STATUSES.CANCELED, // 🚫 Cancelado
+  MANAGEMENT_STATUSES.RESCHEDULED, // 📅 Remarcado
 ];
 
 // ============================================================================
@@ -383,7 +383,8 @@ export const STATUS_TRANSITIONS = {
       SERVICE_STATUSES.CANCELED,
       BOOKING_STATUSES.AWAITING_INSURANCE,
     ],
-    description: 'Agendado pode ir para: Confirmado, Em Atendimento, Cancelado, Aguardando Convênio',
+    description:
+      'Agendado pode ir para: Confirmado, Em Atendimento, Cancelado, Aguardando Convênio',
   },
   [BOOKING_STATUSES.CONFIRMED]: {
     canTransitionTo: [
@@ -394,23 +395,15 @@ export const STATUS_TRANSITIONS = {
     description: 'Confirmado pode voltar para Agendado ou ir para Em Atendimento/Cancelado',
   },
   [BOOKING_STATUSES.SQUEEZEIN]: {
-    canTransitionTo: [
-      SERVICE_STATUSES.IN_SERVICE,
-      SERVICE_STATUSES.CANCELED,
-    ],
+    canTransitionTo: [SERVICE_STATUSES.IN_SERVICE, SERVICE_STATUSES.CANCELED],
     description: 'Encaixe pode ir para Em Atendimento ou Cancelado',
   },
   [BOOKING_STATUSES.AWAITING_INSURANCE]: {
-    canTransitionTo: [
-      BOOKING_STATUSES.SCHEDULED,
-      SERVICE_STATUSES.CANCELED,
-    ],
+    canTransitionTo: [BOOKING_STATUSES.SCHEDULED, SERVICE_STATUSES.CANCELED],
     description: 'Aguardando Convênio pode voltar para Agendado ou Cancelado',
   },
   [BOOKING_STATUSES.BLOCKED]: {
-    canTransitionTo: [
-      BOOKING_STATUSES.SCHEDULED,
-    ],
+    canTransitionTo: [BOOKING_STATUSES.SCHEDULED],
     description: 'Bloqueado pode ser liberado manualmente',
   },
   [SERVICE_STATUSES.IN_SERVICE]: {
@@ -449,7 +442,9 @@ export function canTransitionTo(fromStatus, toStatus) {
   }
 
   const transitions = STATUS_TRANSITIONS[fromStatus];
-  if (!transitions) return true; // Se não há regra, permite
+  if (!transitions) {
+    return true;
+  } // Se não há regra, permite
 
   return transitions.canTransitionTo.includes(toStatus);
 }
@@ -536,14 +531,12 @@ export const MODAL_STATUS_OPTIONS = MODAL_VISIBLE_STATUSES.map((status) => ({
 /**
  * Todos os status disponíveis no sistema (para admin/dev)
  */
-export const ALL_STATUS_OPTIONS = Object.entries(ALL_APPOINTMENT_STATUSES).map(
-  ([key, value]) => ({
-    value,
-    label: STATUS_CONFIG[value].label,
-    icon: STATUS_CONFIG[value].icon,
-    category: STATUS_CONFIG[value].category,
-  })
-);
+export const ALL_STATUS_OPTIONS = Object.entries(ALL_APPOINTMENT_STATUSES).map(([key, value]) => ({
+  value,
+  label: STATUS_CONFIG[value].label,
+  icon: STATUS_CONFIG[value].icon,
+  category: STATUS_CONFIG[value].category,
+}));
 
 /**
  * Status de booking apenas
@@ -578,14 +571,22 @@ export function validatePatientDataForStatus(status, patientData = {}) {
 
   // 🪟 NO GUICHÊ: nome e CPF obrigatórios
   if (status === BOOKING_STATUSES.AT_CHECKOUT) {
-    if (!patientData.name?.trim()) missingFields.push('Nome Completo');
-    if (!patientData.document_id?.trim()) missingFields.push('CPF/RG');
+    if (!patientData.name?.trim()) {
+      missingFields.push('Nome Completo');
+    }
+    if (!patientData.document_id?.trim()) {
+      missingFields.push('CPF/RG');
+    }
   }
 
   // 👨‍⚕️ AGUARDANDO PROFISSIONAL: nome e CPF obrigatórios
   if (status === SERVICE_STATUSES.AWAITING_PROFESSIONAL) {
-    if (!patientData.name?.trim()) missingFields.push('Nome Completo');
-    if (!patientData.document_id?.trim()) missingFields.push('CPF/RG');
+    if (!patientData.name?.trim()) {
+      missingFields.push('Nome Completo');
+    }
+    if (!patientData.document_id?.trim()) {
+      missingFields.push('CPF/RG');
+    }
   }
 
   return missingFields;
@@ -644,17 +645,12 @@ export function isStatusTransitionAllowed(fromStatus, toStatus) {
       SERVICE_STATUSES.NO_SHOW,
       SERVICE_STATUSES.CANCELED,
     ],
-    [SERVICE_STATUSES.IN_SERVICE]: [
-      SERVICE_STATUSES.ATTENDED,
-      SERVICE_STATUSES.NO_SHOW,
-    ],
-    [SERVICE_STATUSES.ATTENDED]: [
-      FINANCIAL_STATUSES.AWAITING_BILLING,
-    ],
+    [SERVICE_STATUSES.IN_SERVICE]: [SERVICE_STATUSES.ATTENDED, SERVICE_STATUSES.NO_SHOW],
+    [SERVICE_STATUSES.ATTENDED]: [FINANCIAL_STATUSES.AWAITING_BILLING],
   };
 
   const allowed = allowedTransitions[fromStatus]?.includes(toStatus) ?? false;
-  
+
   if (!allowed) {
     return {
       allowed: false,
@@ -680,30 +676,30 @@ export function getFormattedStatus(status) {
  * Map de status antigos para novos para compatibilidade
  */
 export const STATUS_MIGRATION_MAP = {
-  'scheduled': BOOKING_STATUSES.SCHEDULED,
-  'agendado': BOOKING_STATUSES.SCHEDULED,
-  'confirmado': BOOKING_STATUSES.CONFIRMED,
-  'confirmed': BOOKING_STATUSES.CONFIRMED,
-  'presente': BOOKING_STATUSES.AT_RECEPTION,  // Check-in: marca como na recepção
-  'at_reception': BOOKING_STATUSES.AT_RECEPTION,
-  'na_recepcao': BOOKING_STATUSES.AT_RECEPTION,
-  'liberado_para_atendimento': SERVICE_STATUSES.AWAITING_PROFESSIONAL, // Released for care
-  'aguardando_profissional': SERVICE_STATUSES.AWAITING_PROFESSIONAL,
-  'awaiting_professional': SERVICE_STATUSES.AWAITING_PROFESSIONAL,
-  'pronto_atendimento': SERVICE_STATUSES.IN_SERVICE,
-  'em_atendimento': SERVICE_STATUSES.IN_SERVICE,
-  'in_service': SERVICE_STATUSES.IN_SERVICE,
-  'done': SERVICE_STATUSES.ATTENDED,
-  'compareceu': SERVICE_STATUSES.ATTENDED,
-  'atendido': SERVICE_STATUSES.ATTENDED,
-  'attended': SERVICE_STATUSES.ATTENDED,
-  'finalizado': SERVICE_STATUSES.ATTENDED,
-  'no_show': SERVICE_STATUSES.NO_SHOW,
-  'faltou': SERVICE_STATUSES.NO_SHOW,
-  'cancelado': SERVICE_STATUSES.CANCELED,
-  'canceled': SERVICE_STATUSES.CANCELED,
-  'remarcado': MANAGEMENT_STATUSES.RESCHEDULED,
-  'rescheduled': MANAGEMENT_STATUSES.RESCHEDULED,
+  scheduled: BOOKING_STATUSES.SCHEDULED,
+  agendado: BOOKING_STATUSES.SCHEDULED,
+  confirmado: BOOKING_STATUSES.CONFIRMED,
+  confirmed: BOOKING_STATUSES.CONFIRMED,
+  presente: BOOKING_STATUSES.AT_RECEPTION, // Check-in: marca como na recepção
+  at_reception: BOOKING_STATUSES.AT_RECEPTION,
+  na_recepcao: BOOKING_STATUSES.AT_RECEPTION,
+  liberado_para_atendimento: SERVICE_STATUSES.AWAITING_PROFESSIONAL, // Released for care
+  aguardando_profissional: SERVICE_STATUSES.AWAITING_PROFESSIONAL,
+  awaiting_professional: SERVICE_STATUSES.AWAITING_PROFESSIONAL,
+  pronto_atendimento: SERVICE_STATUSES.IN_SERVICE,
+  em_atendimento: SERVICE_STATUSES.IN_SERVICE,
+  in_service: SERVICE_STATUSES.IN_SERVICE,
+  done: SERVICE_STATUSES.ATTENDED,
+  compareceu: SERVICE_STATUSES.ATTENDED,
+  atendido: SERVICE_STATUSES.ATTENDED,
+  attended: SERVICE_STATUSES.ATTENDED,
+  finalizado: SERVICE_STATUSES.ATTENDED,
+  no_show: SERVICE_STATUSES.NO_SHOW,
+  faltou: SERVICE_STATUSES.NO_SHOW,
+  cancelado: SERVICE_STATUSES.CANCELED,
+  canceled: SERVICE_STATUSES.CANCELED,
+  remarcado: MANAGEMENT_STATUSES.RESCHEDULED,
+  rescheduled: MANAGEMENT_STATUSES.RESCHEDULED,
 };
 
 /**

@@ -1,6 +1,7 @@
 # 📊 Guia de Observabilidade com Sentry (Produção)
 
 ## Objetivo
+
 Capturar erros reais, rastrear comportamento de usuários e debug em produção sem acesso direto aos logs.
 
 ---
@@ -38,6 +39,7 @@ VITE_APP_ENV=production
 ```
 
 > ⚠️ **IMPORTANTE:** Nunca commitar `.env` com secrets reais no Git. Adicionar ao `.gitignore`:
+>
 > ```
 > .env.local
 > .env.production
@@ -51,7 +53,7 @@ VITE_APP_ENV=production
 ```javascript
 if (import.meta.env.PROD) {
   Sentry.init({
-    dsn: import.meta.env.VITE_SENTRY_DSN || "",
+    dsn: import.meta.env.VITE_SENTRY_DSN || '',
     integrations: [
       new Sentry.Replay({
         maskAllText: true,
@@ -61,7 +63,7 @@ if (import.meta.env.PROD) {
     tracesSampleRate: 0.1, // 10% sampling
     replaysSessionSampleRate: 0.1,
     replaysOnErrorSampleRate: 1.0,
-    environment: import.meta.env.VITE_APP_ENV || "production",
+    environment: import.meta.env.VITE_APP_ENV || 'production',
   });
 }
 ```
@@ -73,6 +75,7 @@ if (import.meta.env.PROD) {
 ### Criar Agendamento
 
 **Em Erro:**
+
 ```
 ❌ Sentry Event:
 - Exception: Error message
@@ -82,6 +85,7 @@ if (import.meta.env.PROD) {
 ```
 
 **Em Sucesso:**
+
 ```
 ✅ Sentry Event (info):
 - Message: "Agendamento criado com sucesso"
@@ -91,6 +95,7 @@ if (import.meta.env.PROD) {
 ### Atualizar Agendamento
 
 **Em Erro:**
+
 ```
 ❌ Sentry Event:
 - Exception: Error message
@@ -100,6 +105,7 @@ if (import.meta.env.PROD) {
 ```
 
 **Em Sucesso:**
+
 ```
 ✅ Sentry Event (info):
 - Message: "Agendamento atualizado com sucesso"
@@ -123,6 +129,7 @@ if (import.meta.env.PROD) {
 ### B. Detalhes do Erro
 
 Clicar no erro para ver:
+
 - ✅ **Stack Trace** — Linha exata do erro
 - ✅ **Breadcrumbs** — Eventos antes do erro
 - ✅ **Tags** — action, clinicId para filtrar
@@ -143,13 +150,13 @@ action:criar_agendamento clinicId:123
 ### Capturar Erro Customizado em Qualquer Lugar
 
 ```javascript
-import * as Sentry from "@sentry/react";
+import * as Sentry from '@sentry/react';
 
 try {
   // seu código
 } catch (error) {
   Sentry.captureException(error, {
-    tags: { feature: "relatorio" },
+    tags: { feature: 'relatorio' },
     extra: { dados: meusDados },
   });
 }
@@ -158,16 +165,16 @@ try {
 ### Enviar Mensagem de Info
 
 ```javascript
-Sentry.captureMessage("Relatório gerado", {
-  level: "info",
-  tags: { feature: "relatorio" },
+Sentry.captureMessage('Relatório gerado', {
+  level: 'info',
+  tags: { feature: 'relatorio' },
 });
 ```
 
 ### Acompanhamento de Performance
 
 ```javascript
-const transaction = Sentry.startTransaction({ name: "operacao-pesada" });
+const transaction = Sentry.startTransaction({ name: 'operacao-pesada' });
 
 // seu código aqui
 
@@ -187,7 +194,7 @@ Sentry.init({
   // ... outros config
   beforeSend(event, hint) {
     // Ignorar erros de rede normais
-    if (event.exception?.values?.[0]?.value?.includes("Failed to fetch")) {
+    if (event.exception?.values?.[0]?.value?.includes('Failed to fetch')) {
       return null;
     }
     return event;
@@ -208,10 +215,10 @@ Sentry.setUser({
 ### C. Adicionar Contexto da Clínica
 
 ```javascript
-Sentry.setTag("clinicId", clinicId);
-Sentry.setContext("clinic", {
+Sentry.setTag('clinicId', clinicId);
+Sentry.setContext('clinic', {
   name: clinicName,
-  plan: "premium",
+  plan: 'premium',
 });
 ```
 
@@ -222,6 +229,7 @@ Sentry.setContext("clinic", {
 ### Problema: Eventos não aparecem no Sentry
 
 **Checklist:**
+
 - [ ] DSN configurada corretamente em `.env.production`
 - [ ] App rodando em build de produção (`npm run build && npm run preview`)
 - [ ] Network tab mostra requisições para `ingest.sentry.io`
@@ -230,12 +238,13 @@ Sentry.setContext("clinic", {
 ### Problema: Sensitive Data Exposto
 
 **Solução:**
+
 ```javascript
 Sentry.init({
   integrations: [
     new Sentry.Replay({
-      maskAllText: true,      // Esconde todo texto
-      blockAllMedia: true,    // Bloqueia imagens/vídeos
+      maskAllText: true, // Esconde todo texto
+      blockAllMedia: true, // Bloqueia imagens/vídeos
     }),
   ],
 });
@@ -244,10 +253,12 @@ Sentry.init({
 ### Problema: Quota Excedida
 
 **Sentry oferece:**
+
 - Free: 5k eventos/mês
 - Paid: Planos personalizados
 
 Para economizar:
+
 ```javascript
 tracesSampleRate: 0.1, // Reduzir para 5% se necessário
 ```
@@ -281,8 +292,8 @@ npm run preview
 
 ```javascript
 // No console do navegador, simular erro:
-import * as Sentry from "@sentry/react";
-Sentry.captureException(new Error("Erro de teste deliberado"));
+import * as Sentry from '@sentry/react';
+Sentry.captureException(new Error('Erro de teste deliberado'));
 ```
 
 ### Passo 3: Verificar Dashboard
@@ -298,15 +309,18 @@ Sentry.captureException(new Error("Erro de teste deliberado"));
 ## 🔟 Próximos Passos
 
 ### Fase 1: Monitoramento Básico ✅ COMPLETO
+
 - [x] Sentry configurado
 - [x] Erros de mutation rastreados
 - [x] Eventos de sucesso logados
 
 ### Fase 2: Alertas (OPCIONAL)
+
 - [ ] Criar regra de alert: "Quando erro de criar_agendamento"
 - [ ] Notificar via Email/Slack
 
 ### Fase 3: Análise (OPCIONAL)
+
 - [ ] Dashboard customizado de performance
 - [ ] Relatório semanal de erros
 

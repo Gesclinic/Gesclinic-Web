@@ -2,7 +2,7 @@
 
 /**
  * HOLIDAYS API
- * 
+ *
  * Gerencia feriados, bloqueios de agenda e overrides manuais
  * Segue padrÃ£o de sistemas grandes (MV, Amplimed, iClinic)
  */
@@ -21,7 +21,7 @@
 export async function isHolidayBlocked(date, clinicId, options = {}) {
   try {
     const { state = null, city = null } = options;
-    
+
     const { data, error } = await supabase.rpc('is_holiday_blocked', {
       p_date: date,
       p_clinic_id: clinicId,
@@ -29,7 +29,9 @@ export async function isHolidayBlocked(date, clinicId, options = {}) {
       p_city: city,
     });
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data || false;
   } catch (error) {
     console.error('Erro ao verificar feriado:', error);
@@ -47,7 +49,7 @@ export async function isHolidayBlocked(date, clinicId, options = {}) {
 export async function getHolidayDetails(date, clinicId, options = {}) {
   try {
     const { state = null, city = null } = options;
-    
+
     const { data, error } = await supabase.rpc('get_holiday_details', {
       p_date: date,
       p_clinic_id: clinicId,
@@ -55,7 +57,9 @@ export async function getHolidayDetails(date, clinicId, options = {}) {
       p_city: city,
     });
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data && data.length > 0 ? data[0] : null;
   } catch (error) {
     console.error('Erro ao buscar detalhes do feriado:', error);
@@ -73,24 +77,24 @@ export async function getHolidayDetails(date, clinicId, options = {}) {
 export async function checkMultipleDates(dates, clinicId, options = {}) {
   try {
     const results = {};
-    
+
     if (!dates || dates.length === 0) {
       console.warn('âŒ checkMultipleDates: datas vazias');
       return results;
     }
 
     // Normalizar datas - remover hora se tiver
-    const normalizedDates = dates.map(d => {
+    const normalizedDates = dates.map((d) => {
       if (typeof d === 'string' && d.includes('T')) {
         return d.split('T')[0];
       }
       return d;
     });
 
-    console.log('ðŸ” checkMultipleDates:', { 
-      datesCount: normalizedDates.length, 
+    console.log('ðŸ” checkMultipleDates:', {
+      datesCount: normalizedDates.length,
       dates: normalizedDates.slice(0, 3),
-      clinicId 
+      clinicId,
     });
 
     // âœ… FIX: Construir query de forma condicional para evitar erro "invalid input syntax for type uuid: null"
@@ -117,21 +121,21 @@ export async function checkMultipleDates(dates, clinicId, options = {}) {
     console.log(`âœ… Feriados encontrados: ${holidays?.length || 0}`, holidays);
 
     // Para cada feriado encontrado, coloca no mapa
-    for (const holiday of (holidays || [])) {
+    for (const holiday of holidays || []) {
       // âœ… IMPORTANTE: NÃƒO filtrar aqui - deixar filtragem no rendering
       // Todos os feriados vÃ£o para o mapa, a lÃ³gica de exibiÃ§Ã£o filtra based em is_mandatory
 
       // Normalizar data
       const dateStr = holiday.date ? holiday.date.split('T')[0] : holiday.date;
-      
-      console.log(`ðŸ—“ï¸ Processando:`, { 
-        date: dateStr, 
-        name: holiday.name, 
+
+      console.log('ðŸ—“ï¸ Processando:', {
+        date: dateStr,
+        name: holiday.name,
         is_blocked: holiday.is_blocked,
         is_mandatory: holiday.is_mandatory,
-        clinic_id: holiday.clinic_id
+        clinic_id: holiday.clinic_id,
       });
-      
+
       results[dateStr] = {
         name: holiday.name,
         is_blocked: holiday.is_blocked,
@@ -141,7 +145,10 @@ export async function checkMultipleDates(dates, clinicId, options = {}) {
       };
     }
 
-    console.log(`ðŸŽ¯ Retornando ${Object.keys(results).length} datas com feriado:`, Object.keys(results));
+    console.log(
+      `ðŸŽ¯ Retornando ${Object.keys(results).length} datas com feriado:`,
+      Object.keys(results),
+    );
     return results;
   } catch (error) {
     console.error('âŒ Erro ao verificar mÃºltiplas datas:', error);
@@ -166,7 +173,9 @@ export async function listHolidaysInRange(startDate, endDate, clinicId) {
       .lte('date', endDate)
       .order('date', { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data || [];
   } catch (error) {
     console.error('Erro ao listar feriados:', error);
@@ -195,7 +204,9 @@ export async function openHolidayManual(date, clinicId, userId, notes = null) {
       p_notes: notes,
     });
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data && data.length > 0 ? data[0] : null;
   } catch (error) {
     console.error('Erro ao abrir agenda manualmente:', error);
@@ -216,7 +227,9 @@ export async function closeHolidayOverride(date, clinicId) {
       p_clinic_id: clinicId,
     });
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return true;
   } catch (error) {
     console.error('Erro ao fechar override:', error);
@@ -231,13 +244,11 @@ export async function closeHolidayOverride(date, clinicId) {
  */
 export async function createHoliday(holiday) {
   try {
-    const { data, error } = await supabase
-      .from('holidays')
-      .insert([holiday])
-      .select()
-      .single();
+    const { data, error } = await supabase.from('holidays').insert([holiday]).select().single();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data;
   } catch (error) {
     console.error('Erro ao criar feriado:', error);
@@ -264,7 +275,9 @@ export async function updateHoliday(holidayId, updates) {
     }
     return data[0];
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data;
   } catch (error) {
     console.error('Erro ao atualizar feriado:', error);
@@ -279,12 +292,11 @@ export async function updateHoliday(holidayId, updates) {
  */
 export async function deleteHoliday(holidayId) {
   try {
-    const { error } = await supabase
-      .from('holidays')
-      .delete()
-      .eq('id', holidayId);
+    const { error } = await supabase.from('holidays').delete().eq('id', holidayId);
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return true;
   } catch (error) {
     console.error('Erro ao deletar feriado:', error);
@@ -309,7 +321,9 @@ export async function listOverridesInRange(startDate, endDate, clinicId) {
       .lte('date', endDate)
       .order('date', { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data || [];
   } catch (error) {
     console.error('Erro ao listar overrides:', error);
@@ -330,26 +344,104 @@ export async function seedNationalHolidays(year, clinicId) {
     console.log(`ðŸŒ± [Seed] Iniciando seed de feriados ${year}:`, { year, clinicId });
 
     const holidays = [
-      { date: `${year}-01-01`, name: 'ConfraternizaÃ§Ã£o Universal', scope: 'NACIONAL', is_blocked: true, is_mandatory: true },
-      { date: `${year}-02-13`, name: 'Carnaval', scope: 'NACIONAL', is_blocked: false, is_mandatory: false },
-      { date: `${year}-02-14`, name: 'Sexta-feira de Carnaval', scope: 'NACIONAL', is_blocked: false, is_mandatory: false },
-      { date: `${year}-02-17`, name: 'TerÃ§a-feira de Carnaval', scope: 'NACIONAL', is_blocked: false, is_mandatory: false },
-      { date: `${year}-04-03`, name: 'Sexta-feira Santa', scope: 'NACIONAL', is_blocked: true, is_mandatory: true },
-      { date: `${year}-04-21`, name: 'Tiradentes', scope: 'NACIONAL', is_blocked: true, is_mandatory: true },
-      { date: `${year}-05-01`, name: 'Dia do Trabalho', scope: 'NACIONAL', is_blocked: true, is_mandatory: true },
-      { date: `${year}-09-07`, name: 'IndependÃªncia do Brasil', scope: 'NACIONAL', is_blocked: true, is_mandatory: true },
-      { date: `${year}-10-12`, name: 'Nossa Senhora Aparecida', scope: 'NACIONAL', is_blocked: true, is_mandatory: true },
-      { date: `${year}-11-02`, name: 'Finados', scope: 'NACIONAL', is_blocked: true, is_mandatory: true },
-      { date: `${year}-11-15`, name: 'ProclamaÃ§Ã£o da RepÃºblica', scope: 'NACIONAL', is_blocked: true, is_mandatory: true },
-      { date: `${year}-11-20`, name: 'ConsciÃªncia Negra', scope: 'NACIONAL', is_blocked: true, is_mandatory: true },
-      { date: `${year}-12-25`, name: 'Natal', scope: 'NACIONAL', is_blocked: true, is_mandatory: true },
+      {
+        date: `${year}-01-01`,
+        name: 'ConfraternizaÃ§Ã£o Universal',
+        scope: 'NACIONAL',
+        is_blocked: true,
+        is_mandatory: true,
+      },
+      {
+        date: `${year}-02-13`,
+        name: 'Carnaval',
+        scope: 'NACIONAL',
+        is_blocked: false,
+        is_mandatory: false,
+      },
+      {
+        date: `${year}-02-14`,
+        name: 'Sexta-feira de Carnaval',
+        scope: 'NACIONAL',
+        is_blocked: false,
+        is_mandatory: false,
+      },
+      {
+        date: `${year}-02-17`,
+        name: 'TerÃ§a-feira de Carnaval',
+        scope: 'NACIONAL',
+        is_blocked: false,
+        is_mandatory: false,
+      },
+      {
+        date: `${year}-04-03`,
+        name: 'Sexta-feira Santa',
+        scope: 'NACIONAL',
+        is_blocked: true,
+        is_mandatory: true,
+      },
+      {
+        date: `${year}-04-21`,
+        name: 'Tiradentes',
+        scope: 'NACIONAL',
+        is_blocked: true,
+        is_mandatory: true,
+      },
+      {
+        date: `${year}-05-01`,
+        name: 'Dia do Trabalho',
+        scope: 'NACIONAL',
+        is_blocked: true,
+        is_mandatory: true,
+      },
+      {
+        date: `${year}-09-07`,
+        name: 'IndependÃªncia do Brasil',
+        scope: 'NACIONAL',
+        is_blocked: true,
+        is_mandatory: true,
+      },
+      {
+        date: `${year}-10-12`,
+        name: 'Nossa Senhora Aparecida',
+        scope: 'NACIONAL',
+        is_blocked: true,
+        is_mandatory: true,
+      },
+      {
+        date: `${year}-11-02`,
+        name: 'Finados',
+        scope: 'NACIONAL',
+        is_blocked: true,
+        is_mandatory: true,
+      },
+      {
+        date: `${year}-11-15`,
+        name: 'ProclamaÃ§Ã£o da RepÃºblica',
+        scope: 'NACIONAL',
+        is_blocked: true,
+        is_mandatory: true,
+      },
+      {
+        date: `${year}-11-20`,
+        name: 'ConsciÃªncia Negra',
+        scope: 'NACIONAL',
+        is_blocked: true,
+        is_mandatory: true,
+      },
+      {
+        date: `${year}-12-25`,
+        name: 'Natal',
+        scope: 'NACIONAL',
+        is_blocked: true,
+        is_mandatory: true,
+      },
     ];
 
     console.log(`ðŸ“‹ [Seed] Total de feriados a inserir: ${holidays.length}`);
 
     // âœ… ESTRATÃ‰GIA: Delete + Reinsert para garantir dados corretos
     // Se houver feriados antigos (versÃ£o anterior com 12 ao invÃ©s de 13), deleta e refaz
-    
+
     // Verificar quantos feriados nacionais jÃ¡ existem para este ano
     const { count: existingCount } = await supabase
       .from('holidays')
@@ -369,7 +461,7 @@ export async function seedNationalHolidays(year, clinicId) {
     // Se faltam feriados, tentar inserir os que estÃ£o faltando
     if (existingCount < 13) {
       console.log(`ðŸ”„ [Seed] Inserindo feriados faltantes de ${year}...`);
-      
+
       // Buscar quais jÃ¡ existem
       const { data: existingHolidays } = await supabase
         .from('holidays')
@@ -377,33 +469,31 @@ export async function seedNationalHolidays(year, clinicId) {
         .eq('scope', 'NACIONAL')
         .gte('date', `${year}-01-01`)
         .lte('date', `${year}-12-31`);
-      
-      const existingDates = new Set((existingHolidays || []).map(h => h.date));
-      
+
+      const existingDates = new Set((existingHolidays || []).map((h) => h.date));
+
       // Inserir apenas os que faltam
-      const toInsert = holidays.filter(h => !existingDates.has(h.date));
-      
+      const toInsert = holidays.filter((h) => !existingDates.has(h.date));
+
       if (toInsert.length > 0) {
-        const { error: insertError } = await supabase
-          .from('holidays')
-          .insert(
-            toInsert.map(h => ({
-              ...h,
-              clinic_id: null,
-              state: null,
-              city: null,
-            }))
-          );
+        const { error: insertError } = await supabase.from('holidays').insert(
+          toInsert.map((h) => ({
+            ...h,
+            clinic_id: null,
+            state: null,
+            city: null,
+          })),
+        );
 
         if (insertError) {
           console.error(`âŒ [Seed] Erro ao inserir feriados ${year}:`, insertError);
           return false;
         }
-        
+
         console.log(`âœ… [Seed] ${toInsert.length} feriados inseridos para ${year}`);
       }
     }
-    
+
     // Contagem final (verificaÃ§Ã£o)
     const { count: finalCount } = await supabase
       .from('holidays')
@@ -412,7 +502,9 @@ export async function seedNationalHolidays(year, clinicId) {
       .gte('date', `${year}-01-01`)
       .lte('date', `${year}-12-31`);
 
-    console.log(`ðŸ“Š [Seed] Total final de feriados nacionais em ${year}: ${finalCount} (esperado: 13)`);
+    console.log(
+      `ðŸ“Š [Seed] Total final de feriados nacionais em ${year}: ${finalCount} (esperado: 13)`,
+    );
     return finalCount === 13;
   } catch (error) {
     console.error('âŒ [Seed] Erro geral na seed de feriados:', error.message);
@@ -427,20 +519,20 @@ export async function seedNationalHolidays(year, clinicId) {
  */
 export async function seedNationalHolidaysMultipleYears() {
   try {
-    console.log(`ðŸŒ± [Seed] Iniciando seed de feriados para mÃºltiplos anos (2024-2028)`);
-    
+    console.log('ðŸŒ± [Seed] Iniciando seed de feriados para mÃºltiplos anos (2024-2028)');
+
     // Semear feriados dos anos anteriores, atual e prÃ³ximos anos
     const yearsToSeed = [2024, 2025, 2026, 2027, 2028];
     const results = [];
-    
+
     for (const year of yearsToSeed) {
       console.log(`ðŸ“… [Seed] Semeando year ${year}...`);
       const result = await seedNationalHolidays(year, null);
       results.push({ year, success: result });
     }
-    
-    console.log(`âœ… [Seed] Feriados de mÃºltiplos anos:`, results);
-    return results.every(r => r.success);
+
+    console.log('âœ… [Seed] Feriados de mÃºltiplos anos:', results);
+    return results.every((r) => r.success);
   } catch (error) {
     console.error('âŒ [Seed] Erro ao semear mÃºltiplos anos:', error.message);
     return false;
@@ -457,21 +549,18 @@ export async function seedNationalHolidaysMultipleYears() {
 export async function debugHolidaysTable() {
   try {
     console.log('ðŸ” [DEBUG] Testando tabela holidays...');
-    
-    const { data, error, status } = await supabase
-      .from('holidays')
-      .select('*')
-      .limit(5);
-    
+
+    const { data, error, status } = await supabase.from('holidays').select('*').limit(5);
+
     console.log(`ðŸ“Š [DEBUG] Status: ${status}`);
     if (error) {
-      console.error(`âŒ [DEBUG] Erro:`, error);
+      console.error('âŒ [DEBUG] Erro:', error);
       return { error, data: null };
     }
-    
-    console.log(`âœ… [DEBUG] Sucesso! Registros encontrados:`, data?.length || 0);
-    console.log(`ðŸ“‹ [DEBUG] Amostra:`, data);
-    
+
+    console.log('âœ… [DEBUG] Sucesso! Registros encontrados:', data?.length || 0);
+    console.log('ðŸ“‹ [DEBUG] Amostra:', data);
+
     return { error: null, data };
   } catch (error) {
     console.error('âŒ [DEBUG] ExceÃ§Ã£o:', error);
@@ -486,7 +575,7 @@ export async function getAllNationalHolidays(year) {
   try {
     const startDate = `${year}-01-01`;
     const endDate = `${year}-12-31`;
-    
+
     const { data, error } = await supabase
       .from('holidays')
       .select('*')
@@ -494,8 +583,10 @@ export async function getAllNationalHolidays(year) {
       .gte('date', startDate)
       .lte('date', endDate)
       .order('date', { ascending: true });
-    
-    if (error) throw error;
+
+    if (error) {
+      throw error;
+    }
     return data || [];
   } catch (error) {
     console.error('âŒ Erro ao buscar feriados nacionais:', error);
@@ -509,7 +600,7 @@ export default {
   getHolidayDetails,
   checkMultipleDates,
   listHolidaysInRange,
-  
+
   // Mutations
   openHolidayManual,
   closeHolidayOverride,
@@ -517,9 +608,8 @@ export default {
   updateHoliday,
   deleteHoliday,
   listOverridesInRange,
-  
+
   // Utilities
   seedNationalHolidays,
   seedNationalHolidaysMultipleYears,
 };
-

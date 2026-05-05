@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
@@ -12,14 +11,20 @@ const ContatoPage = () => {
     <div className="bg-background text-foreground">
       <Helmet>
         <title>Contato - Gesclinic Web</title>
-        <meta name="description" content="Entre em contato com a equipe da Gesclinic Web para tirar dúvidas, solicitar uma demonstração ou obter suporte." />
+        <meta
+          name="description"
+          content="Entre em contato com a equipe da Gesclinic Web para tirar dúvidas, solicitar uma demonstração ou obter suporte."
+        />
       </Helmet>
 
       <div className="container mx-auto px-4 py-16 md:py-24">
         <div className="text-center max-w-3xl mx-auto">
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tighter mb-4">Fale Conosco</h1>
+          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tighter mb-4">
+            Fale Conosco
+          </h1>
           <p className="text-lg md:text-xl text-muted-foreground">
-            Estamos aqui para ajudar. Preencha o formulário abaixo ou utilize um de nossos canais de atendimento.
+            Estamos aqui para ajudar. Preencha o formulário abaixo ou utilize um de nossos canais de
+            atendimento.
           </p>
         </div>
 
@@ -66,7 +71,9 @@ const ContatoPage = () => {
                 <Label htmlFor="message">Sua Mensagem</Label>
                 <Textarea id="message" placeholder="Escreva sua mensagem aqui..." rows={5} />
               </div>
-              <Button type="submit" className="w-full">Enviar Mensagem</Button>
+              <Button type="submit" className="w-full">
+                Enviar Mensagem
+              </Button>
             </form>
           </div>
         </div>

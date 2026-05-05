@@ -4,7 +4,7 @@ import { migrateStatus, SERVICE_STATUSES } from '@/lib/appointmentStatusConstant
 
 /**
  * AgendaSlot - Componente reutilizável para renderizar um slot de horário
- * 
+ *
  * Props:
  * - time: string (HH:MM)
  * - date: string (YYYY-MM-DD)
@@ -41,19 +41,30 @@ export default function AgendaSlot({
   if (columnType === 'professional' && groupId) {
     // Busca horários do profissional para o dia da semana
     const schedules = professionalSchedules.filter(
-      (s) => s.professional_id === groupId && parseInt(s.day_of_week, 10) === dayOfWeek
+      (s) => s.professional_id === groupId && parseInt(s.day_of_week, 10) === dayOfWeek,
     );
     // LOG TEMPORÁRIO PARA DEBUG
     // eslint-disable-next-line no-console
-    console.log('[AgendaSlot DEBUG] groupId:', groupId, 'date:', date, 'dayOfWeek:', dayOfWeek, 'schedules:', schedules, 'allSchedules:', professionalSchedules);
+    console.log(
+      '[AgendaSlot DEBUG] groupId:',
+      groupId,
+      'date:',
+      date,
+      'dayOfWeek:',
+      dayOfWeek,
+      'schedules:',
+      schedules,
+      'allSchedules:',
+      professionalSchedules,
+    );
     if (schedules.length === 0) {
       isAvailable = false;
     } else {
       isAvailable = schedules.some((s) => {
         // Checa se o horário do slot está dentro de algum intervalo configurado
-        const [slotHour, slotMinute] = time.split(":").map(Number);
-        const [startHour, startMinute] = s.start_time.split(":").map(Number);
-        const [endHour, endMinute] = s.end_time.split(":").map(Number);
+        const [slotHour, slotMinute] = time.split(':').map(Number);
+        const [startHour, startMinute] = s.start_time.split(':').map(Number);
+        const [endHour, endMinute] = s.end_time.split(':').map(Number);
         const slotMinutes = slotHour * 60 + slotMinute;
         const startMinutes = startHour * 60 + startMinute;
         const endMinutes = endHour * 60 + endMinute;
@@ -86,51 +97,49 @@ export default function AgendaSlot({
       border: 'border-gray-200',
       hover: 'hover:from-green-50 hover:to-green-100',
       text: 'text-gray-600',
-      badge: 'bg-green-50 text-green-700'
+      badge: 'bg-green-50 text-green-700',
     },
     confirmado: {
       bg: 'bg-gradient-to-br from-green-50 to-green-100',
       border: 'border-green-200',
       hover: 'hover:from-green-100 hover:to-green-200',
       text: 'text-green-800',
-      badge: 'bg-green-200 text-green-900'
+      badge: 'bg-green-200 text-green-900',
     },
     a_confirmar: {
       bg: 'bg-gradient-to-br from-yellow-50 to-yellow-100',
       border: 'border-yellow-200',
       hover: 'hover:from-yellow-100 hover:to-yellow-200',
       text: 'text-yellow-800',
-      badge: 'bg-yellow-200 text-yellow-900'
+      badge: 'bg-yellow-200 text-yellow-900',
     },
     faltou: {
       bg: 'bg-gradient-to-br from-red-50 to-red-100',
       border: 'border-red-200',
       hover: 'hover:from-red-100 hover:to-red-200',
       text: 'text-red-800',
-      badge: 'bg-red-200 text-red-900'
+      badge: 'bg-red-200 text-red-900',
     },
     encaixe: {
       bg: 'bg-gradient-to-br from-blue-50 to-blue-100',
       border: 'border-blue-200',
       hover: 'hover:from-blue-100 hover:to-blue-200',
       text: 'text-blue-800',
-      badge: 'bg-blue-200 text-blue-900'
+      badge: 'bg-blue-200 text-blue-900',
     },
     bloqueado: {
       bg: 'bg-gradient-to-br from-gray-100 to-gray-200',
       border: 'border-gray-300',
       hover: 'hover:from-gray-100 hover:to-gray-200',
       text: 'text-gray-700',
-      badge: 'bg-gray-300 text-gray-900'
-    }
+      badge: 'bg-gray-300 text-gray-900',
+    },
   };
 
   const colors = statusColors[status] || statusColors.available;
 
   // Tamanho do slot
-  const slotClasses = size === 'compact' 
-    ? 'min-h-16 p-1.5'
-    : 'min-h-20 p-2';
+  const slotClasses = size === 'compact' ? 'min-h-16 p-1.5' : 'min-h-20 p-2';
 
   // Ações disponíveis
   const handleAgendar = (e) => {
@@ -219,17 +228,15 @@ export default function AgendaSlot({
       {/* Conteúdo principal */}
       <div className="flex-1 flex flex-col justify-center min-h-0">
         <div className="font-bold text-sm truncate text-gray-900">
-          {appointment ? (appointment.patient_name || 'Paciente') : 'Paciente'}
+          {appointment ? appointment.patient_name || 'Paciente' : 'Paciente'}
         </div>
-        
+
         {size === 'standard' && (
           <>
             <div className="text-xs text-gray-700 truncate">
               {appointment.professional_name && `👨‍⚕️ ${appointment.professional_name}`}
             </div>
-            <div className="text-xs text-gray-600 truncate">
-              {appointment.service_name}
-            </div>
+            <div className="text-xs text-gray-600 truncate">{appointment.service_name}</div>
           </>
         )}
       </div>
@@ -298,18 +305,18 @@ export default function AgendaSlot({
  */
 function getStatusIcon(status) {
   switch (status) {
-    case 'confirmado':
-      return '✓';
-    case 'a_confirmar':
-      return '⚠';
-    case 'faltou':
-      return '✕';
-    case 'encaixe':
-      return '⚡';
-    case 'bloqueado':
-      return '🔒';
-    default:
-      return '•';
+  case 'confirmado':
+    return '✓';
+  case 'a_confirmar':
+    return '⚠';
+  case 'faltou':
+    return '✕';
+  case 'encaixe':
+    return '⚡';
+  case 'bloqueado':
+    return '🔒';
+  default:
+    return '•';
   }
 }
 
@@ -318,20 +325,19 @@ function getStatusIcon(status) {
  */
 function getStatusLabel(status) {
   switch (status) {
-    case 'confirmado':
-      return 'Confirmado';
-    case 'a_confirmar':
-      return 'A Confirmar';
-    case 'faltou':
-      return 'Faltou';
-    case 'encaixe':
-      return 'Encaixe';
-    case 'bloqueado':
-      return 'Bloqueado';
-    case 'available':
-      return 'Disponível';
-    default:
-      return status;
+  case 'confirmado':
+    return 'Confirmado';
+  case 'a_confirmar':
+    return 'A Confirmar';
+  case 'faltou':
+    return 'Faltou';
+  case 'encaixe':
+    return 'Encaixe';
+  case 'bloqueado':
+    return 'Bloqueado';
+  case 'available':
+    return 'Disponível';
+  default:
+    return status;
   }
 }
-

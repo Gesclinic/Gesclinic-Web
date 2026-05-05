@@ -1,4 +1,4 @@
-import * as XLSX from "xlsx";
+import * as XLSX from 'xlsx';
 
 export function exportToExcel(appointments) {
   const data = appointments.map((a) => ({
@@ -14,8 +14,8 @@ export function exportToExcel(appointments) {
 
   const ws = XLSX.utils.json_to_sheet(data);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Agenda");
-  XLSX.writeFile(wb, "agenda_gesclinic.xlsx");
+  XLSX.utils.book_append_sheet(wb, ws, 'Agenda');
+  XLSX.writeFile(wb, 'agenda_gesclinic.xlsx');
 }
 
 export function printAgenda() {

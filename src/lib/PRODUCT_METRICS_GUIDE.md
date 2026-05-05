@@ -3,6 +3,7 @@
 ## Objetivo
 
 Transformar eventos de produto em **dados de negócio** para:
+
 - ✅ Identificar **gargalos** (onde usuários falham)
 - ✅ Entender **uso real** (quais funcionalidades são usadas)
 - ✅ Base para **tomadas de decisão** sobre o produto
@@ -206,18 +207,18 @@ function handleError(error, userId, clinicId) {
 // Abrir Devtools (F12)
 
 // Ver todos os helpers disponíveis
-window.__PRODUCT_METRICS__
+window.__PRODUCT_METRICS__;
 
 // Rastrear um evento manualmente
 window.__PRODUCT_METRICS__.trackEvent('appointment_created', {
   clinicId: 'clinic-123',
   userId: 'user-456',
   action: 'create',
-  extra: { appointment_type: 'consulta' }
+  extra: { appointment_type: 'consulta' },
 });
 
 // Ver resumo de análises
-window.__PRODUCT_METRICS__.getEventSummary()
+window.__PRODUCT_METRICS__.getEventSummary();
 ```
 
 ---
@@ -246,7 +247,7 @@ Resultado: ex. 92% das tentativas são bem-sucedidas
 
 Filtrar por: severity:slow (duration_ms > 5000)
 Agrupar por: event_type
-Resultado: 
+Resultado:
   - appointment_created: 8% lentos
   - appointment_updated: 12% lentos ← GARGALO
   - appointment_confirmed: 2% lentos
@@ -298,14 +299,14 @@ Ação: Melhorar UI do seletor de data
 
 ## 5️⃣ Tags Importantes
 
-| Tag | Valor | Uso |
-|------|-------|-----|
-| **clinic_id** | UUID | Filtrar por clínica |
-| **user_id** | UUID | Rastrear usuário específico |
-| **action** | string | Tipo de ação (create, update, delete) |
-| **event_type** | string | Categorizar evento |
-| **severity** | info/warning/error | Prioridade |
-| **performance** | fast/slow | Duration > 5000ms |
+| Tag             | Valor              | Uso                                   |
+| --------------- | ------------------ | ------------------------------------- |
+| **clinic_id**   | UUID               | Filtrar por clínica                   |
+| **user_id**     | UUID               | Rastrear usuário específico           |
+| **action**      | string             | Tipo de ação (create, update, delete) |
+| **event_type**  | string             | Categorizar evento                    |
+| **severity**    | info/warning/error | Prioridade                            |
+| **performance** | fast/slow          | Duration > 5000ms                     |
 
 ---
 
@@ -337,7 +338,7 @@ Dados:
 - appointment_updated: 3200/mês (71%)
 - appointment_confirmed: 800/mês (18%)
 
-Conclusão: 
+Conclusão:
 - Agenda é core (todos criam)
 - Confirmação é pouco usada
 - Talvez remover ou destacar melhor
@@ -391,7 +392,7 @@ Conclusão:
 
 - ✅ Rastrear sucesso E falha (taxa de conversão)
 - ✅ Incluir contexto (qual field falhou, quanto tempo levou)
-- ✅ Agrupar eventos relacionados (appointment_*)
+- ✅ Agrupar eventos relacionados (appointment\_\*)
 - ✅ Revisar métricas semanalmente
 - ✅ Usar dados para priorizar
 

@@ -1,17 +1,17 @@
 /**
  * productMetrics.js
- * 
+ *
  * Sistema de Métricas de Produto para Gesclinic
  * Captura eventos de negócio e envia para Sentry com tags para análise
- * 
+ *
  * Objetivo:
  * - Identificar gargalos (onde usuários falham)
  * - Entender uso real (quais funcionalidades são usadas)
  * - Base para tomadas de decisão de produto
- * 
+ *
  * @example
  * import { trackEvent } from '@/lib/productMetrics';
- * 
+ *
  * trackEvent('appointment_created', {
  *   clinicId: 'clinic-123',
  *   userId: 'user-456',
@@ -64,7 +64,7 @@ export const PRODUCT_EVENTS = {
 
 /**
  * Registra evento de produto com métricas
- * 
+ *
  * @param {string} eventName - Tipo de evento (ex: 'appointment_created')
  * @param {Object} metadata - Dados do evento
  * @param {string} metadata.clinicId - ID da clínica (required)
@@ -73,7 +73,7 @@ export const PRODUCT_EVENTS = {
  * @param {Object} metadata.extra - Dados adicionais (optional)
  * @param {number} metadata.duration - Tempo em ms (optional)
  * @param {string} metadata.severity - 'info', 'warning', 'error' (default: 'info')
- * 
+ *
  * @example
  * trackEvent(PRODUCT_EVENTS.APPOINTMENT_CREATED, {
  *   clinicId: 'clinic-123',

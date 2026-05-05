@@ -9,114 +9,266 @@ export const PERMISSIONS_BY_MODULE = {
     label: 'Dashboard',
     icon: 'LayoutDashboard',
     permissions: [
-      { id: 'dashboard.visualizar', label: 'Visualizar Dashboard', description: 'Acessar a página inicial do dashboard' }
-    ]
+      {
+        id: 'dashboard.visualizar',
+        label: 'Visualizar Dashboard',
+        description: 'Acessar a página inicial do dashboard',
+      },
+    ],
   },
   agenda: {
     label: 'Agenda',
     icon: 'Calendar',
     permissions: [
-      { id: 'agenda.visualizar', label: 'Visualizar Agenda', description: 'Visualizar compromissos agendados' },
+      {
+        id: 'agenda.visualizar',
+        label: 'Visualizar Agenda',
+        description: 'Visualizar compromissos agendados',
+      },
       { id: 'agenda.criar', label: 'Criar Agendamentos', description: 'Criar novos agendamentos' },
-      { id: 'agenda.editar', label: 'Editar Agendamentos', description: 'Modificar agendamentos existentes' },
+      {
+        id: 'agenda.editar',
+        label: 'Editar Agendamentos',
+        description: 'Modificar agendamentos existentes',
+      },
       { id: 'agenda.deletar', label: 'Deletar Agendamentos', description: 'Remover agendamentos' },
-      { id: 'agenda.confirmacao', label: 'Confirmar Agendamentos', description: 'Confirmar presença de pacientes' },
-      { id: 'agenda.lista_espera', label: 'Lista de Espera', description: 'Gerenciar lista de espera' },
-      { id: 'agenda.relatorios', label: 'Relatórios de Agenda', description: 'Gerar relatórios de agendamentos' },
-      { id: 'agenda.notificacoes', label: 'Notificações', description: 'Enviar notificações de agendamento' }
-    ]
+      {
+        id: 'agenda.confirmacao',
+        label: 'Confirmar Agendamentos',
+        description: 'Confirmar presença de pacientes',
+      },
+      {
+        id: 'agenda.lista_espera',
+        label: 'Lista de Espera',
+        description: 'Gerenciar lista de espera',
+      },
+      {
+        id: 'agenda.relatorios',
+        label: 'Relatórios de Agenda',
+        description: 'Gerar relatórios de agendamentos',
+      },
+      {
+        id: 'agenda.notificacoes',
+        label: 'Notificações',
+        description: 'Enviar notificações de agendamento',
+      },
+    ],
   },
   pacientes: {
     label: 'Pacientes',
     icon: 'Users',
     permissions: [
-      { id: 'pacientes.visualizar', label: 'Visualizar Pacientes', description: 'Ver informações dos pacientes' },
+      {
+        id: 'pacientes.visualizar',
+        label: 'Visualizar Pacientes',
+        description: 'Ver informações dos pacientes',
+      },
       { id: 'pacientes.criar', label: 'Criar Pacientes', description: 'Registrar novos pacientes' },
-      { id: 'pacientes.editar', label: 'Editar Pacientes', description: 'Atualizar dados dos pacientes' },
-      { id: 'pacientes.deletar', label: 'Deletar Pacientes', description: 'Remover registros de pacientes' },
-      { id: 'pacientes.documentos', label: 'Documentos', description: 'Gerenciar documentos de pacientes' },
-      { id: 'pacientes.historico', label: 'Histórico', description: 'Visualizar histórico de atendimentos' }
-    ]
+      {
+        id: 'pacientes.editar',
+        label: 'Editar Pacientes',
+        description: 'Atualizar dados dos pacientes',
+      },
+      {
+        id: 'pacientes.deletar',
+        label: 'Deletar Pacientes',
+        description: 'Remover registros de pacientes',
+      },
+      {
+        id: 'pacientes.documentos',
+        label: 'Documentos',
+        description: 'Gerenciar documentos de pacientes',
+      },
+      {
+        id: 'pacientes.historico',
+        label: 'Histórico',
+        description: 'Visualizar histórico de atendimentos',
+      },
+    ],
   },
   profissionais: {
     label: 'Profissionais',
     icon: 'Stethoscope',
     permissions: [
-      { id: 'profissionais.visualizar', label: 'Visualizar Profissionais', description: 'Ver lista de profissionais' },
-      { id: 'profissionais.criar', label: 'Criar Profissionais', description: 'Registrar novos profissionais' },
-      { id: 'profissionais.editar', label: 'Editar Profissionais', description: 'Atualizar dados dos profissionais' },
-      { id: 'profissionais.deletar', label: 'Deletar Profissionais', description: 'Remover profissionais' }
-    ]
+      {
+        id: 'profissionais.visualizar',
+        label: 'Visualizar Profissionais',
+        description: 'Ver lista de profissionais',
+      },
+      {
+        id: 'profissionais.criar',
+        label: 'Criar Profissionais',
+        description: 'Registrar novos profissionais',
+      },
+      {
+        id: 'profissionais.editar',
+        label: 'Editar Profissionais',
+        description: 'Atualizar dados dos profissionais',
+      },
+      {
+        id: 'profissionais.deletar',
+        label: 'Deletar Profissionais',
+        description: 'Remover profissionais',
+      },
+    ],
   },
   financeiro: {
     label: 'Financeiro',
     icon: 'Wallet',
     permissions: [
-      { id: 'financeiro.dashboard', label: 'Dashboard Financeiro', description: 'Visualizar dashboard financeiro' },
-      { id: 'financeiro.contas_pagar', label: 'Contas a Pagar', description: 'Gerenciar contas a pagar' },
-      { id: 'financeiro.contas_receber', label: 'Contas a Receber', description: 'Gerenciar contas a receber' },
-      { id: 'financeiro.fluxo_caixa', label: 'Fluxo de Caixa', description: 'Visualizar fluxo de caixa' },
-      { id: 'financeiro.plano_contas', label: 'Plano de Contas', description: 'Gerenciar plano de contas' },
-      { id: 'financeiro.centro_custos', label: 'Centro de Custos', description: 'Gerenciar centros de custo' },
-      { id: 'financeiro.conciliacao', label: 'Conciliação Bancária', description: 'Realizar conciliação bancária' },
-      { id: 'financeiro.automacao', label: 'Automação', description: 'Configurar automação financeira' },
-      { id: 'financeiro.repasse_medico', label: 'Repasse Médico', description: 'Gerenciar repasse de médicos' }
-    ]
+      {
+        id: 'financeiro.dashboard',
+        label: 'Dashboard Financeiro',
+        description: 'Visualizar dashboard financeiro',
+      },
+      {
+        id: 'financeiro.contas_pagar',
+        label: 'Contas a Pagar',
+        description: 'Gerenciar contas a pagar',
+      },
+      {
+        id: 'financeiro.contas_receber',
+        label: 'Contas a Receber',
+        description: 'Gerenciar contas a receber',
+      },
+      {
+        id: 'financeiro.fluxo_caixa',
+        label: 'Fluxo de Caixa',
+        description: 'Visualizar fluxo de caixa',
+      },
+      {
+        id: 'financeiro.plano_contas',
+        label: 'Plano de Contas',
+        description: 'Gerenciar plano de contas',
+      },
+      {
+        id: 'financeiro.centro_custos',
+        label: 'Centro de Custos',
+        description: 'Gerenciar centros de custo',
+      },
+      {
+        id: 'financeiro.conciliacao',
+        label: 'Conciliação Bancária',
+        description: 'Realizar conciliação bancária',
+      },
+      {
+        id: 'financeiro.automacao',
+        label: 'Automação',
+        description: 'Configurar automação financeira',
+      },
+      {
+        id: 'financeiro.repasse_medico',
+        label: 'Repasse Médico',
+        description: 'Gerenciar repasse de médicos',
+      },
+    ],
   },
   estoque: {
     label: 'Estoque',
     icon: 'Boxes',
     permissions: [
-      { id: 'estoque.dashboard', label: 'Dashboard Estoque', description: 'Visualizar dashboard de estoque' },
+      {
+        id: 'estoque.dashboard',
+        label: 'Dashboard Estoque',
+        description: 'Visualizar dashboard de estoque',
+      },
       { id: 'estoque.produtos', label: 'Produtos', description: 'Gerenciar produtos' },
-      { id: 'estoque.categorias', label: 'Categorias', description: 'Gerenciar categorias de produtos' },
+      {
+        id: 'estoque.categorias',
+        label: 'Categorias',
+        description: 'Gerenciar categorias de produtos',
+      },
       { id: 'estoque.fornecedores', label: 'Fornecedores', description: 'Gerenciar fornecedores' },
-      { id: 'estoque.movimentacoes', label: 'Movimentações', description: 'Registrar movimentações' },
-      { id: 'estoque.transferencias', label: 'Transferências', description: 'Gerenciar transferências' },
+      {
+        id: 'estoque.movimentacoes',
+        label: 'Movimentações',
+        description: 'Registrar movimentações',
+      },
+      {
+        id: 'estoque.transferencias',
+        label: 'Transferências',
+        description: 'Gerenciar transferências',
+      },
       { id: 'estoque.requisicoes', label: 'Requisições', description: 'Gerenciar requisições' },
       { id: 'estoque.inventario', label: 'Inventário', description: 'Realizar inventário' },
-      { id: 'estoque.relatorios', label: 'Relatórios', description: 'Gerar relatórios de estoque' }
-    ]
+      { id: 'estoque.relatorios', label: 'Relatórios', description: 'Gerar relatórios de estoque' },
+    ],
   },
   faturamento: {
     label: 'Faturamento',
     icon: 'FileText',
     permissions: [
-      { id: 'faturamento.visualizar', label: 'Visualizar Faturamento', description: 'Ver dados de faturamento' },
-      { id: 'faturamento.criar', label: 'Criar Faturamento', description: 'Criar documentos de faturamento' },
-      { id: 'faturamento.editar', label: 'Editar Faturamento', description: 'Editar documentos de faturamento' }
-    ]
+      {
+        id: 'faturamento.visualizar',
+        label: 'Visualizar Faturamento',
+        description: 'Ver dados de faturamento',
+      },
+      {
+        id: 'faturamento.criar',
+        label: 'Criar Faturamento',
+        description: 'Criar documentos de faturamento',
+      },
+      {
+        id: 'faturamento.editar',
+        label: 'Editar Faturamento',
+        description: 'Editar documentos de faturamento',
+      },
+    ],
   },
   configuracoes: {
     label: 'Configurações',
     icon: 'Settings',
     permissions: [
-      { id: 'configuracoes.gerais', label: 'Gerais', description: 'Configurações gerais da clínica' },
+      {
+        id: 'configuracoes.gerais',
+        label: 'Gerais',
+        description: 'Configurações gerais da clínica',
+      },
       { id: 'configuracoes.perfis', label: 'Perfis', description: 'Gerenciar perfis de usuários' },
       { id: 'configuracoes.permissoes', label: 'Permissões', description: 'Gerenciar permissões' },
       { id: 'configuracoes.agenda', label: 'Agenda', description: 'Configurações de agenda' },
       { id: 'configuracoes.conta', label: 'Conta', description: 'Configurações de conta' },
-      { id: 'configuracoes.faturamento', label: 'Faturamento', description: 'Configurações de faturamento' },
-      { id: 'configuracoes.estoque', label: 'Estoque', description: 'Configurações de estoque' }
-    ]
+      {
+        id: 'configuracoes.faturamento',
+        label: 'Faturamento',
+        description: 'Configurações de faturamento',
+      },
+      { id: 'configuracoes.estoque', label: 'Estoque', description: 'Configurações de estoque' },
+    ],
   },
   administracao: {
     label: 'Administração',
     icon: 'Shield',
     permissions: [
-      { id: 'administracao.usuarios', label: 'Usuários', description: 'Gerenciar usuários do sistema' },
-      { id: 'administracao.clinicas', label: 'Clínicas', description: 'Gerenciar clínicas' }
-    ]
+      {
+        id: 'administracao.usuarios',
+        label: 'Usuários',
+        description: 'Gerenciar usuários do sistema',
+      },
+      { id: 'administracao.clinicas', label: 'Clínicas', description: 'Gerenciar clínicas' },
+    ],
   },
   atendimento: {
     label: 'Atendimento',
     icon: 'Heart',
     permissions: [
-      { id: 'atendimento.visualizar', label: 'Visualizar Atendimento', description: 'Ver registros de atendimento' },
-      { id: 'atendimento.criar', label: 'Criar Atendimento', description: 'Registrar novo atendimento' },
-      { id: 'atendimento.editar', label: 'Editar Atendimento', description: 'Editar registros de atendimento' }
-    ]
-  }
+      {
+        id: 'atendimento.visualizar',
+        label: 'Visualizar Atendimento',
+        description: 'Ver registros de atendimento',
+      },
+      {
+        id: 'atendimento.criar',
+        label: 'Criar Atendimento',
+        description: 'Registrar novo atendimento',
+      },
+      {
+        id: 'atendimento.editar',
+        label: 'Editar Atendimento',
+        description: 'Editar registros de atendimento',
+      },
+    ],
+  },
 };
 
 /**
@@ -124,7 +276,7 @@ export const PERMISSIONS_BY_MODULE = {
  */
 export function getAllPermissions() {
   const allPermissions = [];
-  Object.values(PERMISSIONS_BY_MODULE).forEach(module => {
+  Object.values(PERMISSIONS_BY_MODULE).forEach((module) => {
     allPermissions.push(...module.permissions);
   });
   return allPermissions;
@@ -148,7 +300,9 @@ export async function listUserPermissions(userId, clinicId) {
       .eq('user_id', userId)
       .eq('clinic_id', clinicId);
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data || [];
   } catch (error) {
     console.error('Erro ao listar permissões do usuário:', error);
@@ -168,13 +322,15 @@ export async function grantPermission(userId, permissionId, clinicId) {
           user_id: userId,
           permission_id: permissionId,
           clinic_id: clinicId,
-          granted_at: new Date().toISOString()
-        }
+          granted_at: new Date().toISOString(),
+        },
       ])
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data;
   } catch (error) {
     console.error('Erro ao conceder permissão:', error);
@@ -194,7 +350,9 @@ export async function revokePermission(userId, permissionId, clinicId) {
       .eq('permission_id', permissionId)
       .eq('clinic_id', clinicId);
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return true;
   } catch (error) {
     console.error('Erro ao revogar permissão:', error);
@@ -207,19 +365,18 @@ export async function revokePermission(userId, permissionId, clinicId) {
  */
 export async function grantPermissionsBatch(userId, permissionIds, clinicId) {
   try {
-    const permissions = permissionIds.map(permissionId => ({
+    const permissions = permissionIds.map((permissionId) => ({
       user_id: userId,
       permission_id: permissionId,
       clinic_id: clinicId,
-      granted_at: new Date().toISOString()
+      granted_at: new Date().toISOString(),
     }));
 
-    const { data, error } = await supabase
-      .from('user_permissions')
-      .insert(permissions)
-      .select();
+    const { data, error } = await supabase.from('user_permissions').insert(permissions).select();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data;
   } catch (error) {
     console.error('Erro ao conceder permissões em lote:', error);
@@ -239,7 +396,9 @@ export async function revokePermissionsBatch(userId, permissionIds, clinicId) {
       .eq('clinic_id', clinicId)
       .in('permission_id', permissionIds);
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return true;
   } catch (error) {
     console.error('Erro ao revogar permissões em lote:', error);
@@ -260,7 +419,9 @@ export async function hasPermission(userId, permissionId, clinicId) {
       .eq('clinic_id', clinicId)
       .single();
 
-    if (error && error.code !== 'PGRST116') throw error;
+    if (error && error.code !== 'PGRST116') {
+      throw error;
+    }
     return !!data;
   } catch (error) {
     console.error('Erro ao verificar permissão:', error);
@@ -279,8 +440,10 @@ export async function listUsersWithPermission(permissionId, clinicId) {
       .eq('permission_id', permissionId)
       .eq('clinic_id', clinicId);
 
-    if (error) throw error;
-    return data?.map(item => item.users) || [];
+    if (error) {
+      throw error;
+    }
+    return data?.map((item) => item.users) || [];
   } catch (error) {
     console.error('Erro ao listar usuários com permissão:', error);
     return [];

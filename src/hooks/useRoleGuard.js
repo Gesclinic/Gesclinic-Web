@@ -1,7 +1,7 @@
-import { useEffect, useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
-import { useToast } from "@/components/ui/use-toast";
+import { useEffect, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useToast } from '@/components/ui/use-toast';
 
 /**
  * Hook de proteção de rotas por função (RBAC)
@@ -12,7 +12,7 @@ export function useRoleGuard(allowedRoles = []) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { session, currentRole, loading: authLoading } = useAuth();
-  
+
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
 
@@ -24,7 +24,7 @@ export function useRoleGuard(allowedRoles = []) {
 
     // Se não há sessão, redireciona para o login
     if (!session) {
-      navigate("/login", { replace: true });
+      navigate('/login', { replace: true });
       return;
     }
 
@@ -34,29 +34,28 @@ export function useRoleGuard(allowedRoles = []) {
       setLoading(false);
       return;
     }
-    
+
     // Se a role do usuário ainda não carregou, espera
     if (!currentRole) {
-       return; 
+      return;
     }
 
     // Verifica se a role atual está na lista de permitidas
-    const isAllowed = allowedRoles.map(r => r.toLowerCase()).includes(currentRole.toLowerCase());
+    const isAllowed = allowedRoles.map((r) => r.toLowerCase()).includes(currentRole.toLowerCase());
 
     if (isAllowed) {
       setAuthorized(true);
     } else {
       setAuthorized(false);
       toast({
-        variant: "destructive",
-        title: "Acesso Negado",
-        description: "Você não tem permissão para acessar esta página.",
+        variant: 'destructive',
+        title: 'Acesso Negado',
+        description: 'Você não tem permissão para acessar esta página.',
       });
-      navigate("/nao-autorizado", { replace: true });
+      navigate('/nao-autorizado', { replace: true });
     }
-    
-    setLoading(false);
 
+    setLoading(false);
   }, [authLoading, session, currentRole, allowedRoles, navigate, toast]);
 
   return { authorized, loading: authLoading || loading, role: currentRole };

@@ -3,13 +3,13 @@ import { ChevronDown } from 'lucide-react';
 
 /**
  * AgendaFiltersOptimized - Filtros ultra-compactos e colapsáveis
- * 
+ *
  * Design:
  * - Padrão: Fechado (apenas barra com ícone de busca + badge de contagem)
  * - Expandido: Mostra 5 filtros selecionáveis
  * - Altura: 40px (fechado) → 280px (expandido)
  * - Sem espaço desperdiçado quando fechado
- * 
+ *
  * Props:
  * - searchText: string - filtro de busca/paciente
  * - onSearchChange: (text) => void
@@ -34,20 +34,26 @@ export default function AgendaFiltersOptimized({
 
   // Contar filtros ativos
   const activeFilterCount = Object.values(selectedFilters).filter(
-    (v) => v && (Array.isArray(v) ? v.length > 0 : true)
+    (v) => v && (Array.isArray(v) ? v.length > 0 : true),
   ).length;
 
   const handleToggle = useCallback(() => {
     setIsOpen(!isOpen);
   }, [isOpen]);
 
-  const handleSearchChange = useCallback((e) => {
-    onSearchChange(e.target.value);
-  }, [onSearchChange]);
+  const handleSearchChange = useCallback(
+    (e) => {
+      onSearchChange(e.target.value);
+    },
+    [onSearchChange],
+  );
 
-  const handleFilterChange = useCallback((filterName, value) => {
-    onFiltersChange({ ...selectedFilters, [filterName]: value });
-  }, [selectedFilters, onFiltersChange]);
+  const handleFilterChange = useCallback(
+    (filterName, value) => {
+      onFiltersChange({ ...selectedFilters, [filterName]: value });
+    },
+    [selectedFilters, onFiltersChange],
+  );
 
   // Status de exemplo (em produção vem de props)
   const statuses = [
@@ -200,4 +206,3 @@ export default function AgendaFiltersOptimized({
     </div>
   );
 }
-

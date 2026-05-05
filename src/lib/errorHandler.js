@@ -8,7 +8,7 @@
 // ============================================================
 
 export class FriendlyError extends Error {
-  constructor(userMessage, technicalMessage, code = "UNKNOWN_ERROR") {
+  constructor(userMessage, technicalMessage, code = 'UNKNOWN_ERROR') {
     super(technicalMessage);
     this.userMessage = userMessage;
     this.technicalMessage = technicalMessage;
@@ -24,65 +24,65 @@ export class FriendlyError extends Error {
 const ERROR_TRANSLATIONS = {
   // Erros de validação
   validation_error: {
-    user: "Dados inválidos. Verifique os campos e tente novamente.",
-    code: "VALIDATION_ERROR"
+    user: 'Dados inválidos. Verifique os campos e tente novamente.',
+    code: 'VALIDATION_ERROR',
   },
   clinic_id_required: {
-    user: "Clínica não identificada. Faça login novamente.",
-    code: "CLINIC_REQUIRED"
+    user: 'Clínica não identificada. Faça login novamente.',
+    code: 'CLINIC_REQUIRED',
   },
   invalid_clinic_id: {
-    user: "Clínica inválida.",
-    code: "INVALID_CLINIC"
+    user: 'Clínica inválida.',
+    code: 'INVALID_CLINIC',
   },
 
   // Erros de dados
   not_found: {
-    user: "Registro não encontrado.",
-    code: "NOT_FOUND"
+    user: 'Registro não encontrado.',
+    code: 'NOT_FOUND',
   },
   duplicate_key: {
-    user: "Este registro já existe.",
-    code: "DUPLICATE"
+    user: 'Este registro já existe.',
+    code: 'DUPLICATE',
   },
   foreign_key_violation: {
-    user: "Não é possível deletar: há registros relacionados.",
-    code: "HAS_RELATIONS"
+    user: 'Não é possível deletar: há registros relacionados.',
+    code: 'HAS_RELATIONS',
   },
 
   // Erros de autenticação/autorização
   unauthorized: {
-    user: "Você não tem permissão para realizar esta ação.",
-    code: "UNAUTHORIZED"
+    user: 'Você não tem permissão para realizar esta ação.',
+    code: 'UNAUTHORIZED',
   },
   forbidden: {
-    user: "Acesso negado.",
-    code: "FORBIDDEN"
+    user: 'Acesso negado.',
+    code: 'FORBIDDEN',
   },
   unauthenticated: {
-    user: "Sessão expirada. Faça login novamente.",
-    code: "UNAUTHENTICATED"
+    user: 'Sessão expirada. Faça login novamente.',
+    code: 'UNAUTHENTICATED',
   },
 
   // Erros de database
   database_error: {
-    user: "Erro ao acessar banco de dados. Tente novamente.",
-    code: "DATABASE_ERROR"
+    user: 'Erro ao acessar banco de dados. Tente novamente.',
+    code: 'DATABASE_ERROR',
   },
   connection_error: {
-    user: "Erro de conexão. Verifique sua internet.",
-    code: "CONNECTION_ERROR"
+    user: 'Erro de conexão. Verifique sua internet.',
+    code: 'CONNECTION_ERROR',
   },
 
   // Erros de negócio
   appointment_conflict: {
-    user: "Conflito de horário. Escolha outro horário.",
-    code: "APPOINTMENT_CONFLICT"
+    user: 'Conflito de horário. Escolha outro horário.',
+    code: 'APPOINTMENT_CONFLICT',
   },
   invalid_time_range: {
-    user: "Horário inválido. Hora final deve ser após hora inicial.",
-    code: "INVALID_TIME_RANGE"
-  }
+    user: 'Horário inválido. Hora final deve ser após hora inicial.',
+    code: 'INVALID_TIME_RANGE',
+  },
 };
 
 // ============================================================
@@ -91,11 +91,7 @@ const ERROR_TRANSLATIONS = {
 
 export function normalizeError(error, context = {}) {
   if (!error) {
-    return new FriendlyError(
-      "Erro desconhecido",
-      "Unknown error occurred",
-      "UNKNOWN"
-    );
+    return new FriendlyError('Erro desconhecido', 'Unknown error occurred', 'UNKNOWN');
   }
 
   // Se já é FriendlyError, retornar
@@ -108,115 +104,107 @@ export function normalizeError(error, context = {}) {
   const code = error?.code;
   const errorDetails = error?.details;
 
-  console.error("🔴 [ERROR] Normalizando erro:", {
+  console.error('🔴 [ERROR] Normalizando erro:', {
     message,
     code,
     context,
-    stack: error?.stack
+    stack: error?.stack,
   });
 
   // SUPABASE ERRORS
-  if (code === "PGRST116") {
+  if (code === 'PGRST116') {
     // Nenhuma linha retornada (single/many sem resultado)
     return new FriendlyError(
-      "Registro não encontrado.",
+      'Registro não encontrado.',
       `Database query returned no rows: ${message}`,
-      "NOT_FOUND"
+      'NOT_FOUND',
     );
   }
 
-  if (code === "23505") {
+  if (code === '23505') {
     // Duplicate key violation
     return new FriendlyError(
-      "Este registro já existe no sistema.",
+      'Este registro já existe no sistema.',
       `Duplicate key error: ${message}`,
-      "DUPLICATE"
+      'DUPLICATE',
     );
   }
 
-  if (code === "23503") {
+  if (code === '23503') {
     // Foreign key violation
     return new FriendlyError(
-      "Não é possível deletar: há registros relacionados.",
+      'Não é possível deletar: há registros relacionados.',
       `Foreign key constraint violated: ${message}`,
-      "HAS_RELATIONS"
+      'HAS_RELATIONS',
     );
   }
 
-  if (code === "42P01") {
+  if (code === '42P01') {
     // Tabela não existe
     return new FriendlyError(
-      "Erro ao acessar banco de dados.",
+      'Erro ao acessar banco de dados.',
       `Table not found: ${message}`,
-      "DATABASE_ERROR"
+      'DATABASE_ERROR',
     );
   }
 
   // RLS ERRORS
-  if (message.includes("new row violates row-level security policy")) {
+  if (message.includes('new row violates row-level security policy')) {
     return new FriendlyError(
-      "Você não tem permissão para acessar esta clínica.",
+      'Você não tem permissão para acessar esta clínica.',
       `RLS policy violation: ${message}`,
-      "FORBIDDEN"
+      'FORBIDDEN',
     );
   }
 
-  if (message.includes("Unauthorized")) {
+  if (message.includes('Unauthorized')) {
     return new FriendlyError(
-      "Sessão expirada. Faça login novamente.",
+      'Sessão expirada. Faça login novamente.',
       `Unauthorized: ${message}`,
-      "UNAUTHENTICATED"
+      'UNAUTHENTICATED',
     );
   }
 
   // VALIDAÇÃO
-  if (message.includes("obrigatório") || message.includes("required")) {
-    return new FriendlyError(
-      message,
-      `Validation error: ${message}`,
-      "VALIDATION_ERROR"
-    );
+  if (message.includes('obrigatório') || message.includes('required')) {
+    return new FriendlyError(message, `Validation error: ${message}`, 'VALIDATION_ERROR');
   }
 
-  if (message.includes("invalid") || message.includes("inválido")) {
-    return new FriendlyError(
-      message,
-      `Invalid data: ${message}`,
-      "VALIDATION_ERROR"
-    );
+  if (message.includes('invalid') || message.includes('inválido')) {
+    return new FriendlyError(message, `Invalid data: ${message}`, 'VALIDATION_ERROR');
   }
 
-  if (message.includes("clinic_id")) {
+  if (message.includes('clinic_id')) {
     return new FriendlyError(
-      "Clínica não identificada. Faça login novamente.",
+      'Clínica não identificada. Faça login novamente.',
       `clinic_id error: ${message}`,
-      "CLINIC_REQUIRED"
+      'CLINIC_REQUIRED',
     );
   }
 
   // CONEXÃO
-  if (message.includes("fetch") || message.includes("network")) {
+  if (message.includes('fetch') || message.includes('network')) {
     return new FriendlyError(
-      "Erro de conexão. Verifique sua internet.",
+      'Erro de conexão. Verifique sua internet.',
       `Network error: ${message}`,
-      "CONNECTION_ERROR"
+      'CONNECTION_ERROR',
     );
   }
 
   // TIMEOUT
-  if (message.includes("timeout")) {
+  if (message.includes('timeout')) {
     return new FriendlyError(
-      "Operação levou muito tempo. Tente novamente.",
+      'Operação levou muito tempo. Tente novamente.',
       `Timeout: ${message}`,
-      "TIMEOUT"
+      'TIMEOUT',
     );
   }
 
   // PADRÃO
   return new FriendlyError(
-    "Ocorreu um erro. Tente novamente mais tarde.",
+    'Ocorreu um erro. Tente novamente mais tarde.',
     `Unhandled error: ${message}`,
-    "UNKNOWN_ERROR"
+    'UNKNOWN_ERROR',
   );
 }
 
@@ -243,7 +231,7 @@ export function logError(error, context = {}) {
   console.error(`[ERROR-${normalized.code}] ${normalized.userMessage}`, {
     technical: normalized.technicalMessage,
     context,
-    timestamp: normalized.timestamp
+    timestamp: normalized.timestamp,
   });
 
   // Adicionar contexto para Sentry
@@ -252,7 +240,7 @@ export function logError(error, context = {}) {
     technicalMessage: normalized.technicalMessage,
     code: normalized.code,
     context,
-    timestamp: normalized.timestamp
+    timestamp: normalized.timestamp,
   };
 }
 
@@ -262,7 +250,7 @@ export function logError(error, context = {}) {
 
 export async function retryWithBackoff(
   fn,
-  options = { maxRetries: 3, initialDelay: 1000, maxDelay: 10000 }
+  options = { maxRetries: 3, initialDelay: 1000, maxDelay: 10000 },
 ) {
   const { maxRetries, initialDelay, maxDelay } = options;
 
@@ -283,7 +271,7 @@ export async function retryWithBackoff(
       const delay = exponentialDelay + jitter;
 
       console.log(`⏳ [RETRY] Aguardando ${Math.round(delay)}ms antes de tentar novamente...`);
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
 }
@@ -309,12 +297,12 @@ export function isRetryableError(error) {
 
   // Erros que NÃO devem fazer retry
   const nonRetryable = [
-    "VALIDATION_ERROR",
-    "UNAUTHORIZED",
-    "FORBIDDEN",
-    "CLINIC_REQUIRED",
-    "NOT_FOUND",
-    "DUPLICATE"
+    'VALIDATION_ERROR',
+    'UNAUTHORIZED',
+    'FORBIDDEN',
+    'CLINIC_REQUIRED',
+    'NOT_FOUND',
+    'DUPLICATE',
   ];
 
   return !nonRetryable.includes(normalized.code);

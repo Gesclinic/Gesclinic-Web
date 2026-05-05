@@ -6,7 +6,14 @@ const client = customSupabaseClient;
 const discountApprovalsApi = {
   // ==================== DISCOUNT AUTHORIZATIONS ====================
 
-  async createDiscountAuthorization(clinicId, appointmentId, discountAmount, reason, notes = '', userId) {
+  async createDiscountAuthorization(
+    clinicId,
+    appointmentId,
+    discountAmount,
+    reason,
+    notes = '',
+    userId,
+  ) {
     try {
       // Verificar se tabela existe ou usar appointments
       const { data, error } = await client
@@ -16,7 +23,9 @@ const discountApprovalsApi = {
         .eq('clinic_id', clinicId)
         .single();
 
-      if (error && error.code !== 'PGRST116') throw error;
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
 
       // Se tabela discount_authorizations existir, criar registro
       try {
@@ -31,13 +40,15 @@ const discountApprovalsApi = {
               notes,
               requested_by: userId,
               status: 'pending',
-              created_at: new Date().toISOString()
-            }
+              created_at: new Date().toISOString(),
+            },
           ])
           .select()
           .single();
 
-        if (!authError) return auth;
+        if (!authError) {
+          return auth;
+        }
       } catch (e) {
         // Tabela pode não existir, continuar
       }
@@ -48,15 +59,21 @@ const discountApprovalsApi = {
         .update({
           discount: parseFloat(discountAmount),
           discount_reason: reason,
-          discount_authorized_by: null,  // ✅ Null indica PENDENTE
-          discount_authorized_at: null,  // ✅ Sem data = ainda não aprovado
-          updated_at: new Date().toISOString()
-        }).eq('id', appointmentId).select();
+          discount_authorized_by: null, // ✅ Null indica PENDENTE
+          discount_authorized_at: null, // ✅ Sem data = ainda não aprovado
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', appointmentId)
+        .select();
 
-if (!data || data.length === 0) { throw new Error('Record not found'); }
-return data[0];
+      if (!data || data.length === 0) {
+        throw new Error('Record not found');
+      }
+      return data[0];
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        throw updateError;
+      }
       return updated;
     } catch (err) {
       throw new Error(`Erro ao criar autorização de desconto: ${err.message}`);
@@ -67,19 +84,26 @@ return data[0];
     try {
       // Tentar buscar de discount_authorizations se existir
       try {
-        let query = client
-          .from('discount_authorizations')
-          .select('*')
-          .eq('clinic_id', clinicId);
+        let query = client.from('discount_authorizations').select('*').eq('clinic_id', clinicId);
 
-        if (filters.status) query = query.eq('status', filters.status);
-        if (filters.from_date) query = query.gte('approved_at', filters.from_date);
-        if (filters.to_date) query = query.lte('approved_at', filters.to_date);
-        if (filters.appointment_id) query = query.eq('appointment_id', filters.appointment_id);
+        if (filters.status) {
+          query = query.eq('status', filters.status);
+        }
+        if (filters.from_date) {
+          query = query.gte('approved_at', filters.from_date);
+        }
+        if (filters.to_date) {
+          query = query.lte('approved_at', filters.to_date);
+        }
+        if (filters.appointment_id) {
+          query = query.eq('appointment_id', filters.appointment_id);
+        }
 
         const { data, error } = await query.order('approved_at', { ascending: false });
 
-        if (!error && data) return data;
+        if (!error && data) {
+          return data;
+        }
       } catch (e) {
         // Tabela não existe
       }
@@ -87,7 +111,8 @@ return data[0];
       // Fallback: buscar appointments com desconto
       const { data, error } = await client
         .from('appointments')
-        .select(`
+        .select(
+          `
           id, 
           patient_id, 
           professional_id,
@@ -103,18 +128,20 @@ return data[0];
           professionals(name),
           services(name),
           payers(name)
-        `)
+        `,
+        )
         .eq('clinic_id', clinicId)
         .gt('discount', 0)
         .order('created_at', { ascending: false });
 
       if (error) {
         console.warn('⚠️ Erro ao buscar com JOINs, tentando sem JOINs:', error.message);
-        
+
         // Fallback final: buscar sem JOINs
         const { data: simpleData, error: simpleError } = await client
           .from('appointments')
-          .select(`
+          .select(
+            `
             id, 
             patient_id, 
             professional_id,
@@ -126,14 +153,17 @@ return data[0];
             discount_authorized_by, 
             discount_authorized_at, 
             created_at
-          `)
+          `,
+          )
           .eq('clinic_id', clinicId)
           .gt('discount', 0)
           .order('created_at', { ascending: false });
 
-        if (simpleError) throw simpleError;
+        if (simpleError) {
+          throw simpleError;
+        }
 
-        return (simpleData || []).map(apt => ({
+        return (simpleData || []).map((apt) => ({
           id: apt.id,
           appointment_id: apt.id,
           clinic_id: clinicId,
@@ -146,11 +176,11 @@ return data[0];
           status: apt.discount_authorized_by ? 'approved' : 'pending',
           approved_at: apt.discount_authorized_at || apt.created_at,
           approved_by: apt.discount_authorized_by,
-          notes: ''
+          notes: '',
         }));
       }
 
-      return (data || []).map(apt => ({
+      return (data || []).map((apt) => ({
         id: apt.id,
         appointment_id: apt.id,
         clinic_id: clinicId,
@@ -163,7 +193,7 @@ return data[0];
         status: apt.discount_authorized_by ? 'approved' : 'pending',
         approved_at: apt.discount_authorized_at || apt.created_at,
         approved_by: apt.discount_authorized_by,
-        notes: ''
+        notes: '',
       }));
     } catch (err) {
       throw new Error(`Erro ao listar autorizações de desconto: ${err.message}`);
@@ -178,10 +208,14 @@ return data[0];
           .select('*')
           .eq('id', authorizationId);
 
-if (!data || data.length === 0) { throw new Error('Record not found'); }
-return data[0];
+        if (!data || data.length === 0) {
+          throw new Error('Record not found');
+        }
+        return data[0];
 
-        if (!error && data) return data;
+        if (!error && data) {
+          return data;
+        }
       } catch (e) {
         // Tabela não existe
       }
@@ -192,10 +226,14 @@ return data[0];
         .eq('id', authorizationId)
         .gt('discount', 0);
 
-if (!data || data.length === 0) { throw new Error('Record not found'); }
-return data[0];
+      if (!data || data.length === 0) {
+        throw new Error('Record not found');
+      }
+      return data[0];
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
       return {
         id: data.id,
@@ -203,7 +241,7 @@ return data[0];
         discount_amount: data.discount,
         discount_reason: data.discount_reason,
         status: 'approved',
-        approved_at: data.created_at
+        approved_at: data.created_at,
       };
     } catch (err) {
       throw new Error(`Erro ao obter autorização: ${err.message}`);
@@ -215,14 +253,18 @@ return data[0];
       try {
         const { data, error } = await client
           .from('discount_authorizations')
-          .update(updates).eq('id', authorizationId).select();
+          .update(updates)
+          .eq('id', authorizationId)
+          .select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found'); 
-    }
-    return data[0];
+        if (!data || data.length === 0) {
+          throw new Error('Record not found');
+        }
+        return data[0];
 
-        if (!error && data) return data;
+        if (!error && data) {
+          return data;
+        }
       } catch (e) {
         // Tabela não existe
       }
@@ -232,15 +274,19 @@ return data[0];
         .from('appointments')
         .update({
           discount: updates.discount_amount || 0,
-          discount_reason: updates.discount_reason || null
-        }).eq('id', authorizationId).select();
+          discount_reason: updates.discount_reason || null,
+        })
+        .eq('id', authorizationId)
+        .select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found'); 
-    }
-    return data[0];
+      if (!data || data.length === 0) {
+        throw new Error('Record not found');
+      }
+      return data[0];
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       return data;
     } catch (err) {
       throw new Error(`Erro ao atualizar autorização: ${err.message}`);
@@ -253,15 +299,19 @@ return data[0];
         .from('appointments')
         .update({
           discount: 0,
-          discount_reason: null
-        }).eq('id', appointmentId).select();
+          discount_reason: null,
+        })
+        .eq('id', appointmentId)
+        .select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found'); 
-    }
-    return data[0];
+      if (!data || data.length === 0) {
+        throw new Error('Record not found');
+      }
+      return data[0];
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       return data;
     } catch (err) {
       throw new Error(`Erro ao remover desconto: ${err.message}`);
@@ -277,11 +327,13 @@ return data[0];
           .update({
             status: 'approved',
             approved_by: userId,
-            approved_at: new Date().toISOString()
+            approved_at: new Date().toISOString(),
           })
           .eq('appointment_id', appointmentId);
 
-        if (!error) return;
+        if (!error) {
+          return;
+        }
       } catch (e) {
         // Tabela não existe
       }
@@ -291,14 +343,19 @@ return data[0];
         .from('appointments')
         .update({
           discount_authorized_by: userId,
-          discount_authorized_at: new Date().toISOString()
+          discount_authorized_at: new Date().toISOString(),
         })
-        .eq('id', appointmentId).select();
+        .eq('id', appointmentId)
+        .select();
 
-if (!data || data.length === 0) { throw new Error('Record not found'); }
-return data[0];
+      if (!data || data.length === 0) {
+        throw new Error('Record not found');
+      }
+      return data[0];
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       return data;
     } catch (err) {
       throw new Error(`Erro ao aprovar desconto: ${err.message}`);
@@ -313,11 +370,13 @@ return data[0];
           .from('discount_authorizations')
           .update({
             status: 'rejected',
-            rejected_at: new Date().toISOString()
+            rejected_at: new Date().toISOString(),
           })
           .eq('appointment_id', appointmentId);
 
-        if (!error) return;
+        if (!error) {
+          return;
+        }
       } catch (e) {
         // Tabela não existe
       }
@@ -329,15 +388,19 @@ return data[0];
           discount: 0,
           discount_reason: null,
           discount_authorized_by: null,
-          discount_authorized_at: null
-        }).eq('id', appointmentId).select();
+          discount_authorized_at: null,
+        })
+        .eq('id', appointmentId)
+        .select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found'); 
-    }
-    return data[0];
+      if (!data || data.length === 0) {
+        throw new Error('Record not found');
+      }
+      return data[0];
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       return data;
     } catch (err) {
       throw new Error(`Erro ao rejeitar desconto: ${err.message}`);
@@ -352,11 +415,13 @@ return data[0];
           .from('discount_authorizations')
           .update({
             status: 'cancelled',
-            cancelled_at: new Date().toISOString()
+            cancelled_at: new Date().toISOString(),
           })
           .eq('appointment_id', appointmentId);
 
-        if (!error) return;
+        if (!error) {
+          return;
+        }
       } catch (e) {
         // Tabela não existe
       }
@@ -368,15 +433,19 @@ return data[0];
           discount: 0,
           discount_reason: null,
           discount_authorized_by: null,
-          discount_authorized_at: null
-        }).eq('id', appointmentId).select();
+          discount_authorized_at: null,
+        })
+        .eq('id', appointmentId)
+        .select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found'); 
-    }
-    return data[0];
+      if (!data || data.length === 0) {
+        throw new Error('Record not found');
+      }
+      return data[0];
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       return data;
     } catch (err) {
       throw new Error(`Erro ao cancelar desconto: ${err.message}`);
@@ -395,17 +464,19 @@ return data[0];
         .gte('scheduled_date', startDate)
         .lte('scheduled_date', endDate);
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
       const summary = {
         totalDiscounts: 0,
         countDiscounts: 0,
         averageDiscount: 0,
         byReason: {},
-        topReasons: []
+        topReasons: [],
       };
 
-      (data || []).forEach(apt => {
+      (data || []).forEach((apt) => {
         const amount = parseFloat(apt.discount) || 0;
         summary.totalDiscounts += amount;
         summary.countDiscounts += 1;
@@ -441,7 +512,7 @@ return data[0];
       approved: 'Aprovado',
       pending: 'Pendente',
       rejected: 'Rejeitado',
-      cancelled: 'Cancelado'
+      cancelled: 'Cancelado',
     };
     return labels[status] || status;
   },
@@ -451,7 +522,7 @@ return data[0];
       approved: 'bg-green-100 text-green-800',
       pending: 'bg-yellow-100 text-yellow-800',
       rejected: 'bg-red-100 text-red-800',
-      cancelled: 'bg-gray-100 text-gray-800'
+      cancelled: 'bg-gray-100 text-gray-800',
     };
     return colors[status] || 'bg-gray-100 text-gray-800';
   },
@@ -468,7 +539,7 @@ return data[0];
           .update({
             status: 'approved',
             approved_at: now,
-            approved_by: approvedByUserId
+            approved_by: approvedByUserId,
           })
           .eq('id', authorizationId)
           .select()
@@ -481,7 +552,7 @@ return data[0];
               .from('appointments')
               .update({
                 discount_authorized_at: now,
-                discount_authorized_by: approvedByUserId
+                discount_authorized_by: approvedByUserId,
               })
               .eq('id', appointmentId);
           }
@@ -496,13 +567,15 @@ return data[0];
         .from('appointments')
         .update({
           discount_authorized_at: now,
-          discount_authorized_by: approvedByUserId
+          discount_authorized_by: approvedByUserId,
         })
         .eq('id', appointmentId || authorizationId)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       return data;
     } catch (err) {
       throw new Error(`Erro ao aprovar autorização: ${err.message}`);
@@ -520,7 +593,7 @@ return data[0];
           .update({
             status: 'rejected',
             rejected_at: now,
-            rejection_reason: rejectionReason
+            rejection_reason: rejectionReason,
           })
           .eq('id', authorizationId)
           .select()
@@ -535,7 +608,7 @@ return data[0];
                 discount: 0,
                 discount_reason: null,
                 discount_authorized_by: null,
-                discount_authorized_at: null
+                discount_authorized_at: null,
               })
               .eq('id', appointmentId);
           }
@@ -552,18 +625,20 @@ return data[0];
           discount: 0,
           discount_reason: null,
           discount_authorized_by: null,
-          discount_authorized_at: null
+          discount_authorized_at: null,
         })
         .eq('id', appointmentId || authorizationId)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       return data;
     } catch (err) {
       throw new Error(`Erro ao rejeitar autorização: ${err.message}`);
     }
-  }
+  },
 };
 
 export default discountApprovalsApi;

@@ -2,14 +2,14 @@
  * ================================================
  * PatientDetailPage - Tela Única com Abas Internas
  * ================================================
- * 
+ *
  * RESPONSABILIDADES:
  * ✅ Uma única rota: /clinica/pacientes/:patientId
  * ✅ Carrega paciente uma ÚNICA vez
  * ✅ Gerencia abas internas (sem alterar URL)
  * ✅ Centraliza toda navegação de paciente
  * ✅ Valida patientId obrigatoriamente
- * 
+ *
  * ABAS DISPONÍVEIS:
  * 1. Dados Cadastrais
  * 2. Convênios
@@ -18,7 +18,7 @@
  * 5. Histórico Clínico
  * 6. Receita
  * 7. Laudos
- * 
+ *
  * ARQUITETURA:
  * - Sem rotas aninhadas
  * - Abas gerenciadas por estado (PatientContext.activeTab)
@@ -26,23 +26,23 @@
  * - Performance otimizada (fetch uma vez)
  */
 
-import React, { useEffect, useState, useCallback } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
-import { getPatientById } from "@/lib/patientsApi";
-import { supabase } from "@/lib/customSupabaseClient";
-import { updateAppointment } from "@/lib/appointmentsApi";
-import { syncAppointmentBilling } from "@/lib/appointmentBillingApi";
-import { migrateStatus, SERVICE_STATUSES } from "@/lib/appointmentStatusConstants";
-import { uploadPatientPhoto, updatePatientPhoto } from "@/lib/patientsApi";
-import { useToast } from "@/components/ui/use-toast";
-import PageLayout from "@/components/ui/PageLayout";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Helmet } from "react-helmet-async";
-import { motion } from "framer-motion";
-import PhotoCapture from "@/components/PhotoCapture";
+import React, { useEffect, useState, useCallback } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { getPatientById } from '@/lib/patientsApi';
+import { supabase } from '@/lib/customSupabaseClient';
+import { updateAppointment } from '@/lib/appointmentsApi';
+import { syncAppointmentBilling } from '@/lib/appointmentBillingApi';
+import { migrateStatus, SERVICE_STATUSES } from '@/lib/appointmentStatusConstants';
+import { uploadPatientPhoto, updatePatientPhoto } from '@/lib/patientsApi';
+import { useToast } from '@/components/ui/use-toast';
+import PageLayout from '@/components/ui/PageLayout';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Helmet } from 'react-helmet-async';
+import { motion } from 'framer-motion';
+import PhotoCapture from '@/components/PhotoCapture';
 import {
   AlertCircle,
   FileText,
@@ -57,100 +57,100 @@ import {
   ArrowLeft,
   Calendar,
   Stethoscope,
-} from "lucide-react";
+} from 'lucide-react';
 
 // Import dos componentes de aba
-import DadosCadastraisTab from "@/components/pacientes/tabs/DadosCadastraisTab";
-import ConveniosTab from "@/components/pacientes/tabs/ConveniosTab";
-import FamiliaresTab from "@/components/pacientes/tabs/FamiliaresTab";
-import DocumentosTab from "@/components/pacientes/tabs/DocumentosTab";
-import HistoricoClinicoTab from "@/components/pacientes/tabs/HistoricoClinicoTab";
-import ReceitasDigitaisTab from "@/components/pacientes/tabs/ReceitasDigitaisTab";
-import LaudosTab from "@/components/pacientes/tabs/LaudosTab";
+import DadosCadastraisTab from '@/components/pacientes/tabs/DadosCadastraisTab';
+import ConveniosTab from '@/components/pacientes/tabs/ConveniosTab';
+import FamiliaresTab from '@/components/pacientes/tabs/FamiliaresTab';
+import DocumentosTab from '@/components/pacientes/tabs/DocumentosTab';
+import HistoricoClinicoTab from '@/components/pacientes/tabs/HistoricoClinicoTab';
+import ReceitasDigitaisTab from '@/components/pacientes/tabs/ReceitasDigitaisTab';
+import LaudosTab from '@/components/pacientes/tabs/LaudosTab';
 
 const TABS = [
   {
-    id: "dados",
-    label: "Dados Cadastrais",
+    id: 'dados',
+    label: 'Dados Cadastrais',
     icon: FileText,
-    color: "blue",
-    badge: "essential",
-    description: "CPF, telefone, endereço",
+    color: 'blue',
+    badge: 'essential',
+    description: 'CPF, telefone, endereço',
   },
   {
-    id: "convenios",
-    label: "Convênios",
+    id: 'convenios',
+    label: 'Convênios',
     icon: Heart,
-    color: "red",
-    badge: "count",
-    description: "Planos de saúde",
+    color: 'red',
+    badge: 'count',
+    description: 'Planos de saúde',
   },
   {
-    id: "familiares",
-    label: "Dados Familiares",
+    id: 'familiares',
+    label: 'Dados Familiares',
     icon: Users2,
-    color: "green",
-    badge: "count",
-    description: "Responsáveis e contatos",
+    color: 'green',
+    badge: 'count',
+    description: 'Responsáveis e contatos',
   },
   {
-    id: "documentos",
-    label: "Documentos",
+    id: 'documentos',
+    label: 'Documentos',
     icon: FolderOpen,
-    color: "amber",
-    badge: "count",
-    description: "Exames e atestados",
+    color: 'amber',
+    badge: 'count',
+    description: 'Exames e atestados',
   },
   {
-    id: "historico",
-    label: "Histórico Clínico",
+    id: 'historico',
+    label: 'Histórico Clínico',
     icon: BookOpen,
-    color: "purple",
-    badge: "critical",
-    description: "Consultas e diagnósticos",
+    color: 'purple',
+    badge: 'critical',
+    description: 'Consultas e diagnósticos',
   },
   {
-    id: "receitas",
-    label: "Receita",
+    id: 'receitas',
+    label: 'Receita',
     icon: FileText,
-    color: "emerald",
-    badge: "count",
-    description: "Receitas",
+    color: 'emerald',
+    badge: 'count',
+    description: 'Receitas',
   },
   {
-    id: "laudos",
-    label: "Laudos",
+    id: 'laudos',
+    label: 'Laudos',
     icon: FileText,
-    color: "sky",
-    badge: "count",
-    description: "Laudos clínicos formais e preparo para portal do paciente",
+    color: 'sky',
+    badge: 'count',
+    description: 'Laudos clínicos formais e preparo para portal do paciente',
   },
 ];
 
 const ALERT_CONFIGS = {
   documentsIncomplete: {
     icon: FileText,
-    title: "Documentos Incompletos",
-    description: "Faltam documentos importantes",
-    color: "orange",
+    title: 'Documentos Incompletos',
+    description: 'Faltam documentos importantes',
+    color: 'orange',
   },
   expiredInsurance: {
     icon: AlertTriangle,
-    title: "Convênio Vencido",
-    description: "O convênio principal está vencido",
-    color: "red",
+    title: 'Convênio Vencido',
+    description: 'O convênio principal está vencido',
+    color: 'red',
   },
   incompleteRegistration: {
     icon: AlertCircle,
-    title: "Cadastro Incompleto",
-    description: "Dados do paciente incompletos",
-    color: "yellow",
+    title: 'Cadastro Incompleto',
+    description: 'Dados do paciente incompletos',
+    color: 'yellow',
   },
   overdue: {
     icon: Clock,
-    title: "Inadimplência",
-    description: "Paciente com contas pendentes",
-    color: "red",
+    title: 'Inadimplência',
+    description: 'Paciente com contas pendentes',
+    color: 'red',
   },
 };
 
@@ -165,7 +165,7 @@ export default function PatientDetailPage() {
   const [patientData, setPatientData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState("dados");
+  const [activeTab, setActiveTab] = useState('dados');
   const [alerts, setAlerts] = useState({
     documentsIncomplete: false,
     expiredInsurance: false,
@@ -175,7 +175,7 @@ export default function PatientDetailPage() {
 
   // Função para carregar paciente
   const loadPatient = useCallback(async (id) => {
-    if (!id || id.trim() === "") {
+    if (!id || id.trim() === '') {
       setPatientData(null);
       setError(null);
       return;
@@ -197,11 +197,11 @@ export default function PatientDetailPage() {
         };
         setAlerts(newAlerts);
       } else {
-        setError("Paciente não encontrado");
+        setError('Paciente não encontrado');
         setPatientData(null);
       }
     } catch (err) {
-      console.error("Erro ao carregar paciente:", err);
+      console.error('Erro ao carregar paciente:', err);
       setError(err.message);
       setPatientData(null);
     } finally {
@@ -221,7 +221,7 @@ export default function PatientDetailPage() {
   const [checkinData, setCheckinData] = useState(null);
   const [showReturnButton, setShowReturnButton] = useState(false);
   const [showPhotoEditor, setShowPhotoEditor] = useState(false);
-  const [defaultProfessional, setDefaultProfessional] = useState("");
+  const [defaultProfessional, setDefaultProfessional] = useState('');
   const [comingFromAppointment, setComingFromAppointment] = useState(false);
   const [appointmentFlow, setAppointmentFlow] = useState({
     appointmentId: null,
@@ -232,9 +232,9 @@ export default function PatientDetailPage() {
 
   // ✅ Carregar paciente quando patientId muda
   useEffect(() => {
-    if (!patientId || patientId.trim() === "") {
-      console.warn("❌ PatientDetailPage: patientId inválido");
-      navigate("/clinica/pacientes");
+    if (!patientId || patientId.trim() === '') {
+      console.warn('❌ PatientDetailPage: patientId inválido');
+      navigate('/clinica/pacientes');
       return;
     }
 
@@ -244,7 +244,7 @@ export default function PatientDetailPage() {
 
   // ⚠️ GUARD: Configurar UI quando dados chegam
   useEffect(() => {
-    if (!patientId || patientId.trim() === "") {
+    if (!patientId || patientId.trim() === '') {
       return;
     }
 
@@ -255,21 +255,21 @@ export default function PatientDetailPage() {
 
     // ✅ Carregar profissional do atendimento se veio da agenda
     const appointmentId = location.state?.appointmentId;
-    
+
     // ✅ Verificar se veio de um atendimento (via localStorage)
-    const appointmentModeData = localStorage.getItem("fromAppointmentMode");
+    const appointmentModeData = localStorage.getItem('fromAppointmentMode');
     let fromAppointment = false;
     if (appointmentModeData) {
       try {
         const data = JSON.parse(appointmentModeData);
-        const isRecent = (Date.now() - data.timestamp) < 5000; // 5 segundos
+        const isRecent = Date.now() - data.timestamp < 5000; // 5 segundos
         if (isRecent) {
-          console.log("👨‍⚕️ Vindo de um atendimento em andamento:", data);
+          console.log('👨‍⚕️ Vindo de um atendimento em andamento:', data);
           fromAppointment = true;
           setComingFromAppointment(true);
         }
       } catch (err) {
-        console.warn("⚠️ Erro ao parsear fromAppointmentMode:", err);
+        console.warn('⚠️ Erro ao parsear fromAppointmentMode:', err);
       }
     }
 
@@ -277,63 +277,73 @@ export default function PatientDetailPage() {
       fromAppointment = true;
       setComingFromAppointment(true);
     }
-    
-    console.log("📍 PatientDetailPage carregada");
-    console.log("👨‍⚕️ fromAppointment:", fromAppointment);
-    
+
+    console.log('📍 PatientDetailPage carregada');
+    console.log('👨‍⚕️ fromAppointment:', fromAppointment);
+
     if (appointmentId) {
-      console.log("📋 Carregando dados do atendimento:", appointmentId);
+      console.log('📋 Carregando dados do atendimento:', appointmentId);
       supabase
-        .from("appointments")
-        .select("id, professional_id, status, scheduled_date, professionals:professional_id(id, name)")
-        .eq("id", appointmentId)
+        .from('appointments')
+        .select(
+          'id, professional_id, status, scheduled_date, professionals:professional_id(id, name)',
+        )
+        .eq('id', appointmentId)
         .single()
         .then(({ data, error }) => {
           if (error) {
-            console.warn("⚠️ Erro ao carregar dados do atendimento:", error);
+            console.warn('⚠️ Erro ao carregar dados do atendimento:', error);
             return;
           }
-          
+
           if (data) {
-            console.log("📋 Dados do atendimento recebidos:", data);
-            const professionalName = data.professionals?.name || "";
+            console.log('📋 Dados do atendimento recebidos:', data);
+            const professionalName = data.professionals?.name || '';
             const normalizedStatus = migrateStatus(data.status);
-            console.log("👤 Nome do profissional extraído:", professionalName);
+            console.log('👤 Nome do profissional extraído:', professionalName);
 
             setAppointmentFlow({
               appointmentId: data.id,
               status: normalizedStatus,
               scheduledDate: data.scheduled_date || null,
             });
-            
+
             if (professionalName && professionalName.trim()) {
               setDefaultProfessional(professionalName.trim());
-              console.log("✅ Profissional definido como:", professionalName.trim());
+              console.log('✅ Profissional definido como:', professionalName.trim());
             } else {
-              console.warn("⚠️ Nome do profissional vazio ou profissional não encontrado");
+              console.warn('⚠️ Nome do profissional vazio ou profissional não encontrado');
             }
           }
         })
         .catch((err) => {
-          console.error("❌ Erro na query de atendimento:", err);
+          console.error('❌ Erro na query de atendimento:', err);
         });
     } else {
-      console.log("ℹ️ Nenhum appointmentId no location.state");
+      console.log('ℹ️ Nenhum appointmentId no location.state');
     }
 
     // ✅ Verificar se veio de um checkin
-    const storedCheckinData = localStorage.getItem("checkinReturnData");
+    const storedCheckinData = localStorage.getItem('checkinReturnData');
     if (storedCheckinData) {
       try {
         const data = JSON.parse(storedCheckinData);
         setCheckinData(data);
         setShowReturnButton(true);
-        console.log("✅ Retorno ao checkin ativado:", data);
+        console.log('✅ Retorno ao checkin ativado:', data);
       } catch (err) {
-        console.warn("⚠️ Erro ao parsear checkinReturnData:", err);
+        console.warn('⚠️ Erro ao parsear checkinReturnData:', err);
       }
     }
-  }, [patientId, loadPatient, navigate, location.state?.appointmentId, location.state?.fromAgendaClinicalFlow, location.state?.openTab, setActiveTab]);
+  }, [
+    patientId,
+    loadPatient,
+    navigate,
+    location.state?.appointmentId,
+    location.state?.fromAgendaClinicalFlow,
+    location.state?.openTab,
+    setActiveTab,
+  ]);
 
   // ✅ Limpar aba ativa quando sair da tela
   useEffect(() => {
@@ -345,28 +355,27 @@ export default function PatientDetailPage() {
 
   // Calcular idade
   function calculateAge(birthDate) {
-    if (!birthDate) return null;
+    if (!birthDate) {
+      return null;
+    }
     const today = new Date();
     const birth = new Date(birthDate);
     let age = today.getFullYear() - birth.getFullYear();
     const monthDiff = today.getMonth() - birth.getMonth();
-    if (
-      monthDiff < 0 ||
-      (monthDiff === 0 && today.getDate() < birth.getDate())
-    ) {
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
       age--;
     }
     return age;
   }
 
-  const age = patientData
-    ? calculateAge(patientData.birthdate || patientData.birth_date)
-    : null;
+  const age = patientData ? calculateAge(patientData.birthdate || patientData.birth_date) : null;
   const canStartAppointment = appointmentFlow.status === SERVICE_STATUSES.AWAITING_PROFESSIONAL;
   const isAppointmentInProgress = appointmentFlow.status === SERVICE_STATUSES.IN_SERVICE;
 
   const handleStartAppointmentFromPatient = async () => {
-    if (!appointmentFlow.appointmentId) return;
+    if (!appointmentFlow.appointmentId) {
+      return;
+    }
 
     try {
       setStartingAppointment(true);
@@ -376,30 +385,33 @@ export default function PatientDetailPage() {
         started_at: new Date().toISOString(),
       });
 
-      localStorage.setItem("fromAppointmentMode", JSON.stringify({
-        appointmentId: appointmentFlow.appointmentId,
-        patientId,
-        appointmentDate: appointmentFlow.scheduledDate,
-        timestamp: Date.now(),
-      }));
+      localStorage.setItem(
+        'fromAppointmentMode',
+        JSON.stringify({
+          appointmentId: appointmentFlow.appointmentId,
+          patientId,
+          appointmentDate: appointmentFlow.scheduledDate,
+          timestamp: Date.now(),
+        }),
+      );
 
       setAppointmentFlow((prev) => ({
         ...prev,
         status: SERVICE_STATUSES.IN_SERVICE,
       }));
       setComingFromAppointment(true);
-      setActiveTab("historico");
+      setActiveTab('historico');
 
       toast({
-        title: "Atendimento iniciado",
-        description: "Prontuário pronto para registrar a evolução clínica.",
+        title: 'Atendimento iniciado',
+        description: 'Prontuário pronto para registrar a evolução clínica.',
       });
     } catch (startError) {
-      console.error("❌ Erro ao iniciar atendimento pelo prontuário:", startError);
+      console.error('❌ Erro ao iniciar atendimento pelo prontuário:', startError);
       toast({
-        title: "Erro",
-        description: startError?.message || "Não foi possível iniciar o atendimento.",
-        variant: "destructive",
+        title: 'Erro',
+        description: startError?.message || 'Não foi possível iniciar o atendimento.',
+        variant: 'destructive',
       });
     } finally {
       setStartingAppointment(false);
@@ -408,7 +420,9 @@ export default function PatientDetailPage() {
 
   // ✅ Finalizar atendimento (muda status para FINISHED)
   const handleFinishAppointmentFromPatient = async () => {
-    if (!appointmentFlow.appointmentId) return;
+    if (!appointmentFlow.appointmentId) {
+      return;
+    }
 
     try {
       setStartingAppointment(true); // Reusar loading state
@@ -424,26 +438,26 @@ export default function PatientDetailPage() {
       }));
 
       toast({
-        title: "Atendimento finalizado",
-        description: "Sincronizando dados de faturamento...",
+        title: 'Atendimento finalizado',
+        description: 'Sincronizando dados de faturamento...',
       });
 
       // ✅ NOVO: Sincronizar faturamento para Contas a Receber
       console.log('💳 Sincronizando faturamento do appointment:', appointmentFlow.appointmentId);
       const billingResult = await syncAppointmentBilling(appointmentFlow.appointmentId);
-      
+
       if (billingResult.success) {
         console.log('✅ Faturamento sincronizado com sucesso');
         toast({
-          title: "Sucesso",
+          title: 'Sucesso',
           description: billingResult.message,
         });
       } else {
         console.error('⚠️ Erro ao sincronizar faturamento:', billingResult.error);
         toast({
-          title: "Aviso",
+          title: 'Aviso',
           description: billingResult.message,
-          variant: "destructive",
+          variant: 'destructive',
         });
       }
 
@@ -455,15 +469,15 @@ export default function PatientDetailPage() {
           const formattedDate = startDate.toISOString().split('T')[0];
           navigate(`/clinica/agenda?date=${formattedDate}`, { replace: true });
         } else {
-          navigate("/clinica/agenda", { replace: true });
+          navigate('/clinica/agenda', { replace: true });
         }
       }, 1500);
     } catch (finishError) {
-      console.error("❌ Erro ao finalizar atendimento:", finishError);
+      console.error('❌ Erro ao finalizar atendimento:', finishError);
       toast({
-        title: "Erro",
-        description: finishError?.message || "Não foi possível finalizar o atendimento.",
-        variant: "destructive",
+        title: 'Erro',
+        description: finishError?.message || 'Não foi possível finalizar o atendimento.',
+        variant: 'destructive',
       });
     } finally {
       setStartingAppointment(false);
@@ -494,10 +508,8 @@ export default function PatientDetailPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-12">
-              <p className="text-gray-600 mb-6">
-                O paciente solicitado não foi encontrado.
-              </p>
-              <Button onClick={() => navigate("/clinica/pacientes")}>
+              <p className="text-gray-600 mb-6">O paciente solicitado não foi encontrado.</p>
+              <Button onClick={() => navigate('/clinica/pacientes')}>
                 <ArrowLeft size={16} className="mr-2" />
                 Voltar para Lista
               </Button>
@@ -511,22 +523,71 @@ export default function PatientDetailPage() {
   // Renderizar aba ativa
   function renderTabContent() {
     switch (activeTab) {
-      case "dados":
-        return <DadosCadastraisTab patientId={patientId} patientData={patientData} updatePatientData={updatePatientData} />;
-      case "convenios":
-        return <ConveniosTab patientId={patientId} patientData={patientData} updatePatientData={updatePatientData} />;
-      case "familiares":
-        return <FamiliaresTab patientId={patientId} patientData={patientData} updatePatientData={updatePatientData} />;
-      case "documentos":
-        return <DocumentosTab patientId={patientId} patientData={patientData} updatePatientData={updatePatientData} />;
-      case "historico":
-        return <HistoricoClinicoTab patientId={patientId} patientData={patientData} updatePatientData={updatePatientData} defaultProfessional={defaultProfessional} />;
-      case "receitas":
-        return <ReceitasDigitaisTab patientId={patientId} patientData={patientData} updatePatientData={updatePatientData} />;
-      case "laudos":
-        return <LaudosTab patientId={patientId} patientData={patientData} updatePatientData={updatePatientData} />;
-      default:
-        return <DadosCadastraisTab patientId={patientId} patientData={patientData} updatePatientData={updatePatientData} />;
+    case 'dados':
+      return (
+        <DadosCadastraisTab
+          patientId={patientId}
+          patientData={patientData}
+          updatePatientData={updatePatientData}
+        />
+      );
+    case 'convenios':
+      return (
+        <ConveniosTab
+          patientId={patientId}
+          patientData={patientData}
+          updatePatientData={updatePatientData}
+        />
+      );
+    case 'familiares':
+      return (
+        <FamiliaresTab
+          patientId={patientId}
+          patientData={patientData}
+          updatePatientData={updatePatientData}
+        />
+      );
+    case 'documentos':
+      return (
+        <DocumentosTab
+          patientId={patientId}
+          patientData={patientData}
+          updatePatientData={updatePatientData}
+        />
+      );
+    case 'historico':
+      return (
+        <HistoricoClinicoTab
+          patientId={patientId}
+          patientData={patientData}
+          updatePatientData={updatePatientData}
+          defaultProfessional={defaultProfessional}
+        />
+      );
+    case 'receitas':
+      return (
+        <ReceitasDigitaisTab
+          patientId={patientId}
+          patientData={patientData}
+          updatePatientData={updatePatientData}
+        />
+      );
+    case 'laudos':
+      return (
+        <LaudosTab
+          patientId={patientId}
+          patientData={patientData}
+          updatePatientData={updatePatientData}
+        />
+      );
+    default:
+      return (
+        <DadosCadastraisTab
+          patientId={patientId}
+          patientData={patientData}
+          updatePatientData={updatePatientData}
+        />
+      );
     }
   }
 
@@ -539,16 +600,12 @@ export default function PatientDetailPage() {
       <PageLayout
         title={patientData.name}
         breadcrumbs={[
-          { label: "Pacientes", href: "/clinica/pacientes" },
+          { label: 'Pacientes', href: '/clinica/pacientes' },
           { label: patientData.name },
         ]}
       >
         {/* Card do Paciente */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6"
-        >
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
           <Card>
             <CardContent className="pt-6">
               <div className="flex justify-between items-start mb-6 gap-4">
@@ -560,10 +617,13 @@ export default function PatientDetailPage() {
                         src={patientData.photo_url}
                         alt={patientData?.name}
                         className="w-full rounded-lg border-2 border-gray-300 shadow"
-                        style={{ aspectRatio: "3/4", objectFit: "cover" }}
+                        style={{ aspectRatio: '3/4', objectFit: 'cover' }}
                       />
                     ) : (
-                      <div className="w-full bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center" style={{ aspectRatio: "3/4" }}>
+                      <div
+                        className="w-full bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center"
+                        style={{ aspectRatio: '3/4' }}
+                      >
                         <p className="text-2xl">📸</p>
                       </div>
                     )}
@@ -575,7 +635,7 @@ export default function PatientDetailPage() {
                       onClick={() => setShowPhotoEditor(!showPhotoEditor)}
                       className="text-xs h-8 text-blue-600"
                     >
-                      {showPhotoEditor ? "✕" : "📷 Editar"}
+                      {showPhotoEditor ? '✕' : '📷 Editar'}
                     </Button>
                     {patientData?.photo_url && (
                       <Button
@@ -586,15 +646,15 @@ export default function PatientDetailPage() {
                             await updatePatientPhoto(patientId, null);
                             updatePatientData({ ...patientData, photo_url: null });
                             toast({
-                              title: "Sucesso",
-                              description: "Foto removida com sucesso!",
+                              title: 'Sucesso',
+                              description: 'Foto removida com sucesso!',
                             });
                           } catch (error) {
-                            console.error("Erro ao remover foto:", error);
+                            console.error('Erro ao remover foto:', error);
                             toast({
-                              title: "Erro",
-                              description: "Não foi possível remover a foto",
-                              variant: "destructive",
+                              title: 'Erro',
+                              description: 'Não foi possível remover a foto',
+                              variant: 'destructive',
                             });
                           }
                         }}
@@ -612,7 +672,7 @@ export default function PatientDetailPage() {
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Prontuário</p>
                     <p className="font-bold text-blue-600 text-lg">
-                      {patientData.prontuario_numero || "—"}
+                      {patientData.prontuario_numero || '—'}
                     </p>
                   </div>
 
@@ -620,7 +680,7 @@ export default function PatientDetailPage() {
                   <div>
                     <p className="text-sm text-gray-600 mb-1">CPF</p>
                     <p className="font-semibold text-gray-900">
-                      {patientData.document_id || patientData.cpf || "N/A"}
+                      {patientData.document_id || patientData.cpf || 'N/A'}
                     </p>
                   </div>
 
@@ -629,9 +689,9 @@ export default function PatientDetailPage() {
                     <p className="font-semibold text-gray-900">
                       {patientData.birthdate || patientData.birth_date
                         ? new Date(
-                            patientData.birthdate || patientData.birth_date
-                          ).toLocaleDateString("pt-BR")
-                        : "N/A"}
+                          patientData.birthdate || patientData.birth_date,
+                        ).toLocaleDateString('pt-BR')
+                        : 'N/A'}
                       {age && ` (${age} anos)`}
                     </p>
                   </div>
@@ -639,7 +699,7 @@ export default function PatientDetailPage() {
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Telefone</p>
                     <p className="font-semibold text-gray-900">
-                      {patientData.phone || patientData.cell_phone || "N/A"}
+                      {patientData.phone || patientData.cell_phone || 'N/A'}
                     </p>
                   </div>
                 </div>
@@ -653,7 +713,7 @@ export default function PatientDetailPage() {
                       className="bg-violet-600 hover:bg-violet-700 text-white whitespace-nowrap"
                     >
                       <Stethoscope size={18} className="mr-2" />
-                      {startingAppointment ? "Iniciando..." : "Iniciar Atendimento"}
+                      {startingAppointment ? 'Iniciando...' : 'Iniciar Atendimento'}
                     </Button>
                   )}
                   {isAppointmentInProgress && appointmentFlow.appointmentId && (
@@ -663,33 +723,34 @@ export default function PatientDetailPage() {
                       className="bg-green-600 hover:bg-green-700 text-white whitespace-nowrap"
                     >
                       <CheckCircle size={18} className="mr-2" />
-                      {startingAppointment ? "Finalizando..." : "Finalizar Atendimento"}
+                      {startingAppointment ? 'Finalizando...' : 'Finalizar Atendimento'}
                     </Button>
                   )}
                   {comingFromAppointment && (
                     <Button
                       onClick={() => {
-                        const appointmentModeData = localStorage.getItem("fromAppointmentMode");
-                        let appointmentDate = appointmentFlow.scheduledDate || location.state?.appointmentDate || null;
-                        
+                        const appointmentModeData = localStorage.getItem('fromAppointmentMode');
+                        let appointmentDate =
+                          appointmentFlow.scheduledDate || location.state?.appointmentDate || null;
+
                         if (appointmentModeData) {
                           try {
                             const data = JSON.parse(appointmentModeData);
                             appointmentDate = data.appointmentDate;
                           } catch (err) {
-                            console.error("Erro ao parsear data do appointment:", err);
+                            console.error('Erro ao parsear data do appointment:', err);
                           }
                         }
-                        
-                        localStorage.removeItem("fromAppointmentMode");
-                        
+
+                        localStorage.removeItem('fromAppointmentMode');
+
                         if (appointmentDate) {
                           // Navegar para a agenda no dia ou período do agendamento
                           const startDate = new Date(appointmentDate);
                           const formattedDate = startDate.toISOString().split('T')[0];
                           navigate(`/clinica/agenda?date=${formattedDate}`, { replace: true });
                         } else {
-                          navigate("/clinica/agenda", { replace: true });
+                          navigate('/clinica/agenda', { replace: true });
                         }
                       }}
                       className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap"
@@ -702,8 +763,10 @@ export default function PatientDetailPage() {
                     <Button
                       onClick={() => {
                         // Limpar dados de checkin e voltar à agenda
-                        localStorage.removeItem("checkinReturnData");
-                        navigate(`/clinica/agenda?checkinComplete=dados_cadastrais&appointmentId=${checkinData?.appointmentId}`);
+                        localStorage.removeItem('checkinReturnData');
+                        navigate(
+                          `/clinica/agenda?checkinComplete=dados_cadastrais&appointmentId=${checkinData?.appointmentId}`,
+                        );
                       }}
                       className="bg-orange-600 hover:bg-orange-700 text-white whitespace-nowrap"
                     >
@@ -714,9 +777,7 @@ export default function PatientDetailPage() {
                   {/* ✅ Botão "Agendar Atendimento" - Aparecer APENAS quando não há atendimento em progresso */}
                   {!canStartAppointment && !isAppointmentInProgress && (
                     <Button
-                      onClick={() =>
-                        navigate(`/clinica/agenda?patientId=${patientId}`)
-                      }
+                      onClick={() => navigate(`/clinica/agenda?patientId=${patientId}`)}
                       className="bg-green-600 hover:bg-green-700 text-white whitespace-nowrap"
                     >
                       <Calendar size={18} className="mr-2" />
@@ -740,7 +801,9 @@ export default function PatientDetailPage() {
             <Card className="border-blue-300 bg-blue-50">
               <CardContent className="pt-6">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">📷 Capturar/Atualizar Foto</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    📷 Capturar/Atualizar Foto
+                  </h3>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -757,21 +820,21 @@ export default function PatientDetailPage() {
                         const photoUrl = await uploadPatientPhoto(
                           clinicId,
                           patientId,
-                          photoDataUrl
+                          photoDataUrl,
                         );
                         await updatePatientPhoto(patientId, photoUrl);
                         updatePatientData({ ...patientData, photo_url: photoUrl });
                         setShowPhotoEditor(false);
                         toast({
-                          title: "Sucesso",
-                          description: "Foto atualizada com sucesso!",
+                          title: 'Sucesso',
+                          description: 'Foto atualizada com sucesso!',
                         });
                       } catch (error) {
-                        console.error("Erro ao atualizar foto:", error);
+                        console.error('Erro ao atualizar foto:', error);
                         toast({
-                          title: "Erro",
-                          description: "Não foi possível atualizar a foto",
-                          variant: "destructive",
+                          title: 'Erro',
+                          description: 'Não foi possível atualizar a foto',
+                          variant: 'destructive',
                         });
                       }
                     }}
@@ -785,11 +848,7 @@ export default function PatientDetailPage() {
 
         {/* Alertas */}
         {activeAlerts.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="mb-6 space-y-2"
-          >
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-6 space-y-2">
             {activeAlerts.map((alert, idx) => {
               const IconComponent = alert.icon;
               return (
@@ -800,12 +859,8 @@ export default function PatientDetailPage() {
                   <CardContent className="pt-4 pb-4 flex items-start gap-4">
                     <IconComponent className={`text-${alert.color}-600 mt-1`} />
                     <div className="flex-1">
-                      <p className={`font-semibold text-${alert.color}-900`}>
-                        {alert.title}
-                      </p>
-                      <p className={`text-sm text-${alert.color}-800`}>
-                        {alert.description}
-                      </p>
+                      <p className={`font-semibold text-${alert.color}-900`}>{alert.title}</p>
+                      <p className={`text-sm text-${alert.color}-800`}>{alert.description}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -815,25 +870,35 @@ export default function PatientDetailPage() {
         )}
 
         {/* Navegação de Abas - Melhorada */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="mb-6"
-        >
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-6">
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-1 flex gap-1 overflow-x-auto">
             {TABS.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
-              
+
               // Cores para cada aba
               const colorMap = {
-                blue: isActive ? "bg-blue-600 text-white" : "text-gray-600 hover:text-blue-600 hover:bg-blue-50",
-                red: isActive ? "bg-red-600 text-white" : "text-gray-600 hover:text-red-600 hover:bg-red-50",
-                green: isActive ? "bg-green-600 text-white" : "text-gray-600 hover:text-green-600 hover:bg-green-50",
-                amber: isActive ? "bg-amber-600 text-white" : "text-gray-600 hover:text-amber-600 hover:bg-amber-50",
-                purple: isActive ? "bg-purple-600 text-white" : "text-gray-600 hover:text-purple-600 hover:bg-purple-50",
-                emerald: isActive ? "bg-emerald-600 text-white" : "text-gray-600 hover:text-emerald-600 hover:bg-emerald-50",
-                sky: isActive ? "bg-sky-600 text-white" : "text-gray-600 hover:text-sky-600 hover:bg-sky-50",
+                blue: isActive
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50',
+                red: isActive
+                  ? 'bg-red-600 text-white'
+                  : 'text-gray-600 hover:text-red-600 hover:bg-red-50',
+                green: isActive
+                  ? 'bg-green-600 text-white'
+                  : 'text-gray-600 hover:text-green-600 hover:bg-green-50',
+                amber: isActive
+                  ? 'bg-amber-600 text-white'
+                  : 'text-gray-600 hover:text-amber-600 hover:bg-amber-50',
+                purple: isActive
+                  ? 'bg-purple-600 text-white'
+                  : 'text-gray-600 hover:text-purple-600 hover:bg-purple-50',
+                emerald: isActive
+                  ? 'bg-emerald-600 text-white'
+                  : 'text-gray-600 hover:text-emerald-600 hover:bg-emerald-50',
+                sky: isActive
+                  ? 'bg-sky-600 text-white'
+                  : 'text-gray-600 hover:text-sky-600 hover:bg-sky-50',
               };
 
               return (
@@ -859,7 +924,7 @@ export default function PatientDetailPage() {
           {/* Descrição ativa */}
           <div className="mt-3 px-2">
             <p className="text-xs text-gray-500 font-medium">
-              {TABS.find(t => t.id === activeTab)?.description}
+              {TABS.find((t) => t.id === activeTab)?.description}
             </p>
           </div>
         </motion.div>
@@ -878,4 +943,3 @@ export default function PatientDetailPage() {
     </>
   );
 }
-

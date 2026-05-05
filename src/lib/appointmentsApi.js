@@ -1,10 +1,10 @@
 // src/lib/appointmentsApi.js
-import { supabase } from "@/lib/customSupabaseClient";
-import { logAppointmentAudit, AUDIT_ACTION_TYPES, logStatusChange } from "@/lib/auditApi";
-import { migrateStatus } from "@/lib/appointmentStatusConstants";
+import { supabase } from '@/lib/customSupabaseClient';
+import { logAppointmentAudit, AUDIT_ACTION_TYPES, logStatusChange } from '@/lib/auditApi';
+import { migrateStatus } from '@/lib/appointmentStatusConstants';
 
 // Import financial integration for auto-triggers
-import { finalizeAppointmentWithFinancials } from "@/lib/appointmentFinancialIntegrationApi";
+import { finalizeAppointmentWithFinancials } from '@/lib/appointmentFinancialIntegrationApi';
 
 // ============================================================
 // HELPERS: Normaliza��o e Transforma��o
@@ -15,7 +15,7 @@ import { finalizeAppointmentWithFinancials } from "@/lib/appointmentFinancialInt
  * @param {string} val - Valor a normalizar
  * @returns {string|null} UUID ou null
  */
-const normalizeUUID = (val) => (val === '' || val === undefined) ? null : val;
+const normalizeUUID = (val) => (val === '' || val === undefined ? null : val);
 
 /**
  * Extrai data em formato YYYY-MM-DD
@@ -23,10 +23,14 @@ const normalizeUUID = (val) => (val === '' || val === undefined) ? null : val;
  * @returns {string|null} Data formatada ou null
  */
 const extractDate = (dateStr) => {
-  if (!dateStr) return null;
+  if (!dateStr) {
+    return null;
+  }
   try {
     const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return null;
+    if (isNaN(date.getTime())) {
+      return null;
+    }
     return date.toISOString().split('T')[0];
   } catch {
     return null;
@@ -39,7 +43,9 @@ const extractDate = (dateStr) => {
  * @returns {string|null} Hora formatada ou null
  */
 const extractTime = (timeStr) => {
-  if (!timeStr) return null;
+  if (!timeStr) {
+    return null;
+  }
   try {
     // Se j� � HH:MM ou HH:MM:SS, retornar como est�
     if (/^\d{2}:\d{2}(:\d{2})?$/.test(timeStr)) {
@@ -47,7 +53,9 @@ const extractTime = (timeStr) => {
     }
     // Se � ISO, extrair a parte de hora
     const date = new Date(timeStr);
-    if (isNaN(date.getTime())) return null;
+    if (isNaN(date.getTime())) {
+      return null;
+    }
     const isoStr = date.toISOString();
     return isoStr.split('T')[1].substring(0, 8); // HH:MM:SS
   } catch {
@@ -67,42 +75,45 @@ const extractTime = (timeStr) => {
 function validateAppointment(payload) {
   // Valida��es obrigat�rias
   if (!payload.clinicId && !payload.clinic_id) {
-    throw new Error("? Cl�nica � obrigat�ria");
+    throw new Error('? Cl�nica � obrigat�ria');
   }
 
   if (!payload.date && !payload.scheduled_date) {
-    throw new Error("? Data do agendamento � obrigat�ria");
+    throw new Error('? Data do agendamento � obrigat�ria');
   }
 
   if (!payload.startTime && !payload.scheduled_time) {
-    throw new Error("? Hor�rio do agendamento � obrigat�rio");
+    throw new Error('? Hor�rio do agendamento � obrigat�rio');
   }
 
   // Validar data/hora se forem fornecidas
   if (payload.date) {
     const date = new Date(payload.date);
     if (isNaN(date.getTime())) {
-      throw new Error("? Data inv�lida");
+      throw new Error('? Data inv�lida');
     }
   }
 
   if (payload.startTime) {
-    if (!/^\d{2}:\d{2}(:\d{2})?$/.test(payload.startTime) && !payload.startTime.match(/T\d{2}:\d{2}/)) {
-      throw new Error("? Hor�rio em formato inv�lido (esperado HH:MM ou ISO)");
+    if (
+      !/^\d{2}:\d{2}(:\d{2})?$/.test(payload.startTime) &&
+      !payload.startTime.match(/T\d{2}:\d{2}/)
+    ) {
+      throw new Error('? Hor�rio em formato inv�lido (esperado HH:MM ou ISO)');
     }
   }
 
   // Valida��es de neg�cio
   if (payload.value !== undefined && payload.value < 0) {
-    throw new Error("? Valor n�o pode ser negativo");
+    throw new Error('? Valor n�o pode ser negativo');
   }
 
   if (payload.discount !== undefined && payload.discount < 0) {
-    throw new Error("? Desconto n�o pode ser negativo");
+    throw new Error('? Desconto n�o pode ser negativo');
   }
 
   if (payload.duration !== undefined && payload.duration <= 0) {
-    throw new Error("? Dura��o deve ser maior que zero");
+    throw new Error('? Dura��o deve ser maior que zero');
   }
 
   return true;
@@ -114,27 +125,27 @@ function validateAppointment(payload) {
 
 /**
  * Mapeia payload do frontend para formato correto do banco de dados
- * 
+ *
  * REGRAS CR�TICAS:
  * - ? NUNCA usar start_time (coluna n�o existe no banco)
  * - ? SEMPRE converter startTime ? scheduled_time
  * - ? SEMPRE converter date ? scheduled_date
  * - ? SEMPRE passar pelo mapper (nunca enviar payload direto)
- * 
+ *
  * Frontend usa:  date, startTime, endTime, clinicId, patientId, etc
  * Banco usa:     scheduled_date, scheduled_time, end_time, clinic_id, patient_id, etc
- * 
+ *
  * @param {Object} payload - Dados vindos do frontend
  * @returns {Object} Dados formatados para o banco
  * @throws {Error} Se payload for inv�lido
  */
 function mapToDatabase(payload) {
-  if (!payload) throw new Error("Payload inválido");
+  if (!payload) {
+    throw new Error('Payload inválido');
+  }
 
   // ✅ ACEITAR AMBOS OS FORMATOS (camelCase E snake_case)
-  return {
-    id: payload.id,
-
+  const result = {
     clinic_id: payload.clinicId || payload.clinic_id,
     patient_id: payload.patientId || payload.patient_id,
     professional_id: payload.professionalId || payload.professional_id,
@@ -142,38 +153,59 @@ function mapToDatabase(payload) {
     room_id: payload.roomId || payload.room_id,
     payer_id: payload.payerId || payload.payer_id,
     plan_id: payload.planId || payload.plan_id,
-    plano_contas_id: payload.plano_contas_id || payload.planosContasId || payload.planAccountId || null,
+    plano_contas_id:
+      payload.plano_contas_id || payload.planosContasId || payload.planAccountId || null,
     scheduled_date: payload.date || payload.scheduled_date,
     scheduled_time: payload.time || payload.startTime || payload.scheduled_time,
     end_time: payload.endTime || payload.end_time,
 
     // 📊 Status e valores
-    status: payload.status || "scheduled",
+    status: payload.status || 'scheduled',
     notes: payload.notes || null,
     value: payload.value ? parseFloat(payload.value) : null,
     duration: payload.duration || 30,
-    
+
     // 💳 Cartão e autorização
     card_number: payload.card_number || payload.cardNumber || null,
     card_verified: payload.card_verified !== undefined ? payload.card_verified : false,
     authorization_number: payload.authorization_number || payload.authorizationNumber || null,
     authorization_expiry: payload.authorization_expiry || payload.authorizationExpiry || null,
     guide_number: payload.guide_number || payload.guideNumber || null,
-    
+
     // 📋 Faturamento e desconto
     discount: payload.discount !== undefined ? parseFloat(payload.discount) : 0,
     discount_reason: payload.discount_reason || payload.discountReason || null,
     discount_requested_at: payload.discount_requested_at || payload.discountRequestedAt || null,
     discount_requested_by: payload.discount_requested_by || payload.discountRequestedBy || null,
+    discount_requested_by_name:
+      payload.discount_requested_by_name || payload.discountRequestedByName || null,
     discount_authorized_by: payload.discount_authorized_by || payload.discountAuthorizedBy || null,
     discount_authorized_at: payload.discount_authorized_at || payload.discountAuthorizedAt || null,
     discount_rejected_by: payload.discount_rejected_by || payload.discountRejectedBy || null,
     discount_rejected_at: payload.discount_rejected_at || payload.discountRejectedAt || null,
     discount_observation: payload.discount_observation || payload.discountObservation || null,
     payment_method: payload.payment_method || payload.paymentMethod || null,
-    billing_data: typeof payload.billing_data === 'string' ? payload.billing_data : (payload.billing_data ? JSON.stringify(payload.billing_data) : null),
+    payment_splits:
+      typeof payload.payment_splits === 'string'
+        ? payload.payment_splits
+        : payload.payment_splits
+          ? JSON.stringify(payload.payment_splits)
+          : null,
+    billing_data:
+      typeof payload.billing_data === 'string'
+        ? payload.billing_data
+        : payload.billing_data
+          ? JSON.stringify(payload.billing_data)
+          : null,
     billing_notes: payload.billing_notes || payload.billingNotes || null,
   };
+
+  // ✅ Só incluir ID se existir (para UPDATE/EDIT)
+  if (payload.id) {
+    result.id = payload.id;
+  }
+
+  return result;
 }
 
 // ============================================================
@@ -182,15 +214,17 @@ function mapToDatabase(payload) {
 
 /**
  * Mapeia registro do banco para formato esperado pelo frontend
- * 
+ *
  * Convers�o: Banco (snake_case) ? Frontend (camelCase)
- * 
+ *
  * @param {Object} record - Registro vindo do banco de dados
  * @returns {Object} Dados formatados para o frontend
  */
 export function mapFromDatabase(record) {
-  if (!record) return null;
-  
+  if (!record) {
+    return null;
+  }
+
   // 🔍 DEBUG: Log raw data before mapping
   console.log('📦 [mapFromDatabase] Raw record snake_case:', {
     patient_id: record.patient_id,
@@ -199,42 +233,43 @@ export function mapFromDatabase(record) {
     room_id: record.room_id,
     payer_id: record.payer_id,
   });
-  
+
   const mapped = {
     // IDs em camelCase (critical para componentes)
     id: record.id,
     clinicId: record.clinic_id,
     patientId: record.patient_id,
-    professionalId: record.professional_id,  // ✅ ESSE ERA O PROBLEMA!
+    professionalId: record.professional_id, // ✅ ESSE ERA O PROBLEMA!
     serviceId: record.service_id,
     roomId: record.room_id,
     payerId: record.payer_id,
     planId: record.plan_id,
-    
+
     // Datas/Horários
     date: record.scheduled_date,
     startTime: extractTime(record.scheduled_time),
     time: extractTime(record.scheduled_time),
     endTime: extractTime(record.end_time),
     end_time: extractTime(record.end_time),
-    
+
     // Status e notas
     status: record.status,
     notes: record.notes,
     value: record.value,
     duration: record.duration,
     discount: record.discount,
-    
+
     // Campos financeiros
     discountReason: record.discount_reason,
     discountRequestedAt: record.discount_requested_at,
     discountRequestedBy: record.discount_requested_by,
+    discountRequestedByName: record.discount_requested_by_name,
     discountAuthorizedBy: record.discount_authorized_by,
     discountAuthorizedAt: record.discount_authorized_at,
     discountRejectedBy: record.discount_rejected_by,
     discountRejectedAt: record.discount_rejected_at,
     discountObservation: record.discount_observation,
-    
+
     // Dados do paciente
     patientType: record.patient_type,
     leadName: record.lead_name,
@@ -245,7 +280,7 @@ export function mapFromDatabase(record) {
     patientPhone: record.patients?.phone || record.patient_phone || null,
     patientMobile: record.patients?.cell_phone || record.patient_mobile || null,
     patientProntuario: record.patients?.prontuario_numero || null,
-    
+
     // Dados de seguro/cartão
     cardNumber: record.card_number,
     insuranceCardVerified: record.insurance_card_verified,
@@ -253,40 +288,45 @@ export function mapFromDatabase(record) {
     authorizationDate: record.authorization_date,
     authorizationVerified: record.authorization_verified,
     authorizationExpiry: record.authorization_expiry,
-    
+
     // Dados de faturamento
     guideNumber: record.guide_number,
     guideGenerated: record.guide_generated,
     paymentMethod: record.payment_method,
+    paymentSplits: record.payment_splits
+      ? typeof record.payment_splits === 'string'
+        ? JSON.parse(record.payment_splits)
+        : record.payment_splits
+      : null,
     paymentStatus: record.payment_status,
     billingData: record.billing_data,
     billingNotes: record.billing_notes,
     billingXml: record.billing_xml,
-    
+
     // Convênios e planos
     convenioId: record.convenio_id,
     planoContasId: record.plano_contas_id,
     agendaRuleId: record.agenda_rule_id,
-    
+
     // Timestamps
     createdAt: record.created_at,
     updatedAt: record.updated_at,
-    
+
     // Dados relacionados (nomes para exibição) - CAMELCASE
     professionalName: record.professionals?.name || null,
     serviceName: record.services?.name || null,
     roomName: record.rooms?.name || null,
-    payerName: record.payers?.active === false ? null : (record.payers?.name || 'Particular'),
+    payerName: record.payers?.active === false ? null : record.payers?.name || 'Particular',
     planName: record.plans?.name || null,
     planCode: record.plans?.code || null,
-    
+
     // 📦 Dados relacionados (OBJETOS COMPLETOS para componentes)
     professionals: record.professionals || null,
     services: record.services || null,
     rooms: record.rooms || null,
     payers: record.payers || null,
     patients: record.patients || null,
-    
+
     // Dados relacionados (nomes para exibição) - SNAKE_CASE (compatibilidade com agenda)
     patient_name: record.patients?.name || record.lead_name || null,
     patient_phone: record.patients?.phone || record.patient_phone || null,
@@ -295,12 +335,12 @@ export function mapFromDatabase(record) {
     professional_name: record.professionals?.name || null,
     service_name: record.services?.name || null,
     room_name: record.rooms?.name || null,
-    payer_name: record.payers?.active === false ? null : (record.payers?.name || 'Particular'),
+    payer_name: record.payers?.active === false ? null : record.payers?.name || 'Particular',
     plan_name: record.plans?.name || null,
     plan_code: record.plans?.code || null,
     plano_contas_id: record.plano_contas_id || null,
   };
-  
+
   // 🔍 DEBUG: Log mapped camelCase data
   console.log(`✅ [mapFromDatabase] MAPEADO - ID: ${mapped.id}`, {
     patientId: mapped.patientId,
@@ -314,7 +354,7 @@ export function mapFromDatabase(record) {
     roomName: mapped.roomName,
     payerName: mapped.payerName,
   });
-  
+
   return mapped;
 }
 
@@ -324,8 +364,9 @@ export function mapFromDatabase(record) {
 
 export async function listAppointmentsByDate(clinicId, date) {
   const { data, error } = await supabase
-    .from("appointments")
-    .select(`
+    .from('appointments')
+    .select(
+      `
       *,
       patients (id, name, document_id, phone, cell_phone, prontuario_numero, photo_url),
       professionals (id, name),
@@ -333,17 +374,18 @@ export async function listAppointmentsByDate(clinicId, date) {
       rooms (id, name),
       payers (id, name, active),
       plans (id, name, code)
-    `)
-    .eq("clinic_id", clinicId)
-    .eq("scheduled_date", date)
-    .order("scheduled_time", { ascending: true });
+    `,
+    )
+    .eq('clinic_id', clinicId)
+    .eq('scheduled_date', date)
+    .order('scheduled_time', { ascending: true });
 
   if (error) {
     console.error('[listAppointmentsByDate] Erro:', error);
     throw error;
   }
 
-  return data.map(apt => {
+  return data.map((apt) => {
     const mapped = mapFromDatabase(apt);
     mapped.status = migrateStatus(mapped.status);
     return mapped;
@@ -372,38 +414,44 @@ export async function listAppointments({
   }
 
   let query = supabase
-    .from("appointments")
-    .select(`
+    .from('appointments')
+    .select(
+      `
       *,
       patients (id, name, phone),
       professionals (id, name),
       services (id, name),
       payers (id, name),
       rooms (id, name)
-    `)
-    .eq("clinic_id", clinicId)
-    .order("scheduled_date", { ascending: true })
-    .order("scheduled_time", { ascending: true });
+    `,
+    )
+    .eq('clinic_id', clinicId)
+    .order('scheduled_date', { ascending: true })
+    .order('scheduled_time', { ascending: true });
 
   // Convert ISO strings to YYYY-MM-DD format for DATE column comparison
   if (start) {
     const startDate = new Date(start).toISOString().split('T')[0];
-    query = query.gte("scheduled_date", startDate);
+    query = query.gte('scheduled_date', startDate);
   }
   if (end) {
     const endDate = new Date(end).toISOString().split('T')[0];
-    query = query.lte("scheduled_date", endDate);
+    query = query.lte('scheduled_date', endDate);
   }
   if (effectiveProfessionalId) {
-    query = query.eq("professional_id", effectiveProfessionalId);
+    query = query.eq('professional_id', effectiveProfessionalId);
   }
-  if (roomId) query = query.eq("room_id", roomId);
-  if (status) query = query.eq("status", status);
+  if (roomId) {
+    query = query.eq('room_id', roomId);
+  }
+  if (status) {
+    query = query.eq('status', status);
+  }
 
   const { data, error } = await query;
 
   if (error) {
-    console.error("❌ [listAppointments] Erro ao buscar agendamentos:", error);
+    console.error('❌ [listAppointments] Erro ao buscar agendamentos:', error);
     return [];
   }
 
@@ -426,68 +474,119 @@ export async function listAppointments({
   }
 
   // Se os relacionamentos não vieram do Supabase, buscar separadamente
-  const appointmentsWithRelations = (data ?? []).map(apt => ({
+  const appointmentsWithRelations = (data ?? []).map((apt) => ({
     ...apt,
     // Se não temos o objeto patients, tentar usar o campo desnormalizado patient_name
-    patients: apt.patients || (apt.patient_id ? { id: apt.patient_id, name: apt.patient_name } : null),
-    professionals: apt.professionals || (apt.professional_id ? { id: apt.professional_id, name: null } : null),
+    patients:
+      apt.patients || (apt.patient_id ? { id: apt.patient_id, name: apt.patient_name } : null),
+    professionals:
+      apt.professionals || (apt.professional_id ? { id: apt.professional_id, name: null } : null),
     services: apt.services || (apt.service_id ? { id: apt.service_id, name: null } : null),
     payers: apt.payers || (apt.payer_id ? { id: apt.payer_id, name: apt.payer_name } : null),
   }));
 
   // 🔍 Se faltam dados de paciente/profissional/serviço/convênio, buscar separadamente
-  const needsPatientNames = appointmentsWithRelations.some(a => 
-    (a.patient_id && !a.patients?.name) || 
-    (a.professional_id && !a.professionals?.name) ||
-    (a.service_id && !a.services?.name) ||
-    (a.payer_id && !a.payers?.name)
+  const needsPatientNames = appointmentsWithRelations.some(
+    (a) =>
+      (a.patient_id && !a.patients?.name) ||
+      (a.professional_id && !a.professionals?.name) ||
+      (a.service_id && !a.services?.name) ||
+      (a.payer_id && !a.payers?.name),
   );
 
   if (needsPatientNames) {
     console.log('⚠️ [listAppointments] Faltam dados de relacionamentos, buscando separadamente...');
-    
+
     // Coletar IDs únicos que faltam
-    const patientIds = [...new Set(appointmentsWithRelations
-      .filter(a => a.patient_id && !a.patients?.name)
-      .map(a => a.patient_id))];
-    
-    const profIds = [...new Set(appointmentsWithRelations
-      .filter(a => a.professional_id && !a.professionals?.name)
-      .map(a => a.professional_id))];
-    
-    const serviceIds = [...new Set(appointmentsWithRelations
-      .filter(a => a.service_id && !a.services?.name)
-      .map(a => a.service_id))];
-    
-    const payerIds = [...new Set(appointmentsWithRelations
-      .filter(a => a.payer_id && !a.payers?.name)
-      .map(a => a.payer_id))];
+    const patientIds = [
+      ...new Set(
+        appointmentsWithRelations
+          .filter((a) => a.patient_id && !a.patients?.name)
+          .map((a) => a.patient_id),
+      ),
+    ];
+
+    const profIds = [
+      ...new Set(
+        appointmentsWithRelations
+          .filter((a) => a.professional_id && !a.professionals?.name)
+          .map((a) => a.professional_id),
+      ),
+    ];
+
+    const serviceIds = [
+      ...new Set(
+        appointmentsWithRelations
+          .filter((a) => a.service_id && !a.services?.name)
+          .map((a) => a.service_id),
+      ),
+    ];
+
+    const payerIds = [
+      ...new Set(
+        appointmentsWithRelations
+          .filter((a) => a.payer_id && !a.payers?.name)
+          .map((a) => a.payer_id),
+      ),
+    ];
 
     // Buscar dados em paralelo
     const [patientsData, profsData, servicesData, payersData] = await Promise.all([
-      patientIds.length > 0 ? supabase.from('patients').select('id, name, phone').in('id', patientIds).then(r => r.data || []) : Promise.resolve([]),
-      profIds.length > 0 ? supabase.from('professionals').select('id, name').in('id', profIds).then(r => r.data || []) : Promise.resolve([]),
-      serviceIds.length > 0 ? supabase.from('services').select('id, name').in('id', serviceIds).then(r => r.data || []) : Promise.resolve([]),
-      payerIds.length > 0 ? supabase.from('payers').select('id, name').in('id', payerIds).then(r => r.data || []) : Promise.resolve([]),
+      patientIds.length > 0
+        ? supabase
+          .from('patients')
+          .select('id, name, phone')
+          .in('id', patientIds)
+          .then((r) => r.data || [])
+        : Promise.resolve([]),
+      profIds.length > 0
+        ? supabase
+          .from('professionals')
+          .select('id, name')
+          .in('id', profIds)
+          .then((r) => r.data || [])
+        : Promise.resolve([]),
+      serviceIds.length > 0
+        ? supabase
+          .from('services')
+          .select('id, name')
+          .in('id', serviceIds)
+          .then((r) => r.data || [])
+        : Promise.resolve([]),
+      payerIds.length > 0
+        ? supabase
+          .from('payers')
+          .select('id, name')
+          .in('id', payerIds)
+          .then((r) => r.data || [])
+        : Promise.resolve([]),
     ]);
 
     // Popular os dados que faltavam
-    appointmentsWithRelations.forEach(apt => {
+    appointmentsWithRelations.forEach((apt) => {
       if (apt.patient_id && !apt.patients?.name) {
-        const p = patientsData.find(x => x.id === apt.patient_id);
-        if (p) apt.patients = p;
+        const p = patientsData.find((x) => x.id === apt.patient_id);
+        if (p) {
+          apt.patients = p;
+        }
       }
       if (apt.professional_id && !apt.professionals?.name) {
-        const p = profsData.find(x => x.id === apt.professional_id);
-        if (p) apt.professionals = p;
+        const p = profsData.find((x) => x.id === apt.professional_id);
+        if (p) {
+          apt.professionals = p;
+        }
       }
       if (apt.service_id && !apt.services?.name) {
-        const s = servicesData.find(x => x.id === apt.service_id);
-        if (s) apt.services = s;
+        const s = servicesData.find((x) => x.id === apt.service_id);
+        if (s) {
+          apt.services = s;
+        }
       }
       if (apt.payer_id && !apt.payers?.name) {
-        const p = payersData.find(x => x.id === apt.payer_id);
-        if (p) apt.payers = p;
+        const p = payersData.find((x) => x.id === apt.payer_id);
+        if (p) {
+          apt.payers = p;
+        }
       }
     });
 
@@ -500,7 +599,7 @@ export async function listAppointments({
   }
 
   const result = appointmentsWithRelations.map(normalizeAppointment);
-  
+
   // Helpers function to normalize appointment with proper field mapping and display data
   function normalizeAppointment(apt) {
     const mapped = mapFromDatabase(apt);
@@ -526,15 +625,18 @@ export async function listAppointments({
     console.log('   payer_name:', first.payer_name);
   }
 
-  console.log(`✅ [listAppointments] Carregados ${result.length} agendamentos para clínica ${clinicId}`);
-  
+  console.log(
+    `✅ [listAppointments] Carregados ${result.length} agendamentos para clínica ${clinicId}`,
+  );
+
   return result;
 }
 
 export async function getAppointmentById(appointmentId) {
   const { data: apt, error } = await supabase
     .from('appointments')
-    .select(`
+    .select(
+      `
       id,
       clinic_id,
       patient_id,
@@ -588,7 +690,8 @@ export async function getAppointmentById(appointmentId) {
       services (id, name, code),
       payers (id, name, active),
       plans (id, name, code)
-    `)
+    `,
+    )
     .eq('id', appointmentId)
     .maybeSingle();
 
@@ -606,13 +709,13 @@ export async function getAppointmentById(appointmentId) {
   const mapped = mapFromDatabase(apt);
   // Apply status migration
   mapped.status = migrateStatus(mapped.status);
-  
+
   console.log('✅ [getAppointmentById] RAW SUPABASE RESPONSE:', {
     scheduled_date: apt.scheduled_date,
     scheduled_time: apt.scheduled_time,
     end_time: apt.end_time,
   });
-  
+
   console.log('✅ [getAppointmentById] APÓS MAPEAMENTO:', {
     id: mapped.id,
     professionalId: mapped.professionalId,
@@ -621,7 +724,7 @@ export async function getAppointmentById(appointmentId) {
     startTime: mapped.startTime,
     endTime: mapped.endTime,
   });
-  
+
   return mapped;
 }
 
@@ -629,19 +732,23 @@ export async function createAppointment(payload) {
   const data = mapToDatabase(payload);
 
   const { data: result, error } = await supabase
-    .from("appointments")
+    .from('appointments')
     .insert([data])
-    .select(`
+    .select(
+      `
       *,
       patients (id, name, phone),
       professionals (id, name),
       services (id, name),
       payers (id, name),
       rooms (id, name)
-    `)
+    `,
+    )
     .single();
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
   console.log('✅ [createAppointment] Appointment created com relacionamentos:', {
     appointmentId: result?.id,
@@ -655,21 +762,17 @@ export async function createAppointment(payload) {
   return mapFromDatabase(result);
 }
 
-
 export async function updateAppointment(id, payload) {
   console.log('🔴🔴🔴 [updateAppointment] INICIANDO UPDATE');
   console.log('   ID:', id);
   console.log('   Payload recebido:', JSON.stringify(payload, null, 2));
-  
+
   const data = mapToDatabase(payload);
-  
+
   console.log('   Data após mapToDatabase:', JSON.stringify(data, null, 2));
 
   console.log('📤 [updateAppointment] Enviando UPDATE para Supabase...');
-  const { data: result, error } = await supabase
-    .from("appointments")
-    .update(data)
-    .eq("id", id)
+  const { data: result, error } = await supabase.from('appointments').update(data).eq('id', id)
     .select(`
       *,
       patients (id, name, phone),
@@ -713,7 +816,7 @@ export async function updateAppointment(id, payload) {
   console.warn('⚠️ [updateAppointment] UPDATE executado mas sem dados retornados (possível RLS)');
   console.warn('   ⚠️⚠️⚠️ POTENCIAL PROBLEMA: RLS bloqueou a SELECT após UPDATE! ⚠️⚠️⚠️');
   console.warn('   ✅ [FIX v2] Construindo resposta mapeada corretamente do payload original');
-  
+
   // ✅ FIX v2: Se payload contém snake_case, mapear para frontend format
   // Se payload contém camelCase, usar como está
   const responseData = {
@@ -743,31 +846,31 @@ export async function updateAppointment(id, payload) {
     // Spread para preservar qualquer outro campo
     ...payload,
   };
-  
+
   console.warn('   Retornando resposta fallback mapeada:', responseData);
   return responseData;
 }
-
 
 /**
  * Deletar agendamento
  */
 export async function deleteAppointment(id) {
   if (!id) {
-    throw new Error("ID do agendamento é obrigatório");
+    throw new Error('ID do agendamento é obrigatório');
   }
 
   try {
     // 🚀 BLOCKER 4 FIX: Cascade delete financial records first
     console.log('🔄 [DELETE] Limpando registros financeiros associados...');
-    
+
     // Delete ar_receivables (cascade FK will delete medical_production → medical_repasse)
     const { error: arError } = await supabase
       .from('ar_receivables')
       .delete()
       .eq('appointment_id', id);
-    
-    if (arError && arError.code !== 'PGRST116') { // PGRST116 = no rows deleted
+
+    if (arError && arError.code !== 'PGRST116') {
+      // PGRST116 = no rows deleted
       console.warn('⚠️ Erro ao deletar AR:', arError);
     } else {
       console.log('✅ AR e registros financeiros deletados (cascade)');
@@ -778,7 +881,7 @@ export async function deleteAppointment(id) {
       .from('billing_guides')
       .delete()
       .eq('appointment_id', id);
-    
+
     if (guidesError && guidesError.code !== 'PGRST116') {
       console.warn('⚠️ Erro ao deletar guias:', guidesError);
     } else {
@@ -786,24 +889,20 @@ export async function deleteAppointment(id) {
     }
 
     // Now delete the appointment
-    const { error } = await supabase
-      .from("appointments")
-      .delete()
-      .eq("id", id);
+    const { error } = await supabase.from('appointments').delete().eq('id', id);
 
     if (error) {
-      console.error("Erro ao deletar agendamento:", error);
-      throw new Error("Falha ao deletar agendamento");
+      console.error('Erro ao deletar agendamento:', error);
+      throw new Error('Falha ao deletar agendamento');
     }
 
     console.log('✅ Agendamento deletado com sucesso');
     return true;
   } catch (err) {
-    console.error("Erro inesperado:", err);
+    console.error('Erro inesperado:', err);
     throw err;
   }
 }
-
 
 /**
  * Valida se um serviço está disponível para um convênio específico
@@ -818,7 +917,7 @@ export async function validateServicePayerAvailability(serviceId, payerId, clini
     console.warn('⚠️ [validateServicePayerAvailability] Parâmetros incompletos:', {
       serviceId: !!serviceId,
       payerId: !!payerId,
-      clinicId: !!clinicId
+      clinicId: !!clinicId,
     });
     return { available: false };
   }
@@ -835,7 +934,10 @@ export async function validateServicePayerAvailability(serviceId, payerId, clini
 
     if (error && error.code !== 'PGRST116') {
       // PGRST116 = no rows found (não é um erro real)
-      console.error('❌ [validateServicePayerAvailability] Erro ao consultar service_prices:', error);
+      console.error(
+        '❌ [validateServicePayerAvailability] Erro ao consultar service_prices:',
+        error,
+      );
       return { available: false };
     }
 
@@ -845,16 +947,418 @@ export async function validateServicePayerAvailability(serviceId, payerId, clini
       payerId,
       available,
       price: data?.price,
-      coPayment: data?.co_pay
+      coPayment: data?.co_pay,
     });
 
     return {
       available,
       price: data?.price,
-      coPayment: data?.co_pay
+      coPayment: data?.co_pay,
     };
   } catch (err) {
     console.error('❌ [validateServicePayerAvailability] Erro inesperado:', err);
     return { available: false };
+  }
+}
+
+// ============================================================
+// 🆕 MÚLTIPLOS SERVIÇOS POR AGENDAMENTO
+// ============================================================
+
+/**
+ * Criar agendamento com múltiplos serviços
+ * @param {Object} payload - Dados do agendamento
+ * @param {Array} appointmentServices - Array com objetos de serviços
+ * @returns {Promise<Object>} Agendamento criado com serviços
+ */
+export async function createAppointmentWithServices(payload, appointmentServices = []) {
+  if (!appointmentServices || appointmentServices.length === 0) {
+    throw new Error('Adicione pelo menos um serviço ao agendamento');
+  }
+
+  try {
+    // ✅ PASSO 1: Criar agendamento
+    const appointmentData = mapToDatabase(payload);
+
+    const { data: appointmentResult, error: appointmentError } = await supabase
+      .from('appointments')
+      .insert([appointmentData])
+      .select(
+        `
+        *,
+        patients (id, name, phone),
+        professionals (id, name),
+        services (id, name),
+        payers (id, name),
+        rooms (id, name)
+      `,
+      )
+      .single();
+
+    if (appointmentError) {
+      console.error('❌ Erro ao criar agendamento:', appointmentError);
+      throw appointmentError;
+    }
+
+    const appointmentId = appointmentResult.id;
+    console.log('✅ [createAppointmentWithServices] Agendamento criado:', appointmentId);
+
+    // ✅ PASSO 2: Inserir serviços
+    const servicesData = appointmentServices.map((service, index) => ({
+      clinic_id: payload.clinicId || payload.clinic_id,
+      appointment_id: appointmentId,
+      service_id: service.service_id,
+      value: parseFloat(service.value || 0),
+      discount: parseFloat(service.discount || 0),
+      billing_type: service.billing_type || 'per_consultation',
+      quantity: parseInt(service.quantity || 1),
+      sessions_completed: parseInt(service.sessions_completed || 0),
+      status: 'pending',
+      sequence_order: index,
+    }));
+
+    const { data: servicesResult, error: servicesError } = await supabase
+      .from('appointment_services')
+      .insert(servicesData)
+      .select();
+
+    if (servicesError) {
+      console.error('❌ Erro ao inserir serviços:', servicesError);
+      throw servicesError;
+    }
+
+    console.log('✅ [createAppointmentWithServices] Serviços criados:', servicesResult.length);
+
+    // ✅ Retornar agendamento com serviços
+    return {
+      ...mapFromDatabase(appointmentResult),
+      appointment_services: servicesResult,
+    };
+  } catch (error) {
+    console.error('❌ [createAppointmentWithServices] Erro:', error);
+    throw error;
+  }
+}
+
+/**
+ * Atualizar agendamento com múltiplos serviços
+ * @param {string} appointmentId - ID do agendamento
+ * @param {Object} payload - Dados do agendamento
+ * @param {Array} appointmentServices - Array com objetos de serviços
+ * @returns {Promise<Object>} Agendamento atualizado com serviços
+ */
+export async function updateAppointmentWithServices(
+  appointmentId,
+  payload,
+  appointmentServices = [],
+) {
+  if (!appointmentServices || appointmentServices.length === 0) {
+    throw new Error('Adicione pelo menos um serviço ao agendamento');
+  }
+
+  try {
+    // ✅ PASSO 1: Atualizar agendamento
+    const appointmentData = mapToDatabase(payload);
+
+    const { data: appointmentResult, error: appointmentError } = await supabase
+      .from('appointments')
+      .update(appointmentData)
+      .eq('id', appointmentId)
+      .select(
+        `
+        *,
+        patients (id, name, phone),
+        professionals (id, name),
+        services (id, name),
+        payers (id, name),
+        rooms (id, name)
+      `,
+      )
+      .single();
+
+    if (appointmentError) {
+      console.error('❌ Erro ao atualizar agendamento:', appointmentError);
+      throw appointmentError;
+    }
+
+    console.log('✅ [updateAppointmentWithServices] Agendamento atualizado:', appointmentId);
+
+    // ✅ PASSO 2: Remover serviços antigos
+    const { error: deleteError } = await supabase
+      .from('appointment_services')
+      .delete()
+      .eq('appointment_id', appointmentId);
+
+    if (deleteError && deleteError.code !== 'PGRST116') {
+      console.warn('⚠️ Erro ao deletar serviços antigos:', deleteError);
+    }
+
+    // ✅ PASSO 3: Inserir novos serviços
+    const servicesData = appointmentServices
+      .filter((s) => s.service_id) // Filtrar apenas serviços com ID válido
+      .map((service, index) => ({
+        clinic_id: payload.clinicId || payload.clinic_id,
+        appointment_id: appointmentId,
+        service_id: service.service_id,
+        value: parseFloat(service.value || 0),
+        discount: parseFloat(service.discount || 0),
+        billing_type: service.billing_type || 'per_consultation',
+        quantity: parseInt(service.quantity || 1),
+        sessions_completed: parseInt(service.sessions_completed || 0),
+        status: service.status || 'pending',
+        sequence_order: index,
+      }));
+
+    const { data: servicesResult, error: servicesError } = await supabase
+      .from('appointment_services')
+      .insert(servicesData)
+      .select();
+
+    if (servicesError && servicesError.code !== 'PGRST116') {
+      console.error('❌ Erro ao inserir novos serviços:', servicesError);
+      throw servicesError;
+    }
+
+    console.log(
+      '✅ [updateAppointmentWithServices] Serviços atualizados:',
+      servicesResult?.length || 0,
+    );
+
+    // ✅ Retornar agendamento com serviços
+    const result = appointmentResult || {
+      id: appointmentId,
+      ...payload,
+    };
+
+    return {
+      ...mapFromDatabase(result),
+      appointment_services: servicesResult || [],
+    };
+  } catch (error) {
+    console.error('❌ [updateAppointmentWithServices] Erro:', error);
+    throw error;
+  }
+}
+
+/**
+ * Buscar serviços de um agendamento
+ * @param {string} appointmentId - ID do agendamento
+ * @returns {Promise<Array>} Array com serviços do agendamento
+ */
+export async function getAppointmentServices(appointmentId) {
+  try {
+    console.log('📖 [getAppointmentServices] Buscando serviços para appointment:', appointmentId);
+
+    const { data, error } = await supabase
+      .from('appointment_services')
+      .select(
+        `
+        *,
+        services (id, name, tuss_code)
+      `,
+      )
+      .eq('appointment_id', appointmentId)
+      .order('sequence_order', { ascending: true });
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('❌ Erro ao buscar serviços:', error);
+      throw error;
+    }
+
+    // 🔄 Mapear dados para incluir service_name
+    const mappedData = (data || []).map((s) => ({
+      ...s,
+      service_name: s.services?.name || '',
+    }));
+
+    console.log('📖 [getAppointmentServices] Resultado:', {
+      appointmentId,
+      services_found: mappedData?.length || 0,
+      services:
+        mappedData?.map((s) => ({
+          id: s.id,
+          service_id: s.service_id,
+          service_name: s.service_name,
+          value: s.value,
+          quantity: s.quantity,
+          status: s.status,
+        })) || [],
+    });
+
+    return mappedData || [];
+  } catch (error) {
+    console.error('❌ [getAppointmentServices] Erro:', error);
+    return [];
+  }
+}
+
+/**
+ * Atualizar status de serviço (ex: pendente → faturado)
+ * @param {string} appointmentServiceId - ID do serviço do agendamento
+ * @param {string} status - Novo status (pending, billed, cancelled)
+ * @returns {Promise<Object>} Serviço atualizado
+ */
+export async function updateAppointmentServiceStatus(appointmentServiceId, status) {
+  try {
+    const { data, error } = await supabase
+      .from('appointment_services')
+      .update({ status })
+      .eq('id', appointmentServiceId)
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    console.log('✅ Status do serviço atualizado:', appointmentServiceId, '→', status);
+    return data;
+  } catch (error) {
+    console.error('❌ Erro ao atualizar status:', error);
+    throw error;
+  }
+}
+
+/**
+ * Sincronizar serviços de um agendamento (deletar antigos e inserir novos)
+ * @param {string} appointmentId - ID do agendamento
+ * @param {Array} appointmentServices - Array de serviços com sessions_completed
+ * @returns {Promise<Array>} Array de serviços sincronizados
+ */
+export async function syncAppointmentServices(appointmentId, appointmentServices = []) {
+  try {
+    console.log('🔴 [syncAppointmentServices] INICIADO', {
+      appointmentId,
+      appointmentServices_length: appointmentServices?.length || 0,
+      appointmentServices:
+        appointmentServices?.map((s) => ({
+          id: s.id,
+          service_id: s.service_id,
+          service_name: s.service_name,
+          value: s.value,
+          quantity: s.quantity,
+        })) || [],
+    });
+
+    if (!appointmentId) {
+      throw new Error('appointmentId é obrigatório');
+    }
+
+    if (!appointmentServices || appointmentServices.length === 0) {
+      console.log('ℹ️ [syncAppointmentServices] Array vazio - nada para sincronizar');
+      return [];
+    }
+
+    // 0. Buscar clinic_id do agendamento
+    const { data: appointment, error: fetchError } = await supabase
+      .from('appointments')
+      .select('clinic_id')
+      .eq('id', appointmentId)
+      .single();
+
+    if (fetchError || !appointment) {
+      throw new Error(`Agendamento não encontrado: ${fetchError?.message || appointmentId}`);
+    }
+
+    const clinicId = appointment.clinic_id;
+    console.log('🔍 [syncAppointmentServices] clinic_id:', clinicId);
+
+    // 1. Deletar serviços antigos (onde ID começa com 'new-' são novos, outros são do DB)
+    const oldServiceIds = appointmentServices
+      .filter((s) => !s.id?.startsWith('new-'))
+      .map((s) => s.id);
+
+    if (oldServiceIds.length > 0) {
+      console.log(
+        '🗑️ [syncAppointmentServices] Deletando',
+        oldServiceIds.length,
+        'serviços antigos',
+      );
+      const { error: deleteError } = await supabase
+        .from('appointment_services')
+        .delete()
+        .in('id', oldServiceIds);
+
+      if (deleteError) {
+        console.warn('⚠️ Erro ao deletar serviços antigos:', deleteError);
+      }
+    }
+
+    // 2. Preparar dados dos novos serviços (remover campos temporários)
+    const servicesData = appointmentServices
+      .filter((s) => s.service_id) // Filtrar apenas serviços válidos
+      .map((service, index) => ({
+        clinic_id: clinicId, // ✅ clinic_id obrigatório
+        appointment_id: appointmentId,
+        service_id: service.service_id,
+        value: parseFloat(service.value || 0),
+        discount: parseFloat(service.discount || 0),
+        billing_type: service.billing_type || 'per_consultation',
+        quantity: parseInt(service.quantity || 1),
+        sessions_completed: parseInt(service.sessions_completed || 0),
+        status: service.status || 'pending',
+        sequence_order: index,
+      }));
+
+    if (servicesData.length === 0) {
+      console.log(
+        'ℹ️ [syncAppointmentServices] Nenhum serviço válido para sincronizar após filtro',
+      );
+      return [];
+    }
+
+    console.log(
+      '💾 [syncAppointmentServices] Inserindo',
+      servicesData.length,
+      'serviço(s):',
+      servicesData,
+    );
+
+    // 3. Inserir novos serviços
+    const { data: insertedServices, error: insertError } = await supabase
+      .from('appointment_services')
+      .insert(servicesData)
+      .select();
+
+    if (insertError) {
+      console.error('❌ [syncAppointmentServices] Erro ao inserir:', insertError);
+      throw insertError;
+    }
+
+    console.log(
+      '✅ [syncAppointmentServices] Sucesso! Serviços sincronizados:',
+      insertedServices?.length || 0,
+    );
+    return insertedServices || [];
+  } catch (error) {
+    console.error('❌ [syncAppointmentServices] ERRO FINAL:', error.message, error);
+    throw error;
+  }
+}
+
+/**
+ * Atualizar sessões completadas de um serviço (para pacotes/sessões)
+ * @param {string} appointmentServiceId - ID do serviço do agendamento
+ * @param {number} completedSessions - Número de sessões completadas
+ * @returns {Promise<Object>} Serviço atualizado
+ */
+export async function updateAppointmentServiceSessions(appointmentServiceId, completedSessions) {
+  try {
+    const { data, error } = await supabase
+      .from('appointment_services')
+      .update({ sessions_completed: completedSessions })
+      .eq('id', appointmentServiceId)
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    console.log('✅ Sessões atualizadas:', appointmentServiceId, '→', completedSessions);
+    return data;
+  } catch (error) {
+    console.error('❌ Erro ao atualizar sessões:', error);
+    throw error;
   }
 }

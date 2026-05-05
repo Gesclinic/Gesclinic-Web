@@ -1,4 +1,4 @@
-export const NONE = "__none__";
+export const NONE = '__none__';
 
 export const isNone = (value) => value === NONE;
 
@@ -17,16 +17,17 @@ export const asStringOrNull = (value) => {
 };
 
 export const asNumberOrNull = (value) => {
-  if (value === null || value === undefined || value === "" || value === NONE) {
+  if (value === null || value === undefined || value === '' || value === NONE) {
     return null;
   }
   const num = Number(value);
   return isNaN(num) ? null : num;
 };
 
-
 export const toIsoUtcOrNull = (localDateTimeString) => {
-  if (!localDateTimeString) return null;
+  if (!localDateTimeString) {
+    return null;
+  }
   try {
     // Se vier só data/hora, monta string ISO sem offset
     let dateStr = localDateTimeString;

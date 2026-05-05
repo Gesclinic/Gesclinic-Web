@@ -3,7 +3,7 @@
 // API - Regras de Repasse
 // ============================================================
 
-import { customSupabaseClient as supabase } from "@/lib/customSupabaseClient";
+import { customSupabaseClient as supabase } from '@/lib/customSupabaseClient';
 
 /**
  * Lista todas as regras de repasse de uma clínica
@@ -15,8 +15,9 @@ export async function listRevenueRules(clinicId, options = {}) {
   const { professional_id, service_id } = options;
 
   let query = supabase
-    .from("revenue_rules")
-    .select(`
+    .from('revenue_rules')
+    .select(
+      `
       id,
       rule_name,
       professional_id,
@@ -27,24 +28,27 @@ export async function listRevenueRules(clinicId, options = {}) {
       min_value,
       max_value,
       active
-    `)
-    .eq("clinic_id", clinicId)
-    .order("created_at", { ascending: false });
+    `,
+    )
+    .eq('clinic_id', clinicId)
+    .order('created_at', { ascending: false });
 
   if (professional_id) {
-    query = query.eq("professional_id", professional_id);
+    query = query.eq('professional_id', professional_id);
   }
 
   if (service_id) {
-    query = query.eq("service_id", service_id);
+    query = query.eq('service_id', service_id);
   }
 
   const { data, error } = await query;
 
-  if (error) throw new Error(`Falha ao listar regras: ${error.message}`);
-  
+  if (error) {
+    throw new Error(`Falha ao listar regras: ${error.message}`);
+  }
+
   // Mapear os dados e adicionar compatibilidade de nomes de campos
-  return (data || []).map(rule => ({
+  return (data || []).map((rule) => ({
     ...rule,
     rule_type: rule.repasse_type, // Compatibilidade: repasse_type → rule_type
     fixed_value: rule.fixed_amount, // Compatibilidade: fixed_amount → fixed_value
@@ -60,8 +64,9 @@ export async function listRevenueRules(clinicId, options = {}) {
  */
 export async function getRevenueRule(ruleId, clinicId) {
   const { data, error } = await supabase
-    .from("revenue_rules")
-    .select(`
+    .from('revenue_rules')
+    .select(
+      `
       id,
       professional_id,
       service_id,
@@ -75,12 +80,15 @@ export async function getRevenueRule(ruleId, clinicId) {
       active,
       created_at,
       updated_at
-    `)
-    .eq("id", ruleId)
-    .eq("clinic_id", clinicId)
+    `,
+    )
+    .eq('id', ruleId)
+    .eq('clinic_id', clinicId)
     .maybeSingle();
 
-  if (error) throw new Error(`Falha ao obter regra: ${error.message}`);
+  if (error) {
+    throw new Error(`Falha ao obter regra: ${error.message}`);
+  }
   return data;
 }
 
@@ -95,7 +103,7 @@ export async function createRevenueRule(clinicId, data) {
     rule_name,
     professional_id,
     service_id,
-    rule_type = "percentage",
+    rule_type = 'percentage',
     percentage = null,
     fixed_value = null,
     minimum_value = null,
@@ -103,19 +111,19 @@ export async function createRevenueRule(clinicId, data) {
 
   // Validações
   if (!professional_id && !service_id) {
-    throw new Error("Deve especificar profissional OU serviço");
+    throw new Error('Deve especificar profissional OU serviço');
   }
 
-  if (rule_type === "percentage" && (!percentage || percentage < 0 || percentage > 100)) {
-    throw new Error("Percentual deve estar entre 0 e 100");
+  if (rule_type === 'percentage' && (!percentage || percentage < 0 || percentage > 100)) {
+    throw new Error('Percentual deve estar entre 0 e 100');
   }
 
-  if ((rule_type === "fixed" || rule_type === "fixed_value") && !fixed_value) {
-    throw new Error("Valor fixo é obrigatório para este tipo");
+  if ((rule_type === 'fixed' || rule_type === 'fixed_value') && !fixed_value) {
+    throw new Error('Valor fixo é obrigatório para este tipo');
   }
 
   const { data: rule, error } = await supabase
-    .from("revenue_rules")
+    .from('revenue_rules')
     .insert([
       {
         clinic_id: clinicId,
@@ -132,15 +140,19 @@ export async function createRevenueRule(clinicId, data) {
     .select()
     .maybeSingle();
 
-  if (error) throw new Error(`Falha ao criar regra: ${error.message}`);
-  
+  if (error) {
+    throw new Error(`Falha ao criar regra: ${error.message}`);
+  }
+
   // Normalizar resposta
-  return rule ? {
-    ...rule,
-    rule_type: rule.repasse_type,
-    fixed_value: rule.fixed_amount,
-    minimum_value: rule.min_value,
-  } : null;
+  return rule
+    ? {
+      ...rule,
+      rule_type: rule.repasse_type,
+      fixed_value: rule.fixed_amount,
+      minimum_value: rule.min_value,
+    }
+    : null;
 }
 
 /**
@@ -153,39 +165,51 @@ export async function updateRevenueRule(ruleId, updates) {
   try {
     // Construir objeto com apenas campos que queremos atualizar
     const updateData = {};
-    
-    if ("rule_name" in updates) updateData.rule_name = updates.rule_name;
-    if ("professional_id" in updates) updateData.professional_id = updates.professional_id;
-    if ("service_id" in updates) updateData.service_id = updates.service_id;
-    if ("rule_type" in updates) updateData.repasse_type = updates.rule_type;
-    if ("percentage" in updates) {
+
+    if ('rule_name' in updates) {
+      updateData.rule_name = updates.rule_name;
+    }
+    if ('professional_id' in updates) {
+      updateData.professional_id = updates.professional_id;
+    }
+    if ('service_id' in updates) {
+      updateData.service_id = updates.service_id;
+    }
+    if ('rule_type' in updates) {
+      updateData.repasse_type = updates.rule_type;
+    }
+    if ('percentage' in updates) {
       if (updates.percentage !== null && (updates.percentage < 0 || updates.percentage > 100)) {
-        throw new Error("Percentual deve estar entre 0 e 100");
+        throw new Error('Percentual deve estar entre 0 e 100');
       }
       updateData.percentage = updates.percentage;
     }
-    if ("fixed_value" in updates) updateData.fixed_amount = updates.fixed_value;
-    if ("active" in updates) updateData.active = updates.active;
-    
-    console.log("Atualizando regra com dados:", updateData);
-    
+    if ('fixed_value' in updates) {
+      updateData.fixed_amount = updates.fixed_value;
+    }
+    if ('active' in updates) {
+      updateData.active = updates.active;
+    }
+
+    console.log('Atualizando regra com dados:', updateData);
+
     const { data: rule, error } = await supabase
-      .from("revenue_rules")
+      .from('revenue_rules')
       .update(updateData)
-      .eq("id", ruleId)
+      .eq('id', ruleId)
       .select();
 
     if (error) {
-      console.error("Supabase error:", error);
+      console.error('Supabase error:', error);
       throw error;
     }
-    
+
     if (!rule || rule.length === 0) {
-      throw new Error("Regra não encontrada após atualização");
+      throw new Error('Regra não encontrada após atualização');
     }
-    
+
     const updatedRule = rule[0];
-    
+
     // Normalizar resposta
     return {
       ...updatedRule,
@@ -194,7 +218,7 @@ export async function updateRevenueRule(ruleId, updates) {
       minimum_value: updatedRule.min_value,
     };
   } catch (err) {
-    console.error("updateRevenueRule error:", err);
+    console.error('updateRevenueRule error:', err);
     throw err;
   }
 }
@@ -206,21 +230,25 @@ export async function updateRevenueRule(ruleId, updates) {
  */
 export async function deactivateRevenueRule(ruleId) {
   const { data: rule, error } = await supabase
-    .from("revenue_rules")
+    .from('revenue_rules')
     .update({ active: false, updated_at: new Date() })
-    .eq("id", ruleId)
+    .eq('id', ruleId)
     .select()
     .maybeSingle();
 
-  if (error) throw new Error(`Falha ao desativar regra: ${error.message}`);
-  
+  if (error) {
+    throw new Error(`Falha ao desativar regra: ${error.message}`);
+  }
+
   // Normalizar resposta
-  return rule ? {
-    ...rule,
-    rule_type: rule.repasse_type,
-    fixed_value: rule.fixed_amount,
-    minimum_value: rule.min_value,
-  } : null;
+  return rule
+    ? {
+      ...rule,
+      rule_type: rule.repasse_type,
+      fixed_value: rule.fixed_amount,
+      minimum_value: rule.min_value,
+    }
+    : null;
 }
 
 /**
@@ -242,7 +270,7 @@ export async function calculateRepasse(
   serviceId,
   clinicId,
   baseAmount,
-  appointmentStatus = "completed"
+  appointmentStatus = 'completed',
 ) {
   const rules = await listRevenueRules(clinicId, {
     professional_id: professionalId,
@@ -254,15 +282,16 @@ export async function calculateRepasse(
       ruleId: null,
       amount: 0,
       percentage: 0,
-      type: "none",
-      message: "Nenhuma regra de repasse definida",
+      type: 'none',
+      message: 'Nenhuma regra de repasse definida',
     };
   }
 
   // Usar primeira regra que se aplica
-  const rule = rules.find(
-    (r) => r.applies_to_status === "all" || r.applies_to_status?.includes(appointmentStatus)
-  ) || rules[0];
+  const rule =
+    rules.find(
+      (r) => r.applies_to_status === 'all' || r.applies_to_status?.includes(appointmentStatus),
+    ) || rules[0];
 
   let amount = 0;
 
@@ -273,11 +302,11 @@ export async function calculateRepasse(
   const maxValue = rule.max_value;
   const percentage = rule.percentage;
 
-  if (ruleType === "percentage") {
+  if (ruleType === 'percentage') {
     amount = (baseAmount * (percentage || 0)) / 100;
-  } else if (ruleType === "fixed_value" || ruleType === "fixed") {
+  } else if (ruleType === 'fixed_value' || ruleType === 'fixed') {
     amount = fixedAmount || 0;
-  } else if (ruleType === "commission") {
+  } else if (ruleType === 'commission') {
     // Custom logic para comissão
     amount = (baseAmount * (percentage || 0)) / 100;
   }
@@ -307,8 +336,9 @@ export async function calculateRepasse(
  */
 export async function getProfessionalRevenueRules(professionalId, clinicId) {
   const { data, error } = await supabase
-    .from("revenue_rules")
-    .select(`
+    .from('revenue_rules')
+    .select(
+      `
       id,
       rule_name,
       professional_id,
@@ -319,15 +349,18 @@ export async function getProfessionalRevenueRules(professionalId, clinicId) {
       min_value,
       max_value,
       services(code, name)
-    `)
-    .eq("professional_id", professionalId)
-    .eq("clinic_id", clinicId)
-    .eq("active", true);
+    `,
+    )
+    .eq('professional_id', professionalId)
+    .eq('clinic_id', clinicId)
+    .eq('active', true);
 
-  if (error) throw error;
-  
+  if (error) {
+    throw error;
+  }
+
   // Normalizar dados retornados
-  return (data ?? []).map(rule => ({
+  return (data ?? []).map((rule) => ({
     ...rule,
     rule_type: rule.repasse_type,
     fixed_value: rule.fixed_amount,
@@ -343,8 +376,9 @@ export async function getProfessionalRevenueRules(professionalId, clinicId) {
  */
 export async function getServiceRevenueRules(serviceId, clinicId) {
   const { data, error } = await supabase
-    .from("revenue_rules")
-    .select(`
+    .from('revenue_rules')
+    .select(
+      `
       id,
       rule_name,
       professional_id,
@@ -355,15 +389,18 @@ export async function getServiceRevenueRules(serviceId, clinicId) {
       min_value,
       max_value,
       professionals(name, specialization)
-    `)
-    .eq("service_id", serviceId)
-    .eq("clinic_id", clinicId)
-    .eq("active", true);
+    `,
+    )
+    .eq('service_id', serviceId)
+    .eq('clinic_id', clinicId)
+    .eq('active', true);
 
-  if (error) throw error;
-  
+  if (error) {
+    throw error;
+  }
+
   // Normalizar dados retornados
-  return (data ?? []).map(rule => ({
+  return (data ?? []).map((rule) => ({
     ...rule,
     rule_type: rule.repasse_type,
     fixed_value: rule.fixed_amount,
@@ -378,12 +415,14 @@ export async function getServiceRevenueRules(serviceId, clinicId) {
  */
 export async function countRevenueRules(clinicId) {
   const { count, error } = await supabase
-    .from("revenue_rules")
-    .select("id", { count: "exact" })
-    .eq("clinic_id", clinicId)
-    .eq("active", true);
+    .from('revenue_rules')
+    .select('id', { count: 'exact' })
+    .eq('clinic_id', clinicId)
+    .eq('active', true);
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
   return count || 0;
 }
 
@@ -398,8 +437,12 @@ export function simulateRepasse(baseAmount, options = {}) {
 
   let amount = (baseAmount * percentage) / 100;
 
-  if (amount < min_value) amount = min_value;
-  if (max_value && amount > max_value) amount = max_value;
+  if (amount < min_value) {
+    amount = min_value;
+  }
+  if (max_value && amount > max_value) {
+    amount = max_value;
+  }
 
   return parseFloat(amount.toFixed(2));
 }
@@ -412,8 +455,9 @@ export function simulateRepasse(baseAmount, options = {}) {
  */
 export async function getRulesByType(clinicId, type) {
   const { data, error } = await supabase
-    .from("revenue_rules")
-    .select(`
+    .from('revenue_rules')
+    .select(
+      `
       id,
       professional_id,
       service_id,
@@ -422,12 +466,15 @@ export async function getRulesByType(clinicId, type) {
       fixed_amount,
       professionals(name),
       services(name)
-    `)
-    .eq("clinic_id", clinicId)
-    .eq("repasse_type", type)
-    .eq("active", true);
+    `,
+    )
+    .eq('clinic_id', clinicId)
+    .eq('repasse_type', type)
+    .eq('active', true);
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
   return data ?? [];
 }
 

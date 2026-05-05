@@ -1,12 +1,12 @@
 /**
  * useAuthorization.js
- * 
+ *
  * Hook customizado para verificar permissões no React
  * Integra com useAuth() e fornece helpers de RBAC
- * 
+ *
  * @example
  * const { can, isAdmin, canCreate } = useAuthorization();
- * 
+ *
  * if (can('agendamento:criar')) {
  *   return <CriarAgendamentoBtn />;
  * }
@@ -31,7 +31,7 @@ export function useAuthorization() {
     // ========================
     // Função principal
     // ========================
-    
+
     /**
      * Verifica permissão geral
      * @param {string} action - Ex: 'agendamento:criar'

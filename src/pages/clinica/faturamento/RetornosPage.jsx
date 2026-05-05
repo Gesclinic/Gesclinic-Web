@@ -63,8 +63,12 @@ export default function RetornosPage() {
   };
 
   const getStatusColor = (status) => {
-    if (status.includes('Recebido')) return 'bg-green-100 text-green-800';
-    if (status.includes('erro')) return 'bg-red-100 text-red-800';
+    if (status.includes('Recebido')) {
+      return 'bg-green-100 text-green-800';
+    }
+    if (status.includes('erro')) {
+      return 'bg-red-100 text-red-800';
+    }
     return 'bg-blue-100 text-blue-800';
   };
 
@@ -73,9 +77,7 @@ export default function RetornosPage() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Retornos & Recibos</h1>
-        <p className="text-gray-600 mt-2">
-          Acompanhe retornos de processamento e recibos de envio
-        </p>
+        <p className="text-gray-600 mt-2">Acompanhe retornos de processamento e recibos de envio</p>
       </div>
 
       {/* Tabs */}
@@ -100,8 +102,12 @@ export default function RetornosPage() {
                       <th className="text-left py-3 px-4 font-semibold text-gray-700">Recibo</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700">Lote</th>
                       <th className="text-center py-3 px-4 font-semibold text-gray-700">Guias</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Data Envio</th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Recebimento</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                        Data Envio
+                      </th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700">
+                        Recebimento
+                      </th>
                       <th className="text-center py-3 px-4 font-semibold text-gray-700">Status</th>
                       <th className="text-center py-3 px-4 font-semibold text-gray-700">Ações</th>
                     </tr>
@@ -115,7 +121,9 @@ export default function RetornosPage() {
                         <td className="py-3 px-4">{item.dataEnvio}</td>
                         <td className="py-3 px-4">{item.dataRecebimento}</td>
                         <td className="py-3 px-4 text-center">
-                          <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getStatusColor(item.status)}`}>
+                          <span
+                            className={`inline-block px-2 py-1 rounded text-xs font-medium ${getStatusColor(item.status)}`}
+                          >
                             ✓ {item.status}
                           </span>
                         </td>
@@ -158,7 +166,9 @@ export default function RetornosPage() {
                       </div>
                       <div>
                         <p className="text-xs text-gray-500 uppercase">Status</p>
-                        <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getStatusColor(item.status)}`}>
+                        <span
+                          className={`inline-block px-2 py-1 rounded text-xs font-medium ${getStatusColor(item.status)}`}
+                        >
                           {item.status}
                         </span>
                       </div>
@@ -238,4 +248,3 @@ export default function RetornosPage() {
     </div>
   );
 }
-

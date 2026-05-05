@@ -17,7 +17,7 @@ const EXAM_CATALOG = [
   { code: 'PROTEINA_C', name: 'Proteína C Reativa', category: 'Laboratorial' },
   { code: 'ALBUMINA', name: 'Albumina', category: 'Laboratorial' },
   { code: 'HEPATOGRAMA', name: 'Hepatograma', category: 'Laboratorial' },
-  
+
   // Imagem
   { code: 'RAIO_X_TORAX', name: 'Raio-X de Tórax', category: 'Imagem' },
   { code: 'RAIO_X_COLUNA', name: 'Raio-X de Coluna', category: 'Imagem' },
@@ -26,7 +26,7 @@ const EXAM_CATALOG = [
   { code: 'ULTRASSOM_TIRO', name: 'Ultrassom Tireoide', category: 'Imagem' },
   { code: 'RESSONANCIA', name: 'Ressonância Magnética', category: 'Imagem' },
   { code: 'TOMOGRAFIA', name: 'Tomografia Computadorizada', category: 'Imagem' },
-  { code: 'DENSITOMETRIA', name: 'Densitometria Óssea', category: 'Imagem' }
+  { code: 'DENSITOMETRIA', name: 'Densitometria Óssea', category: 'Imagem' },
 ];
 
 export const examRequestsApi = {
@@ -37,7 +37,7 @@ export const examRequestsApi = {
   },
 
   getExamsByCategory(category) {
-    return EXAM_CATALOG.filter(exam => exam.category === category);
+    return EXAM_CATALOG.filter((exam) => exam.category === category);
   },
 
   // ==================== TEMPLATES ====================
@@ -54,13 +54,15 @@ export const examRequestsApi = {
             exams: exams, // array of exam codes
             instructions,
             is_active: true,
-            created_by: userId
-          }
+            created_by: userId,
+          },
         ])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       return data;
     } catch (err) {
       throw new Error(`Erro ao criar template: ${err.message}`);
@@ -69,16 +71,17 @@ export const examRequestsApi = {
 
   async listTemplates(clinicId, onlyActive = true) {
     try {
-      let query = client
-        .from('exam_request_templates')
-        .select('*')
-        .eq('clinic_id', clinicId);
+      let query = client.from('exam_request_templates').select('*').eq('clinic_id', clinicId);
 
-      if (onlyActive) query = query.eq('is_active', true);
+      if (onlyActive) {
+        query = query.eq('is_active', true);
+      }
 
       const { data, error } = await query.order('template_name');
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       return data || [];
     } catch (err) {
       throw new Error(`Erro ao listar templates: ${err.message}`);
@@ -93,7 +96,9 @@ export const examRequestsApi = {
         .eq('id', templateId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       return data;
     } catch (err) {
       throw new Error(`Erro ao obter template: ${err.message}`);
@@ -104,9 +109,12 @@ export const examRequestsApi = {
     try {
       const { error } = await client
         .from('exam_request_templates')
-        .update({ is_active: false }).eq('id', templateId);
+        .update({ is_active: false })
+        .eq('id', templateId);
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       return true;
     } catch (err) {
       throw new Error(`Erro ao deletar template: ${err.message}`);
@@ -130,14 +138,19 @@ export const examRequestsApi = {
             clinical_indication: clinicalIndication,
             priority: details.priority || 'normal',
             status: 'draft',
-            created_by: userId
-          }
-        ]).select();
+            created_by: userId,
+          },
+        ])
+        .select();
 
-if (!data || data.length === 0) { throw new Error('Record not found'); }
-return data[0];
+      if (!data || data.length === 0) {
+        throw new Error('Record not found');
+      }
+      return data[0];
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       return data;
     } catch (err) {
       throw new Error(`Erro ao criar solicitação: ${err.message}`);
@@ -148,14 +161,18 @@ return data[0];
     try {
       const { data, error } = await client
         .from('exam_requests')
-        .update(updates).eq('id', requestId).select();
+        .update(updates)
+        .eq('id', requestId)
+        .select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found'); 
-    }
-    return data[0];
+      if (!data || data.length === 0) {
+        throw new Error('Record not found');
+      }
+      return data[0];
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       return data;
     } catch (err) {
       throw new Error(`Erro ao atualizar solicitação: ${err.message}`);
@@ -164,15 +181,16 @@ return data[0];
 
   async getExamRequest(requestId) {
     try {
-      const { data, error } = await client
-        .from('exam_requests')
-        .select('*')
-        .eq('id', requestId);
+      const { data, error } = await client.from('exam_requests').select('*').eq('id', requestId);
 
-if (!data || data.length === 0) { throw new Error('Record not found'); }
-return data[0];
+      if (!data || data.length === 0) {
+        throw new Error('Record not found');
+      }
+      return data[0];
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       return data;
     } catch (err) {
       throw new Error(`Erro ao obter solicitação: ${err.message}`);
@@ -181,18 +199,23 @@ return data[0];
 
   async listExamRequests(clinicId, filters = {}) {
     try {
-      let query = client
-        .from('exam_requests')
-        .select('*')
-        .eq('clinic_id', clinicId);
+      let query = client.from('exam_requests').select('*').eq('clinic_id', clinicId);
 
-      if (filters.patient_id) query = query.eq('patient_id', filters.patient_id);
-      if (filters.status) query = query.eq('status', filters.status);
-      if (filters.appointment_id) query = query.eq('appointment_id', filters.appointment_id);
+      if (filters.patient_id) {
+        query = query.eq('patient_id', filters.patient_id);
+      }
+      if (filters.status) {
+        query = query.eq('status', filters.status);
+      }
+      if (filters.appointment_id) {
+        query = query.eq('appointment_id', filters.appointment_id);
+      }
 
       const { data, error } = await query.order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       return data || [];
     } catch (err) {
       throw new Error(`Erro ao listar solicitações: ${err.message}`);
@@ -207,14 +230,19 @@ return data[0];
           status: 'sent',
           sent_date: new Date().toISOString(),
           sent_to_lab: sentToLab,
-          lab_protocol: labProtocol
+          lab_protocol: labProtocol,
         })
-        .eq('id', requestId).select();
+        .eq('id', requestId)
+        .select();
 
-if (!data || data.length === 0) { throw new Error('Record not found'); }
-return data[0];
+      if (!data || data.length === 0) {
+        throw new Error('Record not found');
+      }
+      return data[0];
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       return data;
     } catch (err) {
       throw new Error(`Erro ao enviar solicitação: ${err.message}`);
@@ -227,13 +255,19 @@ return data[0];
         .from('exam_requests')
         .update({
           status: 'completed',
-          completed_date: new Date().toISOString()
-        }).eq('id', requestId).select();
+          completed_date: new Date().toISOString(),
+        })
+        .eq('id', requestId)
+        .select();
 
-if (!data || data.length === 0) { throw new Error('Record not found'); }
-return data[0];
+      if (!data || data.length === 0) {
+        throw new Error('Record not found');
+      }
+      return data[0];
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       return data;
     } catch (err) {
       throw new Error(`Erro ao completar solicitação: ${err.message}`);
@@ -244,14 +278,18 @@ return data[0];
     try {
       const { data, error } = await client
         .from('exam_requests')
-        .update({ status: 'cancelled' }).eq('id', requestId).select();
+        .update({ status: 'cancelled' })
+        .eq('id', requestId)
+        .select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found'); 
-    }
-    return data[0];
+      if (!data || data.length === 0) {
+        throw new Error('Record not found');
+      }
+      return data[0];
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       return data;
     } catch (err) {
       throw new Error(`Erro ao cancelar solicitação: ${err.message}`);
@@ -267,14 +305,19 @@ return data[0];
         .from('exam_requests')
         .update({
           printed_count: printedCount,
-          last_printed_at: new Date().toISOString()
+          last_printed_at: new Date().toISOString(),
         })
-        .eq('id', requestId).select();
+        .eq('id', requestId)
+        .select();
 
-if (!data || data.length === 0) { throw new Error('Record not found'); }
-return data[0];
+      if (!data || data.length === 0) {
+        throw new Error('Record not found');
+      }
+      return data[0];
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       return data;
     } catch (err) {
       throw new Error(`Erro ao registrar impressão: ${err.message}`);
@@ -283,12 +326,11 @@ return data[0];
 
   async deleteExamRequest(requestId) {
     try {
-      const { error } = await client
-        .from('exam_requests')
-        .delete()
-        .eq('id', requestId);
+      const { error } = await client.from('exam_requests').delete().eq('id', requestId);
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       return true;
     } catch (err) {
       throw new Error(`Erro ao deletar solicitação: ${err.message}`);
@@ -303,7 +345,7 @@ return data[0];
       created: 'Criada',
       sent: 'Enviada',
       completed: 'Concluída',
-      cancelled: 'Cancelada'
+      cancelled: 'Cancelada',
     };
     return labels[status] || status;
   },
@@ -314,7 +356,7 @@ return data[0];
       created: 'bg-blue-100 text-blue-800',
       sent: 'bg-yellow-100 text-yellow-800',
       completed: 'bg-green-100 text-green-800',
-      cancelled: 'bg-red-100 text-red-800'
+      cancelled: 'bg-red-100 text-red-800',
     };
     return colors[status] || 'bg-gray-100 text-gray-800';
   },
@@ -324,10 +366,10 @@ return data[0];
       low: 'Baixa',
       normal: 'Normal',
       high: 'Alta',
-      urgent: 'Urgente'
+      urgent: 'Urgente',
     };
     return labels[priority] || priority;
-  }
+  },
 };
 
 export default examRequestsApi;

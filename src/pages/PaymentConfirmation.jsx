@@ -16,7 +16,7 @@ export default function PaymentConfirmation() {
   const verifyPayment = async () => {
     try {
       const sessionId = searchParams.get('session_id');
-      
+
       if (!sessionId) {
         setStatus('failed');
         setError('Session ID não encontrado');
@@ -29,17 +29,14 @@ export default function PaymentConfirmation() {
       const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
       // Chamar função para verificar pagamento
-      const response = await fetch(
-        `${supabaseUrl}/functions/v1/verify-stripe-session`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${anonKey}`,
-          },
-          body: JSON.stringify({ session_id: sessionId }),
-        }
-      );
+      const response = await fetch(`${supabaseUrl}/functions/v1/verify-stripe-session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${anonKey}`,
+        },
+        body: JSON.stringify({ session_id: sessionId }),
+      });
 
       console.log('Response status:', response.status);
       const data = await response.json();
@@ -56,7 +53,6 @@ export default function PaymentConfirmation() {
       setTimeout(() => {
         navigate('/clinica/dashboard');
       }, 2000);
-
     } catch (error) {
       console.error('Payment verification error:', error);
       setStatus('failed');
@@ -82,8 +78,18 @@ export default function PaymentConfirmation() {
           <>
             <div className="mb-6">
               <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                <svg
+                  className="w-8 h-8 text-green-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
               </div>
             </div>
@@ -98,14 +104,26 @@ export default function PaymentConfirmation() {
           <>
             <div className="mb-6">
               <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
-                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="w-8 h-8 text-red-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </div>
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Erro no Pagamento</h1>
-            <p className="text-red-600 font-semibold mb-4">{error || 'Ocorreu um erro ao processar seu pagamento.'}</p>
-            
+            <p className="text-red-600 font-semibold mb-4">
+              {error || 'Ocorreu um erro ao processar seu pagamento.'}
+            </p>
+
             <div className="space-y-3">
               <button
                 onClick={verifyPayment}

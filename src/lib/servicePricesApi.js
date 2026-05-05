@@ -1,4 +1,4 @@
-import { customSupabaseClient } from "./customSupabaseClient";
+import { customSupabaseClient } from './customSupabaseClient';
 
 /**
  * Service Prices API
@@ -11,7 +11,7 @@ import { customSupabaseClient } from "./customSupabaseClient";
 export async function getServicePrices(clinicId) {
   try {
     const { data, error } = await customSupabaseClient
-      .from("service_prices")
+      .from('service_prices')
       .select(
         `
         id,
@@ -26,21 +26,23 @@ export async function getServicePrices(clinicId) {
         active,
         services:service_id (id, name, code, service_category),
         payers:payer_id (id, name)
-      `
+      `,
       )
-      .eq("clinic_id", clinicId);
+      .eq('clinic_id', clinicId);
 
-    if (error) throw error;
-    console.log("📊 Service Prices carregados:", data?.length || 0, "items");
-    console.log("📊 Exemplo de preço com relacionamento:", data?.[0]);
-    console.log("📊 Estrutura completa do primeiro item:", JSON.stringify(data?.[0], null, 2));
+    if (error) {
+      throw error;
+    }
+    console.log('📊 Service Prices carregados:', data?.length || 0, 'items');
+    console.log('📊 Exemplo de preço com relacionamento:', data?.[0]);
+    console.log('📊 Estrutura completa do primeiro item:', JSON.stringify(data?.[0], null, 2));
     if (data?.[0]?.services) {
-      console.log("📊 Services object do primeiro preço:", data[0].services);
-      console.log("📊 Code do services:", data[0].services.code);
+      console.log('📊 Services object do primeiro preço:', data[0].services);
+      console.log('📊 Code do services:', data[0].services.code);
     }
     return data || [];
   } catch (error) {
-    console.error("Error fetching service prices:", error);
+    console.error('Error fetching service prices:', error);
     throw error;
   }
 }
@@ -51,7 +53,7 @@ export async function getServicePrices(clinicId) {
 export async function getServicePricesByService(serviceId, clinicId) {
   try {
     const { data, error } = await customSupabaseClient
-      .from("service_prices")
+      .from('service_prices')
       .select(
         `
         id,
@@ -65,15 +67,17 @@ export async function getServicePricesByService(serviceId, clinicId) {
         plan,
         active,
         payers:payer_id (id, name)
-      `
+      `,
       )
-      .eq("service_id", serviceId)
-      .eq("clinic_id", clinicId);
+      .eq('service_id', serviceId)
+      .eq('clinic_id', clinicId);
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data || [];
   } catch (error) {
-    console.error("Error fetching service prices by service:", error);
+    console.error('Error fetching service prices by service:', error);
     throw error;
   }
 }
@@ -84,7 +88,7 @@ export async function getServicePricesByService(serviceId, clinicId) {
 export async function getServicePricesByPayer(payerId, clinicId) {
   try {
     const { data, error } = await customSupabaseClient
-      .from("service_prices")
+      .from('service_prices')
       .select(
         `
         id,
@@ -95,15 +99,17 @@ export async function getServicePricesByPayer(payerId, clinicId) {
         co_pay,
         active,
         services:service_id (id, name)
-      `
+      `,
       )
-      .eq("payer_id", payerId)
-      .eq("clinic_id", clinicId);
+      .eq('payer_id', payerId)
+      .eq('clinic_id', clinicId);
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data || [];
   } catch (error) {
-    console.error("Error fetching service prices by payer:", error);
+    console.error('Error fetching service prices by payer:', error);
     throw error;
   }
 }
@@ -114,7 +120,7 @@ export async function getServicePricesByPayer(payerId, clinicId) {
 export async function createServicePrice(clinicId, data) {
   try {
     const { data: result, error } = await customSupabaseClient
-      .from("service_prices")
+      .from('service_prices')
       .insert([
         {
           clinic_id: clinicId,
@@ -127,10 +133,12 @@ export async function createServicePrice(clinicId, data) {
       ])
       .select();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return result?.[0];
   } catch (error) {
-    console.error("Error creating service price:", error);
+    console.error('Error creating service price:', error);
     throw error;
   }
 }
@@ -141,19 +149,23 @@ export async function createServicePrice(clinicId, data) {
 export async function updateServicePrice(id, data) {
   try {
     const { data: result, error } = await customSupabaseClient
-      .from("service_prices")
+      .from('service_prices')
       .update({
         service_id: data.service_id,
         payer_id: data.payer_id || null,
         price: data.price,
         plan: data.plan || null,
         active: data.active,
-      }).eq("id", id).select();
+      })
+      .eq('id', id)
+      .select();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return result?.[0];
   } catch (error) {
-    console.error("Error updating service price:", error);
+    console.error('Error updating service price:', error);
     throw error;
   }
 }
@@ -163,15 +175,14 @@ export async function updateServicePrice(id, data) {
  */
 export async function deleteServicePrice(id) {
   try {
-    const { error } = await customSupabaseClient
-      .from("service_prices")
-      .delete()
-      .eq("id", id);
+    const { error } = await customSupabaseClient.from('service_prices').delete().eq('id', id);
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return true;
   } catch (error) {
-    console.error("Error deleting service price:", error);
+    console.error('Error deleting service price:', error);
     throw error;
   }
 }
@@ -182,7 +193,7 @@ export async function deleteServicePrice(id) {
 export async function getActiveServicePrices(clinicId) {
   try {
     const { data, error } = await customSupabaseClient
-      .from("service_prices")
+      .from('service_prices')
       .select(
         `
         id,
@@ -193,15 +204,17 @@ export async function getActiveServicePrices(clinicId) {
         co_pay,
         services:service_id (id, name),
         payers:payer_id (id, name)
-      `
+      `,
       )
-      .eq("clinic_id", clinicId)
-      .eq("active", true);
+      .eq('clinic_id', clinicId)
+      .eq('active', true);
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data || [];
   } catch (error) {
-    console.error("Error fetching active service prices:", error);
+    console.error('Error fetching active service prices:', error);
     throw error;
   }
 }
@@ -215,7 +228,7 @@ export async function getActiveServicePrices(clinicId) {
 export async function getServicePricesByHealthInsurance(clinicId, healthInsuranceId) {
   try {
     const { data, error } = await customSupabaseClient
-      .from("service_prices")
+      .from('service_prices')
       .select(
         `
         id,
@@ -223,15 +236,17 @@ export async function getServicePricesByHealthInsurance(clinicId, healthInsuranc
         payer_id,
         price,
         services:service_id (id, name)
-      `
+      `,
       )
-      .eq("clinic_id", clinicId)
-      .eq("payer_id", healthInsuranceId);
+      .eq('clinic_id', clinicId)
+      .eq('payer_id', healthInsuranceId);
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data || [];
   } catch (error) {
-    console.error("Error fetching service prices by health insurance:", error);
+    console.error('Error fetching service prices by health insurance:', error);
     throw error;
   }
 }
@@ -244,35 +259,45 @@ export async function getServicePricesByHealthInsurance(clinicId, healthInsuranc
  * @param {number} valor
  * @returns {Promise<Object>}
  */
-export async function upsertServicePriceHealthInsurance(clinicId, healthInsuranceId, serviceId, valor) {
+export async function upsertServicePriceHealthInsurance(
+  clinicId,
+  healthInsuranceId,
+  serviceId,
+  valor,
+) {
   try {
     // Try to find existing record
     const { data: existing, error: searchError } = await customSupabaseClient
-      .from("service_prices")
-      .select("id")
-      .eq("clinic_id", clinicId)
-      .eq("payer_id", healthInsuranceId)
-      .eq("service_id", serviceId)
+      .from('service_prices')
+      .select('id')
+      .eq('clinic_id', clinicId)
+      .eq('payer_id', healthInsuranceId)
+      .eq('service_id', serviceId)
       .maybeSingle();
 
     if (existing) {
       // Update
       const { data, error } = await customSupabaseClient
-        .from("service_prices")
+        .from('service_prices')
         .update({
           price: parseFloat(valor),
         })
-        .eq("id", existing.id).select();
+        .eq('id', existing.id)
+        .select();
 
-if (!data || data.length === 0) { throw new Error('Record not found'); }
-return data[0];
+      if (!data || data.length === 0) {
+        throw new Error('Record not found');
+      }
+      return data[0];
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       return data;
     } else {
       // Insert
       const { data, error } = await customSupabaseClient
-        .from("service_prices")
+        .from('service_prices')
         .insert([
           {
             clinic_id: clinicId,
@@ -283,14 +308,18 @@ return data[0];
         ])
         .select();
 
-if (!data || data.length === 0) { throw new Error('Record not found'); }
-return data[0];
+      if (!data || data.length === 0) {
+        throw new Error('Record not found');
+      }
+      return data[0];
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       return data;
     }
   } catch (error) {
-    console.error("Error upserting service price:", error);
+    console.error('Error upserting service price:', error);
     throw error;
   }
 }
@@ -305,16 +334,18 @@ return data[0];
 export async function deleteServicePriceHealthInsurance(clinicId, healthInsuranceId, serviceId) {
   try {
     const { error } = await customSupabaseClient
-      .from("service_prices")
+      .from('service_prices')
       .delete()
-      .eq("clinic_id", clinicId)
-      .eq("payer_id", healthInsuranceId)
-      .eq("service_id", serviceId);
+      .eq('clinic_id', clinicId)
+      .eq('payer_id', healthInsuranceId)
+      .eq('service_id', serviceId);
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return true;
   } catch (error) {
-    console.error("Error deleting service price:", error);
+    console.error('Error deleting service price:', error);
     throw error;
   }
 }
@@ -339,7 +370,7 @@ export const getServicePrice = async (payerId, serviceId) => {
   }
 
   const cacheKey = `${payerId}-${serviceId}`;
-  
+
   // Verificar cache
   if (priceCache[cacheKey] !== undefined) {
     console.log(`✅ [Cache] Preço encontrado para ${cacheKey}: R$ ${priceCache[cacheKey]}`);
@@ -365,10 +396,15 @@ export const getServicePrice = async (payerId, serviceId) => {
 
     const price = parseFloat(data?.price || 0);
     priceCache[cacheKey] = price;
-    console.log(`✅ [getServicePrice] Preço encontrado para payer: ${payerId}, service: ${serviceId} = R$ ${price}`);
+    console.log(
+      `✅ [getServicePrice] Preço encontrado para payer: ${payerId}, service: ${serviceId} = R$ ${price}`,
+    );
     return price;
   } catch (err) {
-    console.error(`❌ [getServicePrice] Erro ao buscar preço para payer: ${payerId}, service: ${serviceId}`, err);
+    console.error(
+      `❌ [getServicePrice] Erro ao buscar preço para payer: ${payerId}, service: ${serviceId}`,
+      err,
+    );
     return 0;
   }
 };
@@ -380,9 +416,9 @@ export const getServicePrice = async (payerId, serviceId) => {
  */
 export const getServicePricesBatch = async (combinations = []) => {
   const priceMap = {};
-  
+
   // Filtrar apenas combinações que não estão em cache
-  const notCached = combinations.filter(combo => {
+  const notCached = combinations.filter((combo) => {
     const key = `${combo.payerId}-${combo.serviceId}`;
     if (priceCache[key] !== undefined) {
       priceMap[key] = priceCache[key];
@@ -404,7 +440,7 @@ export const getServicePricesBatch = async (combinations = []) => {
       const key = `${payerId}-${serviceId}`;
       priceMap[key] = price;
     }
-    
+
     console.log(`✅ [Batch] ${notCached.length} preços carregados com sucesso`);
     return priceMap;
   } catch (err) {
@@ -428,24 +464,29 @@ export const clearPriceCache = () => {
  * @returns {Promise<Array<Object>>} Agendamentos com values atualizados
  */
 export const enrichAppointmentsWithPrices = async (appointments = []) => {
-  if (appointments.length === 0) return appointments;
+  if (appointments.length === 0) {
+    return appointments;
+  }
 
   // Extrair combinações únicas que precisam de preço
   const combinations = appointments
-    .filter(apt => !apt.value || parseFloat(apt.value) === 0)
-    .map(apt => ({ payerId: apt.payer_id, serviceId: apt.service_id }))
-    .filter((combo, idx, arr) => 
-      arr.findIndex(x => x.payerId === combo.payerId && x.serviceId === combo.serviceId) === idx
+    .filter((apt) => !apt.value || parseFloat(apt.value) === 0)
+    .map((apt) => ({ payerId: apt.payer_id, serviceId: apt.service_id }))
+    .filter(
+      (combo, idx, arr) =>
+        arr.findIndex((x) => x.payerId === combo.payerId && x.serviceId === combo.serviceId) ===
+        idx,
     );
 
   // Buscar preços em lote
   const priceMap = await getServicePricesBatch(combinations);
 
   // Atualizar agendamentos com preços
-  return appointments.map(apt => ({
+  return appointments.map((apt) => ({
     ...apt,
-    value: apt.value && parseFloat(apt.value) > 0 
-      ? apt.value 
-      : priceMap[`${apt.payer_id}-${apt.service_id}`] || 0
+    value:
+      apt.value && parseFloat(apt.value) > 0
+        ? apt.value
+        : priceMap[`${apt.payer_id}-${apt.service_id}`] || 0,
   }));
 };

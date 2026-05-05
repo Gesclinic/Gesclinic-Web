@@ -34,14 +34,12 @@ export default function ConciliacaoBancaria() {
     updateFilters,
     clearFilters,
     loadStatements,
-    loadIndicators
+    loadIndicators,
   } = useConciliation(clinicId);
 
   const handleToggleSelect = (statementId) => {
-    setSelectedStatements(prev =>
-      prev.includes(statementId)
-        ? prev.filter(id => id !== statementId)
-        : [...prev, statementId]
+    setSelectedStatements((prev) =>
+      prev.includes(statementId) ? prev.filter((id) => id !== statementId) : [...prev, statementId],
     );
   };
 
@@ -49,18 +47,20 @@ export default function ConciliacaoBancaria() {
     // Para bulk conciliation, vamos obter a melhor sugestão de cada um
     try {
       const promises = ids.map(async (id) => {
-        const stmt = statements.find(s => s.id === id);
-        if (!stmt || !suggestions[id] || suggestions[id].length === 0) return null;
-        
+        const stmt = statements.find((s) => s.id === id);
+        if (!stmt || !suggestions[id] || suggestions[id].length === 0) {
+          return null;
+        }
+
         const bestSuggestion = suggestions[id][0]; // Melhor score
         return {
           id,
-          suggestion: bestSuggestion
+          suggestion: bestSuggestion,
         };
       });
 
       const results = await Promise.all(promises);
-      const validResults = results.filter(r => r !== null);
+      const validResults = results.filter((r) => r !== null);
 
       if (validResults.length === 0) {
         alert('Nenhuma sugestão encontrada para os lançamentos selecionados');
@@ -152,11 +152,11 @@ export default function ConciliacaoBancaria() {
       {/* Info */}
       <Card className="p-4 bg-blue-50 border border-blue-200">
         <p className="text-sm text-blue-800">
-          <strong>💡 Dica:</strong> Selecione lançamentos pendentes e procure por sugestões automáticas baseadas em valor e data. 
-          Se não encontrar uma correspondência, crie um novo lançamento vinculado.
+          <strong>💡 Dica:</strong> Selecione lançamentos pendentes e procure por sugestões
+          automáticas baseadas em valor e data. Se não encontrar uma correspondência, crie um novo
+          lançamento vinculado.
         </p>
       </Card>
     </div>
   );
 }
-

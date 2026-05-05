@@ -3,7 +3,7 @@
 // API - Convênios e Seguros (Health Insurances)
 // ============================================================
 
-import { supabase } from "@/lib/customSupabaseClient";
+import { supabase } from '@/lib/customSupabaseClient';
 
 /**
  * Lista todos os convênios de uma clínica
@@ -15,8 +15,9 @@ export async function listHealthInsurances(clinicId, options = {}) {
   const { includeInactive = false } = options;
 
   let query = supabase
-    .from("health_insurances")
-    .select(`
+    .from('health_insurances')
+    .select(
+      `
       id,
       code,
       name,
@@ -83,16 +84,19 @@ export async function listHealthInsurances(clinicId, options = {}) {
       tiss_password,
       tiss_response_email,
       tiss_last_sync
-    `)
-    .eq("clinic_id", clinicId)
-    .order("name", { ascending: true });
+    `,
+    )
+    .eq('clinic_id', clinicId)
+    .order('name', { ascending: true });
 
   if (!includeInactive) {
-    query = query.eq("active", true);
+    query = query.eq('active', true);
   }
 
   const { data, error } = await query;
-  if (error) throw new Error(`Falha ao listar convênios: ${error.message}`);
+  if (error) {
+    throw new Error(`Falha ao listar convênios: ${error.message}`);
+  }
   return data ?? [];
 }
 
@@ -104,8 +108,9 @@ export async function listHealthInsurances(clinicId, options = {}) {
  */
 export async function getHealthInsurance(insuranceId, clinicId) {
   const { data, error } = await supabase
-    .from("health_insurances")
-    .select(`
+    .from('health_insurances')
+    .select(
+      `
       id,
       code,
       name,
@@ -191,12 +196,15 @@ export async function getHealthInsurance(insuranceId, clinicId) {
       tiss_password,
       tiss_response_email,
       tiss_last_sync
-    `)
-    .eq("id", insuranceId)
-    .eq("clinic_id", clinicId)
+    `,
+    )
+    .eq('id', insuranceId)
+    .eq('clinic_id', clinicId)
     .maybeSingle();
 
-  if (error) throw new Error(`Falha ao obter convênio: ${error.message}`);
+  if (error) {
+    throw new Error(`Falha ao obter convênio: ${error.message}`);
+  }
   return data;
 }
 
@@ -207,15 +215,15 @@ export async function getHealthInsurance(insuranceId, clinicId) {
  * @returns {Promise<Object>}
  */
 export async function createHealthInsurance(clinicId, data) {
-  const { 
-    code, 
-    name, 
+  const {
+    code,
+    name,
     fantasy_name,
     legal_name,
-    type, 
-    cnpj, 
-    contact_person, 
-    contact_email, 
+    type,
+    cnpj,
+    contact_person,
+    contact_email,
     contact_phone,
     contact_mobile,
     discount_percentage,
@@ -277,16 +285,16 @@ export async function createHealthInsurance(clinicId, data) {
     financial_contact_phone,
     bank_name,
     bank_branch,
-    bank_account
+    bank_account,
   } = data;
 
   // Validar código único
   if (code) {
     const existing = await supabase
-      .from("health_insurances")
-      .select("id")
-      .eq("clinic_id", clinicId)
-      .eq("code", code)
+      .from('health_insurances')
+      .select('id')
+      .eq('clinic_id', clinicId)
+      .eq('code', code)
       .maybeSingle();
 
     if (existing.data) {
@@ -312,7 +320,7 @@ export async function createHealthInsurance(clinicId, data) {
     registration_ans: registration_ans || null,
     tiss_pattern: tiss_pattern || false,
     guide_format: guide_format || null,
-    tiss_version: tiss_version || "3.05.00",
+    tiss_version: tiss_version || '3.05.00',
     address_street: address_street || null,
     address_number: address_number || null,
     address_neighborhood: address_neighborhood || null,
@@ -321,7 +329,7 @@ export async function createHealthInsurance(clinicId, data) {
     address_zip_code: address_zip_code || null,
     municipal_registration: municipal_registration || null,
     state_registration: state_registration || null,
-    country: country || "Brasil",
+    country: country || 'Brasil',
     icms_applicable: icms_applicable || false,
     icms_rate: parseFloat(icms_rate) || 0,
     pis_applicable: pis_applicable || false,
@@ -369,23 +377,23 @@ export async function createHealthInsurance(clinicId, data) {
     active: true,
   };
 
-  console.log("📊 Dados sendo enviados para INSERT:", insertData);
+  console.log('📊 Dados sendo enviados para INSERT:', insertData);
 
   const { data: insurance, error } = await supabase
-    .from("health_insurances")
+    .from('health_insurances')
     .insert([insertData])
     .select()
     .maybeSingle();
 
   if (error) {
-    console.error("❌ Erro Supabase INSERT:", error);
-    if (error.code === "23505") {
-      throw new Error("CNPJ ou código já cadastrado para esta clínica");
+    console.error('❌ Erro Supabase INSERT:', error);
+    if (error.code === '23505') {
+      throw new Error('CNPJ ou código já cadastrado para esta clínica');
     }
     throw new Error(`Falha ao criar convênio: ${error.message}`);
   }
 
-  console.log("✅ Convênio criado com sucesso:", insurance);
+  console.log('✅ Convênio criado com sucesso:', insurance);
   return insurance;
 }
 
@@ -397,17 +405,17 @@ export async function createHealthInsurance(clinicId, data) {
  * @returns {Promise<Object>}
  */
 export async function updateHealthInsurance(insuranceId, clinicId, updates) {
-  console.log("🔄 UPDATE - insuranceId:", insuranceId, "clinicId:", clinicId);
-  console.log("📊 Dados sendo enviados para UPDATE:", updates);
+  console.log('🔄 UPDATE - insuranceId:', insuranceId, 'clinicId:', clinicId);
+  console.log('📊 Dados sendo enviados para UPDATE:', updates);
 
   // Se atualizando código, validar unicidade
   if (updates.code) {
     const existing = await supabase
-      .from("health_insurances")
-      .select("id")
-      .eq("clinic_id", clinicId)
-      .eq("code", updates.code)
-      .neq("id", insuranceId)
+      .from('health_insurances')
+      .select('id')
+      .eq('clinic_id', clinicId)
+      .eq('code', updates.code)
+      .neq('id', insuranceId)
       .maybeSingle();
 
     if (existing.data) {
@@ -417,10 +425,10 @@ export async function updateHealthInsurance(insuranceId, clinicId, updates) {
 
   // Preparar dados para atualização - limpar undefined
   const dataToUpdate = Object.fromEntries(
-    Object.entries(updates).filter(([, value]) => value !== undefined)
+    Object.entries(updates).filter(([, value]) => value !== undefined),
   );
 
-  console.log("📊 Dados filtrados para UPDATE:", dataToUpdate);
+  console.log('📊 Dados filtrados para UPDATE:', dataToUpdate);
 
   // Adionar updated_at automaticamente (será sobrescrito pelo trigger, mas mantém consistência)
   const dataWithTimestamp = {
@@ -429,16 +437,16 @@ export async function updateHealthInsurance(insuranceId, clinicId, updates) {
   };
 
   const { data, error } = await supabase
-    .from("health_insurances")
+    .from('health_insurances')
     .update(dataWithTimestamp)
-    .eq("id", insuranceId)
-    .eq("clinic_id", clinicId)
+    .eq('id', insuranceId)
+    .eq('clinic_id', clinicId)
     .select();
 
   if (error) {
-    console.error("❌ Erro Supabase UPDATE:", error);
-    if (error.code === "23505") {
-      throw new Error("CNPJ ou código já cadastrado");
+    console.error('❌ Erro Supabase UPDATE:', error);
+    if (error.code === '23505') {
+      throw new Error('CNPJ ou código já cadastrado');
     }
     throw new Error(`Falha ao atualizar convênio: ${error.message}`);
   }
@@ -447,7 +455,7 @@ export async function updateHealthInsurance(insuranceId, clinicId, updates) {
     throw new Error('Convênio não encontrado ou sem permissão');
   }
 
-  console.log("✅ Convênio atualizado com sucesso:", data);
+  console.log('✅ Convênio atualizado com sucesso:', data);
   return data;
 }
 
@@ -459,14 +467,16 @@ export async function updateHealthInsurance(insuranceId, clinicId, updates) {
  */
 export async function deactivateHealthInsurance(insuranceId, clinicId) {
   const { data, error } = await supabase
-    .from("health_insurances")
+    .from('health_insurances')
     .update({ active: false, updated_at: new Date() })
-    .eq("id", insuranceId)
-    .eq("clinic_id", clinicId)
+    .eq('id', insuranceId)
+    .eq('clinic_id', clinicId)
     .select()
     .maybeSingle();
 
-  if (error) throw new Error(`Falha ao desativar convênio: ${error.message}`);
+  if (error) {
+    throw new Error(`Falha ao desativar convênio: ${error.message}`);
+  }
   return data;
 }
 
@@ -478,14 +488,16 @@ export async function deactivateHealthInsurance(insuranceId, clinicId) {
  */
 export async function reactivateHealthInsurance(insuranceId, clinicId) {
   const { data, error } = await supabase
-    .from("health_insurances")
+    .from('health_insurances')
     .update({ active: true, updated_at: new Date() })
-    .eq("id", insuranceId)
-    .eq("clinic_id", clinicId)
+    .eq('id', insuranceId)
+    .eq('clinic_id', clinicId)
     .select()
     .maybeSingle();
 
-  if (error) throw new Error(`Falha ao reativar convênio: ${error.message}`);
+  if (error) {
+    throw new Error(`Falha ao reativar convênio: ${error.message}`);
+  }
   return data;
 }
 
@@ -497,14 +509,16 @@ export async function reactivateHealthInsurance(insuranceId, clinicId) {
  */
 export async function getHealthInsuranceByCode(code, clinicId) {
   const { data, error } = await supabase
-    .from("health_insurances")
-    .select("id, code, name")
-    .eq("code", code)
-    .eq("clinic_id", clinicId)
-    .eq("active", true)
+    .from('health_insurances')
+    .select('id, code, name')
+    .eq('code', code)
+    .eq('clinic_id', clinicId)
+    .eq('active', true)
     .maybeSingle();
 
-  if (error) throw new Error(`Erro ao buscar convênio: ${error.message}`);
+  if (error) {
+    throw new Error(`Erro ao buscar convênio: ${error.message}`);
+  }
   return data;
 }
 
@@ -515,12 +529,14 @@ export async function getHealthInsuranceByCode(code, clinicId) {
  */
 export async function countHealthInsurances(clinicId) {
   const { count, error } = await supabase
-    .from("health_insurances")
-    .select("id", { count: "exact" })
-    .eq("clinic_id", clinicId)
-    .eq("active", true);
+    .from('health_insurances')
+    .select('id', { count: 'exact' })
+    .eq('clinic_id', clinicId)
+    .eq('active', true);
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
   return count || 0;
 }
 
@@ -531,13 +547,15 @@ export async function countHealthInsurances(clinicId) {
  */
 export async function listHealthInsurancesRequiringAuthorization(clinicId) {
   const { data, error } = await supabase
-    .from("health_insurances")
-    .select("id, code, name, authorization_lead_time_days")
-    .eq("clinic_id", clinicId)
-    .eq("active", true)
-    .eq("requires_authorization", true);
+    .from('health_insurances')
+    .select('id, code, name, authorization_lead_time_days')
+    .eq('clinic_id', clinicId)
+    .eq('active', true)
+    .eq('requires_authorization', true);
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
   return data ?? [];
 }
 
@@ -556,25 +574,18 @@ export function validateInsuranceForTISS(insuranceData) {
   const errors = [];
 
   // ANS (obrigatório para privados)
-  if (
-    insuranceData.type !== "government" &&
-    !insuranceData.registration_ans
-  ) {
-    errors.push(
-      "ANS Registration é obrigatório para seguros privados"
-    );
+  if (insuranceData.type !== 'government' && !insuranceData.registration_ans) {
+    errors.push('ANS Registration é obrigatório para seguros privados');
   }
 
   // TISS Pattern (recomendado)
   if (insuranceData.tiss_pattern !== true) {
-    console.warn(
-      "⚠️ TISS Pattern não ativado - pode causar rejeição"
-    );
+    console.warn('⚠️ TISS Pattern não ativado - pode causar rejeição');
   }
 
   // Guide Format
   if (!insuranceData.guide_format) {
-    console.warn("⚠️ Guide Format não definido para convênio");
+    console.warn('⚠️ Guide Format não definido para convênio');
   }
 
   return {
@@ -589,15 +600,10 @@ export function validateInsuranceForTISS(insuranceData) {
  * @param {Object} insuranceData
  * @returns {Promise<Object>}
  */
-export async function updateInsuranceWithValidation(
-  insuranceId,
-  insuranceData
-) {
+export async function updateInsuranceWithValidation(insuranceId, insuranceData) {
   const validation = validateInsuranceForTISS(insuranceData);
   if (!validation.valid) {
-    throw new Error(
-      `Erros TISS para convênio: ${validation.errors.join(", ")}`
-    );
+    throw new Error(`Erros TISS para convênio: ${validation.errors.join(', ')}`);
   }
 
   return updateHealthInsurance(insuranceId, insuranceData);

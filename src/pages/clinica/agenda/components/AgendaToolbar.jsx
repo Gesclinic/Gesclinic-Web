@@ -1,12 +1,12 @@
 // src/pages/clinica/agenda/components/AgendaToolbar.jsx
 
-import React from "react";
-import { Calendar, List, Kanban, Filter } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import React from 'react';
+import { Calendar, List, Kanban, Filter } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 // Esses contextos vêm da Agenda Premium
-import { useAgendaView } from "@/pages/clinica/agenda/context/useAgendaView";
-import { useAgendaFilters } from "@/pages/clinica/agenda/context/useAgendaFilters";
+import { useAgendaView } from '@/pages/clinica/agenda/context/useAgendaView';
+import { useAgendaFilters } from '@/pages/clinica/agenda/context/useAgendaFilters';
 
 export default function AgendaToolbar() {
   const { viewMode, setViewMode } = useAgendaView();
@@ -14,26 +14,25 @@ export default function AgendaToolbar() {
 
   return (
     <div className="w-full bg-white border-b shadow-sm px-4 py-3 flex items-center justify-between">
-
       {/* ESQUERDA — MODO DE VISUALIZAÇÃO */}
       <div className="flex items-center gap-2">
         <Button
-          variant={viewMode === "calendar" ? "default" : "outline"}
-          onClick={() => setViewMode("calendar")}
+          variant={viewMode === 'calendar' ? 'default' : 'outline'}
+          onClick={() => setViewMode('calendar')}
         >
           <Calendar className="w-4 h-4 mr-1" /> Calendário
         </Button>
 
         <Button
-          variant={viewMode === "list" ? "default" : "outline"}
-          onClick={() => setViewMode("list")}
+          variant={viewMode === 'list' ? 'default' : 'outline'}
+          onClick={() => setViewMode('list')}
         >
           <List className="w-4 h-4 mr-1" /> Lista
         </Button>
 
         <Button
-          variant={viewMode === "kanban" ? "default" : "outline"}
-          onClick={() => setViewMode("kanban")}
+          variant={viewMode === 'kanban' ? 'default' : 'outline'}
+          onClick={() => setViewMode('kanban')}
         >
           <Kanban className="w-4 h-4 mr-1" /> Kanban
         </Button>
@@ -41,11 +40,10 @@ export default function AgendaToolbar() {
 
       {/* DIREITA — FILTROS */}
       <div className="flex items-center gap-3">
-
         {/* PROFISSIONAIS */}
         <select
           className="border rounded-lg px-3 py-1 text-sm"
-          value={filters?.professionalId ?? ""}
+          value={filters?.professionalId ?? ''}
           onChange={(e) =>
             setFilters((f) => ({
               ...f,
@@ -67,7 +65,7 @@ export default function AgendaToolbar() {
           type="text"
           placeholder="Buscar paciente..."
           className="border px-3 py-1 rounded-lg text-sm w-48"
-          value={filters?.query ?? ""}
+          value={filters?.query ?? ''}
           onChange={(e) => setFilters((f) => ({ ...f, query: e.target.value }))}
         />
 
@@ -76,4 +74,3 @@ export default function AgendaToolbar() {
     </div>
   );
 }
-

@@ -2,18 +2,18 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 
 /**
  * Hook Universal para Cache de Dados
- * 
+ *
  * Implementa cache em memória com TTL (Time To Live) automático.
  * Reduz chamadas desnecessárias à API e melhora performance.
- * 
+ *
  * @param {Object} options
  * @param {string} options.key - Chave única para o cache
  * @param {Function} options.fetcher - Função assíncrona que busca os dados
  * @param {number} options.ttl - Tempo em ms que o cache é válido (default: 5 min)
  * @param {boolean} options.enabled - Se deve fazer cache (default: true)
- * 
+ *
  * @returns {Object} { data, loading, error, refresh, isCached }
- * 
+ *
  * @example
  * const { data: professionals, loading, error, refresh } = useDataCache({
  *   key: `professionals_${clinicId}`,
@@ -35,10 +35,14 @@ export function useDataCache({
 
   // Função para obter dados do cache
   const getFromCache = useCallback(() => {
-    if (!enabled || !key) return null;
+    if (!enabled || !key) {
+      return null;
+    }
 
     const cached = cacheRef.current.get(key);
-    if (!cached) return null;
+    if (!cached) {
+      return null;
+    }
 
     const { data: cachedData, timestamp } = cached;
     const now = Date.now();
@@ -56,14 +60,16 @@ export function useDataCache({
   // Função para salvar no cache
   const saveToCache = useCallback(
     (newData) => {
-      if (!enabled || !key) return;
+      if (!enabled || !key) {
+        return;
+      }
 
       cacheRef.current.set(key, {
         data: newData,
         timestamp: Date.now(),
       });
     },
-    [key, enabled]
+    [key, enabled],
   );
 
   // Função para buscar dados (com cache)
@@ -136,26 +142,26 @@ export function useDataCache({
 
 /**
  * Hook para Cache com Invalidação Automática
- * 
+ *
  * Semelhante a useDataCache, mas com suporte a invalidação
  * de outros hooks que compartilham a mesma chave.
- * 
+ *
  * @param {Object} options - Mesmas opções de useDataCache
  * @returns {Object} { data, loading, error, refresh, invalidate }
- * 
+ *
  * @example
  * // Hook A (dependência principal)
  * const { data: professionals, invalidate } = useCachedData({
  *   key: `professionals_${clinicId}`,
  *   fetcher: () => professionalsApi.listProfessionals(clinicId),
  * });
- * 
+ *
  * // Hook B (dependência)
  * const { data, refresh } = useCachedData({
  *   key: `professionals_${clinicId}`,
  *   fetcher: () => professionalsApi.listProfessionals(clinicId),
  * });
- * 
+ *
  * // Na função de editar:
  * const handleUpdate = async (id, updates) => {
  *   await api.updateProfessional(id, updates);
@@ -166,13 +172,16 @@ export function useCachedData(options = {}) {
   const cache = useDataCache(options);
   const { key } = options;
 
-  const invalidate = useCallback((cacheKey = key) => {
-    if (cacheKey) {
-      cache.clearCache();
-      // Refetch dados após invalidação
-      cache.refresh();
-    }
-  }, [key, cache]);
+  const invalidate = useCallback(
+    (cacheKey = key) => {
+      if (cacheKey) {
+        cache.clearCache();
+        // Refetch dados após invalidação
+        cache.refresh();
+      }
+    },
+    [key, cache],
+  );
 
   return {
     ...cache,
@@ -182,14 +191,14 @@ export function useCachedData(options = {}) {
 
 /**
  * Gerenciador Global de Cache (Singleton)
- * 
+ *
  * Permite compartilhar cache entre múltiplos hooks
  * e invalidar dados quando necessário.
- * 
+ *
  * @example
  * // Na edição de um profissional:
  * import { CacheManager } from '@/hooks/useDataCache';
- * 
+ *
  * const handleUpdate = async (id, updates) => {
  *   await api.updateProfessional(id, updates);
  *   CacheManager.invalidate(`professionals_${clinicId}`);
@@ -206,7 +215,9 @@ export class CacheManager {
    */
   static get(key) {
     const cached = this.#cacheMap.get(key);
-    if (!cached) return null;
+    if (!cached) {
+      return null;
+    }
 
     const { data, timestamp, ttl } = cached;
     const now = Date.now();
@@ -280,12 +291,14 @@ export class CacheManager {
    * Debug: ver estado do cache
    */
   static debug() {
-    console.table(Array.from(this.#cacheMap.entries()).map(([key, value]) => ({
-      key,
-      size: JSON.stringify(value.data).length,
-      age: Date.now() - value.timestamp,
-      ttl: value.ttl,
-    })));
+    console.table(
+      Array.from(this.#cacheMap.entries()).map(([key, value]) => ({
+        key,
+        size: JSON.stringify(value.data).length,
+        age: Date.now() - value.timestamp,
+        ttl: value.ttl,
+      })),
+    );
   }
 }
 

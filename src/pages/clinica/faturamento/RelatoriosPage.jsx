@@ -13,9 +13,7 @@ export default function RelatoriosPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Relatórios de Faturamento</h1>
-          <p className="text-gray-600 mt-2">
-            Análises e relatórios de faturamento e desempenho
-          </p>
+          <p className="text-gray-600 mt-2">Análises e relatórios de faturamento e desempenho</p>
         </div>
         <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
           <Download size={20} />
@@ -97,7 +95,10 @@ export default function RelatoriosPage() {
                   { mes: 'Novembro/2025', valor: 'R$ 38.950,00', guias: 215, status: 'Fechado' },
                   { mes: 'Outubro/2025', valor: 'R$ 42.100,00', guias: 235, status: 'Fechado' },
                 ].map((item, idx) => (
-                  <div key={idx} className="flex justify-between items-center p-4 border rounded-lg hover:bg-gray-50">
+                  <div
+                    key={idx}
+                    className="flex justify-between items-center p-4 border rounded-lg hover:bg-gray-50"
+                  >
                     <div>
                       <h3 className="font-semibold text-gray-900">{item.mes}</h3>
                       <p className="text-sm text-gray-600">{item.guias} guias processadas</p>
@@ -127,7 +128,10 @@ export default function RelatoriosPage() {
                   { motivo: 'Código TUSS inválido', count: 2, percentual: '20%' },
                   { motivo: 'Outros', count: 1, percentual: '10%' },
                 ].map((item, idx) => (
-                  <div key={idx} className="flex justify-between items-center p-4 border rounded-lg">
+                  <div
+                    key={idx}
+                    className="flex justify-between items-center p-4 border rounded-lg"
+                  >
                     <div className="flex-1">
                       <h3 className="font-semibold text-gray-900">{item.motivo}</h3>
                       <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
@@ -196,4 +200,3 @@ export default function RelatoriosPage() {
     </div>
   );
 }
-

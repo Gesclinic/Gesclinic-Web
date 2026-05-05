@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
-import { listAppointments } from "@/lib/appointmentsApi";
-import { useClinicContext } from "@/contexts/ClinicContext";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
+import { useEffect, useState } from 'react';
+import { listAppointments } from '@/lib/appointmentsApi';
+import { useClinicContext } from '@/contexts/ClinicContext';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
 
 function AgendaUnificadaSimples() {
   const { clinic } = useClinicContext();
@@ -13,7 +13,7 @@ function AgendaUnificadaSimples() {
 
   useEffect(() => {
     if (!clinic?.id) {
-      setError("Clínica não carregada");
+      setError('Clínica não carregada');
       return;
     }
 
@@ -29,7 +29,7 @@ function AgendaUnificadaSimples() {
       clinicId: clinic.id,
       date,
       start: dayStartUTC.toISOString(),
-      end: dayEndUTC.toISOString()
+      end: dayEndUTC.toISOString(),
     });
 
     // 🔒 RBAC: Se for profissional, buscar seu professional_id
@@ -77,23 +77,40 @@ function AgendaUnificadaSimples() {
       <h1 style={{ color: '#1976d2', marginBottom: 16 }}>📋 Agenda - Debug Mode</h1>
 
       {/* INFO BAR */}
-      <div style={{
-        padding: 12,
-        marginBottom: 16,
-        background: '#e3f2fd',
-        border: '3px solid #1976d2',
-        borderRadius: 4,
-        fontSize: 14,
-        fontWeight: 'bold'
-      }}>
-        🏥 Clinic ID: <span style={{ color: clinic?.id ? '#00a000' : '#f00' }}>{clinic?.id || '❌ NÃO CARREGADA'}</span> | 
-        📅 Data: {date} | 
-        📊 Agendamentos: <span style={{ color: agendamentos.length > 0 ? '#00a000' : '#f00' }}>{agendamentos.length}</span> | 
-        ⏳ {loading ? 'CARREGANDO...' : error ? '❌ ERRO' : '✅ PRONTO'}
+      <div
+        style={{
+          padding: 12,
+          marginBottom: 16,
+          background: '#e3f2fd',
+          border: '3px solid #1976d2',
+          borderRadius: 4,
+          fontSize: 14,
+          fontWeight: 'bold',
+        }}
+      >
+        🏥 Clinic ID:{' '}
+        <span style={{ color: clinic?.id ? '#00a000' : '#f00' }}>
+          {clinic?.id || '❌ NÃO CARREGADA'}
+        </span>{' '}
+        | 📅 Data: {date} | 📊 Agendamentos:{' '}
+        <span style={{ color: agendamentos.length > 0 ? '#00a000' : '#f00' }}>
+          {agendamentos.length}
+        </span>{' '}
+        | ⏳ {loading ? 'CARREGANDO...' : error ? '❌ ERRO' : '✅ PRONTO'}
       </div>
 
       {error && (
-        <div style={{ padding: 12, marginBottom: 16, background: '#ffcdd2', border: '2px solid #c62828', borderRadius: 4, color: '#c62828', fontWeight: 'bold' }}>
+        <div
+          style={{
+            padding: 12,
+            marginBottom: 16,
+            background: '#ffcdd2',
+            border: '2px solid #c62828',
+            borderRadius: 4,
+            color: '#c62828',
+            fontWeight: 'bold',
+          }}
+        >
           ❌ ERRO: {error}
         </div>
       )}
@@ -111,9 +128,29 @@ function AgendaUnificadaSimples() {
 
       {/* RESULTS */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: 32, color: '#666', fontSize: 16, fontWeight: 'bold' }}>⏳⏳⏳ Carregando agendamentos... ⏳⏳⏳</div>
+        <div
+          style={{
+            textAlign: 'center',
+            padding: 32,
+            color: '#666',
+            fontSize: 16,
+            fontWeight: 'bold',
+          }}
+        >
+          ⏳⏳⏳ Carregando agendamentos... ⏳⏳⏳
+        </div>
       ) : agendamentos.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 32, color: '#f00', fontWeight: 'bold', background: '#fff0f0', borderRadius: 4, border: '2px solid #f00' }}>
+        <div
+          style={{
+            textAlign: 'center',
+            padding: 32,
+            color: '#f00',
+            fontWeight: 'bold',
+            background: '#fff0f0',
+            borderRadius: 4,
+            border: '2px solid #f00',
+          }}
+        >
           ❌ NÃO HÁ AGENDAMENTOS PARA {date}
         </div>
       ) : (
@@ -124,25 +161,60 @@ function AgendaUnificadaSimples() {
               <thead>
                 <tr style={{ background: '#1976d2', color: '#fff' }}>
                   <th style={{ padding: 10, textAlign: 'left', border: '1px solid #ddd' }}>ID</th>
-                  <th style={{ padding: 10, textAlign: 'left', border: '1px solid #ddd' }}>Horário</th>
-                  <th style={{ padding: 10, textAlign: 'left', border: '1px solid #ddd' }}>Paciente</th>
-                  <th style={{ padding: 10, textAlign: 'left', border: '1px solid #ddd' }}>Profissional</th>
-                  <th style={{ padding: 10, textAlign: 'left', border: '1px solid #ddd' }}>Serviço</th>
+                  <th style={{ padding: 10, textAlign: 'left', border: '1px solid #ddd' }}>
+                    Horário
+                  </th>
+                  <th style={{ padding: 10, textAlign: 'left', border: '1px solid #ddd' }}>
+                    Paciente
+                  </th>
+                  <th style={{ padding: 10, textAlign: 'left', border: '1px solid #ddd' }}>
+                    Profissional
+                  </th>
+                  <th style={{ padding: 10, textAlign: 'left', border: '1px solid #ddd' }}>
+                    Serviço
+                  </th>
                   <th style={{ padding: 10, textAlign: 'left', border: '1px solid #ddd' }}>Sala</th>
-                  <th style={{ padding: 10, textAlign: 'left', border: '1px solid #ddd' }}>Status</th>
+                  <th style={{ padding: 10, textAlign: 'left', border: '1px solid #ddd' }}>
+                    Status
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {agendamentos.map((apt, i) => (
-                  <tr key={i} style={{ background: i % 2 === 0 ? '#fff' : '#f9f9f9', borderBottom: '1px solid #eee' }}>
-                    <td style={{ padding: 10, border: '1px solid #eee', fontSize: 12, color: '#666' }}>{String(apt.id).substring(0, 8)}</td>
-                    <td style={{ padding: 10, border: '1px solid #eee', fontWeight: 'bold', color: '#1976d2' }}>
+                  <tr
+                    key={i}
+                    style={{
+                      background: i % 2 === 0 ? '#fff' : '#f9f9f9',
+                      borderBottom: '1px solid #eee',
+                    }}
+                  >
+                    <td
+                      style={{ padding: 10, border: '1px solid #eee', fontSize: 12, color: '#666' }}
+                    >
+                      {String(apt.id).substring(0, 8)}
+                    </td>
+                    <td
+                      style={{
+                        padding: 10,
+                        border: '1px solid #eee',
+                        fontWeight: 'bold',
+                        color: '#1976d2',
+                      }}
+                    >
                       {apt.start_time || apt.scheduled_time || 'N/A'}
                     </td>
-                    <td style={{ padding: 10, border: '1px solid #eee' }}>{apt.patient_name || 'N/A'}</td>
-                    <td style={{ padding: 10, border: '1px solid #eee' }}>{apt.professional_name || 'N/A'}</td>
-                    <td style={{ padding: 10, border: '1px solid #eee' }}>{apt.service_name || 'N/A'}</td>
-                    <td style={{ padding: 10, border: '1px solid #eee' }}>{apt.room_name || 'N/A'}</td>
+                    <td style={{ padding: 10, border: '1px solid #eee' }}>
+                      {apt.patient_name || 'N/A'}
+                    </td>
+                    <td style={{ padding: 10, border: '1px solid #eee' }}>
+                      {apt.professional_name || 'N/A'}
+                    </td>
+                    <td style={{ padding: 10, border: '1px solid #eee' }}>
+                      {apt.service_name || 'N/A'}
+                    </td>
+                    <td style={{ padding: 10, border: '1px solid #eee' }}>
+                      {apt.room_name || 'N/A'}
+                    </td>
                     <td style={{ padding: 10, border: '1px solid #eee' }}>{apt.status || 'N/A'}</td>
                   </tr>
                 ))}
@@ -154,9 +226,27 @@ function AgendaUnificadaSimples() {
 
       {/* RAW JSON */}
       {agendamentos.length > 0 && (
-        <div style={{ marginTop: 16, padding: 12, background: '#f5f5f5', borderRadius: 4, border: '2px solid #999' }}>
+        <div
+          style={{
+            marginTop: 16,
+            padding: 12,
+            background: '#f5f5f5',
+            borderRadius: 4,
+            border: '2px solid #999',
+          }}
+        >
           <h4 style={{ marginTop: 0 }}>📋 JSON do primeiro agendamento:</h4>
-          <pre style={{ fontSize: 11, overflow: 'auto', maxHeight: 300, background: '#fff', padding: 10, borderRadius: 4, border: '1px solid #ddd' }}>
+          <pre
+            style={{
+              fontSize: 11,
+              overflow: 'auto',
+              maxHeight: 300,
+              background: '#fff',
+              padding: 10,
+              borderRadius: 4,
+              border: '1px solid #ddd',
+            }}
+          >
             {JSON.stringify(agendamentos[0], null, 2)}
           </pre>
         </div>
@@ -166,5 +256,3 @@ function AgendaUnificadaSimples() {
 }
 
 export default AgendaUnificadaSimples;
-
-

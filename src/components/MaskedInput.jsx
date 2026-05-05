@@ -12,10 +12,16 @@ import { Label } from '@/components/ui/label';
  * Entrada: "12345678901" → "123.456.789-01"
  */
 export function maskCPF(value) {
-  if (!value) return '';
+  if (!value) {
+    return '';
+  }
   const cleaned = value.replace(/\D/g, '').slice(0, 11);
-  if (cleaned.length <= 3) return cleaned;
-  if (cleaned.length <= 6) return `${cleaned.slice(0, 3)}.${cleaned.slice(3)}`;
+  if (cleaned.length <= 3) {
+    return cleaned;
+  }
+  if (cleaned.length <= 6) {
+    return `${cleaned.slice(0, 3)}.${cleaned.slice(3)}`;
+  }
   if (cleaned.length <= 9) {
     return `${cleaned.slice(0, 3)}.${cleaned.slice(3, 6)}.${cleaned.slice(6)}`;
   }
@@ -27,10 +33,16 @@ export function maskCPF(value) {
  * Entrada: "11987654321" → "(11) 98765-4321"
  */
 export function maskPhone(value) {
-  if (!value) return '';
+  if (!value) {
+    return '';
+  }
   const cleaned = value.replace(/\D/g, '').slice(0, 11);
-  if (cleaned.length <= 2) return `(${cleaned}`;
-  if (cleaned.length <= 6) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
+  if (cleaned.length <= 2) {
+    return `(${cleaned}`;
+  }
+  if (cleaned.length <= 6) {
+    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
+  }
   return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
 }
 
@@ -39,9 +51,13 @@ export function maskPhone(value) {
  * Entrada: "01310100" → "01310-100"
  */
 export function maskCEP(value) {
-  if (!value) return '';
+  if (!value) {
+    return '';
+  }
   const cleaned = value.replace(/\D/g, '').slice(0, 8);
-  if (cleaned.length <= 5) return cleaned;
+  if (cleaned.length <= 5) {
+    return cleaned;
+  }
   return `${cleaned.slice(0, 5)}-${cleaned.slice(5)}`;
 }
 
@@ -50,10 +66,16 @@ export function maskCEP(value) {
  * Entrada: "15012026" → "15/01/2026"
  */
 export function maskDate(value) {
-  if (!value) return '';
+  if (!value) {
+    return '';
+  }
   const cleaned = value.replace(/\D/g, '').slice(0, 8);
-  if (cleaned.length <= 2) return cleaned;
-  if (cleaned.length <= 4) return `${cleaned.slice(0, 2)}/${cleaned.slice(2)}`;
+  if (cleaned.length <= 2) {
+    return cleaned;
+  }
+  if (cleaned.length <= 4) {
+    return `${cleaned.slice(0, 2)}/${cleaned.slice(2)}`;
+  }
   return `${cleaned.slice(0, 2)}/${cleaned.slice(2, 4)}/${cleaned.slice(4)}`;
 }
 
@@ -62,7 +84,9 @@ export function maskDate(value) {
  * Entrada: "12345" → "R$ 123,45"
  */
 export function maskCurrency(value) {
-  if (!value) return '';
+  if (!value) {
+    return '';
+  }
   const cleaned = value.replace(/\D/g, '');
   const number = parseInt(cleaned || '0', 10) / 100;
   return new Intl.NumberFormat('pt-BR', {
@@ -76,21 +100,27 @@ export function maskCurrency(value) {
  * Entrada: "12345678901234" → "12.345.678/0001-34"
  */
 export function maskCNPJ(value) {
-  if (!value) return '';
+  if (!value) {
+    return '';
+  }
   const cleaned = value.replace(/\D/g, '').slice(0, 14);
-  if (cleaned.length <= 2) return cleaned;
-  if (cleaned.length <= 5) return `${cleaned.slice(0, 2)}.${cleaned.slice(2)}`;
+  if (cleaned.length <= 2) {
+    return cleaned;
+  }
+  if (cleaned.length <= 5) {
+    return `${cleaned.slice(0, 2)}.${cleaned.slice(2)}`;
+  }
   if (cleaned.length <= 8) {
     return `${cleaned.slice(0, 2)}.${cleaned.slice(2, 5)}.${cleaned.slice(5)}`;
   }
   if (cleaned.length <= 12) {
     return `${cleaned.slice(0, 2)}.${cleaned.slice(2, 5)}.${cleaned.slice(5, 8)}/${cleaned.slice(
-      8
+      8,
     )}`;
   }
   return `${cleaned.slice(0, 2)}.${cleaned.slice(2, 5)}.${cleaned.slice(5, 8)}/${cleaned.slice(
     8,
-    12
+    12,
   )}-${cleaned.slice(12)}`;
 }
 
@@ -144,7 +174,9 @@ export function MaskedInput({
   const handleFocus = () => setIsFocused(true);
   const handleBlur = (e) => {
     setIsFocused(false);
-    if (onBlur) onBlur(e);
+    if (onBlur) {
+      onBlur(e);
+    }
   };
 
   const showError = touched && error;
@@ -170,8 +202,8 @@ export function MaskedInput({
           showError
             ? 'border-red-300 focus:ring-red-200'
             : showSuccess
-            ? 'border-green-300 focus:ring-green-200'
-            : 'border-gray-300 focus:ring-blue-200'
+              ? 'border-green-300 focus:ring-green-200'
+              : 'border-gray-300 focus:ring-blue-200'
         } ${className}`}
         {...props}
       />
@@ -225,7 +257,7 @@ export function ExampleMaskedInputs() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setValues(prev => ({ ...prev, [name]: value }));
+    setValues((prev) => ({ ...prev, [name]: value }));
   };
 
   const fields = [

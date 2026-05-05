@@ -1,6 +1,6 @@
-import React from "react";
-import { Helmet } from "react-helmet";
-import { Outlet, NavLink, useLocation } from "react-router-dom";
+import React from 'react';
+import { Helmet } from 'react-helmet';
+import { Outlet, NavLink, useLocation } from 'react-router-dom';
 
 export default function ConfiguracoesLayout() {
   const location = useLocation();
@@ -17,4 +17,3 @@ export default function ConfiguracoesLayout() {
     </div>
   );
 }
-

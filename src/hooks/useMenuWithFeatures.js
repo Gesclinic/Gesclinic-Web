@@ -19,11 +19,11 @@ export function useMenuWithFeatures(baseMenu) {
 
     // Função recursiva para filtrar items
     const filterMenuItems = (items) => {
-      return items.map(item => {
+      return items.map((item) => {
         // Verificar se o item tem uma feature path associada
         if (item.featurePath) {
           const hasAccess = hasFeatureAccess(planSlug, item.featurePath);
-          
+
           if (!hasAccess) {
             return {
               ...item,
@@ -32,7 +32,7 @@ export function useMenuWithFeatures(baseMenu) {
               onClick: () => {
                 // Mostrar modal de upgrade
                 console.log(`Feature ${item.featurePath} requer upgrade`);
-              }
+              },
             };
           }
         }

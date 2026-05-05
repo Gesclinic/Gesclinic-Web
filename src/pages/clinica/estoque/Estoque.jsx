@@ -1,6 +1,17 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Package, PackagePlus, PackageSearch, PackageCheck, PackageX, FileCog, Users, Truck, Map, Warehouse } from 'lucide-react';
+import {
+  Package,
+  PackagePlus,
+  PackageSearch,
+  PackageCheck,
+  PackageX,
+  FileCog,
+  Users,
+  Truck,
+  Map,
+  Warehouse,
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
@@ -9,12 +20,42 @@ const Estoque = () => {
   const navigate = useNavigate();
 
   const menuItems = [
-    { title: 'Produtos', icon: Package, path: 'produtos', desc: 'Cadastre e gerencie seus produtos.' },
-    { title: 'Movimentações', icon: PackagePlus, path: 'movimentos', desc: 'Registre entradas, saídas e transferências.' },
-    { title: 'Fornecedores', icon: Truck, path: 'fornecedores', desc: 'Gerencie sua base de fornecedores.' },
-    { title: 'Categorias', icon: FileCog, path: 'categorias', desc: 'Organize seus produtos em categorias.' },
-    { title: 'Locais de Estoque', icon: Warehouse, path: 'locais', desc: 'Defina os locais de armazenamento.' },
-    { title: 'Relatórios', icon: PackageSearch, path: 'relatorios', desc: 'Analise o desempenho do seu estoque.' },
+    {
+      title: 'Produtos',
+      icon: Package,
+      path: 'produtos',
+      desc: 'Cadastre e gerencie seus produtos.',
+    },
+    {
+      title: 'Movimentações',
+      icon: PackagePlus,
+      path: 'movimentos',
+      desc: 'Registre entradas, saídas e transferências.',
+    },
+    {
+      title: 'Fornecedores',
+      icon: Truck,
+      path: 'fornecedores',
+      desc: 'Gerencie sua base de fornecedores.',
+    },
+    {
+      title: 'Categorias',
+      icon: FileCog,
+      path: 'categorias',
+      desc: 'Organize seus produtos em categorias.',
+    },
+    {
+      title: 'Locais de Estoque',
+      icon: Warehouse,
+      path: 'locais',
+      desc: 'Defina os locais de armazenamento.',
+    },
+    {
+      title: 'Relatórios',
+      icon: PackageSearch,
+      path: 'relatorios',
+      desc: 'Analise o desempenho do seu estoque.',
+    },
   ];
 
   return (
@@ -43,7 +84,7 @@ const Estoque = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
             >
-              <Card 
+              <Card
                 className="h-full hover:shadow-lg hover:border-primary/50 transition-all cursor-pointer flex flex-col"
                 onClick={() => navigate(item.path)}
               >
@@ -66,4 +107,3 @@ const Estoque = () => {
 };
 
 export default Estoque;
-

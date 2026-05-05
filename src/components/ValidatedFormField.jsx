@@ -85,11 +85,7 @@ export function ValidatedFormField({
           </SelectTrigger>
           <SelectContent>
             {options.map((option) => (
-              <SelectItem
-                key={option.value}
-                value={option.value}
-                disabled={option.disabled}
-              >
+              <SelectItem key={option.value} value={option.value} disabled={option.disabled}>
                 {option.label}
               </SelectItem>
             ))}
@@ -186,9 +182,7 @@ export function ValidatedFormField({
             {error}
           </p>
         )}
-        {help && !showError && (
-          <p className="text-gray-500">{help}</p>
-        )}
+        {help && !showError && <p className="text-gray-500">{help}</p>}
         {type === 'textarea' && maxLength && (
           <p className="text-gray-400 text-right">
             {(value || '').length} / {maxLength}

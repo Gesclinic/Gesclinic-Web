@@ -60,9 +60,11 @@ export function AppointmentConfirmationPage() {
   const isConfirmed = result?.status === 'confirmed';
 
   return (
-    <div className={`min-h-screen flex items-center justify-center bg-gradient-to-br ${
-      isConfirmed ? 'from-green-50 to-emerald-100' : 'from-orange-50 to-red-100'
-    }`}>
+    <div
+      className={`min-h-screen flex items-center justify-center bg-gradient-to-br ${
+        isConfirmed ? 'from-green-50 to-emerald-100' : 'from-orange-50 to-red-100'
+      }`}
+    >
       <div className="text-center max-w-md px-4">
         {isConfirmed ? (
           <>
@@ -79,16 +81,21 @@ export function AppointmentConfirmationPage() {
             <h1 className="text-3xl font-bold text-red-700 mb-2">Consultório notificado</h1>
             <p className="text-lg text-gray-700 mb-2">Sua consultação foi cancelada</p>
             <p className="text-sm text-gray-600 mb-6">
-              O consultório foi notificado. Se deseja reagendar, entre em contato conosco pelo WhatsApp.
+              O consultório foi notificado. Se deseja reagendar, entre em contato conosco pelo
+              WhatsApp.
             </p>
           </>
         )}
 
-        <div className="bg-white rounded-lg p-4 shadow-md border-l-4" style={{
-          borderColor: isConfirmed ? '#10b981' : '#ef4444'
-        }}>
+        <div
+          className="bg-white rounded-lg p-4 shadow-md border-l-4"
+          style={{
+            borderColor: isConfirmed ? '#10b981' : '#ef4444',
+          }}
+        >
           <p className="text-sm text-gray-700">
-            <strong>ID da confirmação:</strong><br />
+            <strong>ID da confirmação:</strong>
+            <br />
             <code className="text-xs text-gray-500 break-all">{result?.appointmentId}</code>
           </p>
         </div>

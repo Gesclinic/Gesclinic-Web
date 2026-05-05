@@ -13,14 +13,14 @@ import { supabase } from './customSupabaseClient';
  */
 export function generateTimeSlots(startHour = 8, endHour = 17, intervalMinutes = 30) {
   const slots = [];
-  
+
   for (let hour = startHour; hour <= endHour; hour++) {
     for (let min = 0; min < 60; min += intervalMinutes) {
       const timeStr = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
       slots.push(timeStr);
     }
   }
-  
+
   return slots;
 }
 
@@ -49,7 +49,7 @@ export function getClinicTimeSlots(clinic = null) {
     const clinicData = clinic && typeof clinic === 'object' ? clinic : {};
     const config = getAgendaConfig(clinicData);
     const slots = generateTimeSlots(config.startHour, config.endHour, config.intervalMinutes);
-    
+
     // Garantir que sempre retorna um array válido
     return Array.isArray(slots) && slots.length > 0 ? slots : generateTimeSlots(8, 17, 30);
   } catch (error) {
@@ -68,7 +68,10 @@ export function getClinicTimeSlots(clinic = null) {
  */
 export async function getProfessionalAvailableSlots(professionalId, date) {
   if (!professionalId || !date) {
-    console.log('⚠️ [getProfessionalAvailableSlots] Missing profId or date:', { professionalId, date });
+    console.log('⚠️ [getProfessionalAvailableSlots] Missing profId or date:', {
+      professionalId,
+      date,
+    });
     return [];
   }
 
@@ -82,14 +85,14 @@ export async function getProfessionalAvailableSlots(professionalId, date) {
     } else {
       dateObj = date;
     }
-    
+
     const dayOfWeek = dateObj.getDay(); // 0=domingo, 6=sábado (usando timezone local)
-    
-    console.log('🔍 [getProfessionalAvailableSlots] Buscando para profissional:', { 
-      professionalId, 
-      date, 
+
+    console.log('🔍 [getProfessionalAvailableSlots] Buscando para profissional:', {
+      professionalId,
+      date,
       dayOfWeek,
-      dayName: ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][dayOfWeek]
+      dayName: ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][dayOfWeek],
     });
 
     // Buscar disponibilidade cadastrada para este profissional neste dia
@@ -117,7 +120,7 @@ export async function getProfessionalAvailableSlots(professionalId, date) {
     const availableSlots = [];
     const durationMinutes = schedules[0].duration_minutes || 30;
 
-    schedules.forEach(schedule => {
+    schedules.forEach((schedule) => {
       const [startHour, startMin] = schedule.start_time.split(':').map(Number);
       const [endHour, endMin] = schedule.end_time.split(':').map(Number);
 
@@ -126,7 +129,11 @@ export async function getProfessionalAvailableSlots(professionalId, date) {
       const endTotalMin = endHour * 60 + endMin;
 
       // Gerar slots
-      for (let currentMin = startTotalMin; currentMin + durationMinutes <= endTotalMin; currentMin += durationMinutes) {
+      for (
+        let currentMin = startTotalMin;
+        currentMin + durationMinutes <= endTotalMin;
+        currentMin += durationMinutes
+      ) {
         const hour = Math.floor(currentMin / 60);
         const min = currentMin % 60;
         const slotTime = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
@@ -149,7 +156,11 @@ export async function getProfessionalAvailableSlots(professionalId, date) {
  * @param {string} userProfessionalId - ID do profissional atual (se logado como profissional, retorna apenas ele)
  * @returns {Promise<Array>} Array de profissionais com { id, name, available_slots }
  */
-export async function getAvailableProfessionalsForDay(date, clinicId = null, userProfessionalId = null) {
+export async function getAvailableProfessionalsForDay(
+  date,
+  clinicId = null,
+  userProfessionalId = null,
+) {
   if (!date) {
     console.log('⚠️ [getAvailableProfessionalsForDay] Missing date');
     return [];
@@ -164,14 +175,14 @@ export async function getAvailableProfessionalsForDay(date, clinicId = null, use
     } else {
       dateObj = date;
     }
-    
+
     const dayOfWeek = dateObj.getDay(); // 0=domingo, 6=sábado
-    
+
     console.log('🔍 [getAvailableProfessionalsForDay] Buscando profissionais para:', {
       date,
       dayOfWeek,
       dayName: ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][dayOfWeek],
-      userProfessionalId
+      userProfessionalId,
     });
 
     // Buscar profissionais que têm disponibilidade para este dia
@@ -186,7 +197,12 @@ export async function getAvailableProfessionalsForDay(date, clinicId = null, use
       return [];
     }
 
-    console.log('📊 [getAvailableProfessionalsForDay] Schedules encontrados:', schedules, 'Total:', schedules?.length);
+    console.log(
+      '📊 [getAvailableProfessionalsForDay] Schedules encontrados:',
+      schedules,
+      'Total:',
+      schedules?.length,
+    );
 
     if (!schedules || schedules.length === 0) {
       console.log('ℹ️ Nenhum profissional disponível para este dia');
@@ -196,28 +212,28 @@ export async function getAvailableProfessionalsForDay(date, clinicId = null, use
     // Agrupar por profissional
     const professionalsMap = new Map();
 
-    schedules.forEach(schedule => {
+    schedules.forEach((schedule) => {
       const profId = schedule.professional_id;
-      
+
       if (!professionalsMap.has(profId)) {
         professionalsMap.set(profId, {
           id: profId,
           name: null, // Será preenchido depois
-          schedules: []
+          schedules: [],
         });
       }
 
       professionalsMap.get(profId).schedules.push({
         start_time: schedule.start_time,
         end_time: schedule.end_time,
-        duration_minutes: schedule.duration_minutes || 30
+        duration_minutes: schedule.duration_minutes || 30,
       });
     });
 
     // Buscar dados dos profissionais (nome, etc)
     const profIds = Array.from(professionalsMap.keys());
     console.log('🔍 [getAvailableProfessionalsForDay] IDs de profissionais a buscar:', profIds);
-    
+
     const { data: professionals, error: profError } = await supabase
       .from('professionals')
       .select('id, name')
@@ -231,17 +247,17 @@ export async function getAvailableProfessionalsForDay(date, clinicId = null, use
     console.log('📊 [getAvailableProfessionalsForDay] Profissionais carregados:', professionals);
 
     // Atualizar nomes
-    professionals.forEach(prof => {
+    professionals.forEach((prof) => {
       if (professionalsMap.has(prof.id)) {
         professionalsMap.get(prof.id).name = prof.name;
       }
     });
 
     // Gerar slots disponíveis para cada profissional
-    let result = Array.from(professionalsMap.values()).map(prof => {
+    let result = Array.from(professionalsMap.values()).map((prof) => {
       const availableSlots = [];
-      
-      prof.schedules.forEach(schedule => {
+
+      prof.schedules.forEach((schedule) => {
         const [startHour, startMin] = schedule.start_time.split(':').map(Number);
         const [endHour, endMin] = schedule.end_time.split(':').map(Number);
 
@@ -249,7 +265,11 @@ export async function getAvailableProfessionalsForDay(date, clinicId = null, use
         const endTotalMin = endHour * 60 + endMin;
         const durationMinutes = schedule.duration_minutes || 30;
 
-        for (let currentMin = startTotalMin; currentMin + durationMinutes <= endTotalMin; currentMin += durationMinutes) {
+        for (
+          let currentMin = startTotalMin;
+          currentMin + durationMinutes <= endTotalMin;
+          currentMin += durationMinutes
+        ) {
           const hour = Math.floor(currentMin / 60);
           const min = currentMin % 60;
           const slotTime = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
@@ -262,16 +282,18 @@ export async function getAvailableProfessionalsForDay(date, clinicId = null, use
       return {
         id: prof.id,
         name: prof.name || 'Profissional sem nome',
-        available_slots: availableSlots
+        available_slots: availableSlots,
       };
     });
 
     // 🔒 Se o usuário é um profissional, retornar apenas ele
     if (userProfessionalId) {
       console.log(`🔒 [RBAC] Filtrando para apenas o profissional: ${userProfessionalId}`);
-      result = result.filter(prof => prof.id === userProfessionalId);
+      result = result.filter((prof) => prof.id === userProfessionalId);
       if (result.length === 0) {
-        console.warn(`⚠️ [RBAC] Profissional ${userProfessionalId} não encontrado em profissionalsMap ou não tem disponibilidade hoje`);
+        console.warn(
+          `⚠️ [RBAC] Profissional ${userProfessionalId} não encontrado em profissionalsMap ou não tem disponibilidade hoje`,
+        );
       }
     }
 

@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/customSupabaseClient";
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/customSupabaseClient';
 
 /**
  * DEBUG: Verificar dados de profissionais e convênios
@@ -16,36 +16,36 @@ export default function DebugConvenios() {
       try {
         setLoading(true);
 
-        console.log("🔍 [Debug] Iniciando carregamento de dados...");
+        console.log('🔍 [Debug] Iniciando carregamento de dados...');
 
         // 1. Carregar todos os profissionais
         const { data: profData, error: profError } = await supabase
-          .from("professionals")
-          .select("id, name, full_name")
+          .from('professionals')
+          .select('id, name, full_name')
           .limit(10);
 
-        console.log("👨‍⚕️ Profissionais:", profData, profError);
+        console.log('👨‍⚕️ Profissionais:', profData, profError);
         setProfessionals(profData || []);
 
         // 2. Carregar todos os payers
         const { data: payersData, error: payersError } = await supabase
-          .from("payers")
-          .select("id, name, clinic_id")
+          .from('payers')
+          .select('id, name, clinic_id')
           .limit(20);
 
-        console.log("💰 Payers:", payersData, payersError);
+        console.log('💰 Payers:', payersData, payersError);
         setPayers(payersData || []);
 
         // 3. Carregar todas as relações professional_payers
         const { data: ppData, error: ppError } = await supabase
-          .from("professional_payers")
-          .select("id, professional_id, payer_id")
+          .from('professional_payers')
+          .select('id, professional_id, payer_id')
           .limit(20);
 
-        console.log("🔗 Professional_Payers:", ppData, ppError);
+        console.log('🔗 Professional_Payers:', ppData, ppError);
         setProfessionalPayers(ppData || []);
       } catch (err) {
-        console.error("❌ Erro:", err);
+        console.error('❌ Erro:', err);
       } finally {
         setLoading(false);
       }
@@ -54,7 +54,9 @@ export default function DebugConvenios() {
     load();
   }, []);
 
-  if (loading) return <div className="p-4">Carregando...</div>;
+  if (loading) {
+    return <div className="p-4">Carregando...</div>;
+  }
 
   return (
     <div className="p-6 bg-white rounded-lg shadow">
@@ -74,7 +76,7 @@ export default function DebugConvenios() {
               </tr>
             </thead>
             <tbody>
-              {professionals.map(p => (
+              {professionals.map((p) => (
                 <tr key={p.id} className="hover:bg-gray-50">
                   <td className="border p-2 font-mono text-xs">{p.id}</td>
                   <td className="border p-2">{p.name || p.full_name}</td>
@@ -87,9 +89,7 @@ export default function DebugConvenios() {
 
       {/* PAYERS */}
       <div className="mb-8">
-        <h3 className="text-lg font-semibold mb-3 text-green-600">
-          💰 Payers ({payers.length})
-        </h3>
+        <h3 className="text-lg font-semibold mb-3 text-green-600">💰 Payers ({payers.length})</h3>
         <div className="overflow-x-auto">
           <table className="w-full border border-gray-300 text-sm">
             <thead className="bg-gray-200">
@@ -100,7 +100,7 @@ export default function DebugConvenios() {
               </tr>
             </thead>
             <tbody>
-              {payers.map(p => (
+              {payers.map((p) => (
                 <tr key={p.id} className="hover:bg-gray-50">
                   <td className="border p-2 font-mono text-xs">{p.id}</td>
                   <td className="border p-2">{p.name}</td>
@@ -128,15 +128,15 @@ export default function DebugConvenios() {
               </tr>
             </thead>
             <tbody>
-              {professionalPayers.map(pp => {
-                const prof = professionals.find(p => p.id === pp.professional_id);
-                const payer = payers.find(p => p.id === pp.payer_id);
+              {professionalPayers.map((pp) => {
+                const prof = professionals.find((p) => p.id === pp.professional_id);
+                const payer = payers.find((p) => p.id === pp.payer_id);
                 return (
                   <tr key={pp.id} className="hover:bg-gray-50">
                     <td className="border p-2 font-mono text-xs">{pp.professional_id}</td>
                     <td className="border p-2 font-mono text-xs">{pp.payer_id}</td>
-                    <td className="border p-2">{prof?.name || prof?.full_name || "?"}</td>
-                    <td className="border p-2">{payer?.name || "?"}</td>
+                    <td className="border p-2">{prof?.name || prof?.full_name || '?'}</td>
+                    <td className="border p-2">{payer?.name || '?'}</td>
                   </tr>
                 );
               })}
@@ -145,7 +145,8 @@ export default function DebugConvenios() {
         </div>
         {professionalPayers.length === 0 && (
           <div className="p-4 bg-yellow-50 text-yellow-700 rounded border border-yellow-200">
-            ⚠️ Nenhum registro em professional_payers. Você precisa inserir dados vindando profissionais a payers.
+            ⚠️ Nenhum registro em professional_payers. Você precisa inserir dados vindando
+            profissionais a payers.
           </div>
         )}
       </div>
@@ -159,12 +160,11 @@ export default function DebugConvenios() {
           <li>✓ Professional_Payers: {professionalPayers.length}</li>
           <li>
             {professionalPayers.length === 0
-              ? "❌ Sem vínculos! Precisa inserir registros em professional_payers"
-              : "✅ Há vínculos configurados"}
+              ? '❌ Sem vínculos! Precisa inserir registros em professional_payers'
+              : '✅ Há vínculos configurados'}
           </li>
         </ul>
       </div>
     </div>
   );
 }
-

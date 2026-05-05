@@ -1,7 +1,7 @@
 // src/lib/agendaIntegrationRepasseApi.js
 /**
  * Integração entre Agenda e Repasse Automático
- * 
+ *
  * Objetivo: Auto-registrar produção quando um atendimento é marcado/finalizado
  */
 
@@ -16,7 +16,6 @@ export async function aoMarcarAtendimento(appointmentData) {
   try {
     // Se o atendimento foi concluído ou é do tipo finalizado
     if (appointmentData.status === 'completed' || appointmentData.status === 'realizado') {
-      
       // Buscar preço do serviço
       const { data: serviceData, error: serviceError } = await supabase
         .from('service_prices')
@@ -25,10 +24,12 @@ export async function aoMarcarAtendimento(appointmentData) {
         .eq('clinic_id', appointmentData.clinic_id)
         .single();
 
-      if (serviceError) console.warn('Erro ao buscar preço:', serviceError);
+      if (serviceError) {
+        console.warn('Erro ao buscar preço:', serviceError);
+      }
 
       const valorBruto = serviceData?.price || appointmentData.price || 0;
-      
+
       // Valor líquido = 80% do bruto (estimativa de deduções)
       const valorLiquido = valorBruto * 0.8;
 
@@ -41,8 +42,9 @@ export async function aoMarcarAtendimento(appointmentData) {
           tipo: 'consulta', // ou 'exame', 'cirurgia' conforme serviço
           valor_bruto: valorBruto,
           valor_liquido: valorLiquido,
-          data_atendimento: appointmentData.appointment_date || new Date().toISOString().split('T')[0],
-        }
+          data_atendimento:
+            appointmentData.appointment_date || new Date().toISOString().split('T')[0],
+        },
       );
 
       console.log('✅ Produção registrada automaticamente:', producao);
@@ -69,10 +71,12 @@ export async function sincronizarProducaoHistorica(clinicId, dataInicio, dataFim
       .gte('appointment_date', dataInicio)
       .lte('appointment_date', dataFim);
 
-    if (appointmentsError) throw appointmentsError;
+    if (appointmentsError) {
+      throw appointmentsError;
+    }
 
     const resultados = [];
-    
+
     for (const apt of appointments || []) {
       try {
         // Verificar se já existe produção registrada
@@ -96,9 +100,9 @@ export async function sincronizarProducaoHistorica(clinicId, dataInicio, dataFim
 
     return {
       total: appointments?.length || 0,
-      registrados: resultados.filter(r => r.status === 'registrado').length,
-      jáExistentes: resultados.filter(r => r.status === 'ja-existente').length,
-      erros: resultados.filter(r => r.status === 'erro').length,
+      registrados: resultados.filter((r) => r.status === 'registrado').length,
+      jáExistentes: resultados.filter((r) => r.status === 'ja-existente').length,
+      erros: resultados.filter((r) => r.status === 'erro').length,
       detalhes: resultados,
     };
   } catch (err) {
@@ -112,7 +116,9 @@ export async function sincronizarProducaoHistorica(clinicId, dataInicio, dataFim
  * Integre isto com o seu sistema de agendamento
  */
 export function setupAgendaListener(clinicId) {
-  if (!clinicId) return () => {};
+  if (!clinicId) {
+    return () => {};
+  }
 
   // Setup listener para appointments
   const subscription = supabase
@@ -127,10 +133,10 @@ export function setupAgendaListener(clinicId) {
       },
       (payload) => {
         console.log('🔔 Atendimento finalizado, registrando produção...', payload.new);
-        aoMarcarAtendimento(payload.new).catch(err => 
-          console.error('Erro ao registrar produção:', err)
+        aoMarcarAtendimento(payload.new).catch((err) =>
+          console.error('Erro ao registrar produção:', err),
         );
-      }
+      },
     )
     .subscribe();
 

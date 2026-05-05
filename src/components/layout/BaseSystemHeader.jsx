@@ -1,9 +1,9 @@
-import React from "react";
-import { ChevronRight } from "lucide-react";
+import React from 'react';
+import { ChevronRight } from 'lucide-react';
 
 /**
  * Header padrão para todas as páginas de "Base do Sistema"
- * 
+ *
  * @param {string} category - Categoria (ex: "4.1 Cadastros Estruturais")
  * @param {string} title - Título da página (ex: "Serviços")
  * @param {string} subtitle - Descrição breve do objetivo
@@ -22,14 +22,8 @@ export default function BaseSystemHeader({ category, title, subtitle }) {
 
       {/* Título e Subtítulo */}
       <div>
-        <h1 className="text-3xl font-bold text-[hsl(var(--foreground))] mb-2">
-          {title}
-        </h1>
-        {subtitle && (
-          <p className="text-[hsl(var(--muted-foreground))]">
-            {subtitle}
-          </p>
-        )}
+        <h1 className="text-3xl font-bold text-[hsl(var(--foreground))] mb-2">{title}</h1>
+        {subtitle && <p className="text-[hsl(var(--muted-foreground))]">{subtitle}</p>}
       </div>
     </div>
   );

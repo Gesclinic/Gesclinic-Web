@@ -6,88 +6,85 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-export default function Branding({ 
-  name, 
+export default function Branding({
+  name,
   setName,
-  brandName, 
+  brandName,
   setBrandName,
-  primaryColor, 
+  primaryColor,
   setPrimaryColor,
-  secondaryColor, 
+  secondaryColor,
   setSecondaryColor,
   logoUrl,
   setLogoUrl,
   disabled,
   saving,
-  onSave 
+  onSave,
 }) {
   const { toast } = useToast();
   const fileInputRef = useRef(null);
   const [logoPreview, setLogoPreview] = useState(logoUrl);
 
-  const handleLogoUpload = useCallback((event) => {
-    const file = event.target.files[0];
-    if (!file) return;
+  const handleLogoUpload = useCallback(
+    (event) => {
+      const file = event.target.files[0];
+      if (!file) {
+        return;
+      }
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        variant: "destructive",
-        title: "Arquivo muito grande",
-        description: "O arquivo deve ter no máximo 5MB."
-      });
-      return;
-    }
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          variant: 'destructive',
+          title: 'Arquivo muito grande',
+          description: 'O arquivo deve ter no máximo 5MB.',
+        });
+        return;
+      }
 
-    if (!file.type.startsWith('image/')) {
-      toast({
-        variant: "destructive", 
-        title: "Formato inválido",
-        description: "Por favor, selecione apenas arquivos de imagem."
-      });
-      return;
-    }
+      if (!file.type.startsWith('image/')) {
+        toast({
+          variant: 'destructive',
+          title: 'Formato inválido',
+          description: 'Por favor, selecione apenas arquivos de imagem.',
+        });
+        return;
+      }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const imageUrl = e.target.result;
-      setLogoPreview(imageUrl);
-      setLogoUrl(imageUrl);
-      
-      // Salvar no localStorage
-      const logoData = {
-        logo_url: imageUrl,
-        logo_file_name: file.name,
-        logo_file_type: file.type,
-        logo_file_size: file.size,
-        created_at: new Date().toISOString()
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const imageUrl = e.target.result;
+        setLogoPreview(imageUrl);
+        setLogoUrl(imageUrl);
+
+        // Salvar no localStorage
+        const logoData = {
+          logo_url: imageUrl,
+          logo_file_name: file.name,
+          logo_file_type: file.type,
+          logo_file_size: file.size,
+          created_at: new Date().toISOString(),
+        };
+
+        localStorage.setItem('gesclinic_logo', JSON.stringify(logoData));
+
+        toast({
+          title: 'Logo carregada!',
+          description: `${file.name} foi carregada com sucesso.`,
+        });
       };
-      
-      localStorage.setItem('gesclinic_logo', JSON.stringify(logoData));
-      
-      toast({
-        title: "Logo carregada!",
-        description: `${file.name} foi carregada com sucesso.`
-      });
-    };
-    
-    reader.readAsDataURL(file);
-  }, [setLogoUrl, toast]);
+
+      reader.readAsDataURL(file);
+    },
+    [setLogoUrl, toast],
+  );
 
   return (
-    <motion.div 
-      className="space-y-6"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-    >
+    <motion.div className="space-y-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       {/* Seção Logo da Clínica */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            Logo da Clínica
-          </CardTitle>
-          <p className="text-sm text-gray-600">
-            Faça upload do logo oficial da sua clínica
-          </p>
+          <CardTitle className="flex items-center gap-2">Logo da Clínica</CardTitle>
+          <p className="text-sm text-gray-600">Faça upload do logo oficial da sua clínica</p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-col items-center gap-4">
@@ -104,7 +101,7 @@ export default function Branding({
                 <Upload className="w-8 h-8 text-gray-400" />
               </div>
             )}
-            
+
             <div className="text-center">
               <Button
                 variant="outline"
@@ -132,9 +129,7 @@ export default function Branding({
       <Card>
         <CardHeader>
           <CardTitle>Informações de Empresa</CardTitle>
-          <p className="text-sm text-gray-600">
-            Configure os dados básicos da sua clínica
-          </p>
+          <p className="text-sm text-gray-600">Configure os dados básicos da sua clínica</p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -147,22 +142,18 @@ export default function Branding({
                 onChange={(e) => setName(e.target.value)}
                 disabled={disabled}
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Razão social ou nome completo registrado
-              </p>
+              <p className="text-xs text-gray-500 mt-1">Razão social ou nome completo registrado</p>
             </div>
             <div>
               <Label htmlFor="brandName">Nome fantasia (opcional)</Label>
               <Input
-                id="brandName"  
+                id="brandName"
                 placeholder="Clínica Demo"
                 value={brandName}
                 onChange={(e) => setBrandName(e.target.value)}
                 disabled={disabled}
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Nome comercial da marca utilizado
-              </p>
+              <p className="text-xs text-gray-500 mt-1">Nome comercial da marca utilizado</p>
             </div>
           </div>
         </CardContent>
@@ -172,9 +163,7 @@ export default function Branding({
       <Card>
         <CardHeader>
           <CardTitle>Identidade Visual</CardTitle>
-          <p className="text-sm text-gray-600">
-            Personalize as cores da interface da sua clínica
-          </p>
+          <p className="text-sm text-gray-600">Personalize as cores da interface da sua clínica</p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -216,22 +205,20 @@ export default function Branding({
                   className="font-mono text-sm"
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Cor de apoio e elementos complementares
-              </p>
+              <p className="text-xs text-gray-500 mt-1">Cor de apoio e elementos complementares</p>
             </div>
           </div>
-          
+
           <div className="mt-6">
             <Label>Visualização das cores</Label>
             <div className="flex items-center gap-3 mt-2">
-              <div 
+              <div
                 className="w-8 h-8 rounded border"
                 style={{ backgroundColor: primaryColor }}
                 title="Primária"
               />
               <span className="text-sm font-medium">Primária</span>
-              <div 
+              <div
                 className="w-8 h-8 rounded border"
                 style={{ backgroundColor: secondaryColor }}
                 title="Secundária"
@@ -246,7 +233,7 @@ export default function Branding({
       <div className="p-4 border-2 border-yellow-300 rounded-lg bg-yellow-50 mt-6">
         <h3 className="text-lg font-bold text-yellow-800 mb-4">🧪 Painel de Teste</h3>
         <div className="space-y-3">
-          <button 
+          <button
             className="w-full p-3 bg-blue-600 text-white rounded font-bold hover:bg-blue-700"
             onClick={() => alert('Sistema funcionando!')}
           >
@@ -265,4 +252,3 @@ export default function Branding({
     </motion.div>
   );
 }
-

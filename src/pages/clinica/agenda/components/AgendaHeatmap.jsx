@@ -3,7 +3,7 @@ import React, { useMemo, useState } from 'react';
 
 /**
  * AgendaHeatmap - Visualização de ocupação por horário
- * 
+ *
  * Props:
  * - timeSlots: Array de horários (ex: ["08:00", "08:30", ...])
  * - appointments: Array de agendamentos filtrados
@@ -28,7 +28,7 @@ export default function AgendaHeatmap({
   const heatmapData = useMemo(() => {
     return timeSlots.map((time) => {
       const appointmentsInSlot = appointments.filter(
-        apt => apt.start_time?.substring(0, 5) === time
+        (apt) => apt.start_time?.substring(0, 5) === time,
       );
 
       // Calcular slots totais
@@ -39,14 +39,12 @@ export default function AgendaHeatmap({
 
       // Calcular ocupação
       const occupiedSlots = appointmentsInSlot.length;
-      const occupationPercent = totalSlots > 0 
-        ? Math.round((occupiedSlots / totalSlots) * 100) 
-        : 0;
+      const occupationPercent = totalSlots > 0 ? Math.round((occupiedSlots / totalSlots) * 100) : 0;
       const availableSlots = totalSlots - occupiedSlots;
 
       // Agrupar agendamentos por profissional/sala para tooltip
       const groupedByProfessional = {};
-      appointmentsInSlot.forEach(apt => {
+      appointmentsInSlot.forEach((apt) => {
         if (!groupedByProfessional[apt.professional_id]) {
           groupedByProfessional[apt.professional_id] = [];
         }
@@ -67,13 +65,13 @@ export default function AgendaHeatmap({
 
   // Obter nome do profissional por ID
   const getProfessionalName = (profId) => {
-    const prof = professionals.find(p => p.id === profId);
+    const prof = professionals.find((p) => p.id === profId);
     return prof?.name || 'Desconhecido';
   };
 
   // Obter nome da sala por ID
   const getRoomName = (roomId) => {
-    const room = rooms.find(r => r.id === roomId);
+    const room = rooms.find((r) => r.id === roomId);
     return room?.name || 'Desconhecida';
   };
 
@@ -117,13 +115,12 @@ export default function AgendaHeatmap({
         <div>
           <h3 className="text-sm font-semibold text-gray-900">Heatmap de Ocupação</h3>
           <p className="text-xs text-gray-500 mt-1">
-            Taxa de ocupação por horário • 
-            {viewMode === 'geral' && ' Todos os agendamentos'}
+            Taxa de ocupação por horário •{viewMode === 'geral' && ' Todos os agendamentos'}
             {viewMode === 'profissional' && ` ${columnCount} profissionais`}
             {viewMode === 'sala' && ` ${columnCount} salas`}
           </p>
         </div>
-        
+
         {/* Legenda de cores */}
         <div className="flex gap-4 text-xs">
           <div className="flex items-center gap-2">
@@ -155,7 +152,7 @@ export default function AgendaHeatmap({
               <button
                 onClick={() => handleTimeSlotClick(slot.time)}
                 className={`w-10 h-10 rounded-lg cursor-pointer transition-all transform hover:scale-110 shadow-sm border border-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${getHeatColor(
-                  slot.occupationPercent
+                  slot.occupationPercent,
                 )}`}
                 title={`${slot.time}: ${slot.occupationPercent}% ocupado • Clique para filtrar`}
               >
@@ -173,11 +170,13 @@ export default function AgendaHeatmap({
                   <div className="bg-gray-900 text-white px-4 py-3 rounded-lg whitespace-nowrap text-xs shadow-lg border border-gray-700">
                     {/* Cabeçalho: Horário */}
                     <div className="font-bold text-sm text-blue-300 mb-2">{slot.time}</div>
-                    
+
                     {/* Ocupação */}
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-gray-300">Ocupação:</span>
-                      <span className={`font-bold ml-2 ${getHeatTextColor(slot.occupationPercent)}`}>
+                      <span
+                        className={`font-bold ml-2 ${getHeatTextColor(slot.occupationPercent)}`}
+                      >
                         {slot.occupationPercent}%
                       </span>
                     </div>
@@ -185,39 +184,49 @@ export default function AgendaHeatmap({
                     {/* Contadores */}
                     <div className="flex items-center justify-between mb-2 text-gray-300">
                       <span>Agendamentos:</span>
-                      <span className="font-semibold ml-2">{slot.occupiedSlots} / {slot.totalSlots}</span>
+                      <span className="font-semibold ml-2">
+                        {slot.occupiedSlots} / {slot.totalSlots}
+                      </span>
                     </div>
 
                     {/* Disponíveis */}
                     <div className="flex items-center justify-between mb-3 text-gray-300">
                       <span>Livres:</span>
-                      <span className="font-semibold ml-2 text-green-400">{slot.availableSlots}</span>
+                      <span className="font-semibold ml-2 text-green-400">
+                        {slot.availableSlots}
+                      </span>
                     </div>
 
                     {/* Agendamentos detalhados (se houver) */}
                     {slot.appointmentsInSlot.length > 0 && (
                       <>
                         <div className="border-t border-gray-700 pt-2 mb-2">
-                          <div className="text-gray-400 font-semibold text-xs mb-1">Agendamentos:</div>
+                          <div className="text-gray-400 font-semibold text-xs mb-1">
+                            Agendamentos:
+                          </div>
                           <div className="space-y-1">
                             {viewMode === 'profissional' ? (
                               // Modo profissional: mostrar por profissional
                               Object.entries(slot.groupedByProfessional).map(([profId, apts]) => (
                                 <div key={profId} className="text-gray-300 text-xs ml-1">
-                                  <span className="text-blue-300">•</span> {getProfessionalName(profId)}: {apts.length}
+                                  <span className="text-blue-300">•</span>{' '}
+                                  {getProfessionalName(profId)}: {apts.length}
                                 </div>
                               ))
                             ) : viewMode === 'sala' ? (
                               // Modo sala: mostrar por sala
                               slot.appointmentsInSlot.slice(0, 3).map((apt, idx) => (
                                 <div key={idx} className="text-gray-300 text-xs ml-1">
-                                  <span className="text-blue-300">•</span> {getRoomName(apt.room_id)}: {apt.patient_name}
+                                  <span className="text-blue-300">•</span>{' '}
+                                  {getRoomName(apt.room_id)}: {apt.patient_name}
                                 </div>
                               ))
                             ) : (
                               // Modo geral: mostrar resumo
                               <div className="text-gray-300 text-xs ml-1">
-                                <span className="text-blue-300">•</span> {slot.appointmentsInSlot.length} agendamento{slot.appointmentsInSlot.length !== 1 ? 's' : ''}
+                                <span className="text-blue-300">•</span>{' '}
+                                {slot.appointmentsInSlot.length} agendamento
+                                {slot.appointmentsInSlot.length !== 1 ? 's' : ''}
                               </div>
                             )}
                           </div>
@@ -246,12 +255,12 @@ export default function AgendaHeatmap({
         <div>
           <div className="text-xs text-gray-600 font-medium mb-1">Melhor Horário</div>
           <div className="text-sm font-bold text-green-600">
-            {heatmapData.reduce((min, slot) => 
-              slot.occupationPercent < min.occupationPercent ? slot : min
+            {heatmapData.reduce((min, slot) =>
+              slot.occupationPercent < min.occupationPercent ? slot : min,
             )?.time || '--'}
           </div>
           <div className="text-xs text-gray-500">
-            {Math.min(...heatmapData.map(s => s.occupationPercent))}% ocupado
+            {Math.min(...heatmapData.map((s) => s.occupationPercent))}% ocupado
           </div>
         </div>
 
@@ -259,12 +268,12 @@ export default function AgendaHeatmap({
         <div>
           <div className="text-xs text-gray-600 font-medium mb-1">Pior Horário</div>
           <div className="text-sm font-bold text-red-600">
-            {heatmapData.reduce((max, slot) => 
-              slot.occupationPercent > max.occupationPercent ? slot : max
+            {heatmapData.reduce((max, slot) =>
+              slot.occupationPercent > max.occupationPercent ? slot : max,
             )?.time || '--'}
           </div>
           <div className="text-xs text-gray-500">
-            {Math.max(...heatmapData.map(s => s.occupationPercent))}% ocupado
+            {Math.max(...heatmapData.map((s) => s.occupationPercent))}% ocupado
           </div>
         </div>
 
@@ -274,8 +283,9 @@ export default function AgendaHeatmap({
           <div className="text-sm font-bold text-blue-600">
             {Math.round(
               heatmapData.reduce((sum, slot) => sum + slot.occupationPercent, 0) /
-                heatmapData.length
-            )}%
+                heatmapData.length,
+            )}
+            %
           </div>
           <div className="text-xs text-gray-500">de todos horários</div>
         </div>
@@ -283,4 +293,3 @@ export default function AgendaHeatmap({
     </div>
   );
 }
-

@@ -5,7 +5,7 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
+  TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,7 +31,7 @@ interface CashMovementsTableProps {
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
-    currency: 'BRL'
+    currency: 'BRL',
   }).format(value);
 };
 
@@ -41,13 +41,13 @@ const formatDate = (date: string) => {
     month: '2-digit',
     year: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   });
 };
 
 export const CashMovementsTable: React.FC<CashMovementsTableProps> = ({
   movements,
-  loading = false
+  loading = false,
 }) => {
   return (
     <Card className="border-0 shadow-sm">
@@ -63,9 +63,7 @@ export const CashMovementsTable: React.FC<CashMovementsTableProps> = ({
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
           </div>
         ) : movements.length === 0 ? (
-          <div className="text-center py-8 text-slate-400">
-            Nenhum movimento encontrado
-          </div>
+          <div className="text-center py-8 text-slate-400">Nenhum movimento encontrado</div>
         ) : (
           <div className="overflow-x-auto">
             <Table>
@@ -127,11 +125,7 @@ export const CashMovementsTable: React.FC<CashMovementsTableProps> = ({
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm font-semibold text-right">
-                      <span
-                        className={
-                          mov.type === 'entrada' ? 'text-green-600' : 'text-red-600'
-                        }
-                      >
+                      <span className={mov.type === 'entrada' ? 'text-green-600' : 'text-red-600'}>
                         {mov.type === 'entrada' ? '+' : '-'}
                         {formatCurrency(mov.amount)}
                       </span>

@@ -1,13 +1,13 @@
-import { useState } from "react";
-import { supabase } from "@/lib/customSupabaseClient";
-import { addMinutes } from "date-fns";
+import { useState } from 'react';
+import { supabase } from '@/lib/customSupabaseClient';
+import { addMinutes } from 'date-fns';
 
 export function useAgendaDragDrop() {
   const [draggingEvent, setDraggingEvent] = useState(null);
 
   // Quando começa arrastar
   function onDragStart(event, evData) {
-    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.effectAllowed = 'move';
     setDraggingEvent(evData);
   }
 
@@ -22,7 +22,9 @@ export function useAgendaDragDrop() {
   async function onDrop(e, slot, professionalId) {
     e.preventDefault();
 
-    if (!draggingEvent) return;
+    if (!draggingEvent) {
+      return;
+    }
 
     const original = draggingEvent;
 
@@ -30,17 +32,19 @@ export function useAgendaDragDrop() {
     const newEnd = addMinutes(newStart, draggingEvent.duration);
 
     const { error } = await supabase
-      .from("appointments")
+      .from('appointments')
       .update({
         professional_id: professionalId,
         start_time: newStart.toISOString(),
         end_time: newEnd.toISOString(),
       })
-      .eq("id", original.id);
+      .eq('id', original.id);
 
     setDraggingEvent(null);
 
-    if (error) console.error("Erro ao mover agenda:", error);
+    if (error) {
+      console.error('Erro ao mover agenda:', error);
+    }
   }
 
   return {

@@ -1,12 +1,12 @@
-import React from "react";
-import PageLayout from "@/components/ui/PageLayout";
-import { useBreadcrumbs } from "@/hooks/useBreadcrumbs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React from 'react';
+import PageLayout from '@/components/ui/PageLayout';
+import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function DashboardEstoque() {
   const breadcrumbs = useBreadcrumbs([
-    { label: "Estoque", path: "/clinica/estoque" },
-    { label: "Dashboard" }
+    { label: 'Estoque', path: '/clinica/estoque' },
+    { label: 'Dashboard' },
   ]);
 
   return (
@@ -17,17 +17,23 @@ export default function DashboardEstoque() {
     >
       <div className="grid md:grid-cols-3 gap-4 mt-6">
         <Card>
-          <CardHeader><CardTitle>Total de Itens</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>Total de Itens</CardTitle>
+          </CardHeader>
           <CardContent className="text-3xl font-bold">0</CardContent>
         </Card>
 
         <Card>
-          <CardHeader><CardTitle>Itens com Baixo Estoque</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>Itens com Baixo Estoque</CardTitle>
+          </CardHeader>
           <CardContent className="text-3xl font-bold text-red-600">0</CardContent>
         </Card>
 
         <Card>
-          <CardHeader><CardTitle>Movimentações do Mês</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>Movimentações do Mês</CardTitle>
+          </CardHeader>
           <CardContent className="text-3xl font-bold">0</CardContent>
         </Card>
       </div>
@@ -39,4 +45,3 @@ export default function DashboardEstoque() {
     </PageLayout>
   );
 }
-

@@ -1,13 +1,13 @@
-import React from "react";
-import PageLayout from "@/components/ui/PageLayout";
-import { useBreadcrumbs } from "@/hooks/useBreadcrumbs";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import React from 'react';
+import PageLayout from '@/components/ui/PageLayout';
+import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 export default function GeraisConfig() {
   const breadcrumbs = useBreadcrumbs([
-    { label: "Clínica", path: "/clinica" },
-    { label: "Configurações", path: "/clinica/configuracoes" },
-    { label: "Gerais" }
+    { label: 'Clínica', path: '/clinica' },
+    { label: 'Configurações', path: '/clinica/configuracoes' },
+    { label: 'Gerais' },
   ]);
 
   return (
@@ -67,4 +67,3 @@ export default function GeraisConfig() {
     </PageLayout>
   );
 }
-

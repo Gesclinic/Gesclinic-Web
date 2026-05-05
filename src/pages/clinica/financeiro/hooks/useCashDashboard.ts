@@ -71,7 +71,7 @@ export function useCashDashboard(clinicId: string, filters: CashDashboardFilters
     porServico: [],
     evolucaoDiaria: [],
     porOrigem: [],
-    movimentos: []
+    movimentos: [],
   });
 
   const [loading, setLoading] = useState(false);
@@ -87,7 +87,8 @@ export function useCashDashboard(clinicId: string, filters: CashDashboardFilters
       // Construir query com filtros
       let query = supabase
         .from('cash_movements')
-        .select(`
+        .select(
+          `
           id,
           type,
           amount,
@@ -105,7 +106,8 @@ export function useCashDashboard(clinicId: string, filters: CashDashboardFilters
           professional:professionals(name),
           service:services(name),
           payer:payers(name)
-        `)
+        `,
+        )
         .eq('clinic_id', clinicId)
         .eq('status', 'confirmado');
 
@@ -132,7 +134,7 @@ export function useCashDashboard(clinicId: string, filters: CashDashboardFilters
       }
 
       const { data: movements, error: fetchError } = await query.order('created_at', {
-        ascending: false
+        ascending: false,
       });
 
       if (fetchError) throw fetchError;
@@ -157,7 +159,7 @@ export function useCashDashboard(clinicId: string, filters: CashDashboardFilters
     data,
     loading,
     error,
-    refetch: fetchData
+    refetch: fetchData,
   };
 }
 
@@ -175,7 +177,7 @@ function aggregateData(movements: any[]): CashDashboardData {
     porServico: [],
     evolucaoDiaria: [],
     porOrigem: [],
-    movimentos: movements
+    movimentos: movements,
   };
 
   // Mapas para agregação
@@ -217,7 +219,7 @@ function aggregateData(movements: any[]): CashDashboardData {
       const current = profMap.get(key) || {
         name: mov.professional?.name || 'N/A',
         total: 0,
-        count: 0
+        count: 0,
       };
       current.total += amount;
       current.count += 1;
@@ -230,7 +232,7 @@ function aggregateData(movements: any[]): CashDashboardData {
       const current = payerMap.get(key) || {
         name: mov.payer?.name || 'N/A',
         total: 0,
-        count: 0
+        count: 0,
       };
       current.total += amount;
       current.count += 1;
@@ -243,7 +245,7 @@ function aggregateData(movements: any[]): CashDashboardData {
       const current = serviceMap.get(key) || {
         name: mov.service?.name || 'N/A',
         total: 0,
-        count: 0
+        count: 0,
       };
       current.total += amount;
       current.count += 1;
@@ -274,7 +276,7 @@ function aggregateData(movements: any[]): CashDashboardData {
       professional_id: id,
       professional_name: data.name,
       total: data.total,
-      count: data.count
+      count: data.count,
     }))
     .sort((a, b) => b.total - a.total)
     .slice(0, 5); // Top 5
@@ -285,7 +287,7 @@ function aggregateData(movements: any[]): CashDashboardData {
       payer_name: data.name,
       total: data.total,
       count: data.count,
-      ticketMedio: data.count > 0 ? data.total / data.count : 0
+      ticketMedio: data.count > 0 ? data.total / data.count : 0,
     }))
     .sort((a, b) => b.total - a.total);
 
@@ -294,7 +296,7 @@ function aggregateData(movements: any[]): CashDashboardData {
       service_id: id,
       service_name: data.name,
       total: data.total,
-      count: data.count
+      count: data.count,
     }))
     .sort((a, b) => b.total - a.total)
     .slice(0, 5); // Top 5
@@ -303,7 +305,7 @@ function aggregateData(movements: any[]): CashDashboardData {
     .map(([date, data]) => ({
       date,
       entradas: data.entradas,
-      saidas: data.saidas
+      saidas: data.saidas,
     }))
     .sort((a, b) => a.date.localeCompare(b.date));
 
@@ -312,7 +314,7 @@ function aggregateData(movements: any[]): CashDashboardData {
   result.porOrigem = Array.from(originMap.entries()).map(([origin, total]) => ({
     origin,
     total,
-    percentage: totalPorOrigem > 0 ? (total / totalPorOrigem) * 100 : 0
+    percentage: totalPorOrigem > 0 ? (total / totalPorOrigem) * 100 : 0,
   }));
 
   return result;

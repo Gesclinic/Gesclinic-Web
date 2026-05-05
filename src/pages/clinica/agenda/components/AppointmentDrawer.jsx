@@ -11,7 +11,7 @@ import {
 
 /**
  * AppointmentDrawer - Drawer lateral para ações de atendimento
- * 
+ *
  * Exibe detalhes do agendamento e botões de ação rápida:
  * - Check-in
  * - Confirmar presença
@@ -40,17 +40,17 @@ export default function AppointmentDrawer({
   const [editingDataOpen, setEditingDataOpen] = useState(false);
   const [editCPF, setEditCPF] = useState('');
   const [editPhone, setEditPhone] = useState('');
-  
+
   // 🆕 Estados para dados financeiros no check-in
   const [checkinPlan, setCheckinPlan] = useState('');
   const [checkinAuthorization, setCheckinAuthorization] = useState('');
   const [checkinValue, setCheckinValue] = useState('');
   const [checkinTab, setCheckinTab] = useState('essencial'); // 'essencial', 'cadastrais' ou 'financeiro'
-  
+
   // 🆕 Estados para edição de cadastrais no check-in
   const [editName, setEditName] = useState('');
   const [editEmail, setEditEmail] = useState('');
-  
+
   // 🆕 Campos financeiros adicionais
   const [checkinPayerType, setCheckinPayerType] = useState('CONVENIO'); // CONVENIO, PARTICULAR, CORTESIA
   const [checkinPayerId, setCheckinPayerId] = useState(''); // 🆕 ID do convênio
@@ -62,7 +62,7 @@ export default function AppointmentDrawer({
   const [checkinPaymentMethod, setCheckinPaymentMethod] = useState(''); // DINHEIRO, CARTAO, PIX, CHEQUE, BOLETO
   const [checkinCopayment, setCheckinCopayment] = useState('');
   const [checkinDiscount, setCheckinDiscount] = useState('');
-  
+
   // 🆕 Estados para carregar payers/plans dinamicamente
   const [payers, setPayers] = useState([]);
   const [plans, setPlans] = useState([]);
@@ -72,27 +72,41 @@ export default function AppointmentDrawer({
   useEffect(() => {
     if (checkinOpen && appointment) {
       const cpf = appointment?.patient_cpf || appointment?.cpf || '';
-      const phone = appointment?.patient_phone || appointment?.patient_mobile || appointment?.telefone || '';
+      const phone =
+        appointment?.patient_phone || appointment?.patient_mobile || appointment?.telefone || '';
       // 🔧 Separar payer_name e plan_name corretamente
-      const payer = appointment?.payer_name || appointment?.health_plan || appointment?.convênio || 'Particular';
+      const payer =
+        appointment?.payer_name ||
+        appointment?.health_plan ||
+        appointment?.convênio ||
+        'Particular';
       // Se plan_name não existe (coluna plan_id ainda não criada), usar payer_name como fallback
       const plan = appointment?.plan_name || appointment?.payer_name || 'Particular';
       const authorization = appointment?.authorization || appointment?.autorização || '';
       const value = appointment?.value || appointment?.valor || '';
       const payerType = appointment?.payer_type || 'CONVENIO';
       const cardNumber = appointment?.card_number || appointment?.carteirinha || '';
-      const authExpiry = appointment?.authorization_expiry || appointment?.autorização_vencimento || '';
+      const authExpiry =
+        appointment?.authorization_expiry || appointment?.autorização_vencimento || '';
       const guideNumber = appointment?.guide_number || appointment?.guia || '';
       const paymentMethod = appointment?.payment_method || '';
       const copayment = appointment?.copayment || appointment?.coparticipação || '';
       const discount = appointment?.discount || appointment?.desconto || '';
       const payerId = appointment?.payer_id || ''; // 🆕
       const planId = appointment?.plan_id || ''; // 🆕
-      
-      console.log('[AppointmentDrawer] Sincronizando dados financeios do check-in:', { 
-        cpf, phone, payer, plan, payerType, authorization, value, payerId, planId
+
+      console.log('[AppointmentDrawer] Sincronizando dados financeios do check-in:', {
+        cpf,
+        phone,
+        payer,
+        plan,
+        payerType,
+        authorization,
+        value,
+        payerId,
+        planId,
       });
-      
+
       setCheckinCPF(cpf);
       setCheckinPhone(phone);
       setCheckinPlan(plan);
@@ -143,7 +157,7 @@ export default function AppointmentDrawer({
             .select('id, name')
             .eq('payer_id', checkinPayerId);
           setPlans(data || []);
-          
+
           // Auto-selecionar se houver apenas um plano
           if (data && data.length === 1) {
             console.log('✅ [CheckIn] Auto-selecionando único plano:', data[0].name);
@@ -165,14 +179,17 @@ export default function AppointmentDrawer({
   useEffect(() => {
     if (editingDataOpen && appointment) {
       const cpf = appointment?.patient_cpf || appointment?.cpf || '';
-      const phone = appointment?.patient_phone || appointment?.patient_mobile || appointment?.telefone || '';
-      
+      const phone =
+        appointment?.patient_phone || appointment?.patient_mobile || appointment?.telefone || '';
+
       setEditCPF(cpf);
       setEditPhone(phone);
     }
   }, [editingDataOpen, appointment]);
 
-  if (!isOpen || !appointment) return null;
+  if (!isOpen || !appointment) {
+    return null;
+  }
 
   const {
     id,
@@ -210,7 +227,7 @@ export default function AppointmentDrawer({
     plan: appointment?.plan,
     health_plan_name: appointment?.health_plan_name,
     convênio_plano: appointment?.convênio_plano,
-    full_appointment: JSON.stringify(appointment).substring(0, 500)
+    full_appointment: JSON.stringify(appointment).substring(0, 500),
   });
 
   const name = paciente || patient_name || 'Sem nome';
@@ -221,20 +238,22 @@ export default function AppointmentDrawer({
   const plan = convênio || health_plan || 'Particular';
   const patient_age = idade || age;
   const appointmentTime = horário || appointment.horario || appointment.time || '—';
-  const appointmentDate = scheduled_date || data || date || appointment.scheduled_date || appointment.data || '—';
+  const appointmentDate =
+    scheduled_date || data || date || appointment.scheduled_date || appointment.data || '—';
   const noteText = notas || notes || '';
 
   // Mapear status antigos para novos se necessário (backward compat)
-  let normalizedStatus = migrateStatus(status);
+  const normalizedStatus = migrateStatus(status);
 
-  const statusInfo = STATUS_CONFIG[normalizedStatus] || STATUS_CONFIG[APPOINTMENT_STATUSES.SCHEDULED];
+  const statusInfo =
+    STATUS_CONFIG[normalizedStatus] || STATUS_CONFIG[APPOINTMENT_STATUSES.SCHEDULED];
 
   // Verificar dados essenciais completos
   const getEssentialDataStatus = () => {
     // Usar valores locais (checkinCPF/checkinPhone) se disponíveis, caso contrário usar do appointment
     const cpf = checkinCPF || appointment?.patient_cpf;
     const phone = checkinPhone || appointment?.patient_phone || appointment?.patient_mobile;
-    
+
     const essentialFields = {
       name: appointment?.patient_name,
       cpf: cpf,
@@ -242,7 +261,9 @@ export default function AppointmentDrawer({
     };
 
     const missingFields = Object.entries(essentialFields).reduce((acc, [key, value]) => {
-      if (!value) acc.push(key);
+      if (!value) {
+        acc.push(key);
+      }
       return acc;
     }, []);
 
@@ -303,10 +324,14 @@ export default function AppointmentDrawer({
           phone: 'Telefone',
         };
 
-        const missingNames = essentialDataStatus.missingFields.map(f => missingFieldsText[f]).join(', ');
-        
-        alert(`⚠️ Dados Incompletos!\n\nFaltam os seguintes campos: ${missingNames}\n\nAbrindo página para atualização...`);
-        
+        const missingNames = essentialDataStatus.missingFields
+          .map((f) => missingFieldsText[f])
+          .join(', ');
+
+        alert(
+          `⚠️ Dados Incompletos!\n\nFaltam os seguintes campos: ${missingNames}\n\nAbrindo página para atualização...`,
+        );
+
         const patientId = appointment?.patient_id;
         if (patientId) {
           window.open(`/clinica/pacientes/${patientId}`, '_blank');
@@ -359,7 +384,7 @@ export default function AppointmentDrawer({
       });
 
       // Simular processamento
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Preparar dados financeiros
       const financialData = {
@@ -384,7 +409,7 @@ export default function AppointmentDrawer({
       console.log('[handleQuickCheckIn] Chamando onCheckIn com dados financeiros e cadastrais...');
       onCheckIn(financialData);
       console.log('[handleQuickCheckIn] onCheckIn foi chamado!');
-      
+
       // Fechar modal e drawer
       setCheckinOpen(false);
       onClose();
@@ -399,10 +424,7 @@ export default function AppointmentDrawer({
   return (
     <div className="fixed inset-0 z-[10000] flex items-center justify-center">
       {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/30"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 bg-black/30" onClick={onClose} />
 
       {/* 🆕 Modal Centralizado */}
       <div className="relative w-[90vw] max-w-2xl max-h-[90vh] bg-white shadow-2xl rounded-lg overflow-hidden z-[10001] flex flex-col">
@@ -415,10 +437,7 @@ export default function AppointmentDrawer({
               <p className="text-xs text-blue-100">Informações completas do agendamento</p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 hover:bg-blue-700 rounded-lg transition-colors"
-          >
+          <button onClick={onClose} className="p-1 hover:bg-blue-700 rounded-lg transition-colors">
             <X size={24} className="text-white" />
           </button>
         </div>
@@ -426,7 +445,9 @@ export default function AppointmentDrawer({
         {/* Content com overflow-y-auto */}
         <div className="flex-1 overflow-y-auto px-4 py-3 scrollbar-custom space-y-1.5">
           {/* Status Badge */}
-          <div className={`${statusInfo.color} ${statusInfo.textColor} px-2 py-1.5 rounded-lg font-semibold text-sm text-center flex items-center justify-center gap-1 mb-2`}>
+          <div
+            className={`${statusInfo.color} ${statusInfo.textColor} px-2 py-1.5 rounded-lg font-semibold text-sm text-center flex items-center justify-center gap-1 mb-2`}
+          >
             <span>{statusInfo.icon}</span>
             <span>{statusInfo.label}</span>
           </div>
@@ -439,20 +460,38 @@ export default function AppointmentDrawer({
                 <span className="text-xs font-semibold text-blue-600 uppercase">Paciente</span>
               </div>
               <p className="text-sm font-bold text-gray-900">{name}</p>
-              {patient_age && (
-                <p className="text-xs text-gray-600">{patient_age} anos</p>
-              )}
+              {patient_age && <p className="text-xs text-gray-600">{patient_age} anos</p>}
             </div>
 
             {/* Prontuário + Telefone em 2 colunas */}
             <div className="grid grid-cols-2 gap-1.5">
               <div className="bg-gray-50 p-2 rounded-lg">
-                <span className="text-xs font-semibold text-gray-500 uppercase block mb-0.5">Prontuário</span>
-                <p className="text-xs text-gray-900 font-medium">{appointment?.patient_prontuario || appointment?.patients?.prontuario_numero || appointment?.patient?.prontuario_numero || appointment?.prontuario_numero || appointment?.record_number || appointment?.patient_record || appointment?.prontuario || '—'}</p>
+                <span className="text-xs font-semibold text-gray-500 uppercase block mb-0.5">
+                  Prontuário
+                </span>
+                <p className="text-xs text-gray-900 font-medium">
+                  {appointment?.patient_prontuario ||
+                    appointment?.patients?.prontuario_numero ||
+                    appointment?.patient?.prontuario_numero ||
+                    appointment?.prontuario_numero ||
+                    appointment?.record_number ||
+                    appointment?.patient_record ||
+                    appointment?.prontuario ||
+                    '—'}
+                </p>
               </div>
               <div className="bg-gray-50 p-2 rounded-lg">
-                <span className="text-xs font-semibold text-gray-500 uppercase block mb-0.5">Telefone</span>
-                <p className="text-xs text-gray-900 font-medium break-all">{checkinPhone || appointment?.patient_phone || appointment?.patient_mobile || appointment?.phone || appointment?.telefone || '—'}</p>
+                <span className="text-xs font-semibold text-gray-500 uppercase block mb-0.5">
+                  Telefone
+                </span>
+                <p className="text-xs text-gray-900 font-medium break-all">
+                  {checkinPhone ||
+                    appointment?.patient_phone ||
+                    appointment?.patient_mobile ||
+                    appointment?.phone ||
+                    appointment?.telefone ||
+                    '—'}
+                </p>
               </div>
             </div>
           </div>
@@ -460,26 +499,35 @@ export default function AppointmentDrawer({
           {/* 🆕 Row 2: Data, Horário, Duração */}
           <div className="grid grid-cols-3 gap-1.5">
             <div className="bg-blue-50 p-2 rounded-lg border border-blue-100">
-              <span className="text-xs font-semibold text-blue-600 uppercase block mb-0.5">Data</span>
+              <span className="text-xs font-semibold text-blue-600 uppercase block mb-0.5">
+                Data
+              </span>
               <p className="text-xs font-semibold text-gray-900">
-                {appointmentDate && appointmentDate !== '—' 
+                {appointmentDate && appointmentDate !== '—'
                   ? (() => {
-                      const [year, month, day] = appointmentDate.split('-').map(Number);
-                      const safeDate = new Date(year, month - 1, day);
-                      return safeDate.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
-                    })()
-                  : '—'
-                }
+                    const [year, month, day] = appointmentDate.split('-').map(Number);
+                    const safeDate = new Date(year, month - 1, day);
+                    return safeDate.toLocaleDateString('pt-BR', {
+                      weekday: 'short',
+                      day: '2-digit',
+                      month: '2-digit',
+                    });
+                  })()
+                  : '—'}
               </p>
             </div>
 
             <div className="bg-gray-50 p-2 rounded-lg">
-              <span className="text-xs font-semibold text-gray-500 uppercase block mb-0.5">Horário</span>
+              <span className="text-xs font-semibold text-gray-500 uppercase block mb-0.5">
+                Horário
+              </span>
               <p className="text-xs font-semibold text-gray-900">{appointmentTime}</p>
             </div>
 
             <div className="bg-gray-50 p-2 rounded-lg">
-              <span className="text-xs font-semibold text-gray-500 uppercase block mb-0.5">Duração</span>
+              <span className="text-xs font-semibold text-gray-500 uppercase block mb-0.5">
+                Duração
+              </span>
               <p className="text-xs font-semibold text-gray-900">{duration_min} min</p>
             </div>
           </div>
@@ -487,17 +535,23 @@ export default function AppointmentDrawer({
           {/* 🆕 Row 3: Serviço, Profissional, Sala */}
           <div className="grid grid-cols-3 gap-1.5">
             <div className="bg-gray-50 p-2 rounded-lg">
-              <span className="text-xs font-semibold text-gray-500 uppercase block mb-0.5">Serviço</span>
+              <span className="text-xs font-semibold text-gray-500 uppercase block mb-0.5">
+                Serviço
+              </span>
               <p className="text-xs font-semibold text-gray-900">{service}</p>
             </div>
 
             <div className="bg-gray-50 p-2 rounded-lg">
-              <span className="text-xs font-semibold text-gray-500 uppercase block mb-0.5">Profissional</span>
+              <span className="text-xs font-semibold text-gray-500 uppercase block mb-0.5">
+                Profissional
+              </span>
               <p className="text-xs font-semibold text-gray-900">{prof}</p>
             </div>
 
             <div className="bg-gray-50 p-2 rounded-lg">
-              <span className="text-xs font-semibold text-gray-500 uppercase block mb-0.5">Sala</span>
+              <span className="text-xs font-semibold text-gray-500 uppercase block mb-0.5">
+                Sala
+              </span>
               <p className="text-xs font-semibold text-gray-900">{roomNum}</p>
             </div>
           </div>
@@ -505,30 +559,50 @@ export default function AppointmentDrawer({
           {/* 🆕 Row 4: Convênio, Plano, Código, Valor */}
           <div className="grid grid-cols-2 gap-1.5">
             <div className="bg-blue-50 p-2 rounded-lg border border-blue-100">
-              <span className="text-xs font-semibold text-blue-600 uppercase block mb-0.5">Convênio</span>
-              <p className="text-xs font-semibold text-blue-900">{appointment?.payer_name || appointment?.payers?.name || 'Particular'}</p>
+              <span className="text-xs font-semibold text-blue-600 uppercase block mb-0.5">
+                Convênio
+              </span>
+              <p className="text-xs font-semibold text-blue-900">
+                {appointment?.payer_name || appointment?.payers?.name || 'Particular'}
+              </p>
             </div>
 
             <div className="bg-gray-50 p-2 rounded-lg">
-              <span className="text-xs font-semibold text-gray-500 uppercase block mb-0.5">Plano</span>
-              <p className="text-xs font-medium text-gray-900">{checkinPlan || appointment?.plan_name || 'Particular'}</p>
+              <span className="text-xs font-semibold text-gray-500 uppercase block mb-0.5">
+                Plano
+              </span>
+              <p className="text-xs font-medium text-gray-900">
+                {checkinPlan || appointment?.plan_name || 'Particular'}
+              </p>
             </div>
 
             <div className="bg-gray-50 p-2 rounded-lg">
-              <span className="text-xs font-semibold text-gray-500 uppercase block mb-0.5">Código</span>
-              <p className="text-xs font-medium text-gray-900 font-mono">{appointment?.plan_code || '—'}</p>
+              <span className="text-xs font-semibold text-gray-500 uppercase block mb-0.5">
+                Código
+              </span>
+              <p className="text-xs font-medium text-gray-900 font-mono">
+                {appointment?.plan_code || '—'}
+              </p>
             </div>
 
             <div className="bg-green-50 p-2 rounded-lg border border-green-100">
-              <span className="text-xs font-semibold text-green-600 uppercase block mb-0.5">Valor (R$)</span>
-              <p className="text-xs font-semibold text-green-900">{checkinValue || appointment?.value ? `R$ ${parseFloat(checkinValue || appointment?.value).toFixed(2)}` : '—'}</p>
+              <span className="text-xs font-semibold text-green-600 uppercase block mb-0.5">
+                Valor (R$)
+              </span>
+              <p className="text-xs font-semibold text-green-900">
+                {checkinValue || appointment?.value
+                  ? `R$ ${parseFloat(checkinValue || appointment?.value).toFixed(2)}`
+                  : '—'}
+              </p>
             </div>
           </div>
 
           {/* 🆕 Observações */}
           {noteText && (
             <div className="bg-yellow-50 p-2 rounded-lg border border-yellow-200">
-              <span className="text-xs font-semibold text-yellow-600 uppercase block mb-0.5">Observações</span>
+              <span className="text-xs font-semibold text-yellow-600 uppercase block mb-0.5">
+                Observações
+              </span>
               <p className="text-xs text-yellow-900">{noteText}</p>
             </div>
           )}
@@ -553,15 +627,13 @@ export default function AppointmentDrawer({
               </>
             )}
 
-            {(
-              normalizedStatus === 'agendado' || 
-              normalizedStatus === 'scheduled' || 
+            {(normalizedStatus === 'agendado' ||
+              normalizedStatus === 'scheduled' ||
               normalizedStatus === 'confirmado' ||
               normalizedStatus === 'confirmed' ||
               normalizedStatus === 'at_reception' ||
               status?.toLowerCase?.()?.includes('agendado') ||
-              status?.toLowerCase?.()?.includes('scheduled')
-            ) && (
+              status?.toLowerCase?.()?.includes('scheduled')) && (
               <button
                 onClick={() => setCheckinOpen(true)}
                 className="bg-green-600 hover:bg-green-700 text-white font-medium py-1.5 px-2 text-xs rounded-lg transition-colors"
@@ -570,13 +642,11 @@ export default function AppointmentDrawer({
               </button>
             )}
 
-            {(
-              normalizedStatus === 'at_reception' ||
-              normalizedStatus === 'check-in' || 
+            {(normalizedStatus === 'at_reception' ||
+              normalizedStatus === 'check-in' ||
               normalizedStatus === 'confirmado' ||
               status?.toLowerCase?.()?.includes('check-in') ||
-              status?.toLowerCase?.()?.includes('at_reception')
-            ) && (
+              status?.toLowerCase?.()?.includes('at_reception')) && (
               <button
                 onClick={() => {
                   onStartAppointment(id);
@@ -690,14 +760,16 @@ export default function AppointmentDrawer({
                       <div>
                         <p className="font-semibold">Dados Obrigatórios Faltando!</p>
                         <p className="text-xs">
-                          {essentialDataStatus.missingFields.map(f => {
-                            const labels = {
-                              name: 'Nome',
-                              cpf: 'CPF',
-                              phone: 'Telefone',
-                            };
-                            return labels[f];
-                          }).join(', ')}
+                          {essentialDataStatus.missingFields
+                            .map((f) => {
+                              const labels = {
+                                name: 'Nome',
+                                cpf: 'CPF',
+                                phone: 'Telefone',
+                              };
+                              return labels[f];
+                            })
+                            .join(', ')}
                         </p>
                       </div>
                     </div>
@@ -705,10 +777,18 @@ export default function AppointmentDrawer({
 
                   {/* Dados do Paciente */}
                   <div className="bg-blue-50 p-3 rounded-lg text-sm space-y-1">
-                    <p><strong>👤 Paciente:</strong> {name}</p>
-                    <p><strong>🕐 Horário:</strong> {appointmentTime}</p>
-                    <p><strong>📌 CPF:</strong> {checkinCPF || '—'}</p>
-                    <p><strong>📱 Telefone:</strong> {checkinPhone || '—'}</p>
+                    <p>
+                      <strong>👤 Paciente:</strong> {name}
+                    </p>
+                    <p>
+                      <strong>🕐 Horário:</strong> {appointmentTime}
+                    </p>
+                    <p>
+                      <strong>📌 CPF:</strong> {checkinCPF || '—'}
+                    </p>
+                    <p>
+                      <strong>📱 Telefone:</strong> {checkinPhone || '—'}
+                    </p>
                   </div>
 
                   {!essentialDataStatus.isComplete && (
@@ -726,13 +806,19 @@ export default function AppointmentDrawer({
               {checkinTab === 'cadastrais' && (
                 <div className="space-y-4">
                   <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg text-sm">
-                    <p><strong>⚠️ Editar Dados Cadastrais</strong></p>
-                    <p className="text-xs text-gray-600 mt-1">Dados atualizados aqui serão salvos no sistema</p>
+                    <p>
+                      <strong>⚠️ Editar Dados Cadastrais</strong>
+                    </p>
+                    <p className="text-xs text-gray-600 mt-1">
+                      Dados atualizados aqui serão salvos no sistema
+                    </p>
                   </div>
 
                   {/* Nome */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">👤 Nome Completo</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      👤 Nome Completo
+                    </label>
                     <input
                       type="text"
                       value={editName || name}
@@ -758,7 +844,9 @@ export default function AppointmentDrawer({
 
                   {/* Telefone */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">📱 Telefone</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      📱 Telefone
+                    </label>
                     <input
                       type="tel"
                       placeholder="(11) 9999-9999"
@@ -780,7 +868,9 @@ export default function AppointmentDrawer({
                     />
                   </div>
 
-                  <p className="text-xs text-gray-500 text-center">ℹ️ Preencha todos os campos para confirmar o check-in</p>
+                  <p className="text-xs text-gray-500 text-center">
+                    ℹ️ Preencha todos os campos para confirmar o check-in
+                  </p>
                 </div>
               )}
 
@@ -789,7 +879,9 @@ export default function AppointmentDrawer({
                 <div className="space-y-4">
                   {/* Tipo de Convênio */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">🏥 Tipo de Convênio</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      🏥 Tipo de Convênio
+                    </label>
                     <select
                       value={checkinPayerType}
                       onChange={(e) => setCheckinPayerType(e.target.value)}
@@ -801,64 +893,70 @@ export default function AppointmentDrawer({
                     </select>
                   </div>
 
-              {/* Convênio / Plano */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">💳 Convênio</label>
-                <select
-                  value={checkinPayerId}
-                  onChange={(e) => {
-                    setCheckinPayerId(e.target.value);
-                    if (e.target.value) {
-                      const selectedPayer = payers.find(p => p.id === e.target.value);
-                      setCheckinPlan(selectedPayer?.name || '');
-                    } else {
-                      setCheckinPlan('');
-                    }
-                  }}
-                  disabled={loadingPayers}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-                >
-                  <option value="">
-                    {loadingPayers ? 'Carregando...' : 'Selecione um convênio'}
-                  </option>
-                  {payers.map(payer => (
-                    <option key={payer.id} value={payer.id}>
-                      {payer.name}
-                    </option>
-                  ))}
-                  <option value="particular">Particular</option>
-                </select>
-              </div>
-
-              {/* Plano (se houver convênio selecionado) */}
-              {checkinPayerId && checkinPayerId !== 'particular' && plans.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">📋 Plano</label>
-                  <select
-                    value={checkinPlanId}
-                    onChange={(e) => {
-                      setCheckinPlanId(e.target.value);
-                      if (e.target.value) {
-                        const selectedPlan = plans.find(p => p.id === e.target.value);
-                        setCheckinPlan(selectedPlan?.name || '');
-                      }
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Selecione um plano</option>
-                    {plans.map(plan => (
-                      <option key={plan.id} value={plan.id}>
-                        {plan.name}
+                  {/* Convênio / Plano */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      💳 Convênio
+                    </label>
+                    <select
+                      value={checkinPayerId}
+                      onChange={(e) => {
+                        setCheckinPayerId(e.target.value);
+                        if (e.target.value) {
+                          const selectedPayer = payers.find((p) => p.id === e.target.value);
+                          setCheckinPlan(selectedPayer?.name || '');
+                        } else {
+                          setCheckinPlan('');
+                        }
+                      }}
+                      disabled={loadingPayers}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                    >
+                      <option value="">
+                        {loadingPayers ? 'Carregando...' : 'Selecione um convênio'}
                       </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+                      {payers.map((payer) => (
+                        <option key={payer.id} value={payer.id}>
+                          {payer.name}
+                        </option>
+                      ))}
+                      <option value="particular">Particular</option>
+                    </select>
+                  </div>
+
+                  {/* Plano (se houver convênio selecionado) */}
+                  {checkinPayerId && checkinPayerId !== 'particular' && plans.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        📋 Plano
+                      </label>
+                      <select
+                        value={checkinPlanId}
+                        onChange={(e) => {
+                          setCheckinPlanId(e.target.value);
+                          if (e.target.value) {
+                            const selectedPlan = plans.find((p) => p.id === e.target.value);
+                            setCheckinPlan(selectedPlan?.name || '');
+                          }
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Selecione um plano</option>
+                        {plans.map((plan) => (
+                          <option key={plan.id} value={plan.id}>
+                            {plan.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
                   {/* Carteirinha */}
                   <div className="grid grid-cols-3 gap-2">
                     <div className="col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">🎫 Nº Carteirinha</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        🎫 Nº Carteirinha
+                      </label>
                       <input
                         type="text"
                         value={checkinCardNumber}
@@ -883,7 +981,9 @@ export default function AppointmentDrawer({
                   {/* Autorização */}
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">🔐 Autorização</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        🔐 Autorização
+                      </label>
                       <input
                         type="text"
                         value={checkinAuthorization}
@@ -893,7 +993,9 @@ export default function AppointmentDrawer({
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">📅 Vencimento</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        📅 Vencimento
+                      </label>
                       <input
                         type="date"
                         value={checkinAuthExpiry}
@@ -905,7 +1007,9 @@ export default function AppointmentDrawer({
 
                   {/* Guia */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">📄 Nº Guia</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      📄 Nº Guia
+                    </label>
                     <input
                       type="text"
                       value={checkinGuideNumber}
@@ -918,7 +1022,9 @@ export default function AppointmentDrawer({
                   {/* Valores */}
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">💰 Valor</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        💰 Valor
+                      </label>
                       <input
                         type="text"
                         value={checkinValue}
@@ -928,7 +1034,9 @@ export default function AppointmentDrawer({
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">🎁 Desconto</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        🎁 Desconto
+                      </label>
                       <input
                         type="text"
                         value={checkinDiscount}
@@ -941,7 +1049,9 @@ export default function AppointmentDrawer({
 
                   {/* Co-participação */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">💸 Co-participação</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      💸 Co-participação
+                    </label>
                     <input
                       type="text"
                       value={checkinCopayment}
@@ -953,7 +1063,9 @@ export default function AppointmentDrawer({
 
                   {/* Forma de Pagamento */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">💳 Forma de Pagamento</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      💳 Forma de Pagamento
+                    </label>
                     <select
                       value={checkinPaymentMethod}
                       onChange={(e) => setCheckinPaymentMethod(e.target.value)}
@@ -994,7 +1106,8 @@ export default function AppointmentDrawer({
                     disabled={checkinProcessing || !essentialDataStatus.isComplete || !checkinPlan}
                     className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    {checkinProcessing ? '⏳' : '✅'} {checkinProcessing ? 'Processando...' : 'Confirmar Check-in'}
+                    {checkinProcessing ? '⏳' : '✅'}{' '}
+                    {checkinProcessing ? 'Processando...' : 'Confirmar Check-in'}
                   </button>
                 </div>
               </div>
@@ -1020,21 +1133,23 @@ export default function AppointmentDrawer({
 
               {/* Info sobre o paciente */}
               <div className="bg-gray-50 p-3 rounded-lg mb-4 text-sm">
-                <p><strong>👤 Paciente:</strong> {name}</p>
+                <p>
+                  <strong>👤 Paciente:</strong> {name}
+                </p>
               </div>
 
               {/* Campo CPF */}
               <div className="mb-4">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  📌 CPF *
-                </label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">📌 CPF *</label>
                 <input
                   type="text"
                   placeholder="000.000.000-00"
                   value={editCPF}
                   onChange={(e) => setEditCPF(e.target.value.replace(/\D/g, '').slice(0, 11))}
                   className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                    editCPF ? 'border-green-300 focus:ring-green-500' : 'border-red-300 focus:ring-red-500'
+                    editCPF
+                      ? 'border-green-300 focus:ring-green-500'
+                      : 'border-red-300 focus:ring-red-500'
                   }`}
                 />
               </div>
@@ -1050,7 +1165,9 @@ export default function AppointmentDrawer({
                   value={editPhone}
                   onChange={(e) => setEditPhone(e.target.value)}
                   className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                    editPhone ? 'border-green-300 focus:ring-green-500' : 'border-red-300 focus:ring-red-500'
+                    editPhone
+                      ? 'border-green-300 focus:ring-green-500'
+                      : 'border-red-300 focus:ring-red-500'
                   }`}
                 />
               </div>

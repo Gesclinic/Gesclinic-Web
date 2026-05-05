@@ -1,20 +1,27 @@
 /**
  * 🧾 TIMELINE DE AUDITORIA FINANCEIRA DO ATENDIMENTO
- * 
+ *
  * Componente React que exibe a jornada financeira completa de um atendimento
  * mostrando todos os eventos: faturamento, pagamento, glosa, repasse
  */
 
-import React, { useEffect, useState } from "react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { AlertCircle, CheckCircle, XCircle, FileText, DollarSign, AlertTriangle } from "lucide-react";
+import React, { useEffect, useState } from 'react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import {
+  AlertCircle,
+  CheckCircle,
+  XCircle,
+  FileText,
+  DollarSign,
+  AlertTriangle,
+} from 'lucide-react';
 import {
   getAppointmentFinancialAuditTrail,
   getAppointmentFinancialSummary,
   checkFinancialDivergences,
   FINANCIAL_EVENT_TYPES,
-} from "@/lib/auditFinancialApi";
+} from '@/lib/auditFinancialApi';
 
 // ============================================================
 // MAPA DE CORES E ÍCONES
@@ -22,52 +29,52 @@ import {
 
 const EVENT_CONFIG = {
   [FINANCIAL_EVENT_TYPES.RECEIVABLE_CREATED]: {
-    label: "Conta a Receber Criada",
-    color: "bg-blue-100 text-blue-800 border-blue-300",
+    label: 'Conta a Receber Criada',
+    color: 'bg-blue-100 text-blue-800 border-blue-300',
     icon: FileText,
-    severity: "info",
+    severity: 'info',
   },
   [FINANCIAL_EVENT_TYPES.BILLING_GUIDE_CREATED]: {
-    label: "Guia de Convênio Gerada",
-    color: "bg-cyan-100 text-cyan-800 border-cyan-300",
+    label: 'Guia de Convênio Gerada',
+    color: 'bg-cyan-100 text-cyan-800 border-cyan-300',
     icon: FileText,
-    severity: "info",
+    severity: 'info',
   },
   [FINANCIAL_EVENT_TYPES.BILLING_SENT]: {
-    label: "Guia Enviada para Operadora",
-    color: "bg-green-100 text-green-800 border-green-300",
+    label: 'Guia Enviada para Operadora',
+    color: 'bg-green-100 text-green-800 border-green-300',
     icon: CheckCircle,
-    severity: "success",
+    severity: 'success',
   },
   [FINANCIAL_EVENT_TYPES.PAYMENT_RECEIVED]: {
-    label: "Pagamento Recebido",
-    color: "bg-emerald-100 text-emerald-800 border-emerald-300",
+    label: 'Pagamento Recebido',
+    color: 'bg-emerald-100 text-emerald-800 border-emerald-300',
     icon: DollarSign,
-    severity: "success",
+    severity: 'success',
   },
   [FINANCIAL_EVENT_TYPES.GLOSA_REGISTERED]: {
-    label: "Glosa Registrada",
-    color: "bg-red-100 text-red-800 border-red-300",
+    label: 'Glosa Registrada',
+    color: 'bg-red-100 text-red-800 border-red-300',
     icon: XCircle,
-    severity: "error",
+    severity: 'error',
   },
   [FINANCIAL_EVENT_TYPES.GLOSA_REVERSED]: {
-    label: "Glosa Revertida",
-    color: "bg-orange-100 text-orange-800 border-orange-300",
+    label: 'Glosa Revertida',
+    color: 'bg-orange-100 text-orange-800 border-orange-300',
     icon: AlertTriangle,
-    severity: "warning",
+    severity: 'warning',
   },
   [FINANCIAL_EVENT_TYPES.REPASSE_CALCULATED]: {
-    label: "Repasse Médico Calculado",
-    color: "bg-purple-100 text-purple-800 border-purple-300",
+    label: 'Repasse Médico Calculado',
+    color: 'bg-purple-100 text-purple-800 border-purple-300',
     icon: DollarSign,
-    severity: "info",
+    severity: 'info',
   },
   [FINANCIAL_EVENT_TYPES.REPASSE_PAID]: {
-    label: "Repasse Pago",
-    color: "bg-indigo-100 text-indigo-800 border-indigo-300",
+    label: 'Repasse Pago',
+    color: 'bg-indigo-100 text-indigo-800 border-indigo-300',
     icon: CheckCircle,
-    severity: "success",
+    severity: 'success',
   },
 };
 
@@ -78,9 +85,9 @@ const EVENT_CONFIG = {
 function AuditEventCard({ event, index, totalEvents }) {
   const config = EVENT_CONFIG[event.financial_event_type] || {
     label: event.financial_event_type,
-    color: "bg-gray-100 text-gray-800 border-gray-300",
+    color: 'bg-gray-100 text-gray-800 border-gray-300',
     icon: AlertCircle,
-    severity: "default",
+    severity: 'default',
   };
 
   const Icon = config.icon;
@@ -94,7 +101,7 @@ function AuditEventCard({ event, index, totalEvents }) {
           <Icon className="w-5 h-5 text-gray-600" />
         </div>
         {!isLast && (
-          <div className="w-1 flex-grow bg-gray-300 mt-2" style={{ minHeight: "80px" }}></div>
+          <div className="w-1 flex-grow bg-gray-300 mt-2" style={{ minHeight: '80px' }}></div>
         )}
       </div>
 
@@ -179,7 +186,9 @@ export function AppointmentFinancialAuditTimeline({
 
   // Carregar auditoria financeira
   useEffect(() => {
-    if (!appointmentId) return;
+    if (!appointmentId) {
+      return;
+    }
 
     const loadAudit = async () => {
       try {
@@ -197,8 +206,8 @@ export function AppointmentFinancialAuditTimeline({
         setSummary(financialSummary);
         setDivergences(divergencesList || []);
       } catch (err) {
-        console.error("Erro ao carregar auditoria:", err);
-        setError("Erro ao carregar auditoria financeira");
+        console.error('Erro ao carregar auditoria:', err);
+        setError('Erro ao carregar auditoria financeira');
       } finally {
         setLoading(false);
       }
@@ -208,8 +217,7 @@ export function AppointmentFinancialAuditTimeline({
   }, [appointmentId]);
 
   // Verificar permissões
-  const canViewFinancials =
-    userRole && ["GESTOR", "FINANCEIRO", "ADMIN"].includes(userRole);
+  const canViewFinancials = userRole && ['GESTOR', 'FINANCEIRO', 'ADMIN'].includes(userRole);
 
   if (loading) {
     return (
@@ -281,7 +289,7 @@ export function AppointmentFinancialAuditTimeline({
                   {EVENT_CONFIG[event.financial_event_type]?.label || event.financial_event_type}
                 </span>
                 <span className="text-gray-400">
-                  {format(new Date(event.performed_at), "dd/MM HH:mm", { locale: ptBR })}
+                  {format(new Date(event.performed_at), 'dd/MM HH:mm', { locale: ptBR })}
                 </span>
               </div>
               {event.amount && (
@@ -311,13 +319,9 @@ export function AppointmentFinancialAuditTimeline({
               <h4 className="font-semibold text-sm text-orange-900">
                 ⚠️ {divergences.length} Divergência(s) Detectada(s)
               </h4>
-              <p className="text-xs text-orange-700">
-                Possíveis problemas na auditoria financeira
-              </p>
+              <p className="text-xs text-orange-700">Possíveis problemas na auditoria financeira</p>
             </div>
-            <span className="text-xs text-orange-600">
-              {expandedDivergences ? "▼" : "▶"}
-            </span>
+            <span className="text-xs text-orange-600">{expandedDivergences ? '▼' : '▶'}</span>
           </button>
 
           {expandedDivergences && (
@@ -326,11 +330,11 @@ export function AppointmentFinancialAuditTimeline({
                 <div
                   key={idx}
                   className={`p-2 rounded text-xs ${
-                    div.severity === "HIGH"
-                      ? "bg-red-100 text-red-800"
-                      : div.severity === "MEDIUM"
-                      ? "bg-yellow-100 text-yellow-800"
-                      : "bg-gray-100 text-gray-800"
+                    div.severity === 'HIGH'
+                      ? 'bg-red-100 text-red-800'
+                      : div.severity === 'MEDIUM'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : 'bg-gray-100 text-gray-800'
                   }`}
                 >
                   <strong>{div.message}</strong>
@@ -363,7 +367,9 @@ export function AppointmentFinancialAuditTimeline({
             <div className="text-xs text-green-700 mt-1">Valor Total</div>
           </div>
           <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg text-center">
-            <div className="text-2xl font-bold text-purple-600">{summary.stats.performedByCount}</div>
+            <div className="text-2xl font-bold text-purple-600">
+              {summary.stats.performedByCount}
+            </div>
             <div className="text-xs text-purple-700 mt-1">Usuários</div>
           </div>
           <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg text-center">
@@ -380,12 +386,7 @@ export function AppointmentFinancialAuditTimeline({
         <h3 className="font-semibold text-gray-900 mb-6">Timeline Financeira</h3>
         <div className="space-y-4">
           {trail.map((event, index) => (
-            <AuditEventCard
-              key={event.id}
-              event={event}
-              index={index}
-              totalEvents={trail.length}
-            />
+            <AuditEventCard key={event.id} event={event} index={index} totalEvents={trail.length} />
           ))}
         </div>
       </div>
@@ -393,10 +394,16 @@ export function AppointmentFinancialAuditTimeline({
       {/* Rodapé */}
       <div className="text-xs text-gray-500 text-center py-4 border-t border-gray-200">
         <p>
-          Primeiro evento: {summary?.stats?.firstEventAt ? format(new Date(summary.stats.firstEventAt), "dd/MM/yyyy HH:mm", { locale: ptBR }) : "—"}
+          Primeiro evento:{' '}
+          {summary?.stats?.firstEventAt
+            ? format(new Date(summary.stats.firstEventAt), 'dd/MM/yyyy HH:mm', { locale: ptBR })
+            : '—'}
         </p>
         <p>
-          Último evento: {summary?.stats?.lastEventAt ? format(new Date(summary.stats.lastEventAt), "dd/MM/yyyy HH:mm", { locale: ptBR }) : "—"}
+          Último evento:{' '}
+          {summary?.stats?.lastEventAt
+            ? format(new Date(summary.stats.lastEventAt), 'dd/MM/yyyy HH:mm', { locale: ptBR })
+            : '—'}
         </p>
       </div>
     </div>
@@ -404,4 +411,3 @@ export function AppointmentFinancialAuditTimeline({
 }
 
 export default AppointmentFinancialAuditTimeline;
-

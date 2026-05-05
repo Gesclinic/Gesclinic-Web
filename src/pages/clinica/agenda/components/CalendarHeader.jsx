@@ -1,18 +1,18 @@
-import React from "react";
-import { addDays, subDays, format } from "date-fns";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import React from 'react';
+import { addDays, subDays, format } from 'date-fns';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function CalendarHeader({ filters, setFilters }) {
   const current = filters.dateStart;
 
   const changeDate = (type) => {
-    if (type === "prev") {
+    if (type === 'prev') {
       setFilters((prev) => ({
         ...prev,
         dateStart: subDays(prev.dateStart, 1),
         dateEnd: subDays(prev.dateEnd, 1),
       }));
-    } else if (type === "next") {
+    } else if (type === 'next') {
       setFilters((prev) => ({
         ...prev,
         dateStart: addDays(prev.dateStart, 1),
@@ -29,31 +29,24 @@ export default function CalendarHeader({ filters, setFilters }) {
 
   return (
     <div className="flex items-center gap-3 bg-white border-b px-4 py-2 shadow-sm">
-      <button
-        className="p-1 rounded hover:bg-gray-100"
-        onClick={() => changeDate("prev")}
-      >
+      <button className="p-1 rounded hover:bg-gray-100" onClick={() => changeDate('prev')}>
         <ChevronLeft className="w-4 h-4" />
       </button>
 
       <div className="font-semibold text-[hsl(var(--primary))] text-sm">
-        {format(current, "dd/MM/yyyy")}
+        {format(current, 'dd/MM/yyyy')}
       </div>
 
-      <button
-        className="p-1 rounded hover:bg-gray-100"
-        onClick={() => changeDate("next")}
-      >
+      <button className="p-1 rounded hover:bg-gray-100" onClick={() => changeDate('next')}>
         <ChevronRight className="w-4 h-4" />
       </button>
 
       <button
         className="ml-3 text-xs px-2 py-1 border rounded hover:bg-gray-100"
-        onClick={() => changeDate("today")}
+        onClick={() => changeDate('today')}
       >
         Hoje
       </button>
     </div>
   );
 }
-

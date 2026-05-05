@@ -1,6 +1,6 @@
 export function safeSelectValue(value) {
-  if (value === null || value === undefined || value === "") {
-    return "invalid";
+  if (value === null || value === undefined || value === '') {
+    return 'invalid';
   }
   return String(value);
 }

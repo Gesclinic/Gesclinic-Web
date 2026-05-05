@@ -1,9 +1,9 @@
 /**
  * AgendamentoFormWithRBAC.jsx
- * 
+ *
  * Exemplo de formulário de agendamento com RBAC integrado
  * Mostra como implementar controle de acesso baseado em role
- * 
+ *
  * REGRAS:
  * - recepcao: Pode criar e editar (horário, paciente), NÃO pode editar valor
  * - admin/gestor: Pode criar, editar, incluindo valor
@@ -15,7 +15,7 @@ import useAuthorization from '@/modules/agenda/hooks/useAuthorization';
 
 export function AgendamentoFormWithRBAC({ appointment = null, onSubmit, onCancel }) {
   const auth = useAuthorization();
-  
+
   const [form, setForm] = useState({
     date: appointment?.date || '',
     startTime: appointment?.startTime || '',
@@ -34,14 +34,18 @@ export function AgendamentoFormWithRBAC({ appointment = null, onSubmit, onCancel
   // Se não pode criar agendamento, bloquear acesso
   if (!appointment && !auth.canCreateAppointment) {
     return (
-      <div style={{
-        padding: 24,
-        background: '#fff3e0',
-        border: '1px solid #ffb74d',
-        borderRadius: 8,
-      }}>
+      <div
+        style={{
+          padding: 24,
+          background: '#fff3e0',
+          border: '1px solid #ffb74d',
+          borderRadius: 8,
+        }}
+      >
         <h3 style={{ color: '#e65100', marginBottom: 12 }}>🔒 Acesso Negado</h3>
-        <p style={{ color: '#666' }}>Seu perfil ({auth.currentRole}) não tem permissão para criar agendamentos.</p>
+        <p style={{ color: '#666' }}>
+          Seu perfil ({auth.currentRole}) não tem permissão para criar agendamentos.
+        </p>
       </div>
     );
   }
@@ -49,14 +53,18 @@ export function AgendamentoFormWithRBAC({ appointment = null, onSubmit, onCancel
   // Se não pode editar agendamento, bloquear edição
   if (appointment && !auth.canEditAppointment) {
     return (
-      <div style={{
-        padding: 24,
-        background: '#fff3e0',
-        border: '1px solid #ffb74d',
-        borderRadius: 8,
-      }}>
+      <div
+        style={{
+          padding: 24,
+          background: '#fff3e0',
+          border: '1px solid #ffb74d',
+          borderRadius: 8,
+        }}
+      >
         <h3 style={{ color: '#e65100', marginBottom: 12 }}>🔒 Acesso Negado</h3>
-        <p style={{ color: '#666' }}>Seu perfil ({auth.currentRole}) não tem permissão para editar agendamentos.</p>
+        <p style={{ color: '#666' }}>
+          Seu perfil ({auth.currentRole}) não tem permissão para editar agendamentos.
+        </p>
       </div>
     );
   }
@@ -67,7 +75,7 @@ export function AgendamentoFormWithRBAC({ appointment = null, onSubmit, onCancel
 
   function handleChange(e) {
     const { name, value } = e.target;
-    setForm(prev => ({
+    setForm((prev) => ({
       ...prev,
       [name]: value,
     }));
@@ -75,7 +83,7 @@ export function AgendamentoFormWithRBAC({ appointment = null, onSubmit, onCancel
 
   function handleSubmit(e) {
     e.preventDefault();
-    
+
     // Validações básicas
     if (!form.date || !form.startTime || !form.endTime) {
       alert('Data e horários são obrigatórios');
@@ -106,18 +114,23 @@ export function AgendamentoFormWithRBAC({ appointment = null, onSubmit, onCancel
   // ============================================================
 
   return (
-    <form onSubmit={handleSubmit} style={{
-      padding: 24,
-      background: '#fff',
-      borderRadius: 8,
-      border: '1px solid #e0e0e0',
-    }}>
+    <form
+      onSubmit={handleSubmit}
+      style={{
+        padding: 24,
+        background: '#fff',
+        borderRadius: 8,
+        border: '1px solid #e0e0e0',
+      }}
+    >
       <h2 style={{ marginBottom: 24 }}>
         {appointment ? '✏️ Editar Agendamento' : '➕ Novo Agendamento'}
       </h2>
 
       {/* Data e Horários - Sempre visível */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 24 }}>
+      <div
+        style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 24 }}
+      >
         <div>
           <label style={{ fontWeight: 600, display: 'block', marginBottom: 6 }}>Data *</label>
           <input
@@ -135,7 +148,9 @@ export function AgendamentoFormWithRBAC({ appointment = null, onSubmit, onCancel
           />
         </div>
         <div>
-          <label style={{ fontWeight: 600, display: 'block', marginBottom: 6 }}>Hora Inicial *</label>
+          <label style={{ fontWeight: 600, display: 'block', marginBottom: 6 }}>
+            Hora Inicial *
+          </label>
           <input
             type="time"
             name="startTime"
@@ -209,7 +224,10 @@ export function AgendamentoFormWithRBAC({ appointment = null, onSubmit, onCancel
       {auth.canEditAppointmentValue ? (
         <div style={{ marginBottom: 24 }}>
           <label style={{ fontWeight: 600, display: 'block', marginBottom: 6 }}>
-            💰 Valor (R$) {auth.canEditAppointmentValue && <span style={{ color: '#1976d2', fontSize: '0.85em' }}>✓ Habilitado</span>}
+            💰 Valor (R$){' '}
+            {auth.canEditAppointmentValue && (
+              <span style={{ color: '#1976d2', fontSize: '0.85em' }}>✓ Habilitado</span>
+            )}
           </label>
           <input
             type="number"
@@ -227,15 +245,17 @@ export function AgendamentoFormWithRBAC({ appointment = null, onSubmit, onCancel
           />
         </div>
       ) : (
-        <div style={{
-          padding: 12,
-          background: '#f5f5f5',
-          border: '1px solid #ddd',
-          borderRadius: 4,
-          marginBottom: 24,
-          color: '#999',
-          fontSize: '0.9em',
-        }}>
+        <div
+          style={{
+            padding: 12,
+            background: '#f5f5f5',
+            border: '1px solid #ddd',
+            borderRadius: 4,
+            marginBottom: 24,
+            color: '#999',
+            fontSize: '0.9em',
+          }}
+        >
           🔒 Campo "Valor" desabilitado para seu perfil ({auth.currentRole})
         </div>
       )}
@@ -284,15 +304,17 @@ export function AgendamentoFormWithRBAC({ appointment = null, onSubmit, onCancel
 
       {/* Badge de Permissões (Debug) */}
       {process.env.NODE_ENV === 'development' && (
-        <div style={{
-          padding: 12,
-          background: '#e3f2fd',
-          border: '1px solid #90caf9',
-          borderRadius: 4,
-          marginBottom: 24,
-          fontSize: '0.85em',
-          color: '#1565c0',
-        }}>
+        <div
+          style={{
+            padding: 12,
+            background: '#e3f2fd',
+            border: '1px solid #90caf9',
+            borderRadius: 4,
+            marginBottom: 24,
+            fontSize: '0.85em',
+            color: '#1565c0',
+          }}
+        >
           👤 <strong>{auth.currentRole}</strong>
           {auth.canCreateAppointment && ' ✓ Criar'}
           {auth.canEditAppointment && ' ✓ Editar'}
@@ -302,11 +324,13 @@ export function AgendamentoFormWithRBAC({ appointment = null, onSubmit, onCancel
       )}
 
       {/* Botões */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'flex-end',
-        gap: 12,
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'flex-end',
+          gap: 12,
+        }}
+      >
         <button
           type="button"
           onClick={onCancel}

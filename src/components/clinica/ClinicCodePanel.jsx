@@ -32,7 +32,9 @@ export default function ClinicCodePanel() {
   }, [code, dbCode, year]);
 
   const load = useCallback(async () => {
-    if (!clinicId) return;
+    if (!clinicId) {
+      return;
+    }
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -40,7 +42,9 @@ export default function ClinicCodePanel() {
         .select('code, auto_numbering, validity_days, template, require_approval')
         .eq('clinic_id', clinicId)
         .maybeSingle();
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       setDbCode(data?.code || '');
       setCode(data?.code || '');
       setAutoNumbering(data?.auto_numbering ?? true);
@@ -48,7 +52,11 @@ export default function ClinicCodePanel() {
       setTemplate(data?.template ?? 'padrao');
       setRequireApproval(data?.require_approval ?? false);
     } catch (e) {
-      toast({ variant: 'destructive', title: 'Falha ao carregar código da clínica', description: e.message });
+      toast({
+        variant: 'destructive',
+        title: 'Falha ao carregar código da clínica',
+        description: e.message,
+      });
     } finally {
       setLoading(false);
     }
@@ -88,19 +96,20 @@ export default function ClinicCodePanel() {
         })
         .select()
         .maybeSingle();
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
       setDbCode(normalized);
       toast({ title: 'Código salvo', description: `Novo prefixo: ${normalized}` });
     } catch (e) {
       // Erro de unicidade (código já usado por outra clínica)
-      const isUniqueErr = String(e?.code || '').includes('23505') || /duplicate/i.test(e?.message || '');
+      const isUniqueErr =
+        String(e?.code || '').includes('23505') || /duplicate/i.test(e?.message || '');
       toast({
         variant: 'destructive',
         title: isUniqueErr ? 'Código já utilizado' : 'Falha ao salvar',
-        description: isUniqueErr
-          ? 'Escolha outro código (ele deve ser único).'
-          : e.message,
+        description: isUniqueErr ? 'Escolha outro código (ele deve ser único).' : e.message,
       });
     } finally {
       setSaving(false);
@@ -114,8 +123,11 @@ export default function ClinicCodePanel() {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Defina um identificador curto para a clínica. Ele será usado na numeração automática de orçamentos:
-          <span className="inline-block font-mono ml-1 px-1 py-0.5 rounded bg-muted">ORC-&lt;CÓDIGO&gt;-{year}-00001</span>
+          Defina um identificador curto para a clínica. Ele será usado na numeração automática de
+          orçamentos:
+          <span className="inline-block font-mono ml-1 px-1 py-0.5 rounded bg-muted">
+            ORC-&lt;CÓDIGO&gt;-{year}-00001
+          </span>
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
@@ -128,7 +140,9 @@ export default function ClinicCodePanel() {
               placeholder="Ex.: ALFA, CLIN-01"
               disabled={loading || !canEdit}
             />
-            <p className="text-xs text-muted-foreground">A–Z, 0–9 e “-”, de 2 a 12 caracteres (ex.: ALFA, CLIN-01)</p>
+            <p className="text-xs text-muted-foreground">
+              A–Z, 0–9 e “-”, de 2 a 12 caracteres (ex.: ALFA, CLIN-01)
+            </p>
           </div>
 
           <div className="space-y-1">
@@ -145,7 +159,9 @@ export default function ClinicCodePanel() {
             Salvar
           </Button>
           {!canEdit && (
-            <span className="text-xs text-muted-foreground">Apenas administradores podem editar.</span>
+            <span className="text-xs text-muted-foreground">
+              Apenas administradores podem editar.
+            </span>
           )}
         </div>
       </CardContent>

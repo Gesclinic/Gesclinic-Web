@@ -6,29 +6,33 @@
  * Etapa 2: Dados cadastrais completos
  */
 
-import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { usePatientContext } from "@/contexts/PatientContext";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
-import { updatePatient, updatePatientPhoto, uploadPatientPhoto } from "@/lib/patientsApi";
-import { useToast } from "@/components/ui/use-toast";
-import PageLayout from "@/components/ui/PageLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Helmet } from "react-helmet-async";
-import { Save, ArrowLeft, AlertCircle, CheckCircle } from "lucide-react";
-import { motion } from "framer-motion";
-import PhotoCapture from "@/components/PhotoCapture";
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { usePatientContext } from '@/contexts/PatientContext';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { updatePatient, updatePatientPhoto, uploadPatientPhoto } from '@/lib/patientsApi';
+import { useToast } from '@/components/ui/use-toast';
+import PageLayout from '@/components/ui/PageLayout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Helmet } from 'react-helmet-async';
+import { Save, ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
+import PhotoCapture from '@/components/PhotoCapture';
 
 export default function PatientDadosPage() {
   const { patientId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { clinicId } = useAuth();
-  const { patientData, loading: contextLoading, updatePatientData, loadPatient } =
-    usePatientContext();
+  const {
+    patientData,
+    loading: contextLoading,
+    updatePatientData,
+    loadPatient,
+  } = usePatientContext();
 
   const [loading, setLoading] = useState(false);
 
@@ -40,9 +44,9 @@ export default function PatientDadosPage() {
 
   // ⚠️ GUARD: Validar e carregar patientId
   useEffect(() => {
-    if (!patientId || patientId.trim() === "") {
-      console.warn("❌ PatientDadosPage: patientId inválido ou vazio");
-      navigate("/clinica/pacientes");
+    if (!patientId || patientId.trim() === '') {
+      console.warn('❌ PatientDadosPage: patientId inválido ou vazio');
+      navigate('/clinica/pacientes');
       return;
     }
 
@@ -51,38 +55,38 @@ export default function PatientDadosPage() {
   }, [patientId, navigate, loadPatient]);
 
   const [formData, setFormData] = useState({
-    name: "",
-    document_id: "",
-    birthdate: "",
-    gender: "",
-    phone: "",
-    email: "",
-    street: "",
-    number: "",
-    neighborhood: "",
-    city: "",
-    state: "",
-    zip_code: "",
-    cell_phone: "",
+    name: '',
+    document_id: '',
+    birthdate: '',
+    gender: '',
+    phone: '',
+    email: '',
+    street: '',
+    number: '',
+    neighborhood: '',
+    city: '',
+    state: '',
+    zip_code: '',
+    cell_phone: '',
   });
 
   // Carregar dados iniciais
   useEffect(() => {
     if (patientData) {
       setFormData({
-        name: patientData.name || patientData.full_name || "",
-        document_id: patientData.document_id || patientData.cpf || "",
-        birthdate: patientData.birthdate || patientData.birth_date || "",
-        gender: patientData.gender || "",
-        phone: patientData.phone || "",
-        email: patientData.email || "",
-        street: patientData.street || patientData.address || "",
-        number: patientData.number || "",
-        neighborhood: patientData.neighborhood || "",
-        city: patientData.city || "",
-        state: patientData.state || "",
-        zip_code: patientData.zip_code || "",
-        cell_phone: patientData.cell_phone || "",
+        name: patientData.name || patientData.full_name || '',
+        document_id: patientData.document_id || patientData.cpf || '',
+        birthdate: patientData.birthdate || patientData.birth_date || '',
+        gender: patientData.gender || '',
+        phone: patientData.phone || '',
+        email: patientData.email || '',
+        street: patientData.street || patientData.address || '',
+        number: patientData.number || '',
+        neighborhood: patientData.neighborhood || '',
+        city: patientData.city || '',
+        state: patientData.state || '',
+        zip_code: patientData.zip_code || '',
+        cell_phone: patientData.cell_phone || '',
       });
     }
   }, [patientData]);
@@ -116,11 +120,11 @@ export default function PatientDadosPage() {
 
   async function handleSave() {
     // ⚠️ GUARD: patientId obrigatório para salvar
-    if (!patientId || patientId.trim() === "") {
+    if (!patientId || patientId.trim() === '') {
       toast({
-        title: "Erro",
-        description: "ID do paciente inválido",
-        variant: "destructive",
+        title: 'Erro',
+        description: 'ID do paciente inválido',
+        variant: 'destructive',
       });
       return;
     }
@@ -132,17 +136,17 @@ export default function PatientDadosPage() {
       updatePatientData(formData);
 
       toast({
-        title: "Sucesso",
-        description: "Dados atualizados com sucesso!",
+        title: 'Sucesso',
+        description: 'Dados atualizados com sucesso!',
       });
 
       navigate(`/clinica/pacientes/${patientId}`);
     } catch (error) {
-      console.error("Erro ao atualizar paciente:", error);
+      console.error('Erro ao atualizar paciente:', error);
       toast({
-        title: "Erro",
-        description: "Não foi possível atualizar os dados",
-        variant: "destructive",
+        title: 'Erro',
+        description: 'Não foi possível atualizar os dados',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -168,9 +172,9 @@ export default function PatientDadosPage() {
       <PageLayout
         title="Editar Paciente"
         breadcrumbs={[
-          { label: "Pacientes", href: "/clinica/pacientes" },
-          { label: patientData?.name || "Paciente" },
-          { label: "Dados Cadastrais" },
+          { label: 'Pacientes', href: '/clinica/pacientes' },
+          { label: patientData?.name || 'Paciente' },
+          { label: 'Dados Cadastrais' },
         ]}
       >
         {/* DEBUG */}
@@ -189,7 +193,10 @@ export default function PatientDadosPage() {
                 <div>
                   <p className="text-sm font-semibold text-gray-700 mb-3">Foto</p>
                   {patientData?.photo_url ? (
-                    <div className="w-full bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-300 shadow-md" style={{ aspectRatio: "3/4" }}>
+                    <div
+                      className="w-full bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-300 shadow-md"
+                      style={{ aspectRatio: '3/4' }}
+                    >
                       <img
                         src={patientData.photo_url}
                         alt={patientData?.name}
@@ -197,7 +204,10 @@ export default function PatientDadosPage() {
                       />
                     </div>
                   ) : (
-                    <div className="w-full bg-gray-50 rounded-lg overflow-hidden border-2 border-dashed border-gray-300 flex items-center justify-center flex-col" style={{ aspectRatio: "3/4" }}>
+                    <div
+                      className="w-full bg-gray-50 rounded-lg overflow-hidden border-2 border-dashed border-gray-300 flex items-center justify-center flex-col"
+                      style={{ aspectRatio: '3/4' }}
+                    >
                       <p className="text-6xl">📸</p>
                       <p className="text-xs text-gray-400 mt-2 text-center">Sem foto</p>
                     </div>
@@ -214,20 +224,20 @@ export default function PatientDadosPage() {
                           const photoUrl = await uploadPatientPhoto(
                             clinicId,
                             patientId,
-                            photoDataUrl
+                            photoDataUrl,
                           );
                           await updatePatientPhoto(patientId, photoUrl);
                           updatePatientData({ ...patientData, photo_url: photoUrl });
                           toast({
-                            title: "Sucesso",
-                            description: "Foto atualizada com sucesso!",
+                            title: 'Sucesso',
+                            description: 'Foto atualizada com sucesso!',
                           });
                         } catch (error) {
-                          console.error("Erro ao atualizar foto:", error);
+                          console.error('Erro ao atualizar foto:', error);
                           toast({
-                            title: "Erro",
-                            description: "Não foi possível atualizar a foto",
-                            variant: "destructive",
+                            title: 'Erro',
+                            description: 'Não foi possível atualizar a foto',
+                            variant: 'destructive',
                           });
                         }
                       }}
@@ -239,40 +249,47 @@ export default function PatientDadosPage() {
                 {/* COLUNA 3: Informações do Prontuário */}
                 <div>
                   <p className="text-sm font-semibold text-gray-700 mb-3">Informações</p>
-                <div className="space-y-3 text-sm">
-                  <div>
-                    <p className="text-gray-500 text-xs font-medium">Prontuário</p>
-                    <p className="text-gray-900 font-semibold">{patientData?.record_number || patientData?.prontuario || "CLU-1000"}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500 text-xs font-medium">CPF</p>
-                    <p className="text-gray-900 font-semibold">{patientData?.document_id || patientData?.cpf || "N/A"}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500 text-xs font-medium">Data Nascimento</p>
-                    <p className="text-gray-900 font-semibold">{patientData?.birthdate || patientData?.birth_date || "N/A"}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500 text-xs font-medium">Telefone</p>
-                    <p className="text-gray-900 font-semibold">{patientData?.phone || patientData?.cell_phone || "N/A"}</p>
+                  <div className="space-y-3 text-sm">
+                    <div>
+                      <p className="text-gray-500 text-xs font-medium">Prontuário</p>
+                      <p className="text-gray-900 font-semibold">
+                        {patientData?.record_number || patientData?.prontuario || 'CLU-1000'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs font-medium">CPF</p>
+                      <p className="text-gray-900 font-semibold">
+                        {patientData?.document_id || patientData?.cpf || 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs font-medium">Data Nascimento</p>
+                      <p className="text-gray-900 font-semibold">
+                        {patientData?.birthdate || patientData?.birth_date || 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500 text-xs font-medium">Telefone</p>
+                      <p className="text-gray-900 font-semibold">
+                        {patientData?.phone || patientData?.cell_phone || 'N/A'}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-            
-            {/* Nome em destaque */}
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <h2 className="text-2xl font-bold text-gray-900">{patientData?.name || "Paciente"}</h2>
+
+              {/* Nome em destaque */}
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {patientData?.name || 'Paciente'}
+                </h2>
+              </div>
             </div>
           </div>
-        </div>
         )}
 
         <div className="w-full mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
             <Card>
               <CardHeader>
                 <CardTitle>Informações Completas</CardTitle>
@@ -280,8 +297,12 @@ export default function PatientDadosPage() {
               <CardContent className="space-y-8">
                 {/* Validação TISS - Status Visual */}
                 <div className="bg-blue-50 border border-blue-300 rounded-lg p-4 mb-4">
-                  <p className="text-sm font-semibold text-blue-900">📋 Validação Cadastral (Padrão TISS)</p>
-                  <p className="text-xs text-blue-700 mt-1">Estes dados são obrigatórios para emissão de guia e operações clínicas</p>
+                  <p className="text-sm font-semibold text-blue-900">
+                    📋 Validação Cadastral (Padrão TISS)
+                  </p>
+                  <p className="text-xs text-blue-700 mt-1">
+                    Estes dados são obrigatórios para emissão de guia e operações clínicas
+                  </p>
                 </div>
 
                 {!cadastralStatus.complete && cadastralStatus.missing.length > 0 && (
@@ -327,9 +348,7 @@ export default function PatientDadosPage() {
                       <Input
                         id="name"
                         value={formData.name}
-                        onChange={(e) =>
-                          setFormData({ ...formData, name: e.target.value })
-                        }
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         placeholder="Ex: João da Silva"
                       />
                     </div>
@@ -378,9 +397,7 @@ export default function PatientDadosPage() {
                       <select
                         id="gender"
                         value={formData.gender}
-                        onChange={(e) =>
-                          setFormData({ ...formData, gender: e.target.value })
-                        }
+                        onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="">Selecione</option>
@@ -422,9 +439,7 @@ export default function PatientDadosPage() {
                       <Input
                         id="phone"
                         value={formData.phone}
-                        onChange={(e) =>
-                          setFormData({ ...formData, phone: e.target.value })
-                        }
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                         placeholder="Ex: (11) 3333-3333"
                       />
                     </div>
@@ -456,9 +471,7 @@ export default function PatientDadosPage() {
                         id="email"
                         type="email"
                         value={formData.email}
-                        onChange={(e) =>
-                          setFormData({ ...formData, email: e.target.value })
-                        }
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         placeholder="Ex: email@exemplo.com"
                       />
                     </div>
@@ -479,9 +492,7 @@ export default function PatientDadosPage() {
                       <Input
                         id="street"
                         value={formData.street}
-                        onChange={(e) =>
-                          setFormData({ ...formData, street: e.target.value })
-                        }
+                        onChange={(e) => setFormData({ ...formData, street: e.target.value })}
                         placeholder="Ex: Rua das Flores"
                       />
                     </div>
@@ -494,9 +505,7 @@ export default function PatientDadosPage() {
                       <Input
                         id="number"
                         value={formData.number}
-                        onChange={(e) =>
-                          setFormData({ ...formData, number: e.target.value })
-                        }
+                        onChange={(e) => setFormData({ ...formData, number: e.target.value })}
                         placeholder="Ex: 123"
                       />
                     </div>
@@ -527,9 +536,7 @@ export default function PatientDadosPage() {
                       <Input
                         id="city"
                         value={formData.city}
-                        onChange={(e) =>
-                          setFormData({ ...formData, city: e.target.value })
-                        }
+                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                         placeholder="Ex: São Paulo"
                       />
                     </div>
@@ -542,9 +549,7 @@ export default function PatientDadosPage() {
                       <Input
                         id="state"
                         value={formData.state}
-                        onChange={(e) =>
-                          setFormData({ ...formData, state: e.target.value })
-                        }
+                        onChange={(e) => setFormData({ ...formData, state: e.target.value })}
                         placeholder="Ex: SP"
                         maxLength="2"
                       />
@@ -585,10 +590,14 @@ export default function PatientDadosPage() {
                     onClick={handleSave}
                     disabled={loading || !cadastralStatus.complete}
                     className="flex-1 gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
-                    title={!cadastralStatus.complete ? 'Preencha todos os campos obrigatórios' : 'Salvar alterações'}
+                    title={
+                      !cadastralStatus.complete
+                        ? 'Preencha todos os campos obrigatórios'
+                        : 'Salvar alterações'
+                    }
                   >
                     <Save size={18} />
-                    {loading ? "Salvando..." : "Salvar Alterações"}
+                    {loading ? 'Salvando...' : 'Salvar Alterações'}
                   </Button>
                 </div>
               </CardContent>
@@ -599,4 +608,3 @@ export default function PatientDadosPage() {
     </>
   );
 }
-

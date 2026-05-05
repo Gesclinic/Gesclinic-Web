@@ -4,25 +4,44 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { normalizeCodeCBHPM } from '@/utils/formatters/formatters';
-import { 
-  Scissors, 
-  Plus, 
-  Edit, 
-  Trash2, 
+import {
+  Scissors,
+  Plus,
+  Edit,
+  Trash2,
   Search,
   Calendar,
   User,
   Clock,
   DollarSign,
   Users,
-  AlertTriangle
+  AlertTriangle,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 
@@ -55,7 +74,7 @@ export default function CirurgiasProcedimentos() {
     procedimento_principal: '',
     valor_total: '',
     status: 'Agendada',
-    observacoes: ''
+    observacoes: '',
   });
 
   // Mock data para demonstração
@@ -72,7 +91,7 @@ export default function CirurgiasProcedimentos() {
       sala_cirurgica: 'Sala 1',
       procedimento_principal: 'Apendicectomia Laparoscópica',
       codigo_cbhpm_principal: '31201039',
-      valor_total: 3500.00,
+      valor_total: 3500.0,
       status: 'Realizada',
       total_profissionais: 3,
       profissionais: [
@@ -81,37 +100,37 @@ export default function CirurgiasProcedimentos() {
           nome: 'Dr. João Cirurgião',
           funcao: 'Cirurgião',
           percentual: 60,
-          valor: 2100.00
+          valor: 2100.0,
         },
         {
           id: 'P2',
           nome: 'Dr. Pedro Auxiliar',
           funcao: 'Auxiliar',
           percentual: 25,
-          valor: 875.00
+          valor: 875.0,
         },
         {
           id: 'P3',
           nome: 'Dra. Ana Anestesista',
           funcao: 'Anestesista',
           percentual: 15,
-          valor: 525.00
-        }
+          valor: 525.0,
+        },
       ],
       materiais_utilizados: [
         {
           id: 'M1',
           descricao: 'Kit Laparoscopia',
           quantidade: 1,
-          valor: 450.00
+          valor: 450.0,
         },
         {
           id: 'M2',
           descricao: 'Anestésico Geral',
           quantidade: 2,
-          valor: 120.00
-        }
-      ]
+          valor: 120.0,
+        },
+      ],
     },
     {
       id: 'CIR002',
@@ -125,7 +144,7 @@ export default function CirurgiasProcedimentos() {
       sala_cirurgica: 'Sala 2',
       procedimento_principal: 'Colecistectomia Videolaparoscópica',
       codigo_cbhpm_principal: '31201101',
-      valor_total: 4200.00,
+      valor_total: 4200.0,
       status: 'Agendada',
       total_profissionais: 2,
       profissionais: [
@@ -134,18 +153,18 @@ export default function CirurgiasProcedimentos() {
           nome: 'Dr. Roberto Especialista',
           funcao: 'Cirurgião',
           percentual: 70,
-          valor: 2940.00
+          valor: 2940.0,
         },
         {
           id: 'P5',
           nome: 'Dra. Sandra Anestesia',
           funcao: 'Anestesista',
           percentual: 30,
-          valor: 1260.00
-        }
+          valor: 1260.0,
+        },
       ],
-      materiais_utilizados: []
-    }
+      materiais_utilizados: [],
+    },
   ];
 
   const mockProfissionais = [
@@ -153,7 +172,7 @@ export default function CirurgiasProcedimentos() {
     { id: '2', nome: 'Dr. Pedro Auxiliar', especialidade: 'Cirurgia Geral' },
     { id: '3', nome: 'Dra. Ana Anestesista', especialidade: 'Anestesiologia' },
     { id: '4', nome: 'Dr. Roberto Especialista', especialidade: 'Cirurgia Geral' },
-    { id: '5', nome: 'Dra. Sandra Anestesia', especialidade: 'Anestesiologia' }
+    { id: '5', nome: 'Dra. Sandra Anestesia', especialidade: 'Anestesiologia' },
   ];
 
   useEffect(() => {
@@ -168,9 +187,9 @@ export default function CirurgiasProcedimentos() {
     } catch (error) {
       console.error('Erro ao buscar cirurgias:', error);
       toast({
-        title: "Erro",
-        description: "Não foi possível carregar as cirurgias.",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Não foi possível carregar as cirurgias.',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -187,12 +206,12 @@ export default function CirurgiasProcedimentos() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (profissionaisCirurgia.length === 0) {
       toast({
-        title: "Profissionais obrigatórios",
-        description: "Adicione pelo menos um profissional à cirurgia.",
-        variant: "destructive"
+        title: 'Profissionais obrigatórios',
+        description: 'Adicione pelo menos um profissional à cirurgia.',
+        variant: 'destructive',
       });
       return;
     }
@@ -201,14 +220,14 @@ export default function CirurgiasProcedimentos() {
       const cirurgiaData = {
         ...formData,
         numero_guia: editingCirurgia ? editingCirurgia.numero_guia : generateGuiaNumber(),
-        profissionais: profissionaisCirurgia
+        profissionais: profissionaisCirurgia,
       };
 
       console.log('Salvando cirurgia:', cirurgiaData);
 
       toast({
-        title: editingCirurgia ? "Cirurgia atualizada" : "Cirurgia agendada",
-        description: `Cirurgia ${editingCirurgia ? 'atualizada' : 'agendada'} com sucesso.`
+        title: editingCirurgia ? 'Cirurgia atualizada' : 'Cirurgia agendada',
+        description: `Cirurgia ${editingCirurgia ? 'atualizada' : 'agendada'} com sucesso.`,
       });
 
       setIsDialogOpen(false);
@@ -217,9 +236,9 @@ export default function CirurgiasProcedimentos() {
       fetchCirurgias();
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Não foi possível salvar a cirurgia.",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Não foi possível salvar a cirurgia.',
+        variant: 'destructive',
       });
     }
   };
@@ -238,7 +257,7 @@ export default function CirurgiasProcedimentos() {
       procedimento_principal: '',
       valor_total: '',
       status: 'Agendada',
-      observacoes: ''
+      observacoes: '',
     });
     setProfissionaisCirurgia([]);
   };
@@ -250,48 +269,50 @@ export default function CirurgiasProcedimentos() {
       nome: '',
       funcao: 'Cirurgião',
       percentual: 0,
-      valor: 0
+      valor: 0,
     };
     setProfissionaisCirurgia([...profissionaisCirurgia, newProfissional]);
   };
 
   const updateProfissional = (id, field, value) => {
-    setProfissionaisCirurgia(profs => 
-      profs.map(prof => {
+    setProfissionaisCirurgia((profs) =>
+      profs.map((prof) => {
         if (prof.id === id) {
           const updated = { ...prof, [field]: value };
-          
+
           // Auto-calcular valor baseado no percentual
           if (field === 'percentual' && formData.valor_total) {
             updated.valor = (parseFloat(formData.valor_total) * parseFloat(value)) / 100;
           }
-          
+
           // Se mudou o profissional, atualizar o nome
           if (field === 'profissional_id') {
-            const profissional = mockProfissionais.find(p => p.id === value);
+            const profissional = mockProfissionais.find((p) => p.id === value);
             updated.nome = profissional ? profissional.nome : '';
           }
-          
+
           return updated;
         }
         return prof;
-      })
+      }),
     );
   };
 
   const removeProfissional = (id) => {
-    setProfissionaisCirurgia(profs => profs.filter(prof => prof.id !== id));
+    setProfissionaisCirurgia((profs) => profs.filter((prof) => prof.id !== id));
   };
 
   const recalcularValoresProfissionais = () => {
-    if (!formData.valor_total) return;
-    
+    if (!formData.valor_total) {
+      return;
+    }
+
     const valorTotal = parseFloat(formData.valor_total);
-    setProfissionaisCirurgia(profs =>
-      profs.map(prof => ({
+    setProfissionaisCirurgia((profs) =>
+      profs.map((prof) => ({
         ...prof,
-        valor: (valorTotal * parseFloat(prof.percentual || 0)) / 100
-      }))
+        valor: (valorTotal * parseFloat(prof.percentual || 0)) / 100,
+      })),
     );
   };
 
@@ -309,7 +330,7 @@ export default function CirurgiasProcedimentos() {
       procedimento_principal: cirurgia.procedimento_principal,
       valor_total: cirurgia.valor_total.toString(),
       status: cirurgia.status,
-      observacoes: cirurgia.observacoes || ''
+      observacoes: cirurgia.observacoes || '',
     });
     setProfissionaisCirurgia(cirurgia.profissionais || []);
     setIsDialogOpen(true);
@@ -317,14 +338,14 @@ export default function CirurgiasProcedimentos() {
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      'Agendada': { variant: 'secondary', color: 'text-blue-600' },
+      Agendada: { variant: 'secondary', color: 'text-blue-600' },
       'Em Andamento': { variant: 'default', color: 'text-yellow-600' },
-      'Realizada': { variant: 'default', color: 'text-green-600' },
-      'Cancelada': { variant: 'destructive', color: 'text-red-600' }
+      Realizada: { variant: 'default', color: 'text-green-600' },
+      Cancelada: { variant: 'destructive', color: 'text-red-600' },
     };
 
     const config = statusConfig[status] || { variant: 'outline', color: 'text-gray-600' };
-    
+
     return (
       <Badge variant={config.variant} className={config.color}>
         {status}
@@ -332,13 +353,18 @@ export default function CirurgiasProcedimentos() {
     );
   };
 
-  const filteredCirurgias = cirurgias.filter(cirurgia => {
-    return cirurgia.paciente_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           cirurgia.numero_guia.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           cirurgia.procedimento_principal.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredCirurgias = cirurgias.filter((cirurgia) => {
+    return (
+      cirurgia.paciente_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      cirurgia.numero_guia.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      cirurgia.procedimento_principal.toLowerCase().includes(searchTerm.toLowerCase())
+    );
   });
 
-  const totalPercentual = profissionaisCirurgia.reduce((sum, prof) => sum + (parseFloat(prof.percentual) || 0), 0);
+  const totalPercentual = profissionaisCirurgia.reduce(
+    (sum, prof) => sum + (parseFloat(prof.percentual) || 0),
+    0,
+  );
 
   return (
     <div className="space-y-6">
@@ -384,16 +410,18 @@ export default function CirurgiasProcedimentos() {
                       <Input
                         id="paciente_nome"
                         value={formData.paciente_nome}
-                        onChange={(e) => setFormData({...formData, paciente_nome: e.target.value})}
+                        onChange={(e) =>
+                          setFormData({ ...formData, paciente_nome: e.target.value })
+                        }
                         required
                       />
                     </div>
 
                     <div>
                       <Label htmlFor="convenio_id">Convênio</Label>
-                      <Select 
+                      <Select
                         value={formData.convenio_id}
-                        onValueChange={(value) => setFormData({...formData, convenio_id: value})}
+                        onValueChange={(value) => setFormData({ ...formData, convenio_id: value })}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione o convênio" />
@@ -412,16 +440,20 @@ export default function CirurgiasProcedimentos() {
                         id="data_cirurgia"
                         type="date"
                         value={formData.data_cirurgia}
-                        onChange={(e) => setFormData({...formData, data_cirurgia: e.target.value})}
+                        onChange={(e) =>
+                          setFormData({ ...formData, data_cirurgia: e.target.value })
+                        }
                         required
                       />
                     </div>
 
                     <div>
                       <Label htmlFor="sala_cirurgica">Sala Cirúrgica</Label>
-                      <Select 
+                      <Select
                         value={formData.sala_cirurgica}
-                        onValueChange={(value) => setFormData({...formData, sala_cirurgica: value})}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, sala_cirurgica: value })
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione a sala" />
@@ -440,7 +472,7 @@ export default function CirurgiasProcedimentos() {
                         id="hora_inicio"
                         type="time"
                         value={formData.hora_inicio}
-                        onChange={(e) => setFormData({...formData, hora_inicio: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, hora_inicio: e.target.value })}
                       />
                     </div>
 
@@ -450,7 +482,7 @@ export default function CirurgiasProcedimentos() {
                         id="hora_fim"
                         type="time"
                         value={formData.hora_fim}
-                        onChange={(e) => setFormData({...formData, hora_fim: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, hora_fim: e.target.value })}
                       />
                     </div>
 
@@ -458,10 +490,14 @@ export default function CirurgiasProcedimentos() {
                       <Label htmlFor="codigo_cbhpm_principal">Código CBHPM</Label>
                       <Input
                         id="codigo_cbhpm_principal"
-                        value={formData.codigo_cbhpm_principal ? formData.codigo_cbhpm_principal.toUpperCase() : ""}
+                        value={
+                          formData.codigo_cbhpm_principal
+                            ? formData.codigo_cbhpm_principal.toUpperCase()
+                            : ''
+                        }
                         onChange={(e) => {
                           const normalized = normalizeCodeCBHPM(e.target.value);
-                          setFormData({...formData, codigo_cbhpm_principal: normalized});
+                          setFormData({ ...formData, codigo_cbhpm_principal: normalized });
                         }}
                         placeholder="Ex: 1.01.01.01-2"
                         className="font-bold text-lg tracking-widest text-gray-900"
@@ -477,7 +513,7 @@ export default function CirurgiasProcedimentos() {
                         step="0.01"
                         value={formData.valor_total}
                         onChange={(e) => {
-                          setFormData({...formData, valor_total: e.target.value});
+                          setFormData({ ...formData, valor_total: e.target.value });
                         }}
                         onBlur={recalcularValoresProfissionais}
                         required
@@ -489,16 +525,18 @@ export default function CirurgiasProcedimentos() {
                       <Input
                         id="procedimento_principal"
                         value={formData.procedimento_principal}
-                        onChange={(e) => setFormData({...formData, procedimento_principal: e.target.value})}
+                        onChange={(e) =>
+                          setFormData({ ...formData, procedimento_principal: e.target.value })
+                        }
                         required
                       />
                     </div>
 
                     <div>
                       <Label htmlFor="status">Status</Label>
-                      <Select 
+                      <Select
                         value={formData.status}
-                        onValueChange={(value) => setFormData({...formData, status: value})}
+                        onValueChange={(value) => setFormData({ ...formData, status: value })}
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -518,7 +556,7 @@ export default function CirurgiasProcedimentos() {
                     <Textarea
                       id="observacoes"
                       value={formData.observacoes}
-                      onChange={(e) => setFormData({...formData, observacoes: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
                       rows={3}
                     />
                   </div>
@@ -563,9 +601,11 @@ export default function CirurgiasProcedimentos() {
                             {profissionaisCirurgia.map((prof) => (
                               <TableRow key={prof.id}>
                                 <TableCell>
-                                  <Select 
+                                  <Select
                                     value={prof.profissional_id}
-                                    onValueChange={(value) => updateProfissional(prof.id, 'profissional_id', value)}
+                                    onValueChange={(value) =>
+                                      updateProfissional(prof.id, 'profissional_id', value)
+                                    }
                                   >
                                     <SelectTrigger>
                                       <SelectValue placeholder="Selecione o profissional" />
@@ -580,9 +620,11 @@ export default function CirurgiasProcedimentos() {
                                   </Select>
                                 </TableCell>
                                 <TableCell>
-                                  <Select 
+                                  <Select
                                     value={prof.funcao}
-                                    onValueChange={(value) => updateProfissional(prof.id, 'funcao', value)}
+                                    onValueChange={(value) =>
+                                      updateProfissional(prof.id, 'funcao', value)
+                                    }
                                   >
                                     <SelectTrigger>
                                       <SelectValue />
@@ -602,7 +644,9 @@ export default function CirurgiasProcedimentos() {
                                     max="100"
                                     step="0.1"
                                     value={prof.percentual}
-                                    onChange={(e) => updateProfissional(prof.id, 'percentual', e.target.value)}
+                                    onChange={(e) =>
+                                      updateProfissional(prof.id, 'percentual', e.target.value)
+                                    }
                                     className="w-20"
                                   />
                                 </TableCell>
@@ -630,20 +674,21 @@ export default function CirurgiasProcedimentos() {
                           <div className="flex justify-between items-center">
                             <div>
                               <span className="font-medium">Total Distribuído:</span>
-                              <span className={`ml-2 ${totalPercentual === 100 ? 'text-green-600' : 'text-red-600'}`}>
+                              <span
+                                className={`ml-2 ${totalPercentual === 100 ? 'text-green-600' : 'text-red-600'}`}
+                              >
                                 {totalPercentual.toFixed(1)}%
                               </span>
                               {totalPercentual !== 100 && (
                                 <div className="flex items-center gap-1 mt-1 text-sm text-red-600">
-                                  <AlertTriangle className="w-4 h-4" />
-                                  A soma deve ser 100%
+                                  <AlertTriangle className="w-4 h-4" />A soma deve ser 100%
                                 </div>
                               )}
                             </div>
                             <div className="text-right">
                               <div className="text-sm text-muted-foreground">Valor Total:</div>
                               <div className="text-xl font-bold">
-                                R$ {(formData.valor_total || 0)}
+                                R$ {formData.valor_total || 0}
                               </div>
                             </div>
                           </div>
@@ -655,8 +700,8 @@ export default function CirurgiasProcedimentos() {
               </Tabs>
 
               <div className="flex justify-end gap-2 pt-4">
-                <Button 
-                  type="button" 
+                <Button
+                  type="button"
                   variant="outline"
                   onClick={() => {
                     setIsDialogOpen(false);
@@ -666,7 +711,7 @@ export default function CirurgiasProcedimentos() {
                 >
                   Cancelar
                 </Button>
-                <Button 
+                <Button
                   type="submit"
                   disabled={totalPercentual !== 100 && profissionaisCirurgia.length > 0}
                 >
@@ -715,7 +760,7 @@ export default function CirurgiasProcedimentos() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-blue-600">
-              {cirurgias.filter(c => c.status === 'Agendada').length}
+              {cirurgias.filter((c) => c.status === 'Agendada').length}
             </div>
             <p className="text-sm text-muted-foreground">Agendadas</p>
           </CardContent>
@@ -724,7 +769,7 @@ export default function CirurgiasProcedimentos() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-green-600">
-              {cirurgias.filter(c => c.status === 'Realizada').length}
+              {cirurgias.filter((c) => c.status === 'Realizada').length}
             </div>
             <p className="text-sm text-muted-foreground">Realizadas</p>
           </CardContent>
@@ -763,9 +808,7 @@ export default function CirurgiasProcedimentos() {
             <TableBody>
               {filteredCirurgias.map((cirurgia) => (
                 <TableRow key={cirurgia.id}>
-                  <TableCell className="font-mono text-sm">
-                    {cirurgia.numero_guia}
-                  </TableCell>
+                  <TableCell className="font-mono text-sm">{cirurgia.numero_guia}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <User className="w-4 h-4 text-muted-foreground" />
@@ -810,16 +853,10 @@ export default function CirurgiasProcedimentos() {
                       R$ {cirurgia.valor_total.toFixed(2)}
                     </div>
                   </TableCell>
-                  <TableCell>
-                    {getStatusBadge(cirurgia.status)}
-                  </TableCell>
+                  <TableCell>{getStatusBadge(cirurgia.status)}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleEdit(cirurgia)}
-                      >
+                      <Button size="sm" variant="outline" onClick={() => handleEdit(cirurgia)}>
                         <Edit className="w-3 h-3" />
                       </Button>
                     </div>
@@ -830,10 +867,9 @@ export default function CirurgiasProcedimentos() {
               {filteredCirurgias.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                    {searchTerm 
+                    {searchTerm
                       ? 'Nenhuma cirurgia encontrada com os filtros aplicados.'
-                      : 'Nenhuma cirurgia agendada ainda.'
-                    }
+                      : 'Nenhuma cirurgia agendada ainda.'}
                   </TableCell>
                 </TableRow>
               )}
@@ -844,4 +880,3 @@ export default function CirurgiasProcedimentos() {
     </div>
   );
 }
-

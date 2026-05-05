@@ -5,12 +5,16 @@ import { Label } from '@/components/ui/label';
 
 function paintSignature(canvas, dataUrl) {
   const context = canvas.getContext('2d');
-  if (!context) return;
+  if (!context) {
+    return;
+  }
 
   context.fillStyle = '#ffffff';
   context.fillRect(0, 0, canvas.width, canvas.height);
 
-  if (!dataUrl) return;
+  if (!dataUrl) {
+    return;
+  }
 
   const image = new Image();
   image.onload = () => {
@@ -28,7 +32,9 @@ export default function LaudoSignaturePad({ signature, onChange, disabled = fals
   useEffect(() => {
     const canvas = canvasRef.current;
     const wrapper = wrapperRef.current;
-    if (!canvas || !wrapper) return;
+    if (!canvas || !wrapper) {
+      return;
+    }
 
     const ratio = Math.max(window.devicePixelRatio || 1, 1);
     const width = wrapper.clientWidth || 320;
@@ -39,7 +45,9 @@ export default function LaudoSignaturePad({ signature, onChange, disabled = fals
     canvas.style.height = `${height}px`;
 
     const context = canvas.getContext('2d');
-    if (!context) return;
+    if (!context) {
+      return;
+    }
     context.scale(ratio, ratio);
     context.lineCap = 'round';
     context.lineJoin = 'round';
@@ -58,7 +66,9 @@ export default function LaudoSignaturePad({ signature, onChange, disabled = fals
 
   const getPoint = (event) => {
     const canvas = canvasRef.current;
-    if (!canvas) return null;
+    if (!canvas) {
+      return null;
+    }
     const bounds = canvas.getBoundingClientRect();
     return {
       x: event.clientX - bounds.left,
@@ -67,11 +77,15 @@ export default function LaudoSignaturePad({ signature, onChange, disabled = fals
   };
 
   const handlePointerDown = (event) => {
-    if (disabled) return;
+    if (disabled) {
+      return;
+    }
     const canvas = canvasRef.current;
     const context = canvas?.getContext('2d');
     const point = getPoint(event);
-    if (!canvas || !context || !point) return;
+    if (!canvas || !context || !point) {
+      return;
+    }
     drawingRef.current = true;
     lastPointRef.current = point;
     context.beginPath();
@@ -79,27 +93,37 @@ export default function LaudoSignaturePad({ signature, onChange, disabled = fals
   };
 
   const handlePointerMove = (event) => {
-    if (!drawingRef.current || disabled) return;
+    if (!drawingRef.current || disabled) {
+      return;
+    }
     const canvas = canvasRef.current;
     const context = canvas?.getContext('2d');
     const point = getPoint(event);
-    if (!canvas || !context || !point) return;
+    if (!canvas || !context || !point) {
+      return;
+    }
     context.lineTo(point.x, point.y);
     context.stroke();
     lastPointRef.current = point;
   };
 
   const commitSignature = () => {
-    if (!drawingRef.current) return;
+    if (!drawingRef.current) {
+      return;
+    }
     drawingRef.current = false;
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) {
+      return;
+    }
     updateSignatureValue({ visual_signature_data_url: canvas.toDataURL('image/png') });
   };
 
   const clearSignature = () => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) {
+      return;
+    }
     paintSignature(canvas, '');
     updateSignatureValue({ visual_signature_data_url: '' });
   };
@@ -118,9 +142,10 @@ export default function LaudoSignaturePad({ signature, onChange, disabled = fals
         />
       </div>
 
-
       <div className="space-y-2">
-        <Label htmlFor="signature-certificate-id">Certificado digital <span className="text-red-500">*</span></Label>
+        <Label htmlFor="signature-certificate-id">
+          Certificado digital <span className="text-red-500">*</span>
+        </Label>
         <div className="flex flex-col gap-2">
           <div className="flex gap-2">
             <Input
@@ -140,7 +165,9 @@ export default function LaudoSignaturePad({ signature, onChange, disabled = fals
               disabled={disabled}
               onClick={async () => {
                 // Sugestão para produção: integrar com Web PKI (https://webpki.lacunasoftware.com/)
-                alert('Para produção, integre com Web PKI para leitura segura do certificado A1/A3.');
+                alert(
+                  'Para produção, integre com Web PKI para leitura segura do certificado A1/A3.',
+                );
               }}
             >
               Web PKI
@@ -155,16 +182,24 @@ export default function LaudoSignaturePad({ signature, onChange, disabled = fals
               style={{ display: 'none' }}
               onChange={async (e) => {
                 const file = e.target.files[0];
-                if (!file) return;
+                if (!file) {
+                  return;
+                }
                 const password = prompt('Digite a senha do certificado A1 (.pfx):');
-                if (!password) return;
+                if (!password) {
+                  return;
+                }
                 // Leitura local do .pfx usando pkijs
                 try {
                   const pkijs = await import('pkijs');
                   const asn1js = await import('asn1js');
-                  const buffer = file.arrayBuffer ? await file.arrayBuffer() : await new Response(file).arrayBuffer();
+                  const buffer = file.arrayBuffer
+                    ? await file.arrayBuffer()
+                    : await new Response(file).arrayBuffer();
                   const asn1 = asn1js.fromBER(buffer);
-                  if (asn1.offset === -1) throw new Error('Arquivo .pfx inválido ou corrompido.');
+                  if (asn1.offset === -1) {
+                    throw new Error('Arquivo .pfx inválido ou corrompido.');
+                  }
                   const pfx = new pkijs.PFX({ schema: asn1.result });
                   // pkijs >=3.x: parseInternalValues pode ser sync, depende da versão
                   let bags;
@@ -178,15 +213,23 @@ export default function LaudoSignaturePad({ signature, onChange, disabled = fals
                   // Procura certificado
                   const certBag = bags.certBags?.[0]?.parsedValue;
                   if (certBag) {
-                    const subject = certBag.subject.typesAndValues.map(tv => tv.value.valueBlock.value).join(' ');
-                    const serial = certBag.serialNumber.valueBlock.valueHex ? Array.from(new Uint8Array(certBag.serialNumber.valueBlock.valueHex)).map(b => b.toString(16).padStart(2, '0')).join('') : '';
+                    const subject = certBag.subject.typesAndValues
+                      .map((tv) => tv.value.valueBlock.value)
+                      .join(' ');
+                    const serial = certBag.serialNumber.valueBlock.valueHex
+                      ? Array.from(new Uint8Array(certBag.serialNumber.valueBlock.valueHex))
+                        .map((b) => b.toString(16).padStart(2, '0'))
+                        .join('')
+                      : '';
                     const notAfter = certBag.notAfter.value;
                     updateSignatureValue({
                       certificate_id: serial,
                       certificate_subject: subject,
                       certificate_validity: notAfter,
                     });
-                    alert(`Certificado lido:\nNome: ${subject}\nSérie: ${serial}\nValidade: ${notAfter}`);
+                    alert(
+                      `Certificado lido:\nNome: ${subject}\nSérie: ${serial}\nValidade: ${notAfter}`,
+                    );
                   } else {
                     alert('Não foi possível extrair o certificado do arquivo.');
                   }
@@ -208,23 +251,41 @@ export default function LaudoSignaturePad({ signature, onChange, disabled = fals
           </div>
           {signature?.certificate_subject && (
             <div className="mt-2 text-xs text-slate-700">
-              <div><b>Nome:</b> {signature.certificate_subject}</div>
-              <div><b>Série:</b> {signature.certificate_id}</div>
-              <div><b>Validade:</b> {signature.certificate_validity}</div>
+              <div>
+                <b>Nome:</b> {signature.certificate_subject}
+              </div>
+              <div>
+                <b>Série:</b> {signature.certificate_id}
+              </div>
+              <div>
+                <b>Validade:</b> {signature.certificate_validity}
+              </div>
             </div>
           )}
         </div>
-        <p className="text-xs text-slate-500">Obrigatório. Digite o identificador do certificado digital, utilize a leitura automática ou faça upload do .pfx (A1).</p>
+        <p className="text-xs text-slate-500">
+          Obrigatório. Digite o identificador do certificado digital, utilize a leitura automática
+          ou faça upload do .pfx (A1).
+        </p>
       </div>
 
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-3">
           <Label>Assinatura visual</Label>
-          <Button type="button" variant="ghost" className="px-3 text-slate-600" onClick={clearSignature} disabled={disabled}>
+          <Button
+            type="button"
+            variant="ghost"
+            className="px-3 text-slate-600"
+            onClick={clearSignature}
+            disabled={disabled}
+          >
             Limpar
           </Button>
         </div>
-        <div ref={wrapperRef} className="overflow-hidden rounded-2xl border border-dashed border-slate-300 bg-white">
+        <div
+          ref={wrapperRef}
+          className="overflow-hidden rounded-2xl border border-dashed border-slate-300 bg-white"
+        >
           <canvas
             ref={canvasRef}
             className="block w-full touch-none"
@@ -234,7 +295,9 @@ export default function LaudoSignaturePad({ signature, onChange, disabled = fals
             onPointerLeave={commitSignature}
           />
         </div>
-        <p className="text-xs text-slate-500">Desenhe a assinatura do profissional. O traço será salvo junto com o hash do documento.</p>
+        <p className="text-xs text-slate-500">
+          Desenhe a assinatura do profissional. O traço será salvo junto com o hash do documento.
+        </p>
       </div>
     </div>
   );

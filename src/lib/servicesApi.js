@@ -1,5 +1,5 @@
-﻿import { supabase } from "@/lib/customSupabaseClient";
-import { normalizeCodeCBHPM } from "@/utils/formatters/formatters";
+﻿import { supabase } from '@/lib/customSupabaseClient';
+import { normalizeCodeCBHPM } from '@/utils/formatters/formatters';
 
 /**
  * Lista todos os serviÃ§os de uma clÃ­nica
@@ -8,28 +8,33 @@ import { normalizeCodeCBHPM } from "@/utils/formatters/formatters";
  */
 export async function listServices(clinicId) {
   console.log('ðŸ“‹ [listServices] Iniciando com clinicId:', clinicId);
-  
+
   if (!clinicId) {
     console.log('ðŸ“‹ [listServices] Sem clinicId, retornando vazio');
     return [];
   }
-  
+
   try {
     console.log('ðŸ“‹ [listServices] Executando query para clinic_id ==', clinicId);
-    
+
     const { data, error } = await supabase
-      .from("services")
-      .select("id, name, code, description, default_duration_minutes, type_billing, allow_scheduling_fit, requires_authorization, base_value, service_category, is_billable, tuss_code, type_service, guide_type, unit_measure, cost_value, active")
-      .eq("clinic_id", clinicId)
-      .order("name", { ascending: true });
-    
-    console.log('ðŸ“‹ [listServices] Query executada. Resultado:', { count: data?.length || 0, error: error?.message || 'nenhum' });
-    
+      .from('services')
+      .select(
+        'id, name, code, description, default_duration_minutes, type_billing, allow_scheduling_fit, requires_authorization, base_value, service_category, is_billable, tuss_code, type_service, guide_type, unit_measure, cost_value, active',
+      )
+      .eq('clinic_id', clinicId)
+      .order('name', { ascending: true });
+
+    console.log('ðŸ“‹ [listServices] Query executada. Resultado:', {
+      count: data?.length || 0,
+      error: error?.message || 'nenhum',
+    });
+
     if (error) {
       console.error('ðŸ“‹ [listServices] Erro na query:', error);
       throw error;
     }
-    
+
     return data || [];
   } catch (err) {
     console.error('ðŸ“‹ [listServices] Erro no try/catch:', err);
@@ -45,23 +50,23 @@ export async function listServices(clinicId) {
  */
 export async function createService(clinicId, serviceData) {
   if (!clinicId || !serviceData.name) {
-    throw new Error("clinic_id e name sÃ£o obrigatÃ³rios");
+    throw new Error('clinic_id e name sÃ£o obrigatÃ³rios');
   }
 
   const { data, error } = await supabase
-    .from("services")
+    .from('services')
     .insert([
       {
         clinic_id: clinicId,
         name: serviceData.name,
         description: serviceData.description || null,
         default_duration_minutes: serviceData.default_duration_minutes || 30,
-        type_billing: serviceData.type_billing || "per_consultation",
+        type_billing: serviceData.type_billing || 'per_consultation',
         allow_scheduling_fit: serviceData.allow_scheduling_fit !== false,
         requires_authorization: serviceData.requires_authorization || false,
         base_value: parseFloat(serviceData.base_value) || 0,
         code: serviceData.code ? normalizeCodeCBHPM(serviceData.code) : null,
-        service_category: serviceData.service_category || "consultation",
+        service_category: serviceData.service_category || 'consultation',
         is_billable: serviceData.is_billable !== false,
         tuss_code: serviceData.tuss_code ? normalizeCodeCBHPM(serviceData.tuss_code) : null,
         type_service: serviceData.type_service || null,
@@ -74,7 +79,9 @@ export async function createService(clinicId, serviceData) {
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
   return data;
 }
 
@@ -93,17 +100,19 @@ export async function updateService(serviceId, serviceData) {
   };
 
   const { data, error } = await supabase
-    .from("services")
+    .from('services')
     .update(normalizedData)
-    .eq("id", serviceId)
+    .eq('id', serviceId)
     .select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
+  if (!data || data.length === 0) {
+    throw new Error('Record not found');
+  }
+  return data[0];
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
   return data;
 }
 
@@ -114,17 +123,19 @@ export async function updateService(serviceId, serviceData) {
  */
 export async function deleteService(serviceId) {
   const { data, error } = await supabase
-    .from("services")
+    .from('services')
     .update({ active: false })
-    .eq("id", serviceId)
+    .eq('id', serviceId)
     .select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
+  if (!data || data.length === 0) {
+    throw new Error('Record not found');
+  }
+  return data[0];
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
   return data;
 }
 
@@ -144,21 +155,21 @@ export function validateServiceForTISS(serviceData) {
 
   // TUSS Code (obrigatÃ³rio)
   if (!serviceData.tuss_code) {
-    errors.push("TUSS Code Ã© obrigatÃ³rio");
+    errors.push('TUSS Code Ã© obrigatÃ³rio');
   } else if (serviceData.tuss_code.length !== 10) {
-    errors.push("TUSS Code deve ter exatamente 10 dÃ­gitos");
+    errors.push('TUSS Code deve ter exatamente 10 dÃ­gitos');
   } else if (!/^\d{10}$/.test(serviceData.tuss_code)) {
-    errors.push("TUSS Code deve conter apenas nÃºmeros");
+    errors.push('TUSS Code deve conter apenas nÃºmeros');
   }
 
   // Type Service (obrigatÃ³rio)
   if (!serviceData.type_service) {
-    errors.push("Tipo de ServiÃ§o Ã© obrigatÃ³rio");
+    errors.push('Tipo de ServiÃ§o Ã© obrigatÃ³rio');
   }
 
   // Guide Type (recomendado)
   if (!serviceData.guide_type) {
-    console.warn("âš ï¸ Guide Type nÃ£o definido para serviÃ§o");
+    console.warn('âš ï¸ Guide Type nÃ£o definido para serviÃ§o');
   }
 
   return {
@@ -176,17 +187,14 @@ export function validateServiceForTISS(serviceData) {
 export async function updateServiceWithValidation(serviceId, serviceData) {
   // Validar se vai ativar sem campos obrigatÃ³rios
   if (serviceData.active && !serviceData.tuss_code) {
-    throw new Error(
-      "NÃ£o Ã© possÃ­vel ativar serviÃ§o sem TUSS Code (obrigatÃ³rio para TISS)"
-    );
+    throw new Error('NÃ£o Ã© possÃ­vel ativar serviÃ§o sem TUSS Code (obrigatÃ³rio para TISS)');
   }
 
   const validation = validateServiceForTISS(serviceData);
   if (!validation.valid) {
-    console.warn("âš ï¸ Avisos TISS para serviÃ§o:", validation.errors);
+    console.warn('âš ï¸ Avisos TISS para serviÃ§o:', validation.errors);
     // Continua mesmo com avisos, mas registra
   }
 
   return updateService(serviceId, serviceData);
 }
-

@@ -1,10 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ValidatedFormField } from '@/components/ValidatedFormField';
@@ -36,7 +31,7 @@ export function TabbedForm({
   const formik = useFormValidation(initialValues, async (fieldName, value, allValues) => {
     // Encontrar o campo e sua validação
     for (const tab of tabs) {
-      const field = tab.fields.find(f => f.name === fieldName);
+      const field = tab.fields.find((f) => f.name === fieldName);
       if (field && field.validate) {
         return await field.validate(value, allValues);
       }
@@ -46,18 +41,18 @@ export function TabbedForm({
 
   // Marcar aba como visitada
   const handleTabChange = (tabIndex) => {
-    setVisitedTabs(prev => new Set([...prev, tabIndex]));
+    setVisitedTabs((prev) => new Set([...prev, tabIndex]));
     setActiveTab(tabIndex);
   };
 
   // Validar tab específica
   const validateTab = async (tabIndex) => {
     const tab = tabs[tabIndex];
-    const fieldNames = tab.fields.map(f => f.name);
+    const fieldNames = tab.fields.map((f) => f.name);
 
     const isValid = await Promise.all(
-      fieldNames.map(fieldName => formik.validateField(fieldName, formik.values[fieldName]))
-    ).then(results => results.every(r => !r?.error));
+      fieldNames.map((fieldName) => formik.validateField(fieldName, formik.values[fieldName])),
+    ).then((results) => results.every((r) => !r?.error));
 
     return isValid;
   };
@@ -94,9 +89,9 @@ export function TabbedForm({
 
     try {
       // Validar todas as abas
-      const allValid = await Promise.all(
-        tabs.map((_, index) => validateTab(index))
-      ).then(results => results.every(v => v));
+      const allValid = await Promise.all(tabs.map((_, index) => validateTab(index))).then(
+        (results) => results.every((v) => v),
+      );
 
       if (!allValid) {
         setSubmitError('Existem erros em algumas abas. Revise e tente novamente.');
@@ -107,7 +102,9 @@ export function TabbedForm({
       await onSubmit(formik.values);
       setSubmitSuccess(true);
       setTimeout(() => {
-        if (onCancel) onCancel();
+        if (onCancel) {
+          onCancel();
+        }
       }, 1500);
     } catch (error) {
       setSubmitError(error.message || 'Erro ao salvar formulário');
@@ -122,7 +119,7 @@ export function TabbedForm({
   // Contar erros por aba
   const getTabErrorCount = (tabIndex) => {
     const tab = tabs[tabIndex];
-    return tab.fields.filter(field => formik.errors[field.name]).length;
+    return tab.fields.filter((field) => formik.errors[field.name]).length;
   };
 
   return (
@@ -171,7 +168,10 @@ export function TabbedForm({
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-6">
-        <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${tabs.length}, 1fr)` }}>
+        <TabsList
+          className="grid w-full"
+          style={{ gridTemplateColumns: `repeat(${tabs.length}, 1fr)` }}
+        >
           {tabs.map((tab, index) => {
             const Icon = tab.icon;
             const hasError = getTabErrorCount(index) > 0;
@@ -181,9 +181,7 @@ export function TabbedForm({
               <TabsTrigger
                 key={index}
                 value={String(index)}
-                className={`flex items-center gap-2 ${
-                  hasError && isVisited ? 'text-red-600' : ''
-                }`}
+                className={`flex items-center gap-2 ${hasError && isVisited ? 'text-red-600' : ''}`}
               >
                 {Icon && <Icon className="w-4 h-4" />}
                 <span>{tab.label}</span>
@@ -198,9 +196,7 @@ export function TabbedForm({
         {/* Tab Contents */}
         {tabs.map((tab, index) => (
           <TabsContent key={index} value={String(index)} className="space-y-4 mt-6">
-            {tab.description && (
-              <p className="text-sm text-gray-600 mb-4">{tab.description}</p>
-            )}
+            {tab.description && <p className="text-sm text-gray-600 mb-4">{tab.description}</p>}
 
             {/* Campos da Aba */}
             <div className="space-y-4">
@@ -251,10 +247,7 @@ export function TabbedForm({
           Anterior
         </Button>
 
-        <Button
-          variant="outline"
-          onClick={onCancel}
-        >
+        <Button variant="outline" onClick={onCancel}>
           {cancelLabel}
         </Button>
 

@@ -5,11 +5,7 @@
 
 import React from 'react';
 
-export default function EncaixeSuggestions({ 
-  suggestions = [], 
-  onSelect = null,
-  loading = false,
-}) {
+export default function EncaixeSuggestions({ suggestions = [], onSelect = null, loading = false }) {
   // Não renderizar se não houver sugestões
   if (!suggestions || suggestions.length === 0) {
     return null;
@@ -51,33 +47,37 @@ export default function EncaixeSuggestions({
  * Card individual de sugestão
  */
 function SuggestionCard({ sugestao, index, onSelect, disabled }) {
-  const {
-    horario,
-    profissional,
-    sala,
-    score,
-    ocupacao,
-    consecutivos,
-    motivo,
-  } = sugestao;
+  const { horario, profissional, sala, score, ocupacao, consecutivos, motivo } = sugestao;
 
   // Determinar cor baseada no score
   const getScoreColor = () => {
-    if (score >= 75) return 'text-green-600';
-    if (score >= 50) return 'text-blue-600';
+    if (score >= 75) {
+      return 'text-green-600';
+    }
+    if (score >= 50) {
+      return 'text-blue-600';
+    }
     return 'text-gray-600';
   };
 
   const getScoreBg = () => {
-    if (score >= 75) return 'bg-green-100';
-    if (score >= 50) return 'bg-blue-100';
+    if (score >= 75) {
+      return 'bg-green-100';
+    }
+    if (score >= 50) {
+      return 'bg-blue-100';
+    }
     return 'bg-gray-100';
   };
 
   // Determinad rótulo de qualidade
   const getLabel = () => {
-    if (index === 0) return '🏆 Ideal';
-    if (index === 1) return '✓ Bom';
+    if (index === 0) {
+      return '🏆 Ideal';
+    }
+    if (index === 1) {
+      return '✓ Bom';
+    }
     return '○ Alternativa';
   };
 
@@ -90,19 +90,16 @@ function SuggestionCard({ sugestao, index, onSelect, disabled }) {
       {/* Linha 1: Horário, Profissional, Sala + Score */}
       <div className="flex items-center justify-between gap-3 mb-2">
         <div className="flex-1">
-          <span className="font-semibold text-gray-900">
-            {horario}
-          </span>
+          <span className="font-semibold text-gray-900">{horario}</span>
           <span className="text-gray-500 text-sm ml-2">
-            • {profissional?.name || profissional?.nome || 'Prof.'} • {sala?.name || sala?.nome || 'Sala'}
+            • {profissional?.name || profissional?.nome || 'Prof.'} •{' '}
+            {sala?.name || sala?.nome || 'Sala'}
           </span>
         </div>
 
         {/* Score visual (direita) */}
         <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${getScoreBg()}`}>
-          <span className={`font-bold text-sm ${getScoreColor()}`}>
-            {Math.round(score)}%
-          </span>
+          <span className={`font-bold text-sm ${getScoreColor()}`}>{Math.round(score)}%</span>
           <span className="text-xs text-gray-600">{getLabel()}</span>
         </div>
       </div>
@@ -111,9 +108,7 @@ function SuggestionCard({ sugestao, index, onSelect, disabled }) {
       <div className="flex items-center justify-between text-xs text-gray-600">
         <span className="italic">{motivo}</span>
         <div className="flex gap-3 text-right">
-          <span title="Ocupação do horário">
-            📊 {ocupacao}% ocupado
-          </span>
+          <span title="Ocupação do horário">📊 {ocupacao}% ocupado</span>
           <span title="Slots consecutivos livres" className="text-green-600">
             ✓ {consecutivos} slots
           </span>
@@ -134,14 +129,10 @@ export function EncaixeSuggestionsLoading() {
         <h4 className="font-semibold text-gray-900">Analisando sugestões de encaixe...</h4>
       </div>
       <div className="space-y-2">
-        {[1, 2, 3].map(i => (
-          <div
-            key={i}
-            className="h-12 bg-blue-100 rounded-lg animate-pulse"
-          />
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-12 bg-blue-100 rounded-lg animate-pulse" />
         ))}
       </div>
     </div>
   );
 }
-

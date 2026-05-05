@@ -14,7 +14,7 @@ import AgendaTabs from './components/AgendaTabs';
 import AgendaFilters from './components/AgendaFilters';
 import AgendaHeatmap from './components/AgendaHeatmap';
 import AgendaTimeline from './components/AgendaTimeline';
-import AppointmentModal from './components/AppointmentModal';
+import AppointmentModal from './components/AppointmentUnitedModal';
 import EncaixeSuggestions from './components/EncaixeSuggestions';
 import AgendaFinanceDashboard from './components/AgendaFinanceDashboard';
 import AgendaProfessionalView from './components/AgendaProfessionalView';
@@ -30,6 +30,7 @@ import {
   createAppointment,
   updateAppointment,
   deleteAppointment,
+  syncAppointmentServices,
 } from '@/lib/appointmentsApi';
 import { listProfessionals } from '@/lib/professionalsApi';
 import { listServices } from '@/lib/servicesApi';
@@ -47,7 +48,7 @@ import { sendBatchConfirmations } from '@/lib/whatsappConfirmationApi';
 
 /**
  * AgendaPage - Página principal da Agenda Única
- * 
+ *
  * Características:
  * - Visualização única com múltiplos modos (Geral, Profissional, Sala)
  * - Sem múltiplas rotas
@@ -57,7 +58,7 @@ import { sendBatchConfirmations } from '@/lib/whatsappConfirmationApi';
  */
 export default function AgendaPage() {
   console.log('🚀 [AgendaPage] COMPONENTE INICIOU!');
-  
+
   const navigate = useNavigate();
   const location = useLocation();
   const { user, currentRole, loading: authLoading } = useAuth();
@@ -70,7 +71,7 @@ export default function AgendaPage() {
   const appointmentDateFromState = location.state?.appointmentDate; // 📅 State
   const appointmentDateFromStateOrUrl = appointmentDateFromUrl || appointmentDateFromState; // Prioridade: URL > state
   const agenda = useAgendaStore();
-  
+
   // 🔍 DEBUG: Verificar clinicId
   console.log('╔═══════════════════════════════════════════════════════════════╗');
   console.log('║         🎯 [AgendaPage] STARTUP DIAGNOSTICS                  ║');
@@ -85,22 +86,25 @@ export default function AgendaPage() {
   console.log('📋 location.search:', location.search);
   console.log('📦 location.state:', location.state);
   console.log('═══════════════════════════════════════════════════════════════');
-  
+
   // 🚩 Flag para rastrear se o modal foi fechado intencionalmente
-  const hasModalBeenClosed = useRef(false);  // 🔍 Rastrear o patientId anterior para detectar mudanças
-  const prevPatientIdRef = useRef(null);  
+  const hasModalBeenClosed = useRef(false); // 🔍 Rastrear o patientId anterior para detectar mudanças
+  const prevPatientIdRef = useRef(null);
   // 🔐 Controle de acesso aos diferentes modos
   // Recepção: modo simplificado operacional
   // Profissional: modo focado apenas seus atendimentos
   // Gestor: modo completo com análises financeiras
   const isProfissional = currentRole?.toLowerCase?.() === 'profissional';
-  const isGestor = currentRole && ['gestor', 'admin', 'administrador'].includes(currentRole?.toLowerCase?.());
+  const isGestor =
+    currentRole && ['gestor', 'admin', 'administrador'].includes(currentRole?.toLowerCase?.());
   // 📊 Indicadores: apenas Admin e Gestor
-  const canViewIndicators = currentRole && ['gestor', 'admin', 'administrador'].includes(currentRole?.toLowerCase?.());
+  const canViewIndicators =
+    currentRole && ['gestor', 'admin', 'administrador'].includes(currentRole?.toLowerCase?.());
   // Permite profissional, gestor, ou role desconhecido (null = pode ser admin)
   const canAccessProfessionalMode = isProfissional || isGestor || !currentRole;
-  const canAccessGestorMode = !currentRole || (currentRole?.toLowerCase?.() !== 'recepcao' && !isProfissional);
-  
+  const canAccessGestorMode =
+    !currentRole || (currentRole?.toLowerCase?.() !== 'recepcao' && !isProfissional);
+
   const [agendaMode, setAgendaMode] = useState('recepcao');
   const [userProfessionalId, setUserProfessionalId] = useState(null);
   const [whatsappLoading, setWhatsappLoading] = useState(false);
@@ -113,15 +117,17 @@ export default function AgendaPage() {
   useEffect(() => {
     const ensureHolidaysExist = async () => {
       const currentYear = new Date().getFullYear();
-      
-      console.log(`🌱 [AgendaPage] Garantindo feriados para ${currentYear}. clinicId=${clinicId}, loading=${loadingClinic}`);
-      
+
+      console.log(
+        `🌱 [AgendaPage] Garantindo feriados para ${currentYear}. clinicId=${clinicId}, loading=${loadingClinic}`,
+      );
+
       try {
         // Passa null para clinic_id - feriados nacionais são compartilhados
         const seedResult = await seedNationalHolidays(currentYear, null);
         console.log(`📌 [Seed] Resultado: ${seedResult ? '✅ OK' : '⚠️ FALHOU'}`);
       } catch (error) {
-        console.error(`❌ [Seed] Erro:`, error);
+        console.error('❌ [Seed] Erro:', error);
       }
     };
 
@@ -129,7 +135,7 @@ export default function AgendaPage() {
     // Feriados nacionais (clinic_id = null) existem para todo o sistema
     ensureHolidaysExist();
   }, []);
-  
+
   // 🔧 Auto-set Modo Profissional quando profissional logado
   useEffect(() => {
     if (isProfissional) {
@@ -137,10 +143,10 @@ export default function AgendaPage() {
       setAgendaMode('profissional');
     }
   }, [isProfissional]);
-  
+
   // Estado para sugestões de encaixe
   const [encaixeSuggestions, setEncaixeSuggestions] = useState([]);
-  
+
   // 📋 Estado para Check-in Drawer
   const [checkinOpen, setCheckinOpen] = useState(false);
   const [checkinAppointment, setCheckinAppointment] = useState(null);
@@ -162,8 +168,12 @@ export default function AgendaPage() {
 
   // Carregar metadata diretamente
   useEffect(() => {
-    console.log('📊 [Metadata Effect] Disparado. Condiçoes:', { clinicId, authLoading, loadingClinic });
-    
+    console.log('📊 [Metadata Effect] Disparado. Condiçoes:', {
+      clinicId,
+      authLoading,
+      loadingClinic,
+    });
+
     if (authLoading) {
       console.log('📊 [Metadata Effect] Auth ainda carregando, aguardando...');
       return;
@@ -173,27 +183,42 @@ export default function AgendaPage() {
       console.log('📊 [Metadata Effect] clinicId ainda não disponível:', clinicId);
       return;
     }
-    
+
     (async () => {
       try {
         console.log('📊 [Metadata Effect] Carregando dados para clinicId:', clinicId);
-        
+
         const [professionals, rooms, services, payers, patients] = await Promise.all([
-          listProfessionals(clinicId).catch(err => { console.error('❌ Erro em listProfessionals:', err); return []; }),
-          listRooms(clinicId).catch(err => { console.error('❌ Erro em listRooms:', err); return []; }),
-          listServices(clinicId).catch(err => { console.error('❌ Erro em listServices:', err); return []; }),
-          listPayers(clinicId).catch(err => { console.error('❌ Erro em listPayers:', err); return []; }),
-          listPatients(clinicId).catch(err => { console.error('❌ Erro em listPatients:', err); return []; }),
+          listProfessionals(clinicId).catch((err) => {
+            console.error('❌ Erro em listProfessionals:', err);
+            return [];
+          }),
+          listRooms(clinicId).catch((err) => {
+            console.error('❌ Erro em listRooms:', err);
+            return [];
+          }),
+          listServices(clinicId).catch((err) => {
+            console.error('❌ Erro em listServices:', err);
+            return [];
+          }),
+          listPayers(clinicId).catch((err) => {
+            console.error('❌ Erro em listPayers:', err);
+            return [];
+          }),
+          listPatients(clinicId).catch((err) => {
+            console.error('❌ Erro em listPatients:', err);
+            return [];
+          }),
         ]);
-        
+
         console.log('📊 [Metadata Effect] Dados carregados:', {
           professionals: professionals?.length || 0,
           rooms: rooms?.length || 0,
-          services: services?.length || 0, 
+          services: services?.length || 0,
           payers: payers?.length || 0,
           patients: patients?.length || 0,
         });
-        
+
         setMetadataFromCache({
           professionals: professionals || [],
           rooms: rooms || [],
@@ -218,7 +243,7 @@ export default function AgendaPage() {
       console.warn('🚫 Acesso negado ao Modo Gestor para perfil:', currentRole);
       setAgendaMode(canAccessProfessionalMode ? 'profissional' : 'recepcao');
     }
-    
+
     if (!canAccessProfessionalMode && agendaMode === 'profissional') {
       console.warn('🚫 Acesso negado ao Modo Profissional para perfil:', currentRole);
       setAgendaMode('recepcao');
@@ -235,7 +260,7 @@ export default function AgendaPage() {
       // Resetar flag apenas quando patientId muda para um novo valor
       hasModalBeenClosed.current = false;
     }
-    
+
     // Só abre a modal se há patientId no URL, não há slot selecionado, e o modal não foi fechado intencionalmente
     if (patientIdFromUrl && !agenda.selectedSlot && !hasModalBeenClosed.current) {
       console.log('📋 Abrindo modal com patientId:', patientIdFromUrl);
@@ -246,7 +271,7 @@ export default function AgendaPage() {
         date: today,
         time: '09:00',
       });
-      
+
       // Carregar dados do paciente para pré-seleção
       const loadPatient = async () => {
         try {
@@ -260,7 +285,7 @@ export default function AgendaPage() {
           console.error('❌ Erro ao carregar paciente:', err);
         }
       };
-      
+
       loadPatient();
     }
   }, [patientIdFromUrl, agenda]);
@@ -271,14 +296,18 @@ export default function AgendaPage() {
       agenda.filteredAppointments || [],
       agenda.metadata?.professionals || [],
       agenda.metadata?.services || [],
-      agenda.date
+      agenda.date,
     );
   }, [agenda.filteredAppointments, agenda.metadata, agenda.date]);
 
   // 👨‍⚕️ Filtrar agendamentos para profissional
   const professionalAppointments = useMemo(() => {
-    console.log('🔍 [ProfessionalView] Filtering with:', { agendaMode, userProfessionalId, appointmentCount: agenda.filteredAppointments?.length });
-    
+    console.log('🔍 [ProfessionalView] Filtering with:', {
+      agendaMode,
+      userProfessionalId,
+      appointmentCount: agenda.filteredAppointments?.length,
+    });
+
     if (agendaMode !== 'profissional' || !agenda.filteredAppointments) {
       console.log('🔍 [ProfessionalView] Not in professional mode or no appointments');
       return agenda.filteredAppointments;
@@ -288,14 +317,18 @@ export default function AgendaPage() {
     if (userProfessionalId) {
       console.log('👨‍⚕️ [ProfessionalView] Filtering by professional_id:', userProfessionalId);
       const filtered = agenda.filteredAppointments.filter(
-        a => a.professional_id === userProfessionalId
+        (a) => a.professional_id === userProfessionalId,
       );
-      console.log(`👨‍⚕️ [ProfessionalView] Filtered from ${agenda.filteredAppointments.length} to ${filtered.length} appointments`);
+      console.log(
+        `👨‍⚕️ [ProfessionalView] Filtered from ${agenda.filteredAppointments.length} to ${filtered.length} appointments`,
+      );
       return filtered;
     }
 
     // Fallback: se não houver userProfessionalId mas estiver em modo profissional, retornar vazio
-    console.error('🔴 [ProfessionalView] Em modo profissional mas sem userProfessionalId! Retornando vazio.');
+    console.error(
+      '🔴 [ProfessionalView] Em modo profissional mas sem userProfessionalId! Retornando vazio.',
+    );
     return [];
   }, [agendaMode, agenda.filteredAppointments, userProfessionalId]);
 
@@ -320,44 +353,78 @@ export default function AgendaPage() {
       const endDate = new Date(year, month - 1, day, 23, 59, 59, 999);
       const endISO = endDate.toISOString();
 
-      console.log('📅 Buscando agendamentos:', { date: agenda.date, startISO, endISO, clinicId, currentRole: currentRole, user_id: user?.id });
+      console.log('📅 Buscando agendamentos:', {
+        date: agenda.date,
+        startISO,
+        endISO,
+        clinicId,
+        currentRole: currentRole,
+        user_id: user?.id,
+      });
 
       // 🔒 Se for profissional, buscar o professional_id do usuário
       let userProfId = null;
       const isProf = currentRole?.toLowerCase?.() === 'profissional';
-      console.log('🔍 [RBAC Debug] isProf:', isProf, 'currentRole:', currentRole, 'user.email:', user?.email);
-      
+      console.log(
+        '🔍 [RBAC Debug] isProf:',
+        isProf,
+        'currentRole:',
+        currentRole,
+        'user.email:',
+        user?.email,
+      );
+
       if (isProf && user?.email) {
-        console.log('🔍 [RBAC Debug] Querying professionals table for email:', user.email, 'clinic_id:', clinicId);
+        console.log(
+          '🔍 [RBAC Debug] Querying professionals table for email:',
+          user.email,
+          'clinic_id:',
+          clinicId,
+        );
         const { data: allProfs, error: profError } = await supabase
           .from('professionals')
           .select('id, email, clinic_id, name')
           .eq('email', user.email)
           .eq('clinic_id', clinicId);
-        
-        console.log('🔍 [RBAC Debug] Query result (all records):', { allProfs, profError, count: allProfs?.length });
-        
+
+        console.log('🔍 [RBAC Debug] Query result (all records):', {
+          allProfs,
+          profError,
+          count: allProfs?.length,
+        });
+
         if (allProfs?.length > 1) {
-          console.error(`⚠️ [DUPLICATA] ${allProfs.length} registros encontrados para ${user.email}`);
-          allProfs.forEach((p, idx) => console.log(`  [${idx}] id=${p.id}, name=${p.name}, clinic_id=${p.clinic_id}`));
+          console.error(
+            `⚠️ [DUPLICATA] ${allProfs.length} registros encontrados para ${user.email}`,
+          );
+          allProfs.forEach((p, idx) =>
+            console.log(`  [${idx}] id=${p.id}, name=${p.name}, clinic_id=${p.clinic_id}`),
+          );
         }
-        
+
         if (allProfs?.length === 1) {
           const profData = allProfs[0];
           userProfId = profData.id;
           setUserProfessionalId(userProfId);
           console.log(`✅ [RBAC] Profissional encontrado: ${userProfId} (${profData.name})`);
         } else if (allProfs?.length === 0) {
-          console.error(`❌ [RBAC CRÍTICO] Nenhum profissional encontrado para email=${user.email} e clinic_id=${clinicId}`);
+          console.error(
+            `❌ [RBAC CRÍTICO] Nenhum profissional encontrado para email=${user.email} e clinic_id=${clinicId}`,
+          );
         }
       }
 
-      console.log('🔍 [RBAC Debug] Calling listAppointments with:', { userRole: currentRole, userProfessionalId: userProfId });
-      
+      console.log('🔍 [RBAC Debug] Calling listAppointments with:', {
+        userRole: currentRole,
+        userProfessionalId: userProfId,
+      });
+
       if (isProf && !userProfId) {
-        console.error('🔴 [RBAC] ERRO: Modo profissional mas sem professional_id! Nenhum filtro será aplicado!');
+        console.error(
+          '🔴 [RBAC] ERRO: Modo profissional mas sem professional_id! Nenhum filtro será aplicado!',
+        );
       }
-      
+
       // Buscar agendamentos
       const appointments = await listAppointments({
         clinicId,
@@ -383,21 +450,20 @@ export default function AgendaPage() {
    * Quando metadataFromCache é atualizado, aplica ao store SEMPRE (se não for null)
    */
   useEffect(() => {
-    if (!metadataFromCache) return; // Ignorar se still null
-    
+    if (!metadataFromCache) {
+      return;
+    } // Ignorar se still null
+
     console.log('📦 [Metadata Effect 2] Aplicando dados. Contagem:', {
       professionals: metadataFromCache?.professionals?.length || 0,
       rooms: metadataFromCache?.rooms?.length || 0,
       services: metadataFromCache?.services?.length || 0,
       payers: metadataFromCache?.payers?.length || 0,
     });
-    
+
     agenda.setMetadata(metadataFromCache);
     console.log('✅ [Metadata Effect 2] Metadata setada no store');
-    
   }, [metadataFromCache, agenda]);
-
-
 
   // Carregamento de dados na montagem e quando clinicId muda
   useEffect(() => {
@@ -445,12 +511,46 @@ export default function AgendaPage() {
     // Gerar sugestões inteligentes quando abrir modal de novo agendamento
     generateEncaixeSuggestions(30);
 
+    // ✅ Formatar data e hora para exibição em português
+    const displayDate = slot.date || agenda.date;
+    const displayTime = slot.time || '09:00';
+    const profesionalName = 'Profissional a definir';
+
+    // Converter data YYYY-MM-DD para DD/MM/YYYY
+    const dateParts = displayDate ? displayDate.split('-') : ['2026', '01', '01'];
+    const [year, month, day] = dateParts;
+    const formattedDate = `${day}/${month}/${year}`;
+
+    // ✅ Pedir confirmação antes de abrir o modal
+    const confirmed = window.confirm(
+      'Deseja criar novo agendamento?\n\n' +
+        `📅 Data: ${formattedDate}\n` +
+        `🕐 Horário: ${displayTime}\n` +
+        `👨‍⚕️ Profissional: ${profesionalName}\n\n` +
+        'Clique em OK para continuar...',
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    // ✅ Ser explícito: usar apenas os dados necessários para novo agendamento
     agenda.selectSlot({
-      date: agenda.date,
-      time: slot.time || '09:00',
       type: 'new',
-      ...slot,
+      date: slot.date || agenda.date,
+      time: slot.time || '09:00',
+      professional_id: slot.professional_id || undefined,
+      room_id: slot.room_id || undefined,
     });
+  };
+
+  /**
+   * 🎉 Callback quando agendamento é salvo com sucesso
+   */
+  const handleAppointmentSuccess = async () => {
+    console.log('✅ [handleAppointmentSuccess] Agendamento salvo com sucesso!');
+    await loadAgendaData();
+    agenda.deselectSlot();
   };
 
   /**
@@ -476,7 +576,7 @@ export default function AgendaPage() {
       // ✅ Passar info completa para rastrear a origem
       navigate(`/clinica/pacientes/${appointment.patient_id}`, {
         state: {
-          previousPage: "agenda",  // ✅ Indicar que veio da Agenda
+          previousPage: 'agenda', // ✅ Indicar que veio da Agenda
           appointmentId: appointment.id,
           appointmentDate: appointment.scheduled_date || null,
           openTab: 'historico',
@@ -515,52 +615,73 @@ export default function AgendaPage() {
   useEffect(() => {
     // Se temos appointmentDate direto do state ou URL (vindo de Contas a Receber), usar direto
     if (appointmentDateFromStateOrUrl) {
-      console.log('📅 [Navigate To Appointment Date] appointmentDate vindo do state/URL:', appointmentDateFromStateOrUrl);
+      console.log(
+        '📅 [Navigate To Appointment Date] appointmentDate vindo do state/URL:',
+        appointmentDateFromStateOrUrl,
+      );
       console.log('   clinicId:', clinicId, 'loadingClinic:', loadingClinic);
-      
+
       // Validar formato YYYY-MM-DD
       if (/^\d{4}-\d{2}-\d{2}$/.test(appointmentDateFromStateOrUrl)) {
         // Não é necessário esperar clinicId estar pronto - pode setar a data direto
         agenda.setDate(appointmentDateFromStateOrUrl);
-        console.log('✅ [Navigate To Appointment Date] Agenda navegada para data:', appointmentDateFromStateOrUrl);
+        console.log(
+          '✅ [Navigate To Appointment Date] Agenda navegada para data:',
+          appointmentDateFromStateOrUrl,
+        );
       } else {
-        console.warn('⚠️ [Navigate To Appointment Date] Data do estado/URL com formato inválido:', appointmentDateFromStateOrUrl);
+        console.warn(
+          '⚠️ [Navigate To Appointment Date] Data do estado/URL com formato inválido:',
+          appointmentDateFromStateOrUrl,
+        );
       }
       return; // Não processar appointmentId depois
     }
 
     // Se temos appointmentId, buscar no banco para descobrir a data
     if (!appointmentIdFromUrl || !clinicId) {
-      console.log('❌ [Navigate To Appointment Date] Sem appointmentId ou clinicId', {appointmentIdFromUrl, clinicId});
+      console.log('❌ [Navigate To Appointment Date] Sem appointmentId ou clinicId', {
+        appointmentIdFromUrl,
+        clinicId,
+      });
       return;
     }
 
-    console.log('🔍 [Navigate To Appointment Date] Buscando appointment no banco...', { appointmentIdFromUrl });
+    console.log('🔍 [Navigate To Appointment Date] Buscando appointment no banco...', {
+      appointmentIdFromUrl,
+    });
 
     // Buscar o appointment no Supabase para descobrir a data correta
     supabase
       .from('appointments')
-      .select('*')  // Buscar TODOS os campos para debugar
+      .select('*') // Buscar TODOS os campos para debugar
       .eq('id', appointmentIdFromUrl)
       .eq('clinic_id', clinicId)
       .maybeSingle()
       .then(({ data, error }) => {
         if (error) {
-          console.warn('⚠️ [Navigate To Appointment Date] Erro ao buscar appointment:', error.message);
+          console.warn(
+            '⚠️ [Navigate To Appointment Date] Erro ao buscar appointment:',
+            error.message,
+          );
           return;
         }
 
         if (!data) {
-          console.warn('⚠️ [Navigate To Appointment Date] Appointment não encontrado:', appointmentIdFromUrl);
+          console.warn(
+            '⚠️ [Navigate To Appointment Date] Appointment não encontrado:',
+            appointmentIdFromUrl,
+          );
           return;
         }
 
         if (data) {
           console.log('📊 [Navigate To Appointment Date] Dados completos do appointment:', data);
-          
+
           // Tentar diferentes nomes de campo para data
-          let appointmentDate = data.appointment_date || data.scheduled_date || data.date || data.data_agendamento;
-          
+          let appointmentDate =
+            data.appointment_date || data.scheduled_date || data.date || data.data_agendamento;
+
           if (!appointmentDate) {
             console.warn('⚠️ [Navigate To Appointment Date] Nenhum campo de data encontrado!');
             console.log('   Campos disponíveis:', Object.keys(data));
@@ -585,7 +706,7 @@ export default function AgendaPage() {
           console.warn('⚠️ [Navigate To Appointment Date] Appointment não encontrado no banco');
         }
       })
-      .catch(err => {
+      .catch((err) => {
         console.error('❌ [Navigate To Appointment Date] Erro:', err.message);
       });
   }, [appointmentIdFromUrl, appointmentDateFromStateOrUrl, clinicId]); // Dependências
@@ -593,7 +714,7 @@ export default function AgendaPage() {
   // 🔗 SEGUNDO: Abrir drawer de Check-in automaticamente com appointmentId (do state ou URL)
   useEffect(() => {
     console.log('🔔 [AutoOpen Checkin] useEffect DISPAROU!', { appointmentIdFromUrl });
-    
+
     // Esperar agenda carregar e ter appointmentId
     if (!appointmentIdFromUrl) {
       console.log('❌ [AutoOpen Checkin] Sem appointmentId disponível - RETORNANDO');
@@ -616,12 +737,18 @@ export default function AgendaPage() {
     // Procurar em appointments primeiro, depois em filteredAppointments
     const allAppointments = agenda.appointments || [];
     const filteredAppointments = agenda.filteredAppointments || [];
-    
-    console.log('🔎 [AutoOpen Checkin] Procurando em', allAppointments.length, '+ ', filteredAppointments.length, 'appointments');
-    
-    let foundAppointment = allAppointments.find(apt => apt.id === appointmentIdFromUrl);
+
+    console.log(
+      '🔎 [AutoOpen Checkin] Procurando em',
+      allAppointments.length,
+      '+ ',
+      filteredAppointments.length,
+      'appointments',
+    );
+
+    let foundAppointment = allAppointments.find((apt) => apt.id === appointmentIdFromUrl);
     if (!foundAppointment) {
-      foundAppointment = filteredAppointments.find(apt => apt.id === appointmentIdFromUrl);
+      foundAppointment = filteredAppointments.find((apt) => apt.id === appointmentIdFromUrl);
     }
 
     if (foundAppointment) {
@@ -630,7 +757,7 @@ export default function AgendaPage() {
         patient: foundAppointment.patient_name,
         time: foundAppointment.scheduled_time,
       });
-      
+
       // Pequeno delay para garantir que o componente está renderizado
       setTimeout(() => {
         handleOpenCheckin(foundAppointment);
@@ -639,8 +766,8 @@ export default function AgendaPage() {
     } else {
       console.warn('⚠️ [AutoOpen Checkin] Appointment NÃO encontrado!', {
         appointmentIdFromUrl,
-        sampleIds: allAppointments.map(a => a.id).slice(0, 5),
-        filteredSample: filteredAppointments.map(a => a.id).slice(0, 5),
+        sampleIds: allAppointments.map((a) => a.id).slice(0, 5),
+        filteredSample: filteredAppointments.map((a) => a.id).slice(0, 5),
       });
     }
   }, [appointmentIdFromUrl, agenda.appointments, agenda.filteredAppointments, agenda.loading]);
@@ -655,16 +782,16 @@ export default function AgendaPage() {
     console.log('   agenda.loading:', agenda.loading);
     console.log('   agenda.appointments count:', agenda.appointments?.length);
     console.log('   agenda.selectedSlot:', agenda.selectedSlot ? 'JÁ SETADO' : 'null');
-    
+
     // Se já tem algo selecionado, não tenta abrir novamente
     if (agenda.selectedSlot) {
       console.log('⏭️ [AutoOpen Edit Modal] Já há um slot selecionado, saindo');
       return;
     }
-    
+
     if (modeParam === 'edit' && appointmentIdFromUrl) {
       console.log('✅ [AutoOpen Edit Modal] CONDIÇÕES ATENDIDAS: mode=edit + appointmentId');
-      
+
       // CRÍTICO: Verificar se a data foi navegada corretamente
       if (appointmentDateFromStateOrUrl && agenda.date !== appointmentDateFromStateOrUrl) {
         console.log('⏳ [AutoOpen Edit Modal] Aguardando navegação para data correta...');
@@ -672,17 +799,17 @@ export default function AgendaPage() {
         console.log('   Atual:', agenda.date);
         return; // Aguardar próxima execução
       }
-      
+
       if (agenda.loading) {
         console.log('⏳ [AutoOpen Edit Modal] Aguardando carregamento dos dados...');
         return;
       }
-      
+
       // Encontrar o appointment
       const allAppointments = agenda.appointments || [];
       console.log('🔍 Procurando appointment com ID:', appointmentIdFromUrl);
       console.log('   Total de appointments disponíveis:', allAppointments.length);
-      
+
       if (allAppointments.length === 0) {
         console.log('⚠️ Nenhum appointment carregado ainda. Tentando novamente em 500ms...');
         const timer = setTimeout(() => {
@@ -691,25 +818,28 @@ export default function AgendaPage() {
         }, 500);
         return () => clearTimeout(timer);
       }
-      
-      let foundAppointment = allAppointments.find(apt => apt.id === appointmentIdFromUrl);
-      
+
+      const foundAppointment = allAppointments.find((apt) => apt.id === appointmentIdFromUrl);
+
       if (foundAppointment) {
         console.log('✅ [AutoOpen Edit Modal] Appointment ENCONTRADO:', foundAppointment.id);
         console.log('   paciente:', foundAppointment.patient_id);
         console.log('   payer:', foundAppointment.payer_id);
-        
+
         agenda.selectSlot({
           type: 'existing',
           appointmentId: appointmentIdFromUrl,
           appointment: foundAppointment,
-          mode: 'edit'
+          mode: 'edit',
         });
-        
+
         console.log('✅ selectSlot chamado. Modal deve abrir agora.');
       } else {
-        console.warn('⚠️ [AutoOpen Edit Modal] Appointment NÃO encontrado com ID:', appointmentIdFromUrl);
-        console.log('   IDs disponíveis:', allAppointments.map(a => a.id).join(', '));
+        console.warn(
+          '⚠️ [AutoOpen Edit Modal] Appointment NÃO encontrado com ID:',
+          appointmentIdFromUrl,
+        );
+        console.log('   IDs disponíveis:', allAppointments.map((a) => a.id).join(', '));
       }
     } else {
       if (modeParam !== 'edit') {
@@ -719,39 +849,30 @@ export default function AgendaPage() {
         console.log('⏭️ [AutoOpen Edit Modal] Sem appointmentIdFromUrl');
       }
     }
-  }, [modeParam, appointmentIdFromUrl, appointmentDateFromStateOrUrl, agenda.date, agenda.loading, agenda.appointments, agenda.selectSlot]);
+  }, [
+    modeParam,
+    appointmentIdFromUrl,
+    appointmentDateFromStateOrUrl,
+    agenda.date,
+    agenda.loading,
+    agenda.appointments,
+    agenda.selectSlot,
+  ]);
 
   const handleSlotClick = (slot) => {
-    console.log('🖱️ handleSlotClick recebeu slot:', {
-      type: slot.type,
-      id: slot.id,
-      patient_id: slot.patient_id,
-      professional_id: slot.professional_id,
-      service_id: slot.service_id,
-      room_id: slot.room_id,
-      status: slot.status,
-    });
-    
     if (slot.type === 'new') {
       handleNewAppointment(slot);
     } else if (slot.type === 'bloquear') {
-      // Bloquear horário - cria agendamento com status "bloqueado"
       handleBlockAppointment(slot);
     } else if (slot.type === 'encaixe') {
-      // Encaixe - abre modal de novo agendamento
       handleNewAppointment(slot);
     } else if (slot.type === 'delete') {
-      // Deletar agendamento (apenas admin)
       handleDeleteAppointment(slot.id);
     } else if (slot.type === 'start-attendance') {
-      // Iniciar atendimento - muda status para em_atendimento
       handleStartAttendance(slot.id);
     } else if (slot.type === 'edit') {
-      console.log('✏️ Editando agendamento:', slot.id);
       agenda.selectSlot(slot);
     } else {
-      // Fallback: Editar agendamento existente
-      console.log('⚠️ Type não identificado, tratando como edit. Type:', slot.type);
       agenda.selectSlot(slot);
     }
   };
@@ -759,7 +880,7 @@ export default function AgendaPage() {
   const handleDeleteAppointment = async (appointmentId) => {
     try {
       agenda.setLoading(true);
-      
+
       // Validar permissões
       if (currentRole !== 'admin') {
         throw new Error('Apenas administradores podem deletar agendamentos');
@@ -767,10 +888,7 @@ export default function AgendaPage() {
 
       console.log('🗑️ Deletando agendamento:', appointmentId);
 
-      const { error } = await supabase
-        .from('appointments')
-        .delete()
-        .eq('id', appointmentId);
+      const { error } = await supabase.from('appointments').delete().eq('id', appointmentId);
 
       if (error) {
         console.error('❌ Erro do Supabase:', error);
@@ -778,7 +896,7 @@ export default function AgendaPage() {
       }
 
       console.log('✅ Agendamento deletado com sucesso');
-      
+
       // Recarregar agenda
       await loadAgendaData();
     } catch (err) {
@@ -796,9 +914,9 @@ export default function AgendaPage() {
 
       const { error } = await supabase
         .from('appointments')
-        .update({ 
+        .update({
           status: 'em_atendimento',
-          em_atendimento_em: new Date().toISOString()
+          em_atendimento_em: new Date().toISOString(),
         })
         .eq('id', appointmentId);
 
@@ -808,7 +926,7 @@ export default function AgendaPage() {
       }
 
       console.log('✅ Atendimento iniciado com sucesso');
-      
+
       // Recarregar agenda
       await loadAgendaData();
     } catch (err) {
@@ -836,20 +954,34 @@ export default function AgendaPage() {
       }
 
       // Validações obrigatórias SEMPRE
-      if (!formData.date) throw new Error('Data é obrigatória');
-      if (!formData.time) throw new Error('Horário é obrigatório');
-      if (!formData.professional_id) throw new Error('Profissional é obrigatório');
-      if (!formData.room_id) throw new Error('Sala é obrigatória');
-      if (!formData.service_id) throw new Error('Serviço é obrigatório');
+      if (!formData.date) {
+        throw new Error('Data é obrigatória');
+      }
+      if (!formData.time) {
+        throw new Error('Horário é obrigatório');
+      }
+      if (!formData.professional_id) {
+        throw new Error('Profissional é obrigatório');
+      }
+      if (!formData.room_id) {
+        throw new Error('Sala é obrigatória');
+      }
+      if (!formData.service_id) {
+        throw new Error('Serviço é obrigatório');
+      }
       // payer_id é opcional - pode ser particular
 
       // Validações específicas por tipo de agendamento
       const isQuickBooking = formData.patient_type === 'PRE_PATIENT';
-      
+
       if (isQuickBooking) {
         // Agendamento rápido: nome e celular obrigatórios
-        if (!formData.lead_name) throw new Error('Nome é obrigatório');
-        if (!formData.lead_mobile) throw new Error('Celular é obrigatório');
+        if (!formData.lead_name) {
+          throw new Error('Nome é obrigatório');
+        }
+        if (!formData.lead_mobile) {
+          throw new Error('Celular é obrigatório');
+        }
       } else {
         // Agendamento normal: paciente obrigatório
         if (!formData.patient_id) {
@@ -897,10 +1029,15 @@ export default function AgendaPage() {
           const minutes = String(appointmentCalculations.endTime.getMinutes()).padStart(2, '0');
           const seconds = String(appointmentCalculations.endTime.getSeconds()).padStart(2, '0');
           endTimeFormatted = `${hours}:${minutes}:${seconds}`;
-        } 
+        }
         // Se for string com ISO (contém T), extrair apenas a parte de tempo
-        else if (typeof appointmentCalculations.endTime === 'string' && appointmentCalculations.endTime.includes('T')) {
-          endTimeFormatted = appointmentCalculations.endTime.split('T')[1]?.substring(0, 8) || appointmentCalculations.endTime;
+        else if (
+          typeof appointmentCalculations.endTime === 'string' &&
+          appointmentCalculations.endTime.includes('T')
+        ) {
+          endTimeFormatted =
+            appointmentCalculations.endTime.split('T')[1]?.substring(0, 8) ||
+            appointmentCalculations.endTime;
         }
         // Se for HH:MM ou HH:MM:SS, usar como está
         else {
@@ -947,27 +1084,44 @@ export default function AgendaPage() {
         agenda.addAppointmentLocal(result);
       }
 
+      // 📋 SINCRONIZAR MÚLTIPLOS SERVIÇOS (se houver)
+      if (result?.id && formData.appointmentServices && formData.appointmentServices.length > 0) {
+        try {
+          console.log(
+            '📋 [Sincronizando serviços]',
+            formData.appointmentServices.length,
+            'serviço(s)',
+          );
+          await syncAppointmentServices(result.id, formData.appointmentServices);
+          console.log('✅ Serviços sincronizados com sucesso!');
+        } catch (servicesErr) {
+          console.error('❌ Erro ao sincronizar serviços:', servicesErr);
+          // Não bloquear o salvamento se os serviços falharem
+          console.warn('⚠️ Agendamento salvo, mas houve erro ao sincronizar os serviços');
+        }
+      }
+
       // Recarregar data para sincronizar com banco
       console.log('🔄 Recarregando agenda após salvar...', result);
-      
+
       // Se a data foi alterada, navegar para a nova data
       const oldDate = agenda.selectedSlot?.scheduled_date || agenda.selectedSlot?.date;
       const newDate = formData.date;
-      
+
       console.log('🔍 DEBUG - Comparação de datas:');
       console.log('   oldDate (agenda.selectedSlot):', oldDate, typeof oldDate);
       console.log('   newDate (formData):', newDate, typeof newDate);
       console.log('   Comparação oldDate !== newDate:', oldDate !== newDate);
-      
+
       if (oldDate && newDate) {
         // Normalizar datas para comparação (remover espaços e timezone)
         const oldDateNorm = String(oldDate).split(' ')[0].trim();
         const newDateNorm = String(newDate).split(' ')[0].trim();
-        
+
         console.log('   oldDateNorm:', oldDateNorm);
         console.log('   newDateNorm:', newDateNorm);
         console.log('   oldDateNorm !== newDateNorm:', oldDateNorm !== newDateNorm);
-        
+
         if (oldDateNorm !== newDateNorm) {
           console.log(`📅 ✅ Data MUDOU: ${oldDateNorm} → ${newDateNorm}`);
           agenda.setDate(newDateNorm);
@@ -975,7 +1129,7 @@ export default function AgendaPage() {
           console.log(`📅 ℹ️ Mesma data: ${oldDateNorm}`);
         }
       }
-      
+
       await loadAgendaData();
 
       console.log('✅ Agendamento salvo e agenda recarregada');
@@ -1006,7 +1160,7 @@ export default function AgendaPage() {
 
       agenda.updateAppointmentLocal(id, updated);
       agenda.deselectSlot();
-      
+
       // Recarregar para sincronizar
       await loadAgendaData();
     } catch (err) {
@@ -1030,7 +1184,7 @@ export default function AgendaPage() {
 
       agenda.updateAppointmentLocal(id, updated);
       agenda.deselectSlot();
-      
+
       // Recarregar para sincronizar
       await loadAgendaData();
     } catch (err) {
@@ -1083,7 +1237,9 @@ export default function AgendaPage() {
   const handleBlockAppointment = async (slot) => {
     // Confirmar bloqueio
     const confirm = window.confirm(`Tem certeza que deseja bloquear o horário ${slot.time}?`);
-    if (!confirm) return;
+    if (!confirm) {
+      return;
+    }
 
     try {
       agenda.setLoading(true);
@@ -1091,17 +1247,19 @@ export default function AgendaPage() {
 
       // Procurar paciente "BLOQUEIO" ou usar o primeiro paciente disponível
       let blockPatientId = null;
-      
+
       // Tentar encontrar paciente especial "BLOQUEIO"
       if (agenda.metadata?.patients?.length > 0) {
-        const blockPatient = agenda.metadata.patients.find(p => 
-          p.name?.toUpperCase?.() === 'BLOQUEIO' || p.id === 'bloqueio'
+        const blockPatient = agenda.metadata.patients.find(
+          (p) => p.name?.toUpperCase?.() === 'BLOQUEIO' || p.id === 'bloqueio',
         );
         blockPatientId = blockPatient?.id || agenda.metadata.patients[0].id;
       }
 
       if (!blockPatientId) {
-        throw new Error('Nenhum paciente disponível para criar bloqueio. Crie um paciente "BLOQUEIO" no sistema.');
+        throw new Error(
+          'Nenhum paciente disponível para criar bloqueio. Crie um paciente "BLOQUEIO" no sistema.',
+        );
       }
 
       // Preparar dados para bloqueio
@@ -1135,8 +1293,10 @@ export default function AgendaPage() {
   // 📱 Função para disparar confirmações via WhatsApp
   const handleSendWhatsAppConfirmations = async () => {
     console.log('🔥 [AgendaPage] handleSendWhatsAppConfirmations foi chamada!');
-    
-    if (!window.confirm('Enviar confirmações de WhatsApp para pacientes com agendamentos de amanhã?')) {
+
+    if (
+      !window.confirm('Enviar confirmações de WhatsApp para pacientes com agendamentos de amanhã?')
+    ) {
       return;
     }
 
@@ -1180,7 +1340,7 @@ export default function AgendaPage() {
   console.log('║ agendaMode:', agendaMode);
   console.log('║ clinicId:', clinicId);
   console.log('╚═══════════════════════════════════════════════════════════════╝');
-  
+
   // 🔒 Guard: Se ainda não tem clinicId E não está carregando, mostrar erro
   if (!clinicId && !loadingClinic && !authLoading) {
     return (
@@ -1192,30 +1352,46 @@ export default function AgendaPage() {
       </div>
     );
   }
-  
+
   return (
     <div className="min-h-screen bg-gray-50 pb-8">
       {/* 🔴 DEBUG BANNER - Mostrar role e mode */}
       <div className="w-full bg-red-200 border-b-4 border-red-600 px-4 py-3">
         <div className="flex gap-4 text-sm font-mono">
-          <div><strong>🔍 Debug:</strong> Role={currentRole} | Mode={agendaMode} | Prof={isProfessional ? userProfessionalId || 'loading' : 'N/A'}</div>
-          <div>| Auth Loading={authLoading} | Clinic Loading={loadingClinic}</div>
+          <div>
+            <strong>🔍 Debug:</strong> Role={currentRole} | Mode={agendaMode} | Prof=
+            {isProfessional ? userProfessionalId || 'loading' : 'N/A'}
+          </div>
+          <div>
+            | Auth Loading={authLoading} | Clinic Loading={loadingClinic}
+          </div>
         </div>
       </div>
       {/* 🔥 TESTE: Botão em posição FIXA - TOP LEVEL */}
-      <div style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 99999, backgroundColor: '#dc2626', padding: '20px', borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
+      <div
+        style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          zIndex: 99999,
+          backgroundColor: '#dc2626',
+          padding: '20px',
+          borderRadius: '10px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+        }}
+      >
         <button
           onClick={handleSendWhatsAppConfirmations}
           disabled={whatsappLoading}
-          style={{ 
-            padding: '12px 24px', 
-            backgroundColor: '#ef4444', 
+          style={{
+            padding: '12px 24px',
+            backgroundColor: '#ef4444',
             color: 'white',
             fontSize: '16px',
             fontWeight: 'bold',
             border: '2px solid white',
             borderRadius: '8px',
-            cursor: whatsappLoading ? 'not-allowed' : 'pointer'
+            cursor: whatsappLoading ? 'not-allowed' : 'pointer',
           }}
         >
           🔥 TESTE: {whatsappLoading ? 'Enviando...' : 'CLIQUE AQUI'}
@@ -1265,8 +1441,9 @@ export default function AgendaPage() {
                 <div className="flex-1">
                   <h3 className="font-semibold text-yellow-900">Sem Profissional Associado</h3>
                   <p className="text-sm text-yellow-700 mt-1">
-                    Seu usuário não está associado a um profissional no sistema. 
-                    {canAccessGestorMode && ' Você pode voltar à visualização Geral para gerenciar todos os agendamentos.'}
+                    Seu usuário não está associado a um profissional no sistema.
+                    {canAccessGestorMode &&
+                      ' Você pode voltar à visualização Geral para gerenciar todos os agendamentos.'}
                   </p>
                 </div>
               </div>
@@ -1286,236 +1463,236 @@ export default function AgendaPage() {
       ) : (
         /* MODO RECEPÇÃO / GESTOR - LAYOUT COMPLETO */
         <div className="w-full mx-auto px-4 py-6">
-
-        {/* 🟢 Banner da Agenda Única */}
-        <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 flex items-center gap-3">
-          <span className="text-2xl">📅</span>
-          <div className="flex-1">
-            <h2 className="font-semibold text-blue-900">Agenda Única da Clínica</h2>
-            <p className="text-sm text-blue-700">Escolha a visualização abaixo: Geral, Por Profissional ou Por Sala</p>
-          </div>
-          <div className="group relative inline-block">
-            <span className="text-sm bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium cursor-help">
-              ℹ️ URL: /clinica/agenda
-            </span>
-            <div className="hidden group-hover:block absolute bottom-full right-0 mb-2 bg-gray-800 text-white text-xs px-3 py-2 rounded whitespace-nowrap z-50">
-              A URL permanece /clinica/agenda ao trocar abas
-              <div className="absolute top-full right-3 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-800"></div>
+          {/* 🟢 Banner da Agenda Única */}
+          <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 flex items-center gap-3">
+            <span className="text-2xl">📅</span>
+            <div className="flex-1">
+              <h2 className="font-semibold text-blue-900">Agenda Única da Clínica</h2>
+              <p className="text-sm text-blue-700">
+                Escolha a visualização abaixo: Geral, Por Profissional ou Por Sala
+              </p>
             </div>
-          </div>
-        </div>
-
-        {/* 🟢 Tabs de modo de visualização (sem mudar URL) */}
-        <div className="mb-6">
-          <h3 className="text-sm font-semibold text-gray-700 mb-2">Modo de Visualização:</h3>
-          <AgendaTabs
-            viewMode={agenda.viewMode}
-            onViewModeChange={agenda.setViewMode}
-          />
-        </div>
-
-        {/* 🔐 Toggle de Modo (Recepção / Profissional / Gestor) */}
-        {currentRole !== 'recepcao' && (
-          <div className="mb-6 pb-4 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-semibold text-gray-700">Modo da Agenda:</h3>
-                <p className="text-xs text-gray-500 mt-1">
-                  {agendaMode === 'recepcao' 
-                    ? '📞 Recepção - Visualização operacional simplificada' 
-                    : agendaMode === 'profissional'
-                    ? '👨‍⚕️ Profissional - Apenas meus atendimentos'
-                    : '📊 Gestor - Análises financeiras e ocupação'}
-                </p>
-              </div>
-              <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
-                {/* Botão Recepção */}
-                <button
-                  onClick={() => setAgendaMode('recepcao')}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                    agendaMode === 'recepcao'
-                      ? 'bg-white text-blue-600 shadow-sm border border-gray-200'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  📞 Recepção
-                </button>
-                
-                {/* Botão Profissional (qualquer um que não seja recepção) */}
-                {canAccessProfessionalMode && (
-                  <button
-                    onClick={() => setAgendaMode('profissional')}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                      agendaMode === 'profissional'
-                        ? 'bg-white text-blue-600 shadow-sm border border-gray-200'
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    👨‍⚕️ Profissional
-                  </button>
-                )}
-                
-                {/* Botão Gestor (apenas se tiver acesso) */}
-                {canAccessGestorMode && (
-                  <button
-                    onClick={() => setAgendaMode('gestor')}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                      agendaMode === 'gestor'
-                        ? 'bg-white text-blue-600 shadow-sm border border-gray-200'
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    📊 Gestor
-                  </button>
-                )}
+            <div className="group relative inline-block">
+              <span className="text-sm bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium cursor-help">
+                ℹ️ URL: /clinica/agenda
+              </span>
+              <div className="hidden group-hover:block absolute bottom-full right-0 mb-2 bg-gray-800 text-white text-xs px-3 py-2 rounded whitespace-nowrap z-50">
+                A URL permanece /clinica/agenda ao trocar abas
+                <div className="absolute top-full right-3 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-800"></div>
               </div>
             </div>
           </div>
-        )}
 
-        {/* 📱 Botão para enviar confirmações via WhatsApp */}
-
-        {/* Filtros inteligentes */}
-        <AgendaFilters
-          viewMode={agenda.viewMode}
-          filters={agenda.filters}
-          onFilterChange={agenda.updateFilter}
-          onMultipleFilterChange={agenda.setMultipleFilters}
-          onClearFilters={agenda.clearFilters}
-          metadata={agenda.metadata}
-          currentRole={currentRole}
-        />
-
-        {/* Mensagens de erro */}
-        {agenda.error && (
-          <div className="mb-6 p-4 bg-red-100 border border-red-300 text-red-700 rounded-lg">
-            {agenda.error}
-          </div>
-        )}
-
-        {/* 📊 Dashboard Agenda × Financeiro (apenas Modo Gestor) */}
-        {agendaMode === 'gestor' && !agenda.loading && metrics && (
-          <CollapsibleSection
-            title="Gestão Financeira da Agenda"
-            icon="💰"
-            summary={`R$ ${metrics.totalReceita.toFixed(0)} · ${metrics.ocupacaoPercentual}% ocupação · ${metrics.statusAgenda.label}`}
-            storageKey="agenda-financeiro-open"
-            defaultOpen={false}
-            className="mb-8"
-          >
-            <AgendaFinanceDashboard metrics={metrics} loading={agenda.loading} />
-          </CollapsibleSection>
-        )}
-
-        {/* 💡 Sugestões de Encaixe Inteligente (apenas Modo Gestor) */}
-        {agendaMode === 'gestor' && !agenda.loading && encaixeSuggestions.length > 0 && (
+          {/* 🟢 Tabs de modo de visualização (sem mudar URL) */}
           <div className="mb-6">
-            <EncaixeSuggestions
-              suggestions={encaixeSuggestions}
-              onSelect={(sugestao) => {
-                // Ao selecionar sugestão, atualizar filtros e abrir modal
-                agenda.setMultipleFilters({
-                  professional: sugestao.profissional.id,
-                  room: sugestao.sala.id,
-                  searchText: sugestao.horario,
-                });
-
-                // Selecionar o slot sugerido
-                handleNewAppointment({
-                  time: sugestao.horario,
-                  professional_id: sugestao.profissional.id,
-                  room_id: sugestao.sala.id,
-                });
-              }}
-            />
+            <h3 className="text-sm font-semibold text-gray-700 mb-2">Modo de Visualização:</h3>
+            <AgendaTabs viewMode={agenda.viewMode} onViewModeChange={agenda.setViewMode} />
           </div>
-        )}
 
-        {/* 🔥 Heatmap de Ocupação (apenas Modo Gestor) */}
-        {agendaMode === 'gestor' && !agenda.loading && (
-          <CollapsibleSection
-            title="Heatmap de Ocupação"
-            icon="🔥"
-            summary={`Ocupação média ${Math.round((agenda.filteredAppointments?.length || 0) / Math.max(1, (agenda.metadata.professionals?.length || 1) * 10) * 100)}%`}
-            storageKey="agenda-heatmap-open"
-            defaultOpen={false}
-            className="mb-8"
-          >
-            <AgendaHeatmap
-              timeSlots={Array.from({ length: 20 }, (_, i) => {
-                const hour = Math.floor(8 + i / 2);
-                const minute = (i % 2) * 30;
-                return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-              })}
-              appointments={agenda.filteredAppointments}
-              viewMode={agenda.viewMode}
-              columnCount={
-                agenda.viewMode === 'profissional'
-                  ? agenda.metadata.professionals?.length || 1
-                  : agenda.viewMode === 'sala'
-                  ? agenda.metadata.rooms?.length || 1
-                  : 1
-              }
-              onTimeSlotClick={(time) => {
-                // Filtro automático por horário
-                agenda.updateFilter('searchText', `${time}`);
-                
-                // Scroll para o horário na timeline
-                setTimeout(() => {
-                  const timelineElement = document.querySelector('[data-timeline-time="' + time + '"]');
-                  if (timelineElement) {
-                    timelineElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                  }
-                }, 100);
-              }}
-              professionals={agenda.metadata.professionals || []}
-              rooms={agenda.metadata.rooms || []}
-            />
-          </CollapsibleSection>
-        )}
+          {/* 🔐 Toggle de Modo (Recepção / Profissional / Gestor) */}
+          {currentRole !== 'recepcao' && (
+            <div className="mb-6 pb-4 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700">Modo da Agenda:</h3>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {agendaMode === 'recepcao'
+                      ? '📞 Recepção - Visualização operacional simplificada'
+                      : agendaMode === 'profissional'
+                        ? '👨‍⚕️ Profissional - Apenas meus atendimentos'
+                        : '📊 Gestor - Análises financeiras e ocupação'}
+                  </p>
+                </div>
+                <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
+                  {/* Botão Recepção */}
+                  <button
+                    onClick={() => setAgendaMode('recepcao')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                      agendaMode === 'recepcao'
+                        ? 'bg-white text-blue-600 shadow-sm border border-gray-200'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    📞 Recepção
+                  </button>
 
-        {/* Indicadores da Agenda - Abaixo do Heatmap (apenas Modo Gestor) */}
-        {clinicId && agendaMode === 'gestor' && !agenda.loading && (
-          <CollapsibleSection
-            title="Indicadores da Agenda"
-            icon="📊"
-            summary="Status geral, ocupação e métricas financeiras"
-            storageKey="agenda-indicators-open"
-            defaultOpen={true}
-            className="mb-8"
-          >
-            <AgendaIndicators 
-              clinicId={clinicId}
-              date={agenda.date}
-              professionalId={isProfissional ? user?.id : undefined}
-              currentRole={currentRole}
-              onAlertsChange={(alerts) => {
-                if (alerts.length > 0) {
-                  console.log('🚨 Alertas gerados:', alerts);
-                }
-              }}
-            />
-          </CollapsibleSection>
-        )}
+                  {/* Botão Profissional (qualquer um que não seja recepção) */}
+                  {canAccessProfessionalMode && (
+                    <button
+                      onClick={() => setAgendaMode('profissional')}
+                      className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                        agendaMode === 'profissional'
+                          ? 'bg-white text-blue-600 shadow-sm border border-gray-200'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      👨‍⚕️ Profissional
+                    </button>
+                  )}
 
-        {/* Timeline / Grade de horários (Recepção e Gestor) */}
-        {agenda.loading ? (
-          <div className="flex items-center justify-center h-96">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          </div>
-        ) : (
-          <AgendaTimeline
+                  {/* Botão Gestor (apenas se tiver acesso) */}
+                  {canAccessGestorMode && (
+                    <button
+                      onClick={() => setAgendaMode('gestor')}
+                      className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                        agendaMode === 'gestor'
+                          ? 'bg-white text-blue-600 shadow-sm border border-gray-200'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      📊 Gestor
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 📱 Botão para enviar confirmações via WhatsApp */}
+
+          {/* Filtros inteligentes */}
+          <AgendaFilters
             viewMode={agenda.viewMode}
-            date={agenda.date}
-            appointments={agenda.filteredAppointments}
-            onSlotClick={handleSlotClick}
-            onCheckin={handleOpenAtendimento}
+            filters={agenda.filters}
+            onFilterChange={agenda.updateFilter}
+            onMultipleFilterChange={agenda.setMultipleFilters}
+            onClearFilters={agenda.clearFilters}
             metadata={agenda.metadata}
-            userRole={currentRole}
-            slotDuration={30}
-            filteredProfessionalId={agenda.filters.professional}
+            currentRole={currentRole}
           />
-        )}
+
+          {/* Mensagens de erro */}
+          {agenda.error && (
+            <div className="mb-6 p-4 bg-red-100 border border-red-300 text-red-700 rounded-lg">
+              {agenda.error}
+            </div>
+          )}
+
+          {/* 📊 Dashboard Agenda × Financeiro (apenas Modo Gestor) */}
+          {agendaMode === 'gestor' && !agenda.loading && metrics && (
+            <CollapsibleSection
+              title="Gestão Financeira da Agenda"
+              icon="💰"
+              summary={`R$ ${metrics.totalReceita.toFixed(0)} · ${metrics.ocupacaoPercentual}% ocupação · ${metrics.statusAgenda.label}`}
+              storageKey="agenda-financeiro-open"
+              defaultOpen={false}
+              className="mb-8"
+            >
+              <AgendaFinanceDashboard metrics={metrics} loading={agenda.loading} />
+            </CollapsibleSection>
+          )}
+
+          {/* 💡 Sugestões de Encaixe Inteligente (apenas Modo Gestor) */}
+          {agendaMode === 'gestor' && !agenda.loading && encaixeSuggestions.length > 0 && (
+            <div className="mb-6">
+              <EncaixeSuggestions
+                suggestions={encaixeSuggestions}
+                onSelect={(sugestao) => {
+                  // Ao selecionar sugestão, atualizar filtros e abrir modal
+                  agenda.setMultipleFilters({
+                    professional: sugestao.profissional.id,
+                    room: sugestao.sala.id,
+                    searchText: sugestao.horario,
+                  });
+
+                  // Selecionar o slot sugerido
+                  handleNewAppointment({
+                    time: sugestao.horario,
+                    professional_id: sugestao.profissional.id,
+                    room_id: sugestao.sala.id,
+                  });
+                }}
+              />
+            </div>
+          )}
+
+          {/* 🔥 Heatmap de Ocupação (apenas Modo Gestor) */}
+          {agendaMode === 'gestor' && !agenda.loading && (
+            <CollapsibleSection
+              title="Heatmap de Ocupação"
+              icon="🔥"
+              summary={`Ocupação média ${Math.round(((agenda.filteredAppointments?.length || 0) / Math.max(1, (agenda.metadata.professionals?.length || 1) * 10)) * 100)}%`}
+              storageKey="agenda-heatmap-open"
+              defaultOpen={false}
+              className="mb-8"
+            >
+              <AgendaHeatmap
+                timeSlots={Array.from({ length: 20 }, (_, i) => {
+                  const hour = Math.floor(8 + i / 2);
+                  const minute = (i % 2) * 30;
+                  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+                })}
+                appointments={agenda.filteredAppointments}
+                viewMode={agenda.viewMode}
+                columnCount={
+                  agenda.viewMode === 'profissional'
+                    ? agenda.metadata.professionals?.length || 1
+                    : agenda.viewMode === 'sala'
+                      ? agenda.metadata.rooms?.length || 1
+                      : 1
+                }
+                onTimeSlotClick={(time) => {
+                  // Filtro automático por horário
+                  agenda.updateFilter('searchText', `${time}`);
+
+                  // Scroll para o horário na timeline
+                  setTimeout(() => {
+                    const timelineElement = document.querySelector(
+                      '[data-timeline-time="' + time + '"]',
+                    );
+                    if (timelineElement) {
+                      timelineElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                  }, 100);
+                }}
+                professionals={agenda.metadata.professionals || []}
+                rooms={agenda.metadata.rooms || []}
+              />
+            </CollapsibleSection>
+          )}
+
+          {/* Indicadores da Agenda - Abaixo do Heatmap (apenas Modo Gestor) */}
+          {clinicId && agendaMode === 'gestor' && !agenda.loading && (
+            <CollapsibleSection
+              title="Indicadores da Agenda"
+              icon="📊"
+              summary="Status geral, ocupação e métricas financeiras"
+              storageKey="agenda-indicators-open"
+              defaultOpen={true}
+              className="mb-8"
+            >
+              <AgendaIndicators
+                clinicId={clinicId}
+                date={agenda.date}
+                professionalId={isProfissional ? user?.id : undefined}
+                currentRole={currentRole}
+                onAlertsChange={(alerts) => {
+                  if (alerts.length > 0) {
+                    console.log('🚨 Alertas gerados:', alerts);
+                  }
+                }}
+              />
+            </CollapsibleSection>
+          )}
+
+          {/* Timeline / Grade de horários (Recepção e Gestor) */}
+          {agenda.loading ? (
+            <div className="flex items-center justify-center h-96">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+          ) : (
+            <AgendaTimeline
+              viewMode={agenda.viewMode}
+              date={agenda.date}
+              appointments={agenda.filteredAppointments}
+              onSlotClick={handleSlotClick}
+              onCheckin={handleOpenAtendimento}
+              metadata={agenda.metadata}
+              userRole={currentRole}
+              slotDuration={30}
+              filteredProfessionalId={agenda.filters.professional}
+            />
+          )}
         </div>
       )}
 
@@ -1527,16 +1704,14 @@ export default function AgendaPage() {
           hasModalBeenClosed.current = true;
           agenda.deselectSlot();
         }}
-        selectedSlot={agenda.selectedSlot}
-        onSave={handleSaveAppointment}
-        onCancel={handleCancelAppointment}
-        onConfirm={handleConfirmAppointment}
-        onFitting={handleFittingAppointment}
-        currentRole={currentRole}
-        metadata={agenda.metadata}
-        loading={agenda.loading}
-        patientId={patientIdFromUrl}
-        preSelectedPatient={preSelectedPatient}
+        mode={agenda.selectedSlot?.id ? 'edit' : 'new'}
+        appointment={agenda.selectedSlot?.id ? agenda.selectedSlot : null}
+        appointmentIdToEdit={agenda.selectedSlot?.id}
+        professionals={agenda.metadata.professionals || []}
+        services={agenda.metadata.services || []}
+        payers={agenda.metadata.payers || []}
+        rooms={agenda.metadata.rooms || []}
+        onSuccess={handleAppointmentSuccess}
       />
 
       {/* 📋 Drawer de Check-in */}
@@ -1558,4 +1733,3 @@ export default function AgendaPage() {
     </div>
   );
 }
-

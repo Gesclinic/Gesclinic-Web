@@ -16,7 +16,7 @@ export default function ModalCriarAgendamento({
   payers = [],
   onCreated = null,
   onEditCompleted = null,
-  
+
   // Interface NOVA (props do novo modal)
   isOpen = false,
   onClose = null,
@@ -43,24 +43,24 @@ export default function ModalCriarAgendamento({
     console.log('   props.data.professional_id:', data.professional_id);
     console.log('   data keys:', Object.keys(data));
   }
-  
+
   // Estado para carregar rooms
   const [roomsList, setRoomsList] = useState(rooms || []);
-  
+
   // Estado para armazenar o agendamento carregado
   const [loadedAppointment, setLoadedAppointment] = useState(null);
-  
+
   // Estado para detectar quando modal reabre
   const [wasModalOpenBefore, setWasModalOpenBefore] = useState(false);
-  
+
   // ✅ CALCULAR isModalOpen AQUI (ANTES dos useEffects)
   // Se 'open' for true (interface antiga), usa true. Caso contrário, usa 'isOpen'
   const isModalOpen = open === true ? true : isOpen;
-  
+
   // 📋 PASSO 3: Consolidate appointment from BOTH sources (prop or loaded via ID)
   // 🚨 IMPORTANTE: Em modo EDIT (appointmentIdToEdit), SEMPRE usar loadedAppointment do banco
   // Isso garante que os dados mais recentes sejam usados, evitando dados stale do cache
-  // Prioridade: 
+  // Prioridade:
   //   - Em EDIT: loadedAppointment (do banco) ou appointment prop
   //   - Em NEW: data (passed from parent) > appointment prop
   const finalAppointment = useMemo(() => {
@@ -71,7 +71,7 @@ export default function ModalCriarAgendamento({
     // Em modo NEW, priorizar data prop
     return data || loadedAppointment || appointment;
   }, [appointmentIdToEdit, data, loadedAppointment, appointment]);
-  
+
   // 🔍 DEBUG: QUAL SOURCE ESTÁ SENDO USADO?
   console.log('📋 [ModalCriarAgendamento] Consolidando appointment:', {
     temData: !!data,
@@ -80,7 +80,7 @@ export default function ModalCriarAgendamento({
     final: finalAppointment ? '✅' : '❌',
     modo: appointmentIdToEdit ? 'EDIT' : 'NEW',
   });
-  
+
   if (finalAppointment) {
     console.log('✅ [ModalCriarAgendamento] finalAppointment COMPLETO:', {
       id: finalAppointment.id,
@@ -92,16 +92,19 @@ export default function ModalCriarAgendamento({
       time: finalAppointment.time || finalAppointment.scheduled_time,
     });
   }
-  
+
   // Carregar appointment quando appointmentIdToEdit muda
   useEffect(() => {
     if (appointmentIdToEdit && !data) {
-      console.log('📥 [ModalCriarAgendamento] Carregando agendamento via appointmentIdToEdit:', appointmentIdToEdit);
-      
+      console.log(
+        '📥 [ModalCriarAgendamento] Carregando agendamento via appointmentIdToEdit:',
+        appointmentIdToEdit,
+      );
+
       (async () => {
         try {
           const apt = await getAppointmentById(appointmentIdToEdit);
-          
+
           if (apt) {
             console.log('✅ Agendamento carregado com mapping:', {
               id: apt.id,
@@ -127,12 +130,14 @@ export default function ModalCriarAgendamento({
       setLoadedAppointment(null);
     }
   }, [appointmentIdToEdit, data]);
-  
+
   // 🔄 RECARREGAR DADOS QUANDO MODAL REABRE APÓS FECHAR
   useEffect(() => {
     if (isModalOpen && !wasModalOpenBefore && appointmentIdToEdit) {
-      console.log('🔄 [ModalCriarAgendamento] Modal REABRINDO - recarregando dados atualizados após save');
-      
+      console.log(
+        '🔄 [ModalCriarAgendamento] Modal REABRINDO - recarregando dados atualizados após save',
+      );
+
       (async () => {
         try {
           const apt = await getAppointmentById(appointmentIdToEdit);
@@ -153,7 +158,7 @@ export default function ModalCriarAgendamento({
     }
     setWasModalOpenBefore(isModalOpen);
   }, [isModalOpen, appointmentIdToEdit]);
-  
+
   // Carregar rooms se clinicId for fornecido
   useEffect(() => {
     if (clinicId && (!rooms || rooms.length === 0)) {
@@ -164,10 +169,10 @@ export default function ModalCriarAgendamento({
       setRoomsList(rooms);
     }
   }, [clinicId, rooms]);
-  
+
   // Determinar o modo baseado no estado
   const determinedMode = appointmentIdToEdit ? 'edit' : mode;
-  
+
   // Handler de fechamento que chama o callback correto
   const handleClose = () => {
     if (onClose) {
@@ -176,7 +181,7 @@ export default function ModalCriarAgendamento({
       onOpenChange(false);
     }
   };
-  
+
   // Handler de sucesso que chama o callback correto
   const handleSuccess = (appointmentData) => {
     console.log('✅ [ModalCriarAgendamento handleSuccess] Agendamento salvo!', {
@@ -185,7 +190,7 @@ export default function ModalCriarAgendamento({
       temOnEditCompleted: !!onEditCompleted,
       temOnSuccess: !!onSuccess,
     });
-    
+
     // 🔄 Em modo EDIT, também chamar onCreated para recarregar a agenda
     // (onCreated é o callback que recarrega a agenda no AgendaIndex)
     if (onCreated) {
@@ -200,7 +205,7 @@ export default function ModalCriarAgendamento({
     }
     handleClose();
   };
-  
+
   // 🎬 DEBUG LOG
   if (isModalOpen && finalAppointment) {
     console.log('🎬 [ModalCriarAgendamento RENDER]');
@@ -213,7 +218,7 @@ export default function ModalCriarAgendamento({
       console.log('   finalAppointment.professional_id:', finalAppointment.professional_id);
     }
   }
-  
+
   return (
     <AppointmentUnitedModal
       isOpen={isModalOpen}

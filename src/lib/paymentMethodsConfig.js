@@ -59,14 +59,33 @@ export const PAYMENT_METHOD_CONFIG = {
     icon: '💳',
     fields: [
       { id: 'card_brand', label: 'Bandeira', type: 'select', required: true, options: CARD_BRANDS },
-      { id: 'card_last_digits', label: 'Últimos 4 Dígitos', type: 'text', required: true, maxLength: 4, mask: 'numeric' },
+      {
+        id: 'card_last_digits',
+        label: 'Últimos 4 Dígitos',
+        type: 'text',
+        required: true,
+        maxLength: 4,
+        mask: 'numeric',
+      },
       { id: 'card_holder_name', label: 'Nome do Titular', type: 'text', required: false },
-      { id: 'card_installments', label: 'Nº de Parcelas', type: 'select', required: true, options: Array.from({length: 12}, (_, i) => ({
-        id: `${i+1}`,
-        label: `${i+1}x`
-      })) },
+      {
+        id: 'card_installments',
+        label: 'Nº de Parcelas',
+        type: 'select',
+        required: true,
+        options: Array.from({ length: 12 }, (_, i) => ({
+          id: `${i + 1}`,
+          label: `${i + 1}x`,
+        })),
+      },
       { id: 'receipt_number', label: 'Nº Autorização/Comprovante', type: 'text', required: true },
-      { id: 'processor', label: 'Operadora/Gateway', type: 'text', required: false, placeholder: 'Rede, Cielo, Adyen, etc' },
+      {
+        id: 'processor',
+        label: 'Operadora/Gateway',
+        type: 'text',
+        required: false,
+        placeholder: 'Rede, Cielo, Adyen, etc',
+      },
       { id: 'notes', label: 'Observações', type: 'textarea', required: false },
     ],
     accountingAccount: 'CARTAO_RECEBER', // Plano de contas padrão
@@ -78,8 +97,20 @@ export const PAYMENT_METHOD_CONFIG = {
     color: 'blue',
     icon: '📱',
     fields: [
-      { id: 'pix_identifier', label: 'Identificador PIX (Chave/CPF/Telefone)', type: 'text', required: true, placeholder: 'email@example.com ou 000.000.000-00' },
-      { id: 'pix_transaction_id', label: 'ID da Transação PIX (E2ID)', type: 'text', required: true, placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx' },
+      {
+        id: 'pix_identifier',
+        label: 'Identificador PIX (Chave/CPF/Telefone)',
+        type: 'text',
+        required: true,
+        placeholder: 'email@example.com ou 000.000.000-00',
+      },
+      {
+        id: 'pix_transaction_id',
+        label: 'ID da Transação PIX (E2ID)',
+        type: 'text',
+        required: true,
+        placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+      },
       { id: 'bank_account', label: 'Conta Bancária Destino', type: 'select', required: true },
       { id: 'pix_timestamp', label: 'Data/Hora do PIX', type: 'datetime-local', required: true },
       { id: 'notes', label: 'Observações', type: 'textarea', required: false },
@@ -93,10 +124,36 @@ export const PAYMENT_METHOD_CONFIG = {
     color: 'yellow',
     icon: '📋',
     fields: [
-      { id: 'check_bank', label: 'Banco', type: 'text', required: true, placeholder: 'BB, Caixa, Itaú, etc' },
-      { id: 'check_agency', label: 'Agência', type: 'text', required: true, maxLength: 5, mask: 'numeric' },
-      { id: 'check_account', label: 'Conta', type: 'text', required: true, placeholder: '123456-7' },
-      { id: 'check_number', label: 'Número do Cheque', type: 'text', required: true, maxLength: 10, mask: 'numeric' },
+      {
+        id: 'check_bank',
+        label: 'Banco',
+        type: 'text',
+        required: true,
+        placeholder: 'BB, Caixa, Itaú, etc',
+      },
+      {
+        id: 'check_agency',
+        label: 'Agência',
+        type: 'text',
+        required: true,
+        maxLength: 5,
+        mask: 'numeric',
+      },
+      {
+        id: 'check_account',
+        label: 'Conta',
+        type: 'text',
+        required: true,
+        placeholder: '123456-7',
+      },
+      {
+        id: 'check_number',
+        label: 'Número do Cheque',
+        type: 'text',
+        required: true,
+        maxLength: 10,
+        mask: 'numeric',
+      },
       { id: 'check_due_date', label: 'Data de Compensação', type: 'date', required: true },
       { id: 'check_owner_name', label: 'Nome do Titular', type: 'text', required: false },
       { id: 'notes', label: 'Observações', type: 'textarea', required: false },
@@ -111,8 +168,22 @@ export const PAYMENT_METHOD_CONFIG = {
     color: 'indigo',
     icon: '📄',
     fields: [
-      { id: 'boleto_number', label: 'Código de Barras (47 dígitos)', type: 'text', required: true, maxLength: 47, mask: 'numeric', placeholder: '00000.00000 00000.000000 00000.000000 0 00000000000000' },
-      { id: 'boleto_bank', label: 'Banco', type: 'text', required: true, placeholder: 'Caixa, Itaú, etc' },
+      {
+        id: 'boleto_number',
+        label: 'Código de Barras (47 dígitos)',
+        type: 'text',
+        required: true,
+        maxLength: 47,
+        mask: 'numeric',
+        placeholder: '00000.00000 00000.000000 00000.000000 0 00000000000000',
+      },
+      {
+        id: 'boleto_bank',
+        label: 'Banco',
+        type: 'text',
+        required: true,
+        placeholder: 'Caixa, Itaú, etc',
+      },
       { id: 'boleto_amount', label: 'Valor do Boleto (R$)', type: 'number', required: true },
       { id: 'boleto_due_date', label: 'Data de Vencimento', type: 'date', required: true },
       { id: 'boleto_received_date', label: 'Data de Recebimento', type: 'date', required: false },
@@ -128,12 +199,36 @@ export const PAYMENT_METHOD_CONFIG = {
     color: 'cyan',
     icon: '🏦',
     fields: [
-      { id: 'doc_bank', label: 'Banco Origem', type: 'text', required: true, placeholder: 'Caixa, Itaú, Bradesco, etc' },
+      {
+        id: 'doc_bank',
+        label: 'Banco Origem',
+        type: 'text',
+        required: true,
+        placeholder: 'Caixa, Itaú, Bradesco, etc',
+      },
       { id: 'doc_agency', label: 'Agência Origem', type: 'text', required: true, mask: 'numeric' },
-      { id: 'doc_account', label: 'Conta Origem', type: 'text', required: true, placeholder: '123456-7' },
+      {
+        id: 'doc_account',
+        label: 'Conta Origem',
+        type: 'text',
+        required: true,
+        placeholder: '123456-7',
+      },
       { id: 'doc_account_owner', label: 'Titular da Conta', type: 'text', required: true },
-      { id: 'doc_cpf_cnpj', label: 'CPF/CNPJ do Titular', type: 'text', required: true, mask: 'numeric' },
-      { id: 'doc_transaction_id', label: 'Identificador de Transação DOC', type: 'text', required: false, placeholder: 'Nº DOC ou UR' },
+      {
+        id: 'doc_cpf_cnpj',
+        label: 'CPF/CNPJ do Titular',
+        type: 'text',
+        required: true,
+        mask: 'numeric',
+      },
+      {
+        id: 'doc_transaction_id',
+        label: 'Identificador de Transação DOC',
+        type: 'text',
+        required: false,
+        placeholder: 'Nº DOC ou UR',
+      },
       { id: 'doc_date', label: 'Data da Transação', type: 'date', required: true },
       { id: 'notes', label: 'Observações', type: 'textarea', required: false },
     ],
@@ -147,12 +242,36 @@ export const PAYMENT_METHOD_CONFIG = {
     color: 'rose',
     icon: '⚡',
     fields: [
-      { id: 'ted_bank', label: 'Banco Origem', type: 'text', required: true, placeholder: 'Caixa, Itaú, Bradesco, etc' },
+      {
+        id: 'ted_bank',
+        label: 'Banco Origem',
+        type: 'text',
+        required: true,
+        placeholder: 'Caixa, Itaú, Bradesco, etc',
+      },
       { id: 'ted_agency', label: 'Agência Origem', type: 'text', required: true, mask: 'numeric' },
-      { id: 'ted_account', label: 'Conta Origem', type: 'text', required: true, placeholder: '123456-7' },
+      {
+        id: 'ted_account',
+        label: 'Conta Origem',
+        type: 'text',
+        required: true,
+        placeholder: '123456-7',
+      },
       { id: 'ted_account_owner', label: 'Titular da Conta', type: 'text', required: true },
-      { id: 'ted_cpf_cnpj', label: 'CPF/CNPJ do Titular', type: 'text', required: true, mask: 'numeric' },
-      { id: 'ted_transaction_id', label: 'Identificador de Transação TED', type: 'text', required: true, placeholder: 'Número do comprovante' },
+      {
+        id: 'ted_cpf_cnpj',
+        label: 'CPF/CNPJ do Titular',
+        type: 'text',
+        required: true,
+        mask: 'numeric',
+      },
+      {
+        id: 'ted_transaction_id',
+        label: 'Identificador de Transação TED',
+        type: 'text',
+        required: true,
+        placeholder: 'Número do comprovante',
+      },
       { id: 'ted_date', label: 'Data/Hora da Transação', type: 'datetime-local', required: true },
       { id: 'notes', label: 'Observações', type: 'textarea', required: false },
     ],
@@ -166,13 +285,37 @@ export const PAYMENT_METHOD_CONFIG = {
     color: 'amber',
     icon: '💰',
     fields: [
-      { id: 'deposit_bank', label: 'Banco Destino', type: 'text', required: true, placeholder: 'Caixa, Itaú, Bradesco, etc' },
-      { id: 'deposit_agency', label: 'Agência Destino', type: 'text', required: true, mask: 'numeric' },
-      { id: 'deposit_account', label: 'Conta Destino', type: 'text', required: true, placeholder: '123456-7' },
-      { id: 'deposit_account_type', label: 'Tipo de Conta', type: 'select', required: true, options: [
-        { id: 'corrente', label: 'Corrente' },
-        { id: 'poupanca', label: 'Poupança' }
-      ]},
+      {
+        id: 'deposit_bank',
+        label: 'Banco Destino',
+        type: 'text',
+        required: true,
+        placeholder: 'Caixa, Itaú, Bradesco, etc',
+      },
+      {
+        id: 'deposit_agency',
+        label: 'Agência Destino',
+        type: 'text',
+        required: true,
+        mask: 'numeric',
+      },
+      {
+        id: 'deposit_account',
+        label: 'Conta Destino',
+        type: 'text',
+        required: true,
+        placeholder: '123456-7',
+      },
+      {
+        id: 'deposit_account_type',
+        label: 'Tipo de Conta',
+        type: 'select',
+        required: true,
+        options: [
+          { id: 'corrente', label: 'Corrente' },
+          { id: 'poupanca', label: 'Poupança' },
+        ],
+      },
       { id: 'deposit_amount', label: 'Valor Depositado (R$)', type: 'number', required: true },
       { id: 'deposit_receipt', label: 'Número do Comprovante', type: 'text', required: true },
       { id: 'deposit_date', label: 'Data de Depósito', type: 'date', required: true },
@@ -192,7 +335,7 @@ export const defaultPaymentData = {
   payment_received_by: null, // Quem recebeu (caixa/operador)
   payment_received_at: null, // Quando recebeu (timestamp)
   payment_notes: '', // Observações gerais
-  
+
   // DESCONTO - com autorização
   discount: '0.00',
   discount_reason: '', // Motivo do desconto
@@ -202,14 +345,14 @@ export const defaultPaymentData = {
   discount_observation: '', // Observações sobre o desconto,
   // PLANO DE CONTAS (Faturamento)
   plano_contas_id: '',
-  
+
   // Campos dinâmicos por forma
   dinheiro: {
     value_received: '',
     change: '',
     notes: '',
   },
-  
+
   cartao: {
     card_brand: '',
     card_last_digits: '',
@@ -219,7 +362,7 @@ export const defaultPaymentData = {
     processor: '',
     notes: '',
   },
-  
+
   pix: {
     pix_identifier: '',
     pix_transaction_id: '',
@@ -227,7 +370,7 @@ export const defaultPaymentData = {
     pix_timestamp: '',
     notes: '',
   },
-  
+
   cheque: {
     check_bank: '',
     check_agency: '',
@@ -237,7 +380,7 @@ export const defaultPaymentData = {
     check_owner_name: '',
     notes: '',
   },
-  
+
   boleto: {
     boleto_number: '',
     boleto_bank: '',
@@ -286,12 +429,14 @@ export const defaultPaymentData = {
  */
 export function validatePaymentData(paymentMethod, paymentData) {
   const config = PAYMENT_METHOD_CONFIG[paymentMethod];
-  if (!config) return { valid: false, errors: ['Forma de pagamento inválida'] };
+  if (!config) {
+    return { valid: false, errors: ['Forma de pagamento inválida'] };
+  }
 
   const errors = [];
   const data = paymentData[getPaymentMethodKey(paymentMethod)] || {};
 
-  config.fields.forEach(field => {
+  config.fields.forEach((field) => {
     if (field.required && !data[field.id]) {
       errors.push(`${field.label} é obrigatório`);
     }
@@ -325,15 +470,24 @@ export function validatePaymentData(paymentMethod, paymentData) {
  */
 export function getPaymentMethodKey(paymentMethod) {
   switch (paymentMethod) {
-    case PAYMENT_METHODS.DINHEIRO: return 'dinheiro';
-    case PAYMENT_METHODS.CARTAO: return 'cartao';
-    case PAYMENT_METHODS.PIX: return 'pix';
-    case PAYMENT_METHODS.CHEQUE: return 'cheque';
-    case PAYMENT_METHODS.BOLETO: return 'boleto';
-    case PAYMENT_METHODS.DOC: return 'doc';
-    case PAYMENT_METHODS.TED: return 'ted';
-    case PAYMENT_METHODS.DEPOSITO: return 'deposito';
-    default: return 'dinheiro';
+  case PAYMENT_METHODS.DINHEIRO:
+    return 'dinheiro';
+  case PAYMENT_METHODS.CARTAO:
+    return 'cartao';
+  case PAYMENT_METHODS.PIX:
+    return 'pix';
+  case PAYMENT_METHODS.CHEQUE:
+    return 'cheque';
+  case PAYMENT_METHODS.BOLETO:
+    return 'boleto';
+  case PAYMENT_METHODS.DOC:
+    return 'doc';
+  case PAYMENT_METHODS.TED:
+    return 'ted';
+  case PAYMENT_METHODS.DEPOSITO:
+    return 'deposito';
+  default:
+    return 'dinheiro';
   }
 }
 

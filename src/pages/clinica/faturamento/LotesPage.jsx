@@ -33,16 +33,16 @@ export default function LotesPage() {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'Rascunho':
-        return 'bg-gray-100 text-gray-800';
-      case 'Enviado':
-        return 'bg-blue-100 text-blue-800';
-      case 'Processado':
-        return 'bg-green-100 text-green-800';
-      case 'Erro':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+    case 'Rascunho':
+      return 'bg-gray-100 text-gray-800';
+    case 'Enviado':
+      return 'bg-blue-100 text-blue-800';
+    case 'Processado':
+      return 'bg-green-100 text-green-800';
+    case 'Erro':
+      return 'bg-red-100 text-red-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
     }
   };
 
@@ -52,9 +52,7 @@ export default function LotesPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Lotes de Envio</h1>
-          <p className="text-gray-600 mt-2">
-            Crie e acompanhe lotes de guias para processamento
-          </p>
+          <p className="text-gray-600 mt-2">Crie e acompanhe lotes de guias para processamento</p>
         </div>
         <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
           <Plus size={20} />
@@ -91,7 +89,9 @@ export default function LotesPage() {
                       </span>
                     </td>
                     <td className="py-3 px-4">
-                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(lote.status)}`}>
+                      <span
+                        className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(lote.status)}`}
+                      >
                         {lote.status}
                       </span>
                     </td>
@@ -176,4 +176,3 @@ export default function LotesPage() {
     </div>
   );
 }
-

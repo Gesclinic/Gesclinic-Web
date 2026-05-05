@@ -1,8 +1,8 @@
 /**
  * CheckinChecklist.jsx
- * 
+ *
  * ✅ CHECKLIST INTELIGENTE
- * 
+ *
  * Lógica:
  * - Itens base SEMPRE obrigatórios
  * - Itens extras conforme tipo de serviço e convênio
@@ -10,8 +10,8 @@
  * - Cada item tem tooltip explicativo
  */
 
-import React, { useMemo, useEffect, useState } from "react";
-import { CheckCircle2, Circle, AlertCircle, Info, Edit2 } from "lucide-react";
+import React, { useMemo, useEffect, useState } from 'react';
+import { CheckCircle2, Circle, AlertCircle, Info, Edit2 } from 'lucide-react';
 
 export default function CheckinChecklist({ appointment, onStatusChange, onEditItem }) {
   const [editingItemId, setEditingItemId] = useState(null);
@@ -24,78 +24,78 @@ export default function CheckinChecklist({ appointment, onStatusChange, onEditIt
 
     // SEMPRE OBRIGATÓRIO
     items.push({
-      id: "dados_cadastrais",
-      label: "Dados cadastrais conferidos",
-      description: "Nome, data de nascimento, CPF, endereço atualizados",
+      id: 'dados_cadastrais',
+      label: 'Dados cadastrais conferidos',
+      description: 'Nome, data de nascimento, CPF, endereço atualizados',
       required: true,
       status: appointment?.patient_verified || false,
     });
 
     items.push({
-      id: "servico",
-      label: "Serviço correto",
-      description: "Validar tipo de consulta/procedimento agendado",
+      id: 'servico',
+      label: 'Serviço correto',
+      description: 'Validar tipo de consulta/procedimento agendado',
       required: true,
       status: !!appointment?.service_name,
     });
 
     items.push({
-      id: "profissional",
-      label: "Profissional correto",
-      description: "Confirmar que o profissional é aquele esperado",
+      id: 'profissional',
+      label: 'Profissional correto',
+      description: 'Confirmar que o profissional é aquele esperado',
       required: true,
       status: !!appointment?.professional_name,
     });
 
     // SE CONVÊNIO
-    if (appointment?.payer_type === "CONVENIO" || appointment?.payer_name) {
+    if (appointment?.payer_type === 'CONVENIO' || appointment?.payer_name) {
       items.push({
-        id: "convenio_valido",
-        label: "Convênio válido",
-        description: "Verificar se o plano está ativo e sem restrições",
+        id: 'convenio_valido',
+        label: 'Convênio válido',
+        description: 'Verificar se o plano está ativo e sem restrições',
         required: true,
         status: appointment?.payer_verified || false,
       });
 
       items.push({
-        id: "carteira",
-        label: "Carteirinha conferida",
-        description: "Copiar/anexar carteira ou validar número",
+        id: 'carteira',
+        label: 'Carteirinha conferida',
+        description: 'Copiar/anexar carteira ou validar número',
         required: true,
         status: appointment?.card_verified || false,
       });
 
       items.push({
-        id: "autorizacao",
-        label: "Autorização válida",
-        description: "Solicitar autorização ao convênio se necessário",
+        id: 'autorizacao',
+        label: 'Autorização válida',
+        description: 'Solicitar autorização ao convênio se necessário',
         required: true,
         status: appointment?.authorization_verified || false,
       });
 
       items.push({
-        id: "guia",
-        label: "Guia gerada",
-        description: "Gerar guia (manual ou automática) antes de liberar",
+        id: 'guia',
+        label: 'Guia gerada',
+        description: 'Gerar guia (manual ou automática) antes de liberar',
         required: true,
         status: !!appointment?.guide_number,
       });
     }
 
     // SE PARTICULAR
-    if (appointment?.payer_type === "PARTICULAR" || !appointment?.payer_name) {
+    if (appointment?.payer_type === 'PARTICULAR' || !appointment?.payer_name) {
       items.push({
-        id: "pagamento_definido",
-        label: "Forma de pagamento definida",
-        description: "Débito, crédito, PIX, dinheiro ou conforme convênio",
+        id: 'pagamento_definido',
+        label: 'Forma de pagamento definida',
+        description: 'Débito, crédito, PIX, dinheiro ou conforme convênio',
         required: true,
         status: !!appointment?.payment_method,
       });
 
       items.push({
-        id: "pagamento_status",
-        label: "Pagamento OK",
-        description: "Recebido ANTES ou APÓS atendimento (esclarecer)",
+        id: 'pagamento_status',
+        label: 'Pagamento OK',
+        description: 'Recebido ANTES ou APÓS atendimento (esclarecer)',
         required: true,
         status: !!appointment?.payment_received || appointment?.payment_authorized_after,
       });
@@ -114,7 +114,7 @@ export default function CheckinChecklist({ appointment, onStatusChange, onEditIt
 
   const completedCount = useMemo(
     () => checklistItems.filter((item) => item.status).length,
-    [checklistItems]
+    [checklistItems],
   );
 
   // ============================================
@@ -124,7 +124,7 @@ export default function CheckinChecklist({ appointment, onStatusChange, onEditIt
   // Itens pendentes para navegação rápida
   const pendingItems = useMemo(
     () => checklistItems.filter((item) => !item.status),
-    [checklistItems]
+    [checklistItems],
   );
 
   // Notificar quando status mudar
@@ -173,7 +173,7 @@ export default function CheckinChecklist({ appointment, onStatusChange, onEditIt
           <p className="font-semibold text-gray-900">Progresso do Checklist</p>
           <span
             className={`text-lg font-bold ${
-              isChecklistComplete ? "text-green-600" : "text-orange-600"
+              isChecklistComplete ? 'text-green-600' : 'text-orange-600'
             }`}
           >
             {completedCount}/{checklistItems.length}
@@ -182,7 +182,7 @@ export default function CheckinChecklist({ appointment, onStatusChange, onEditIt
         <div className="w-full bg-gray-200 rounded-full h-2">
           <div
             className={`h-2 rounded-full transition-all ${
-              isChecklistComplete ? "bg-green-500" : "bg-orange-500"
+              isChecklistComplete ? 'bg-green-500' : 'bg-orange-500'
             }`}
             style={{
               width: `${(completedCount / checklistItems.length) * 100}%`,
@@ -196,8 +196,8 @@ export default function CheckinChecklist({ appointment, onStatusChange, onEditIt
         )}
         {!isChecklistComplete && (
           <p className="text-sm text-orange-700 mt-3 flex items-center gap-2">
-            <AlertCircle size={16} /> ⚠️{" "}
-            {checklistItems.filter((i) => !i.status).length} itens pendentes
+            <AlertCircle size={16} /> ⚠️ {checklistItems.filter((i) => !i.status).length} itens
+            pendentes
           </p>
         )}
       </div>
@@ -208,9 +208,9 @@ export default function CheckinChecklist({ appointment, onStatusChange, onEditIt
           <div
             key={item.id}
             className={`border rounded-lg p-4 transition ${
-              item.status 
-                ? "border-gray-200 hover:border-gray-300 bg-gray-50" 
-                : "border-orange-300 hover:border-orange-400 bg-orange-50"
+              item.status
+                ? 'border-gray-200 hover:border-gray-300 bg-gray-50'
+                : 'border-orange-300 hover:border-orange-400 bg-orange-50'
             }`}
           >
             <div className="flex items-start gap-3">
@@ -221,15 +221,13 @@ export default function CheckinChecklist({ appointment, onStatusChange, onEditIt
               )}
 
               <div className="flex-1">
-                <p className={`font-semibold ${item.status ? "text-gray-900" : "text-orange-900"}`}>
+                <p className={`font-semibold ${item.status ? 'text-gray-900' : 'text-orange-900'}`}>
                   {item.label}
                 </p>
                 <p className="text-sm text-gray-600 mt-1">{item.description}</p>
 
                 {item.required && !item.status && (
-                  <p className="text-xs text-rose-600 mt-2 font-semibold">
-                    ⚠️ OBRIGATÓRIO
-                  </p>
+                  <p className="text-xs text-rose-600 mt-2 font-semibold">⚠️ OBRIGATÓRIO</p>
                 )}
 
                 {/* Botão Editar para itens pendentes */}
@@ -251,12 +249,10 @@ export default function CheckinChecklist({ appointment, onStatusChange, onEditIt
               <div className="flex-shrink-0">
                 <span
                   className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    item.status
-                      ? "bg-green-100 text-green-700"
-                      : "bg-orange-100 text-orange-700"
+                    item.status ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
                   }`}
                 >
-                  {item.status ? "✅ OK" : "⏳ Pendente"}
+                  {item.status ? '✅ OK' : '⏳ Pendente'}
                 </span>
               </div>
             </div>
@@ -280,4 +276,3 @@ export default function CheckinChecklist({ appointment, onStatusChange, onEditIt
     </div>
   );
 }
-

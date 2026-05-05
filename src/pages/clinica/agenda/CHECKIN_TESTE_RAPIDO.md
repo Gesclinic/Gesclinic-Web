@@ -19,6 +19,7 @@ import CheckinRecepacao from "@/pages/clinica/agenda/views/CheckinRecepacao";
 ### Passo 2: Navegar (30 segundos)
 
 Faça login como **recepcionista** e acesse:
+
 ```
 http://localhost:3000/clinica/agenda/checkin
 ```
@@ -54,15 +55,15 @@ http://localhost:3000/clinica/agenda/checkin
 
 ## 🧪 CHECKLIST DE TESTES
 
-| Cenário | Status | Checklist | Financeiro | Resultado | ✅ |
-|---------|--------|-----------|-----------|-----------|-----|
-| Paciente OK | AGUARDANDO | ✅ 100% | ✅ OK | Libera | ☐ |
-| Falta nome paciente | AGUARDANDO | ❌ 50% | ✅ OK | Bloqueia | ☐ |
-| Convênio sem guia | AGUARDANDO | ✅ 100% | ❌ Sem guia | Bloqueia | ☐ |
-| Particular sem pagto | AGUARDANDO | ✅ 100% | ❌ Sem pagto | Bloqueia | ☐ |
-| Já liberado | LIBERADO | ✅ 100% | ✅ OK | Botão cinza | ☐ |
-| Marcar falta | AGUARDANDO | ✅ 100% | ✅ OK | Muda para FALTA | ☐ |
-| Remarcar | PENDENTE | ❌ Pendente | ✅ OK | Abre reagendamento | ☐ |
+| Cenário              | Status     | Checklist   | Financeiro   | Resultado          | ✅  |
+| -------------------- | ---------- | ----------- | ------------ | ------------------ | --- |
+| Paciente OK          | AGUARDANDO | ✅ 100%     | ✅ OK        | Libera             | ☐   |
+| Falta nome paciente  | AGUARDANDO | ❌ 50%      | ✅ OK        | Bloqueia           | ☐   |
+| Convênio sem guia    | AGUARDANDO | ✅ 100%     | ❌ Sem guia  | Bloqueia           | ☐   |
+| Particular sem pagto | AGUARDANDO | ✅ 100%     | ❌ Sem pagto | Bloqueia           | ☐   |
+| Já liberado          | LIBERADO   | ✅ 100%     | ✅ OK        | Botão cinza        | ☐   |
+| Marcar falta         | AGUARDANDO | ✅ 100%     | ✅ OK        | Muda para FALTA    | ☐   |
+| Remarcar             | PENDENTE   | ❌ Pendente | ✅ OK        | Abre reagendamento | ☐   |
 
 ---
 
@@ -71,11 +72,13 @@ http://localhost:3000/clinica/agenda/checkin
 ### 1. Profissional NÃO acessa Check-in?
 
 Faça login como **profissional** e tente:
+
 ```
 http://localhost:3000/clinica/agenda/checkin
 ```
 
 Resultado esperado:
+
 ```
 ⚠️ Você não tem permissão para acessar o check-in da recepção.
 ```
@@ -83,23 +86,27 @@ Resultado esperado:
 ### 2. Profissional vê APENAS liberados?
 
 Faça login como **profissional** e vá para:
+
 ```
 http://localhost:3000/clinica/agenda
 ```
 
 Resultado esperado:
+
 - Só aparecem pacientes com status 🟢 **LIBERADO_PARA_ATENDIMENTO**
 - Pacientes 🟡 **Aguardando** e 🔴 **Pendentes** desaparecem
 
 ### 3. Liberação registra data/hora?
 
 Ao liberar um paciente, no banco de dados deve ter:
+
 ```sql
-SELECT liberado_em, liberado_por FROM appointments 
+SELECT liberado_em, liberado_por FROM appointments
 WHERE id = 'paciente_liberado';
 ```
 
 Resultado esperado:
+
 ```
 liberado_em  | 2026-01-14 10:30:45
 liberado_por | uuid_da_recepcao
@@ -112,15 +119,16 @@ liberado_por | uuid_da_recepcao
 ### Dica 1: Verificar status do agendamento
 
 Abra DevTools (F12) → Console:
+
 ```javascript
 // Loga o agendamento selecionado
-console.log("Agendamento:", selectedAppointment);
+console.log('Agendamento:', selectedAppointment);
 
 // Verifica se checklist está completo
-console.log("Checklist completo:", isChecklistComplete);
+console.log('Checklist completo:', isChecklistComplete);
 
 // Verifica se financeiro OK
-console.log("Financeiro OK:", isFinanceResolved);
+console.log('Financeiro OK:', isFinanceResolved);
 ```
 
 ### Dica 2: Forçar refresh de dados
@@ -132,8 +140,9 @@ O polling a cada 30s atualiza automaticamente.
 ### Dica 3: Simular paciente sem dados
 
 No banco de dados, limpe dados de um agendamento:
+
 ```sql
-UPDATE appointments 
+UPDATE appointments
 SET patient_verified = false,
     service_name = null,
     professional_name = null
@@ -195,6 +204,7 @@ Resultado: __________________
 ### Problema: "Nenhum agendamento para hoje"
 
 **Solução:**
+
 - Verifique se existem agendamentos no banco de dados
 - Confirme se a data está correta (hoje)
 - Verifique se clinic_id está correto
@@ -202,6 +212,7 @@ Resultado: __________________
 ### Problema: Checklist mostra vazio
 
 **Solução:**
+
 - Agendamento pode estar incompleto no banco
 - Verifique se campos como `patient_verified`, `service_name` existem
 - Confira API em `appointmentsApi.js`
@@ -209,6 +220,7 @@ Resultado: __________________
 ### Problema: Botão "Liberar" não aparece
 
 **Solução:**
+
 - Checklist não está 100% completo
 - Financeiro não está resolvido
 - Status já é LIBERADO
@@ -217,6 +229,7 @@ Resultado: __________________
 ### Problema: Não consegue clicar em "Liberar"
 
 **Solução:**
+
 - Pode estar carregando (loading = true)
 - Revise as validações em `CheckinAcoes.jsx`
 - Confirme que permissões estão corretas
@@ -233,7 +246,6 @@ Você saberá que o Check-in está pronto quando:
 ✅ Checklist bloqueia liberação incompleta  
 ✅ Financeiro resolvido antes de liberar  
 ✅ Polling atualiza a cada 30s  
-✅ Mensagens de erro são claras  
+✅ Mensagens de erro são claras
 
 🎉 **PRONTO PARA PRODUÇÃO**
-

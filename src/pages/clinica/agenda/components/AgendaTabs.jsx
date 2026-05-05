@@ -5,7 +5,7 @@ import React from 'react';
  * AgendaTabs - Tabs para alternar entre modos de visualização
  * ⭐ IMPORTANTE: Sem alterar rota, apenas controlando estado viewMode
  * A URL permanece /clinica/agenda ao trocar as abas
- * 
+ *
  * Props:
  * - viewMode: 'geral' | 'profissional' | 'sala'
  * - onViewModeChange: (mode) => void
@@ -18,21 +18,21 @@ export default function AgendaTabs({ viewMode, onViewModeChange, hasPermission }
       label: 'Agenda Geral',
       icon: '📋',
       activeIcon: '📋',
-      description: 'Visualização geral de todos os agendamentos'
+      description: 'Visualização geral de todos os agendamentos',
     },
     {
       id: 'profissional',
       label: 'Por Profissional',
       icon: '👤',
       activeIcon: '👨‍⚕️',
-      description: 'Agendamentos por coluna de profissional'
+      description: 'Agendamentos por coluna de profissional',
     },
     {
       id: 'sala',
       label: 'Por Sala',
       icon: '🏢',
       activeIcon: '🏥',
-      description: 'Agendamentos por coluna de sala'
+      description: 'Agendamentos por coluna de sala',
     },
   ];
 
@@ -48,7 +48,7 @@ export default function AgendaTabs({ viewMode, onViewModeChange, hasPermission }
         }
       `}</style>
       <div className="flex gap-0 min-w-max">
-        {tabs.map(tab => {
+        {tabs.map((tab) => {
           const isActive = viewMode === tab.id;
           return (
             <button
@@ -68,7 +68,7 @@ export default function AgendaTabs({ viewMode, onViewModeChange, hasPermission }
                 background: isActive ? '#f0f7ff' : 'white',
                 color: isActive ? '#1976d2' : '#666',
                 cursor: 'pointer',
-                border: 'none'
+                border: 'none',
               }}
               onMouseEnter={(e) => !isActive && (e.target.style.background = '#f9f9f9')}
               onMouseLeave={(e) => !isActive && (e.target.style.background = 'white')}
@@ -79,15 +79,17 @@ export default function AgendaTabs({ viewMode, onViewModeChange, hasPermission }
               </span>
               <span>{tab.label}</span>
               {isActive && (
-                <div style={{
-                  position: 'absolute',
-                  bottom: '-2px',
-                  left: 0,
-                  right: 0,
-                  height: '2px',
-                  background: 'linear-gradient(to right, #1976d2, #1565c0)',
-                  animation: 'slideInUnderline 0.3s ease-out'
-                }}></div>
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: '-2px',
+                    left: 0,
+                    right: 0,
+                    height: '2px',
+                    background: 'linear-gradient(to right, #1976d2, #1565c0)',
+                    animation: 'slideInUnderline 0.3s ease-out',
+                  }}
+                ></div>
               )}
             </button>
           );
@@ -96,4 +98,3 @@ export default function AgendaTabs({ viewMode, onViewModeChange, hasPermission }
     </div>
   );
 }
-

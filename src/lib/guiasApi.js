@@ -12,10 +12,7 @@ import { supabase } from './customSupabaseClient';
  */
 export async function listarGuias(clinicId, filters = {}) {
   try {
-    let query = supabase
-      .from('billing_guides')
-      .select('*')
-      .eq('clinic_id', clinicId);
+    let query = supabase.from('billing_guides').select('*').eq('clinic_id', clinicId);
 
     // Aplicar filtros opcionais
     if (filters.tipo) {
@@ -25,9 +22,7 @@ export async function listarGuias(clinicId, filters = {}) {
       query = query.eq('status', filters.status);
     }
     if (filters.dataInicio && filters.dataFim) {
-      query = query
-        .gte('data_criacao', filters.dataInicio)
-        .lte('data_criacao', filters.dataFim);
+      query = query.gte('data_criacao', filters.dataInicio).lte('data_criacao', filters.dataFim);
     }
 
     const { data, error } = await query.order('data_criacao', { ascending: false });
@@ -78,19 +73,20 @@ export async function criarGuia(clinicId, dadosGuia) {
     // 🚀 BLOCKER 2 FIX: Allow optional patient/card validation for auto-creation from appointments
     // If appointment_id is provided, we're in auto-creation mode
     const isAutoCreation = !!dadosGuia.appointment_id;
-    
+
     if (!isAutoCreation && (!dadosGuia.paciente_nome || !dadosGuia.numero_carteirinha)) {
       throw new Error('Nome do paciente e número de carteirinha são obrigatórios');
     }
 
     const guiaData = {
       clinic_id: clinicId,
-      appointment_id: dadosGuia.appointment_id || null,  // NEW: FK link to appointment
+      appointment_id: dadosGuia.appointment_id || null, // NEW: FK link to appointment
       tipo_guia: dadosGuia.tipo_guia || 'SP',
       paciente_nome: (dadosGuia.paciente_nome || '').trim() || 'Paciente',
       convenio: dadosGuia.convenio?.trim() || dadosGuia.payer_name?.trim() || null,
       plano: dadosGuia.plano?.trim() || dadosGuia.plan_name?.trim() || null,
-      numero_carteirinha: (dadosGuia.numero_carteirinha || '').trim() || dadosGuia.card_number?.trim() || null,
+      numero_carteirinha:
+        (dadosGuia.numero_carteirinha || '').trim() || dadosGuia.card_number?.trim() || null,
       profissional: dadosGuia.profissional?.trim() || dadosGuia.professional_name?.trim() || null,
       codigo_cbhpm: dadosGuia.codigo_cbhpm?.trim() || dadosGuia.service_code?.trim() || null,
       valor: parseFloat(dadosGuia.valor || dadosGuia.value) || 0,
@@ -180,10 +176,7 @@ export async function deletarGuia(guiaId) {
   try {
     console.log('🗑️ Deletando guia:', guiaId);
 
-    const { error } = await supabase
-      .from('billing_guides')
-      .delete()
-      .eq('id', guiaId);
+    const { error } = await supabase.from('billing_guides').delete().eq('id', guiaId);
 
     if (error) {
       throw error;
@@ -228,4 +221,3 @@ export async function atualizarStatusGuia(guiaId, novoStatus) {
     throw error;
   }
 }
-

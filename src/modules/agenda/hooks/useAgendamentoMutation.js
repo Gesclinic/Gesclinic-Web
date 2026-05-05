@@ -1,9 +1,13 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
-import { useClinicContext } from "@/contexts/ClinicContext";
-import { criarAgendamento, atualizarAgendamento, deletarAgendamento } from "@/modules/agenda/services/agenda.api.mutations";
-import * as Sentry from "@sentry/react";
-import { normalizeError, retryWithBackoff, isRetryableError } from "@/lib/errorHandler";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useClinicContext } from '@/contexts/ClinicContext';
+import {
+  criarAgendamento,
+  atualizarAgendamento,
+  deletarAgendamento,
+} from '@/modules/agenda/services/agenda.api.mutations';
+import * as Sentry from '@sentry/react';
+import { normalizeError, retryWithBackoff, isRetryableError } from '@/lib/errorHandler';
 
 /**
  * Hook: Mutações de agendamento com validação, auditoria e retry
@@ -23,10 +27,10 @@ export function useAgendamentoMutation() {
 
   const validatePrerequisites = () => {
     if (!userId) {
-      throw new Error("Usuário não autenticado");
+      throw new Error('Usuário não autenticado');
     }
     if (!clinicId) {
-      throw new Error("Clínica não identificada");
+      throw new Error('Clínica não identificada');
     }
     return true;
   };
@@ -39,41 +43,50 @@ export function useAgendamentoMutation() {
     mutationFn: async (formData) => {
       try {
         validatePrerequisites();
-        const payload = { ...formData, clinicId, status: formData.status || "scheduled" };
-        
-        console.log("📝 [CRIAR] Payload:", { clinicId, patientId: payload.patientId, date: payload.date });
-        return await retryWithBackoff(() => criarAgendamento(payload), { maxRetries: 3, initialDelay: 1000 });
+        const payload = { ...formData, clinicId, status: formData.status || 'scheduled' };
+
+        console.log('📝 [CRIAR] Payload:', {
+          clinicId,
+          patientId: payload.patientId,
+          date: payload.date,
+        });
+        return await retryWithBackoff(() => criarAgendamento(payload), {
+          maxRetries: 3,
+          initialDelay: 1000,
+        });
       } catch (error) {
-        const normalized = normalizeError(error, { action: "create_appointment", clinicId });
+        const normalized = normalizeError(error, { action: 'create_appointment', clinicId });
         Sentry.captureException(normalized);
         throw normalized;
       }
     },
 
     onMutate: async (formData) => {
-      await queryClient.cancelQueries({ queryKey: ["appointments", clinicId, formData.date] });
-      const previous = queryClient.getQueryData(["appointments", clinicId, formData.date]);
-      queryClient.setQueryData(["appointments", clinicId, formData.date], (old = []) => [
+      await queryClient.cancelQueries({ queryKey: ['appointments', clinicId, formData.date] });
+      const previous = queryClient.getQueryData(['appointments', clinicId, formData.date]);
+      queryClient.setQueryData(['appointments', clinicId, formData.date], (old = []) => [
         ...old,
-        { ...formData, id: "temp-" + crypto.randomUUID(), __optimistic: true }
+        { ...formData, id: 'temp-' + crypto.randomUUID(), __optimistic: true },
       ]);
       return { previous };
     },
 
     onSuccess: (data) => {
-      console.log("✅ [CRIAR] Sucesso:", data.id);
-      queryClient.invalidateQueries({ queryKey: ["appointments"] });
-      Sentry.captureMessage("Agendamento criado", "info", { tags: { action: "create_appointment_success" } });
+      console.log('✅ [CRIAR] Sucesso:', data.id);
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      Sentry.captureMessage('Agendamento criado', 'info', {
+        tags: { action: 'create_appointment_success' },
+      });
     },
 
     onError: (error, formData, context) => {
       if (context?.previous !== undefined) {
-        queryClient.setQueryData(["appointments", clinicId, formData.date], context.previous);
+        queryClient.setQueryData(['appointments', clinicId, formData.date], context.previous);
       }
-      console.error("❌ [CRIAR] Erro:", error.userMessage || error.message);
+      console.error('❌ [CRIAR] Erro:', error.userMessage || error.message);
     },
 
-    retry: (failureCount, error) => failureCount < 3 && isRetryableError(error)
+    retry: (failureCount, error) => failureCount < 3 && isRetryableError(error),
   });
 
   // ============================================================
@@ -84,54 +97,69 @@ export function useAgendamentoMutation() {
     mutationFn: async ({ agendamentoId, formData }) => {
       try {
         validatePrerequisites();
-        if (!agendamentoId) throw new Error("ID obrigatório");
-        
+        if (!agendamentoId) {
+          throw new Error('ID obrigatório');
+        }
+
         // ⚠️ CRÍTICO: Garantir que clinicId vem do CONTEXTO, não do formData
         // formData pode ter clinicId errado de um agendamento anterior
-        const payload = { 
-          ...formData, 
+        const payload = {
+          ...formData,
           clinicId, // SEMPRE DO CONTEXTO - sobrescreve formData.clinicId
-          id: agendamentoId 
+          id: agendamentoId,
         };
-        
-        console.log("✏️ [ATUALIZAR] Payload:", { 
-          agendamentoId, 
+
+        console.log('✏️ [ATUALIZAR] Payload:', {
+          agendamentoId,
           clinicId: clinicId, // Log do contexto
           formDataClinicId: formData.clinicId, // Log do que veio do form
           date: payload.date,
-          finalClinicId: payload.clinicId // Log do final
+          finalClinicId: payload.clinicId, // Log do final
         });
-        return await retryWithBackoff(() => atualizarAgendamento(agendamentoId, payload), { maxRetries: 3 });
+        return await retryWithBackoff(() => atualizarAgendamento(agendamentoId, payload), {
+          maxRetries: 3,
+        });
       } catch (error) {
-        const normalized = normalizeError(error, { action: "update_appointment", clinicId, agendamentoId });
+        const normalized = normalizeError(error, {
+          action: 'update_appointment',
+          clinicId,
+          agendamentoId,
+        });
         Sentry.captureException(normalized);
         throw normalized;
       }
     },
 
     onMutate: async ({ agendamentoId, formData }) => {
-      await queryClient.cancelQueries({ queryKey: ["appointments", clinicId, formData.date] });
-      const previous = queryClient.getQueryData(["appointments", clinicId, formData.date]);
-      queryClient.setQueryData(["appointments", clinicId, formData.date], (old = []) =>
-        old.map(item => item.id === agendamentoId ? { ...item, ...formData, __optimistic: true } : item)
+      await queryClient.cancelQueries({ queryKey: ['appointments', clinicId, formData.date] });
+      const previous = queryClient.getQueryData(['appointments', clinicId, formData.date]);
+      queryClient.setQueryData(['appointments', clinicId, formData.date], (old = []) =>
+        old.map((item) =>
+          item.id === agendamentoId ? { ...item, ...formData, __optimistic: true } : item,
+        ),
       );
       return { previous };
     },
 
     onSuccess: (data) => {
-      console.log("✅ [ATUALIZAR] Sucesso:", data.id);
-      queryClient.invalidateQueries({ queryKey: ["appointments"] });
-      Sentry.captureMessage("Agendamento atualizado", "info", { tags: { action: "update_appointment_success" } });
+      console.log('✅ [ATUALIZAR] Sucesso:', data.id);
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      Sentry.captureMessage('Agendamento atualizado', 'info', {
+        tags: { action: 'update_appointment_success' },
+      });
     },
 
     onError: (error, variables, context) => {
       if (context?.previous !== undefined) {
-        queryClient.setQueryData(["appointments", clinicId, variables.formData.date], context.previous);
+        queryClient.setQueryData(
+          ['appointments', clinicId, variables.formData.date],
+          context.previous,
+        );
       }
-      console.error("❌ [ATUALIZAR] Erro:", error.userMessage || error.message);
+      console.error('❌ [ATUALIZAR] Erro:', error.userMessage || error.message);
     },
 
-    retry: (failureCount, error) => failureCount < 3 && isRetryableError(error)
+    retry: (failureCount, error) => failureCount < 3 && isRetryableError(error),
   });
 
   // ============================================================
@@ -142,28 +170,38 @@ export function useAgendamentoMutation() {
     mutationFn: async (agendamentoId) => {
       try {
         validatePrerequisites();
-        if (!agendamentoId) throw new Error("ID obrigatório");
-        
-        console.log("🗑️ [DELETAR] Agendamento:", { agendamentoId, clinicId });
-        return await retryWithBackoff(() => deletarAgendamento(agendamentoId, clinicId), { maxRetries: 3 });
+        if (!agendamentoId) {
+          throw new Error('ID obrigatório');
+        }
+
+        console.log('🗑️ [DELETAR] Agendamento:', { agendamentoId, clinicId });
+        return await retryWithBackoff(() => deletarAgendamento(agendamentoId, clinicId), {
+          maxRetries: 3,
+        });
       } catch (error) {
-        const normalized = normalizeError(error, { action: "delete_appointment", clinicId, agendamentoId });
+        const normalized = normalizeError(error, {
+          action: 'delete_appointment',
+          clinicId,
+          agendamentoId,
+        });
         Sentry.captureException(normalized);
         throw normalized;
       }
     },
 
     onSuccess: () => {
-      console.log("✅ [DELETAR] Sucesso");
-      queryClient.invalidateQueries({ queryKey: ["appointments"] });
-      Sentry.captureMessage("Agendamento deletado", "info", { tags: { action: "delete_appointment_success" } });
+      console.log('✅ [DELETAR] Sucesso');
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      Sentry.captureMessage('Agendamento deletado', 'info', {
+        tags: { action: 'delete_appointment_success' },
+      });
     },
 
     onError: (error) => {
-      console.error("❌ [DELETAR] Erro:", error.userMessage || error.message);
+      console.error('❌ [DELETAR] Erro:', error.userMessage || error.message);
     },
 
-    retry: (failureCount, error) => failureCount < 3 && isRetryableError(error)
+    retry: (failureCount, error) => failureCount < 3 && isRetryableError(error),
   });
 
   // ============================================================
@@ -195,14 +233,14 @@ export function useAgendamentoMutation() {
     loading: {
       create: createMutation.isPending,
       update: updateMutation.isPending,
-      delete: deleteMutation.isPending
+      delete: deleteMutation.isPending,
     },
-    
+
     // Reset
     reset: () => {
       createMutation.reset();
       updateMutation.reset();
       deleteMutation.reset();
-    }
+    },
   };
 }

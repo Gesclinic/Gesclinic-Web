@@ -1,7 +1,7 @@
 // src/lib/repasseBancariaApi.js
 /**
  * Integração com Transferência Bancária Automática
- * 
+ *
  * Suportado:
  * - Brasil: PIX, TED
  * - Internacional: SWIFT
@@ -15,9 +15,8 @@ import { supabase } from './customSupabaseClient';
  */
 export async function salvarDadosBancarios(professionalId, clinicId, dadosBancarios) {
   try {
-    const { data, error } = await supabase
-      .from('professional_bank_accounts')
-      .upsert([
+    const { data, error } = await supabase.from('professional_bank_accounts').upsert(
+      [
         {
           professional_id: professionalId,
           clinic_id: clinicId,
@@ -31,10 +30,14 @@ export async function salvarDadosBancarios(professionalId, clinicId, dadosBancar
           titular: dadosBancarios.titular,
           ativo: true,
           created_at: new Date().toISOString(),
-        }
-      ], { onConflict: ['professional_id', 'clinic_id'] });
+        },
+      ],
+      { onConflict: ['professional_id', 'clinic_id'] },
+    );
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     console.log('✅ Dados bancários salvos:', data);
     return data;
   } catch (err) {
@@ -56,7 +59,9 @@ export async function obterDadosBancarios(professionalId, clinicId) {
       .eq('ativo', true)
       .single();
 
-    if (error && error.code !== 'PGRST116') throw error;
+    if (error && error.code !== 'PGRST116') {
+      throw error;
+    }
     return data || null;
   } catch (err) {
     console.error('❌ Erro ao obter dados bancários:', err);
@@ -70,35 +75,32 @@ export async function obterDadosBancarios(professionalId, clinicId) {
 export async function criarRequisicaoTransferencia(repasse, metodo = 'pix') {
   try {
     // Buscar dados bancários do profissional
-    const dadosBancarios = await obterDadosBancarios(
-      repasse.professional_id,
-      repasse.clinic_id
-    );
+    const dadosBancarios = await obterDadosBancarios(repasse.professional_id, repasse.clinic_id);
 
     if (!dadosBancarios) {
       throw new Error('Profissional não possui dados bancários cadastrados');
     }
 
     // Criar registro de transferência
-    const { data, error } = await supabase
-      .from('repasse_transferencias')
-      .insert([
-        {
-          repasse_id: repasse.id,
-          professional_id: repasse.professional_id,
-          clinic_id: repasse.clinic_id,
-          valor: repasse.valor_profissional,
-          metodo, // 'pix', 'ted', 'paypal', 'stripe'
-          dados_bancarios_id: dadosBancarios.id,
-          status: 'pendente', // 'pendente', 'processando', 'concluido', 'erro'
-          descricao: `Repasse ${repasse.periodo_inicio} a ${repasse.periodo_fim}`,
-          data_transacao: null,
-          id_transacao_externa: null,
-          created_at: new Date().toISOString(),
-        }
-      ]);
+    const { data, error } = await supabase.from('repasse_transferencias').insert([
+      {
+        repasse_id: repasse.id,
+        professional_id: repasse.professional_id,
+        clinic_id: repasse.clinic_id,
+        valor: repasse.valor_profissional,
+        metodo, // 'pix', 'ted', 'paypal', 'stripe'
+        dados_bancarios_id: dadosBancarios.id,
+        status: 'pendente', // 'pendente', 'processando', 'concluido', 'erro'
+        descricao: `Repasse ${repasse.periodo_inicio} a ${repasse.periodo_fim}`,
+        data_transacao: null,
+        id_transacao_externa: null,
+        created_at: new Date().toISOString(),
+      },
+    ]);
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     console.log('✅ Requisição de transferência criada:', data);
     return data?.[0];
   } catch (err) {
@@ -118,7 +120,7 @@ export async function transferirPIX(transferencia) {
     console.log('Chave PIX:', transferencia.dados_bancarios?.chave_pix);
 
     // Simular processamento
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await new Promise((resolve) => setTimeout(resolve, 3000));
 
     // Atualizar status
     const { data, error } = await supabase
@@ -131,7 +133,9 @@ export async function transferirPIX(transferencia) {
       .eq('id', transferencia.id)
       .select();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     console.log('✅ Transferência PIX concluída:', data);
     return data?.[0];
   } catch (err) {
@@ -147,7 +151,7 @@ export async function transferirIntegracaoAPI(transferencia, provedor = 'api-99p
   try {
     // Aqui você integraria com API real
     // Exemplo:
-    
+
     if (provedor === 'api-99pay') {
       // const response = await fetch('https://api.exemplo.com/transfer', {
       //   method: 'POST',
@@ -184,24 +188,24 @@ export async function processarTransferenciasLote(repassos, metodo = 'pix') {
         if (metodo === 'pix') {
           // Executar transferência
           const resultado = await transferirPIX(requisicao);
-          resultados.push({ 
-            repasse: repasse.id, 
+          resultados.push({
+            repasse: repasse.id,
             status: 'sucesso',
-            transacao: resultado 
+            transacao: resultado,
           });
         } else {
           // Outros métodos
-          resultados.push({ 
-            repasse: repasse.id, 
+          resultados.push({
+            repasse: repasse.id,
             status: 'pendente_processamento',
-            detalhes: requisicao 
+            detalhes: requisicao,
           });
         }
       } catch (err) {
-        resultados.push({ 
-          repasse: repasse.id, 
+        resultados.push({
+          repasse: repasse.id,
           status: 'erro',
-          erro: err.message 
+          erro: err.message,
         });
       }
     }
@@ -229,7 +233,9 @@ export async function obterHistoricoTransferencias(clinicId, professionalId = nu
     }
 
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data || [];
   } catch (err) {
     console.error('❌ Erro ao buscar histórico:', err);
@@ -250,16 +256,21 @@ export async function gerarRelatorioBancario(clinicId, dataInicio, dataFim) {
       .lte('created_at', dataFim)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
 
     // Calcular totais
     const totais = {
       total_repassos: data?.length || 0,
-      concluidos: data?.filter(t => t.status === 'concluido').length || 0,
-      pendentes: data?.filter(t => t.status === 'pendente' || t.status === 'processando').length || 0,
-      erros: data?.filter(t => t.status === 'erro').length || 0,
+      concluidos: data?.filter((t) => t.status === 'concluido').length || 0,
+      pendentes:
+        data?.filter((t) => t.status === 'pendente' || t.status === 'processando').length || 0,
+      erros: data?.filter((t) => t.status === 'erro').length || 0,
       valor_total: data?.reduce((sum, t) => sum + (t.valor || 0), 0) || 0,
-      valor_concluido: data?.filter(t => t.status === 'concluido').reduce((sum, t) => sum + (t.valor || 0), 0) || 0,
+      valor_concluido:
+        data?.filter((t) => t.status === 'concluido').reduce((sum, t) => sum + (t.valor || 0), 0) ||
+        0,
     };
 
     return { dados: data, totais };

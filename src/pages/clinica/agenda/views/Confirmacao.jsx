@@ -1,12 +1,10 @@
 // src/pages/clinica/agenda/views/Confirmacao.jsx
-import React from "react";
+import React from 'react';
 
 export default function Confirmacao() {
   return (
     <div>
-      <h2 className="text-lg font-semibold text-[hsl(var(--primary))]">
-        Confirmação de Consultas
-      </h2>
+      <h2 className="text-lg font-semibold text-[hsl(var(--primary))]">Confirmação de Consultas</h2>
 
       <p className="text-gray-600 mb-4">Gerencie confirmações automáticas e manuais.</p>
 
@@ -21,4 +19,3 @@ export default function Confirmacao() {
     </div>
   );
 }
-

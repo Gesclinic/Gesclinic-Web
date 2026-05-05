@@ -4,23 +4,42 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { normalizeCodeCBHPM } from '@/utils/formatters/formatters';
-import { 
-  Pill, 
-  Plus, 
-  Edit, 
-  Trash2, 
+import {
+  Pill,
+  Plus,
+  Edit,
+  Trash2,
   Search,
   Package,
   AlertTriangle,
   Calendar,
   TrendingDown,
-  CheckCircle
+  CheckCircle,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 
@@ -49,7 +68,7 @@ export default function MateriaisMedicamentos() {
     validade: '',
     quantidade: 1,
     valor_unitario: '',
-    observacoes: ''
+    observacoes: '',
   });
 
   // Form state para materiais
@@ -60,7 +79,7 @@ export default function MateriaisMedicamentos() {
     unidade_medida: 'UN',
     valor_referencia: '',
     categoria: '',
-    controlado: false
+    controlado: false,
   });
 
   // Mock data para demonstração
@@ -71,11 +90,11 @@ export default function MateriaisMedicamentos() {
       codigo_tuss: '80101012',
       descricao: 'Seringa Descartável 10ml',
       unidade_medida: 'UN',
-      valor_referencia: 2.50,
+      valor_referencia: 2.5,
       categoria: 'Material Cirúrgico',
       controlado: false,
       estoque_atual: 500,
-      estoque_minimo: 100
+      estoque_minimo: 100,
     },
     {
       id: 'MAT002',
@@ -83,11 +102,11 @@ export default function MateriaisMedicamentos() {
       codigo_tuss: '80201015',
       descricao: 'Cateter Venoso Central',
       unidade_medida: 'UN',
-      valor_referencia: 85.00,
+      valor_referencia: 85.0,
       categoria: 'Material Cirúrgico',
       controlado: true,
       estoque_atual: 25,
-      estoque_minimo: 10
+      estoque_minimo: 10,
     },
     {
       id: 'MED001',
@@ -95,11 +114,11 @@ export default function MateriaisMedicamentos() {
       codigo_tuss: '90101020',
       descricao: 'Anestésico Local Lidocaína 2%',
       unidade_medida: 'AMP',
-      valor_referencia: 12.00,
+      valor_referencia: 12.0,
       categoria: 'Medicamentos',
       controlado: true,
       estoque_atual: 80,
-      estoque_minimo: 20
+      estoque_minimo: 20,
     },
     {
       id: 'MED002',
@@ -107,12 +126,12 @@ export default function MateriaisMedicamentos() {
       codigo_tuss: '90201025',
       descricao: 'Contraste Iodado 100ml',
       unidade_medida: 'FR',
-      valor_referencia: 45.00,
+      valor_referencia: 45.0,
       categoria: 'Medicamentos',
       controlado: false,
       estoque_atual: 15,
-      estoque_minimo: 5
-    }
+      estoque_minimo: 5,
+    },
   ];
 
   const mockLancamentos = [
@@ -125,11 +144,11 @@ export default function MateriaisMedicamentos() {
       lote: 'LT2025001',
       validade: '2026-12-31',
       quantidade: 2,
-      valor_unitario: 2.50,
-      valor_total: 5.00,
+      valor_unitario: 2.5,
+      valor_total: 5.0,
       data_lancamento: '2025-10-30',
       status: 'Lançado',
-      baixa_estoque: true
+      baixa_estoque: true,
     },
     {
       id: 'LAN002',
@@ -140,11 +159,11 @@ export default function MateriaisMedicamentos() {
       lote: 'LT2025050',
       validade: '2025-11-15',
       quantidade: 1,
-      valor_unitario: 12.00,
-      valor_total: 12.00,
+      valor_unitario: 12.0,
+      valor_total: 12.0,
       data_lancamento: '2025-10-30',
       status: 'Lançado',
-      baixa_estoque: true
+      baixa_estoque: true,
     },
     {
       id: 'LAN003',
@@ -155,12 +174,12 @@ export default function MateriaisMedicamentos() {
       lote: 'LT2025075',
       validade: '2026-08-20',
       quantidade: 1,
-      valor_unitario: 45.00,
-      valor_total: 45.00,
+      valor_unitario: 45.0,
+      valor_total: 45.0,
       data_lancamento: '2025-10-29',
       status: 'Pendente Baixa',
-      baixa_estoque: false
-    }
+      baixa_estoque: false,
+    },
   ];
 
   useEffect(() => {
@@ -176,9 +195,9 @@ export default function MateriaisMedicamentos() {
     } catch (error) {
       console.error('Erro ao buscar dados:', error);
       toast({
-        title: "Erro",
-        description: "Não foi possível carregar os dados.",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Não foi possível carregar os dados.',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -191,8 +210,8 @@ export default function MateriaisMedicamentos() {
       console.log('Criando lançamento:', formLancamento);
 
       toast({
-        title: "Lançamento registrado",
-        description: "Material/medicamento lançado com sucesso."
+        title: 'Lançamento registrado',
+        description: 'Material/medicamento lançado com sucesso.',
       });
 
       setIsDialogOpen(false);
@@ -200,9 +219,9 @@ export default function MateriaisMedicamentos() {
       fetchData();
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Não foi possível registrar o lançamento.",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Não foi possível registrar o lançamento.',
+        variant: 'destructive',
       });
     }
   };
@@ -213,8 +232,8 @@ export default function MateriaisMedicamentos() {
       console.log('Cadastrando material:', formMaterial);
 
       toast({
-        title: "Material cadastrado",
-        description: "Material/medicamento cadastrado com sucesso."
+        title: 'Material cadastrado',
+        description: 'Material/medicamento cadastrado com sucesso.',
       });
 
       setIsDialogOpen(false);
@@ -222,9 +241,9 @@ export default function MateriaisMedicamentos() {
       fetchData();
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Não foi possível cadastrar o material.",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Não foi possível cadastrar o material.',
+        variant: 'destructive',
       });
     }
   };
@@ -237,7 +256,7 @@ export default function MateriaisMedicamentos() {
       validade: '',
       quantidade: 1,
       valor_unitario: '',
-      observacoes: ''
+      observacoes: '',
     });
   };
 
@@ -249,25 +268,25 @@ export default function MateriaisMedicamentos() {
       unidade_medida: 'UN',
       valor_referencia: '',
       categoria: '',
-      controlado: false
+      controlado: false,
     });
   };
 
   const handleBaixaEstoque = async (lancamento) => {
     try {
       console.log('Executando baixa no estoque:', lancamento.id);
-      
+
       toast({
-        title: "Baixa executada",
-        description: "Baixa no estoque executada com sucesso."
+        title: 'Baixa executada',
+        description: 'Baixa no estoque executada com sucesso.',
       });
 
       fetchData();
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Não foi possível executar a baixa no estoque.",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Não foi possível executar a baixa no estoque.',
+        variant: 'destructive',
       });
     }
   };
@@ -288,13 +307,17 @@ export default function MateriaisMedicamentos() {
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      'Lançado': { variant: 'default', color: 'text-green-600', icon: CheckCircle },
-      'Pendente Baixa': { variant: 'secondary', color: 'text-yellow-600', icon: AlertTriangle }
+      Lançado: { variant: 'default', color: 'text-green-600', icon: CheckCircle },
+      'Pendente Baixa': { variant: 'secondary', color: 'text-yellow-600', icon: AlertTriangle },
     };
 
-    const config = statusConfig[status] || { variant: 'outline', color: 'text-gray-600', icon: AlertTriangle };
+    const config = statusConfig[status] || {
+      variant: 'outline',
+      color: 'text-gray-600',
+      icon: AlertTriangle,
+    };
     const Icon = config.icon;
-    
+
     return (
       <Badge variant={config.variant} className={`${config.color} gap-1`}>
         <Icon className="w-3 h-3" />
@@ -327,16 +350,20 @@ export default function MateriaisMedicamentos() {
     );
   };
 
-  const filteredLancamentos = lancamentos.filter(lanc => {
-    return lanc.guia_sadt.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           lanc.paciente_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           lanc.material_descricao.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredLancamentos = lancamentos.filter((lanc) => {
+    return (
+      lanc.guia_sadt.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lanc.paciente_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lanc.material_descricao.toLowerCase().includes(searchTerm.toLowerCase())
+    );
   });
 
-  const filteredMateriais = materiais.filter(mat => {
-    return mat.descricao.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           mat.codigo_cbhpm.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           mat.codigo_tuss.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredMateriais = materiais.filter((mat) => {
+    return (
+      mat.descricao.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      mat.codigo_cbhpm.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      mat.codigo_tuss.toLowerCase().includes(searchTerm.toLowerCase())
+    );
   });
 
   return (
@@ -358,7 +385,7 @@ export default function MateriaisMedicamentos() {
             <Package className="w-4 h-4" />
             Cadastrar Material
           </Button>
-          
+
           <Button className="gap-2" onClick={openLancamentoDialog}>
             <Plus className="w-4 h-4" />
             Novo Lançamento
@@ -378,7 +405,7 @@ export default function MateriaisMedicamentos() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-green-600">
-              {lancamentos.filter(l => l.baixa_estoque).length}
+              {lancamentos.filter((l) => l.baixa_estoque).length}
             </div>
             <p className="text-sm text-muted-foreground">Baixas Executadas</p>
           </CardContent>
@@ -387,7 +414,7 @@ export default function MateriaisMedicamentos() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-yellow-600">
-              {lancamentos.filter(l => !l.baixa_estoque).length}
+              {lancamentos.filter((l) => !l.baixa_estoque).length}
             </div>
             <p className="text-sm text-muted-foreground">Pendentes de Baixa</p>
           </CardContent>
@@ -396,7 +423,7 @@ export default function MateriaisMedicamentos() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-red-600">
-              {materiais.filter(m => m.estoque_atual <= m.estoque_minimo).length}
+              {materiais.filter((m) => m.estoque_atual <= m.estoque_minimo).length}
             </div>
             <p className="text-sm text-muted-foreground">Estoque Baixo</p>
           </CardContent>
@@ -458,14 +485,14 @@ export default function MateriaisMedicamentos() {
                 <TableBody>
                   {filteredLancamentos.map((lancamento) => (
                     <TableRow key={lancamento.id}>
-                      <TableCell className="font-mono text-sm">
-                        {lancamento.guia_sadt}
-                      </TableCell>
+                      <TableCell className="font-mono text-sm">{lancamento.guia_sadt}</TableCell>
                       <TableCell>{lancamento.paciente_nome}</TableCell>
                       <TableCell>
                         <div>
                           <div className="font-medium">{lancamento.material_descricao}</div>
-                          <div className="text-xs text-muted-foreground">ID: {lancamento.material_id}</div>
+                          <div className="text-xs text-muted-foreground">
+                            ID: {lancamento.material_id}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -481,16 +508,11 @@ export default function MateriaisMedicamentos() {
                       <TableCell className="text-right font-semibold">
                         R$ {lancamento.valor_total.toFixed(2)}
                       </TableCell>
-                      <TableCell>
-                        {getStatusBadge(lancamento.status)}
-                      </TableCell>
+                      <TableCell>{getStatusBadge(lancamento.status)}</TableCell>
                       <TableCell>
                         <div className="flex gap-2">
                           {!lancamento.baixa_estoque && (
-                            <Button
-                              size="sm"
-                              onClick={() => handleBaixaEstoque(lancamento)}
-                            >
+                            <Button size="sm" onClick={() => handleBaixaEstoque(lancamento)}>
                               <TrendingDown className="w-3 h-3 mr-1" />
                               Baixar
                             </Button>
@@ -610,10 +632,9 @@ export default function MateriaisMedicamentos() {
         <DialogContent className="app-dialog-shell app-dialog-shell--content app-dialog-shell--wide">
           <DialogHeader>
             <DialogTitle>
-              {dialogType === 'lancamento' 
-                ? 'Novo Lançamento de Material' 
-                : 'Cadastrar Material/Medicamento'
-              }
+              {dialogType === 'lancamento'
+                ? 'Novo Lançamento de Material'
+                : 'Cadastrar Material/Medicamento'}
             </DialogTitle>
           </DialogHeader>
 
@@ -622,31 +643,37 @@ export default function MateriaisMedicamentos() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="guia_sadt_id">Guia SADT</Label>
-                  <Select 
+                  <Select
                     value={formLancamento.guia_sadt_id}
-                    onValueChange={(value) => setFormLancamento({...formLancamento, guia_sadt_id: value})}
+                    onValueChange={(value) =>
+                      setFormLancamento({ ...formLancamento, guia_sadt_id: value })
+                    }
                     required
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione a guia SADT" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="SADT001-2025-001">SADT001-2025-001 - Maria Silva</SelectItem>
-                      <SelectItem value="SADT002-2025-002">SADT002-2025-002 - Pedro Santos</SelectItem>
+                      <SelectItem value="SADT001-2025-001">
+                        SADT001-2025-001 - Maria Silva
+                      </SelectItem>
+                      <SelectItem value="SADT002-2025-002">
+                        SADT002-2025-002 - Pedro Santos
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div>
                   <Label htmlFor="material_id">Material/Medicamento</Label>
-                  <Select 
+                  <Select
                     value={formLancamento.material_id}
                     onValueChange={(value) => {
-                      const material = materiais.find(m => m.id === value);
+                      const material = materiais.find((m) => m.id === value);
                       setFormLancamento({
-                        ...formLancamento, 
+                        ...formLancamento,
                         material_id: value,
-                        valor_unitario: material ? material.valor_referencia.toString() : ''
+                        valor_unitario: material ? material.valor_referencia.toString() : '',
                       });
                     }}
                     required
@@ -669,7 +696,7 @@ export default function MateriaisMedicamentos() {
                   <Input
                     id="lote"
                     value={formLancamento.lote}
-                    onChange={(e) => setFormLancamento({...formLancamento, lote: e.target.value})}
+                    onChange={(e) => setFormLancamento({ ...formLancamento, lote: e.target.value })}
                     required
                   />
                 </div>
@@ -680,7 +707,9 @@ export default function MateriaisMedicamentos() {
                     id="validade"
                     type="date"
                     value={formLancamento.validade}
-                    onChange={(e) => setFormLancamento({...formLancamento, validade: e.target.value})}
+                    onChange={(e) =>
+                      setFormLancamento({ ...formLancamento, validade: e.target.value })
+                    }
                     required
                   />
                 </div>
@@ -692,7 +721,9 @@ export default function MateriaisMedicamentos() {
                     type="number"
                     min="1"
                     value={formLancamento.quantidade}
-                    onChange={(e) => setFormLancamento({...formLancamento, quantidade: parseInt(e.target.value)})}
+                    onChange={(e) =>
+                      setFormLancamento({ ...formLancamento, quantidade: parseInt(e.target.value) })
+                    }
                     required
                   />
                 </div>
@@ -704,23 +735,19 @@ export default function MateriaisMedicamentos() {
                     type="number"
                     step="0.01"
                     value={formLancamento.valor_unitario}
-                    onChange={(e) => setFormLancamento({...formLancamento, valor_unitario: e.target.value})}
+                    onChange={(e) =>
+                      setFormLancamento({ ...formLancamento, valor_unitario: e.target.value })
+                    }
                     required
                   />
                 </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-4">
-                <Button 
-                  type="button" 
-                  variant="outline"
-                  onClick={() => setIsDialogOpen(false)}
-                >
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit">
-                  Registrar Lançamento
-                </Button>
+                <Button type="submit">Registrar Lançamento</Button>
               </div>
             </form>
           ) : (
@@ -730,10 +757,10 @@ export default function MateriaisMedicamentos() {
                   <Label htmlFor="codigo_cbhpm">Código CBHPM</Label>
                   <Input
                     id="codigo_cbhpm"
-                    value={formMaterial.codigo_cbhpm ? formMaterial.codigo_cbhpm.toUpperCase() : ""}
+                    value={formMaterial.codigo_cbhpm ? formMaterial.codigo_cbhpm.toUpperCase() : ''}
                     onChange={(e) => {
                       const normalized = normalizeCodeCBHPM(e.target.value);
-                      setFormMaterial({...formMaterial, codigo_cbhpm: normalized});
+                      setFormMaterial({ ...formMaterial, codigo_cbhpm: normalized });
                     }}
                     placeholder="Ex: 1.01.01.01-2"
                     className="font-bold text-lg tracking-widest text-gray-900"
@@ -745,10 +772,10 @@ export default function MateriaisMedicamentos() {
                   <Label htmlFor="codigo_tuss">Código TUSS</Label>
                   <Input
                     id="codigo_tuss"
-                    value={formMaterial.codigo_tuss ? formMaterial.codigo_tuss.toUpperCase() : ""}
+                    value={formMaterial.codigo_tuss ? formMaterial.codigo_tuss.toUpperCase() : ''}
                     onChange={(e) => {
                       const normalized = normalizeCodeCBHPM(e.target.value);
-                      setFormMaterial({...formMaterial, codigo_tuss: normalized});
+                      setFormMaterial({ ...formMaterial, codigo_tuss: normalized });
                     }}
                     placeholder="Ex: 0101010101"
                     className="font-bold text-lg tracking-widest text-gray-900"
@@ -761,16 +788,20 @@ export default function MateriaisMedicamentos() {
                   <Input
                     id="descricao"
                     value={formMaterial.descricao}
-                    onChange={(e) => setFormMaterial({...formMaterial, descricao: e.target.value})}
+                    onChange={(e) =>
+                      setFormMaterial({ ...formMaterial, descricao: e.target.value })
+                    }
                     required
                   />
                 </div>
 
                 <div>
                   <Label htmlFor="categoria">Categoria</Label>
-                  <Select 
+                  <Select
                     value={formMaterial.categoria}
-                    onValueChange={(value) => setFormMaterial({...formMaterial, categoria: value})}
+                    onValueChange={(value) =>
+                      setFormMaterial({ ...formMaterial, categoria: value })
+                    }
                     required
                   >
                     <SelectTrigger>
@@ -787,9 +818,11 @@ export default function MateriaisMedicamentos() {
 
                 <div>
                   <Label htmlFor="unidade_medida">Unidade de Medida</Label>
-                  <Select 
+                  <Select
                     value={formMaterial.unidade_medida}
-                    onValueChange={(value) => setFormMaterial({...formMaterial, unidade_medida: value})}
+                    onValueChange={(value) =>
+                      setFormMaterial({ ...formMaterial, unidade_medida: value })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -811,7 +844,9 @@ export default function MateriaisMedicamentos() {
                     type="number"
                     step="0.01"
                     value={formMaterial.valor_referencia}
-                    onChange={(e) => setFormMaterial({...formMaterial, valor_referencia: e.target.value})}
+                    onChange={(e) =>
+                      setFormMaterial({ ...formMaterial, valor_referencia: e.target.value })
+                    }
                     required
                   />
                 </div>
@@ -821,7 +856,9 @@ export default function MateriaisMedicamentos() {
                     type="checkbox"
                     id="controlado"
                     checked={formMaterial.controlado}
-                    onChange={(e) => setFormMaterial({...formMaterial, controlado: e.target.checked})}
+                    onChange={(e) =>
+                      setFormMaterial({ ...formMaterial, controlado: e.target.checked })
+                    }
                     className="rounded"
                   />
                   <Label htmlFor="controlado">Material Controlado</Label>
@@ -829,16 +866,10 @@ export default function MateriaisMedicamentos() {
               </div>
 
               <div className="flex justify-end gap-2 pt-4">
-                <Button 
-                  type="button" 
-                  variant="outline"
-                  onClick={() => setIsDialogOpen(false)}
-                >
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit">
-                  Cadastrar Material
-                </Button>
+                <Button type="submit">Cadastrar Material</Button>
               </div>
             </form>
           )}
@@ -847,4 +878,3 @@ export default function MateriaisMedicamentos() {
     </div>
   );
 }
-

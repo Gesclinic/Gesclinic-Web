@@ -4,10 +4,10 @@
 // ============================================================
 // Componente que envolve rotas que requerem setup wizard
 
-import React, { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
-import * as baseSystemApi from "@/lib/baseSystemApi";
-import { BlockingModal } from "./BlockingModal";
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+import * as baseSystemApi from '@/lib/baseSystemApi';
+import { BlockingModal } from './BlockingModal';
 
 /**
  * Wrapper para rotas que requerem wizard completo
@@ -24,7 +24,9 @@ export function ProtectedWizardRoute({ children, feature, options = {} }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!clinicId) return;
+    if (!clinicId) {
+      return;
+    }
     checkAccess();
   }, [clinicId, feature]);
 
@@ -36,46 +38,34 @@ export function ProtectedWizardRoute({ children, feature, options = {} }) {
       // Regras de bloqueio por feature
       const blockerRules = {
         agenda: {
-          message: "Para usar a Agenda, você precisa:",
+          message: 'Para usar a Agenda, você precisa:',
           checkIssues: true,
-          criticalIssues: [
-            "no_professionals",
-            "no_services",
-            "no_professional_services",
-          ],
+          criticalIssues: ['no_professionals', 'no_services', 'no_professional_services'],
         },
         scheduling: {
-          message: "Para agendar, você precisa:",
+          message: 'Para agendar, você precisa:',
           checkIssues: true,
           criticalIssues: [
-            "no_professionals",
-            "no_services",
-            "no_professional_services",
-            "incomplete_agenda_rules",
+            'no_professionals',
+            'no_services',
+            'no_professional_services',
+            'incomplete_agenda_rules',
           ],
         },
         financeiro: {
-          message: "Para acessar o Financeiro, você precisa:",
+          message: 'Para acessar o Financeiro, você precisa:',
           checkIssues: true,
-          criticalIssues: [
-            "no_professionals",
-            "no_services",
-            "no_professional_services",
-          ],
+          criticalIssues: ['no_professionals', 'no_services', 'no_professional_services'],
         },
         checkin: {
-          message: "Para usar Check-in, você precisa:",
+          message: 'Para usar Check-in, você precisa:',
           checkIssues: true,
-          criticalIssues: [
-            "no_professionals",
-            "no_services",
-            "no_professional_services",
-          ],
+          criticalIssues: ['no_professionals', 'no_services', 'no_professional_services'],
         },
         invoices: {
-          message: "Para gerar faturas, você precisa:",
+          message: 'Para gerar faturas, você precisa:',
           checkIssues: true,
-          criticalIssues: ["no_services"],
+          criticalIssues: ['no_services'],
         },
       };
 
@@ -88,9 +78,7 @@ export function ProtectedWizardRoute({ children, feature, options = {} }) {
       }
 
       // Verifica se há issues críticos
-      const criticalIssues = validation.issues.filter((i) =>
-        rule.criticalIssues.includes(i.id)
-      );
+      const criticalIssues = validation.issues.filter((i) => rule.criticalIssues.includes(i.id));
 
       if (criticalIssues.length > 0) {
         setIsBlocked(true);
@@ -100,13 +88,13 @@ export function ProtectedWizardRoute({ children, feature, options = {} }) {
             id: i.id,
             message: i.message,
             action: i.action,
-          }))
+          })),
         );
       } else {
         setIsBlocked(false);
       }
     } catch (error) {
-      console.error("Erro ao verificar acesso:", error);
+      console.error('Erro ao verificar acesso:', error);
       // Em caso de erro, não bloqueia (fail open)
       setIsBlocked(false);
     } finally {
@@ -127,12 +115,7 @@ export function ProtectedWizardRoute({ children, feature, options = {} }) {
 
   if (isBlocked) {
     return (
-      <BlockingModal
-        isOpen={true}
-        feature={feature}
-        reason={blockReason}
-        issues={blockingIssues}
-      />
+      <BlockingModal isOpen={true} feature={feature} reason={blockReason} issues={blockingIssues} />
     );
   }
 

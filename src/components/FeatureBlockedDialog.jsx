@@ -3,16 +3,18 @@
 // Diálogo que mostra quando uma funcionalidade está bloqueada
 // ============================================================
 
-import React from "react";
-import { AlertCircle, ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { useNavigate } from "react-router-dom";
+import React from 'react';
+import { AlertCircle, ArrowRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { useNavigate } from 'react-router-dom';
 
 export function FeatureBlockedDialog({ feature, blockReason, actionPath, isOpen, onDismiss }) {
   const navigate = useNavigate();
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    return null;
+  }
 
   return (
     <div className="app-modal-overlay">
@@ -46,17 +48,14 @@ export function FeatureBlockedDialog({ feature, blockReason, actionPath, isOpen,
                 Configurar Agora
               </Button>
             )}
-            <Button
-              onClick={onDismiss}
-              variant="outline"
-              className="w-full"
-            >
+            <Button onClick={onDismiss} variant="outline" className="w-full">
               Fechar
             </Button>
           </div>
 
           <p className="text-xs text-gray-500 mt-4 text-center">
-            Configure os requisitos em <strong>Base do Sistema</strong> para desbloquear esta funcionalidade.
+            Configure os requisitos em <strong>Base do Sistema</strong> para desbloquear esta
+            funcionalidade.
           </p>
         </div>
       </Card>

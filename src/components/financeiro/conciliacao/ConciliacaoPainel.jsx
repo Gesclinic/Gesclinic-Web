@@ -8,7 +8,7 @@ import { formatCurrency, formatDate } from '@/lib/formatters';
 import {
   CONCILIATION_STATUS_VISUAL,
   TRANSACTION_TYPE,
-  FINANCIAL_LINK_TYPE
+  FINANCIAL_LINK_TYPE,
 } from '@/lib/conciliationStatus';
 
 export function ConciliacaoPainel({
@@ -19,7 +19,7 @@ export function ConciliacaoPainel({
   onMarkDivergent,
   onIgnore,
   findSuggestions,
-  loading
+  loading,
 }) {
   const [loading2, setLoading2] = useState(false);
   const [divergenceReason, setDivergenceReason] = useState('');
@@ -27,13 +27,14 @@ export function ConciliacaoPainel({
   const [activeTab, setActiveTab] = useState('suggestions');
   const [creatingFinancial, setCreatingFinancial] = useState(false);
   const [financialForm, setFinancialForm] = useState({
-    type: statement?.transaction_type === TRANSACTION_TYPE.CREDIT 
-      ? FINANCIAL_LINK_TYPE.RECEIVABLE 
-      : FINANCIAL_LINK_TYPE.PAYABLE,
+    type:
+      statement?.transaction_type === TRANSACTION_TYPE.CREDIT
+        ? FINANCIAL_LINK_TYPE.RECEIVABLE
+        : FINANCIAL_LINK_TYPE.PAYABLE,
     dueDate: formatDate(new Date()),
     categoryId: null,
     costCenterId: null,
-    description: statement?.description || ''
+    description: statement?.description || '',
   });
 
   useEffect(() => {
@@ -43,7 +44,9 @@ export function ConciliacaoPainel({
   }, [statement, activeTab]);
 
   const handleFindSuggestions = async () => {
-    if (!statement) return;
+    if (!statement) {
+      return;
+    }
     setLoading2(true);
     try {
       await findSuggestions(statement);
@@ -61,7 +64,9 @@ export function ConciliacaoPainel({
   };
 
   const handleCreateAndLink = async () => {
-    if (!statement) return;
+    if (!statement) {
+      return;
+    }
     try {
       await onCreateAndLink(statement.id, {
         type: financialForm.type,
@@ -69,7 +74,7 @@ export function ConciliacaoPainel({
         description: financialForm.description,
         dueDate: financialForm.dueDate,
         categoryId: financialForm.categoryId,
-        costCenterId: financialForm.costCenterId
+        costCenterId: financialForm.costCenterId,
       });
       setCreatingFinancial(false);
     } catch (err) {
@@ -116,9 +121,7 @@ export function ConciliacaoPainel({
       <div className="border-b pb-4 mb-4">
         <div className="flex justify-between items-start">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Conciliação de Lançamento
-            </h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Conciliação de Lançamento</h3>
             <div className="space-y-1 text-sm">
               <p className="text-gray-600">
                 <span className="font-medium">Data:</span> {formatDate(statement.statement_date)}
@@ -177,14 +180,16 @@ export function ConciliacaoPainel({
       {activeTab === 'suggestions' && (
         <div className="space-y-3">
           {loading2 && <p className="text-center text-gray-500">Buscando sugestões...</p>}
-          {!loading2 && suggestions[statement.id]?.length > 0 ? (
-            suggestions[statement.id].map((sugg, idx) => (
+          {!loading2 && suggestions[statement.id]?.length > 0
+            ? suggestions[statement.id].map((sugg, idx) => (
               <div key={idx} className="p-3 border rounded-lg hover:bg-gray-50">
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex-1">
                     <p className="font-medium text-gray-900">{sugg.description}</p>
                     <p className="text-xs text-gray-500">
-                      {sugg.type === FINANCIAL_LINK_TYPE.PAYABLE ? 'Contas a Pagar' : 'Contas a Receber'}
+                      {sugg.type === FINANCIAL_LINK_TYPE.PAYABLE
+                        ? 'Contas a Pagar'
+                        : 'Contas a Receber'}
                     </p>
                   </div>
                   <div className="text-right">
@@ -195,10 +200,10 @@ export function ConciliacaoPainel({
                 <div className="flex justify-between items-center">
                   <div className="flex gap-2 text-xs">
                     <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                      Score: {(sugg.matchScore * 100).toFixed(0)}%
+                        Score: {(sugg.matchScore * 100).toFixed(0)}%
                     </span>
                     <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded">
-                      Status: {sugg.status}
+                        Status: {sugg.status}
                     </span>
                   </div>
                   <Button
@@ -206,14 +211,12 @@ export function ConciliacaoPainel({
                     size="sm"
                     className="bg-green-600 hover:bg-green-700"
                   >
-                    ✓ Conciliar
+                      ✓ Conciliar
                   </Button>
                 </div>
               </div>
             ))
-          ) : (
-            !loading2 && <p className="text-center text-gray-500">Nenhuma sugestão encontrada</p>
-          )}
+            : !loading2 && <p className="text-center text-gray-500">Nenhuma sugestão encontrada</p>}
         </div>
       )}
 
@@ -224,7 +227,7 @@ export function ConciliacaoPainel({
             <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
             <select
               value={financialForm.type}
-              onChange={(e) => setFinancialForm({...financialForm, type: e.target.value})}
+              onChange={(e) => setFinancialForm({ ...financialForm, type: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value={FINANCIAL_LINK_TYPE.PAYABLE}>Contas a Pagar</option>
@@ -237,17 +240,19 @@ export function ConciliacaoPainel({
             <input
               type="text"
               value={financialForm.description}
-              onChange={(e) => setFinancialForm({...financialForm, description: e.target.value})}
+              onChange={(e) => setFinancialForm({ ...financialForm, description: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Data de Vencimento</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Data de Vencimento
+            </label>
             <input
               type="date"
               value={financialForm.dueDate}
-              onChange={(e) => setFinancialForm({...financialForm, dueDate: e.target.value})}
+              onChange={(e) => setFinancialForm({ ...financialForm, dueDate: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -298,12 +303,7 @@ export function ConciliacaoPainel({
               onChange={(e) => setIgnoreReason(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-2 focus:outline-none focus:ring-2 focus:ring-gray-500"
             />
-            <Button
-              onClick={handleIgnore}
-              disabled={loading}
-              variant="outline"
-              className="w-full"
-            >
+            <Button onClick={handleIgnore} disabled={loading} variant="outline" className="w-full">
               ⚠️ Ignorar
             </Button>
           </div>

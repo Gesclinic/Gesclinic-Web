@@ -1,16 +1,16 @@
 /**
  * SuggestionsDrawer.jsx
- * 
+ *
  * 💡 DRAWER LATERAL COM SUGESTÕES
- * 
+ *
  * Exibe sugestões em painel deslizável ao lado da agenda
  * com mais espaço e detalhes
  */
 
-import React, { useState, useEffect } from "react";
-import { X, Menu, RefreshCw, Zap } from "lucide-react";
-import { generateEncaixeSuggestions } from "@/lib/agendaSuggestionsApi";
-import AgendaSuggestions from "./AgendaSuggestions";
+import React, { useState, useEffect } from 'react';
+import { X, Menu, RefreshCw, Zap } from 'lucide-react';
+import { generateEncaixeSuggestions } from '@/lib/agendaSuggestionsApi';
+import AgendaSuggestions from './AgendaSuggestions';
 
 export default function SuggestionsDrawer({
   clinicId,
@@ -37,10 +37,7 @@ export default function SuggestionsDrawer({
     <>
       {/* Backdrop */}
       {isOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
-          onClick={onClose}
-        />
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden" onClick={onClose} />
       )}
 
       {/* Drawer */}
@@ -48,7 +45,7 @@ export default function SuggestionsDrawer({
         className={`
           fixed right-0 top-0 h-full bg-white border-l border-gray-200
           transform transition-transform duration-300 z-40
-          ${isOpen ? "translate-x-0" : "translate-x-full"}
+          ${isOpen ? 'translate-x-0' : 'translate-x-full'}
           w-full sm:w-96 overflow-y-auto scrollbar-custom
         `}
       >
@@ -66,11 +63,7 @@ export default function SuggestionsDrawer({
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
               title="Atualizar sugestões"
             >
-              <RefreshCw
-                className={`w-4 h-4 text-gray-600 ${
-                  refreshing ? "animate-spin" : ""
-                }`}
-              />
+              <RefreshCw className={`w-4 h-4 text-gray-600 ${refreshing ? 'animate-spin' : ''}`} />
             </button>
 
             <button
@@ -96,7 +89,7 @@ export default function SuggestionsDrawer({
         {/* Footer com timestamp */}
         {lastUpdate && (
           <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 p-3 text-xs text-gray-500 text-center">
-            Atualizado em {lastUpdate.toLocaleTimeString("pt-BR")}
+            Atualizado em {lastUpdate.toLocaleTimeString('pt-BR')}
           </div>
         )}
       </div>
@@ -116,4 +109,3 @@ export function useSuggestionsDrawer() {
 
   return { isOpen, toggle, open, close };
 }
-

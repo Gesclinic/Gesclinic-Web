@@ -1,5 +1,15 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { TrendingUp, ChevronDown, ChevronUp, Save, Trash2, X, FileText, FileSpreadsheet, Printer } from 'lucide-react';
+import {
+  TrendingUp,
+  ChevronDown,
+  ChevronUp,
+  Save,
+  Trash2,
+  X,
+  FileText,
+  FileSpreadsheet,
+  Printer,
+} from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useClinicContext } from '@/contexts/ClinicContext';
 import { supabase } from '@/lib/customSupabaseClient';
@@ -29,7 +39,7 @@ const CaixaIndividualOperador = () => {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [filterName, setFilterName] = useState('');
   const [savedFilters, setSavedFilters] = useState([]);
-  
+
   // Estados dos filtros
   const [filters, setFilters] = useState({
     startDate: '',
@@ -38,16 +48,30 @@ const CaixaIndividualOperador = () => {
     origin: '',
     professionalId: '',
     payerId: '',
-    paymentMethod: ''
+    paymentMethod: '',
   });
 
-  const { movements, loading: movementsLoading, fetchMovements, addMovement, deleteMovement } = useCashMovements(drawer?.id || '', clinicId || '');
-  const { patients, professionals, services, payers, fetchAllData: fetchFormData } = useCashFormData(clinicId || '');
+  const {
+    movements,
+    loading: movementsLoading,
+    fetchMovements,
+    addMovement,
+    deleteMovement,
+  } = useCashMovements(drawer?.id || '', clinicId || '');
+  const {
+    patients,
+    professionals,
+    services,
+    payers,
+    fetchAllData: fetchFormData,
+  } = useCashFormData(clinicId || '');
   const { fetchProfessionalReprises } = useRepasseCalculation();
 
   useEffect(() => {
-    if (!user?.id) return;
-    
+    if (!user?.id) {
+      return;
+    }
+
     // Buscar nome do usuário da tabela users
     const fetchOperatorName = async () => {
       try {
@@ -56,7 +80,7 @@ const CaixaIndividualOperador = () => {
           .select('name')
           .eq('id', user.id)
           .single();
-        
+
         if (!error && data?.name) {
           setOperatorName(data.name);
         }
@@ -81,15 +105,17 @@ const CaixaIndividualOperador = () => {
   }, [clinicId]);
 
   const loadDrawer = async () => {
-    if (!clinicId || !user?.id) return;
+    if (!clinicId || !user?.id) {
+      return;
+    }
     setLoading(true);
     try {
       const d = await cashDrawerApi.getOrCreateDrawer(clinicId, user.id);
       setDrawer(d);
-      
+
       const summ = await cashDrawerApi.getMovementSummary(d.id);
       setSummary(summ);
-      
+
       // Fetch from new hook
       if (d.id) {
         await fetchMovements();
@@ -113,11 +139,11 @@ const CaixaIndividualOperador = () => {
         ...formData,
         drawer_id: drawer.id,
         clinic_id: clinicId,
-        created_by: user.id
+        created_by: user.id,
       };
 
       await addMovement(payload);
-      
+
       // Reload drawer summary
       const summ = await cashDrawerApi.getMovementSummary(drawer.id);
       setSummary(summ);
@@ -132,11 +158,13 @@ const CaixaIndividualOperador = () => {
   };
 
   const handleDeleteMovement = async (movementId) => {
-    if (!window.confirm('Tem certeza que deseja deletar este movimento?')) return;
+    if (!window.confirm('Tem certeza que deseja deletar este movimento?')) {
+      return;
+    }
 
     try {
       await deleteMovement(movementId);
-      
+
       // Reload drawer summary
       if (drawer?.id) {
         const summ = await cashDrawerApi.getMovementSummary(drawer.id);
@@ -148,9 +176,13 @@ const CaixaIndividualOperador = () => {
   };
 
   const handleCloseDrawer = async () => {
-    if (!summary) return;
+    if (!summary) {
+      return;
+    }
     const closingBalance = prompt('Saldo final do caixa:', summary.balance.toFixed(2));
-    if (closingBalance === null) return;
+    if (closingBalance === null) {
+      return;
+    }
     try {
       await cashDrawerApi.closeDrawer(drawer.id, closingBalance, summary.balance, '');
       await loadDrawer();
@@ -160,7 +192,7 @@ const CaixaIndividualOperador = () => {
   };
 
   const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+    setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
   const clearFilters = () => {
@@ -171,23 +203,25 @@ const CaixaIndividualOperador = () => {
       origin: '',
       professionalId: '',
       payerId: '',
-      paymentMethod: ''
+      paymentMethod: '',
     });
   };
 
   const saveFilterWithName = () => {
-    if (!filterName.trim()) return;
-    
+    if (!filterName.trim()) {
+      return;
+    }
+
     const newFilter = {
       id: Date.now(),
       name: filterName,
-      filters: { ...filters }
+      filters: { ...filters },
     };
-    
+
     const updated = [...savedFilters, newFilter];
     setSavedFilters(updated);
     localStorage.setItem(`caixa-operador-filters-${clinicId}`, JSON.stringify(updated));
-    
+
     setFilterName('');
     setShowSaveModal(false);
   };
@@ -197,7 +231,7 @@ const CaixaIndividualOperador = () => {
   };
 
   const deleteSavedFilter = (id) => {
-    const updated = savedFilters.filter(f => f.id !== id);
+    const updated = savedFilters.filter((f) => f.id !== id);
     setSavedFilters(updated);
     localStorage.setItem(`caixa-operador-filters-${clinicId}`, JSON.stringify(updated));
   };
@@ -206,7 +240,7 @@ const CaixaIndividualOperador = () => {
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currency: 'BRL'
+      currency: 'BRL',
     }).format(value || 0);
   };
 
@@ -223,9 +257,24 @@ const CaixaIndividualOperador = () => {
       ['Total Saida', formatCurrency(summary?.totalSaida), '', '', '', '', '', '', ''],
       ['', '', '', '', '', '', '', '', ''],
       ['MOVIMENTOS FILTRADOS', '', '', '', '', '', '', '', ''],
-      ['HORA', 'PACIENTE', 'SERVICO', 'CONVENIO', 'TIPO', 'PROFISSIONAL', 'FORMA PGTO', 'VALOR', 'STATUS'],
-      ...filteredMovements.map(m => [
-        m.created_at ? new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+      [
+        'HORA',
+        'PACIENTE',
+        'SERVICO',
+        'CONVENIO',
+        'TIPO',
+        'PROFISSIONAL',
+        'FORMA PGTO',
+        'VALOR',
+        'STATUS',
+      ],
+      ...filteredMovements.map((m) => [
+        m.created_at
+          ? new Date(m.created_at).toLocaleTimeString('pt-BR', {
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+          : 'N/A',
         m.patient?.name || 'Particular',
         m.service?.name || 'N/A',
         m.payer_type === 'convenio' && m.payer ? m.payer.name : 'Particular',
@@ -233,8 +282,8 @@ const CaixaIndividualOperador = () => {
         m.professional?.name || 'N/A',
         m.payment_method || 'N/A',
         formatCurrency(m.amount),
-        m.status ? m.status.charAt(0).toUpperCase() + m.status.slice(1) : 'N/A'
-      ])
+        m.status ? m.status.charAt(0).toUpperCase() + m.status.slice(1) : 'N/A',
+      ]),
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(data);
@@ -247,11 +296,11 @@ const CaixaIndividualOperador = () => {
     const doc = new jsPDF();
     doc.setFontSize(16);
     doc.text('RELATÓRIO CAIXA INDIVIDUAL', 14, 15);
-    
+
     doc.setFontSize(10);
     doc.text(`Data de Geração: ${new Date().toLocaleDateString('pt-BR')}`, 14, 25);
     doc.text(`Operador: ${operatorName || 'N/A'}`, 14, 32);
-    
+
     // Seção de Resumo
     doc.setFontSize(12);
     doc.text('RESUMO DO DIA', 14, 45);
@@ -263,8 +312,13 @@ const CaixaIndividualOperador = () => {
 
     // Tabela de Movimentos Filtrados
     if (filteredMovements.length > 0) {
-      const tableData = filteredMovements.map(m => [
-        m.created_at ? new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+      const tableData = filteredMovements.map((m) => [
+        m.created_at
+          ? new Date(m.created_at).toLocaleTimeString('pt-BR', {
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+          : 'N/A',
         m.patient?.name || 'Particular',
         m.service?.name || 'N/A',
         m.payer_type === 'convenio' && m.payer ? m.payer.name : 'Particular',
@@ -272,22 +326,34 @@ const CaixaIndividualOperador = () => {
         m.professional?.name || 'N/A',
         m.payment_method || 'N/A',
         formatCurrency(m.amount),
-        m.status ? m.status.charAt(0).toUpperCase() + m.status.slice(1) : 'N/A'
+        m.status ? m.status.charAt(0).toUpperCase() + m.status.slice(1) : 'N/A',
       ]);
 
       doc.setFontSize(11);
       doc.text('MOVIMENTOS FILTRADOS', 14, 85);
-      
+
       doc.autoTable({
-        head: [['HORA', 'PACIENTE', 'SERVICO', 'CONVENIO', 'TIPO', 'PROFISSIONAL', 'FORMA PGTO', 'VALOR', 'STATUS']],
+        head: [
+          [
+            'HORA',
+            'PACIENTE',
+            'SERVICO',
+            'CONVENIO',
+            'TIPO',
+            'PROFISSIONAL',
+            'FORMA PGTO',
+            'VALOR',
+            'STATUS',
+          ],
+        ],
         body: tableData,
         startY: 92,
         theme: 'grid',
         styles: { fontSize: 8 },
         headStyles: { fillColor: [66, 133, 244], textColor: [255, 255, 255], fontStyle: 'bold' },
         columnStyles: {
-          7: { halign: 'right' } // Align valor to right
-        }
+          7: { halign: 'right' }, // Align valor to right
+        },
       });
     } else {
       doc.setFontSize(10);
@@ -302,32 +368,50 @@ const CaixaIndividualOperador = () => {
   };
 
   // Aplicar filtros aos movimentos
-  const filteredMovements = movements.filter(mov => {
+  const filteredMovements = movements.filter((mov) => {
     if (filters.startDate) {
       const movDate = new Date(mov.created_at).toDateString();
       const filterDate = new Date(filters.startDate).toDateString();
-      if (movDate < filterDate) return false;
+      if (movDate < filterDate) {
+        return false;
+      }
     }
     if (filters.endDate) {
       const movDate = new Date(mov.created_at).toDateString();
       const filterDate = new Date(filters.endDate).toDateString();
-      if (movDate > filterDate) return false;
+      if (movDate > filterDate) {
+        return false;
+      }
     }
-    if (filters.type && mov.type !== filters.type) return false;
-    if (filters.origin && mov.origin !== filters.origin) return false;
-    if (filters.professionalId && mov.professional_id !== filters.professionalId) return false;
-    if (filters.payerId && mov.payer_id !== filters.payerId) return false;
-    if (filters.paymentMethod && mov.payment_method !== filters.paymentMethod) return false;
+    if (filters.type && mov.type !== filters.type) {
+      return false;
+    }
+    if (filters.origin && mov.origin !== filters.origin) {
+      return false;
+    }
+    if (filters.professionalId && mov.professional_id !== filters.professionalId) {
+      return false;
+    }
+    if (filters.payerId && mov.payer_id !== filters.payerId) {
+      return false;
+    }
+    if (filters.paymentMethod && mov.payment_method !== filters.paymentMethod) {
+      return false;
+    }
     return true;
   });
 
   // Extrair opções únicas dos movimentos para filtros
-  const uniqueProfessionals = [...new Set(movements.map(m => m.professional_id).filter(Boolean))];
-  const uniquePayers = [...new Set(movements.map(m => m.payer_id).filter(Boolean))];
-  const uniquePaymentMethods = [...new Set(movements.map(m => m.payment_method).filter(Boolean))];
+  const uniqueProfessionals = [...new Set(movements.map((m) => m.professional_id).filter(Boolean))];
+  const uniquePayers = [...new Set(movements.map((m) => m.payer_id).filter(Boolean))];
+  const uniquePaymentMethods = [...new Set(movements.map((m) => m.payment_method).filter(Boolean))];
 
-  if (loading) return <div className="p-6 text-center">Carregando...</div>;
-  if (!drawer) return <div className="p-6 text-center text-red-600">Erro ao carregar caixa</div>;
+  if (loading) {
+    return <div className="p-6 text-center">Carregando...</div>;
+  }
+  if (!drawer) {
+    return <div className="p-6 text-center text-red-600">Erro ao carregar caixa</div>;
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">
@@ -336,7 +420,9 @@ const CaixaIndividualOperador = () => {
         <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-800">💳 Caixa Individual</h1>
-            <p className="text-slate-500">Gerenciamento integrado de movimentações e atendimento clínico</p>
+            <p className="text-slate-500">
+              Gerenciamento integrado de movimentações e atendimento clínico
+            </p>
           </div>
           <div className="flex gap-2 flex-wrap">
             <button
@@ -367,22 +453,34 @@ const CaixaIndividualOperador = () => {
         <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-xl shadow-lg p-6 mb-8 border border-blue-500">
           <div className="grid grid-cols-4 gap-6">
             <div className="flex flex-col">
-              <span className="text-blue-200 text-xs uppercase tracking-wide font-semibold mb-2">Saldo Aberto</span>
+              <span className="text-blue-200 text-xs uppercase tracking-wide font-semibold mb-2">
+                Saldo Aberto
+              </span>
               <span className="text-lg font-bold">R$ {drawer.opening_balance.toFixed(2)}</span>
             </div>
             <div className="flex flex-col border-l border-blue-400 pl-6">
-              <span className="text-blue-200 text-xs uppercase tracking-wide font-semibold mb-2">Saldo Atual</span>
+              <span className="text-blue-200 text-xs uppercase tracking-wide font-semibold mb-2">
+                Saldo Atual
+              </span>
               <span className="text-lg font-bold">R$ {summary?.balance.toFixed(2) || '0.00'}</span>
             </div>
             <div className="flex flex-col border-l border-blue-400 pl-6">
-              <span className="text-blue-200 text-xs uppercase tracking-wide font-semibold mb-2">Status</span>
-              <span className={`text-sm font-bold uppercase ${drawer.status === 'open' ? 'text-green-300' : 'text-yellow-300'}`}>
+              <span className="text-blue-200 text-xs uppercase tracking-wide font-semibold mb-2">
+                Status
+              </span>
+              <span
+                className={`text-sm font-bold uppercase ${drawer.status === 'open' ? 'text-green-300' : 'text-yellow-300'}`}
+              >
                 {drawer.status === 'open' ? '🟢 ABERTO' : '🔴 FECHADO'}
               </span>
             </div>
             <div className="flex flex-col border-l border-blue-400 pl-6">
-              <span className="text-blue-200 text-xs uppercase tracking-wide font-semibold mb-2">Operador</span>
-              <span className="text-sm font-semibold truncate">{operatorName || user?.email || 'N/A'}</span>
+              <span className="text-blue-200 text-xs uppercase tracking-wide font-semibold mb-2">
+                Operador
+              </span>
+              <span className="text-sm font-semibold truncate">
+                {operatorName || user?.email || 'N/A'}
+              </span>
             </div>
           </div>
         </div>
@@ -394,7 +492,9 @@ const CaixaIndividualOperador = () => {
               <div className="h-1 bg-gradient-to-r from-green-500 to-green-600" />
               <div className="p-5">
                 <p className="text-sm font-medium text-slate-500 mb-2">Entradas</p>
-                <p className="text-lg font-bold text-slate-800">R$ {summary.totalEntrada.toFixed(2)}</p>
+                <p className="text-lg font-bold text-slate-800">
+                  R$ {summary.totalEntrada.toFixed(2)}
+                </p>
               </div>
             </div>
 
@@ -402,21 +502,28 @@ const CaixaIndividualOperador = () => {
               <div className="h-1 bg-gradient-to-r from-red-500 to-red-600" />
               <div className="p-5">
                 <p className="text-sm font-medium text-slate-500 mb-2">Saídas</p>
-                <p className="text-lg font-bold text-slate-800">R$ {summary.totalSaida.toFixed(2)}</p>
+                <p className="text-lg font-bold text-slate-800">
+                  R$ {summary.totalSaida.toFixed(2)}
+                </p>
               </div>
             </div>
 
-            {Object.entries(summary.byMethod).slice(0, 3).map(([method, data]) => (
-              <div key={method} className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition">
-                <div className="h-1 bg-gradient-to-r from-blue-500 to-blue-600" />
-                <div className="p-5">
-                  <p className="text-sm font-medium text-slate-500 mb-2">{method}</p>
-                  <p className="text-lg font-bold text-slate-800">
-                    R$ {(data.entrada - data.saida).toFixed(2)}
-                  </p>
+            {Object.entries(summary.byMethod)
+              .slice(0, 3)
+              .map(([method, data]) => (
+                <div
+                  key={method}
+                  className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition"
+                >
+                  <div className="h-1 bg-gradient-to-r from-blue-500 to-blue-600" />
+                  <div className="p-5">
+                    <p className="text-sm font-medium text-slate-500 mb-2">{method}</p>
+                    <p className="text-lg font-bold text-slate-800">
+                      R$ {(data.entrada - data.saida).toFixed(2)}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
         )}
 
@@ -424,7 +531,7 @@ const CaixaIndividualOperador = () => {
         <div className="bg-white rounded-xl shadow-sm border border-slate-100 mb-6 overflow-hidden">
           <div className="border-b border-slate-100">
             <div className="flex p-2 gap-2">
-              {['resumo', 'movimentos'].map(tab => (
+              {['resumo', 'movimentos'].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -452,13 +559,21 @@ const CaixaIndividualOperador = () => {
                 <div className="grid grid-cols-2 gap-6">
                   <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
                     <p className="text-sm text-green-700 font-semibold mb-2">Total de Entradas</p>
-                    <p className="text-xl font-bold text-green-800">R$ {summary.totalEntrada.toFixed(2)}</p>
-                    <p className="text-xs text-green-600 mt-2">+{movements.filter(m => m.type === 'entrada').length} transações</p>
+                    <p className="text-xl font-bold text-green-800">
+                      R$ {summary.totalEntrada.toFixed(2)}
+                    </p>
+                    <p className="text-xs text-green-600 mt-2">
+                      +{movements.filter((m) => m.type === 'entrada').length} transações
+                    </p>
                   </div>
                   <div className="p-4 bg-gradient-to-br from-red-50 to-red-100 rounded-lg border border-red-200">
                     <p className="text-sm text-red-700 font-semibold mb-2">Total de Saídas</p>
-                    <p className="text-xl font-bold text-red-800">R$ {summary.totalSaida.toFixed(2)}</p>
-                    <p className="text-xs text-red-600 mt-2">-{movements.filter(m => m.type === 'saida').length} transações</p>
+                    <p className="text-xl font-bold text-red-800">
+                      R$ {summary.totalSaida.toFixed(2)}
+                    </p>
+                    <p className="text-xs text-red-600 mt-2">
+                      -{movements.filter((m) => m.type === 'saida').length} transações
+                    </p>
                   </div>
                 </div>
               </div>
@@ -481,7 +596,9 @@ const CaixaIndividualOperador = () => {
                   <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-4 animate-in fade-in duration-200">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                       <div>
-                        <label className="block text-xs font-semibold text-slate-600 mb-1">Data Inicial</label>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">
+                          Data Inicial
+                        </label>
                         <input
                           type="date"
                           value={filters.startDate}
@@ -490,7 +607,9 @@ const CaixaIndividualOperador = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-600 mb-1">Data Final</label>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">
+                          Data Final
+                        </label>
                         <input
                           type="date"
                           value={filters.endDate}
@@ -499,7 +618,9 @@ const CaixaIndividualOperador = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-600 mb-1">Tipo</label>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">
+                          Tipo
+                        </label>
                         <select
                           value={filters.type}
                           onChange={(e) => handleFilterChange('type', e.target.value)}
@@ -511,7 +632,9 @@ const CaixaIndividualOperador = () => {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-600 mb-1">Origem</label>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">
+                          Origem
+                        </label>
                         <select
                           value={filters.origin}
                           onChange={(e) => handleFilterChange('origin', e.target.value)}
@@ -523,41 +646,53 @@ const CaixaIndividualOperador = () => {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-600 mb-1">Profissional</label>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">
+                          Profissional
+                        </label>
                         <select
                           value={filters.professionalId}
                           onChange={(e) => handleFilterChange('professionalId', e.target.value)}
                           className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="">Todos</option>
-                          {uniqueProfessionals.map(prof => (
-                            <option key={prof} value={prof}>{prof}</option>
+                          {uniqueProfessionals.map((prof) => (
+                            <option key={prof} value={prof}>
+                              {prof}
+                            </option>
                           ))}
                         </select>
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-600 mb-1">Convênio</label>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">
+                          Convênio
+                        </label>
                         <select
                           value={filters.payerId}
                           onChange={(e) => handleFilterChange('payerId', e.target.value)}
                           className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="">Todos</option>
-                          {uniquePayers.map(payer => (
-                            <option key={payer} value={payer}>{payer}</option>
+                          {uniquePayers.map((payer) => (
+                            <option key={payer} value={payer}>
+                              {payer}
+                            </option>
                           ))}
                         </select>
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold text-slate-600 mb-1">Forma Pgto</label>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">
+                          Forma Pgto
+                        </label>
                         <select
                           value={filters.paymentMethod}
                           onChange={(e) => handleFilterChange('paymentMethod', e.target.value)}
                           className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="">Todos</option>
-                          {uniquePaymentMethods.map(method => (
-                            <option key={method} value={method}>{method}</option>
+                          {uniquePaymentMethods.map((method) => (
+                            <option key={method} value={method}>
+                              {method}
+                            </option>
                           ))}
                         </select>
                       </div>
@@ -584,20 +719,24 @@ const CaixaIndividualOperador = () => {
                         <div className="flex items-center gap-2">
                           <select
                             onChange={(e) => {
-                              const filter = savedFilters.find(f => f.id.toString() === e.target.value);
-                              if (filter) loadSavedFilter(filter);
+                              const filter = savedFilters.find(
+                                (f) => f.id.toString() === e.target.value,
+                              );
+                              if (filter) {
+                                loadSavedFilter(filter);
+                              }
                             }}
                             className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                           >
                             <option value="">Carregar filtro salvo...</option>
-                            {savedFilters.map(f => (
+                            {savedFilters.map((f) => (
                               <option key={f.id} value={f.id}>
                                 {f.name}
                               </option>
                             ))}
                           </select>
                           <div className="flex gap-1">
-                            {savedFilters.map(f => (
+                            {savedFilters.map((f) => (
                               <button
                                 key={f.id}
                                 onClick={() => deleteSavedFilter(f.id)}
@@ -616,7 +755,8 @@ const CaixaIndividualOperador = () => {
 
                 <div className="flex justify-between items-center mb-4">
                   <p className="text-sm text-slate-600">
-                    Exibindo <span className="font-semibold">{filteredMovements.length}</span> de <span className="font-semibold">{movements.length}</span> movimentos
+                    Exibindo <span className="font-semibold">{filteredMovements.length}</span> de{' '}
+                    <span className="font-semibold">{movements.length}</span> movimentos
                   </p>
                   <button
                     onClick={() => setShowCashModal(true)}
@@ -675,7 +815,7 @@ const CaixaIndividualOperador = () => {
           <div className="bg-white rounded-lg shadow-xl w-full max-w-sm overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b border-slate-100">
               <h2 className="text-lg font-bold text-slate-800">Salvar Filtro</h2>
-              <button 
+              <button
                 onClick={() => {
                   setShowSaveModal(false);
                   setFilterName('');
@@ -687,7 +827,9 @@ const CaixaIndividualOperador = () => {
             </div>
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Nome do Filtro</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Nome do Filtro
+                </label>
                 <input
                   type="text"
                   value={filterName}
@@ -727,4 +869,3 @@ const CaixaIndividualOperador = () => {
 };
 
 export default CaixaIndividualOperador;
-

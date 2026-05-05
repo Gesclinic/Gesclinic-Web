@@ -1,33 +1,39 @@
-import React, { useState, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { X, Upload, Save, Lock } from "lucide-react";
-import { supabase } from "@/lib/customSupabaseClient";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
-import { useToast } from "@/components/ui/use-toast";
+import React, { useState, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Upload, Save, Lock } from 'lucide-react';
+import { supabase } from '@/lib/customSupabaseClient';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useToast } from '@/components/ui/use-toast';
 
 const UserProfileModal = ({ isOpen, onClose }) => {
   const { user, reloadUser } = useAuth();
   const { toast } = useToast();
-  const [name, setName] = useState(user?.user_metadata?.full_name || "");
-  const [email] = useState(user?.email || "");
-  const [avatarPreview, setAvatarPreview] = useState(user?.user_metadata?.avatar_url || "");
+  const [name, setName] = useState(user?.user_metadata?.full_name || '');
+  const [email] = useState(user?.email || '');
+  const [avatarPreview, setAvatarPreview] = useState(user?.user_metadata?.avatar_url || '');
   const [avatarFile, setAvatarFile] = useState(null);
   const [saving, setSaving] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const fileInputRef = useRef(null);
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    return null;
+  }
 
   /** 🔹 Upload de avatar para o Supabase Storage */
   const handleAvatarUpload = async (file) => {
-    if (!file) return;
+    if (!file) {
+      return;
+    }
     const filePath = `avatars/${user.id}-${Date.now()}-${file.name}`;
-    const { data, error } = await supabase.storage.from("avatars").upload(filePath, file);
-    if (error) throw error;
+    const { data, error } = await supabase.storage.from('avatars').upload(filePath, file);
+    if (error) {
+      throw error;
+    }
 
-    const { data: publicUrlData } = supabase.storage.from("avatars").getPublicUrl(filePath);
+    const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
     return publicUrlData.publicUrl;
   };
 
@@ -36,33 +42,37 @@ const UserProfileModal = ({ isOpen, onClose }) => {
     setSaving(true);
     try {
       let newAvatarUrl = avatarPreview;
-      if (avatarFile) newAvatarUrl = await handleAvatarUpload(avatarFile);
+      if (avatarFile) {
+        newAvatarUrl = await handleAvatarUpload(avatarFile);
+      }
 
       const updates = {
         data: {
           full_name: name,
-          avatar_url: newAvatarUrl || "",
+          avatar_url: newAvatarUrl || '',
         },
       };
 
       const { error } = await supabase.auth.updateUser(updates);
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
       await reloadUser?.();
 
       toast({
-        title: "Perfil atualizado com sucesso!",
-        description: "Suas informações foram salvas.",
-        className: "bg-emerald-600 text-white border-none",
+        title: 'Perfil atualizado com sucesso!',
+        description: 'Suas informações foram salvas.',
+        className: 'bg-emerald-600 text-white border-none',
       });
 
       onClose();
     } catch (err) {
-      console.error("Erro ao atualizar perfil:", err.message);
+      console.error('Erro ao atualizar perfil:', err.message);
       toast({
-        title: "Erro ao salvar alterações",
-        description: "Tente novamente mais tarde.",
-        variant: "destructive",
+        title: 'Erro ao salvar alterações',
+        description: 'Tente novamente mais tarde.',
+        variant: 'destructive',
       });
     } finally {
       setSaving(false);
@@ -75,9 +85,9 @@ const UserProfileModal = ({ isOpen, onClose }) => {
     if (file) {
       if (file.size > 2 * 1024 * 1024) {
         toast({
-          title: "Imagem muito grande",
-          description: "O tamanho máximo permitido é 2 MB.",
-          variant: "destructive",
+          title: 'Imagem muito grande',
+          description: 'O tamanho máximo permitido é 2 MB.',
+          variant: 'destructive',
         });
         return;
       }
@@ -89,32 +99,32 @@ const UserProfileModal = ({ isOpen, onClose }) => {
   /** 🔹 Remove o avatar */
   const handleRemoveAvatar = () => {
     setAvatarFile(null);
-    setAvatarPreview("");
+    setAvatarPreview('');
   };
 
   /** 🔹 Atualiza senha */
   const handleChangePassword = async () => {
     if (!newPassword || !confirmPassword) {
       toast({
-        title: "Campos obrigatórios",
-        description: "Preencha ambos os campos de senha.",
-        variant: "destructive",
+        title: 'Campos obrigatórios',
+        description: 'Preencha ambos os campos de senha.',
+        variant: 'destructive',
       });
       return;
     }
     if (newPassword !== confirmPassword) {
       toast({
-        title: "Senhas diferentes",
-        description: "As senhas não coincidem.",
-        variant: "destructive",
+        title: 'Senhas diferentes',
+        description: 'As senhas não coincidem.',
+        variant: 'destructive',
       });
       return;
     }
     if (newPassword.length < 6) {
       toast({
-        title: "Senha muito curta",
-        description: "A senha deve ter pelo menos 6 caracteres.",
-        variant: "destructive",
+        title: 'Senha muito curta',
+        description: 'A senha deve ter pelo menos 6 caracteres.',
+        variant: 'destructive',
       });
       return;
     }
@@ -123,22 +133,24 @@ const UserProfileModal = ({ isOpen, onClose }) => {
 
     try {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
-      setNewPassword("");
-      setConfirmPassword("");
+      setNewPassword('');
+      setConfirmPassword('');
 
       toast({
-        title: "Senha alterada com sucesso!",
-        description: "Sua nova senha já está ativa.",
-        className: "bg-emerald-600 text-white border-none",
+        title: 'Senha alterada com sucesso!',
+        description: 'Sua nova senha já está ativa.',
+        className: 'bg-emerald-600 text-white border-none',
       });
     } catch (err) {
-      console.error("Erro ao alterar senha:", err.message);
+      console.error('Erro ao alterar senha:', err.message);
       toast({
-        title: "Erro ao alterar senha",
-        description: "Tente novamente mais tarde.",
-        variant: "destructive",
+        title: 'Erro ao alterar senha',
+        description: 'Tente novamente mais tarde.',
+        variant: 'destructive',
       });
     } finally {
       setChangingPassword(false);
@@ -173,7 +185,7 @@ const UserProfileModal = ({ isOpen, onClose }) => {
             <div className="flex flex-col items-center gap-3 mb-6">
               <div className="relative">
                 <img
-                  src={avatarPreview || "https://via.placeholder.com/80x80?text=User"}
+                  src={avatarPreview || 'https://via.placeholder.com/80x80?text=User'}
                   alt="Avatar"
                   className="w-24 h-24 rounded-full object-cover border border-gray-300"
                 />
@@ -253,7 +265,7 @@ const UserProfileModal = ({ isOpen, onClose }) => {
                   className="flex items-center justify-center gap-2 bg-[#1A5B8A] text-white px-4 py-2 rounded-md hover:bg-[#174f78] w-full disabled:opacity-50"
                 >
                   <Lock className="w-4 h-4" />
-                  {changingPassword ? "Alterando..." : "Salvar nova senha"}
+                  {changingPassword ? 'Alterando...' : 'Salvar nova senha'}
                 </button>
               </div>
             </div>
@@ -266,7 +278,7 @@ const UserProfileModal = ({ isOpen, onClose }) => {
                 className="flex items-center gap-2 bg-[#1A5B8A] text-white px-4 py-2 rounded-md hover:bg-[#174f78] disabled:opacity-50"
               >
                 <Save className="w-4 h-4" />
-                {saving ? "Salvando..." : "Salvar Alterações"}
+                {saving ? 'Salvando...' : 'Salvar Alterações'}
               </button>
             </div>
           </motion.div>

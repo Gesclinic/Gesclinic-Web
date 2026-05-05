@@ -1,16 +1,23 @@
-import React, { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search } from "lucide-react";
-import { supabase } from "@/lib/customSupabaseClient";
-import { useToast } from "@/components/ui/use-toast";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
+import React, { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Search } from 'lucide-react';
+import { supabase } from '@/lib/customSupabaseClient';
+import { useToast } from '@/components/ui/use-toast';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
 
 export default function BuscarAgendamentoModal({ open, onClose, onSelect }) {
   const { user } = useAuth();
-  const [filtros, setFiltros] = useState({ paciente: "", profissional: "", data: "" });
+  const [filtros, setFiltros] = useState({ paciente: '', profissional: '', data: '' });
   const [resultados, setResultados] = useState([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -19,26 +26,32 @@ export default function BuscarAgendamentoModal({ open, onClose, onSelect }) {
     setLoading(true);
     let clinicId;
     if (user) {
-        const { data: profileData } = await supabase.from('profiles').select('default_clinic_id').eq('id', user.id).single();
-        clinicId = profileData?.default_clinic_id;
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('default_clinic_id')
+        .eq('id', user.id)
+        .single();
+      clinicId = profileData?.default_clinic_id;
     }
 
     if (!clinicId) {
-        toast({ title: "Erro", description: "Clínica não encontrada.", variant: "destructive" });
-        setLoading(false);
-        return;
+      toast({ title: 'Erro', description: 'Clínica não encontrada.', variant: 'destructive' });
+      setLoading(false);
+      return;
     }
 
-    const { data, error } = await supabase.rpc("list_appointments_enhanced", {
+    const { data, error } = await supabase.rpc('list_appointments_enhanced', {
       p_clinic_id: clinicId,
       p_start_date: filtros.data || new Date(0).toISOString(),
-      p_end_date: filtros.data ? new Date(new Date(filtros.data).getTime() + 24 * 60 * 60 * 1000).toISOString() : new Date().toISOString(),
+      p_end_date: filtros.data
+        ? new Date(new Date(filtros.data).getTime() + 24 * 60 * 60 * 1000).toISOString()
+        : new Date().toISOString(),
       p_professional_id: null,
       p_status: null,
     });
-    
+
     if (error) {
-      toast({ title: "Erro na busca", description: error.message, variant: "destructive" });
+      toast({ title: 'Erro na busca', description: error.message, variant: 'destructive' });
     } else {
       setResultados(data || []);
     }
@@ -56,7 +69,9 @@ export default function BuscarAgendamentoModal({ open, onClose, onSelect }) {
           <Input
             placeholder="Nome do Paciente ou Profissional"
             value={filtros.paciente}
-            onChange={(e) => setFiltros({ ...filtros, paciente: e.target.value, profissional: e.target.value })}
+            onChange={(e) =>
+              setFiltros({ ...filtros, paciente: e.target.value, profissional: e.target.value })
+            }
             className="flex-grow"
           />
           <Input
@@ -66,7 +81,7 @@ export default function BuscarAgendamentoModal({ open, onClose, onSelect }) {
             className="w-auto"
           />
           <Button onClick={handleBuscar} disabled={loading}>
-            <Search size={16} className="mr-2" /> {loading ? "Buscando..." : "Buscar"}
+            <Search size={16} className="mr-2" /> {loading ? 'Buscando...' : 'Buscar'}
           </Button>
         </div>
 
@@ -93,18 +108,26 @@ export default function BuscarAgendamentoModal({ open, onClose, onSelect }) {
                   }}
                 >
                   <TableCell>{new Date(r.start_time).toLocaleDateString('pt-BR')}</TableCell>
-                  <TableCell>{new Date(r.start_time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit'})}h</TableCell>
+                  <TableCell>
+                    {new Date(r.start_time).toLocaleTimeString('pt-BR', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                    h
+                  </TableCell>
                   <TableCell>{r.patient_name}</TableCell>
                   <TableCell>{r.professional_name}</TableCell>
                   <TableCell>{r.service_name}</TableCell>
                   <TableCell>{r.status}</TableCell>
                 </TableRow>
               ))}
-               {resultados.length === 0 && !loading && (
+              {resultados.length === 0 && !loading && (
                 <TableRow>
-                    <TableCell colSpan={6} className="text-center py-4">Nenhum resultado encontrado.</TableCell>
+                  <TableCell colSpan={6} className="text-center py-4">
+                    Nenhum resultado encontrado.
+                  </TableCell>
                 </TableRow>
-               )}
+              )}
             </TableBody>
           </Table>
         </div>

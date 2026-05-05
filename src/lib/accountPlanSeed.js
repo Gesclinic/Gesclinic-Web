@@ -6,7 +6,9 @@ import { supabase } from '@/lib/customSupabaseClient';
  * Level 2: Operational (launchable)
  */
 export async function applyDefaultAccountPlan(clinicId) {
-  if (!clinicId) throw new Error('Clinic ID obrigatório');
+  if (!clinicId) {
+    throw new Error('Clinic ID obrigatório');
+  }
 
   const parents = [
     { name: 'Receitas', type: 'receita' },
@@ -19,7 +21,7 @@ export async function applyDefaultAccountPlan(clinicId) {
   ];
 
   const children = {
-    'Receitas': [
+    Receitas: [
       'Consultas',
       'Exames',
       'Procedimentos',
@@ -35,7 +37,7 @@ export async function applyDefaultAccountPlan(clinicId) {
       'Parcerias / Comissões',
       'Receitas Financeiras',
     ],
-    'Custos': [
+    Custos: [
       'Repasse Médico',
       'Repasse Profissionais Terceiros',
       'Plantões',
@@ -72,19 +74,8 @@ export async function applyDefaultAccountPlan(clinicId) {
       'Juros e Multas',
       'Antecipação de Recebíveis',
     ],
-    'Impostos e Tributos': [
-      'Simples Nacional',
-      'ISS',
-      'IRPJ',
-      'CSLL',
-      'INSS Patronal',
-      'FGTS',
-    ],
-    'Investimentos': [
-      'Compra de Equipamentos',
-      'Obras e Reformas',
-      'Tecnologia e Expansão',
-    ],
+    'Impostos e Tributos': ['Simples Nacional', 'ISS', 'IRPJ', 'CSLL', 'INSS Patronal', 'FGTS'],
+    Investimentos: ['Compra de Equipamentos', 'Obras e Reformas', 'Tecnologia e Expansão'],
     'Contas de Resultado / Ajustes': [
       'Depreciação',
       'Amortização',
@@ -102,14 +93,20 @@ export async function applyDefaultAccountPlan(clinicId) {
       .eq('name', name)
       .limit(1)
       .maybeSingle();
-    if (findErr) throw findErr;
-    if (found?.id) return found.id;
+    if (findErr) {
+      throw findErr;
+    }
+    if (found?.id) {
+      return found.id;
+    }
     const { data: created, error: insErr } = await supabase
       .from('account_plans')
       .insert({ clinic_id: clinicId, name, type, parent_id: null })
       .select('id')
       .single();
-    if (insErr) throw insErr;
+    if (insErr) {
+      throw insErr;
+    }
     return created.id;
   };
 
@@ -123,14 +120,25 @@ export async function applyDefaultAccountPlan(clinicId) {
       .eq('name', childName)
       .limit(1)
       .maybeSingle();
-    if (findErr) throw findErr;
-    if (found?.id) return found.id;
+    if (findErr) {
+      throw findErr;
+    }
+    if (found?.id) {
+      return found.id;
+    }
     const { data: created, error: insErr } = await supabase
       .from('account_plans')
-      .insert({ clinic_id: clinicId, name: childName, type: parentType === 'receita' ? 'receita' : 'despesa', parent_id: parentId })
+      .insert({
+        clinic_id: clinicId,
+        name: childName,
+        type: parentType === 'receita' ? 'receita' : 'despesa',
+        parent_id: parentId,
+      })
       .select('id')
       .single();
-    if (insErr) throw insErr;
+    if (insErr) {
+      throw insErr;
+    }
     return created.id;
   };
 
@@ -148,7 +156,7 @@ export async function applyDefaultAccountPlan(clinicId) {
 
 /** Returns only launchable accounts (level 2, have parent). */
 export function selectLaunchable(plans) {
-  return (Array.isArray(plans) ? plans : []).filter(p => !!p.parent_id);
+  return (Array.isArray(plans) ? plans : []).filter((p) => !!p.parent_id);
 }
 
 /**
@@ -158,7 +166,9 @@ export function selectLaunchable(plans) {
  * - Re-applies the default hierarchical structure
  */
 export async function resetAccountPlan(clinicId) {
-  if (!clinicId) throw new Error('Clinic ID obrigatório');
+  if (!clinicId) {
+    throw new Error('Clinic ID obrigatório');
+  }
   try {
     // Clear categories on AP bills for this clinic
     await supabase.from('ap_bills').update({ category_id: null }).eq('clinic_id', clinicId);
@@ -168,7 +178,9 @@ export async function resetAccountPlan(clinicId) {
   }
   // Delete existing plan
   const del = await supabase.from('account_plans').delete().eq('clinic_id', clinicId);
-  if (del.error) throw del.error;
+  if (del.error) {
+    throw del.error;
+  }
   // Re-seed
   await applyDefaultAccountPlan(clinicId);
   return { ok: true };

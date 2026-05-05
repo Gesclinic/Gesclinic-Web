@@ -2,16 +2,15 @@ import { useState } from 'react';
 
 /**
  * Hook para gerenciar estado do formulário de agendamento
- * 
+ *
  * Responsabilidades:
  * - Manter estado centralizado do formulário
  * - Preencher com dados do agendamento
  * - Reset para novo agendamento
- * 
+ *
  * @returns {Object} { formData, setFormData, fillFromAppointment, reset }
  */
 export function useAppointmentForm() {
-
   const getEmpty = () => ({
     // 🔧 DADOS PRINCIPAIS
     patient_id: '',
@@ -24,7 +23,7 @@ export function useAppointmentForm() {
     value: '',
     status: 'scheduled',
     notes: '',
-    
+
     // 🔧 DADOS EXPANDIDOS (para consolidação completa)
     plano_contas_id: '',
     duration: 30,
@@ -41,7 +40,9 @@ export function useAppointmentForm() {
    * @param {Object} apt - Agendamento com dados em snake_case (do banco)
    */
   const fillFromAppointment = (apt) => {
-    if (!apt) return;
+    if (!apt) {
+      return;
+    }
 
     console.log('🔧 [useAppointmentForm] fillFromAppointment chamado com:', apt.id);
 
@@ -84,6 +85,6 @@ export function useAppointmentForm() {
     formData,
     setFormData,
     fillFromAppointment,
-    reset
+    reset,
   };
 }

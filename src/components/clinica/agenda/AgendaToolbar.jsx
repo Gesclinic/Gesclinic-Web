@@ -1,13 +1,28 @@
-import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Calendar as CalendarIcon, RefreshCcw, Users, LayoutGrid, List, ChevronLeft, ChevronRight, Filter } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { supabase } from "@/lib/customSupabaseClient";
-import { useClinic } from "@/contexts/useClinicContext";
+import React, { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import {
+  Calendar as CalendarIcon,
+  RefreshCcw,
+  Users,
+  LayoutGrid,
+  List,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
+} from 'lucide-react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { supabase } from '@/lib/customSupabaseClient';
+import { useClinic } from '@/contexts/useClinicContext';
 
 export default function AgendaToolbar({
   date,
@@ -23,7 +38,9 @@ export default function AgendaToolbar({
 
   useEffect(() => {
     const fetchProfessionals = async () => {
-      if (!clinic?.id) return;
+      if (!clinic?.id) {
+        return;
+      }
       const { data } = await supabase
         .from('professionals')
         .select('id, name')
@@ -88,8 +105,10 @@ export default function AgendaToolbar({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
-            {professionals.map(p => (
-              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+            {professionals.map((p) => (
+              <SelectItem key={p.id} value={p.id}>
+                {p.name}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -112,16 +131,16 @@ export default function AgendaToolbar({
         <div className="flex items-center gap-1 rounded-md bg-gray-100 p-1">
           <Button
             size="sm"
-            variant={viewMode === "clinica" ? "secondary" : "ghost"}
-            onClick={() => setViewMode("clinica")}
+            variant={viewMode === 'clinica' ? 'secondary' : 'ghost'}
+            onClick={() => setViewMode('clinica')}
             className="h-8 px-3"
           >
             <LayoutGrid className="h-4 w-4" />
           </Button>
           <Button
             size="sm"
-            variant={viewMode === "profissional" ? "secondary" : "ghost"}
-            onClick={() => setViewMode("profissional")}
+            variant={viewMode === 'profissional' ? 'secondary' : 'ghost'}
+            onClick={() => setViewMode('profissional')}
             className="h-8 px-3"
           >
             <List className="h-4 w-4" />

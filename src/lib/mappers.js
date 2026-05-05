@@ -3,7 +3,7 @@
  * Frontend (camelCase) ↔ Database (snake_case)
  */
 
-import { validateAppointmentPayload } from "./validators";
+import { validateAppointmentPayload } from './validators';
 
 // ============================================================
 // MAPPERS DE AGENDAMENTO
@@ -19,21 +19,21 @@ export function mapAppointmentToDatabase(payload) {
   // 🔴 CRÍTICO: Garantir clinic_id ANTES de fazer qualquer coisa
   const clinicId = payload.clinicId || payload.clinic_id;
   if (!clinicId) {
-    console.error("🔴 [MAPPER] clinic_id AUSENTE NO PAYLOAD!", { 
+    console.error('🔴 [MAPPER] clinic_id AUSENTE NO PAYLOAD!', {
       payload,
       hasClinicId: Boolean(payload.clinicId),
-      hasClinic_id: Boolean(payload.clinic_id)
+      hasClinic_id: Boolean(payload.clinic_id),
     });
-    throw new Error("clinic_id é OBRIGATÓRIO no payload - recebido undefined");
+    throw new Error('clinic_id é OBRIGATÓRIO no payload - recebido undefined');
   }
 
-  console.log("📝 [MAPPER] INPUT PAYLOAD:", {
+  console.log('📝 [MAPPER] INPUT PAYLOAD:', {
     keys: Object.keys(payload),
     hasDate: Boolean(payload.date),
     hasStartTime: Boolean(payload.startTime),
     hasEndTime: Boolean(payload.endTime),
     hasNotes: Boolean(payload.notes),
-    hasValue: Boolean(payload.value)
+    hasValue: Boolean(payload.value),
   });
 
   const mapped = {
@@ -53,7 +53,7 @@ export function mapAppointmentToDatabase(payload) {
     end_time: payload.endTime || payload.end_time || null,
 
     // Status e notas
-    status: payload.status || "scheduled",
+    status: payload.status || 'scheduled',
     notes: payload.notes || payload.observacoes || null,
 
     // Valores financeiros
@@ -62,20 +62,20 @@ export function mapAppointmentToDatabase(payload) {
     payer_type: payload.payerType || payload.payer_type || null,
 
     // Timestamp
-    updated_at: new Date().toISOString()
+    updated_at: new Date().toISOString(),
   };
 
-  console.log("📝 [MAPPER] OUTPUT MAPPED:", {
+  console.log('📝 [MAPPER] OUTPUT MAPPED:', {
     keys: Object.keys(mapped),
     clinic_id: mapped.clinic_id,
     scheduled_date: mapped.scheduled_date,
-    scheduled_time: mapped.scheduled_time
+    scheduled_time: mapped.scheduled_time,
   });
 
   // ⚠️ SANITY CHECK: Verificar novamente após mapeamento
   if (!mapped.clinic_id) {
-    console.error("🔴 [MAPPER] clinic_id perdido durante mapeamento!", { mapped });
-    throw new Error("ERRO INTERNO: clinic_id foi perdido após mapear");
+    console.error('🔴 [MAPPER] clinic_id perdido durante mapeamento!', { mapped });
+    throw new Error('ERRO INTERNO: clinic_id foi perdido após mapear');
   }
 
   return mapped;
@@ -86,7 +86,9 @@ export function mapAppointmentToDatabase(payload) {
  * snake_case → camelCase
  */
 export function mapAppointmentFromDatabase(data) {
-  if (!data) return null;
+  if (!data) {
+    return null;
+  }
 
   return {
     // IDs
@@ -121,7 +123,7 @@ export function mapAppointmentFromDatabase(data) {
     patient: data.patient,
     professional: data.professional,
     service: data.service,
-    payer: data.payer
+    payer: data.payer,
   };
 }
 
@@ -129,7 +131,9 @@ export function mapAppointmentFromDatabase(data) {
  * Mapeia lista de agendamentos
  */
 export function mapAppointmentsFromDatabase(data) {
-  if (!Array.isArray(data)) return [];
+  if (!Array.isArray(data)) {
+    return [];
+  }
   return data.map(mapAppointmentFromDatabase);
 }
 
@@ -148,7 +152,7 @@ export function mapGuiaToDatabase(payload) {
     descricao: payload.descricao,
     ativa: payload.ativa !== false,
     data_criacao: payload.data_criacao || new Date().toISOString(),
-    data_atualizacao: new Date().toISOString()
+    data_atualizacao: new Date().toISOString(),
   };
 }
 
@@ -156,7 +160,9 @@ export function mapGuiaToDatabase(payload) {
  * Converte guia do banco para frontend
  */
 export function mapGuiaFromDatabase(data) {
-  if (!data) return null;
+  if (!data) {
+    return null;
+  }
 
   return {
     id: data.id,
@@ -165,7 +171,7 @@ export function mapGuiaFromDatabase(data) {
     descricao: data.descricao,
     ativa: data.ativa,
     dataCriacao: data.data_criacao,
-    dataAtualizacao: data.data_atualizacao
+    dataAtualizacao: data.data_atualizacao,
   };
 }
 
@@ -173,7 +179,9 @@ export function mapGuiaFromDatabase(data) {
  * Mapeia lista de guias
  */
 export function mapGuiasFromDatabase(data) {
-  if (!Array.isArray(data)) return [];
+  if (!Array.isArray(data)) {
+    return [];
+  }
   return data.map(mapGuiaFromDatabase);
 }
 
@@ -185,7 +193,9 @@ export function mapGuiasFromDatabase(data) {
  * Converte log de auditoria do banco para frontend
  */
 export function mapAuditLogFromDatabase(data) {
-  if (!data) return null;
+  if (!data) {
+    return null;
+  }
 
   return {
     id: data.id,
@@ -194,7 +204,7 @@ export function mapAuditLogFromDatabase(data) {
     performedBy: data.performed_by,
     performedByRole: data.performed_by_role,
     context: data.context,
-    createdAt: data.created_at
+    createdAt: data.created_at,
   };
 }
 
@@ -202,7 +212,9 @@ export function mapAuditLogFromDatabase(data) {
  * Mapeia lista de logs de auditoria
  */
 export function mapAuditLogsFromDatabase(data) {
-  if (!Array.isArray(data)) return [];
+  if (!Array.isArray(data)) {
+    return [];
+  }
   return data.map(mapAuditLogFromDatabase);
 }
 
@@ -225,15 +237,14 @@ export function sanitizePayload(payload) {
 export function extractChanges(oldData, newData) {
   const changes = {};
 
-  Object.keys(newData).forEach(key => {
+  Object.keys(newData).forEach((key) => {
     if (oldData[key] !== newData[key]) {
       changes[key] = {
         old: oldData[key],
-        new: newData[key]
+        new: newData[key],
       };
     }
   });
 
   return changes;
 }
-

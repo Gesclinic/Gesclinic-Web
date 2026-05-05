@@ -1,14 +1,14 @@
-import React from "react";
-import PageLayout from "@/components/ui/PageLayout";
-import { useBreadcrumbs } from "@/hooks/useBreadcrumbs";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import React from 'react';
+import PageLayout from '@/components/ui/PageLayout';
+import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import LaudoTemplatesManager from '@/components/configuracoes/LaudoTemplatesManager';
 
 export default function DocumentosConfig() {
   const breadcrumbs = useBreadcrumbs([
-    { label: "Clínica", path: "/clinica" },
-    { label: "Configurações", path: "/clinica/configuracoes" },
-    { label: "Documentos e Modelos" }
+    { label: 'Clínica', path: '/clinica' },
+    { label: 'Configurações', path: '/clinica/configuracoes' },
+    { label: 'Documentos e Modelos' },
   ]);
 
   return (
@@ -75,4 +75,3 @@ export default function DocumentosConfig() {
     </PageLayout>
   );
 }
-

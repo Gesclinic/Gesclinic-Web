@@ -5,18 +5,25 @@ import { X, ChevronDown } from 'lucide-react';
  * AgendaProfessionalFilters - Filtros para Modo Profissional
  * Aparece apenas para Admin/Gestor, não aparece para profissional puro
  */
-export default function AgendaProfessionalFilters({ agenda, isGestor, canAccessGestorMode, isProfissional }) {
+export default function AgendaProfessionalFilters({
+  agenda,
+  isGestor,
+  canAccessGestorMode,
+  isProfissional,
+}) {
   const [expandFilters, setExpandFilters] = useState(window.innerWidth > 768);
-  
+
   // Mostrar filtros apenas se for admin/gestor E não for profissional puro
   const shouldShowFilters = (isGestor || canAccessGestorMode) && !isProfissional;
-  
+
   if (!shouldShowFilters) {
     return null;
   }
 
   // Contar filtros ativos
-  const activeFilterCount = Object.values(agenda.filters || {}).filter(v => v !== null && v !== '').length;
+  const activeFilterCount = Object.values(agenda.filters || {}).filter(
+    (v) => v !== null && v !== '',
+  ).length;
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg mb-6">
@@ -53,7 +60,9 @@ export default function AgendaProfessionalFilters({ agenda, isGestor, canAccessG
             onClick={() => setExpandFilters(!expandFilters)}
             className="md:hidden inline-flex items-center gap-1 px-3 py-1 text-sm text-gray-600 hover:text-gray-900"
           >
-            <ChevronDown className={`w-4 h-4 transition-transform ${expandFilters ? 'rotate-180' : ''}`} />
+            <ChevronDown
+              className={`w-4 h-4 transition-transform ${expandFilters ? 'rotate-180' : ''}`}
+            />
           </button>
         </div>
       </div>
@@ -163,4 +172,3 @@ export default function AgendaProfessionalFilters({ agenda, isGestor, canAccessG
     </div>
   );
 }
-

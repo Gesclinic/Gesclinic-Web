@@ -1,24 +1,39 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from 'react';
 import LaudoSignaturePad from '@/components/laudos/LaudoSignaturePad';
 import LaudoSignatureBlock from '@/components/laudos/LaudoSignatureBlock';
-import { Drawer, DrawerContent } from "@/components/ui/drawer";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
-import { Save, CreditCard, FileText, User, Printer, History, Loader2, ClipboardList } from "lucide-react";
-import { supabase } from "@/lib/customSupabaseClient.js";
-import { useToast } from "@/components/ui/use-toast";
-import { formatPhone } from "@/utils/formatters/formatPhone";
+import { Drawer, DrawerContent } from '@/components/ui/drawer';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Save,
+  CreditCard,
+  FileText,
+  User,
+  Printer,
+  History,
+  Loader2,
+  ClipboardList,
+} from 'lucide-react';
+import { supabase } from '@/lib/customSupabaseClient.js';
+import { useToast } from '@/components/ui/use-toast';
+import { formatPhone } from '@/utils/formatters/formatPhone';
 
 export default function DrawerAtendimento({ open, onClose, appointment, onSave }) {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("atendimento");
+  const [activeTab, setActiveTab] = useState('atendimento');
   const [data, setData] = useState({});
   const [loading, setLoading] = useState(false);
-  const [docText, setDocText] = useState("");
-  const [docTemplate, setDocTemplate] = useState("");
+  const [docText, setDocText] = useState('');
+  const [docTemplate, setDocTemplate] = useState('');
   const [historicoDocs, setHistoricoDocs] = useState([]);
   // Estado para assinatura híbrida da receita
   const [rxSignature, setRxSignature] = useState({});
@@ -34,14 +49,14 @@ export default function DrawerAtendimento({ open, onClose, appointment, onSave }
       <div style="min-height:200px;border-bottom:1px solid #ccc;"></div>
       <br/><div style="text-align:center;">
       <p>__________________________________</p></div>`,
-      receita: `
+    receita: `
         <div class='receita-bloco-unico'>
           <div class='receita-cabecalho-linha'>
             <span class='logo-clinica'>Gesclinic</span>
             <span class='nome-clinica'>Gesclinic Demo</span>
             <span class='receita-titulo'>RECEITA</span>
             <span class='receita-subtitulo'>Documento para Assinatura Manual</span>
-            <span class='receita-data'>Emitido em ${new Date().toLocaleDateString()} às ${new Date().toLocaleTimeString().slice(0,8)}</span>
+            <span class='receita-data'>Emitido em ${new Date().toLocaleDateString()} às ${new Date().toLocaleTimeString().slice(0, 8)}</span>
           </div>
           <hr class='receita-divider'/>
           <div style="min-height:200px;border-bottom:1px solid #ccc;"></div>
@@ -63,29 +78,37 @@ export default function DrawerAtendimento({ open, onClose, appointment, onSave }
   };
 
   const loadHistoricoAtendimentos = useCallback(async (patientId) => {
-    if (!patientId) return;
+    if (!patientId) {
+      return;
+    }
     const { data: rows } = await supabase
-      .from("appointments")
-      .select("id, start_time, status, service:services(name), professional:professionals(name)")
-      .eq("patient_id", patientId)
-      .order("start_time", { ascending: false })
+      .from('appointments')
+      .select('id, start_time, status, service:services(name), professional:professionals(name)')
+      .eq('patient_id', patientId)
+      .order('start_time', { ascending: false })
       .limit(10);
     setHistoricoAtendimentos(rows || []);
   }, []);
 
   const loadHistoricoDocs = useCallback(async (patientId) => {
-    if (!patientId) return;
+    if (!patientId) {
+      return;
+    }
     const { data: docs } = await supabase
-      .from("patient_documents")
-      .select("id, created_at, type, content")
-      .eq("patient_id", patientId)
-      .order("created_at", { ascending: false });
+      .from('patient_documents')
+      .select('id, created_at, type, content')
+      .eq('patient_id', patientId)
+      .order('created_at', { ascending: false });
     setHistoricoDocs(docs || []);
   }, []);
 
   const loadResumoPaciente = useCallback(async (patientId) => {
-    if (!patientId) return;
-    const { data } = await supabase.rpc("get_patient_clinical_summary", { p_patient_id: patientId });
+    if (!patientId) {
+      return;
+    }
+    const { data } = await supabase.rpc('get_patient_clinical_summary', {
+      p_patient_id: patientId,
+    });
     setResumoPaciente(data?.[0] || null);
   }, []);
 
@@ -102,9 +125,9 @@ export default function DrawerAtendimento({ open, onClose, appointment, onSave }
         setHistoricoAtendimentos([]);
         setResumoPaciente(null);
       }
-      setDocText("");
-      setDocTemplate("");
-      setActiveTab("atendimento");
+      setDocText('');
+      setDocTemplate('');
+      setActiveTab('atendimento');
     }
   }, [open, appointment, loadHistoricoDocs, loadHistoricoAtendimentos, loadResumoPaciente]);
 
@@ -124,20 +147,24 @@ export default function DrawerAtendimento({ open, onClose, appointment, onSave }
         service_id: data.service_id,
         start_time: data.start_time,
         end_time: data.end_time,
-        status: data.status || "scheduled",
+        status: data.status || 'scheduled',
         price: data.price,
         notes: data.notes,
-        phone: data.phone || ""
+        phone: data.phone || '',
       };
-      
+
       const { error } = await supabase.rpc('create_or_update_appointment', { p_data: payload });
 
-      if (error) throw error;
-      toast({ title: "✅ Sucesso", description: "Atendimento salvo com sucesso." });
-      if(onSave) onSave();
+      if (error) {
+        throw error;
+      }
+      toast({ title: '✅ Sucesso', description: 'Atendimento salvo com sucesso.' });
+      if (onSave) {
+        onSave();
+      }
       onClose();
     } catch (err) {
-      toast({ title: "Erro ao salvar", description: err.message, variant: "destructive" });
+      toast({ title: 'Erro ao salvar', description: err.message, variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -145,17 +172,17 @@ export default function DrawerAtendimento({ open, onClose, appointment, onSave }
 
   const handleFaturamento = async () => {
     toast({
-      title: "🚧 Em breve",
-      description: "A integração com o faturamento TISS será adicionada.",
+      title: '🚧 Em breve',
+      description: 'A integração com o faturamento TISS será adicionada.',
     });
   };
 
   const saveDocumentoPaciente = async () => {
     if (!data.patient_id) {
       toast({
-        title: "Atenção",
-        description: "Selecione um paciente antes de salvar.",
-        variant: "destructive",
+        title: 'Atenção',
+        description: 'Selecione um paciente antes de salvar.',
+        variant: 'destructive',
       });
       return;
     }
@@ -165,11 +192,11 @@ export default function DrawerAtendimento({ open, onClose, appointment, onSave }
     if (docTemplate === 'receita' && rxSignature && rxSignature.certificate_id) {
       metadata.signature = rxSignature;
     }
-    const { error } = await supabase.from("patient_documents").insert([
+    const { error } = await supabase.from('patient_documents').insert([
       {
         patient_id: data.patient_id,
         appointment_id: data.id,
-        type: docTemplate || "personalizado",
+        type: docTemplate || 'personalizado',
         content: docText,
         metadata,
       },
@@ -177,35 +204,44 @@ export default function DrawerAtendimento({ open, onClose, appointment, onSave }
     setLoading(false);
     if (!error) {
       toast({
-        title: "Documento salvo!",
-        description: "Adicionado ao histórico do paciente.",
+        title: 'Documento salvo!',
+        description: 'Adicionado ao histórico do paciente.',
       });
       loadHistoricoDocs(data.patient_id);
     } else {
       toast({
-        title: "Erro ao salvar documento",
+        title: 'Erro ao salvar documento',
         description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
     }
   };
 
   const handlePrint = () => {
-    let finalHtml = (docText || "").replace(/{{paciente}}/g, data.patient_name || "Paciente não informado");
+    let finalHtml = (docText || '').replace(
+      /{{paciente}}/g,
+      data.patient_name || 'Paciente não informado',
+    );
     // Remove qualquer linha ou bloco (com ou sem tags) que contenha 'ASSINATURA' e 'CARIMBO DO PROFISSIONAL' (com ou sem acento, variações, espaços, tags)
-    finalHtml = finalHtml.replace(/<[^>]*>?\s*ASSINATURA[^<\n]*CARIMBO DO PROFISSIONAL[^<\n]*<\/?[^>]*>/gim, '');
-    finalHtml = finalHtml.replace(/<[^>]*>?\s*ASSINATURA[^<\n]*PROFISSIONAL[^<\n]*<\/?[^>]*>/gim, '');
+    finalHtml = finalHtml.replace(
+      /<[^>]*>?\s*ASSINATURA[^<\n]*CARIMBO DO PROFISSIONAL[^<\n]*<\/?[^>]*>/gim,
+      '',
+    );
+    finalHtml = finalHtml.replace(
+      /<[^>]*>?\s*ASSINATURA[^<\n]*PROFISSIONAL[^<\n]*<\/?[^>]*>/gim,
+      '',
+    );
     finalHtml = finalHtml.replace(/^.*ASSINATURA.*CARIMBO DO PROFISSIONAL.*$/gim, '');
     finalHtml = finalHtml.replace(/^.*ASSINATURA.*PROFISSIONAL.*$/gim, '');
     let assinaturaHtml = '';
     if (docTemplate === 'receita' && rxSignature && rxSignature.certificate_id) {
-      assinaturaHtml = `<div class='assinatura-bloco'>`;
+      assinaturaHtml = "<div class='assinatura-bloco'>";
       if (rxSignature.visual_signature_data_url) {
         assinaturaHtml += `<div style='margin-bottom:8px;'><img src='${rxSignature.visual_signature_data_url}' alt='Assinatura' style='height:60px;max-width:100%;object-fit:contain;'/></div>`;
       }
-      assinaturaHtml += `</div>`;
+      assinaturaHtml += '</div>';
     }
-    const win = window.open("", "_blank");
+    const win = window.open('', '_blank');
     win.document.write(`
       <html><head><title>${docTemplate.toUpperCase()} - Gesclinic</title>
             <style>
@@ -348,7 +384,7 @@ export default function DrawerAtendimento({ open, onClose, appointment, onSave }
       </head><body>
         <div class='receita-bloco-unico'>
           <div class='receita-titulo'>RECEITA</div>
-          <div class='receita-subtitulo'>Documento para Assinatura Manual<br/>Emitido em ${new Date().toLocaleDateString()} às ${new Date().toLocaleTimeString().slice(0,5)}</div>
+          <div class='receita-subtitulo'>Documento para Assinatura Manual<br/>Emitido em ${new Date().toLocaleDateString()} às ${new Date().toLocaleTimeString().slice(0, 5)}</div>
           <hr class='receita-divider'/>
           <div>${finalHtml}</div>
           ${assinaturaHtml}
@@ -377,14 +413,14 @@ export default function DrawerAtendimento({ open, onClose, appointment, onSave }
       <DrawerContent className="w-[90vw] max-w-[720px] p-4 bg-white shadow-xl rounded-l-2xl flex flex-col">
         <div className="flex justify-between items-center mb-4 flex-shrink-0">
           <h2 className="text-xl font-semibold text-blue-800">
-            {data.id ? "Editar Atendimento" : "Novo Atendimento"}
+            {data.id ? 'Editar Atendimento' : 'Novo Atendimento'}
           </h2>
           {data.patient_id && (
             <Button
               size="sm"
               variant="link"
               className="flex items-center gap-1 text-blue-600 h-auto p-0"
-              onClick={() => setActiveTab("historico_clinico")}
+              onClick={() => setActiveTab('historico_clinico')}
             >
               <ClipboardList size={16} /> Ver histórico clínico
             </Button>
@@ -394,21 +430,58 @@ export default function DrawerAtendimento({ open, onClose, appointment, onSave }
         <div className="flex-grow overflow-y-auto">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-5 mb-4 bg-gray-100 rounded-lg">
-              <TabsTrigger value="atendimento"><User size={16} className="mr-1"/> Atendimento</TabsTrigger>
-              <TabsTrigger value="financeiro"><CreditCard size={16} className="mr-1"/> Financeiro</TabsTrigger>
-              <TabsTrigger value="documentos"><FileText size={16} className="mr-1"/> Documentos</TabsTrigger>
-              <TabsTrigger value="historico"><History size={16} className="mr-1"/> Docs</TabsTrigger>
-              <TabsTrigger value="historico_clinico"><ClipboardList size={16} className="mr-1"/> Histórico</TabsTrigger>
+              <TabsTrigger value="atendimento">
+                <User size={16} className="mr-1" /> Atendimento
+              </TabsTrigger>
+              <TabsTrigger value="financeiro">
+                <CreditCard size={16} className="mr-1" /> Financeiro
+              </TabsTrigger>
+              <TabsTrigger value="documentos">
+                <FileText size={16} className="mr-1" /> Documentos
+              </TabsTrigger>
+              <TabsTrigger value="historico">
+                <History size={16} className="mr-1" /> Docs
+              </TabsTrigger>
+              <TabsTrigger value="historico_clinico">
+                <ClipboardList size={16} className="mr-1" /> Histórico
+              </TabsTrigger>
             </TabsList>
 
             {/* Atendimento */}
             <TabsContent value="atendimento">
               <div className="space-y-4 p-1">
-                <Input name="patient_name" placeholder="Nome do paciente" value={data.patient_name || ""} onChange={handleInputChange} className="font-semibold" />
-                <Input name="phone" placeholder="(XX) 9 XXXX-XXXX" value={data.phone || ""} onChange={(e) => handleInputChange({ ...e, target: { ...e.target, value: formatPhone(e.target.value) } })} />
-                <Input name="service_name" placeholder="Serviço" value={data.service_name || ""} onChange={handleInputChange} />
-                 <Select name="status" value={data.status || 'agendado'} onValueChange={(v) => setData({ ...data, status: v })}>
-                  <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+                <Input
+                  name="patient_name"
+                  placeholder="Nome do paciente"
+                  value={data.patient_name || ''}
+                  onChange={handleInputChange}
+                  className="font-semibold"
+                />
+                <Input
+                  name="phone"
+                  placeholder="(XX) 9 XXXX-XXXX"
+                  value={data.phone || ''}
+                  onChange={(e) =>
+                    handleInputChange({
+                      ...e,
+                      target: { ...e.target, value: formatPhone(e.target.value) },
+                    })
+                  }
+                />
+                <Input
+                  name="service_name"
+                  placeholder="Serviço"
+                  value={data.service_name || ''}
+                  onChange={handleInputChange}
+                />
+                <Select
+                  name="status"
+                  value={data.status || 'agendado'}
+                  onValueChange={(v) => setData({ ...data, status: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="scheduled">Agendado</SelectItem>
                     <SelectItem value="confirmed">Confirmado</SelectItem>
@@ -418,17 +491,34 @@ export default function DrawerAtendimento({ open, onClose, appointment, onSave }
                     <SelectItem value="no_show">Não Compareceu</SelectItem>
                   </SelectContent>
                 </Select>
-                <Textarea name="notes" placeholder="Observações do agendamento..." value={data.notes || ""} onChange={handleInputChange} />
+                <Textarea
+                  name="notes"
+                  placeholder="Observações do agendamento..."
+                  value={data.notes || ''}
+                  onChange={handleInputChange}
+                />
               </div>
             </TabsContent>
 
             {/* Financeiro */}
             <TabsContent value="financeiro">
               <div className="space-y-4 p-1">
-                <p className="text-sm text-gray-500">Registrar pagamento ou gerar guia de convênio.</p>
-                <Input type="number" placeholder="Valor" value={data.price || ""} onChange={(e) => setData({ ...data, price: parseFloat(e.target.value) || 0 })} />
-                <Select onValueChange={(v) => setData({ ...data, payment_method: v })} value={data.payment_method}>
-                  <SelectTrigger><SelectValue placeholder="Forma de pagamento" /></SelectTrigger>
+                <p className="text-sm text-gray-500">
+                  Registrar pagamento ou gerar guia de convênio.
+                </p>
+                <Input
+                  type="number"
+                  placeholder="Valor"
+                  value={data.price || ''}
+                  onChange={(e) => setData({ ...data, price: parseFloat(e.target.value) || 0 })}
+                />
+                <Select
+                  onValueChange={(v) => setData({ ...data, payment_method: v })}
+                  value={data.payment_method}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Forma de pagamento" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="dinheiro">Dinheiro</SelectItem>
                     <SelectItem value="pix">PIX</SelectItem>
@@ -445,23 +535,45 @@ export default function DrawerAtendimento({ open, onClose, appointment, onSave }
             {/* Documentos */}
             <TabsContent value="documentos">
               <div className="space-y-3 p-1">
-                <Select value={docTemplate} onValueChange={(v) => { setDocTemplate(v); setDocText(defaultTemplates[v] || ''); }}>
-                  <SelectTrigger><SelectValue placeholder="Selecionar modelo de documento" /></SelectTrigger>
+                <Select
+                  value={docTemplate}
+                  onValueChange={(v) => {
+                    setDocTemplate(v);
+                    setDocText(defaultTemplates[v] || '');
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecionar modelo de documento" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="receita">Receita Médica</SelectItem>
                     <SelectItem value="laudo">Laudo Médico</SelectItem>
                     <SelectItem value="atestado">Atestado Médico</SelectItem>
                   </SelectContent>
                 </Select>
-                <Textarea rows={12} value={docText} onChange={(e) => setDocText(e.target.value)} className="border border-gray-300 rounded-md font-mono text-sm" placeholder="Digite o conteúdo do documento ou selecione um modelo."/>
+                <Textarea
+                  rows={12}
+                  value={docText}
+                  onChange={(e) => setDocText(e.target.value)}
+                  className="border border-gray-300 rounded-md font-mono text-sm"
+                  placeholder="Digite o conteúdo do documento ou selecione um modelo."
+                />
                 {/* Assinatura híbrida da receita */}
                 {docTemplate === 'receita' && (
                   <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm mt-4">
-                    <h3 className="text-sm font-semibold text-slate-900">Assinatura híbrida da receita</h3>
+                    <h3 className="text-sm font-semibold text-slate-900">
+                      Assinatura híbrida da receita
+                    </h3>
                     <div className="mt-4">
-                      <LaudoSignaturePad signature={rxSignature} onChange={setRxSignature} disabled={loading} />
+                      <LaudoSignaturePad
+                        signature={rxSignature}
+                        onChange={setRxSignature}
+                        disabled={loading}
+                      />
                       {rxSignatureError && (
-                        <p className="mt-2 text-sm text-red-600 font-semibold">{rxSignatureError}</p>
+                        <p className="mt-2 text-sm text-red-600 font-semibold">
+                          {rxSignatureError}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -472,7 +584,9 @@ export default function DrawerAtendimento({ open, onClose, appointment, onSave }
                     onClick={() => {
                       if (docTemplate === 'receita') {
                         if (!rxSignature?.certificate_id || !rxSignature.certificate_id.trim()) {
-                          setRxSignatureError('O certificado digital é obrigatório para assinar a receita.');
+                          setRxSignatureError(
+                            'O certificado digital é obrigatório para assinar a receita.',
+                          );
                           return;
                         }
                         setRxSignatureError('');
@@ -495,14 +609,27 @@ export default function DrawerAtendimento({ open, onClose, appointment, onSave }
               <div className="space-y-2 p-1">
                 <h3 className="font-semibold text-gray-700">Histórico de Documentos</h3>
                 {historicoDocs.length === 0 && (
-                  <p className="text-sm text-gray-500 text-center py-4">Nenhum documento registrado.</p>
+                  <p className="text-sm text-gray-500 text-center py-4">
+                    Nenhum documento registrado.
+                  </p>
                 )}
                 {historicoDocs.map((doc) => (
-                  <div key={doc.id} className="border border-gray-200 rounded-md p-3 hover:bg-gray-50 cursor-pointer"
-                    onClick={() => { setDocTemplate(doc.type); setDocText(doc.content); setActiveTab("documentos"); }}>
+                  <div
+                    key={doc.id}
+                    className="border border-gray-200 rounded-md p-3 hover:bg-gray-50 cursor-pointer"
+                    onClick={() => {
+                      setDocTemplate(doc.type);
+                      setDocText(doc.content);
+                      setActiveTab('documentos');
+                    }}
+                  >
                     <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium capitalize">{doc.type.replace('_', ' ')}</span>
-                      <span className="text-xs text-gray-500">{new Date(doc.created_at).toLocaleDateString("pt-BR")}</span>
+                      <span className="text-sm font-medium capitalize">
+                        {doc.type.replace('_', ' ')}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {new Date(doc.created_at).toLocaleDateString('pt-BR')}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -512,24 +639,43 @@ export default function DrawerAtendimento({ open, onClose, appointment, onSave }
             {/* Histórico Clínico */}
             <TabsContent value="historico_clinico">
               <div className="space-y-4 p-1">
-                 {resumoPaciente && (
+                {resumoPaciente && (
                   <div className="mb-4 border-b pb-4 text-sm text-gray-700 space-y-1">
                     <h3 className="font-semibold text-gray-800 mb-2">Resumo do Paciente</h3>
-                    <p><strong>Último atendimento:</strong> {resumoPaciente.last_date ? new Date(resumoPaciente.last_date).toLocaleDateString("pt-BR") : "—"}</p>
-                    <p><strong>Total de atendimentos:</strong> {resumoPaciente.total_appointments}</p>
-                    <p><strong>Particulares:</strong> {resumoPaciente.total_private}</p>
-                    <p><strong>Convênios:</strong> {resumoPaciente.total_insurance}</p>
+                    <p>
+                      <strong>Último atendimento:</strong>{' '}
+                      {resumoPaciente.last_date
+                        ? new Date(resumoPaciente.last_date).toLocaleDateString('pt-BR')
+                        : '—'}
+                    </p>
+                    <p>
+                      <strong>Total de atendimentos:</strong> {resumoPaciente.total_appointments}
+                    </p>
+                    <p>
+                      <strong>Particulares:</strong> {resumoPaciente.total_private}
+                    </p>
+                    <p>
+                      <strong>Convênios:</strong> {resumoPaciente.total_insurance}
+                    </p>
                   </div>
                 )}
 
                 <h3 className="font-semibold text-gray-700">Últimos Atendimentos</h3>
                 {historicoAtendimentos.length === 0 && (
-                  <p className="text-gray-500 text-sm text-center py-4">Nenhum atendimento registrado.</p>
+                  <p className="text-gray-500 text-sm text-center py-4">
+                    Nenhum atendimento registrado.
+                  </p>
                 )}
                 {historicoAtendimentos.map((a) => (
-                  <div key={a.id} className="border border-gray-200 p-3 rounded-md hover:bg-gray-50 text-sm">
+                  <div
+                    key={a.id}
+                    className="border border-gray-200 p-3 rounded-md hover:bg-gray-50 text-sm"
+                  >
                     <div className="flex justify-between">
-                      <span>{new Date(a.start_time).toLocaleDateString("pt-BR")} — <strong>{a.service?.name || "Atendimento"}</strong></span>
+                      <span>
+                        {new Date(a.start_time).toLocaleDateString('pt-BR')} —{' '}
+                        <strong>{a.service?.name || 'Atendimento'}</strong>
+                      </span>
                       <span className="text-gray-500 capitalize">{a.status}</span>
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
@@ -544,10 +690,16 @@ export default function DrawerAtendimento({ open, onClose, appointment, onSave }
 
         <div className="flex-shrink-0 pt-4 mt-auto border-t">
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={onClose} disabled={loading}>Cancelar</Button>
+            <Button variant="outline" onClick={onClose} disabled={loading}>
+              Cancelar
+            </Button>
             <Button onClick={handleSave} disabled={loading}>
-              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save size={16} className="mr-2" />}
-              {loading ? "Salvando..." : "Salvar"}
+              {loading ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Save size={16} className="mr-2" />
+              )}
+              {loading ? 'Salvando...' : 'Salvar'}
             </Button>
           </div>
         </div>

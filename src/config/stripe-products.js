@@ -14,14 +14,14 @@ export const STRIPE_PRODUCTS = {
         id: 'price_1SoxdGLH381hB5ddad7o2vYa',
         amount: 9900, // R$ 99.00
         currency: 'brl',
-        interval: 'month'
+        interval: 'month',
       },
       annual: {
         id: 'price_1Soxe1LH381hB5ddjFcjfm9H',
         amount: 99000, // R$ 990.00
         currency: 'brl',
-        interval: 'year'
-      }
+        interval: 'year',
+      },
     },
     features: {
       maxUsers: 2,
@@ -29,8 +29,8 @@ export const STRIPE_PRODUCTS = {
       hasFinancial: false,
       hasStock: false,
       hasReports: false,
-      hasMultiUnit: false
-    }
+      hasMultiUnit: false,
+    },
   },
 
   professional: {
@@ -42,14 +42,14 @@ export const STRIPE_PRODUCTS = {
         id: 'price_1SoxgCLH381hB5ddvwskr7Mx',
         amount: 24900, // R$ 249.00
         currency: 'brl',
-        interval: 'month'
+        interval: 'month',
       },
       annual: {
         id: 'price_1SoxgkLH381hB5ddWPfsR6ry',
         amount: 249000, // R$ 2.490.00
         currency: 'brl',
-        interval: 'year'
-      }
+        interval: 'year',
+      },
     },
     features: {
       maxUsers: 10,
@@ -57,8 +57,8 @@ export const STRIPE_PRODUCTS = {
       hasFinancial: true,
       hasStock: true,
       hasReports: true,
-      hasMultiUnit: false
-    }
+      hasMultiUnit: false,
+    },
   },
 
   enterprise: {
@@ -70,14 +70,14 @@ export const STRIPE_PRODUCTS = {
         id: 'price_1Soxi2LH381hB5ddZUDZ2yXR',
         amount: 48900, // R$ 489.00
         currency: 'brl',
-        interval: 'month'
+        interval: 'month',
       },
       annual: {
         id: 'price_1SoxiLLH381hB5ddLPG3yIt6',
         amount: 489000, // R$ 4.890.00
         currency: 'brl',
-        interval: 'year'
-      }
+        interval: 'year',
+      },
     },
     features: {
       maxUsers: 999,
@@ -85,9 +85,9 @@ export const STRIPE_PRODUCTS = {
       hasFinancial: true,
       hasStock: true,
       hasReports: true,
-      hasMultiUnit: true
-    }
-  }
+      hasMultiUnit: true,
+    },
+  },
 };
 
 /**
@@ -101,12 +101,12 @@ export const getPriceId = (planSlug, billingCycle = 'monthly') => {
   if (!plan) {
     throw new Error(`Plan not found: ${planSlug}`);
   }
-  
+
   const price = plan.prices[billingCycle];
   if (!price) {
     throw new Error(`Billing cycle not found: ${billingCycle}`);
   }
-  
+
   return price.id;
 };
 

@@ -2,10 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useClinicContext } from '@/contexts/ClinicContext';
 import { supabase } from '@/lib/customSupabaseClient';
-import {
-  calcularRepasse,
-  dashboardRepasseMedico,
-} from '@/lib/medicalRepasseApi';
+import { calcularRepasse, dashboardRepasseMedico } from '@/lib/medicalRepasseApi';
 import { listProfessionals } from '@/lib/professionalsApi';
 
 const RepasseMedicoPage = () => {
@@ -15,7 +12,7 @@ const RepasseMedicoPage = () => {
   // Estados
   const [mes, setMes] = useState(new Date().getMonth() + 1);
   const [ano, setAno] = useState(new Date().getFullYear());
-  
+
   const [dashboard, setDashboard] = useState(null);
   const [profissionais, setProfissionais] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -32,9 +29,11 @@ const RepasseMedicoPage = () => {
   }, [clinicId, mes, ano]);
 
   const carregarDados = async () => {
-    if (!clinicId) return;
+    if (!clinicId) {
+      return;
+    }
 
-    console.log("🔍 [REPASSE MÉDICO] Buscando dados com filtros:", {
+    console.log('🔍 [REPASSE MÉDICO] Buscando dados com filtros:', {
       clinicId,
       mes,
       ano,
@@ -48,12 +47,12 @@ const RepasseMedicoPage = () => {
     try {
       // Carregar profissionais
       const profs = await listProfessionals(clinicId);
-      console.log("✅ [REPASSE MÉDICO] Profissionais carregados:", profs?.length || 0);
+      console.log('✅ [REPASSE MÉDICO] Profissionais carregados:', profs?.length || 0);
       setProfissionais(profs || []);
 
       // Carregar dashboard de produção
       const dash = await dashboardRepasseMedico(clinicId, dataInicio, dataFim);
-      console.log("✅ [REPASSE MÉDICO] Dashboard carregado:", {
+      console.log('✅ [REPASSE MÉDICO] Dashboard carregado:', {
         totalBruto: dash?.totais?.totalBruto,
         totalLiquido: dash?.totais?.totalLiquido,
         totalProfissional: dash?.totais?.totalProfissional,
@@ -61,10 +60,10 @@ const RepasseMedicoPage = () => {
         porProfissionalCount: dash?.porProfissional?.length || 0,
         repassesCount: dash?.repasses?.length || 0,
       });
-      console.log("📋 [REPASSE MÉDICO] Detalhes por profissional:", dash?.porProfissional);
+      console.log('📋 [REPASSE MÉDICO] Detalhes por profissional:', dash?.porProfissional);
       setDashboard(dash || {});
     } catch (err) {
-      console.error("❌ [REPASSE MÉDICO] Erro ao carregar dados:", err);
+      console.error('❌ [REPASSE MÉDICO] Erro ao carregar dados:', err);
       setErro(err.message || 'Erro ao carregar dados');
     } finally {
       setLoading(false);
@@ -72,7 +71,7 @@ const RepasseMedicoPage = () => {
   };
 
   const handleGerarRepasse = async () => {
-    console.log("🚀 [REPASSE MÉDICO] Iniciando geração de repasse com RPC:", {
+    console.log('🚀 [REPASSE MÉDICO] Iniciando geração de repasse com RPC:', {
       clinicId,
       mes,
       ano,
@@ -82,53 +81,50 @@ const RepasseMedicoPage = () => {
     setErro(null);
 
     try {
-      const { data, error: rpcError } = await supabase.rpc(
-        "generate_doctor_commissions_v2",
-        {
-          p_clinic_id: clinicId,
-          p_month: mes,
-          p_year: ano,
-          p_mode: "atendido",
-        }
-      );
+      const { data, error: rpcError } = await supabase.rpc('generate_doctor_commissions_v2', {
+        p_clinic_id: clinicId,
+        p_month: mes,
+        p_year: ano,
+        p_mode: 'atendido',
+      });
 
       if (rpcError) {
-        console.error("❌ [REPASSE MÉDICO] Erro na RPC:", rpcError);
-        setErro(rpcError.message || "Erro ao gerar repasse");
+        console.error('❌ [REPASSE MÉDICO] Erro na RPC:', rpcError);
+        setErro(rpcError.message || 'Erro ao gerar repasse');
       } else {
-        console.log("✅ [REPASSE MÉDICO] RPC executada com sucesso:", data);
-        
+        console.log('✅ [REPASSE MÉDICO] RPC executada com sucesso:', data);
+
         // Recarregar dados após geração
         await carregarDados();
-        
+
         // Mostrar mensagem de sucesso
         const resultado = data?.[0] || {};
-        alert(`✅ Sucesso: ${resultado.message || "Repasse gerado"}`);
+        alert(`✅ Sucesso: ${resultado.message || 'Repasse gerado'}`);
       }
     } catch (err) {
-      console.error("❌ [REPASSE MÉDICO] Erro ao gerar repasse:", err);
-      setErro(err.message || "Erro ao gerar repasse");
+      console.error('❌ [REPASSE MÉDICO] Erro ao gerar repasse:', err);
+      setErro(err.message || 'Erro ao gerar repasse');
     } finally {
       setLoading(false);
     }
   };
 
   const handleCalcularRepasse = async (professionalId) => {
-    console.log("🔄 [REPASSE MÉDICO] Recalculando repasse para profissional:", professionalId);
+    console.log('🔄 [REPASSE MÉDICO] Recalculando repasse para profissional:', professionalId);
     setLoading(true);
     setErro(null);
 
     try {
       const repasse = await calcularRepasse(clinicId, professionalId, dataInicio, dataFim);
-      console.log("✅ [REPASSE MÉDICO] Repasse recalculado:", repasse);
-      
+      console.log('✅ [REPASSE MÉDICO] Repasse recalculado:', repasse);
+
       if (repasse) {
         await carregarDados();
       } else {
         setErro('Nenhuma produção encontrada para este período');
       }
     } catch (err) {
-      console.error("❌ [REPASSE MÉDICO] Erro ao recalcular repasse:", err);
+      console.error('❌ [REPASSE MÉDICO] Erro ao recalcular repasse:', err);
       setErro(err.message || 'Erro ao calcular repasse');
     } finally {
       setLoading(false);
@@ -172,9 +168,7 @@ const RepasseMedicoPage = () => {
           <div className="flex items-end justify-between gap-4">
             <div className="flex gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Mês
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Mês</label>
                 <select
                   value={mes}
                   onChange={(e) => setMes(Number(e.target.value))}
@@ -188,9 +182,7 @@ const RepasseMedicoPage = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Ano
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Ano</label>
                 <input
                   type="number"
                   value={ano}
@@ -276,9 +268,7 @@ const RepasseMedicoPage = () => {
                     <th className="px-6 py-3 text-right text-sm font-medium text-gray-700">
                       Lucro Clínica
                     </th>
-                    <th className="px-6 py-3 text-right text-sm font-medium text-gray-700">
-                      %
-                    </th>
+                    <th className="px-6 py-3 text-right text-sm font-medium text-gray-700">%</th>
                     <th className="px-6 py-3 text-center text-sm font-medium text-gray-700">
                       Ações
                     </th>
@@ -293,7 +283,10 @@ const RepasseMedicoPage = () => {
                     </tr>
                   ) : (
                     dashboard?.porProfissional?.map((prof) => (
-                      <tr key={prof.professional_id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <tr
+                        key={prof.professional_id}
+                        className="border-b border-gray-100 hover:bg-gray-50"
+                      >
                         <td className="px-6 py-4 text-sm font-medium text-gray-900">
                           {prof.profissional || 'N/A'}
                         </td>

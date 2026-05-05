@@ -9,24 +9,24 @@
 export const VALIDATION_CHECKLIST = {
   // 🏗️ ESTRUTURA E ARQUIVOS
   ESTRUTURA: [
-    { item: "Arquivo AgendaPage.jsx existe", completed: false },
-    { item: "Arquivo useAgendaStore.js existe", completed: false },
-    { item: "Arquivo AgendaHeader.jsx existe", completed: false },
-    { item: "Arquivo AgendaIndicators.jsx existe", completed: false },
-    { item: "Arquivo AgendaTabs.jsx existe", completed: false },
-    { item: "Arquivo AgendaFilters.jsx existe", completed: false },
-    { item: "Arquivo AgendaTimeline.jsx existe", completed: false },
-    { item: "Arquivo AppointmentModal.jsx existe", completed: false },
-    { item: "Arquivo roomsApi.js existe", completed: false },
-    { item: "Rota /clinica/agenda está registrada", completed: false },
+    { item: 'Arquivo AgendaPage.jsx existe', completed: false },
+    { item: 'Arquivo useAgendaStore.js existe', completed: false },
+    { item: 'Arquivo AgendaHeader.jsx existe', completed: false },
+    { item: 'Arquivo AgendaIndicators.jsx existe', completed: false },
+    { item: 'Arquivo AgendaTabs.jsx existe', completed: false },
+    { item: 'Arquivo AgendaFilters.jsx existe', completed: false },
+    { item: 'Arquivo AgendaTimeline.jsx existe', completed: false },
+    { item: 'Arquivo AppointmentModal.jsx existe', completed: false },
+    { item: 'Arquivo roomsApi.js existe', completed: false },
+    { item: 'Rota /clinica/agenda está registrada', completed: false },
   ],
 
   // 🎯 FUNCIONAMENTO BÁSICO
   FUNCIONALIDADE_BASICA: [
-    { item: "Página /clinica/agenda carrega sem erros", completed: false },
-    { item: "useAgendaStore pode ser instanciado", completed: false },
-    { item: "Estado inicial é consistente", completed: false },
-    { item: "Nenhuma mensagem de erro no console", completed: false },
+    { item: 'Página /clinica/agenda carrega sem erros', completed: false },
+    { item: 'useAgendaStore pode ser instanciado', completed: false },
+    { item: 'Estado inicial é consistente', completed: false },
+    { item: 'Nenhuma mensagem de erro no console', completed: false },
   ],
 
   // 📅 NAVEGAÇÃO DE DATA
@@ -34,8 +34,8 @@ export const VALIDATION_CHECKLIST = {
     { item: "Botão 'Anterior' muda data para dia anterior", completed: false },
     { item: "Botão 'Próximo' muda data para próximo dia", completed: false },
     { item: "Botão 'Hoje' volta para data atual", completed: false },
-    { item: "Input de data pode ser alterado manualmente", completed: false },
-    { item: "Data muda corretamente no header", completed: false },
+    { item: 'Input de data pode ser alterado manualmente', completed: false },
+    { item: 'Data muda corretamente no header', completed: false },
   ],
 
   // 👁️ MODOS DE VISUALIZAÇÃO
@@ -43,23 +43,23 @@ export const VALIDATION_CHECKLIST = {
     { item: "Aba 'Agenda Geral' funciona e renderiza tabela", completed: false },
     { item: "Aba 'Por Profissional' funciona e renderiza colunas", completed: false },
     { item: "Aba 'Por Sala' funciona e renderiza colunas", completed: false },
-    { item: "Trocar de aba não recarrega a página (URL não muda)", completed: false },
-    { item: "Estado de aba é mantido ao navegar", completed: false },
+    { item: 'Trocar de aba não recarrega a página (URL não muda)', completed: false },
+    { item: 'Estado de aba é mantido ao navegar', completed: false },
   ],
 
   // 🔍 FILTROS
   FILTROS: [
-    { item: "Barra de busca funciona (texto)", completed: false },
-    { item: "Filtro de Profissional funciona", completed: false },
+    { item: 'Barra de busca funciona (texto)', completed: false },
+    { item: 'Filtro de Profissional funciona', completed: false },
     { item: "Filtro de Profissional oculto em modo 'profissional'", completed: false },
-    { item: "Filtro de Sala funciona", completed: false },
+    { item: 'Filtro de Sala funciona', completed: false },
     { item: "Filtro de Sala oculto em modo 'sala'", completed: false },
-    { item: "Filtro de Status funciona", completed: false },
-    { item: "Filtro de Convênio funciona", completed: false },
-    { item: "Filtro de Serviço funciona", completed: false },
-    { item: "Múltiplos filtros podem ser aplicados simultaneamente", completed: false },
+    { item: 'Filtro de Status funciona', completed: false },
+    { item: 'Filtro de Convênio funciona', completed: false },
+    { item: 'Filtro de Serviço funciona', completed: false },
+    { item: 'Múltiplos filtros podem ser aplicados simultaneamente', completed: false },
     { item: "Botão 'Limpar' remove todos os filtros", completed: false },
-    { item: "Indicador de filtros ativos mostra quantidade correta", completed: false },
+    { item: 'Indicador de filtros ativos mostra quantidade correta', completed: false },
   ],
 
   // 📊 INDICADORES
@@ -69,34 +69,37 @@ export const VALIDATION_CHECKLIST = {
     { item: "Card 'Confirmados' renderiza", completed: false },
     { item: "Card 'Faltas' renderiza", completed: false },
     { item: "Card 'Encaixes' renderiza", completed: false },
-    { item: "Indicadores reagem a filtros ativos", completed: false },
-    { item: "Indicadores mostram valores corretos", completed: false },
+    { item: 'Indicadores reagem a filtros ativos', completed: false },
+    { item: 'Indicadores mostram valores corretos', completed: false },
   ],
 
   // ⏰ TIMELINE / GRADE DE HORÁRIOS
   TIMELINE: [
-    { item: "Grade de horários renderiza (slots a cada 30 min)", completed: false },
+    { item: 'Grade de horários renderiza (slots a cada 30 min)', completed: false },
     { item: "Modo 'geral' mostra tabela com colunas corretas", completed: false },
     { item: "Modo 'profissional' mostra colunas por profissional", completed: false },
     { item: "Modo 'sala' mostra colunas por sala", completed: false },
-    { item: "Clicar em slot vazio abre modal para criar novo", completed: false },
-    { item: "Clicar em agendamento existente abre modal para editar", completed: false },
-    { item: "Cores de status são aplicadas corretamente", completed: false },
-    { item: "Hover em agendamento mostra efeito visual", completed: false },
+    { item: 'Clicar em slot vazio abre modal para criar novo', completed: false },
+    { item: 'Clicar em agendamento existente abre modal para editar', completed: false },
+    { item: 'Cores de status são aplicadas corretamente', completed: false },
+    { item: 'Hover em agendamento mostra efeito visual', completed: false },
   ],
 
   // 🗂️ MODAL DE AGENDAMENTO
   MODAL: [
-    { item: "Modal abre ao clicar em slot", completed: false },
-    { item: "Modal fecha ao clicar em X", completed: false },
+    { item: 'Modal abre ao clicar em slot', completed: false },
+    { item: 'Modal fecha ao clicar em X', completed: false },
     { item: "Modal fecha ao clicar 'Fechar'", completed: false },
     { item: "Aba 'Agendamento' renderiza campos corretos", completed: false },
     { item: "Aba 'Paciente' renderiza campos corretos", completed: false },
     { item: "Aba 'Financeiro' renderiza campos corretos", completed: false },
     { item: "Aba 'Histórico' renderiza sem erros", completed: false },
-    { item: "Trocar de aba no modal funciona", completed: false },
+    { item: 'Trocar de aba no modal funciona', completed: false },
     { item: "Modal modo 'novo' mostra apenas botões 'Salvar' e 'Encaixe'", completed: false },
-    { item: "Modal modo 'editar' mostra botões 'Confirmar', 'Cancelar' e 'Salvar'", completed: false },
+    {
+      item: "Modal modo 'editar' mostra botões 'Confirmar', 'Cancelar' e 'Salvar'",
+      completed: false,
+    },
   ],
 
   // 🔐 PERMISSÕES (RBAC)
@@ -112,45 +115,45 @@ export const VALIDATION_CHECKLIST = {
 
   // 📱 RESPONSIVIDADE
   RESPONSIVIDADE: [
-    { item: "Layout funciona em mobile (320px)", completed: false },
-    { item: "Layout funciona em tablet (768px)", completed: false },
-    { item: "Layout funciona em desktop (1920px)", completed: false },
-    { item: "Tabela de agendamentos rola horizontalmente em mobile", completed: false },
-    { item: "Modal é responsivo em mobile", completed: false },
+    { item: 'Layout funciona em mobile (320px)', completed: false },
+    { item: 'Layout funciona em tablet (768px)', completed: false },
+    { item: 'Layout funciona em desktop (1920px)', completed: false },
+    { item: 'Tabela de agendamentos rola horizontalmente em mobile', completed: false },
+    { item: 'Modal é responsivo em mobile', completed: false },
   ],
 
   // 🔧 INTEGRAÇÃO API
   API_INTEGRACAO: [
-    { item: "Agendamentos carregam da API", completed: false },
-    { item: "Profissionais carregam da API", completed: false },
-    { item: "Salas carregam da API", completed: false },
-    { item: "Serviços carregam da API", completed: false },
-    { item: "Convênios carregam da API", completed: false },
-    { item: "Pacientes carregam da API", completed: false },
-    { item: "Novo agendamento salva na API", completed: false },
-    { item: "Editar agendamento salva na API", completed: false },
-    { item: "Cancelar agendamento atualiza na API", completed: false },
-    { item: "Confirmar agendamento atualiza na API", completed: false },
+    { item: 'Agendamentos carregam da API', completed: false },
+    { item: 'Profissionais carregam da API', completed: false },
+    { item: 'Salas carregam da API', completed: false },
+    { item: 'Serviços carregam da API', completed: false },
+    { item: 'Convênios carregam da API', completed: false },
+    { item: 'Pacientes carregam da API', completed: false },
+    { item: 'Novo agendamento salva na API', completed: false },
+    { item: 'Editar agendamento salva na API', completed: false },
+    { item: 'Cancelar agendamento atualiza na API', completed: false },
+    { item: 'Confirmar agendamento atualiza na API', completed: false },
   ],
 
   // 🎨 DESIGN E UX
   DESIGN: [
-    { item: "Cores de status são visualmente distintas", completed: false },
-    { item: "Fonte é legível em todos os tamanhos", completed: false },
-    { item: "Espaçamento é consistente", completed: false },
-    { item: "Botões têm hover/feedback visual", completed: false },
-    { item: "Inputs mostram foco visual", completed: false },
-    { item: "Loading spinner aparece ao carregar", completed: false },
-    { item: "Mensagens de erro aparecem adequadamente", completed: false },
+    { item: 'Cores de status são visualmente distintas', completed: false },
+    { item: 'Fonte é legível em todos os tamanhos', completed: false },
+    { item: 'Espaçamento é consistente', completed: false },
+    { item: 'Botões têm hover/feedback visual', completed: false },
+    { item: 'Inputs mostram foco visual', completed: false },
+    { item: 'Loading spinner aparece ao carregar', completed: false },
+    { item: 'Mensagens de erro aparecem adequadamente', completed: false },
   ],
 
   // ⚡ PERFORMANCE
   PERFORMANCE: [
-    { item: "Página carrega em menos de 2s", completed: false },
-    { item: "Modal abre/fecha sem delay", completed: false },
-    { item: "Filtros respondem imediatamente", completed: false },
-    { item: "Indicadores calculam sem lag", completed: false },
-    { item: "Não há vazamento de memória (DevTools)", completed: false },
+    { item: 'Página carrega em menos de 2s', completed: false },
+    { item: 'Modal abre/fecha sem delay', completed: false },
+    { item: 'Filtros respondem imediatamente', completed: false },
+    { item: 'Indicadores calculam sem lag', completed: false },
+    { item: 'Não há vazamento de memória (DevTools)', completed: false },
   ],
 
   // 🐛 BUGS CONHECIDOS (Se houver)
@@ -163,16 +166,16 @@ export const VALIDATION_CHECKLIST = {
  * FUNCAO AUXILIAR PARA IMPRIMIR CHECKLIST
  */
 export function printChecklist() {
-  console.log("📋 CHECKLIST DE VALIDAÇÃO - AGENDA ÚNICA\n");
-  
+  console.log('📋 CHECKLIST DE VALIDAÇÃO - AGENDA ÚNICA\n');
+
   Object.entries(VALIDATION_CHECKLIST).forEach(([category, items]) => {
     if (Array.isArray(items) && items.length > 0) {
       console.log(`\n${category}:`);
       items.forEach((item, idx) => {
-        const check = item.completed ? "✅" : "⬜";
+        const check = item.completed ? '✅' : '⬜';
         console.log(`  ${check} ${item.item}`);
       });
-      const completed = items.filter(i => i.completed).length;
+      const completed = items.filter((i) => i.completed).length;
       console.log(`  [${completed}/${items.length}]`);
     }
   });
@@ -253,24 +256,19 @@ TEMPO TOTAL: ~50 minutos
  */
 export const TEST_DATA = {
   professionals: [
-    { id: "prof-001", name: "Dr. Silva" },
-    { id: "prof-002", name: "Dra. Santos" },
-    { id: "prof-003", name: "Dr. Oliveira" },
+    { id: 'prof-001', name: 'Dr. Silva' },
+    { id: 'prof-002', name: 'Dra. Santos' },
+    { id: 'prof-003', name: 'Dr. Oliveira' },
   ],
   rooms: [
-    { id: "room-001", name: "Sala 1" },
-    { id: "room-002", name: "Sala 2" },
-    { id: "room-003", name: "Consultório" },
+    { id: 'room-001', name: 'Sala 1' },
+    { id: 'room-002', name: 'Sala 2' },
+    { id: 'room-003', name: 'Consultório' },
   ],
   services: [
-    { id: "service-001", name: "Consulta" },
-    { id: "service-002", name: "Procedimento" },
-    { id: "service-003", name: "Exame" },
+    { id: 'service-001', name: 'Consulta' },
+    { id: 'service-002', name: 'Procedimento' },
+    { id: 'service-003', name: 'Exame' },
   ],
-  statuses: [
-    "confirmado",
-    "a_confirmar",
-    "faltou",
-    "encaixe",
-  ],
+  statuses: ['confirmado', 'a_confirmar', 'faltou', 'encaixe'],
 };

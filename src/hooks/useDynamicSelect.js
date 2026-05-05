@@ -45,38 +45,47 @@ export function useDependentSelect(dependencies = {}) {
   const [cascade, setCascade] = useState({});
   const [loading, setLoading] = useState({});
 
-  const loadCascade = useCallback(async (key, dependencyKey, fetchFn) => {
-    const dependencyValue = dependencies[dependencyKey];
-    
-    // Limpar cascata se dependência estiver vazia
-    if (!dependencyValue) {
-      setCascade(prev => {
-        const updated = { ...prev };
-        delete updated[key];
-        return updated;
-      });
-      return;
-    }
+  const loadCascade = useCallback(
+    async (key, dependencyKey, fetchFn) => {
+      const dependencyValue = dependencies[dependencyKey];
 
-    setLoading(prev => ({ ...prev, [key]: true }));
-    try {
-      const data = await fetchFn(dependencyValue);
-      setCascade(prev => ({ ...prev, [key]: data || [] }));
-    } catch (error) {
-      console.error(`Erro ao carregar ${key}:`, error);
-      setCascade(prev => ({ ...prev, [key]: [] }));
-    } finally {
-      setLoading(prev => ({ ...prev, [key]: false }));
-    }
-  }, [dependencies]);
+      // Limpar cascata se dependência estiver vazia
+      if (!dependencyValue) {
+        setCascade((prev) => {
+          const updated = { ...prev };
+          delete updated[key];
+          return updated;
+        });
+        return;
+      }
 
-  const getCascadeOptions = useCallback((key) => {
-    return cascade[key] || [];
-  }, [cascade]);
+      setLoading((prev) => ({ ...prev, [key]: true }));
+      try {
+        const data = await fetchFn(dependencyValue);
+        setCascade((prev) => ({ ...prev, [key]: data || [] }));
+      } catch (error) {
+        console.error(`Erro ao carregar ${key}:`, error);
+        setCascade((prev) => ({ ...prev, [key]: [] }));
+      } finally {
+        setLoading((prev) => ({ ...prev, [key]: false }));
+      }
+    },
+    [dependencies],
+  );
 
-  const isCascadeLoading = useCallback((key) => {
-    return loading[key] || false;
-  }, [loading]);
+  const getCascadeOptions = useCallback(
+    (key) => {
+      return cascade[key] || [];
+    },
+    [cascade],
+  );
+
+  const isCascadeLoading = useCallback(
+    (key) => {
+      return loading[key] || false;
+    },
+    [loading],
+  );
 
   return {
     cascade,
@@ -102,18 +111,15 @@ export function useSearchableSelect(items = []) {
     } else {
       const term = searchTerm.toLowerCase();
       const results = items.filter(
-        item =>
-          item.label.toLowerCase().includes(term) ||
-          item.value.toLowerCase().includes(term)
+        (item) =>
+          item.label.toLowerCase().includes(term) || item.value.toLowerCase().includes(term),
       );
       setFiltered(results);
     }
   }, [searchTerm, items]);
 
   const toggle = (id) => {
-    setSelectedIds(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    );
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
 
   const isSelected = (id) => selectedIds.includes(id);
@@ -146,19 +152,19 @@ export function useMultiSelect(initialValues = []) {
       console.warn(`Máximo de ${maxItems} itens atingido`);
       return false;
     }
-    if (!selected.find(s => s.value === item.value)) {
-      setSelected(prev => [...prev, item]);
+    if (!selected.find((s) => s.value === item.value)) {
+      setSelected((prev) => [...prev, item]);
       return true;
     }
     return false;
   };
 
   const remove = (value) => {
-    setSelected(prev => prev.filter(s => s.value !== value));
+    setSelected((prev) => prev.filter((s) => s.value !== value));
   };
 
   const toggle = (item) => {
-    if (selected.find(s => s.value === item.value)) {
+    if (selected.find((s) => s.value === item.value)) {
       remove(item.value);
     } else {
       add(item);
@@ -167,7 +173,7 @@ export function useMultiSelect(initialValues = []) {
 
   const clear = () => setSelected([]);
 
-  const isSelected = (value) => selected.some(s => s.value === value);
+  const isSelected = (value) => selected.some((s) => s.value === value);
 
   const canAddMore = () => !maxItems || selected.length < maxItems;
 

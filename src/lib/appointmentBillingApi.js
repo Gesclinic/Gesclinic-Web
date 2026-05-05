@@ -1,6 +1,6 @@
 /**
  * Appointment Billing API
- * 
+ *
  * Sincroniza dados de faturamento do agendamento com:
  * - ap_bills (Contas a Receber)
  * - invoices (Guias de Faturamento)
@@ -15,7 +15,7 @@ import {
 
 /**
  * ✅ Sincronizar faturamento ao finalizar atendimento
- * 
+ *
  * Cria ou atualiza registros em ap_bills (Contas a Receber)
  * e invoices (Guias) baseado no tipo de pagamento
  */
@@ -26,7 +26,8 @@ export const syncAppointmentBilling = async (appointmentId) => {
     // 1️⃣ Carregar appointment com detalhes
     const { data: appointment, error: aptError } = await supabase
       .from('appointments')
-      .select(`
+      .select(
+        `
         id,
         clinic_id,
         patient_id,
@@ -47,7 +48,8 @@ export const syncAppointmentBilling = async (appointmentId) => {
         services:service_id(id, name, price, code),
         payers:payer_id(id, name),
         plans:plan_id(id, name, code)
-      `)
+      `,
+      )
       .eq('id', appointmentId)
       .single();
 
@@ -74,7 +76,7 @@ export const syncAppointmentBilling = async (appointmentId) => {
 
     // 3️⃣ Criar entrada em ar_receivables (Contas a Receber)
     const appointmentDate = new Date(appointment.scheduled_date).toISOString().split('T')[0];
-    
+
     const receivableData = {
       clinic_id: appointment.clinic_id,
       paciente_id: appointment.patient_id,
@@ -120,7 +122,7 @@ export const syncAppointmentBilling = async (appointmentId) => {
     // 4️⃣ Se for convênio, criar também em invoices (faturamento/guias)
     if (isConvenio && appointment.services?.id) {
       console.log('📄 Criando Guia de Faturamento para convênio...');
-      
+
       // TODO: Validar status correto para invoices - constraint recusando todos os valores
       // Por enquanto comentado
       /*
@@ -148,16 +150,15 @@ export const syncAppointmentBilling = async (appointmentId) => {
     // 5️⃣ Gerar repasse automático se é convênio e receivable foi criado
     if (isConvenio && receivable && receivable[0]) {
       console.log('💰 Gerando repasse automático...');
-      
+
       try {
         // Chamar RPC para gerar repasse automaticamente
-        const { data: repasse, error: repasseError } = await supabase
-          .rpc('gerar_repasse_medico', {
-            p_clinic_id: appointment.clinic_id,
-            p_mes: new Date().getMonth() + 1,
-            p_ano: new Date().getFullYear(),
-            p_tipo_geracao: 'agenda'
-          });
+        const { data: repasse, error: repasseError } = await supabase.rpc('gerar_repasse_medico', {
+          p_clinic_id: appointment.clinic_id,
+          p_mes: new Date().getMonth() + 1,
+          p_ano: new Date().getFullYear(),
+          p_tipo_geracao: 'agenda',
+        });
 
         if (repasseError) {
           console.error('⚠️ Erro ao gerar repasse:', repasseError.message);
@@ -171,7 +172,7 @@ export const syncAppointmentBilling = async (appointmentId) => {
 
     return {
       success: true,
-      message: `✅ Faturamento sincronizado: Conta a Receber criada`,
+      message: '✅ Faturamento sincronizado: Conta a Receber criada',
       receivableId: receivable?.[0]?.id,
     };
   } catch (err) {

@@ -16,7 +16,7 @@ export default function StatusBadge({ status }) {
       {s === 'paid' && 'Paga'}
       {s === 'overdue' && 'Vencida'}
       {s === 'scheduled' && 'Agendada'}
-      {!['open','paid','overdue','scheduled'].includes(s) && s}
+      {!['open', 'paid', 'overdue', 'scheduled'].includes(s) && s}
     </span>
   );
 }

@@ -20,7 +20,9 @@ export default function AgendaConfirmacoes() {
 
   // Buscar dados de confirmações
   useEffect(() => {
-    if (!clinicId) return;
+    if (!clinicId) {
+      return;
+    }
 
     const loadConfirmations = async () => {
       setLoading(true);
@@ -28,7 +30,8 @@ export default function AgendaConfirmacoes() {
         // 1. Buscar confirmações
         const { data: confirmationsData, error: confirmError } = await supabase
           .from('appointment_confirmations')
-          .select(`
+          .select(
+            `
             id,
             appointment_id,
             clinic_id,
@@ -37,20 +40,24 @@ export default function AgendaConfirmacoes() {
             confirmed,
             confirmed_at,
             created_at
-          `)
+          `,
+          )
           .eq('clinic_id', clinicId)
           .order('created_at', { ascending: false });
 
-        if (confirmError) throw confirmError;
+        if (confirmError) {
+          throw confirmError;
+        }
 
         // 2. Buscar dados dos agendamentos
-        const appointmentIds = (confirmationsData || []).map(c => c.appointment_id);
+        const appointmentIds = (confirmationsData || []).map((c) => c.appointment_id);
         let appointmentsData = [];
-        
+
         if (appointmentIds.length > 0) {
           const { data: appts, error: apptError } = await supabase
             .from('appointments')
-            .select(`
+            .select(
+              `
               id,
               patient_name,
               appointment_date,
@@ -58,32 +65,37 @@ export default function AgendaConfirmacoes() {
               professional_id,
               status,
               phone
-            `)
+            `,
+            )
             .in('id', appointmentIds);
 
-          if (apptError) throw apptError;
+          if (apptError) {
+            throw apptError;
+          }
           appointmentsData = appts || [];
         }
 
         // 3. Buscar dados dos profissionais
-        const profIds = appointmentsData.map(a => a.professional_id).filter(Boolean);
+        const profIds = appointmentsData.map((a) => a.professional_id).filter(Boolean);
         let professionalsData = [];
-        
+
         if (profIds.length > 0) {
           const { data: profs, error: profError } = await supabase
             .from('professionals')
             .select('id, name')
             .in('id', profIds);
 
-          if (profError) throw profError;
+          if (profError) {
+            throw profError;
+          }
           professionalsData = profs || [];
         }
 
         // 4. Combinar dados
-        const combined = (confirmationsData || []).map(conf => {
-          const apt = appointmentsData.find(a => a.id === conf.appointment_id);
-          const prof = professionalsData.find(p => p.id === apt?.professional_id);
-          
+        const combined = (confirmationsData || []).map((conf) => {
+          const apt = appointmentsData.find((a) => a.id === conf.appointment_id);
+          const prof = professionalsData.find((p) => p.id === apt?.professional_id);
+
           return {
             ...conf,
             patient_name: apt?.patient_name || 'N/A',
@@ -97,9 +109,9 @@ export default function AgendaConfirmacoes() {
 
         // 5. Calcular estatísticas
         const total = combined.length;
-        const pending = combined.filter(c => c.confirmed === null).length;
-        const confirmed = combined.filter(c => c.confirmed === true).length;
-        const rejected = combined.filter(c => c.confirmed === false).length;
+        const pending = combined.filter((c) => c.confirmed === null).length;
+        const confirmed = combined.filter((c) => c.confirmed === true).length;
+        const rejected = combined.filter((c) => c.confirmed === false).length;
 
         setConfirmations(combined);
         setStats({ total, pending, confirmed, rejected });
@@ -114,15 +126,23 @@ export default function AgendaConfirmacoes() {
   }, [clinicId]);
 
   // Filtrar confirmações
-  const filtered = confirmations.filter(c => {
-    if (filter === 'pending') return c.confirmed === null;
-    if (filter === 'confirmed') return c.confirmed === true;
-    if (filter === 'rejected') return c.confirmed === false;
+  const filtered = confirmations.filter((c) => {
+    if (filter === 'pending') {
+      return c.confirmed === null;
+    }
+    if (filter === 'confirmed') {
+      return c.confirmed === true;
+    }
+    if (filter === 'rejected') {
+      return c.confirmed === false;
+    }
     return true;
   });
 
   const formatDate = (dateStr) => {
-    if (!dateStr) return 'N/A';
+    if (!dateStr) {
+      return 'N/A';
+    }
     try {
       return format(parseISO(dateStr), 'dd/MM/yyyy', { locale: ptBR });
     } catch {
@@ -132,12 +152,24 @@ export default function AgendaConfirmacoes() {
 
   const getStatusBadge = (confirmed) => {
     if (confirmed === null) {
-      return <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium">⏳ Pendente</span>;
+      return (
+        <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium">
+          ⏳ Pendente
+        </span>
+      );
     }
     if (confirmed === true) {
-      return <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">✅ Confirmado</span>;
+      return (
+        <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+          ✅ Confirmado
+        </span>
+      );
     }
-    return <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium">❌ Rejeitado</span>;
+    return (
+      <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium">
+        ❌ Rejeitado
+      </span>
+    );
   };
 
   return (
@@ -148,9 +180,7 @@ export default function AgendaConfirmacoes() {
           <h1 className="text-4xl font-bold text-gray-900 mb-2 flex items-center gap-3">
             ✅ Confirmações de Agendamento
           </h1>
-          <p className="text-gray-600">
-            Histórico de todas as confirmações enviadas via WhatsApp
-          </p>
+          <p className="text-gray-600">Histórico de todas as confirmações enviadas via WhatsApp</p>
         </div>
 
         {/* Stats Cards */}
@@ -203,7 +233,7 @@ export default function AgendaConfirmacoes() {
             { id: 'pending', label: '⏳ Pendentes', color: 'bg-yellow-100 text-yellow-700' },
             { id: 'confirmed', label: '✅ Confirmadas', color: 'bg-green-100 text-green-700' },
             { id: 'rejected', label: '❌ Rejeitadas', color: 'bg-red-100 text-red-700' },
-          ].map(f => (
+          ].map((f) => (
             <button
               key={f.id}
               onClick={() => setFilter(f.id)}
@@ -238,23 +268,45 @@ export default function AgendaConfirmacoes() {
               <table className="w-full">
                 <thead className="bg-gray-50 border-b">
                   <tr>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Paciente</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Profissional</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Data</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Hora</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Enviado em</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">Status</th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                      Paciente
+                    </th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                      Profissional
+                    </th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                      Data
+                    </th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                      Hora
+                    </th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                      Enviado em
+                    </th>
+                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">
+                      Status
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {filtered.map(conf => (
+                  {filtered.map((conf) => (
                     <tr key={conf.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 text-sm text-gray-900 font-medium">{conf.patient_name}</td>
+                      <td className="px-6 py-4 text-sm text-gray-900 font-medium">
+                        {conf.patient_name}
+                      </td>
                       <td className="px-6 py-4 text-sm text-gray-600">{conf.professional_name}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{formatDate(conf.appointment_date)}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{conf.appointment_time || 'N/A'}</td>
                       <td className="px-6 py-4 text-sm text-gray-600">
-                        {conf.message_sent_at ? format(parseISO(conf.message_sent_at), 'dd/MM/yyyy HH:mm', { locale: ptBR }) : 'N/A'}
+                        {formatDate(conf.appointment_date)}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        {conf.appointment_time || 'N/A'}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-600">
+                        {conf.message_sent_at
+                          ? format(parseISO(conf.message_sent_at), 'dd/MM/yyyy HH:mm', {
+                            locale: ptBR,
+                          })
+                          : 'N/A'}
                       </td>
                       <td className="px-6 py-4 text-sm">{getStatusBadge(conf.confirmed)}</td>
                     </tr>
@@ -268,5 +320,3 @@ export default function AgendaConfirmacoes() {
     </div>
   );
 }
-
-

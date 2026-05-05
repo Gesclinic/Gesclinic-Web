@@ -21,13 +21,19 @@ export default function EstoqueFornecedores() {
   const [itemToDelete, setItemToDelete] = useState(null);
 
   const fetchItems = useCallback(async () => {
-    if (!clinicId) return;
+    if (!clinicId) {
+      return;
+    }
     setLoading(true);
     try {
       const data = await stockSuppliersApi.list(clinicId);
       setItems(data);
     } catch (error) {
-      toast({ variant: 'destructive', title: 'Erro ao buscar fornecedores', description: error.message });
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao buscar fornecedores',
+        description: error.message,
+      });
     } finally {
       setLoading(false);
     }
@@ -54,7 +60,11 @@ export default function EstoqueFornecedores() {
       fetchItems();
       setDialogOpen(false);
     } catch (error) {
-      toast({ variant: 'destructive', title: 'Erro ao salvar fornecedor', description: error.message });
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao salvar fornecedor',
+        description: error.message,
+      });
     }
   };
 
@@ -64,22 +74,29 @@ export default function EstoqueFornecedores() {
   };
 
   const handleDelete = async () => {
-    if (!itemToDelete) return;
+    if (!itemToDelete) {
+      return;
+    }
     try {
       await stockSuppliersApi.remove(itemToDelete.id);
       toast({ title: 'Fornecedor excluído com sucesso!' });
       fetchItems();
     } catch (error) {
-      toast({ variant: 'destructive', title: 'Erro ao excluir fornecedor', description: error.message });
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao excluir fornecedor',
+        description: error.message,
+      });
     } finally {
       setDeleteAlertOpen(false);
       setItemToDelete(null);
     }
   };
 
-  const filteredItems = items.filter(item =>
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (item.tax_id && item.tax_id.includes(searchTerm))
+  const filteredItems = items.filter(
+    (item) =>
+      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.tax_id && item.tax_id.includes(searchTerm)),
   );
 
   return (
@@ -116,40 +133,58 @@ export default function EstoqueFornecedores() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan="5" className="p-4 text-center text-gray-500">Carregando...</td></tr>
-                ) : filteredItems.map(item => (
-                  <tr key={item.id} className="border-b hover:bg-gray-50 transition-colors">
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">🏢</span>
-                        <div>
-                          <p className="font-semibold text-gray-900">{item.name}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-4 text-gray-600 font-mono text-xs">{item.tax_id || '—'}</td>
-                    <td className="p-4 text-gray-600 text-sm">{item.contact_name || '—'}</td>
-                    <td className="p-4 text-gray-600 text-xs">
-                      <div className="flex flex-col gap-1">
-                        {item.phone && <span>📱 {item.phone}</span>}
-                        {item.email && <span>📧 {item.email}</span>}
-                        {!item.phone && !item.email && <span>—</span>}
-                      </div>
-                    </td>
-                    <td className="p-4 flex justify-end gap-2">
-                      <Button variant="outline" size="sm" onClick={() => handleOpenDialog(item)} title="Editar">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="destructive" size="sm" onClick={() => openDeleteAlert(item)} title="Excluir">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                  <tr>
+                    <td colSpan="5" className="p-4 text-center text-gray-500">
+                      Carregando...
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  filteredItems.map((item) => (
+                    <tr key={item.id} className="border-b hover:bg-gray-50 transition-colors">
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">🏢</span>
+                          <div>
+                            <p className="font-semibold text-gray-900">{item.name}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4 text-gray-600 font-mono text-xs">{item.tax_id || '—'}</td>
+                      <td className="p-4 text-gray-600 text-sm">{item.contact_name || '—'}</td>
+                      <td className="p-4 text-gray-600 text-xs">
+                        <div className="flex flex-col gap-1">
+                          {item.phone && <span>📱 {item.phone}</span>}
+                          {item.email && <span>📧 {item.email}</span>}
+                          {!item.phone && !item.email && <span>—</span>}
+                        </div>
+                      </td>
+                      <td className="p-4 flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenDialog(item)}
+                          title="Editar"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => openDeleteAlert(item)}
+                          title="Excluir"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
             {!loading && filteredItems.length === 0 && (
-              <p className="text-muted-foreground text-center py-6">Nenhum fornecedor encontrado.</p>
+              <p className="text-muted-foreground text-center py-6">
+                Nenhum fornecedor encontrado.
+              </p>
             )}
           </div>
         </CardContent>
@@ -174,4 +209,3 @@ export default function EstoqueFornecedores() {
     </div>
   );
 }
-

@@ -23,13 +23,19 @@ export default function EstoqueCategorias() {
   const [itemToDelete, setItemToDelete] = useState(null);
 
   const fetchItems = useCallback(async () => {
-    if (!clinicId) return;
+    if (!clinicId) {
+      return;
+    }
     setLoading(true);
     try {
       const data = await stockCategoriesApi.list(clinicId);
       setItems(data);
     } catch (error) {
-      toast({ variant: 'destructive', title: `Erro ao buscar ${PLURAL_ENTITY_NAME.toLowerCase()}`, description: error.message });
+      toast({
+        variant: 'destructive',
+        title: `Erro ao buscar ${PLURAL_ENTITY_NAME.toLowerCase()}`,
+        description: error.message,
+      });
     } finally {
       setLoading(false);
     }
@@ -59,7 +65,11 @@ export default function EstoqueCategorias() {
         toast({ title: `${ENTITY_NAME} criada com sucesso!` });
         try {
           if (created?.id) {
-            const msg = { id: created.id, name: created.name || payload.name || '', ts: Date.now() };
+            const msg = {
+              id: created.id,
+              name: created.name || payload.name || '',
+              ts: Date.now(),
+            };
             localStorage.setItem('gc_cat_created', JSON.stringify(msg));
             // também prepara seleção por nome como fallback
             localStorage.setItem('gc_cat_pending', msg.name);
@@ -69,7 +79,11 @@ export default function EstoqueCategorias() {
       fetchItems();
       handleCloseDialog();
     } catch (error) {
-      toast({ variant: 'destructive', title: `Erro ao salvar ${ENTITY_NAME.toLowerCase()}`, description: error.message });
+      toast({
+        variant: 'destructive',
+        title: `Erro ao salvar ${ENTITY_NAME.toLowerCase()}`,
+        description: error.message,
+      });
     }
   };
 
@@ -79,13 +93,19 @@ export default function EstoqueCategorias() {
   };
 
   const handleDelete = async () => {
-    if (!itemToDelete) return;
+    if (!itemToDelete) {
+      return;
+    }
     try {
       await stockCategoriesApi.remove(itemToDelete.id);
       toast({ title: `${ENTITY_NAME} excluída com sucesso!` });
       fetchItems();
     } catch (error) {
-      toast({ variant: 'destructive', title: `Erro ao excluir ${ENTITY_NAME.toLowerCase()}`, description: error.message });
+      toast({
+        variant: 'destructive',
+        title: `Erro ao excluir ${ENTITY_NAME.toLowerCase()}`,
+        description: error.message,
+      });
     } finally {
       setDeleteAlertOpen(false);
       setItemToDelete(null);
@@ -119,42 +139,64 @@ export default function EstoqueCategorias() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan="4" className="p-4 text-center text-gray-500">Carregando...</td></tr>
-                ) : items.map(item => (
-                  <tr key={item.id} className="border-b hover:bg-gray-50 transition-colors">
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">{item.emoji || '📦'}</span>
-                        <div>
-                          <p className="font-semibold text-gray-900">{item.name}</p>
-                          <p className="text-xs text-gray-500">{item.code || '—'}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-4 text-gray-600 text-xs max-w-xs truncate">{item.description || '—'}</td>
-                    <td className="p-4">
-                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                        item.is_active !== false
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-200 text-gray-700'
-                      }`}>
-                        {item.is_active !== false ? '🟢 Ativa' : '⚪ Inativa'}
-                      </span>
-                    </td>
-                    <td className="p-4 flex justify-end gap-2">
-                      <Button variant="outline" size="sm" onClick={() => handleOpenDialog(item)} title="Editar">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="destructive" size="sm" onClick={() => openDeleteAlert(item)} title="Excluir">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                  <tr>
+                    <td colSpan="4" className="p-4 text-center text-gray-500">
+                      Carregando...
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  items.map((item) => (
+                    <tr key={item.id} className="border-b hover:bg-gray-50 transition-colors">
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">{item.emoji || '📦'}</span>
+                          <div>
+                            <p className="font-semibold text-gray-900">{item.name}</p>
+                            <p className="text-xs text-gray-500">{item.code || '—'}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4 text-gray-600 text-xs max-w-xs truncate">
+                        {item.description || '—'}
+                      </td>
+                      <td className="p-4">
+                        <span
+                          className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                            item.is_active !== false
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-gray-200 text-gray-700'
+                          }`}
+                        >
+                          {item.is_active !== false ? '🟢 Ativa' : '⚪ Inativa'}
+                        </span>
+                      </td>
+                      <td className="p-4 flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenDialog(item)}
+                          title="Editar"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => openDeleteAlert(item)}
+                          title="Excluir"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
             {!loading && items.length === 0 && (
-              <p className="text-muted-foreground text-center py-6">Nenhuma {ENTITY_NAME.toLowerCase()} encontrada.</p>
+              <p className="text-muted-foreground text-center py-6">
+                Nenhuma {ENTITY_NAME.toLowerCase()} encontrada.
+              </p>
             )}
           </div>
         </CardContent>
@@ -174,10 +216,9 @@ export default function EstoqueCategorias() {
         open={deleteAlertOpen}
         onOpenChange={setDeleteAlertOpen}
         onConfirm={handleDelete}
-        title={`Confirmar Exclusão`}
+        title={'Confirmar Exclusão'}
         description={`Tem certeza que deseja excluir a ${ENTITY_NAME.toLowerCase()} "${itemToDelete?.name}"?`}
       />
     </div>
   );
 }
-

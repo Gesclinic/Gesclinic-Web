@@ -3,10 +3,10 @@
 
 /**
  * 📋 VISÃO GERAL
- * 
+ *
  * A Agenda foi refatorada para um modelo de AGENDA ÚNICA com múltiplos modos
  * de visualização, sem múltiplas rotas. Segue padrão ERP médico profissional.
- * 
+ *
  * Características principais:
  * ✅ Uma única rota: /clinica/agenda
  * ✅ Três modos de visualização controlados por estado
@@ -19,7 +19,7 @@
 
 /**
  * 🏗️ ARQUITETURA DE ARQUIVOS
- * 
+ *
  * src/pages/clinica/agenda/
  * ├── AgendaPage.jsx                    // Página principal (orquestra tudo)
  * ├── hooks/
@@ -35,9 +35,9 @@
 
 /**
  * 🎯 HOOK: useAgendaStore
- * 
+ *
  * Gerencia o estado único da Agenda
- * 
+ *
  * Estados:
  * - date: string (ISO) - Data selecionada
  * - viewMode: 'geral' | 'profissional' | 'sala'
@@ -46,7 +46,7 @@
  * - selectedSlot: Agendamento selecionado para modal
  * - metadata: { professionals, rooms, services, payers, patients }
  * - loading, error, indicators
- * 
+ *
  * Funções principais:
  * - updateFilter(key, value)
  * - clearFilters()
@@ -55,7 +55,7 @@
  * - selectSlot(slot)
  * - deselectSlot()
  * - previousDay(), nextDay(), goToday()
- * 
+ *
  * Exemplo de uso:
  * const agenda = useAgendaStore();
  * agenda.updateFilter('professional', '123');
@@ -64,16 +64,16 @@
 
 /**
  * 📱 COMPONENTE: AgendaPage
- * 
+ *
  * Componente principal que:
  * 1. Carrega dados da Agenda (agendamentos)
  * 2. Carrega metadata (profissionais, salas, etc)
  * 3. Orquestra todos os sub-componentes
  * 4. Gerencia permissões por RBAC
  * 5. Integra com Supabase
- * 
+ *
  * Props: Nenhuma (usa contextos)
- * 
+ *
  * Fluxo:
  * AgendaPage
  * ├── Carrega data/metadata com useEffect
@@ -87,13 +87,13 @@
 
 /**
  * 🎨 COMPONENTES UI
- * 
+ *
  * 1. AgendaHeader
  *    - Input de data
  *    - Botões: Anterior, Hoje, Próximo
  *    - Botão: Novo Agendamento
  *    - Botões: Semana, Mês
- * 
+ *
  * 2. AgendaIndicators
  *    - Taxa de ocupação (%)
  *    - Total de agendamentos
@@ -101,11 +101,11 @@
  *    - Faltas
  *    - Encaixes
  *    (Reagem aos filtros ativos)
- * 
+ *
  * 3. AgendaTabs
  *    - [ Agenda Geral ] [ Por Profissional ] [ Por Sala ]
  *    - Controlam viewMode
- * 
+ *
  * 4. AgendaFilters
  *    - Barra de busca (paciente/serviço)
  *    - Dropdown: Profissional (oculto em modo 'profissional')
@@ -114,7 +114,7 @@
  *    - Dropdown: Convênio
  *    - Dropdown: Serviço
  *    - Mostra contador de filtros ativos
- * 
+ *
  * 5. AgendaTimeline
  *    - Modo 'geral': Tabela com colunas (hora, paciente, prof, serviço, sala, status)
  *    - Modo 'profissional': Grid com colunas por profissional
@@ -126,14 +126,14 @@
 
 /**
  * 🔄 CICLO DE VIDA DO AGENDAMENTO
- * 
+ *
  * 1. CRIAR NOVO
  *    - Clique em slot vazio → Modal abre
  *    - Modo "novo" (sem ID)
  *    - Abas: Agendamento, Paciente, Financeiro
  *    - Botão "Salvar" → API create
  *    - Botão "Encaixe" → Cria com status 'encaixe'
- * 
+ *
  * 2. EDITAR EXISTENTE
  *    - Clique em agendamento existente → Modal abre
  *    - Modo "editar" (com ID)
@@ -146,12 +146,12 @@
  *    - Botão "Confirmar" → status = 'confirmado'
  *    - Botão "Cancelar" → status = 'cancelado'
  *    - Botão "Salvar" → API update
- * 
+ *
  * 3. CANCELAR
  *    - Botão "Cancelar" no modal
  *    - Requer confirmação
  *    - API: updateAppointment({ status: 'cancelado' })
- * 
+ *
  * 4. CONFIRMAR
  *    - Botão "Confirmar" no modal
  *    - API: updateAppointment({ status: 'confirmado' })
@@ -159,7 +159,7 @@
 
 /**
  * 🔐 CONTROLE DE PERMISSÕES (RBAC)
- * 
+ *
  * Role: 'recepcao'
  *   ✅ Ver todos os agendamentos
  *   ✅ Criar novo agendamento
@@ -167,23 +167,23 @@
  *   ✅ Confirmar agendamento
  *   ❌ Editar valor (financeiro)
  *   ❌ Cancelar agendamento
- * 
+ *
  * Role: 'profissional'
  *   ✅ Ver seus próprios agendamentos
  *   ✅ Confirmar (via modal ou flag)
  *   ❌ Editar dados
  *   ❌ Criar novo
  *   ❌ Cancelar
- * 
+ *
  * Role: 'gestor'
  *   ✅ Ver todos
  *   ✅ Editar tudo
  *   ✅ Confirmar/Cancelar
  *   ✅ Ver indicadores detalhados
- * 
+ *
  * Role: 'admin'
  *   ✅ Acesso total
- * 
+ *
  * Implementação:
  * - Verificar currentRole do useAuth()
  * - Condicionar renderização/habilitação de elementos
@@ -192,7 +192,7 @@
 
 /**
  * 🌍 INTEGRAÇÃO SUPABASE
- * 
+ *
  * Tabelas necessárias:
  * - appointments: agendamentos
  * - professionals: profissionais
@@ -201,9 +201,9 @@
  * - payers: convênios/pagadores
  * - patients: pacientes
  * - clinics: clínicas
- * 
+ *
  * APIs a implementar/atualizar:
- * 
+ *
  * 1. appointmentsApi.js
  *    ✅ listAppointments({ clinicId, start, end, filters })
  *    ⭕ createAppointment(data)
@@ -211,26 +211,26 @@
  *    ⭕ deleteAppointment(id)
  *    ⭕ confirmAppointment(id)
  *    ⭕ cancelAppointment(id)
- * 
+ *
  * 2. professionalsApi.js
  *    ⭕ list({ clinicId })
- * 
+ *
  * 3. roomsApi.js (NOVO)
  *    ⭕ list({ clinicId })
- * 
+ *
  * 4. servicesApi.js
  *    ⭕ list({ clinicId })
- * 
+ *
  * 5. payersApi.js
  *    ⭕ list({ clinicId })
- * 
+ *
  * 6. patientsApi.js
  *    ⭕ list({ clinicId })
  */
 
 /**
  * 📊 CORES POR STATUS
- * 
+ *
  * Disponível:     bg-gray-100    (vazio)
  * Confirmado:     bg-green-100   ✓
  * A confirmar:    bg-yellow-100  ⚠
@@ -240,29 +240,29 @@
 
 /**
  * 🚀 COMO USAR
- * 
+ *
  * 1. Página está pronta em /clinica/agenda
- * 
+ *
  * 2. Importar e usar em outro componente:
  *    import { useAgendaStore } from '@/pages/clinica/agenda/hooks/useAgendaStore';
- *    
+ *
  *    const agenda = useAgendaStore();
  *    agenda.updateFilter('professional', '123');
  *    agenda.setViewMode('profissional');
- * 
+ *
  * 3. Implementar handlers de ação (salvamento, cancelamento):
  *    - handleSaveAppointment
  *    - handleCancelAppointment
  *    - handleConfirmAppointment
  *    - handleFittingAppointment
- * 
+ *
  * 4. Completar integração com APIs Supabase:
  *    - Todos os "// TODO" comentários no código
  */
 
 /**
  * ✅ CHECKLIST DE CONCLUSÃO
- * 
+ *
  * [ ] AgendaPage renderiza sem erros
  * [ ] Todos os componentes montam corretamente
  * [ ] useAgendaStore funciona

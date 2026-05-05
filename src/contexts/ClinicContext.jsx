@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { supabase } from "@/lib/customSupabaseClient";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { supabase } from '@/lib/customSupabaseClient';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
 
 const ClinicContext = createContext(undefined);
 
@@ -12,8 +12,10 @@ export function ClinicProvider({ children }) {
 
   // Obter clinicId: primeiro de useAuth, depois do localStorage customizado
   const getClinicId = () => {
-    if (clinicId) return clinicId;
-    
+    if (clinicId) {
+      return clinicId;
+    }
+
     // Fallback para sessão customizada do localStorage
     const customSession = localStorage.getItem('gesclinic_session');
     if (customSession) {
@@ -33,8 +35,13 @@ export function ClinicProvider({ children }) {
     let active = true;
 
     async function loadClinic() {
-      console.log('🏥 [ClinicContext] loadClinic acionado. authLoading:', authLoading, 'resolvedClinicId:', resolvedClinicId);
-      
+      console.log(
+        '🏥 [ClinicContext] loadClinic acionado. authLoading:',
+        authLoading,
+        'resolvedClinicId:',
+        resolvedClinicId,
+      );
+
       // 🔒 Aguarda o Auth terminar
       if (authLoading) {
         console.log('⏳ [ClinicContext] Aguardando auth completar...');
@@ -54,18 +61,20 @@ export function ClinicProvider({ children }) {
       setLoadingClinic(true);
 
       const { data, error } = await supabase
-        .from("clinics")
-        .select("id, name, brand_color")
-        .eq("id", resolvedClinicId)
+        .from('clinics')
+        .select('id, name, brand_color')
+        .eq('id', resolvedClinicId)
         .maybeSingle();
 
-      if (!active) return;
+      if (!active) {
+        return;
+      }
 
       if (error) {
-        console.error("[ClinicContext] erro ao carregar clínica:", error.message);
+        console.error('[ClinicContext] erro ao carregar clínica:', error.message);
         setClinic(null);
       } else {
-        console.log("✅ [ClinicContext] Clínica carregada:", data);
+        console.log('✅ [ClinicContext] Clínica carregada:', data);
         setClinic(data);
         window.__clinic = data; // 👈 debug global
       }
@@ -99,9 +108,7 @@ export function useClinicContext() {
   const context = useContext(ClinicContext);
 
   if (context === undefined) {
-    throw new Error(
-      "useClinicContext deve ser usado dentro de um <ClinicProvider>"
-    );
+    throw new Error('useClinicContext deve ser usado dentro de um <ClinicProvider>');
   }
 
   return context;

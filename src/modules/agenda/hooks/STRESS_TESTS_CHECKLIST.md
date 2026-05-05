@@ -12,6 +12,7 @@
 ### 1. Criar Múltiplos Agendamentos Rapidamente ⏱️
 
 **Passos:**
+
 ```
 1. Abrir formulário NovoAgendamento
 2. Preencher dados
@@ -20,13 +21,15 @@
 ```
 
 **Esperado:**
+
 - [ ] 5 itens otimistas aparecem na agenda
-- [ ] Cada tem __optimistic: true
+- [ ] Cada tem \_\_optimistic: true
 - [ ] Nenhuma duplicação de IDs
 - [ ] Todos consolidam com IDs reais após sucesso
 - [ ] Zero flicker visual
 
 **Se falhar:**
+
 ```
 ❌ Duplicação: Verificar crypto.randomUUID()
 ❌ Flicker: Verificar placeholderData nas queries
@@ -38,6 +41,7 @@
 ### 2. Editar Múltiplos Itens Seguidos ⏱️
 
 **Passos:**
+
 ```
 1. Criar 3 agendamentos
 2. Esperar consolidação
@@ -48,7 +52,8 @@
 ```
 
 **Esperado:**
-- [ ] Todos os 3 mostram __optimistic: true
+
+- [ ] Todos os 3 mostram \_\_optimistic: true
 - [ ] Nenhuma colisão de IDs
 - [ ] Ordem de atualização preservada
 - [ ] Todos consolidam corretamente
@@ -58,6 +63,7 @@
 ### 3. Simular Erro de Rede 🌐
 
 **Passos:**
+
 ```
 1. Abrir DevTools > Network
 2. Desligar internet (offline)
@@ -68,6 +74,7 @@
 ```
 
 **Esperado:**
+
 - [ ] Item otimista adicionado ao cache
 - [ ] Mutation tenta retry automaticamente
 - [ ] Backoff exponencial (1s, 2s, 4s, ...)
@@ -80,6 +87,7 @@
 ### 4. Trocar Clínica Durante Save 🏥
 
 **Passos:**
+
 ```
 1. Criar agendamento na clínica A
 2. Enquanto salva, trocar para clínica B
@@ -87,6 +95,7 @@
 ```
 
 **Esperado:**
+
 - [ ] Item otimista permanece em A
 - [ ] Cache isolado por clinicId
 - [ ] Sem contaminação entre clínicas
@@ -97,6 +106,7 @@
 ### 5. Trocar Data Durante Save 📅
 
 **Passos:**
+
 ```
 1. Criar agendamento em 2026-04-15
 2. Enquanto salva, trocar para 2026-04-16
@@ -104,6 +114,7 @@
 ```
 
 **Esperado:**
+
 - [ ] Item permanece em 15/04
 - [ ] Novo item não aparece em 16/04
 - [ ] Cache isolado por date
@@ -114,6 +125,7 @@
 ### 6. Navegar Entre Telas Rápido 🧭
 
 **Passos:**
+
 ```
 1. Agenda → Criar agendamento
 2. Enquanto salva, voltar à agenda
@@ -124,6 +136,7 @@
 ```
 
 **Esperado:**
+
 - [ ] Item otimista persiste durante navegação
 - [ ] Cache mantido durante saída/volta
 - [ ] Zero refetch desnecessário
@@ -134,6 +147,7 @@
 ### 7. Múltiplas Abas do Browser 🔀
 
 **Passos:**
+
 ```
 1. Aba 1: Abrir Agenda (criar agendamento)
 2. Aba 2: Abrir mesma Agenda
@@ -142,6 +156,7 @@
 ```
 
 **Esperado:**
+
 - [ ] Ambas atualizam (React Query sincrona)
 - [ ] Sem duplicação
 - [ ] Consolidação consistente
@@ -151,6 +166,7 @@
 ### 8. Rede Lenta (Throttle 3G) 📊
 
 **Passos:**
+
 ```
 1. DevTools > Network > Throttle 3G
 2. Criar agendamento
@@ -158,6 +174,7 @@
 ```
 
 **Esperado:**
+
 - [ ] UI responsivo mesmo em 3G
 - [ ] Loading visível mas fluido
 - [ ] Retry com backoff funciona
@@ -168,6 +185,7 @@
 ### 9. Rollback em Erro (Force 500) ⚠️
 
 **Passos:**
+
 ```
 1. Interceptar requisição (DevTools/Proxy)
 2. Retornar erro 500
@@ -176,6 +194,7 @@
 ```
 
 **Esperado:**
+
 - [ ] Item otimista adicionado
 - [ ] Mutation falha → Retry 1/2/3
 - [ ] Após 3 falhas, desiste
@@ -188,6 +207,7 @@
 ### 10. Validação de Payload ✅
 
 **Passos:**
+
 ```
 1. Tentar criar sem clinicId (console hack)
 2. Tentar criar sem date
@@ -195,6 +215,7 @@
 ```
 
 **Esperado:**
+
 - [ ] Erro imediato (sem ir para servidor)
 - [ ] Nenhuma retry
 - [ ] Mensagem específica: "clinicId é obrigatório"
@@ -215,6 +236,7 @@ Promise.all([
 ```
 
 **Esperado:**
+
 - [ ] 80 operações simultâneas
 - [ ] Sem crashes
 - [ ] Sem duplicação
@@ -227,11 +249,12 @@ Promise.all([
 ```javascript
 // Criar 1000 agendamentos em diferentes datas
 for (let i = 0; i < 1000; i++) {
-  await criarAgendamento({ date: `2026-04-${(i % 30) + 1}` })
+  await criarAgendamento({ date: `2026-04-${(i % 30) + 1}` });
 }
 ```
 
 **Esperado:**
+
 - [ ] Memory não explode (gcTime limpa inativos)
 - [ ] Performance mantida
 - [ ] Sem memory leaks
@@ -253,14 +276,14 @@ for (let i = 0; i < 1000; i++) {
 
 ## Métricas de Sucesso
 
-| Métrica | Esperado | Tolerância |
-|---------|----------|------------|
-| **Latência Percebida** | < 50ms | ±10ms |
-| **Retry Attempt** | 3x máximo | - |
-| **Backoff Delay** | 1s, 2s, 4s, max 30s | ±100ms |
-| **Rollback Latência** | < 100ms | ±20ms |
-| **Memory (1000 items)** | < 50MB | ±10MB |
-| **CPU (durante save)** | < 20% | ±5% |
+| Métrica                 | Esperado            | Tolerância |
+| ----------------------- | ------------------- | ---------- |
+| **Latência Percebida**  | < 50ms              | ±10ms      |
+| **Retry Attempt**       | 3x máximo           | -          |
+| **Backoff Delay**       | 1s, 2s, 4s, max 30s | ±100ms     |
+| **Rollback Latência**   | < 100ms             | ±20ms      |
+| **Memory (1000 items)** | < 50MB              | ±10MB      |
+| **CPU (durante save)**  | < 20%               | ±5%        |
 
 ---
 

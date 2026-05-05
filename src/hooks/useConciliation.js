@@ -12,12 +12,12 @@ import {
   ignoreStatement,
   getIndicators,
   listBankAccounts,
-  getStatementHistory
+  getStatementHistory,
 } from '@/lib/conciliationApi';
 import {
   CONCILIATION_STATUS,
   TRANSACTION_TYPE,
-  FINANCIAL_LINK_TYPE
+  FINANCIAL_LINK_TYPE,
 } from '@/lib/conciliationStatus';
 
 /**
@@ -27,13 +27,13 @@ export function useConciliation(clinicId) {
   const [statements, setStatements] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  
+
   const [filters, setFilters] = useState({
     status: null,
     startDate: null,
     endDate: null,
     accountId: null,
-    search: ''
+    search: '',
   });
 
   const [indicators, setIndicators] = useState({
@@ -44,7 +44,7 @@ export function useConciliation(clinicId) {
     ignored: 0,
     totalCredit: 0,
     totalDebit: 0,
-    difference: 0
+    difference: 0,
   });
 
   const [bankAccounts, setBankAccounts] = useState([]);
@@ -54,30 +54,33 @@ export function useConciliation(clinicId) {
   /**
    * Carregar extratos
    */
-  const loadStatements = useCallback(async (page = 0, pageSize = 50) => {
-    try {
-      setLoading(true);
-      setError(null);
+  const loadStatements = useCallback(
+    async (page = 0, pageSize = 50) => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      const result = await listBankStatements({
-        clinicId,
-        status: filters.status,
-        startDate: filters.startDate,
-        endDate: filters.endDate,
-        accountId: filters.accountId,
-        search: filters.search,
-        limit: pageSize,
-        offset: page * pageSize
-      });
+        const result = await listBankStatements({
+          clinicId,
+          status: filters.status,
+          startDate: filters.startDate,
+          endDate: filters.endDate,
+          accountId: filters.accountId,
+          search: filters.search,
+          limit: pageSize,
+          offset: page * pageSize,
+        });
 
-      setStatements(result.data);
-    } catch (err) {
-      console.error('Error loading statements:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [clinicId, filters]);
+        setStatements(result.data);
+      } catch (err) {
+        console.error('Error loading statements:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [clinicId, filters],
+  );
 
   /**
    * Carregar contas bancárias
@@ -100,7 +103,7 @@ export function useConciliation(clinicId) {
         clinicId,
         filters.accountId,
         filters.startDate,
-        filters.endDate
+        filters.endDate,
       );
       setIndicators(ind);
     } catch (err) {
@@ -111,188 +114,209 @@ export function useConciliation(clinicId) {
   /**
    * Importar extrato (função wrapper)
    */
-  const importExtract = useCallback(async (items, accountId) => {
-    try {
-      setLoading(true);
-      setError(null);
+  const importExtract = useCallback(
+    async (items, accountId) => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      const result = await importBankStatements({
-        clinicId,
-        statements: items,
-        accountId
-      });
+        const result = await importBankStatements({
+          clinicId,
+          statements: items,
+          accountId,
+        });
 
-      // Recarregar lista
-      await loadStatements();
-      await loadIndicators();
+        // Recarregar lista
+        await loadStatements();
+        await loadIndicators();
 
-      return result;
-    } catch (err) {
-      console.error('Error importing statements:', err);
-      setError(err.message);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, [clinicId, loadStatements, loadIndicators]);
+        return result;
+      } catch (err) {
+        console.error('Error importing statements:', err);
+        setError(err.message);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [clinicId, loadStatements, loadIndicators],
+  );
 
   /**
    * Buscar sugestões para um extrato
    */
-  const findSuggestionsForStatement = useCallback(async (statement) => {
-    try {
-      const sugg = await findSuggestions({
-        clinicId,
-        amount: statement.amount,
-        description: statement.description,
-        transactionType: statement.transaction_type,
-        statementDate: statement.statement_date
-      });
+  const findSuggestionsForStatement = useCallback(
+    async (statement) => {
+      try {
+        const sugg = await findSuggestions({
+          clinicId,
+          amount: statement.amount,
+          description: statement.description,
+          transactionType: statement.transaction_type,
+          statementDate: statement.statement_date,
+        });
 
-      setSuggestions(prev => ({
-        ...prev,
-        [statement.id]: sugg
-      }));
+        setSuggestions((prev) => ({
+          ...prev,
+          [statement.id]: sugg,
+        }));
 
-      return sugg;
-    } catch (err) {
-      console.error('Error finding suggestions:', err);
-      return [];
-    }
-  }, [clinicId]);
+        return sugg;
+      } catch (err) {
+        console.error('Error finding suggestions:', err);
+        return [];
+      }
+    },
+    [clinicId],
+  );
 
   /**
    * Conciliar um extrato
    */
-  const handleConciliate = useCallback(async (statementId, financialId, financialType) => {
-    try {
-      setLoading(true);
-      setError(null);
+  const handleConciliate = useCallback(
+    async (statementId, financialId, financialType) => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      await conciliateStatement(statementId, financialId, financialType);
+        await conciliateStatement(statementId, financialId, financialType);
 
-      // Atualizar lista
-      await loadStatements();
-      await loadIndicators();
+        // Atualizar lista
+        await loadStatements();
+        await loadIndicators();
 
-      setSelectedStatement(null);
-    } catch (err) {
-      console.error('Error conciliating statement:', err);
-      setError(err.message);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, [loadStatements, loadIndicators]);
+        setSelectedStatement(null);
+      } catch (err) {
+        console.error('Error conciliating statement:', err);
+        setError(err.message);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [loadStatements, loadIndicators],
+  );
 
   /**
    * Criar lançamento e vincular
    */
-  const handleCreateAndLink = useCallback(async (statementId, financialData) => {
-    try {
-      setLoading(true);
-      setError(null);
+  const handleCreateAndLink = useCallback(
+    async (statementId, financialData) => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      await createAndLinkFinancial({
-        statementId,
-        ...financialData,
-        clinicId
-      });
+        await createAndLinkFinancial({
+          statementId,
+          ...financialData,
+          clinicId,
+        });
 
-      // Atualizar lista
-      await loadStatements();
-      await loadIndicators();
+        // Atualizar lista
+        await loadStatements();
+        await loadIndicators();
 
-      setSelectedStatement(null);
-    } catch (err) {
-      console.error('Error creating and linking financial:', err);
-      setError(err.message);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, [clinicId, loadStatements, loadIndicators]);
+        setSelectedStatement(null);
+      } catch (err) {
+        console.error('Error creating and linking financial:', err);
+        setError(err.message);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [clinicId, loadStatements, loadIndicators],
+  );
 
   /**
    * Marcar como divergente
    */
-  const handleMarkDivergent = useCallback(async (statementId, reason) => {
-    try {
-      setLoading(true);
-      setError(null);
+  const handleMarkDivergent = useCallback(
+    async (statementId, reason) => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      await markAsDivergent(statementId, reason);
+        await markAsDivergent(statementId, reason);
 
-      await loadStatements();
-      await loadIndicators();
+        await loadStatements();
+        await loadIndicators();
 
-      setSelectedStatement(null);
-    } catch (err) {
-      console.error('Error marking as divergent:', err);
-      setError(err.message);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, [loadStatements, loadIndicators]);
+        setSelectedStatement(null);
+      } catch (err) {
+        console.error('Error marking as divergent:', err);
+        setError(err.message);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [loadStatements, loadIndicators],
+  );
 
   /**
    * Ignorar lançamento
    */
-  const handleIgnore = useCallback(async (statementId, reason) => {
-    try {
-      setLoading(true);
-      setError(null);
+  const handleIgnore = useCallback(
+    async (statementId, reason) => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      await ignoreStatement(statementId, reason);
+        await ignoreStatement(statementId, reason);
 
-      await loadStatements();
-      await loadIndicators();
+        await loadStatements();
+        await loadIndicators();
 
-      setSelectedStatement(null);
-    } catch (err) {
-      console.error('Error ignoring statement:', err);
-      setError(err.message);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, [loadStatements, loadIndicators]);
+        setSelectedStatement(null);
+      } catch (err) {
+        console.error('Error ignoring statement:', err);
+        setError(err.message);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [loadStatements, loadIndicators],
+  );
 
   /**
    * Conciliar múltiplos selecionados
    */
-  const handleBulkConciliate = useCallback(async (selectedIds, getMatchFunction) => {
-    try {
-      setLoading(true);
-      setError(null);
+  const handleBulkConciliate = useCallback(
+    async (selectedIds, getMatchFunction) => {
+      try {
+        setLoading(true);
+        setError(null);
 
-      const promises = selectedIds.map(async (id) => {
-        const statement = statements.find(s => s.id === id);
-        const match = await getMatchFunction(id);
+        const promises = selectedIds.map(async (id) => {
+          const statement = statements.find((s) => s.id === id);
+          const match = await getMatchFunction(id);
 
-        if (match) {
-          return conciliateStatement(id, match.financial_id, match.financial_type);
-        }
-      });
+          if (match) {
+            return conciliateStatement(id, match.financial_id, match.financial_type);
+          }
+        });
 
-      await Promise.all(promises);
-      await loadStatements();
-      await loadIndicators();
-    } catch (err) {
-      console.error('Error in bulk conciliation:', err);
-      setError(err.message);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, [statements, loadStatements, loadIndicators]);
+        await Promise.all(promises);
+        await loadStatements();
+        await loadIndicators();
+      } catch (err) {
+        console.error('Error in bulk conciliation:', err);
+        setError(err.message);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [statements, loadStatements, loadIndicators],
+  );
 
   /**
    * Atualizar filtros
    */
   const updateFilters = useCallback((newFilters) => {
-    setFilters(prev => ({ ...prev, ...newFilters }));
+    setFilters((prev) => ({ ...prev, ...newFilters }));
   }, []);
 
   /**
@@ -304,7 +328,7 @@ export function useConciliation(clinicId) {
       startDate: null,
       endDate: null,
       accountId: null,
-      search: ''
+      search: '',
     });
   }, []);
 
@@ -356,7 +380,7 @@ export function useConciliation(clinicId) {
     // Reload
     loadStatements,
     loadIndicators,
-    loadBankAccounts
+    loadBankAccounts,
   };
 }
 
@@ -376,10 +400,10 @@ export function useBankStatementParser() {
       setParseError(null);
 
       const lines = fileContent.trim().split('\n');
-      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      const headers = lines[0].split(',').map((h) => h.trim().toLowerCase());
 
       const statements = lines.slice(1).map((line, idx) => {
-        const values = line.split(',').map(v => v.trim());
+        const values = line.split(',').map((v) => v.trim());
         const row = {};
 
         headers.forEach((header, i) => {
@@ -390,7 +414,10 @@ export function useBankStatementParser() {
           date: row.data || row.date,
           description: row.descricao || row.description,
           amount: parseFloat(row.valor || row.amount),
-          type: row.tipo || row.type === 'C' || row.type === 'credit' ? TRANSACTION_TYPE.CREDIT : TRANSACTION_TYPE.DEBIT
+          type:
+            row.tipo || row.type === 'C' || row.type === 'credit'
+              ? TRANSACTION_TYPE.CREDIT
+              : TRANSACTION_TYPE.DEBIT,
         };
       });
 
@@ -414,7 +441,7 @@ export function useBankStatementParser() {
       const statements = [];
       const transactions = fileContent.match(/<STMTTRN>[\s\S]*?<\/STMTTRN>/g) || [];
 
-      transactions.forEach(tx => {
+      transactions.forEach((tx) => {
         const dateMatch = tx.match(/<DTPOSTED>(\d{8})/);
         const amountMatch = tx.match(/<TRNAMT>(-?\d+\.?\d*)/);
         const descMatch = tx.match(/<MEMO>(.*?)</);
@@ -426,7 +453,7 @@ export function useBankStatementParser() {
             date: dateMatch[1],
             description: descMatch ? descMatch[1] : 'OFX Transaction',
             amount: Math.abs(amount),
-            type: amount > 0 ? TRANSACTION_TYPE.CREDIT : TRANSACTION_TYPE.DEBIT
+            type: amount > 0 ? TRANSACTION_TYPE.CREDIT : TRANSACTION_TYPE.DEBIT,
           });
         }
       });
@@ -444,6 +471,6 @@ export function useBankStatementParser() {
     parsing,
     parseError,
     parseCSV,
-    parseOFX
+    parseOFX,
   };
 }

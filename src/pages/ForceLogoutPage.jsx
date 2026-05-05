@@ -1,6 +1,6 @@
-import React, { useEffect } from "react";
-import { supabase } from "@/lib/customSupabaseClient";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useEffect } from 'react';
+import { supabase } from '@/lib/customSupabaseClient';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function ForceLogoutPage() {
   useEffect(() => {
@@ -9,11 +9,11 @@ export default function ForceLogoutPage() {
         await supabase.auth.signOut();
         // Aguardar um pouco e redirecionar
         setTimeout(() => {
-          window.location.href = "/login";
+          window.location.href = '/login';
         }, 1500);
       } catch (error) {
-        console.error("Erro ao fazer logout:", error);
-        window.location.href = "/login";
+        console.error('Erro ao fazer logout:', error);
+        window.location.href = '/login';
       }
     }
 
@@ -29,7 +29,9 @@ export default function ForceLogoutPage() {
         <CardContent>
           <div className="space-y-4">
             <p className="text-center">Sua sessão está sendo encerrada.</p>
-            <p className="text-center text-sm text-gray-600">Você será redirecionado para fazer login novamente em alguns segundos...</p>
+            <p className="text-center text-sm text-gray-600">
+              Você será redirecionado para fazer login novamente em alguns segundos...
+            </p>
             <div className="flex justify-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>

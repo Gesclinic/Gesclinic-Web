@@ -1,25 +1,27 @@
 import React, { useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { 
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Edit, Unlock, AlertTriangle } from "lucide-react";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Edit, Unlock, AlertTriangle } from 'lucide-react';
 import { updateAppointmentStatus } from '@/lib/agendaApi';
 import { supabase } from '@/lib/customSupabaseClient';
 
 const BlockedSlotManager = ({ appointment, onStatusChange }) => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isUnblocking, setIsUnblocking] = useState(false);
-  const [blockReason, setBlockReason] = useState(appointment?.notes || appointment?.block_reason || '');
+  const [blockReason, setBlockReason] = useState(
+    appointment?.notes || appointment?.block_reason || '',
+  );
   const [isUpdating, setIsUpdating] = useState(false);
 
   const handleUnblock = async () => {
@@ -28,14 +30,16 @@ const BlockedSlotManager = ({ appointment, onStatusChange }) => {
       // Em vez de mudar status, vamos remover o bloqueio definindo is_blocked=false e status=agendado
       const { data, error } = await supabase
         .from('appointments')
-        .update({ 
+        .update({
           is_blocked: false,
-          status: 'agendado'
+          status: 'agendado',
         })
         .eq('id', appointment.id);
-      
-      if (error) throw error;
-      
+
+      if (error) {
+        throw error;
+      }
+
       onStatusChange && onStatusChange(appointment.id, 'agendado');
       setIsEditDialogOpen(false);
     } catch (error) {
@@ -55,9 +59,11 @@ const BlockedSlotManager = ({ appointment, onStatusChange }) => {
         .from('appointments')
         .update({ notes: blockReason })
         .eq('id', appointment.id);
-      
-      if (error) throw error;
-      
+
+      if (error) {
+        throw error;
+      }
+
       setIsEditDialogOpen(false);
       // TODO: Mostrar toast de sucesso
     } catch (error) {
@@ -75,7 +81,7 @@ const BlockedSlotManager = ({ appointment, onStatusChange }) => {
           <AlertTriangle className="w-3 h-3 mr-1" />
           Bloqueado
         </Badge>
-        
+
         <Button
           size="sm"
           variant="outline"
@@ -98,12 +104,10 @@ const BlockedSlotManager = ({ appointment, onStatusChange }) => {
               Edite o motivo do bloqueio ou desbloqueie o horário.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="blockReason">
-                Motivo do Bloqueio
-              </Label>
+              <Label htmlFor="blockReason">Motivo do Bloqueio</Label>
               <Textarea
                 id="blockReason"
                 placeholder="Ex: Manutenção, Ausência do profissional, etc."
@@ -112,15 +116,16 @@ const BlockedSlotManager = ({ appointment, onStatusChange }) => {
                 rows={3}
               />
             </div>
-            
+
             <div className="border-t pt-4">
               <p className="text-sm text-gray-600 mb-3">
-                Horário: {new Date(appointment.start_time).toLocaleString('pt-BR', { 
-                  hour: '2-digit', 
+                Horário:{' '}
+                {new Date(appointment.start_time).toLocaleString('pt-BR', {
+                  hour: '2-digit',
                   minute: '2-digit',
                   day: '2-digit',
                   month: '2-digit',
-                  year: 'numeric'
+                  year: 'numeric',
                 })}
               </p>
               <p className="text-sm text-gray-600">
@@ -137,15 +142,11 @@ const BlockedSlotManager = ({ appointment, onStatusChange }) => {
             >
               Cancelar
             </Button>
-            
-            <Button
-              variant="outline"
-              onClick={handleUpdateReason}
-              disabled={isUpdating}
-            >
+
+            <Button variant="outline" onClick={handleUpdateReason} disabled={isUpdating}>
               {isUpdating ? 'Salvando...' : 'Salvar Motivo'}
             </Button>
-            
+
             <Button
               variant="default"
               onClick={handleUnblock}

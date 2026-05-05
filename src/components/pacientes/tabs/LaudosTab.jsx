@@ -1,67 +1,80 @@
-import React, { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import { Plus, FileText, Eye, Edit, Trash2, Globe, Calendar, Clock, RefreshCw, Printer } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/components/ui/use-toast";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
-import { useClinicContext } from "@/contexts/useClinicContext";
-import LaudoDialog from "@/components/clinica/LaudoDialog";
-import * as professionalsApi from "@/lib/professionalsApi";
-import { getClinic } from "@/lib/clinicsApi";
+import React, { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Plus,
+  FileText,
+  Eye,
+  Edit,
+  Trash2,
+  Globe,
+  Calendar,
+  Clock,
+  RefreshCw,
+  Printer,
+} from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/components/ui/use-toast';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useClinicContext } from '@/contexts/useClinicContext';
+import LaudoDialog from '@/components/clinica/LaudoDialog';
+import * as professionalsApi from '@/lib/professionalsApi';
+import { getClinic } from '@/lib/clinicsApi';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   createPatientLaudo,
   deletePatientLaudo,
   listPatientLaudos,
   syncLocalPatientLaudos,
   updatePatientLaudo,
-} from "@/lib/patientLaudosApi";
+} from '@/lib/patientLaudosApi';
 import {
   buildLetterheadText,
   getLaudoTypeLabel,
   summarizeLaudoContent,
-} from "@/lib/patientLaudoTemplates";
-import { printLaudoDocument } from "@/lib/laudoPrint";
-import LaudoLetterhead from "@/components/laudos/LaudoLetterhead";
-import LaudoSignatureBlock from "@/components/laudos/LaudoSignatureBlock";
+} from '@/lib/patientLaudoTemplates';
+import { printLaudoDocument } from '@/lib/laudoPrint';
+import LaudoLetterhead from '@/components/laudos/LaudoLetterhead';
+import LaudoSignatureBlock from '@/components/laudos/LaudoSignatureBlock';
 import {
   createPatientLaudoTemplate,
   listPatientLaudoTemplates,
   updatePatientLaudoTemplate,
-} from "@/lib/patientLaudoModelsApi";
+} from '@/lib/patientLaudoModelsApi';
 
 const STATUS_CONFIG = {
-  rascunho: { label: "Rascunho", className: "bg-amber-100 text-amber-800 border border-amber-200" },
-  assinado: { label: "Assinado", className: "bg-emerald-100 text-emerald-800 border border-emerald-200" },
-  publicado: { label: "Publicado", className: "bg-sky-100 text-sky-800 border border-sky-200" },
-  cancelado: { label: "Cancelado", className: "bg-rose-100 text-rose-800 border border-rose-200" },
+  rascunho: { label: 'Rascunho', className: 'bg-amber-100 text-amber-800 border border-amber-200' },
+  assinado: {
+    label: 'Assinado',
+    className: 'bg-emerald-100 text-emerald-800 border border-emerald-200',
+  },
+  publicado: { label: 'Publicado', className: 'bg-sky-100 text-sky-800 border border-sky-200' },
+  cancelado: { label: 'Cancelado', className: 'bg-rose-100 text-rose-800 border border-rose-200' },
 };
 
 function normalizeLaudoRow(row) {
   return {
     ...row,
-    title: row?.title ?? row?.titulo ?? "",
-    content: row?.content ?? row?.corpo ?? "",
+    title: row?.title ?? row?.titulo ?? '',
+    content: row?.content ?? row?.corpo ?? '',
     exam_date: row?.exam_date ?? row?.data_exame ?? null,
-    laudo_type: row?.laudo_type ?? row?.metadata?.template_type ?? "personalizado",
-    _storage_mode: row?._storage_mode || "supabase",
+    laudo_type: row?.laudo_type ?? row?.metadata?.template_type ?? 'personalizado',
+    _storage_mode: row?._storage_mode || 'supabase',
   };
 }
 
 function buildClinicInfo(clinicRow) {
-  if (!clinicRow) return null;
+  if (!clinicRow) {
+    return null;
+  }
 
   return {
     ...clinicRow,
-    address_line: [clinicRow?.address, clinicRow?.city, clinicRow?.state].filter(Boolean).join(" - "),
-    contact_line: [clinicRow?.phone, clinicRow?.email, clinicRow?.cnpj].filter(Boolean).join(" • "),
+    address_line: [clinicRow?.address, clinicRow?.city, clinicRow?.state]
+      .filter(Boolean)
+      .join(' - '),
+    contact_line: [clinicRow?.phone, clinicRow?.email, clinicRow?.cnpj].filter(Boolean).join(' • '),
   };
 }
 
@@ -85,11 +98,11 @@ export default function LaudosTab({ patientId, patientData, updatePatientData })
   const resolvedClinicInfo = buildClinicInfo(clinicDetails);
   const resolvedProfessionalInfo = professionalsApi.normalizeProfessionalProfile(professionalData);
 
-  const localLaudosCount = laudos.filter((item) => item._storage_mode === "local").length;
+  const localLaudosCount = laudos.filter((item) => item._storage_mode === 'local').length;
 
   const getProfessionalName = () => {
     try {
-      const savedSession = localStorage.getItem("gesclinic_session");
+      const savedSession = localStorage.getItem('gesclinic_session');
       if (savedSession) {
         const sessionData = JSON.parse(savedSession);
         if (sessionData.username) {
@@ -100,7 +113,7 @@ export default function LaudosTab({ patientId, patientData, updatePatientData })
       // noop
     }
 
-    return user?.user_metadata?.full_name || user?.username || user?.email || "Profissional";
+    return user?.user_metadata?.full_name || user?.username || user?.email || 'Profissional';
   };
 
   async function loadLaudos() {
@@ -109,11 +122,11 @@ export default function LaudosTab({ patientId, patientData, updatePatientData })
       const rows = await listPatientLaudos(patientId, clinic?.id || clinicId || null);
       setLaudos((rows || []).map(normalizeLaudoRow));
     } catch (error) {
-      console.error("Erro ao carregar laudos:", error);
+      console.error('Erro ao carregar laudos:', error);
       toast({
-        title: "Erro",
-        description: "Falha ao carregar os laudos do paciente.",
-        variant: "destructive",
+        title: 'Erro',
+        description: 'Falha ao carregar os laudos do paciente.',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -125,13 +138,14 @@ export default function LaudosTab({ patientId, patientData, updatePatientData })
       const rows = await listPatientLaudoTemplates(clinic?.id || clinicId || null);
       setTemplates(rows || []);
     } catch (error) {
-      console.error("Erro ao carregar modelos de laudo:", error);
+      console.error('Erro ao carregar modelos de laudo:', error);
     }
   }
 
   async function loadContextData() {
     try {
-      const emailToSearch = user?.email || (JSON.parse(localStorage.getItem("gesclinic_session") || "{}")).email;
+      const emailToSearch =
+        user?.email || JSON.parse(localStorage.getItem('gesclinic_session') || '{}').email;
       const [professional, clinicRow] = await Promise.all([
         professionalsApi.getProfessionalByUserId(user?.id, emailToSearch),
         clinic?.id || clinicId ? getClinic(clinic?.id || clinicId) : Promise.resolve(null),
@@ -140,7 +154,7 @@ export default function LaudosTab({ patientId, patientData, updatePatientData })
       setProfessionalData(professional || null);
       setClinicDetails(clinicRow || clinic || null);
     } catch (error) {
-      console.error("Erro ao carregar contexto do laudo:", error);
+      console.error('Erro ao carregar contexto do laudo:', error);
       setClinicDetails(clinic || null);
     }
   }
@@ -178,15 +192,18 @@ export default function LaudosTab({ patientId, patientData, updatePatientData })
 
     try {
       if (editingLaudo?.id) {
-        const updatedRow = normalizeLaudoRow(await updatePatientLaudo(editingLaudo.id, laudoPayload));
-        setLaudos((prev) => prev.map((item) => item.id === editingLaudo.id ? updatedRow : item));
+        const updatedRow = normalizeLaudoRow(
+          await updatePatientLaudo(editingLaudo.id, laudoPayload),
+        );
+        setLaudos((prev) => prev.map((item) => (item.id === editingLaudo.id ? updatedRow : item)));
         setEditingLaudo(null);
         setShowEditor(false);
         toast({
-          title: "Laudo atualizado",
-          description: updatedRow._storage_mode === "local"
-            ? "Alteracoes salvas localmente ate a migration do Supabase ser aplicada."
-            : "As alteracoes do laudo foram salvas no Supabase.",
+          title: 'Laudo atualizado',
+          description:
+            updatedRow._storage_mode === 'local'
+              ? 'Alteracoes salvas localmente ate a migration do Supabase ser aplicada.'
+              : 'As alteracoes do laudo foram salvas no Supabase.',
         });
         return;
       }
@@ -195,17 +212,18 @@ export default function LaudosTab({ patientId, patientData, updatePatientData })
       setLaudos((prev) => [newRow, ...prev]);
       setShowEditor(false);
       toast({
-        title: "Laudo criado",
-        description: newRow._storage_mode === "local"
-          ? "Laudo salvo localmente ate a migration do Supabase ser aplicada."
-          : "O laudo foi salvo nesta ficha do paciente.",
+        title: 'Laudo criado',
+        description:
+          newRow._storage_mode === 'local'
+            ? 'Laudo salvo localmente ate a migration do Supabase ser aplicada.'
+            : 'O laudo foi salvo nesta ficha do paciente.',
       });
     } catch (error) {
-      console.error("Erro ao salvar laudo:", error);
+      console.error('Erro ao salvar laudo:', error);
       toast({
-        title: "Erro",
-        description: "Falha ao salvar o laudo do paciente.",
-        variant: "destructive",
+        title: 'Erro',
+        description: 'Falha ao salvar o laudo do paciente.',
+        variant: 'destructive',
       });
       throw error;
     } finally {
@@ -235,19 +253,20 @@ export default function LaudosTab({ patientId, patientData, updatePatientData })
       await loadTemplates();
 
       toast({
-        title: payload.id ? "Modelo atualizado" : "Modelo salvo",
-        description: savedTemplate?._storage_mode === "local"
-          ? "Modelo salvo localmente ate a migration do Supabase ser aplicada."
-          : "O modelo de laudo foi salvo com sucesso.",
+        title: payload.id ? 'Modelo atualizado' : 'Modelo salvo',
+        description:
+          savedTemplate?._storage_mode === 'local'
+            ? 'Modelo salvo localmente ate a migration do Supabase ser aplicada.'
+            : 'O modelo de laudo foi salvo com sucesso.',
       });
 
       return savedTemplate;
     } catch (error) {
-      console.error("Erro ao salvar modelo de laudo:", error);
+      console.error('Erro ao salvar modelo de laudo:', error);
       toast({
-        title: "Erro",
-        description: "Falha ao salvar o modelo de laudo.",
-        variant: "destructive",
+        title: 'Erro',
+        description: 'Falha ao salvar o modelo de laudo.',
+        variant: 'destructive',
       });
       throw error;
     } finally {
@@ -259,13 +278,13 @@ export default function LaudosTab({ patientId, patientData, updatePatientData })
     try {
       await deletePatientLaudo(id);
       setLaudos((prev) => prev.filter((item) => item.id !== id));
-      toast({ title: "Laudo removido", description: "O laudo foi excluido da lista do paciente." });
+      toast({ title: 'Laudo removido', description: 'O laudo foi excluido da lista do paciente.' });
     } catch (error) {
-      console.error("Erro ao remover laudo:", error);
+      console.error('Erro ao remover laudo:', error);
       toast({
-        title: "Erro",
-        description: "Falha ao remover o laudo.",
-        variant: "destructive",
+        title: 'Erro',
+        description: 'Falha ao remover o laudo.',
+        variant: 'destructive',
       });
     }
   };
@@ -273,13 +292,15 @@ export default function LaudosTab({ patientId, patientData, updatePatientData })
   const handleTogglePortal = async (id) => {
     const currentRow = laudos.find((item) => item.id === id);
 
-    if (!currentRow) return;
+    if (!currentRow) {
+      return;
+    }
 
-    if (!["assinado", "publicado"].includes(currentRow.status)) {
+    if (!['assinado', 'publicado'].includes(currentRow.status)) {
       toast({
-        title: "Assinatura pendente",
-        description: "O laudo precisa estar assinado antes de ser publicado no portal.",
-        variant: "destructive",
+        title: 'Assinatura pendente',
+        description: 'O laudo precisa estar assinado antes de ser publicado no portal.',
+        variant: 'destructive',
       });
       return;
     }
@@ -287,27 +308,31 @@ export default function LaudosTab({ patientId, patientData, updatePatientData })
     const nextPortalState = !currentRow.portal_visible;
 
     try {
-      const updatedRow = normalizeLaudoRow(await updatePatientLaudo(id, {
-        portal_visible: nextPortalState,
-        status: nextPortalState ? "publicado" : "assinado",
-        portal_published_at: nextPortalState ? (currentRow.portal_published_at || new Date().toISOString()) : null,
-        signed_at: currentRow.signed_at || new Date().toISOString(),
-      }));
+      const updatedRow = normalizeLaudoRow(
+        await updatePatientLaudo(id, {
+          portal_visible: nextPortalState,
+          status: nextPortalState ? 'publicado' : 'assinado',
+          portal_published_at: nextPortalState
+            ? currentRow.portal_published_at || new Date().toISOString()
+            : null,
+          signed_at: currentRow.signed_at || new Date().toISOString(),
+        }),
+      );
 
-      setLaudos((prev) => prev.map((item) => item.id === id ? updatedRow : item));
+      setLaudos((prev) => prev.map((item) => (item.id === id ? updatedRow : item)));
 
       toast({
-        title: updatedRow.portal_visible ? "Portal habilitado" : "Portal desabilitado",
+        title: updatedRow.portal_visible ? 'Portal habilitado' : 'Portal desabilitado',
         description: updatedRow.portal_visible
-          ? "O laudo foi marcado para exibicao no portal do paciente."
-          : "O laudo deixou de ficar disponivel no portal.",
+          ? 'O laudo foi marcado para exibicao no portal do paciente.'
+          : 'O laudo deixou de ficar disponivel no portal.',
       });
     } catch (error) {
-      console.error("Erro ao atualizar publicacao do laudo:", error);
+      console.error('Erro ao atualizar publicacao do laudo:', error);
       toast({
-        title: "Erro",
-        description: "Falha ao atualizar a publicacao do laudo.",
-        variant: "destructive",
+        title: 'Erro',
+        description: 'Falha ao atualizar a publicacao do laudo.',
+        variant: 'destructive',
       });
     }
   };
@@ -321,31 +346,32 @@ export default function LaudosTab({ patientId, patientData, updatePatientData })
 
       if (result.blockedByPolicy) {
         toast({
-          title: "Sincronizacao bloqueada",
-          description: "O Supabase ainda esta rejeitando gravacoes. Aplique a migration e tente novamente.",
-          variant: "destructive",
+          title: 'Sincronizacao bloqueada',
+          description:
+            'O Supabase ainda esta rejeitando gravacoes. Aplique a migration e tente novamente.',
+          variant: 'destructive',
         });
         return;
       }
 
       if (result.syncedRows.length > 0) {
         toast({
-          title: "Laudos sincronizados",
+          title: 'Laudos sincronizados',
           description: `${result.syncedRows.length} laudo(s) foram enviados ao Supabase.`,
         });
         return;
       }
 
       toast({
-        title: "Nada para sincronizar",
-        description: "Nao ha laudos locais pendentes neste paciente.",
+        title: 'Nada para sincronizar',
+        description: 'Nao ha laudos locais pendentes neste paciente.',
       });
     } catch (error) {
-      console.error("Erro ao sincronizar laudos locais:", error);
+      console.error('Erro ao sincronizar laudos locais:', error);
       toast({
-        title: "Erro",
-        description: "Falha ao sincronizar laudos locais com o Supabase.",
-        variant: "destructive",
+        title: 'Erro',
+        description: 'Falha ao sincronizar laudos locais com o Supabase.',
+        variant: 'destructive',
       });
     } finally {
       setSyncingLocal(false);
@@ -369,23 +395,34 @@ export default function LaudosTab({ patientId, patientData, updatePatientData })
   };
 
   return (
-    <motion.div className="space-y-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }}>
+    <motion.div
+      className="space-y-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.25 }}
+    >
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="text-lg font-semibold text-gray-900">Laudos</h3>
-          <p className="mt-1 text-sm text-gray-500">Laudos clinicos formais com fluxo de rascunho, assinatura, publicacao e acesso futuro no portal do paciente.</p>
+          <p className="mt-1 text-sm text-gray-500">
+            Laudos clinicos formais com fluxo de rascunho, assinatura, publicacao e acesso futuro no
+            portal do paciente.
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {localLaudosCount > 0 ? (
             <Button variant="outline" onClick={handleSyncLocalLaudos} disabled={syncingLocal}>
-              <RefreshCw size={16} className={`mr-2 ${syncingLocal ? "animate-spin" : ""}`} />
+              <RefreshCw size={16} className={`mr-2 ${syncingLocal ? 'animate-spin' : ''}`} />
               Sincronizar locais
             </Button>
           ) : null}
-          <Button className="bg-sky-600 hover:bg-sky-700 text-white" onClick={() => {
-            setEditingLaudo(null);
-            setShowEditor(true);
-          }}>
+          <Button
+            className="bg-sky-600 hover:bg-sky-700 text-white"
+            onClick={() => {
+              setEditingLaudo(null);
+              setShowEditor(true);
+            }}
+          >
             <Plus size={16} className="mr-2" />
             Novo Laudo
           </Button>
@@ -395,32 +432,47 @@ export default function LaudosTab({ patientId, patientData, updatePatientData })
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="border-l-4 border-sky-500 bg-sky-50">
           <CardContent className="pt-5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Total de laudos</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Total de laudos
+            </p>
             <p className="mt-2 text-3xl font-bold text-sky-900">{laudos.length}</p>
           </CardContent>
         </Card>
         <Card className="border-l-4 border-emerald-500 bg-emerald-50">
           <CardContent className="pt-5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Publicados</p>
-            <p className="mt-2 text-3xl font-bold text-emerald-900">{laudos.filter((item) => item.status === "publicado").length}</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Publicados
+            </p>
+            <p className="mt-2 text-3xl font-bold text-emerald-900">
+              {laudos.filter((item) => item.status === 'publicado').length}
+            </p>
           </CardContent>
         </Card>
         <Card className="border-l-4 border-violet-500 bg-violet-50">
           <CardContent className="pt-5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Pendentes de sincronizacao</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+              Pendentes de sincronizacao
+            </p>
             <p className="mt-2 text-3xl font-bold text-violet-900">{localLaudosCount}</p>
           </CardContent>
         </Card>
       </div>
 
       {loading ? (
-        <Card><CardContent className="pt-10 pb-10 text-center text-gray-500">Carregando laudos...</CardContent></Card>
+        <Card>
+          <CardContent className="pt-10 pb-10 text-center text-gray-500">
+            Carregando laudos...
+          </CardContent>
+        </Card>
       ) : laudos.length === 0 ? (
         <Card className="border-l-4 border-sky-500 bg-sky-50">
           <CardContent className="pt-12 pb-12 text-center">
             <FileText className="mx-auto mb-4 h-12 w-12 text-sky-300" />
             <p className="font-medium text-gray-700">Nenhum laudo cadastrado</p>
-            <p className="mt-2 text-sm text-gray-500">Crie laudos formais para deixar separado do historico clinico e preparar a futura entrega no portal.</p>
+            <p className="mt-2 text-sm text-gray-500">
+              Crie laudos formais para deixar separado do historico clinico e preparar a futura
+              entrega no portal.
+            </p>
           </CardContent>
         </Card>
       ) : (
@@ -435,46 +487,95 @@ export default function LaudosTab({ patientId, patientData, updatePatientData })
                       <Badge variant="outline" className="border-slate-300 bg-white text-slate-700">
                         {getLaudoTypeLabel(laudo.laudo_type)}
                       </Badge>
-                      <Badge className={STATUS_CONFIG[laudo.status]?.className || "bg-slate-100 text-slate-800"}>
+                      <Badge
+                        className={
+                          STATUS_CONFIG[laudo.status]?.className || 'bg-slate-100 text-slate-800'
+                        }
+                      >
                         {STATUS_CONFIG[laudo.status]?.label || laudo.status}
                       </Badge>
                       <Badge
                         variant="outline"
-                        className={laudo._storage_mode === "local" ? "border-amber-300 bg-amber-50 text-amber-800" : "border-emerald-300 bg-emerald-50 text-emerald-800"}
+                        className={
+                          laudo._storage_mode === 'local'
+                            ? 'border-amber-300 bg-amber-50 text-amber-800'
+                            : 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                        }
                       >
-                        {laudo._storage_mode === "local" ? "Local" : "Supabase"}
+                        {laudo._storage_mode === 'local' ? 'Local' : 'Supabase'}
                       </Badge>
                       {laudo.portal_visible ? (
-                        <Badge variant="outline" className="border-violet-200 bg-violet-50 text-violet-800">Portal habilitado</Badge>
+                        <Badge
+                          variant="outline"
+                          className="border-violet-200 bg-violet-50 text-violet-800"
+                        >
+                          Portal habilitado
+                        </Badge>
                       ) : null}
                     </div>
                     <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-gray-500">
-                      <span className="inline-flex items-center gap-1"><Clock size={12} /> {new Date(laudo.created_at).toLocaleDateString("pt-BR")}</span>
-                      <span className="inline-flex items-center gap-1"><Calendar size={12} /> {laudo.exam_date ? new Date(laudo.exam_date).toLocaleDateString("pt-BR") : "Sem data de exame"}</span>
-                      <span>{laudo.professional_name || "Profissional nao informado"}</span>
+                      <span className="inline-flex items-center gap-1">
+                        <Clock size={12} /> {new Date(laudo.created_at).toLocaleDateString('pt-BR')}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Calendar size={12} />{' '}
+                        {laudo.exam_date
+                          ? new Date(laudo.exam_date).toLocaleDateString('pt-BR')
+                          : 'Sem data de exame'}
+                      </span>
+                      <span>{laudo.professional_name || 'Profissional nao informado'}</span>
                     </div>
-                    <p className="mt-3 line-clamp-3 text-sm text-gray-700">{laudo.summary || summarizeLaudoContent(laudo.content) || "Sem conteudo informado."}</p>
+                    <p className="mt-3 line-clamp-3 text-sm text-gray-700">
+                      {laudo.summary ||
+                        summarizeLaudoContent(laudo.content) ||
+                        'Sem conteudo informado.'}
+                    </p>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="h-9 w-9 p-0" onClick={() => {
-                      setSelectedLaudo(laudo);
-                      setShowPreview(true);
-                    }}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 w-9 p-0"
+                      onClick={() => {
+                        setSelectedLaudo(laudo);
+                        setShowPreview(true);
+                      }}
+                    >
                       <Eye size={16} />
                     </Button>
-                    <Button variant="outline" size="sm" className="h-9 w-9 p-0" onClick={() => handlePrintLaudo(laudo)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 w-9 p-0"
+                      onClick={() => handlePrintLaudo(laudo)}
+                    >
                       <Printer size={16} />
                     </Button>
-                    <Button variant="outline" size="sm" className="h-9 w-9 p-0" onClick={() => {
-                      setEditingLaudo(laudo);
-                      setShowEditor(true);
-                    }}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 w-9 p-0"
+                      onClick={() => {
+                        setEditingLaudo(laudo);
+                        setShowEditor(true);
+                      }}
+                    >
                       <Edit size={16} />
                     </Button>
-                    <Button variant="outline" size="sm" className="h-9 w-9 p-0" onClick={() => handleTogglePortal(laudo.id)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 w-9 p-0"
+                      onClick={() => handleTogglePortal(laudo.id)}
+                    >
                       <Globe size={16} />
                     </Button>
-                    <Button variant="outline" size="sm" className="h-9 w-9 p-0 text-rose-600" onClick={() => handleDeleteLaudo(laudo.id)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 w-9 p-0 text-rose-600"
+                      onClick={() => handleDeleteLaudo(laudo.id)}
+                    >
                       <Trash2 size={16} />
                     </Button>
                   </div>
@@ -489,7 +590,9 @@ export default function LaudosTab({ patientId, patientData, updatePatientData })
         open={showEditor}
         onOpenChange={(open) => {
           setShowEditor(open);
-          if (!open) setEditingLaudo(null);
+          if (!open) {
+            setEditingLaudo(null);
+          }
         }}
         onSubmit={handleSubmitLaudo}
         templates={templates}
@@ -497,7 +600,7 @@ export default function LaudosTab({ patientId, patientData, updatePatientData })
         initialData={editingLaudo}
         loading={saving}
         savingTemplate={savingTemplate}
-        patientName={patientData?.name || ""}
+        patientName={patientData?.name || ''}
         clinicInfo={resolvedClinicInfo}
         professionalInfo={resolvedProfessionalInfo}
       />
@@ -507,10 +610,12 @@ export default function LaudosTab({ patientId, patientData, updatePatientData })
           <DialogHeader className="border-b border-slate-200 px-6 pb-4 pt-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <DialogTitle>{selectedLaudo?.title || "Laudo"}</DialogTitle>
+                <DialogTitle>{selectedLaudo?.title || 'Laudo'}</DialogTitle>
               </div>
               {selectedLaudo?.portal_visible ? (
-                <Badge variant="outline" className="border-violet-200 bg-violet-50 text-violet-800">Marcado para portal</Badge>
+                <Badge variant="outline" className="border-violet-200 bg-violet-50 text-violet-800">
+                  Marcado para portal
+                </Badge>
               ) : null}
             </div>
           </DialogHeader>
@@ -522,38 +627,58 @@ export default function LaudosTab({ patientId, patientData, updatePatientData })
                     <Badge variant="outline" className="border-slate-300 bg-white text-slate-700">
                       {getLaudoTypeLabel(selectedLaudo.laudo_type)}
                     </Badge>
-                    <Badge className={STATUS_CONFIG[selectedLaudo.status]?.className || "bg-slate-100 text-slate-800"}>
+                    <Badge
+                      className={
+                        STATUS_CONFIG[selectedLaudo.status]?.className ||
+                        'bg-slate-100 text-slate-800'
+                      }
+                    >
                       {STATUS_CONFIG[selectedLaudo.status]?.label || selectedLaudo.status}
                     </Badge>
                     <Badge
                       variant="outline"
-                      className={selectedLaudo._storage_mode === "local" ? "border-amber-300 bg-amber-50 text-amber-800" : "border-emerald-300 bg-emerald-50 text-emerald-800"}
+                      className={
+                        selectedLaudo._storage_mode === 'local'
+                          ? 'border-amber-300 bg-amber-50 text-amber-800'
+                          : 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                      }
                     >
-                      {selectedLaudo._storage_mode === "local" ? "Local" : "Supabase"}
+                      {selectedLaudo._storage_mode === 'local' ? 'Local' : 'Supabase'}
                     </Badge>
                   </div>
                   <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                     <p className="font-semibold text-gray-700">Paciente</p>
-                    <p className="mt-1 text-gray-900">{patientData?.name || "Paciente"}</p>
+                    <p className="mt-1 text-gray-900">{patientData?.name || 'Paciente'}</p>
                   </div>
                   <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                     <p className="font-semibold text-gray-700">Profissional</p>
-                    <p className="mt-1 text-gray-900">{selectedLaudo.professional_name || "Nao informado"}</p>
+                    <p className="mt-1 text-gray-900">
+                      {selectedLaudo.professional_name || 'Nao informado'}
+                    </p>
                   </div>
                   <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                     <p className="font-semibold text-gray-700">Data do exame</p>
-                    <p className="mt-1 text-gray-900">{selectedLaudo.exam_date ? new Date(selectedLaudo.exam_date).toLocaleDateString("pt-BR") : "Nao informada"}</p>
+                    <p className="mt-1 text-gray-900">
+                      {selectedLaudo.exam_date
+                        ? new Date(selectedLaudo.exam_date).toLocaleDateString('pt-BR')
+                        : 'Nao informada'}
+                    </p>
                   </div>
                   <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                     <p className="font-semibold text-gray-700">Criado em</p>
-                    <p className="mt-1 text-gray-900">{new Date(selectedLaudo.created_at).toLocaleDateString("pt-BR")}</p>
+                    <p className="mt-1 text-gray-900">
+                      {new Date(selectedLaudo.created_at).toLocaleDateString('pt-BR')}
+                    </p>
                   </div>
                 </div>
               </aside>
               <div className="min-h-0 overflow-y-auto px-6 py-6">
                 {selectedLaudo?.metadata?.letterhead ? (
                   <div className="mb-4">
-                    <LaudoLetterhead letterhead={selectedLaudo.metadata.letterhead} section="clinic" />
+                    <LaudoLetterhead
+                      letterhead={selectedLaudo.metadata.letterhead}
+                      section="clinic"
+                    />
                   </div>
                 ) : null}
                 <div className="mb-3 flex items-center justify-between gap-3">
@@ -564,11 +689,15 @@ export default function LaudosTab({ patientId, patientData, updatePatientData })
                   </Button>
                 </div>
                 <div className="min-h-[55vh] rounded-2xl border border-gray-200 bg-white p-5 text-sm leading-6 text-gray-800 whitespace-pre-wrap shadow-sm">
-                  {selectedLaudo.content || "Sem conteudo informado."}
+                  {selectedLaudo.content || 'Sem conteudo informado.'}
                 </div>
                 {selectedLaudo?.metadata?.letterhead ? (
                   <div className="mt-4">
-                    <LaudoLetterhead letterhead={selectedLaudo.metadata.letterhead} section="professional" compact />
+                    <LaudoLetterhead
+                      letterhead={selectedLaudo.metadata.letterhead}
+                      section="professional"
+                      compact
+                    />
                   </div>
                 ) : null}
                 {selectedLaudo?.metadata?.signature ? (

@@ -3,16 +3,16 @@
 // CRUD Completo de Recursos - Base do Sistema
 // ============================================================
 
-import React, { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
-import { useClinicContext } from "@/contexts/ClinicContext";
-import * as resourcesApi from "@/lib/resourcesApi";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Plus, Edit2, Trash2, Check, X, Package, Archive } from "lucide-react";
-import BaseSystemHeader from "@/components/layout/BaseSystemHeader";
-import { Alert } from "@/components/layout/BaseSystemAlert";
-import EmptyState from "@/components/layout/EmptyState";
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useClinicContext } from '@/contexts/ClinicContext';
+import * as resourcesApi from '@/lib/resourcesApi';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Plus, Edit2, Trash2, Check, X, Package, Archive } from 'lucide-react';
+import BaseSystemHeader from '@/components/layout/BaseSystemHeader';
+import { Alert } from '@/components/layout/BaseSystemAlert';
+import EmptyState from '@/components/layout/EmptyState';
 export function RecursosPage() {
   const { user, isAuthenticated } = useAuth();
   const { clinicId } = useClinicContext();
@@ -23,9 +23,9 @@ export function RecursosPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    category: "",
+    name: '',
+    description: '',
+    category: '',
     active: true,
   });
   const [submitting, setSubmitting] = useState(false);
@@ -43,8 +43,8 @@ export function RecursosPage() {
       const data = await resourcesApi.listResources(clinicId);
       setResources(Array.isArray(data) ? data : []);
     } catch (err) {
-      setError(err.message || "Erro ao carregar recursos");
-      console.error("Erro:", err);
+      setError(err.message || 'Erro ao carregar recursos');
+      console.error('Erro:', err);
       setResources([]);
     } finally {
       setLoading(false);
@@ -53,7 +53,7 @@ export function RecursosPage() {
 
   const handleNew = () => {
     setEditingId(null);
-    setFormData({ name: "", description: "", category: "", active: true });
+    setFormData({ name: '', description: '', category: '', active: true });
     setShowForm(true);
     setError(null);
   };
@@ -61,9 +61,9 @@ export function RecursosPage() {
   const handleEdit = (resource) => {
     setEditingId(resource.id);
     setFormData({
-      name: resource.name || "",
-      description: resource.description || "",
-      category: resource.category || "",
+      name: resource.name || '',
+      description: resource.description || '',
+      category: resource.category || '',
       active: resource.active !== false,
     });
     setShowForm(true);
@@ -73,19 +73,23 @@ export function RecursosPage() {
   const closeForm = () => {
     setShowForm(false);
     setEditingId(null);
-    setFormData({ name: "", description: "", category: "", active: true });
+    setFormData({ name: '', description: '', category: '', active: true });
     setSubmitting(false);
   };
 
   const handleCloseWithCheck = () => {
     const hasData = Object.entries(formData).some(([key, value]) => {
-      if (typeof value === "string") return value.trim() !== "";
-      if (typeof value === "boolean") return value !== true;
+      if (typeof value === 'string') {
+        return value.trim() !== '';
+      }
+      if (typeof value === 'boolean') {
+        return value !== true;
+      }
       return false;
     });
 
     if (hasData) {
-      if (window.confirm("Tem certeza que deseja sair? As alterações não salvas serão perdidas.")) {
+      if (window.confirm('Tem certeza que deseja sair? As alterações não salvas serão perdidas.')) {
         closeForm();
       }
     } else {
@@ -95,11 +99,11 @@ export function RecursosPage() {
 
   const validateForm = () => {
     if (!formData.name.trim()) {
-      setError("Nome do recurso é obrigatório");
+      setError('Nome do recurso é obrigatório');
       return false;
     }
     if (formData.name.trim().length < 3) {
-      setError("Nome deve ter pelo menos 3 caracteres");
+      setError('Nome deve ter pelo menos 3 caracteres');
       return false;
     }
     return true;
@@ -125,11 +129,7 @@ export function RecursosPage() {
 
       if (editingId) {
         await resourcesApi.updateResource(editingId, clinicId, dataToSave);
-        setResources(
-          resources.map((r) =>
-            r.id === editingId ? { ...r, ...dataToSave } : r
-          )
-        );
+        setResources(resources.map((r) => (r.id === editingId ? { ...r, ...dataToSave } : r)));
       } else {
         const newResource = await resourcesApi.createResource(clinicId, dataToSave);
         setResources([...resources, newResource]);
@@ -137,8 +137,8 @@ export function RecursosPage() {
 
       closeForm();
     } catch (err) {
-      setError(err.message || "Erro ao salvar recurso");
-      console.error("Erro:", err);
+      setError(err.message || 'Erro ao salvar recurso');
+      console.error('Erro:', err);
     } finally {
       setSubmitting(false);
     }
@@ -154,8 +154,8 @@ export function RecursosPage() {
       await resourcesApi.deleteResource(id, clinicId);
       setResources(resources.filter((r) => r.id !== id));
     } catch (err) {
-      setError(err.message || "Erro ao deletar recurso");
-      console.error("Erro:", err);
+      setError(err.message || 'Erro ao deletar recurso');
+      console.error('Erro:', err);
     }
   };
 
@@ -178,14 +178,7 @@ export function RecursosPage() {
       />
 
       {/* ALERTA DE ERRO/SUCESSO */}
-      {error && (
-        <Alert
-          type="error"
-          title="Aviso"
-          message={error}
-          onClose={() => setError(null)}
-        />
-      )}
+      {error && <Alert type="error" title="Aviso" message={error} onClose={() => setError(null)} />}
 
       {/* CARD PRINCIPAL */}
       <Card>
@@ -206,10 +199,7 @@ export function RecursosPage() {
               title="Nenhum recurso cadastrado"
               description="Comece criando seu primeiro recurso para gerenciar equipamentos e materiais disponíveis."
               action={
-                <Button
-                  onClick={handleNew}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
+                <Button onClick={handleNew} className="bg-blue-600 hover:bg-blue-700">
                   Cadastrar Primeiro Recurso
                 </Button>
               }
@@ -219,37 +209,20 @@ export function RecursosPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-gray-50">
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                      Nome
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                      Categoria
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                      Descrição
-                    </th>
-                    <th className="text-center py-3 px-4 font-semibold text-gray-700">
-                      Status
-                    </th>
-                    <th className="text-center py-3 px-4 font-semibold text-gray-700">
-                      Ações
-                    </th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Nome</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Categoria</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Descrição</th>
+                    <th className="text-center py-3 px-4 font-semibold text-gray-700">Status</th>
+                    <th className="text-center py-3 px-4 font-semibold text-gray-700">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   {resources.map((resource) => (
-                    <tr
-                      key={resource.id}
-                      className="border-b hover:bg-gray-50 transition"
-                    >
-                      <td className="py-3 px-4 font-medium text-gray-900">
-                        {resource.name}
-                      </td>
-                      <td className="py-3 px-4 text-gray-600">
-                        {resource.category || "-"}
-                      </td>
+                    <tr key={resource.id} className="border-b hover:bg-gray-50 transition">
+                      <td className="py-3 px-4 font-medium text-gray-900">{resource.name}</td>
+                      <td className="py-3 px-4 text-gray-600">{resource.category || '-'}</td>
                       <td className="py-3 px-4 text-gray-600 max-w-xs truncate">
-                        {resource.description || "-"}
+                        {resource.description || '-'}
                       </td>
                       <td className="py-3 px-4 text-center">
                         {resource.active ? (
@@ -301,7 +274,7 @@ export function RecursosPage() {
                 <div className="flex items-center gap-3">
                   <Archive size={24} className="text-white" />
                   <h2 className="text-xl font-bold text-white">
-                    {editingId ? "✏️ Editar Recurso" : "➕ Novo Recurso"}
+                    {editingId ? '✏️ Editar Recurso' : '➕ Novo Recurso'}
                   </h2>
                 </div>
                 <button
@@ -316,14 +289,22 @@ export function RecursosPage() {
 
               {/* Content */}
               <CardContent className="app-modal-body p-6 modal-content-scroll">
-                <form id="recursos-form" onSubmit={handleSubmit} className="space-y-5" style={{flex: 1, overflow: "visible"}}>
-                  <div style={{flex: 1, overflowY: "auto", paddingRight: "8px"}}>
-
+                <form
+                  id="recursos-form"
+                  onSubmit={handleSubmit}
+                  className="space-y-5"
+                  style={{ flex: 1, overflow: 'visible' }}
+                >
+                  <div style={{ flex: 1, overflowY: 'auto', paddingRight: '8px' }}>
                     {/* SEÇÃO 1: IDENTIFICAÇÃO DO RECURSO */}
                     <div className="bg-white border border-gray-200 rounded-lg p-5 space-y-4">
                       <div className="border-b pb-3">
-                        <h3 className="text-lg font-bold text-gray-900">📦 Identificação do Recurso</h3>
-                        <p className="text-sm text-gray-600 mt-1">Informações básicas para identificar e organizar</p>
+                        <h3 className="text-lg font-bold text-gray-900">
+                          📦 Identificação do Recurso
+                        </h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Informações básicas para identificar e organizar
+                        </p>
                       </div>
 
                       {/* Nome */}
@@ -334,16 +315,16 @@ export function RecursosPage() {
                         <input
                           type="text"
                           value={formData.name}
-                          onChange={(e) =>
-                            setFormData({ ...formData, name: e.target.value })
-                          }
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                           placeholder="Ex: Estetoscópio, Monitor Cardíaco, Cadeira"
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           required
                           disabled={submitting}
                           autoFocus
                         />
-                        <p className="text-xs text-gray-500 mt-2">Nome único e descritivo do recurso</p>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Nome único e descritivo do recurso
+                        </p>
                       </div>
 
                       {/* Categoria */}
@@ -353,9 +334,7 @@ export function RecursosPage() {
                         </label>
                         <select
                           value={formData.category}
-                          onChange={(e) =>
-                            setFormData({ ...formData, category: e.target.value })
-                          }
+                          onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
                           disabled={submitting}
                         >
@@ -385,7 +364,9 @@ export function RecursosPage() {
                           rows={4}
                           disabled={submitting}
                         />
-                        <p className="text-xs text-gray-500 mt-2">Informações adicionais para melhor identificação</p>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Informações adicionais para melhor identificação
+                        </p>
                       </div>
                     </div>
 
@@ -393,7 +374,9 @@ export function RecursosPage() {
                     <div className="bg-white border border-gray-200 rounded-lg p-5">
                       <div className="border-b pb-3 mb-4">
                         <h3 className="text-lg font-bold text-gray-900">⚙️ Status</h3>
-                        <p className="text-sm text-gray-600 mt-1">Controle de disponibilidade do recurso</p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Controle de disponibilidade do recurso
+                        </p>
                       </div>
 
                       <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
@@ -402,9 +385,7 @@ export function RecursosPage() {
                             type="checkbox"
                             id="active"
                             checked={formData.active}
-                            onChange={(e) =>
-                              setFormData({ ...formData, active: e.target.checked })
-                            }
+                            onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
                             className="w-5 h-5 rounded border border-gray-300 cursor-pointer accent-blue-600"
                             disabled={submitting}
                           />
@@ -415,13 +396,15 @@ export function RecursosPage() {
                         </label>
                       </div>
                     </div>
-
                   </div>
                 </form>
               </CardContent>
 
               {/* Footer */}
-              <div style={{flexShrink: 0}} className="border-t bg-gradient-to-r from-gray-50 to-white px-6 py-4 flex gap-3 justify-end rounded-b-lg">
+              <div
+                style={{ flexShrink: 0 }}
+                className="border-t bg-gradient-to-r from-gray-50 to-white px-6 py-4 flex gap-3 justify-end rounded-b-lg"
+              >
                 <Button
                   type="button"
                   onClick={handleCloseWithCheck}
@@ -443,9 +426,9 @@ export function RecursosPage() {
                       Salvando...
                     </>
                   ) : editingId ? (
-                    "✓ Atualizar"
+                    '✓ Atualizar'
                   ) : (
-                    "✓ Criar"
+                    '✓ Criar'
                   )}
                 </Button>
               </div>
@@ -456,4 +439,3 @@ export function RecursosPage() {
     </div>
   );
 }
-

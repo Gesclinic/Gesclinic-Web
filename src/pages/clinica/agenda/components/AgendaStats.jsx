@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 
 /**
  * AgendaStats - KPIs do dia
- * 
+ *
  * Exibe:
  * - Total de atendimentos
  * - Horários livres
@@ -12,11 +12,11 @@ import { useMemo } from 'react';
 export default function AgendaStats({ appointments = [], allSlots = [] }) {
   const stats = useMemo(() => {
     const totalSlots = allSlots.length;
-    const occupiedSlots = appointments.filter(a => a.paciente || a.patient_name).length;
+    const occupiedSlots = appointments.filter((a) => a.paciente || a.patient_name).length;
     const freeSlots = totalSlots - occupiedSlots;
     const occupancyPercent = totalSlots > 0 ? Math.round((occupiedSlots / totalSlots) * 100) : 0;
-    
-    const delays = appointments.filter(a => {
+
+    const delays = appointments.filter((a) => {
       const status = a.status?.toLowerCase();
       return status === 'falta' || (status === 'confirmado' && a.horário);
     }).length;
@@ -68,4 +68,3 @@ export default function AgendaStats({ appointments = [], allSlots = [] }) {
     </div>
   );
 }
-

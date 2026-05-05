@@ -1,7 +1,7 @@
 // src/components/layout/Sidebar.jsx
-import React, { useState, useMemo, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useState, useMemo, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Importar TODOS os novos ícones
 import {
@@ -78,12 +78,12 @@ import {
   WalletCards,
   Building2,
   Receipt,
-} from "lucide-react";
+} from 'lucide-react';
 
-import { getMenuItems } from "@/constants/menu.js";
-import logoG from "@/assets/logo_gesclinic_g.png";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
-import { cn } from "@/lib/utils";
+import { getMenuItems } from '@/constants/menu.js';
+import logoG from '@/assets/logo_gesclinic_g.png';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { cn } from '@/lib/utils';
 
 const isPathActive = (itemPath, pathname) => {
   if (!itemPath) {
@@ -211,32 +211,29 @@ export default function Sidebar({ isOpen, setIsOpen }) {
 
   // Determina o role: primeiro da sessão customizada, depois do Supabase Auth
   const getRoleForMenu = () => {
-    const customSession = localStorage.getItem("gesclinic_session");
+    const customSession = localStorage.getItem('gesclinic_session');
     if (customSession) {
       try {
         const sessionData = JSON.parse(customSession);
-        return sessionData.role || "recepcao";
+        return sessionData.role || 'recepcao';
       } catch (e) {
-        console.error("Erro ao parsear sessão customizada", e);
+        console.error('Erro ao parsear sessão customizada', e);
       }
     }
-    return currentRole || "recepcao";
+    return currentRole || 'recepcao';
   };
 
   // Gera menu baseado no perfil
-  const menu = useMemo(
-    () => {
-      const role = getRoleForMenu();
-      const filteredMenu = getMenuItems(role);
-      return filteredMenu;
-    },
-    [currentRole]
-  );
+  const menu = useMemo(() => {
+    const role = getRoleForMenu();
+    const filteredMenu = getMenuItems(role);
+    return filteredMenu;
+  }, [currentRole]);
 
   const descendantsById = useMemo(() => buildDescendantsMap(menu), [menu]);
   const activeTrail = useMemo(
     () => buildActiveTrail(menu, location.pathname),
-    [menu, location.pathname]
+    [menu, location.pathname],
   );
 
   // Estado para rastrear módulos e subgrupos abertos
@@ -270,10 +267,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
       const prevKeys = Object.keys(prev);
       const nextKeys = Object.keys(nextOpenItems);
 
-      if (
-        prevKeys.length === nextKeys.length &&
-        nextKeys.every((key) => prev[key])
-      ) {
+      if (prevKeys.length === nextKeys.length && nextKeys.every((key) => prev[key])) {
         return prev;
       }
 
@@ -318,7 +312,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     });
   };
 
-  const renderIcon = (name, size = "h-5 w-5") => {
+  const renderIcon = (name, size = 'h-5 w-5') => {
     const IconComponent = ICONS[name] || LayoutDashboard;
     return <IconComponent className={size} />;
   };
@@ -346,22 +340,20 @@ export default function Sidebar({ isOpen, setIsOpen }) {
             to={item.path}
             title={!isOpen ? item.label : undefined}
             className={cn(
-              "group flex items-center gap-3 rounded-xl transition-all font-medium min-h-[48px]",
-              isOpen ? "px-3 py-3" : "justify-center px-2 py-3",
+              'group flex items-center gap-3 rounded-xl transition-all font-medium min-h-[48px]',
+              isOpen ? 'px-3 py-3' : 'justify-center px-2 py-3',
               isActive
-                ? "bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))] shadow-sm ring-1 ring-[hsl(var(--primary))]/10"
-                : "text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/5"
+                ? 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))] shadow-sm ring-1 ring-[hsl(var(--primary))]/10'
+                : 'text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/5',
             )}
           >
             <span
               className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-lg transition-colors",
-                isActive
-                  ? "bg-[hsl(var(--primary))]/12"
-                  : "group-hover:bg-[hsl(var(--primary))]/8"
+                'flex h-9 w-9 items-center justify-center rounded-lg transition-colors',
+                isActive ? 'bg-[hsl(var(--primary))]/12' : 'group-hover:bg-[hsl(var(--primary))]/8',
               )}
             >
-              {renderIcon(item.icon, "h-5 w-5")}
+              {renderIcon(item.icon, 'h-5 w-5')}
             </span>
             <AnimatePresence initial={false}>
               {isOpen && (
@@ -388,24 +380,24 @@ export default function Sidebar({ isOpen, setIsOpen }) {
             onClick={() => toggleItem(item, currentLevelSiblingIds)}
             aria-expanded={isItemOpen}
             className={cn(
-              "group flex items-center w-full rounded-xl transition-all duration-200 min-h-[48px]",
-              isOpen ? "gap-3 px-3 py-3" : "justify-center px-2 py-3",
+              'group flex items-center w-full rounded-xl transition-all duration-200 min-h-[48px]',
+              isOpen ? 'gap-3 px-3 py-3' : 'justify-center px-2 py-3',
               isItemOpen || isBranchActive
-                ? "bg-[hsl(var(--primary))]/8 text-[hsl(var(--primary))] shadow-sm ring-1 ring-[hsl(var(--primary))]/10"
-                : "text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/4",
-              "font-medium cursor-pointer"
+                ? 'bg-[hsl(var(--primary))]/8 text-[hsl(var(--primary))] shadow-sm ring-1 ring-[hsl(var(--primary))]/10'
+                : 'text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/4',
+              'font-medium cursor-pointer',
             )}
             title={!isOpen ? item.label : undefined}
           >
             <span
               className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-lg transition-colors",
+                'flex h-9 w-9 items-center justify-center rounded-lg transition-colors',
                 isItemOpen || isBranchActive
-                  ? "bg-[hsl(var(--primary))]/12"
-                  : "group-hover:bg-[hsl(var(--primary))]/8"
+                  ? 'bg-[hsl(var(--primary))]/12'
+                  : 'group-hover:bg-[hsl(var(--primary))]/8',
               )}
             >
-              {renderIcon(item.icon, "h-5 w-5")}
+              {renderIcon(item.icon, 'h-5 w-5')}
             </span>
             <AnimatePresence initial={false}>
               {isOpen && (
@@ -423,7 +415,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
             {hasChildren && isOpen && (
               <motion.div
                 animate={{ rotate: isItemOpen ? 180 : 0 }}
-                transition={{ duration: 0.22, ease: "easeInOut" }}
+                transition={{ duration: 0.22, ease: 'easeInOut' }}
                 className="flex items-center opacity-60"
               >
                 <ChevronDown className="h-4 w-4" />
@@ -436,13 +428,13 @@ export default function Sidebar({ isOpen, setIsOpen }) {
             {isOpen && isItemOpen && hasChildren && (
               <motion.div
                 initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
+                animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
                 className="overflow-hidden"
               >
                 <div className="pl-3 ml-4 mt-1 space-y-1 border-l border-[hsl(var(--primary))]/10">
-              {item.children.map((child) => (
+                  {item.children.map((child) => (
                     <MenuItem
                       key={child.id}
                       item={child}
@@ -451,7 +443,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                         .filter((childItem) => childItem.children?.length)
                         .map((childItem) => childItem.id)}
                     />
-              ))}
+                  ))}
                 </div>
               </motion.div>
             )}
@@ -470,13 +462,13 @@ export default function Sidebar({ isOpen, setIsOpen }) {
           <Link
             to={item.path}
             className={cn(
-              "flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm transition-all",
+              'flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm transition-all',
               isActive
-                ? "bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))] shadow-sm"
-                : "text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/5"
+                ? 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))] shadow-sm'
+                : 'text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/5',
             )}
           >
-            {renderIcon(item.icon, "h-4 w-4")}
+            {renderIcon(item.icon, 'h-4 w-4')}
             <span className="font-normal">{item.label}</span>
           </Link>
         );
@@ -490,18 +482,18 @@ export default function Sidebar({ isOpen, setIsOpen }) {
             onClick={() => toggleItem(item, currentLevelSiblingIds)}
             aria-expanded={isItemOpen}
             className={cn(
-              "flex items-center w-full gap-2 px-3 py-2.5 rounded-lg text-sm transition-all duration-200",
+              'flex items-center w-full gap-2 px-3 py-2.5 rounded-lg text-sm transition-all duration-200',
               isItemOpen || isBranchActive
-                ? "bg-[hsl(var(--primary))]/6 text-[hsl(var(--primary))]"
-                : "text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/4"
+                ? 'bg-[hsl(var(--primary))]/6 text-[hsl(var(--primary))]'
+                : 'text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/4',
             )}
           >
-            {renderIcon(item.icon, "h-4 w-4")}
+            {renderIcon(item.icon, 'h-4 w-4')}
             <span className="flex-1 text-left font-normal">{item.label}</span>
             {hasGrandchildren && (
               <motion.div
                 animate={{ rotate: isItemOpen ? 180 : 0 }}
-                transition={{ duration: 0.25, ease: "easeInOut" }}
+                transition={{ duration: 0.25, ease: 'easeInOut' }}
                 className="flex items-center opacity-50"
               >
                 <ChevronDown className="h-3 w-3" />
@@ -514,15 +506,15 @@ export default function Sidebar({ isOpen, setIsOpen }) {
             {isItemOpen && hasGrandchildren && (
               <motion.div
                 initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
+                animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.18, ease: "easeOut" }}
+                transition={{ duration: 0.18, ease: 'easeOut' }}
                 className="overflow-hidden"
               >
                 <div className="pl-3 ml-3 mt-1 space-y-1 border-l border-[hsl(var(--primary))]/10">
-              {item.children.map((grandchild) => (
+                  {item.children.map((grandchild) => (
                     <MenuItem key={grandchild.id} item={grandchild} level={2} />
-              ))}
+                  ))}
                 </div>
               </motion.div>
             )}
@@ -537,13 +529,13 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         <Link
           to={item.path}
           className={cn(
-            "flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all",
+            'flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all',
             isActive
-              ? "bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]"
-              : "text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/5"
+              ? 'bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]'
+              : 'text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/5',
           )}
         >
-          {item.icon && renderIcon(item.icon, "h-3 w-3")}
+          {item.icon && renderIcon(item.icon, 'h-3 w-3')}
           <span className="font-normal">{item.label}</span>
         </Link>
       );
@@ -553,24 +545,20 @@ export default function Sidebar({ isOpen, setIsOpen }) {
   return (
     <motion.aside
       className={cn(
-        "flex flex-col bg-white/99 backdrop-blur border-r border-[hsl(var(--primary))]/5 shadow-sm h-screen z-40",
-        isOpen ? "w-64" : "w-[4.2rem]"
+        'flex flex-col bg-white/99 backdrop-blur border-r border-[hsl(var(--primary))]/5 shadow-sm h-screen z-40',
+        isOpen ? 'w-64' : 'w-[4.2rem]',
       )}
       animate={{ width: isOpen ? 256 : 68 }}
-      transition={{ duration: 0.25, ease: "easeInOut" }}
+      transition={{ duration: 0.25, ease: 'easeInOut' }}
     >
       {/* LOGO */}
       <div className="flex items-center justify-between h-16 border-b border-[hsl(var(--primary))]/5 px-3 bg-white/70 backdrop-blur">
         <motion.div
           animate={{ scale: isOpen ? 1 : 0.85 }}
-          transition={{ duration: 0.25, ease: "easeInOut" }}
+          transition={{ duration: 0.25, ease: 'easeInOut' }}
           className="flex items-center gap-2"
         >
-          <img
-            src={logoG}
-            className="w-9 h-9 rounded-lg"
-            alt="Gesclinic"
-          />
+          <img src={logoG} className="w-9 h-9 rounded-lg" alt="Gesclinic" />
           <AnimatePresence mode="wait">
             {isOpen && (
               <motion.span
@@ -600,9 +588,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
           </button>
         )}
         {menu && menu.length > 0 ? (
-          menu.map((item) => (
-            <MenuItem key={item.id} item={item} level={0} />
-          ))
+          menu.map((item) => <MenuItem key={item.id} item={item} level={0} />)
         ) : (
           <div className="px-3 py-4 text-xs text-[hsl(var(--primary))]/60 text-center">
             <p>Nenhum menu disponível</p>
@@ -615,17 +601,17 @@ export default function Sidebar({ isOpen, setIsOpen }) {
       <motion.div
         className="border-t border-[hsl(var(--primary))]/5 p-3 bg-white/50 backdrop-blur"
         animate={{ padding: isOpen ? 12 : 8 }}
-        transition={{ duration: 0.25, ease: "easeInOut" }}
+        transition={{ duration: 0.25, ease: 'easeInOut' }}
       >
         <motion.button
           whileHover={{ scale: 1.01 }}
           whileTap={{ scale: 0.99 }}
           onClick={handleLogout}
           className={cn(
-            "w-full text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/10 transition-all duration-200",
-            "flex items-center gap-3 px-3 py-2 rounded-lg font-medium",
-            "hover:shadow-sm",
-            !isOpen && "justify-center p-2"
+            'w-full text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/10 transition-all duration-200',
+            'flex items-center gap-3 px-3 py-2 rounded-lg font-medium',
+            'hover:shadow-sm',
+            !isOpen && 'justify-center p-2',
           )}
         >
           <LogOut className="h-5 w-5 flex-shrink-0" />
@@ -653,7 +639,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
       >
         <motion.div
           animate={{ rotate: isOpen ? 0 : 180 }}
-          transition={{ duration: 0.25, ease: "easeInOut" }}
+          transition={{ duration: 0.25, ease: 'easeInOut' }}
         >
           {isOpen ? (
             <ChevronLeft className="h-4 w-4 text-[hsl(var(--primary))]" />

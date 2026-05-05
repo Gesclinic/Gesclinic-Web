@@ -6,7 +6,7 @@
  */
 async function safeSelectServiceGroups(clinicId) {
   // 1Âª tentativa: com todas as colunas â€œdesejÃ¡veisâ€
-  let q = supabase
+  const q = supabase
     .from('service_groups')
     .select('id, name, status, created_at')
     .eq('clinic_id', clinicId)
@@ -26,19 +26,27 @@ async function safeSelectServiceGroups(clinicId) {
     error = retry.error;
   }
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    throw new Error(error.message);
+  }
   return data ?? [];
 }
 
 export async function listServiceGroups(clinicId) {
-  if (!clinicId) throw new Error('clinicId Ã© obrigatÃ³rio.');
+  if (!clinicId) {
+    throw new Error('clinicId Ã© obrigatÃ³rio.');
+  }
   return safeSelectServiceGroups(clinicId);
 }
 
 export async function createServiceGroup(clinicId, name) {
-  if (!clinicId) throw new Error('clinicId Ã© obrigatÃ³rio.');
+  if (!clinicId) {
+    throw new Error('clinicId Ã© obrigatÃ³rio.');
+  }
   const clean = String(name || '').trim();
-  if (!clean) throw new Error('Informe um nome.');
+  if (!clean) {
+    throw new Error('Informe um nome.');
+  }
 
   const { data, error } = await supabase
     .from('service_groups')
@@ -61,11 +69,17 @@ export async function createServiceGroup(clinicId, name) {
 }
 
 export async function updateServiceGroup(id, patch) {
-  if (!id) throw new Error('id Ã© obrigatÃ³rio.');
+  if (!id) {
+    throw new Error('id Ã© obrigatÃ³rio.');
+  }
   // sanitize patch: sÃ³ permitir campos esperados
   const safePatch = {};
-  if (typeof patch?.name === 'string') safePatch.name = patch.name.trim();
-  if (patch?.status != null) safePatch.status = patch.status;
+  if (typeof patch?.name === 'string') {
+    safePatch.name = patch.name.trim();
+  }
+  if (patch?.status != null) {
+    safePatch.status = patch.status;
+  }
 
   const { data, error } = await supabase
     .from('service_groups')
@@ -73,10 +87,10 @@ export async function updateServiceGroup(id, patch) {
     .eq('id', id)
     .select('id, name, status');
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
+  if (!data || data.length === 0) {
+    throw new Error('Record not found');
+  }
+  return data[0];
 
   if (error) {
     const msg = (error.message || '').toLowerCase();
@@ -93,11 +107,10 @@ export async function updateServiceGroup(id, patch) {
 }
 
 export async function deleteServiceGroup(id) {
-  if (!id) throw new Error('id Ã© obrigatÃ³rio.');
-  const { error } = await supabase
-    .from('service_groups')
-    .delete()
-    .eq('id', id);
+  if (!id) {
+    throw new Error('id Ã© obrigatÃ³rio.');
+  }
+  const { error } = await supabase.from('service_groups').delete().eq('id', id);
 
   if (error) {
     if (String(error.code) === '42501') {

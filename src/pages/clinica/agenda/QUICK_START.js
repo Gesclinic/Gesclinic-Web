@@ -17,7 +17,6 @@
 // const navigate = useNavigate();
 // navigate('/clinica/agenda');
 
-
 // ============================================================
 // 2. USAR O HOOK useAgendaStore
 // ============================================================
@@ -47,7 +46,6 @@ export default function MeuComponente() {
   );
 }
 
-
 // ============================================================
 // 3. EXEMPLOS DE USO COMUM
 // ============================================================
@@ -62,11 +60,11 @@ function changeToProView() {
 // EXEMPLO 2: Aplicar múltiplos filtros
 function applyAdvancedFilters() {
   const agenda = useAgendaStore();
-  
+
   agenda.setMultipleFilters({
     professional: 'prof-001',
     status: 'a_confirmar',
-    searchText: 'João'
+    searchText: 'João',
   });
 
   console.log('Agendamentos filtrados:', agenda.filteredAppointments.length);
@@ -83,13 +81,13 @@ function resetFilters() {
 // EXEMPLO 4: Navegar entre datas
 function navigateDates() {
   const agenda = useAgendaStore();
-  
-  agenda.goToday();        // Volta para hoje
-  agenda.previousDay();    // Vai para ontem
-  agenda.nextDay();        // Vai para amanhã
-  agenda.goToWeek();       // Vai para segunda da semana
-  agenda.goToMonth();      // Vai para primeiro dia do mês
-  
+
+  agenda.goToday(); // Volta para hoje
+  agenda.previousDay(); // Vai para ontem
+  agenda.nextDay(); // Vai para amanhã
+  agenda.goToWeek(); // Vai para segunda da semana
+  agenda.goToMonth(); // Vai para primeiro dia do mês
+
   // Ou definir data manualmente
   agenda.setDate('2026-02-15');
 }
@@ -97,14 +95,14 @@ function navigateDates() {
 // EXEMPLO 5: Selecionar agendamento
 function selectAppointment() {
   const agenda = useAgendaStore();
-  
+
   const appointment = {
     id: 'apt-123',
     patient_name: 'João Silva',
     start_time: '2026-01-20T14:30:00',
-    status: 'a_confirmar'
+    status: 'a_confirmar',
   };
-  
+
   agenda.selectSlot(appointment);
   // Modal abrirá automaticamente em AgendaPage
 }
@@ -112,10 +110,10 @@ function selectAppointment() {
 // EXEMPLO 6: Atualizar agendamento na lista local
 function updateLocalAppointment() {
   const agenda = useAgendaStore();
-  
+
   agenda.updateAppointmentLocal('apt-123', {
     status: 'confirmado',
-    notes: 'Paciente confirmou'
+    notes: 'Paciente confirmou',
   });
   // A lista atualiza imediatamente (sem esperar API)
 }
@@ -123,7 +121,7 @@ function updateLocalAppointment() {
 // EXEMPLO 7: Adicionar novo agendamento
 function addNewAppointment() {
   const agenda = useAgendaStore();
-  
+
   const newApt = {
     id: 'apt-new-' + Date.now(),
     clinic_id: 'clinic-123',
@@ -132,16 +130,16 @@ function addNewAppointment() {
     patient_name: 'Maria',
     professional_name: 'Dr. Silva',
     start_time: '2026-01-20T15:00:00',
-    status: 'a_confirmar'
+    status: 'a_confirmar',
   };
-  
+
   agenda.addAppointmentLocal(newApt);
 }
 
 // EXEMPLO 8: Ver indicadores
 function showIndicators() {
   const agenda = useAgendaStore();
-  
+
   const kpis = agenda.indicators;
   console.log(`Total: ${kpis.total}`);
   console.log(`Confirmados: ${kpis.confirmed}`);
@@ -153,12 +151,12 @@ function showIndicators() {
 // EXEMPLO 9: Acessar metadata
 function getMetadata() {
   const agenda = useAgendaStore();
-  
+
   const professionals = agenda.metadata.professionals;
   const rooms = agenda.metadata.rooms;
   const services = agenda.metadata.services;
   const payers = agenda.metadata.payers;
-  
+
   console.log('Profissionais:', professionals);
   console.log('Salas:', rooms);
 }
@@ -166,13 +164,12 @@ function getMetadata() {
 // EXEMPLO 10: Monitorar mudanças
 function watchChanges() {
   const agenda = useAgendaStore();
-  
+
   // Sempre que appointments muda:
   // const effects = useMemo(() => {
   //   console.log('Agendamentos mudaram:', agenda.appointments);
   // }, [agenda.appointments]);
 }
-
 
 // ============================================================
 // 4. CHECKLIST: PRIMEIROS PASSOS
@@ -192,7 +189,6 @@ const FIRST_STEPS = `
 
 Tempo estimado: 5 minutos
 `;
-
 
 // ============================================================
 // 5. TROUBLESHOOTING RÁPIDO
@@ -231,7 +227,6 @@ const TROUBLESHOOTING = `
    → Verificar console para loops infinitos
 `;
 
-
 // ============================================================
 // 6. ESTRUTURA MÍNIMA PARA TESTAR
 // ============================================================
@@ -246,7 +241,6 @@ export default function TestAgenda() {
 
 // Renderizar em /clinica/agenda ou diretamente
 `;
-
 
 // ============================================================
 // 7. VERIFICAR INSTALAÇÃO
@@ -265,10 +259,10 @@ function checkInstallation() {
     'AgendaFilters.jsx',
     'AgendaTimeline.jsx',
     'AppointmentModal.jsx',
-    'roomsApi.js'
+    'roomsApi.js',
   ];
 
-  requiredFiles.forEach(file => {
+  requiredFiles.forEach((file) => {
     console.log(`✅ ${file}`);
   });
 
@@ -285,7 +279,6 @@ function checkInstallation() {
 
   console.log('\n✅ Instalação OK!');
 }
-
 
 // ============================================================
 // 8. PRÓXIMOS PASSOS APÓS INSTALAÇÃO
@@ -313,7 +306,6 @@ const NEXT_STEPS = `
    - SMS/Email de confirmação
    - Dashboard com relatórios
 `;
-
 
 // ============================================================
 // COMANDOS ÚTEIS
@@ -347,7 +339,6 @@ console.clear()
 F12 → Console tab
 `;
 
-
 // ============================================================
 // RESUMO
 // ============================================================
@@ -369,10 +360,4 @@ console.log(`
 Próximo passo: Abra /clinica/agenda no navegador!
 `);
 
-export {
-  checkInstallation,
-  FIRST_STEPS,
-  TROUBLESHOOTING,
-  NEXT_STEPS,
-  USEFUL_COMMANDS
-};
+export { checkInstallation, FIRST_STEPS, TROUBLESHOOTING, NEXT_STEPS, USEFUL_COMMANDS };

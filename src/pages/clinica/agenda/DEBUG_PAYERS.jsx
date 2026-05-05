@@ -1,16 +1,16 @@
 /**
  * ARQUIVO DE DEBUG - Verificar dados de professional_payers
- * 
+ *
  * Use este arquivo para testar a função listarConveniosPorProfissional
  */
 
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/customSupabaseClient";
-import { listarConveniosPorProfissional } from "@/modules/agenda/services/agenda.api.business";
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/customSupabaseClient';
+import { listarConveniosPorProfissional } from '@/modules/agenda/services/agenda.api.business';
 
 export default function DebugPayers() {
   const [professionals, setProfessionals] = useState([]);
-  const [selectedProfId, setSelectedProfId] = useState("");
+  const [selectedProfId, setSelectedProfId] = useState('');
   const [payers, setPayers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [allProfessionalPayers, setAllProfessionalPayers] = useState([]);
@@ -18,17 +18,14 @@ export default function DebugPayers() {
   // Carregar profissionais
   useEffect(() => {
     async function load() {
-      const { data } = await supabase
-        .from("professionals")
-        .select("id, full_name")
-        .limit(10);
+      const { data } = await supabase.from('professionals').select('id, full_name').limit(10);
       setProfessionals(data || []);
-      
+
       // Também carregar todos os professional_payers
       const { data: ppData } = await supabase
-        .from("professional_payers")
-        .select("id, professional_id, payer_id");
-      console.log("📋 Todos os professional_payers:", ppData);
+        .from('professional_payers')
+        .select('id, professional_id, payer_id');
+      console.log('📋 Todos os professional_payers:', ppData);
       setAllProfessionalPayers(ppData || []);
     }
     load();
@@ -38,16 +35,16 @@ export default function DebugPayers() {
   const handleTest = async (profId) => {
     setSelectedProfId(profId);
     setLoading(true);
-    console.log("🔍 Testando profissional:", profId);
-    
+    console.log('🔍 Testando profissional:', profId);
+
     try {
       const result = await listarConveniosPorProfissional({
         profissionalId: profId,
       });
-      console.log("✅ Resultado:", result);
+      console.log('✅ Resultado:', result);
       setPayers(result);
     } catch (err) {
-      console.error("❌ Erro:", err);
+      console.error('❌ Erro:', err);
     } finally {
       setLoading(false);
     }
@@ -62,14 +59,14 @@ export default function DebugPayers() {
         <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-xl font-bold mb-4">Profissionais</h2>
           <div className="space-y-2">
-            {professionals.map(p => (
+            {professionals.map((p) => (
               <button
                 key={p.id}
                 onClick={() => handleTest(p.id)}
                 className={`w-full text-left p-3 rounded border-2 transition ${
                   selectedProfId === p.id
-                    ? "border-blue-600 bg-blue-50"
-                    : "border-gray-300 hover:bg-gray-50"
+                    ? 'border-blue-600 bg-blue-50'
+                    : 'border-gray-300 hover:bg-gray-50'
                 }`}
               >
                 {p.full_name}
@@ -86,11 +83,8 @@ export default function DebugPayers() {
             <p className="text-gray-500">Nenhum convênio encontrado</p>
           )}
           <div className="space-y-2">
-            {payers.map(p => (
-              <div
-                key={p.id}
-                className="p-3 bg-green-50 border border-green-300 rounded"
-              >
+            {payers.map((p) => (
+              <div key={p.id} className="p-3 bg-green-50 border border-green-300 rounded">
                 {p.name} (ID: {p.id})
               </div>
             ))}
@@ -113,4 +107,3 @@ export default function DebugPayers() {
     </div>
   );
 }
-

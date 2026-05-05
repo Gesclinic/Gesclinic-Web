@@ -1,6 +1,7 @@
 # 🔒 Guia: Controle de Concorrência (Optimistic Locking)
 
 ## Objetivo
+
 Evitar que múltiplos usuários sobrescrevam dados uns dos outros quando editam simultaneamente o mesmo agendamento.
 
 ---
@@ -40,12 +41,14 @@ User B (11:05): Tenta salvar horário para 14:00
 ### A. Banco de Dados (Supabase)
 
 **Tabela: `appointments`**
+
 ```sql
 -- Campo já existe
 updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 ```
 
 **RPC: `update_appointment_safe()`**
+
 ```sql
 -- Validar versão ANTES de atualizar
 IF current_updated_at != payload_updated_at THEN
@@ -61,20 +64,20 @@ UPDATE appointments SET ... WHERE id = p_id
 ```javascript
 export async function updateAppointment(id, updates) {
   // 1. Buscar updated_at ATUAL
-  const current = await supabase.from("appointments").select("updated_at").eq("id", id);
-  
+  const current = await supabase.from('appointments').select('updated_at').eq('id', id);
+
   // 2. Validar: se updated_at no payload ≠ current, é CONFLITO
   if (updates.updated_at !== current.updated_at) {
     throw Error({ code: 'conflict_detected' });
   }
-  
+
   // 3. Chamar RPC segura
-  const result = await supabase.rpc("update_appointment_safe", {
+  const result = await supabase.rpc('update_appointment_safe', {
     p_appointment_id: id,
     p_updated_at: current.updated_at,
-    p_payload: updates
+    p_payload: updates,
   });
-  
+
   // 4. Se erro = conflito, relançar
   if (!result.success && result.error === 'conflict_detected') {
     throw Error({ code: 'conflict_detected' });
@@ -92,10 +95,10 @@ mutationFn: async ({ id, payload }) => {
     .from("appointments")
     .select("updated_at")
     .eq("id", id);
-  
+
   // 2. Adicionar updated_at ao payload
   payload.updated_at = current.updated_at;
-  
+
   // 3. Enviar para servidor
   return atualizarAgendamento(id, payload);
 },
@@ -118,7 +121,9 @@ async function handleSubmit() {
     onClose();
   } catch (err) {
     if (err?.code === 'conflict_detected') {
-      setError('⚠️ Este agendamento foi atualizado por outro usuário.\n\nCarregue novamente para ver as alterações.');
+      setError(
+        '⚠️ Este agendamento foi atualizado por outro usuário.\n\nCarregue novamente para ver as alterações.',
+      );
     }
   }
 }

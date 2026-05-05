@@ -24,10 +24,10 @@ export default function Checkout() {
         stripe = window.Stripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
       }
     };
-    
+
     loadStripe();
     loadPlans();
-    
+
     // Check if returning from successful payment
     const sessionId = searchParams.get('session_id');
     if (sessionId) {
@@ -43,7 +43,7 @@ export default function Checkout() {
     if (urlPlanId) {
       // Set the selected plan after plans are loaded
       setTimeout(() => {
-        const foundPlan = plans.find(p => p.id === urlPlanId);
+        const foundPlan = plans.find((p) => p.id === urlPlanId);
         if (foundPlan) {
           setSelectedPlan(foundPlan);
         }
@@ -59,10 +59,12 @@ export default function Checkout() {
         .eq('active', true)
         .order('price_monthly', { ascending: true });
 
-      if (error) throw error;
-      
+      if (error) {
+        throw error;
+      }
+
       // Update or add Enterprise plan with correct pricing
-      const enterpriseIndex = data.findIndex(p => p.slug === 'enterprise');
+      const enterpriseIndex = data.findIndex((p) => p.slug === 'enterprise');
       const enterprisePlan = {
         name: 'Plano Enterprise',
         slug: 'enterprise',
@@ -77,9 +79,9 @@ export default function Checkout() {
           financeiro: true,
           estoque: true,
           relatorios: true,
-          custom_branding: true
+          custom_branding: true,
         },
-        active: true
+        active: true,
       };
 
       if (enterpriseIndex !== -1) {
@@ -87,16 +89,16 @@ export default function Checkout() {
       } else {
         data.push({
           id: 'enterprise-custom',
-          ...enterprisePlan
+          ...enterprisePlan,
         });
       }
-      
+
       setPlans(data);
 
       // Se veio de um registro, selecione o plano automaticamente
       const urlPlanId = searchParams.get('planId');
       if (urlPlanId && data.length > 0) {
-        const foundPlan = data.find(p => p.id === urlPlanId);
+        const foundPlan = data.find((p) => p.id === urlPlanId);
         if (foundPlan) {
           setSelectedPlan(foundPlan);
         }
@@ -121,7 +123,7 @@ export default function Checkout() {
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           },
           body: JSON.stringify({ session_id: sessionId }),
-        }
+        },
       );
 
       if (response.ok) {
@@ -158,24 +160,21 @@ export default function Checkout() {
       const priceId = getPriceId(plan.slug, billingCycle === 'annual' ? 'annual' : 'monthly');
       const productId = STRIPE_PRODUCTS[plan.slug].productId;
 
-      const response = await fetch(
-        `${supabaseUrl}/functions/v1/create-stripe-checkout`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${anonKey}`,
-          },
-          body: JSON.stringify({
-            planId: plan.id,
-            planSlug: plan.slug,
-            priceId: priceId,
-            productId: productId,
-            billingCycle: billingCycle,
-            clinicName: clinicName,
-          }),
-        }
-      );
+      const response = await fetch(`${supabaseUrl}/functions/v1/create-stripe-checkout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${anonKey}`,
+        },
+        body: JSON.stringify({
+          planId: plan.id,
+          planSlug: plan.slug,
+          priceId: priceId,
+          productId: productId,
+          billingCycle: billingCycle,
+          clinicName: clinicName,
+        }),
+      });
 
       console.log('Status da resposta:', response.status);
       console.log('Headers:', response.headers);
@@ -205,7 +204,6 @@ export default function Checkout() {
       console.log('Redirecionando para:', result.checkout_url);
       // Redirecionar para Stripe - ao retornar, vai para payment-confirmation
       window.location.href = result.checkout_url;
-
     } catch (error) {
       console.error('ERRO:', error);
       alert('Erro: ' + error.message);
@@ -228,19 +226,13 @@ export default function Checkout() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Escolha seu Plano
-          </h1>
-          <p className="text-xl text-gray-600">
-            Comece sua jornada com Gesclinic
-          </p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Escolha seu Plano</h1>
+          <p className="text-xl text-gray-600">Comece sua jornada com Gesclinic</p>
         </div>
 
         {/* Clinic Name Input */}
         <div className="bg-white rounded-lg shadow-lg p-8 mb-8 max-w-2xl mx-auto">
-          <label className="block text-sm font-medium text-gray-700 mb-3">
-            Nome da Clínica *
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-3">Nome da Clínica *</label>
           <input
             type="text"
             value={clinicName}
@@ -279,10 +271,7 @@ export default function Checkout() {
         {/* Plans Grid */}
         <div className="grid md:grid-cols-3 gap-6 mb-8">
           {plans.map((plan) => {
-            const price =
-              billingCycle === 'monthly'
-                ? plan.price_monthly
-                : plan.price_annual;
+            const price = billingCycle === 'monthly' ? plan.price_monthly : plan.price_annual;
             const isProfessional = plan.slug === 'professional';
             const isEnterprise = plan.slug === 'enterprise';
 
@@ -318,12 +307,8 @@ export default function Checkout() {
                   </div>
                 )}
 
-                <h3 className="text-2xl font-bold text-gray-900 mb-1">
-                  {plan.name}
-                </h3>
-                <p className="text-gray-600 text-sm mb-6 h-10">
-                  {plan.description}
-                </p>
+                <h3 className="text-2xl font-bold text-gray-900 mb-1">{plan.name}</h3>
+                <p className="text-gray-600 text-sm mb-6 h-10">{plan.description}</p>
 
                 {/* Preço */}
                 <div className="mb-6">
@@ -338,9 +323,7 @@ export default function Checkout() {
                         </span>
                       </div>
                       {billingCycle === 'annual' && price !== null && (
-                        <p className="text-sm text-gray-500">
-                          R$ {(price / 12).toFixed(2)}/mês
-                        </p>
+                        <p className="text-sm text-gray-500">R$ {(price / 12).toFixed(2)}/mês</p>
                       )}
                     </>
                   ) : (
@@ -473,8 +456,8 @@ export default function Checkout() {
                     isEnterprise
                       ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg hover:shadow-xl disabled:opacity-50 disabled:hover:scale-100'
                       : isProfessional
-                      ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg hover:shadow-xl disabled:opacity-50 disabled:hover:scale-100'
-                      : 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg hover:shadow-xl disabled:opacity-50 disabled:hover:scale-100'
+                        ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg hover:shadow-xl disabled:opacity-50 disabled:hover:scale-100'
+                        : 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg hover:shadow-xl disabled:opacity-50 disabled:hover:scale-100'
                   }`}
                 >
                   {processing ? (

@@ -8,53 +8,53 @@
 // ============================================================
 
 export function validateClinicId(clinicId) {
-  if (!clinicId || typeof clinicId !== "string") {
-    throw new Error("clinic_id é obrigatório e deve ser string");
+  if (!clinicId || typeof clinicId !== 'string') {
+    throw new Error('clinic_id é obrigatório e deve ser string');
   }
   return true;
 }
 
 export function validateAppointmentDate(date) {
-  if (!date || typeof date !== "string") {
-    throw new Error("Data é obrigatória (YYYY-MM-DD)");
+  if (!date || typeof date !== 'string') {
+    throw new Error('Data é obrigatória (YYYY-MM-DD)');
   }
-  
+
   const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
   if (!dateRegex.test(date)) {
-    throw new Error("Data inválida - use formato YYYY-MM-DD");
+    throw new Error('Data inválida - use formato YYYY-MM-DD');
   }
-  
+
   const parsedDate = new Date(date);
   if (isNaN(parsedDate.getTime())) {
-    throw new Error("Data não é válida");
+    throw new Error('Data não é válida');
   }
-  
+
   return true;
 }
 
 export function validateAppointmentTime(time) {
-  if (!time || typeof time !== "string") {
-    throw new Error("Horário é obrigatório (HH:MM:SS)");
+  if (!time || typeof time !== 'string') {
+    throw new Error('Horário é obrigatório (HH:MM:SS)');
   }
-  
+
   const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9](?::[0-5][0-9])?$/;
   if (!timeRegex.test(time)) {
-    throw new Error("Horário inválido - use formato HH:MM:SS");
+    throw new Error('Horário inválido - use formato HH:MM:SS');
   }
-  
+
   return true;
 }
 
 export function validatePatientId(patientId) {
-  if (!patientId || typeof patientId !== "string") {
-    throw new Error("Paciente é obrigatório");
+  if (!patientId || typeof patientId !== 'string') {
+    throw new Error('Paciente é obrigatório');
   }
   return true;
 }
 
 export function validateAppointmentPayload(payload) {
-  if (!payload || typeof payload !== "object") {
-    throw new Error("Payload inválido");
+  if (!payload || typeof payload !== 'object') {
+    throw new Error('Payload inválido');
   }
 
   // CRÍTICO: clinic_id obrigatório
@@ -76,9 +76,9 @@ export function validateAppointmentPayload(payload) {
 
   // Validação de status se presente
   if (payload.status) {
-    const validStatuses = ["scheduled", "confirmed", "completed", "cancelled"];
+    const validStatuses = ['scheduled', 'confirmed', 'completed', 'cancelled'];
     if (!validStatuses.includes(payload.status)) {
-      throw new Error(`Status inválido. Use: ${validStatuses.join(", ")}`);
+      throw new Error(`Status inválido. Use: ${validStatuses.join(', ')}`);
     }
   }
 
@@ -87,7 +87,7 @@ export function validateAppointmentPayload(payload) {
 
 export function validateAppointmentUpdatePayload(payload) {
   if (!payload.id) {
-    throw new Error("ID do agendamento é obrigatório para atualizar");
+    throw new Error('ID do agendamento é obrigatório para atualizar');
   }
   validateAppointmentPayload(payload);
   return true;
@@ -98,38 +98,38 @@ export function validateAppointmentUpdatePayload(payload) {
 // ============================================================
 
 export function validateFinancialValue(value) {
-  if (typeof value !== "number") {
-    throw new Error("Valor deve ser numérico");
+  if (typeof value !== 'number') {
+    throw new Error('Valor deve ser numérico');
   }
-  
+
   if (value < 0) {
-    throw new Error("Valor não pode ser negativo");
+    throw new Error('Valor não pode ser negativo');
   }
-  
+
   return true;
 }
 
 export function validateGuiaPayload(payload) {
-  if (!payload || typeof payload !== "object") {
-    throw new Error("Payload inválido");
+  if (!payload || typeof payload !== 'object') {
+    throw new Error('Payload inválido');
   }
 
   // CRÍTICO: clinic_id obrigatório
   validateClinicId(payload.clinic_id);
 
   // Tipo de guia obrigatório
-  if (!payload.tipo_guia || typeof payload.tipo_guia !== "string") {
-    throw new Error("Tipo de guia é obrigatório");
+  if (!payload.tipo_guia || typeof payload.tipo_guia !== 'string') {
+    throw new Error('Tipo de guia é obrigatório');
   }
 
-  const validTypes = ["RPS", "NFS", "NOTA_FISCAL", "GUIA_SERVICO"];
+  const validTypes = ['RPS', 'NFS', 'NOTA_FISCAL', 'GUIA_SERVICO'];
   if (!validTypes.includes(payload.tipo_guia)) {
-    throw new Error(`Tipo de guia inválido. Use: ${validTypes.join(", ")}`);
+    throw new Error(`Tipo de guia inválido. Use: ${validTypes.join(', ')}`);
   }
 
   // Descrição obrigatória
-  if (!payload.descricao || typeof payload.descricao !== "string") {
-    throw new Error("Descrição é obrigatória");
+  if (!payload.descricao || typeof payload.descricao !== 'string') {
+    throw new Error('Descrição é obrigatória');
   }
 
   return true;
@@ -139,8 +139,8 @@ export function validateGuiaPayload(payload) {
 // VALIDADORES GERAIS
 // ============================================================
 
-export function validateUUID(uuid, fieldName = "ID") {
-  if (!uuid || typeof uuid !== "string") {
+export function validateUUID(uuid, fieldName = 'ID') {
+  if (!uuid || typeof uuid !== 'string') {
     throw new Error(`${fieldName} é obrigatório`);
   }
 
@@ -155,7 +155,7 @@ export function validateUUID(uuid, fieldName = "ID") {
 export function validateEmail(email) {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
-    throw new Error("Email inválido");
+    throw new Error('Email inválido');
   }
   return true;
 }
@@ -164,7 +164,7 @@ export function validatePhoneNumber(phone) {
   // Formato: (XX) XXXXX-XXXX
   const phoneRegex = /^\(\d{2}\)\s?\d{4,5}-\d{4}$/;
   if (!phoneRegex.test(phone)) {
-    throw new Error("Telefone inválido - use formato (XX) XXXXX-XXXX");
+    throw new Error('Telefone inválido - use formato (XX) XXXXX-XXXX');
   }
   return true;
 }
@@ -175,26 +175,26 @@ export function validatePhoneNumber(phone) {
 
 export function validateTimeRange(startTime, endTime) {
   if (!startTime || !endTime) {
-    throw new Error("Hora de início e fim são obrigatórias");
+    throw new Error('Hora de início e fim são obrigatórias');
   }
 
   validateAppointmentTime(startTime);
   validateAppointmentTime(endTime);
 
-  const [startHour, startMin] = startTime.split(":").map(Number);
-  const [endHour, endMin] = endTime.split(":").map(Number);
+  const [startHour, startMin] = startTime.split(':').map(Number);
+  const [endHour, endMin] = endTime.split(':').map(Number);
 
   const startMinutes = startHour * 60 + startMin;
   const endMinutes = endHour * 60 + endMin;
 
   if (startMinutes >= endMinutes) {
-    throw new Error("Hora de fim deve ser posterior à hora de início");
+    throw new Error('Hora de fim deve ser posterior à hora de início');
   }
 
   // Mínimo de 15 minutos de duração
   const durationMinutes = endMinutes - startMinutes;
   if (durationMinutes < 15) {
-    throw new Error("Duração mínima do agendamento é 15 minutos");
+    throw new Error('Duração mínima do agendamento é 15 minutos');
   }
 
   return true;
@@ -204,7 +204,7 @@ export function validateTimeRange(startTime, endTime) {
 // FUNÇÃO UTILITÁRIA: Executar validação com try/catch
 // ============================================================
 
-export function executeValidation(validatorFn, data, fieldName = "Campo") {
+export function executeValidation(validatorFn, data, fieldName = 'Campo') {
   try {
     validatorFn(data);
     return { valid: true };
@@ -212,7 +212,7 @@ export function executeValidation(validatorFn, data, fieldName = "Campo") {
     return {
       valid: false,
       error: error.message,
-      field: fieldName
+      field: fieldName,
     };
   }
 }

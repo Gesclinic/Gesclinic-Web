@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 export default function CashDashboardPage() {
   const breadcrumbs = useBreadcrumbs([
     { label: 'Financeiro', path: '/clinica/financeiro' },
-    { label: 'Caixa Gerencial' }
+    { label: 'Caixa Gerencial' },
   ]);
 
   const { clinicId } = useAuth();
@@ -34,16 +34,8 @@ export default function CashDashboardPage() {
     const loadMetadata = async () => {
       try {
         const [profsRes, payersRes] = await Promise.all([
-          supabase
-            .from('professionals')
-            .select('id, name')
-            .eq('clinic_id', clinicId)
-            .order('name'),
-          supabase
-            .from('payers')
-            .select('id, name')
-            .eq('clinic_id', clinicId)
-            .order('name')
+          supabase.from('professionals').select('id, name').eq('clinic_id', clinicId).order('name'),
+          supabase.from('payers').select('id, name').eq('clinic_id', clinicId).order('name'),
         ]);
 
         if (profsRes.data) setProfessionals(profsRes.data);
@@ -65,7 +57,7 @@ export default function CashDashboardPage() {
       'ConvÃªnio',
       'Forma Pagamento',
       'Origem',
-      'Valor'
+      'Valor',
     ];
 
     const rows = data.movimentos.map((mov) => [
@@ -76,7 +68,7 @@ export default function CashDashboardPage() {
       mov.payer?.name || 'Particular',
       mov.payment_method || '—',
       mov.origin === 'agenda' ? 'Agenda' : 'Manual',
-      mov.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+      mov.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
     ]);
 
     const csv = [headers, ...rows].map((row) => row.join(';')).join('\n');
@@ -108,7 +100,7 @@ export default function CashDashboardPage() {
     { id: 'visao-geral', label: 'ðŸ“Š VisÃ£o Geral' },
     { id: 'movimentos', label: 'ðŸ“ Movimentos' },
     { id: 'profissionais', label: 'ðŸ‘¨â€âš•ï¸ Profissionais' },
-    { id: 'convenios', label: 'ðŸ¥ ConvÃªnios' }
+    { id: 'convenios', label: 'ðŸ¥ ConvÃªnios' },
   ];
 
   return (
@@ -157,10 +149,7 @@ export default function CashDashboardPage() {
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[...Array(6)].map((_, i) => (
-                <div
-                  key={i}
-                  className="h-32 bg-slate-100 rounded-lg animate-pulse"
-                />
+                <div key={i} className="h-32 bg-slate-100 rounded-lg animate-pulse" />
               ))}
             </div>
           ) : (
@@ -234,7 +223,3 @@ export default function CashDashboardPage() {
     </PageLayout>
   );
 }
-
-
-
-

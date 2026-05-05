@@ -4,16 +4,35 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Bed, 
-  Plus, 
-  Edit, 
+import {
+  Bed,
+  Plus,
+  Edit,
   Search,
   Calendar,
   User,
@@ -22,7 +41,7 @@ import {
   FileText,
   AlertTriangle,
   CheckCircle,
-  XCircle
+  XCircle,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 
@@ -60,7 +79,7 @@ export default function GuiaInternacao() {
     medico_solicitante: '',
     carater_internacao: 'Eletiva',
     regime_internacao: 'Hospitalar',
-    observacoes: ''
+    observacoes: '',
   });
 
   // Mock data para demonstração
@@ -87,10 +106,10 @@ export default function GuiaInternacao() {
       dias_internacao: 3,
       status: 'Internado',
       guias_associadas: [
-        { tipo: 'SP', numero: 'SP001-2025-001', valor: 1500.00 },
-        { tipo: 'SADT', numero: 'SADT005-2025-001', valor: 800.00 }
+        { tipo: 'SP', numero: 'SP001-2025-001', valor: 1500.0 },
+        { tipo: 'SADT', numero: 'SADT005-2025-001', valor: 800.0 },
       ],
-      valor_total: 2300.00
+      valor_total: 2300.0,
     },
     {
       id: 'INT002',
@@ -114,10 +133,10 @@ export default function GuiaInternacao() {
       dias_internacao: 5,
       status: 'Alta Médica',
       guias_associadas: [
-        { tipo: 'SP', numero: 'SP002-2025-001', valor: 2200.00 },
-        { tipo: 'SADT', numero: 'SADT006-2025-001', valor: 1200.00 }
+        { tipo: 'SP', numero: 'SP002-2025-001', valor: 2200.0 },
+        { tipo: 'SADT', numero: 'SADT006-2025-001', valor: 1200.0 },
       ],
-      valor_total: 3400.00
+      valor_total: 3400.0,
     },
     {
       id: 'INT003',
@@ -141,8 +160,8 @@ export default function GuiaInternacao() {
       dias_internacao: 1,
       status: 'Aguardando Autorização',
       guias_associadas: [],
-      valor_total: 0.00
-    }
+      valor_total: 0.0,
+    },
   ];
 
   useEffect(() => {
@@ -157,9 +176,9 @@ export default function GuiaInternacao() {
     } catch (error) {
       console.error('Erro ao buscar internações:', error);
       toast({
-        title: "Erro",
-        description: "Não foi possível carregar as internações.",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Não foi possível carregar as internações.',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -176,18 +195,18 @@ export default function GuiaInternacao() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     try {
       const internacaoData = {
         ...formData,
-        numero_guia: editingInternacao ? editingInternacao.numero_guia : generateGuiaNumber()
+        numero_guia: editingInternacao ? editingInternacao.numero_guia : generateGuiaNumber(),
       };
 
       console.log('Salvando internação:', internacaoData);
 
       toast({
-        title: editingInternacao ? "Internação atualizada" : "Internação registrada",
-        description: `Internação ${editingInternacao ? 'atualizada' : 'registrada'} com sucesso.`
+        title: editingInternacao ? 'Internação atualizada' : 'Internação registrada',
+        description: `Internação ${editingInternacao ? 'atualizada' : 'registrada'} com sucesso.`,
       });
 
       setIsDialogOpen(false);
@@ -196,9 +215,9 @@ export default function GuiaInternacao() {
       fetchInternacoes();
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Não foi possível salvar a internação.",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Não foi possível salvar a internação.',
+        variant: 'destructive',
       });
     }
   };
@@ -223,7 +242,7 @@ export default function GuiaInternacao() {
       medico_solicitante: '',
       carater_internacao: 'Eletiva',
       regime_internacao: 'Hospitalar',
-      observacoes: ''
+      observacoes: '',
     });
   };
 
@@ -247,7 +266,7 @@ export default function GuiaInternacao() {
       medico_solicitante: internacao.medico_solicitante,
       carater_internacao: internacao.carater_internacao,
       regime_internacao: internacao.regime_internacao,
-      observacoes: internacao.observacoes || ''
+      observacoes: internacao.observacoes || '',
     });
     setIsDialogOpen(true);
   };
@@ -255,34 +274,42 @@ export default function GuiaInternacao() {
   const handleDarAlta = async (internacao) => {
     try {
       console.log('Dando alta para internação:', internacao.id);
-      
+
       toast({
-        title: "Alta realizada",
-        description: `Alta médica registrada para ${internacao.paciente_nome}.`
+        title: 'Alta realizada',
+        description: `Alta médica registrada para ${internacao.paciente_nome}.`,
       });
 
       fetchInternacoes();
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Não foi possível registrar a alta.",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Não foi possível registrar a alta.',
+        variant: 'destructive',
       });
     }
   };
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      'Aguardando Autorização': { variant: 'secondary', color: 'text-yellow-600', icon: AlertTriangle },
-      'Autorizada': { variant: 'default', color: 'text-blue-600', icon: CheckCircle },
-      'Internado': { variant: 'default', color: 'text-green-600', icon: Bed },
+      'Aguardando Autorização': {
+        variant: 'secondary',
+        color: 'text-yellow-600',
+        icon: AlertTriangle,
+      },
+      Autorizada: { variant: 'default', color: 'text-blue-600', icon: CheckCircle },
+      Internado: { variant: 'default', color: 'text-green-600', icon: Bed },
       'Alta Médica': { variant: 'outline', color: 'text-gray-600', icon: CheckCircle },
-      'Cancelada': { variant: 'destructive', color: 'text-red-600', icon: XCircle }
+      Cancelada: { variant: 'destructive', color: 'text-red-600', icon: XCircle },
     };
 
-    const config = statusConfig[status] || { variant: 'outline', color: 'text-gray-600', icon: AlertTriangle };
+    const config = statusConfig[status] || {
+      variant: 'outline',
+      color: 'text-gray-600',
+      icon: AlertTriangle,
+    };
     const Icon = config.icon;
-    
+
     return (
       <Badge variant={config.variant} className={`${config.color} gap-1`}>
         <Icon className="w-3 h-3" />
@@ -293,13 +320,13 @@ export default function GuiaInternacao() {
 
   const getCaraterBadge = (carater) => {
     const caraterConfig = {
-      'Eletiva': { variant: 'default', color: 'text-green-600' },
-      'Urgência': { variant: 'destructive', color: 'text-red-600' },
-      'Emergência': { variant: 'destructive', color: 'text-red-600' }
+      Eletiva: { variant: 'default', color: 'text-green-600' },
+      Urgência: { variant: 'destructive', color: 'text-red-600' },
+      Emergência: { variant: 'destructive', color: 'text-red-600' },
     };
 
     const config = caraterConfig[carater] || { variant: 'outline', color: 'text-gray-600' };
-    
+
     return (
       <Badge variant={config.variant} className={config.color}>
         {carater}
@@ -307,13 +334,14 @@ export default function GuiaInternacao() {
     );
   };
 
-  const filteredInternacoes = internacoes.filter(internacao => {
-    const matchesSearch = internacao.paciente_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         internacao.numero_guia.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         internacao.diagnostico_principal.toLowerCase().includes(searchTerm.toLowerCase());
-    
+  const filteredInternacoes = internacoes.filter((internacao) => {
+    const matchesSearch =
+      internacao.paciente_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      internacao.numero_guia.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      internacao.diagnostico_principal.toLowerCase().includes(searchTerm.toLowerCase());
+
     const matchesStatus = statusFilter === 'all' || internacao.status === statusFilter;
-    
+
     return matchesSearch && matchesStatus;
   });
 
@@ -360,16 +388,18 @@ export default function GuiaInternacao() {
                       <Input
                         id="paciente_nome"
                         value={formData.paciente_nome}
-                        onChange={(e) => setFormData({...formData, paciente_nome: e.target.value})}
+                        onChange={(e) =>
+                          setFormData({ ...formData, paciente_nome: e.target.value })
+                        }
                         required
                       />
                     </div>
 
                     <div>
                       <Label htmlFor="convenio_id">Convênio</Label>
-                      <Select 
+                      <Select
                         value={formData.convenio_id}
-                        onValueChange={(value) => setFormData({...formData, convenio_id: value})}
+                        onValueChange={(value) => setFormData({ ...formData, convenio_id: value })}
                         required
                       >
                         <SelectTrigger>
@@ -389,7 +419,9 @@ export default function GuiaInternacao() {
                       <Input
                         id="numero_autorizacao"
                         value={formData.numero_autorizacao}
-                        onChange={(e) => setFormData({...formData, numero_autorizacao: e.target.value})}
+                        onChange={(e) =>
+                          setFormData({ ...formData, numero_autorizacao: e.target.value })
+                        }
                         placeholder="Autorização do convênio"
                         required
                       />
@@ -397,9 +429,11 @@ export default function GuiaInternacao() {
 
                     <div>
                       <Label htmlFor="carater_internacao">Caráter da Internação</Label>
-                      <Select 
+                      <Select
                         value={formData.carater_internacao}
-                        onValueChange={(value) => setFormData({...formData, carater_internacao: value})}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, carater_internacao: value })
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -414,9 +448,11 @@ export default function GuiaInternacao() {
 
                     <div>
                       <Label htmlFor="regime_internacao">Regime de Internação</Label>
-                      <Select 
+                      <Select
                         value={formData.regime_internacao}
-                        onValueChange={(value) => setFormData({...formData, regime_internacao: value})}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, regime_internacao: value })
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -434,7 +470,9 @@ export default function GuiaInternacao() {
                       <Input
                         id="especialidade"
                         value={formData.especialidade}
-                        onChange={(e) => setFormData({...formData, especialidade: e.target.value})}
+                        onChange={(e) =>
+                          setFormData({ ...formData, especialidade: e.target.value })
+                        }
                         required
                       />
                     </div>
@@ -448,7 +486,9 @@ export default function GuiaInternacao() {
                       <Input
                         id="cid_principal"
                         value={formData.cid_principal}
-                        onChange={(e) => setFormData({...formData, cid_principal: e.target.value})}
+                        onChange={(e) =>
+                          setFormData({ ...formData, cid_principal: e.target.value })
+                        }
                         placeholder="Ex: K35.9"
                         required
                       />
@@ -459,7 +499,9 @@ export default function GuiaInternacao() {
                       <Input
                         id="medico_solicitante"
                         value={formData.medico_solicitante}
-                        onChange={(e) => setFormData({...formData, medico_solicitante: e.target.value})}
+                        onChange={(e) =>
+                          setFormData({ ...formData, medico_solicitante: e.target.value })
+                        }
                         required
                       />
                     </div>
@@ -469,7 +511,9 @@ export default function GuiaInternacao() {
                       <Input
                         id="diagnostico_principal"
                         value={formData.diagnostico_principal}
-                        onChange={(e) => setFormData({...formData, diagnostico_principal: e.target.value})}
+                        onChange={(e) =>
+                          setFormData({ ...formData, diagnostico_principal: e.target.value })
+                        }
                         required
                       />
                     </div>
@@ -479,7 +523,9 @@ export default function GuiaInternacao() {
                       <Input
                         id="medico_assistente"
                         value={formData.medico_assistente}
-                        onChange={(e) => setFormData({...formData, medico_assistente: e.target.value})}
+                        onChange={(e) =>
+                          setFormData({ ...formData, medico_assistente: e.target.value })
+                        }
                         required
                       />
                     </div>
@@ -494,7 +540,7 @@ export default function GuiaInternacao() {
                         id="data_entrada"
                         type="date"
                         value={formData.data_entrada}
-                        onChange={(e) => setFormData({...formData, data_entrada: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, data_entrada: e.target.value })}
                         required
                       />
                     </div>
@@ -505,7 +551,7 @@ export default function GuiaInternacao() {
                         id="hora_entrada"
                         type="time"
                         value={formData.hora_entrada}
-                        onChange={(e) => setFormData({...formData, hora_entrada: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, hora_entrada: e.target.value })}
                         required
                       />
                     </div>
@@ -516,26 +562,38 @@ export default function GuiaInternacao() {
                         id="data_alta_prevista"
                         type="date"
                         value={formData.data_alta_prevista}
-                        onChange={(e) => setFormData({...formData, data_alta_prevista: e.target.value})}
+                        onChange={(e) =>
+                          setFormData({ ...formData, data_alta_prevista: e.target.value })
+                        }
                       />
                     </div>
 
                     <div>
                       <Label htmlFor="leito">Leito</Label>
-                      <Select 
+                      <Select
                         value={formData.leito}
-                        onValueChange={(value) => setFormData({...formData, leito: value})}
+                        onValueChange={(value) => setFormData({ ...formData, leito: value })}
                         required
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione o leito" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Leito 101 - Quarto 10">Leito 101 - Quarto 10</SelectItem>
-                          <SelectItem value="Leito 102 - Quarto 10">Leito 102 - Quarto 10</SelectItem>
-                          <SelectItem value="Leito 201 - Quarto 20">Leito 201 - Quarto 20</SelectItem>
-                          <SelectItem value="Leito 202 - Quarto 20">Leito 202 - Quarto 20</SelectItem>
-                          <SelectItem value="Leito 301 - Quarto 30">Leito 301 - Quarto 30</SelectItem>
+                          <SelectItem value="Leito 101 - Quarto 10">
+                            Leito 101 - Quarto 10
+                          </SelectItem>
+                          <SelectItem value="Leito 102 - Quarto 10">
+                            Leito 102 - Quarto 10
+                          </SelectItem>
+                          <SelectItem value="Leito 201 - Quarto 20">
+                            Leito 201 - Quarto 20
+                          </SelectItem>
+                          <SelectItem value="Leito 202 - Quarto 20">
+                            Leito 202 - Quarto 20
+                          </SelectItem>
+                          <SelectItem value="Leito 301 - Quarto 30">
+                            Leito 301 - Quarto 30
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -546,7 +604,9 @@ export default function GuiaInternacao() {
                         id="data_alta_real"
                         type="date"
                         value={formData.data_alta_real}
-                        onChange={(e) => setFormData({...formData, data_alta_real: e.target.value})}
+                        onChange={(e) =>
+                          setFormData({ ...formData, data_alta_real: e.target.value })
+                        }
                       />
                     </div>
 
@@ -556,7 +616,7 @@ export default function GuiaInternacao() {
                         id="hora_alta"
                         type="time"
                         value={formData.hora_alta}
-                        onChange={(e) => setFormData({...formData, hora_alta: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, hora_alta: e.target.value })}
                       />
                     </div>
                   </div>
@@ -566,7 +626,7 @@ export default function GuiaInternacao() {
                     <Textarea
                       id="observacoes"
                       value={formData.observacoes}
-                      onChange={(e) => setFormData({...formData, observacoes: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
                       rows={3}
                     />
                   </div>
@@ -574,8 +634,8 @@ export default function GuiaInternacao() {
               </Tabs>
 
               <div className="flex justify-end gap-2 pt-4">
-                <Button 
-                  type="button" 
+                <Button
+                  type="button"
                   variant="outline"
                   onClick={() => {
                     setIsDialogOpen(false);
@@ -648,7 +708,7 @@ export default function GuiaInternacao() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-green-600">
-              {internacoes.filter(i => i.status === 'Internado').length}
+              {internacoes.filter((i) => i.status === 'Internado').length}
             </div>
             <p className="text-sm text-muted-foreground">Pacientes Internados</p>
           </CardContent>
@@ -657,7 +717,7 @@ export default function GuiaInternacao() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-yellow-600">
-              {internacoes.filter(i => i.status === 'Aguardando Autorização').length}
+              {internacoes.filter((i) => i.status === 'Aguardando Autorização').length}
             </div>
             <p className="text-sm text-muted-foreground">Aguardando Autorização</p>
           </CardContent>
@@ -696,9 +756,7 @@ export default function GuiaInternacao() {
             <TableBody>
               {filteredInternacoes.map((internacao) => (
                 <TableRow key={internacao.id}>
-                  <TableCell className="font-mono text-sm">
-                    {internacao.numero_guia}
-                  </TableCell>
+                  <TableCell className="font-mono text-sm">{internacao.numero_guia}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <User className="w-4 h-4 text-muted-foreground" />
@@ -721,7 +779,9 @@ export default function GuiaInternacao() {
                       <Calendar className="w-4 h-4 text-muted-foreground" />
                       <div>
                         <div className="text-sm">{internacao.data_entrada}</div>
-                        <div className="text-xs text-muted-foreground">{internacao.hora_entrada}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {internacao.hora_entrada}
+                        </div>
                       </div>
                     </div>
                   </TableCell>
@@ -731,33 +791,22 @@ export default function GuiaInternacao() {
                       {internacao.leito}
                     </div>
                   </TableCell>
-                  <TableCell>
-                    {getCaraterBadge(internacao.carater_internacao)}
-                  </TableCell>
+                  <TableCell>{getCaraterBadge(internacao.carater_internacao)}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4 text-muted-foreground" />
                       {internacao.dias_internacao} dias
                     </div>
                   </TableCell>
-                  <TableCell>
-                    {getStatusBadge(internacao.status)}
-                  </TableCell>
+                  <TableCell>{getStatusBadge(internacao.status)}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleEdit(internacao)}
-                      >
+                      <Button size="sm" variant="outline" onClick={() => handleEdit(internacao)}>
                         <Edit className="w-3 h-3" />
                       </Button>
 
                       {internacao.status === 'Internado' && (
-                        <Button
-                          size="sm"
-                          onClick={() => handleDarAlta(internacao)}
-                        >
+                        <Button size="sm" onClick={() => handleDarAlta(internacao)}>
                           Alta
                         </Button>
                       )}
@@ -780,10 +829,9 @@ export default function GuiaInternacao() {
               {filteredInternacoes.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                    {searchTerm || statusFilter !== 'all' 
+                    {searchTerm || statusFilter !== 'all'
                       ? 'Nenhuma internação encontrada com os filtros aplicados.'
-                      : 'Nenhuma internação registrada ainda.'
-                    }
+                      : 'Nenhuma internação registrada ainda.'}
                   </TableCell>
                 </TableRow>
               )}
@@ -794,4 +842,3 @@ export default function GuiaInternacao() {
     </div>
   );
 }
-

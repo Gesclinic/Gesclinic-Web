@@ -1,7 +1,7 @@
 /**
  * @fileoverview Página de Gerenciamento de Procedimentos CBHPM
  * @module CBHPMManagement
- * 
+ *
  * Funcionalidades:
  * - Listar procedimentos CBHPM
  * - Criar novo procedimento
@@ -11,29 +11,36 @@
  * - Busca por código ou descrição
  */
 
-import React, { useState, useEffect } from "react";
-import { Helmet } from "react-helmet";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
-import { useClinicContext } from "@/contexts/ClinicContext";
-import { useToast } from "@/components/ui/use-toast";
-import * as cbhpmApi from "@/lib/cbhpmApi";
+import React, { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useClinicContext } from '@/contexts/ClinicContext';
+import { useToast } from '@/components/ui/use-toast';
+import * as cbhpmApi from '@/lib/cbhpmApi';
 
-import PageLayout from "@/components/ui/PageLayout";
-import { useBreadcrumbs } from "@/hooks/useBreadcrumbs";
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
+import PageLayout from '@/components/ui/PageLayout';
+import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select';
 import {
   Plus,
   Edit2,
@@ -46,29 +53,29 @@ import {
   Loader2,
   RotateCcw,
   Eye,
-} from "lucide-react";
+} from 'lucide-react';
 
 const GUIA_TYPES = [
-  { value: "consulta", label: "📋 Consulta" },
-  { value: "sadt", label: "🔬 SADT" },
-  { value: "internacao", label: "🏥 Internação" },
-  { value: "procedimento", label: "🔧 Procedimento" },
+  { value: 'consulta', label: '📋 Consulta' },
+  { value: 'sadt', label: '🔬 SADT' },
+  { value: 'internacao', label: '🏥 Internação' },
+  { value: 'procedimento', label: '🔧 Procedimento' },
 ];
 
 const UNIDADE_MEDIDA = [
-  { value: "unidade", label: "Unidade" },
-  { value: "sessao", label: "Sessão" },
-  { value: "minuto", label: "Minuto" },
-  { value: "diaria", label: "Diária" },
-  { value: "hora", label: "Hora" },
+  { value: 'unidade', label: 'Unidade' },
+  { value: 'sessao', label: 'Sessão' },
+  { value: 'minuto', label: 'Minuto' },
+  { value: 'diaria', label: 'Diária' },
+  { value: 'hora', label: 'Hora' },
 ];
 
 export default function CBHPMManagement() {
   const { clinicId } = useClinicContext();
   const { toast } = useToast();
   const breadcrumbs = useBreadcrumbs([
-    { label: "Base do Sistema", path: "/clinica/base-sistema" },
-    { label: "CBHPM" },
+    { label: 'Base do Sistema', path: '/clinica/base-sistema' },
+    { label: 'CBHPM' },
   ]);
 
   const [procedures, setProcedures] = useState([]);
@@ -80,30 +87,30 @@ export default function CBHPMManagement() {
   const [showDeleted, setShowDeleted] = useState(false);
 
   // Filtros
-  const [search, setSearch] = useState("");
-  const [filterCategory, setFilterCategory] = useState("all-categories");
-  const [filterGuiaType, setFilterGuiaType] = useState("all-types");
+  const [search, setSearch] = useState('');
+  const [filterCategory, setFilterCategory] = useState('all-categories');
+  const [filterGuiaType, setFilterGuiaType] = useState('all-types');
   const [categories, setCategories] = useState([]);
   const [guiaTypes, setGuiaTypes] = useState([]);
 
   // Form
   const [formData, setFormData] = useState({
-    codigo_cbhpm: "",
-    descricao_completa: "",
-    descricao_curta: "",
-    grupo_procedimento: "",
-    subgrupo_procedimento: "",
-    codigo_tuss: "",
-    valor_minimo: "",
-    valor_maximo: "",
-    valor_base: "",
+    codigo_cbhpm: '',
+    descricao_completa: '',
+    descricao_curta: '',
+    grupo_procedimento: '',
+    subgrupo_procedimento: '',
+    codigo_tuss: '',
+    valor_minimo: '',
+    valor_maximo: '',
+    valor_base: '',
     permite_faturamento: true,
     exige_autorizacao: false,
-    tipo_guia: "",
-    unidade_medida: "",
-    categoria: "",
-    subcategoria: "",
-    observacoes: "",
+    tipo_guia: '',
+    unidade_medida: '',
+    categoria: '',
+    subcategoria: '',
+    observacoes: '',
   });
 
   const [valErrors, setValErrors] = useState([]);
@@ -125,11 +132,11 @@ export default function CBHPMManagement() {
       setProcedures(data);
       setFilteredProcedures(data);
     } catch (error) {
-      console.error("Erro ao carregar CBHPM:", error);
+      console.error('Erro ao carregar CBHPM:', error);
       toast({
-        title: "Erro",
-        description: "Não foi possível carregar os procedimentos CBHPM",
-        variant: "destructive",
+        title: 'Erro',
+        description: 'Não foi possível carregar os procedimentos CBHPM',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -145,7 +152,7 @@ export default function CBHPMManagement() {
       setCategories(categories);
       setGuiaTypes(guiaTypes);
     } catch (error) {
-      console.error("Erro ao carregar filtros:", error);
+      console.error('Erro ao carregar filtros:', error);
     }
   };
 
@@ -160,17 +167,17 @@ export default function CBHPMManagement() {
         (p) =>
           p.codigo_cbhpm?.toLowerCase().includes(searchLower) ||
           p.descricao_completa?.toLowerCase().includes(searchLower) ||
-          p.codigo_tuss?.toLowerCase().includes(searchLower)
+          p.codigo_tuss?.toLowerCase().includes(searchLower),
       );
     }
 
     // Filtro de categoria
-    if (filterCategory && filterCategory !== "all-categories") {
+    if (filterCategory && filterCategory !== 'all-categories') {
       filtered = filtered.filter((p) => p.categoria === filterCategory);
     }
 
     // Filtro de tipo de guia
-    if (filterGuiaType && filterGuiaType !== "all-types") {
+    if (filterGuiaType && filterGuiaType !== 'all-types') {
       filtered = filtered.filter((p) => p.tipo_guia === filterGuiaType);
     }
 
@@ -181,22 +188,22 @@ export default function CBHPMManagement() {
   const handleNew = () => {
     setEditingId(null);
     setFormData({
-      codigo_cbhpm: "",
-      descricao_completa: "",
-      descricao_curta: "",
-      grupo_procedimento: "",
-      subgrupo_procedimento: "",
-      codigo_tuss: "",
-      valor_minimo: "",
-      valor_maximo: "",
-      valor_base: "",
+      codigo_cbhpm: '',
+      descricao_completa: '',
+      descricao_curta: '',
+      grupo_procedimento: '',
+      subgrupo_procedimento: '',
+      codigo_tuss: '',
+      valor_minimo: '',
+      valor_maximo: '',
+      valor_base: '',
       permite_faturamento: true,
       exige_autorizacao: false,
-      tipo_guia: "",
-      unidade_medida: "",
-      categoria: "",
-      subcategoria: "",
-      observacoes: "",
+      tipo_guia: '',
+      unidade_medida: '',
+      categoria: '',
+      subcategoria: '',
+      observacoes: '',
     });
     setValErrors([]);
     setIsDialogOpen(true);
@@ -208,20 +215,20 @@ export default function CBHPMManagement() {
     setFormData({
       codigo_cbhpm: procedure.codigo_cbhpm,
       descricao_completa: procedure.descricao_completa,
-      descricao_curta: procedure.descricao_curta || "",
-      grupo_procedimento: procedure.grupo_procedimento || "",
-      subgrupo_procedimento: procedure.subgrupo_procedimento || "",
-      codigo_tuss: procedure.codigo_tuss || "",
-      valor_minimo: procedure.valor_minimo?.toString() || "",
-      valor_maximo: procedure.valor_maximo?.toString() || "",
-      valor_base: procedure.valor_base?.toString() || "",
+      descricao_curta: procedure.descricao_curta || '',
+      grupo_procedimento: procedure.grupo_procedimento || '',
+      subgrupo_procedimento: procedure.subgrupo_procedimento || '',
+      codigo_tuss: procedure.codigo_tuss || '',
+      valor_minimo: procedure.valor_minimo?.toString() || '',
+      valor_maximo: procedure.valor_maximo?.toString() || '',
+      valor_base: procedure.valor_base?.toString() || '',
       permite_faturamento: procedure.permite_faturamento,
       exige_autorizacao: procedure.exige_autorizacao,
-      tipo_guia: procedure.tipo_guia || "",
-      unidade_medida: procedure.unidade_medida || "",
-      categoria: procedure.categoria || "",
-      subcategoria: procedure.subcategoria || "",
-      observacoes: procedure.observacoes || "",
+      tipo_guia: procedure.tipo_guia || '',
+      unidade_medida: procedure.unidade_medida || '',
+      categoria: procedure.categoria || '',
+      subcategoria: procedure.subcategoria || '',
+      observacoes: procedure.observacoes || '',
     });
     setValErrors([]);
     setIsDialogOpen(true);
@@ -233,8 +240,12 @@ export default function CBHPMManagement() {
 
     // Validações
     const errors = [];
-    if (!formData.codigo_cbhpm.trim()) errors.push("Código CBHPM é obrigatório");
-    if (!formData.descricao_completa.trim()) errors.push("Descrição é obrigatória");
+    if (!formData.codigo_cbhpm.trim()) {
+      errors.push('Código CBHPM é obrigatório');
+    }
+    if (!formData.descricao_completa.trim()) {
+      errors.push('Descrição é obrigatória');
+    }
 
     const codeValidation = cbhpmApi.validateCBHPMCode(formData.codigo_cbhpm);
     if (!codeValidation.valid) {
@@ -253,26 +264,26 @@ export default function CBHPMManagement() {
         // Atualizar
         await cbhpmApi.updateCBHPM(editingId, formData);
         toast({
-          title: "Sucesso",
-          description: "Procedimento CBHPM atualizado com sucesso",
+          title: 'Sucesso',
+          description: 'Procedimento CBHPM atualizado com sucesso',
         });
       } else {
         // Criar
         await cbhpmApi.createCBHPM(clinicId, formData);
         toast({
-          title: "Sucesso",
-          description: "Procedimento CBHPM criado com sucesso",
+          title: 'Sucesso',
+          description: 'Procedimento CBHPM criado com sucesso',
         });
       }
 
       setIsDialogOpen(false);
       loadProcedures();
     } catch (error) {
-      console.error("Erro ao salvar:", error);
+      console.error('Erro ao salvar:', error);
       toast({
-        title: "Erro",
+        title: 'Erro',
         description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
     } finally {
       setSubmitting(false);
@@ -281,21 +292,23 @@ export default function CBHPMManagement() {
 
   // Deletar
   const handleDelete = async (id) => {
-    if (!confirm("Tem certeza que deseja deletar este procedimento?")) return;
+    if (!confirm('Tem certeza que deseja deletar este procedimento?')) {
+      return;
+    }
 
     try {
       await cbhpmApi.deleteCBHPM(id);
       toast({
-        title: "Sucesso",
-        description: "Procedimento deletado",
+        title: 'Sucesso',
+        description: 'Procedimento deletado',
       });
       loadProcedures();
     } catch (error) {
-      console.error("Erro ao deletar:", error);
+      console.error('Erro ao deletar:', error);
       toast({
-        title: "Erro",
-        description: "Não foi possível deletar o procedimento",
-        variant: "destructive",
+        title: 'Erro',
+        description: 'Não foi possível deletar o procedimento',
+        variant: 'destructive',
       });
     }
   };
@@ -305,16 +318,16 @@ export default function CBHPMManagement() {
     try {
       await cbhpmApi.restoreCBHPM(id);
       toast({
-        title: "Sucesso",
-        description: "Procedimento restaurado",
+        title: 'Sucesso',
+        description: 'Procedimento restaurado',
       });
       loadProcedures();
     } catch (error) {
-      console.error("Erro ao restaurar:", error);
+      console.error('Erro ao restaurar:', error);
       toast({
-        title: "Erro",
-        description: "Não foi possível restaurar",
-        variant: "destructive",
+        title: 'Erro',
+        description: 'Não foi possível restaurar',
+        variant: 'destructive',
       });
     }
   };
@@ -325,7 +338,11 @@ export default function CBHPMManagement() {
         <title>CBHPM - Gesclinic</title>
       </Helmet>
 
-      <PageLayout breadcrumbs={breadcrumbs} title="Procedimentos CBHPM" subtitle="Catalogar e gerenciar procedimentos médicos">
+      <PageLayout
+        breadcrumbs={breadcrumbs}
+        title="Procedimentos CBHPM"
+        subtitle="Catalogar e gerenciar procedimentos médicos"
+      >
         {/* Barra de Ação */}
         <div className="mb-6 flex gap-3 items-center">
           <Button onClick={handleNew} className="gap-2">
@@ -343,12 +360,12 @@ export default function CBHPMManagement() {
           </div>
 
           <Button
-            variant={showDeleted ? "default" : "outline"}
+            variant={showDeleted ? 'default' : 'outline'}
             onClick={() => setShowDeleted(!showDeleted)}
             className="gap-2"
           >
             <RotateCcw className="w-4 h-4" />
-            {showDeleted ? "Showing Deleted" : "Show Deleted"}
+            {showDeleted ? 'Showing Deleted' : 'Show Deleted'}
           </Button>
         </div>
 
@@ -392,12 +409,8 @@ export default function CBHPMManagement() {
         {/* Tabela */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle>
-              Procedimentos ({filteredProcedures.length})
-            </CardTitle>
-            <CardDescription>
-              Manage medical procedures with CBHPM codes
-            </CardDescription>
+            <CardTitle>Procedimentos ({filteredProcedures.length})</CardTitle>
+            <CardDescription>Manage medical procedures with CBHPM codes</CardDescription>
           </CardHeader>
 
           <CardContent>
@@ -427,16 +440,17 @@ export default function CBHPMManagement() {
 
                   <TableBody>
                     {filteredProcedures.map((procedure) => (
-                      <TableRow key={procedure.id} className={!procedure.ativo ? "opacity-60 bg-destructive/5" : ""}>
+                      <TableRow
+                        key={procedure.id}
+                        className={!procedure.ativo ? 'opacity-60 bg-destructive/5' : ''}
+                      >
                         <TableCell className="font-mono font-bold text-sm">
                           {procedure.codigo_cbhpm}
                         </TableCell>
 
                         <TableCell>
                           <div>
-                            <p className="font-medium text-sm">
-                              {procedure.descricao_completa}
-                            </p>
+                            <p className="font-medium text-sm">{procedure.descricao_completa}</p>
                             {procedure.descricao_curta && (
                               <p className="text-xs text-muted-foreground">
                                 {procedure.descricao_curta}
@@ -529,7 +543,7 @@ export default function CBHPMManagement() {
         <DialogContent className="app-dialog-shell app-dialog-shell--content app-dialog-shell--wide overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editingId ? "✏️ Editar Procedimento" : "➕ Novo Procedimento CBHPM"}
+              {editingId ? '✏️ Editar Procedimento' : '➕ Novo Procedimento CBHPM'}
             </DialogTitle>
           </DialogHeader>
 
@@ -584,9 +598,7 @@ export default function CBHPMManagement() {
               <Input
                 id="descricao_completa"
                 value={formData.descricao_completa}
-                onChange={(e) =>
-                  setFormData({ ...formData, descricao_completa: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, descricao_completa: e.target.value })}
                 placeholder="Ex: Consulta - Clínico Geral"
                 disabled={submitting}
                 required
@@ -598,9 +610,7 @@ export default function CBHPMManagement() {
               <Input
                 id="descricao_curta"
                 value={formData.descricao_curta}
-                onChange={(e) =>
-                  setFormData({ ...formData, descricao_curta: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, descricao_curta: e.target.value })}
                 placeholder="Ex: Consulta Clínico"
                 disabled={submitting}
               />
@@ -640,9 +650,7 @@ export default function CBHPMManagement() {
                   type="number"
                   step="0.01"
                   value={formData.valor_minimo}
-                  onChange={(e) =>
-                    setFormData({ ...formData, valor_minimo: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, valor_minimo: e.target.value })}
                   placeholder="0,00"
                   disabled={submitting}
                 />
@@ -655,9 +663,7 @@ export default function CBHPMManagement() {
                   type="number"
                   step="0.01"
                   value={formData.valor_base}
-                  onChange={(e) =>
-                    setFormData({ ...formData, valor_base: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, valor_base: e.target.value })}
                   placeholder="0,00"
                   disabled={submitting}
                 />
@@ -670,9 +676,7 @@ export default function CBHPMManagement() {
                   type="number"
                   step="0.01"
                   value={formData.valor_maximo}
-                  onChange={(e) =>
-                    setFormData({ ...formData, valor_maximo: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, valor_maximo: e.target.value })}
                   placeholder="0,00"
                   disabled={submitting}
                 />
@@ -704,9 +708,7 @@ export default function CBHPMManagement() {
                 <Label htmlFor="unidade_medida">Unidade de Medida</Label>
                 <Select
                   value={formData.unidade_medida}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, unidade_medida: value })
-                  }
+                  onValueChange={(value) => setFormData({ ...formData, unidade_medida: value })}
                 >
                   <SelectTrigger disabled={submitting}>
                     <SelectValue placeholder="Selecione..." />
@@ -781,7 +783,7 @@ export default function CBHPMManagement() {
               </Button>
               <Button type="submit" disabled={submitting} className="gap-2">
                 {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                {editingId ? "Atualizar" : "Criar"}
+                {editingId ? 'Atualizar' : 'Criar'}
               </Button>
             </div>
           </form>

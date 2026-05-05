@@ -8,16 +8,17 @@ import { listarConveniosPorProfissional } from '@/modules/agenda/services/agenda
 import { supabase } from '@/lib/customSupabaseClient';
 import { suggestEncaixes } from '@/modules/agenda/utils/suggestEncaixe';
 import { generateTimeSlots } from '@/utils/helpers/generateTimeSlots';
+import ServiceListItem from './ServiceListItem';
 
 /**
  * AppointmentModal - Modal com abas para criar/editar agendamentos
- * 
+ *
  * Abas:
  * - Agendamento (data, hora, profissional, sala, serviço)
  * - Paciente (dados do paciente)
  * - Financeiro (convênio, valor)
  * - Histórico (histórico de alterações)
- * 
+ *
  * Props:
  * - isOpen: boolean
  * - onClose: () => void
@@ -46,14 +47,17 @@ export default function AppointmentModal({
 }) {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('agendamento');
-  const [formData, setFormData] = useState(getInitialFormData(selectedSlot, patientId, preSelectedPatient));
+  const [formData, setFormData] = useState(
+    getInitialFormData(selectedSlot, patientId, preSelectedPatient),
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [errorFields, setErrorFields] = useState([]); // 🆕 Lista de campos com erro
   const [isQuickBooking, setIsQuickBooking] = useState(false);
   const [selectedPatientData, setSelectedPatientData] = useState(null);
   const [filteredPayers, setFilteredPayers] = useState(metadata.payers || []);
-  
+  const [appointmentServices, setAppointmentServices] = useState([]); // 🆕 Múltiplos serviços
+
   // 🆕 Estados para transferência de agendamento
   const [showTransferOptions, setShowTransferOptions] = useState(false);
   const [suggestedSlots, setSuggestedSlots] = useState([]);
@@ -67,18 +71,18 @@ export default function AppointmentModal({
     console.log('📌 [AppointmentModal] Verificando tipo de paciente para selecionar aba');
     console.log('   selectedSlot?.mode:', selectedSlot?.mode);
     console.log('   selectedSlot?.appointment?.payer_id:', selectedSlot?.appointment?.payer_id);
-    
+
     // Apenas auto-selecionar quando vindo do modo edit (Contas a Receber)
     if (selectedSlot?.mode === 'edit' && selectedSlot?.appointment) {
       const appointment = selectedSlot.appointment;
-      
+
       // Verificar se é particular (sem payer) ou convênio (com payer)
       const isParticular = !appointment.payer_id;
       const isConvenio = !!appointment.payer_id;
-      
+
       console.log('   isParticular:', isParticular);
       console.log('   isConvenio:', isConvenio);
-      
+
       if (isParticular) {
         console.log('✅ É PARTICULAR - Abrindo aba Financeiro (Pagamento)');
         setActiveTab('financeiro');
@@ -91,7 +95,12 @@ export default function AppointmentModal({
 
   // �🔄 Atualizar formData quando selectedSlot ou preSelectedPatient mudarem
   React.useEffect(() => {
-    console.log('🔄 Atualizando formData. selectedSlot:', selectedSlot, 'preSelectedPatient:', preSelectedPatient);
+    console.log(
+      '🔄 Atualizando formData. selectedSlot:',
+      selectedSlot,
+      'preSelectedPatient:',
+      preSelectedPatient,
+    );
     const newFormData = getInitialFormData(selectedSlot, patientId, preSelectedPatient);
     setFormData(newFormData);
     console.log('📝 FormData atualizado:', newFormData);
@@ -102,10 +111,17 @@ export default function AppointmentModal({
   React.useEffect(() => {
     console.log('👀 [AppointmentModal] Estado atual do Profissional:');
     console.log('   formData.professional_id:', formData.professional_id);
-    console.log('   metadata.professionals:', metadata.professionals?.length || 0, 'profissionais disponíveis');
+    console.log(
+      '   metadata.professionals:',
+      metadata.professionals?.length || 0,
+      'profissionais disponíveis',
+    );
     if (formData.professional_id && metadata.professionals) {
-      const matched = metadata.professionals.find(p => p.id === formData.professional_id);
-      console.log('   ✅ Profissional encontrado?', matched ? `${matched.name} (${matched.id})` : '❌ NÃO ENCONTRADO');
+      const matched = metadata.professionals.find((p) => p.id === formData.professional_id);
+      console.log(
+        '   ✅ Profissional encontrado?',
+        matched ? `${matched.name} (${matched.id})` : '❌ NÃO ENCONTRADO',
+      );
     }
   }, [formData.professional_id, metadata.professionals]);
 
@@ -117,13 +133,13 @@ export default function AppointmentModal({
 
   // 🚨 Função para fechar com confirmação se houver dados
   const handleCloseWithConfirmation = () => {
-    const hasData = Object.values(formData).some(value => 
-      value !== null && value !== '' && value !== undefined && value !== false
+    const hasData = Object.values(formData).some(
+      (value) => value !== null && value !== '' && value !== undefined && value !== false,
     );
-    
+
     if (hasData && isNewAppointment) {
       const { missingFields } = validateAppointment();
-      
+
       if (missingFields.length > 0) {
         const message = `⚠️ Você tem informações preenchidas, mas faltam ${missingFields.length} campo(s) obrigatório(s):\n\n• ${missingFields.join('\n• ')}\n\nDeseja sair sem salvar?`;
         if (confirm(message)) {
@@ -146,7 +162,7 @@ export default function AppointmentModal({
       // Se temos preSelectedPatient, usar esses dados
       if (preSelectedPatient) {
         console.log('📋 Pré-preenchendo com preSelectedPatient:', preSelectedPatient);
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
           patient_cpf: preSelectedPatient.document_id || preSelectedPatient.cpf || '',
           patient_phone: preSelectedPatient.phone || '',
@@ -158,11 +174,11 @@ export default function AppointmentModal({
 
       // Procurar em metadata.patients
       if (formData.patient_id && metadata.patients) {
-        const patient = metadata.patients.find(p => p.id === formData.patient_id);
+        const patient = metadata.patients.find((p) => p.id === formData.patient_id);
         if (patient) {
           console.log('📋 Pré-preenchendo com metadata.patients:', patient);
           setSelectedPatientData(patient);
-          setFormData(prev => ({
+          setFormData((prev) => ({
             ...prev,
             patient_cpf: patient.document_id || patient.cpf || '',
             patient_phone: patient.phone || '',
@@ -195,7 +211,7 @@ export default function AppointmentModal({
           if (patient) {
             console.log('✅ Dados do paciente carregados:', patient);
             setSelectedPatientData(patient);
-            setFormData(prev => ({
+            setFormData((prev) => ({
               ...prev,
               patient_cpf: patient.document_id || '',
               patient_phone: patient.phone || '',
@@ -214,34 +230,37 @@ export default function AppointmentModal({
   // 💰 Carregar convênios do profissional selecionado
   React.useEffect(() => {
     async function loadProfessionalPayers() {
-      console.log("=== CARREGANDO PAYERS DO PROFISSIONAL ===");
-      console.log("📋 formData.professional_id:", formData.professional_id);
-      
+      console.log('=== CARREGANDO PAYERS DO PROFISSIONAL ===');
+      console.log('📋 formData.professional_id:', formData.professional_id);
+
       // Se não houver profissional selecionado, mostrar todos os convênios
       if (!formData.professional_id) {
-        console.log("📋 Nenhum profissional selecionado, usando todos os convênios:", metadata.payers);
+        console.log(
+          '📋 Nenhum profissional selecionado, usando todos os convênios:',
+          metadata.payers,
+        );
         setFilteredPayers(metadata.payers || []);
         return;
       }
 
-      console.log("🔍 Carregando convênios para profissional:", formData.professional_id);
-      
+      console.log('🔍 Carregando convênios para profissional:', formData.professional_id);
+
       try {
         const conventions = await listarConveniosPorProfissional({
           profissionalId: formData.professional_id,
         });
-        console.log("✅ Resultado da função:", conventions);
-        console.log("📊 Comprimento:", conventions?.length || 0);
-        
+        console.log('✅ Resultado da função:', conventions);
+        console.log('📊 Comprimento:', conventions?.length || 0);
+
         if (conventions && conventions.length > 0) {
-          console.log("✨ Convênios encontrados! Atualizando state...");
+          console.log('✨ Convênios encontrados! Atualizando state...');
           setFilteredPayers(conventions);
         } else {
-          console.log("⚠️ Nenhum convênio encontrado para este profissional");
+          console.log('⚠️ Nenhum convênio encontrado para este profissional');
           setFilteredPayers([]);
         }
       } catch (err) {
-        console.error("❌ Erro ao carregar convênios:", err);
+        console.error('❌ Erro ao carregar convênios:', err);
         // Fallback: usar todos os convênios se erro
         setFilteredPayers(metadata.payers || []);
       }
@@ -253,13 +272,13 @@ export default function AppointmentModal({
   // 💰 Carregar preço do serviço quando convênio ou serviço mudam
   React.useEffect(() => {
     async function loadServicePrice() {
-      console.log("=== CARREGANDO PREÇO DO SERVIÇO ===");
-      console.log("📋 formData.payer_id:", formData.payer_id);
-      console.log("📋 formData.service_id:", formData.service_id);
+      console.log('=== CARREGANDO PREÇO DO SERVIÇO ===');
+      console.log('📋 formData.payer_id:', formData.payer_id);
+      console.log('📋 formData.service_id:', formData.service_id);
 
       // Precisa de ambos para buscar o preço
       if (!formData.payer_id || !formData.service_id) {
-        console.log("⚠️ Faltam payer_id ou service_id");
+        console.log('⚠️ Faltam payer_id ou service_id');
         return;
       }
 
@@ -272,21 +291,21 @@ export default function AppointmentModal({
           .maybeSingle();
 
         if (error) {
-          console.log("⚠️ Erro ao buscar preço:", error);
+          console.log('⚠️ Erro ao buscar preço:', error);
           throw error;
         }
 
         if (!servicePrices) {
-          console.log("⚠️ Nenhum preço encontrado para esta combinação");
+          console.log('⚠️ Nenhum preço encontrado para esta combinação');
           return;
         }
 
         if (servicePrices && servicePrices.price) {
-          console.log("✅ Preço encontrado:", servicePrices.price);
+          console.log('✅ Preço encontrado:', servicePrices.price);
           handleInputChange('value', servicePrices.price);
         }
       } catch (err) {
-        console.error("❌ Erro ao carregar preço:", err);
+        console.error('❌ Erro ao carregar preço:', err);
       }
     }
 
@@ -294,9 +313,9 @@ export default function AppointmentModal({
   }, [formData.payer_id, formData.service_id]);
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
   // Formatar telefone com máscara
@@ -372,13 +391,14 @@ export default function AppointmentModal({
 
       console.log('💾 Tentando salvar agendamento...');
       console.log('📋 FormData:', formData);
+      console.log('📋 AppointmentServices:', appointmentServices.length, 'serviço(s)');
       console.log('🆕 isNewAppointment:', isNewAppointment);
       console.log('📞 isQuickBooking:', isQuickBooking);
 
       // Validar campos obrigatórios
       const { missingFields, fieldMap } = validateAppointment();
       console.log('✓ Validação:', { missingFields, fieldMap });
-      
+
       if (missingFields.length > 0) {
         setErrorFields(Object.keys(fieldMap));
         setError(`⚠️ Campos obrigatórios faltando:\n\n• ${missingFields.join('\n• ')}`);
@@ -394,6 +414,7 @@ export default function AppointmentModal({
           ...formData,
           patient_id: null,
           patient_type: 'PRE_PATIENT',
+          appointmentServices, // 🆕 Incluir serviços
         };
         console.log('📱 Salvando agendamento rápido:', quickData);
         await onSave(quickData);
@@ -401,6 +422,7 @@ export default function AppointmentModal({
         const normalData = {
           ...formData,
           patient_type: 'PATIENT',
+          appointmentServices, // 🆕 Incluir serviços
         };
         console.log('👤 Salvando agendamento normal:', normalData);
         await onSave(normalData);
@@ -478,7 +500,9 @@ export default function AppointmentModal({
         .eq('scheduled_date', appointmentDate)
         .not('status', 'is', null);
 
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        throw fetchError;
+      }
 
       // Gerar horários do dia (08:00 às 17:30, intervalos de 30min)
       const horarios = generateTimeSlots({
@@ -488,7 +512,7 @@ export default function AppointmentModal({
       });
 
       // Preparar serviço (buscar informações)
-      const servicoSelecionado = metadata.services?.find(s => s.id === formData.service_id);
+      const servicoSelecionado = metadata.services?.find((s) => s.id === formData.service_id);
       const servico = {
         duracao: servicoSelecionado?.duration_minutes || 30,
       };
@@ -530,7 +554,7 @@ export default function AppointmentModal({
 
       // Salvar mudanças
       await onSave(updatedFormData);
-      
+
       // Fechar modal de sugestões
       setShowTransferOptions(false);
       setSuggestedSlots([]);
@@ -541,7 +565,9 @@ export default function AppointmentModal({
     }
   };
 
-  if (!isOpen || !selectedSlot) return null;
+  if (!isOpen || !selectedSlot) {
+    return null;
+  }
 
   return (
     <div className="app-modal-overlay">
@@ -553,7 +579,7 @@ export default function AppointmentModal({
           </h2>
           <button
             onClick={() => {
-              console.log("X button clicked, calling onClose");
+              console.log('X button clicked, calling onClose');
               handleCloseWithConfirmation();
             }}
             className="text-gray-500 hover:text-gray-700 transition"
@@ -564,17 +590,20 @@ export default function AppointmentModal({
 
         {/* Tabs */}
         <div className="border-b border-gray-200 bg-gray-50 px-6 flex gap-0">
-          {['agendamento', 'paciente', 'financeiro', 'historico'].map(tab => {
+          {['agendamento', 'paciente', 'financeiro', 'historico'].map((tab) => {
             let tabLabel = '';
-            if (tab === 'agendamento') tabLabel = 'Dados do Agendamento';
-            else if (tab === 'paciente') tabLabel = 'Dados Cadastrais';
-            else if (tab === 'financeiro') {
+            if (tab === 'agendamento') {
+              tabLabel = 'Dados do Agendamento';
+            } else if (tab === 'paciente') {
+              tabLabel = 'Dados Cadastrais';
+            } else if (tab === 'financeiro') {
               // Mostrar label diferente baseado no tipo de paciente
               const isParticular = !selectedSlot?.appointment?.payer_id;
               tabLabel = isParticular ? 'Pagamento' : 'Faturamento';
+            } else if (tab === 'historico') {
+              tabLabel = 'Histórico';
             }
-            else if (tab === 'historico') tabLabel = 'Histórico';
-            
+
             return (
               <button
                 key={tab}
@@ -598,9 +627,14 @@ export default function AppointmentModal({
               <div className="font-bold mb-2">⚠️ {error.split('\n')[0]}</div>
               {error.includes('\n') && (
                 <ul className="ml-4 space-y-1">
-                  {error.split('\n').slice(2).map((line, idx) => (
-                    <li key={idx} className="text-sm">{line}</li>
-                  ))}
+                  {error
+                    .split('\n')
+                    .slice(2)
+                    .map((line, idx) => (
+                      <li key={idx} className="text-sm">
+                        {line}
+                      </li>
+                    ))}
                 </ul>
               )}
             </div>
@@ -624,6 +658,8 @@ export default function AppointmentModal({
                 setShowTransferOptions(false);
                 setSuggestedSlots([]);
               }}
+              appointmentServices={appointmentServices}
+              onServicesChange={setAppointmentServices}
             />
           )}
 
@@ -634,7 +670,9 @@ export default function AppointmentModal({
                 <div className="space-y-4">
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                     <h3 className="font-semibold text-blue-900 mb-1">📞 Agendamento Rápido</h3>
-                    <p className="text-sm text-blue-800">Preencha os dados mínimos. Cadastro completo será feito na recepção.</p>
+                    <p className="text-sm text-blue-800">
+                      Preencha os dados mínimos. Cadastro completo será feito na recepção.
+                    </p>
                   </div>
 
                   <div>
@@ -721,11 +759,7 @@ export default function AppointmentModal({
           )}
 
           {activeTab === 'historico' && (
-            <TabHistorico 
-              selectedSlot={selectedSlot}
-              currentRole={currentRole}
-              userId={user?.id}
-            />
+            <TabHistorico selectedSlot={selectedSlot} currentRole={currentRole} userId={user?.id} />
           )}
         </div>
 
@@ -761,7 +795,13 @@ export default function AppointmentModal({
           {isEditing && (
             <button
               onClick={handleSearchAvailableSlots}
-              disabled={submitting || loadingSuggestions || showTransferOptions || !formData.date || !formData.service_id}
+              disabled={
+                submitting ||
+                loadingSuggestions ||
+                showTransferOptions ||
+                !formData.date ||
+                !formData.service_id
+              }
               className="px-4 py-2 text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50 transition font-medium"
               title="Buscar horários disponíveis para transferir este agendamento"
             >
@@ -809,13 +849,15 @@ function TabAgendamento({
   onSearchAvailableSlots,
   onTransferToSlot,
   onCloseTransferOptions,
+  appointmentServices = [],
+  onServicesChange = () => {},
 }) {
   // Encaixe permite editar data e hora
   const isEncaixe = selectedSlot?.type === 'encaixe';
   // ✅ CORRIGIDO: Permitir a TODOS editar data/hora (gestores, profissionais, receptionistas)
   // 📅 Se isNewAppointment, permite editar; se está editando, também permite
   const canEditDateTime = canEdit; // Simplificado: qualquer um que pode editar pode mudar data/hora
-  
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
@@ -852,8 +894,10 @@ function TabAgendamento({
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100"
           >
             <option value="">Selecione um profissional</option>
-            {metadata.professionals?.map(prof => (
-              <option key={prof.id} value={prof.id}>{prof.name}</option>
+            {metadata.professionals?.map((prof) => (
+              <option key={prof.id} value={prof.id}>
+                {prof.name}
+              </option>
             ))}
           </select>
         </div>
@@ -867,8 +911,10 @@ function TabAgendamento({
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100"
           >
             <option value="">Selecione uma sala</option>
-            {metadata.rooms?.map(room => (
-              <option key={room.id} value={room.id}>{room.name}</option>
+            {metadata.rooms?.map((room) => (
+              <option key={room.id} value={room.id}>
+                {room.name}
+              </option>
             ))}
           </select>
         </div>
@@ -883,8 +929,10 @@ function TabAgendamento({
           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100"
         >
           <option value="">Selecione um serviço</option>
-          {metadata.services?.map(service => (
-            <option key={service.id} value={service.id}>{service.name}</option>
+          {metadata.services?.map((service) => (
+            <option key={service.id} value={service.id}>
+              {service.name}
+            </option>
           ))}
         </select>
       </div>
@@ -900,6 +948,18 @@ function TabAgendamento({
           placeholder="Observações sobre o agendamento..."
         />
       </div>
+
+      {/* 📋 MÚLTIPLOS SERVIÇOS */}
+      {canEdit && (
+        <ServiceListItem
+          services={appointmentServices}
+          onServicesChange={onServicesChange}
+          professionalId={formData.professional_id}
+          payerId={formData.payer_id}
+          clinicId={selectedSlot?.clinic_id}
+          metadata={metadata}
+        />
+      )}
 
       {/* 🆕 Seção de Transferência de Horário */}
       {!showTransferOptions && (
@@ -918,12 +978,11 @@ function TabAgendamento({
           <div className="flex justify-between items-start">
             <div>
               <h4 className="text-sm font-semibold text-gray-700 mb-1">💡 Horários Disponíveis</h4>
-              <p className="text-xs text-gray-600">{suggestedSlots.length} opção(ões) encontrada(s)</p>
+              <p className="text-xs text-gray-600">
+                {suggestedSlots.length} opção(ões) encontrada(s)
+              </p>
             </div>
-            <button
-              onClick={onCloseTransferOptions}
-              className="text-gray-500 hover:text-gray-700"
-            >
+            <button onClick={onCloseTransferOptions} className="text-gray-500 hover:text-gray-700">
               ✕
             </button>
           </div>
@@ -944,7 +1003,9 @@ function TabAgendamento({
                     <p className="text-xs text-gray-600 mt-1">{slot.motivo}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs font-semibold text-purple-600">Score: {slot.score.toFixed(0)}</p>
+                    <p className="text-xs font-semibold text-purple-600">
+                      Score: {slot.score.toFixed(0)}
+                    </p>
                   </div>
                 </div>
               </button>
@@ -962,7 +1023,9 @@ function TabAgendamento({
 
       {showTransferOptions && suggestedSlots.length === 0 && !loadingSuggestions && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <p className="text-sm text-yellow-800">⚠️ Nenhum horário disponível encontrado neste dia.</p>
+          <p className="text-sm text-yellow-800">
+            ⚠️ Nenhum horário disponível encontrado neste dia.
+          </p>
           <button
             onClick={onCloseTransferOptions}
             className="text-sm text-yellow-600 hover:text-yellow-700 mt-2 font-medium"
@@ -978,12 +1041,7 @@ function TabAgendamento({
 /**
  * TabPaciente - Dados do paciente
  */
-function TabPaciente({
-  formData,
-  onChange,
-  metadata,
-  canEdit,
-}) {
+function TabPaciente({ formData, onChange, metadata, canEdit }) {
   return (
     <div className="space-y-4">
       <div>
@@ -995,8 +1053,10 @@ function TabPaciente({
           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100"
         >
           <option value="">Selecione um paciente</option>
-          {metadata.patients?.map(patient => (
-            <option key={patient.id} value={patient.id}>{patient.name}</option>
+          {metadata.patients?.map((patient) => (
+            <option key={patient.id} value={patient.id}>
+              {patient.name}
+            </option>
           ))}
         </select>
       </div>
@@ -1039,18 +1099,15 @@ function TabPaciente({
 /**
  * TabFinanceiro - Dados financeiros do agendamento
  */
-function TabFinanceiro({
-  formData,
-  onChange,
-  metadata,
-  filteredPayers = [],
-  canEdit,
-}) {
+function TabFinanceiro({ formData, onChange, metadata, filteredPayers = [], canEdit }) {
   return (
     <div className="space-y-4">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Convênio / Pagador {filteredPayers.length > 0 && <span className="text-xs text-green-600">({filteredPayers.length})</span>}
+          Convênio / Pagador{' '}
+          {filteredPayers.length > 0 && (
+            <span className="text-xs text-green-600">({filteredPayers.length})</span>
+          )}
         </label>
         <select
           value={formData.payer_id || ''}
@@ -1058,9 +1115,13 @@ function TabFinanceiro({
           disabled={!canEdit}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm disabled:bg-gray-100"
         >
-          <option value="">{filteredPayers.length === 0 ? 'Nenhum convênio disponível' : 'Selecione um convênio'}</option>
-          {filteredPayers.map(payer => (
-            <option key={payer.id} value={payer.id}>{payer.name}</option>
+          <option value="">
+            {filteredPayers.length === 0 ? 'Nenhum convênio disponível' : 'Selecione um convênio'}
+          </option>
+          {filteredPayers.map((payer) => (
+            <option key={payer.id} value={payer.id}>
+              {payer.name}
+            </option>
           ))}
         </select>
       </div>
@@ -1082,7 +1143,11 @@ function TabFinanceiro({
           </div>
           {formData.value && (
             <p className="text-xs text-gray-500 mt-1">
-              R$ {parseFloat(formData.value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              R${' '}
+              {parseFloat(formData.value).toLocaleString('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
             </p>
           )}
         </div>
@@ -1146,7 +1211,9 @@ function TabHistorico({ selectedSlot, currentRole, userId }) {
  * Função auxiliar para inicializar os dados do formulário
  */
 function getInitialFormData(selectedSlot, patientId, preSelectedPatient) {
-  if (!selectedSlot) return {};
+  if (!selectedSlot) {
+    return {};
+  }
 
   if (selectedSlot.type === 'new') {
     console.log('🎬 [getInitialFormData] Novo agendamento, selectedSlot:', {
@@ -1198,4 +1265,3 @@ function getInitialFormData(selectedSlot, patientId, preSelectedPatient) {
     patient_mobile: selectedSlot.patient_mobile || selectedSlot.patients?.cell_phone || '',
   };
 }
-

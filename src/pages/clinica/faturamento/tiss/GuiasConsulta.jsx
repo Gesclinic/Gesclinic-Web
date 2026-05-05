@@ -4,26 +4,51 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { normalizeCodeCBHPM } from '@/utils/formatters/formatters';
-import { 
-  FileUp, 
-  Plus, 
-  Edit, 
-  Eye, 
-  Download, 
-  CheckCircle, 
+import {
+  FileUp,
+  Plus,
+  Edit,
+  Eye,
+  Download,
+  CheckCircle,
   AlertCircle,
   Search,
   Calendar,
-  FileCode
+  FileCode,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
-import { criarGuia, atualizarGuia, listarGuias, gerarNumeroGuia, deletarGuia } from '@/modules/financeiro/services/guiasApi';
+import {
+  criarGuia,
+  atualizarGuia,
+  listarGuias,
+  gerarNumeroGuia,
+  deletarGuia,
+} from '@/modules/financeiro/services/guiasApi';
 import {
   validateTISSXMLGenerationCascade,
   formatCascadeErrors,
@@ -54,7 +79,7 @@ export default function GuiasConsulta() {
     profissional: '',
     codigo_cbhpm: '',
     valor: '',
-    observacoes: ''
+    observacoes: '',
   });
 
   // Mock data para demonstração
@@ -71,9 +96,9 @@ export default function GuiasConsulta() {
       profissional: 'Dr. João Cardiologia',
       codigo_cbhpm: '40101012',
       descricao_procedimento: 'Consulta em Cardiologia',
-      valor: 150.00,
+      valor: 150.0,
       status: 'Aguardando XML',
-      xml_path: null
+      xml_path: null,
     },
     {
       id: '002',
@@ -87,10 +112,10 @@ export default function GuiasConsulta() {
       profissional: 'Dra. Ana Pediatria',
       codigo_cbhpm: '40301010',
       descricao_procedimento: 'Exame de Eletrocardiograma',
-      valor: 80.00,
+      valor: 80.0,
       status: 'XML Gerado',
-      xml_path: '/xml/guia_002.xml'
-    }
+      xml_path: '/xml/guia_002.xml',
+    },
   ];
 
   useEffect(() => {
@@ -105,9 +130,9 @@ export default function GuiasConsulta() {
     } catch (error) {
       console.error('❌ Erro ao buscar guias:', error);
       toast({
-        title: "Erro",
-        description: "Não foi possível carregar as guias.",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Não foi possível carregar as guias.',
+        variant: 'destructive',
       });
       // Fallback: mostrar dados mock
       setGuias(mockGuias);
@@ -122,18 +147,18 @@ export default function GuiasConsulta() {
       // Validar campos obrigatórios
       if (!formData.paciente_nome.trim()) {
         toast({
-          title: "Validação",
-          description: "Nome do paciente é obrigatório.",
-          variant: "destructive"
+          title: 'Validação',
+          description: 'Nome do paciente é obrigatório.',
+          variant: 'destructive',
         });
         return;
       }
 
       if (!formData.numero_carteirinha.trim()) {
         toast({
-          title: "Validação",
-          description: "Número de carteirinha/matrícula é obrigatório.",
-          variant: "destructive"
+          title: 'Validação',
+          description: 'Número de carteirinha/matrícula é obrigatório.',
+          variant: 'destructive',
         });
         return;
       }
@@ -143,8 +168,8 @@ export default function GuiasConsulta() {
         console.log('📝 Atualizando guia:', editingGuia.id, formData);
         await atualizarGuia(editingGuia.id, formData);
         toast({
-          title: "✅ Guia atualizada",
-          description: `Guia atualizada com sucesso.`
+          title: '✅ Guia atualizada',
+          description: 'Guia atualizada com sucesso.',
         });
       } else {
         // Criar nova guia
@@ -152,8 +177,8 @@ export default function GuiasConsulta() {
         const novaGuia = await criarGuia(formData);
         console.log('✅ Guia criada:', novaGuia);
         toast({
-          title: "✅ Guia criada",
-          description: `Guia criada com sucesso. Matrícula/Carteirinha: ${formData.numero_carteirinha}`
+          title: '✅ Guia criada',
+          description: `Guia criada com sucesso. Matrícula/Carteirinha: ${formData.numero_carteirinha}`,
         });
       }
 
@@ -164,9 +189,9 @@ export default function GuiasConsulta() {
     } catch (error) {
       console.error('❌ Erro ao salvar guia:', error);
       toast({
-        title: "Erro",
-        description: error.message || "Não foi possível salvar a guia.",
-        variant: "destructive"
+        title: 'Erro',
+        description: error.message || 'Não foi possível salvar a guia.',
+        variant: 'destructive',
       });
     }
   };
@@ -181,7 +206,7 @@ export default function GuiasConsulta() {
       profissional: '',
       codigo_cbhpm: '',
       valor: '',
-      observacoes: ''
+      observacoes: '',
     });
   };
 
@@ -196,7 +221,7 @@ export default function GuiasConsulta() {
       profissional: guia.profissional,
       codigo_cbhpm: guia.codigo_cbhpm,
       valor: guia.valor.toString(),
-      observacoes: guia.observacoes || ''
+      observacoes: guia.observacoes || '',
     });
     setIsDialogOpen(true);
   };
@@ -265,9 +290,9 @@ export default function GuiasConsulta() {
     const statusConfig = {
       'Aguardando XML': { variant: 'outline', color: 'text-yellow-600' },
       'XML Gerado': { variant: 'default', color: 'text-green-600' },
-      'Enviado': { variant: 'secondary', color: 'text-blue-600' },
-      'Glosado': { variant: 'destructive', color: 'text-red-600' },
-      'Pago': { variant: 'success', color: 'text-green-600' }
+      Enviado: { variant: 'secondary', color: 'text-blue-600' },
+      Glosado: { variant: 'destructive', color: 'text-red-600' },
+      Pago: { variant: 'success', color: 'text-green-600' },
     };
 
     const config = statusConfig[status] || { variant: 'outline', color: 'text-gray-600' };
@@ -278,13 +303,14 @@ export default function GuiasConsulta() {
     );
   };
 
-  const filteredGuias = guias.filter(guia => {
-    const matchesSearch = guia.paciente_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         guia.numero_guia.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         guia.convenio.toLowerCase().includes(searchTerm.toLowerCase());
-    
+  const filteredGuias = guias.filter((guia) => {
+    const matchesSearch =
+      guia.paciente_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      guia.numero_guia.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      guia.convenio.toLowerCase().includes(searchTerm.toLowerCase());
+
     const matchesStatus = statusFilter === 'all' || guia.status === statusFilter;
-    
+
     return matchesSearch && matchesStatus;
   });
 
@@ -311,18 +337,16 @@ export default function GuiasConsulta() {
           </DialogTrigger>
           <DialogContent className="app-dialog-shell app-dialog-shell--content app-dialog-shell--wide">
             <DialogHeader>
-              <DialogTitle>
-                {editingGuia ? 'Editar Guia' : 'Nova Guia de Consulta'}
-              </DialogTitle>
+              <DialogTitle>{editingGuia ? 'Editar Guia' : 'Nova Guia de Consulta'}</DialogTitle>
             </DialogHeader>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="tipo_guia">Tipo de Guia</Label>
-                  <Select 
+                  <Select
                     value={formData.tipo_guia}
-                    onValueChange={(value) => setFormData({...formData, tipo_guia: value})}
+                    onValueChange={(value) => setFormData({ ...formData, tipo_guia: value })}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -339,7 +363,7 @@ export default function GuiasConsulta() {
                   <Input
                     id="paciente_nome"
                     value={formData.paciente_nome}
-                    onChange={(e) => setFormData({...formData, paciente_nome: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, paciente_nome: e.target.value })}
                     required
                   />
                 </div>
@@ -349,7 +373,7 @@ export default function GuiasConsulta() {
                   <Input
                     id="convenio"
                     value={formData.convenio}
-                    onChange={(e) => setFormData({...formData, convenio: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, convenio: e.target.value })}
                     required
                   />
                 </div>
@@ -359,7 +383,7 @@ export default function GuiasConsulta() {
                   <Input
                     id="plano"
                     value={formData.plano}
-                    onChange={(e) => setFormData({...formData, plano: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, plano: e.target.value })}
                     required
                   />
                 </div>
@@ -369,7 +393,9 @@ export default function GuiasConsulta() {
                   <Input
                     id="numero_carteirinha"
                     value={formData.numero_carteirinha}
-                    onChange={(e) => setFormData({...formData, numero_carteirinha: e.target.value})}
+                    onChange={(e) =>
+                      setFormData({ ...formData, numero_carteirinha: e.target.value })
+                    }
                     required
                   />
                 </div>
@@ -379,7 +405,7 @@ export default function GuiasConsulta() {
                   <Input
                     id="profissional"
                     value={formData.profissional}
-                    onChange={(e) => setFormData({...formData, profissional: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, profissional: e.target.value })}
                     required
                   />
                 </div>
@@ -388,10 +414,10 @@ export default function GuiasConsulta() {
                   <Label htmlFor="codigo_cbhpm">Código CBHPM</Label>
                   <Input
                     id="codigo_cbhpm"
-                    value={formData.codigo_cbhpm ? formData.codigo_cbhpm.toUpperCase() : ""}
+                    value={formData.codigo_cbhpm ? formData.codigo_cbhpm.toUpperCase() : ''}
                     onChange={(e) => {
                       const normalized = normalizeCodeCBHPM(e.target.value);
-                      setFormData({...formData, codigo_cbhpm: normalized});
+                      setFormData({ ...formData, codigo_cbhpm: normalized });
                     }}
                     placeholder="Ex: 1.01.01.01-2"
                     className="font-bold text-lg tracking-widest text-gray-900"
@@ -406,7 +432,7 @@ export default function GuiasConsulta() {
                     type="number"
                     step="0.01"
                     value={formData.valor}
-                    onChange={(e) => setFormData({...formData, valor: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, valor: e.target.value })}
                     required
                   />
                 </div>
@@ -417,14 +443,14 @@ export default function GuiasConsulta() {
                 <Textarea
                   id="observacoes"
                   value={formData.observacoes}
-                  onChange={(e) => setFormData({...formData, observacoes: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
                   rows={3}
                 />
               </div>
 
               <div className="flex justify-end gap-2 pt-4">
-                <Button 
-                  type="button" 
+                <Button
+                  type="button"
                   variant="outline"
                   onClick={() => {
                     setIsDialogOpen(false);
@@ -434,9 +460,7 @@ export default function GuiasConsulta() {
                 >
                   Cancelar
                 </Button>
-                <Button type="submit">
-                  {editingGuia ? 'Atualizar' : 'Criar'} Guia
-                </Button>
+                <Button type="submit">{editingGuia ? 'Atualizar' : 'Criar'} Guia</Button>
               </div>
             </form>
           </DialogContent>
@@ -503,7 +527,8 @@ export default function GuiasConsulta() {
                   ))}
                 </ul>
                 <p className="text-red-700 text-xs mt-3">
-                  Preencha todos os dados TISS obrigatórios nos cadastros (Serviços, Profissionais, Convênios) antes de gerar XML.
+                  Preencha todos os dados TISS obrigatórios nos cadastros (Serviços, Profissionais,
+                  Convênios) antes de gerar XML.
                 </p>
               </div>
             </div>
@@ -534,40 +559,24 @@ export default function GuiasConsulta() {
             <TableBody>
               {filteredGuias.map((guia) => (
                 <TableRow key={guia.id}>
-                  <TableCell className="font-mono text-sm">
-                    {guia.numero_guia}
-                  </TableCell>
+                  <TableCell className="font-mono text-sm">{guia.numero_guia}</TableCell>
                   <TableCell>
-                    <Badge variant="outline">
-                      {guia.tipo}
-                    </Badge>
+                    <Badge variant="outline">{guia.tipo}</Badge>
                   </TableCell>
                   <TableCell>{guia.data_criacao}</TableCell>
                   <TableCell>{guia.paciente_nome}</TableCell>
                   <TableCell>{guia.convenio}</TableCell>
                   <TableCell>{guia.profissional}</TableCell>
-                  <TableCell className="text-right">
-                    R$ {guia.valor.toFixed(2)}
-                  </TableCell>
-                  <TableCell>
-                    {getStatusBadge(guia.status)}
-                  </TableCell>
+                  <TableCell className="text-right">R$ {guia.valor.toFixed(2)}</TableCell>
+                  <TableCell>{getStatusBadge(guia.status)}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleEdit(guia)}
-                      >
+                      <Button size="sm" variant="outline" onClick={() => handleEdit(guia)}>
                         <Edit className="w-3 h-3" />
                       </Button>
 
                       {!guia.xml_path ? (
-                        <Button
-                          size="sm"
-                          onClick={() => handleGenerateXML(guia)}
-                          className="gap-1"
-                        >
+                        <Button size="sm" onClick={() => handleGenerateXML(guia)} className="gap-1">
                           <FileUp className="w-3 h-3" />
                           Gerar XML
                         </Button>
@@ -588,10 +597,9 @@ export default function GuiasConsulta() {
               {filteredGuias.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                    {searchTerm || statusFilter !== 'all' 
+                    {searchTerm || statusFilter !== 'all'
                       ? 'Nenhuma guia encontrada com os filtros aplicados.'
-                      : 'Nenhuma guia cadastrada ainda.'
-                    }
+                      : 'Nenhuma guia cadastrada ainda.'}
                   </TableCell>
                 </TableRow>
               )}
@@ -602,4 +610,3 @@ export default function GuiasConsulta() {
     </div>
   );
 }
-

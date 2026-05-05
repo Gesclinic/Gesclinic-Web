@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/customSupabaseClient";
+import { supabase } from '@/lib/customSupabaseClient';
 
 /**
  * Serviço ÚNICO de agenda
@@ -7,7 +7,7 @@ import { supabase } from "@/lib/customSupabaseClient";
  */
 export async function listarAgenda({ clinicId, date, startDate = null, endDate = null }) {
   console.log('[DEBUG listarAgenda] Input:', { clinicId, date, startDate, endDate });
-  
+
   if (!clinicId) {
     console.warn('[DEBUG listarAgenda] Missing clinicId');
     return [];
@@ -25,9 +25,9 @@ export async function listarAgenda({ clinicId, date, startDate = null, endDate =
   }
 
   // Determinar range de datas
-  let queryStartDate = startDate || formattedDate;
+  const queryStartDate = startDate || formattedDate;
   let queryEndDate = endDate;
-  
+
   if (!queryEndDate) {
     // Carregar 30 dias a partir da data
     const endDateObj = new Date(formattedDate);
@@ -38,8 +38,9 @@ export async function listarAgenda({ clinicId, date, startDate = null, endDate =
   console.log('[DEBUG listarAgenda] Query range:', { queryStartDate, queryEndDate });
 
   const { data, error } = await supabase
-    .from("appointments")
-    .select(`
+    .from('appointments')
+    .select(
+      `
       id,
       clinic_id,
       scheduled_date,
@@ -56,22 +57,31 @@ export async function listarAgenda({ clinicId, date, startDate = null, endDate =
       service:services(id, name),
       room:rooms(id, name),
       payer:payers(id, name)
-    `)
-    .eq("clinic_id", clinicId)
-    .gte("scheduled_date", queryStartDate)
-    .lte("scheduled_date", queryEndDate)
-    .order("scheduled_date")
-    .order("scheduled_time");
+    `,
+    )
+    .eq('clinic_id', clinicId)
+    .gte('scheduled_date', queryStartDate)
+    .lte('scheduled_date', queryEndDate)
+    .order('scheduled_date')
+    .order('scheduled_time');
 
   if (error) {
-    console.error("❌ Erro ao listar agenda:", error);
+    console.error('❌ Erro ao listar agenda:', error);
     return [];
   }
 
-  console.log(`✅ Agendamentos carregados: ${data?.length || 0} para clínica ${clinicId} no período ${queryStartDate} a ${queryEndDate}`);
+  console.log(
+    `✅ Agendamentos carregados: ${data?.length || 0} para clínica ${clinicId} no período ${queryStartDate} a ${queryEndDate}`,
+  );
   if (data && data.length > 0) {
-    console.log('   Profissionais com agendamentos:', [...new Set(data.map(a => a.professional?.name || a.professional_id))].join(', '));
-    console.log('   Datas com agendamentos:', [...new Set(data.map(a => a.scheduled_date))].join(', '));
+    console.log(
+      '   Profissionais com agendamentos:',
+      [...new Set(data.map((a) => a.professional?.name || a.professional_id))].join(', '),
+    );
+    console.log(
+      '   Datas com agendamentos:',
+      [...new Set(data.map((a) => a.scheduled_date))].join(', '),
+    );
   }
   return data || [];
 }

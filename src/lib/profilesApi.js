@@ -67,9 +67,18 @@ export const PROFILES_CONFIG = {
       'administracao.clinicas',
       'atendimento.visualizar',
       'atendimento.criar',
-      'atendimento.editar'
+      'atendimento.editar',
     ],
-    modules: ['Dashboard', 'Agenda', 'Pacientes', 'Financeiro', 'Estoque', 'Faturamento', 'Configurações', 'Administração']
+    modules: [
+      'Dashboard',
+      'Agenda',
+      'Pacientes',
+      'Financeiro',
+      'Estoque',
+      'Faturamento',
+      'Configurações',
+      'Administração',
+    ],
   },
   financeiro: {
     id: 'financeiro',
@@ -87,9 +96,9 @@ export const PROFILES_CONFIG = {
       'financeiro.conciliacao',
       'financeiro.automacao',
       'financeiro.repasse_medico',
-      'faturamento.visualizar'
+      'faturamento.visualizar',
     ],
-    modules: ['Dashboard', 'Financeiro', 'Faturamento']
+    modules: ['Dashboard', 'Financeiro', 'Faturamento'],
   },
   recepcao: {
     id: 'recepcao',
@@ -111,9 +120,9 @@ export const PROFILES_CONFIG = {
       'pacientes.historico',
       'profissionais.visualizar',
       'atendimento.visualizar',
-      'atendimento.criar'
+      'atendimento.criar',
     ],
-    modules: ['Dashboard', 'Agenda', 'Pacientes', 'Atendimento']
+    modules: ['Dashboard', 'Agenda', 'Pacientes', 'Atendimento'],
   },
   profissional: {
     id: 'profissional',
@@ -129,9 +138,9 @@ export const PROFILES_CONFIG = {
       'pacientes.historico',
       'atendimento.visualizar',
       'atendimento.criar',
-      'atendimento.editar'
+      'atendimento.editar',
     ],
-    modules: ['Dashboard', 'Agenda', 'Pacientes', 'Atendimento']
+    modules: ['Dashboard', 'Agenda', 'Pacientes', 'Atendimento'],
   },
   estoque: {
     id: 'estoque',
@@ -148,9 +157,9 @@ export const PROFILES_CONFIG = {
       'estoque.transferencias',
       'estoque.requisicoes',
       'estoque.inventario',
-      'estoque.relatorios'
+      'estoque.relatorios',
     ],
-    modules: ['Dashboard', 'Estoque']
+    modules: ['Dashboard', 'Estoque'],
   },
   faturamento: {
     id: 'faturamento',
@@ -164,10 +173,10 @@ export const PROFILES_CONFIG = {
       'faturamento.criar',
       'faturamento.editar',
       'profissionais.visualizar',
-      'pacientes.visualizar'
+      'pacientes.visualizar',
     ],
-    modules: ['Dashboard', 'Financeiro', 'Faturamento']
-  }
+    modules: ['Dashboard', 'Financeiro', 'Faturamento'],
+  },
 };
 
 /**
@@ -180,7 +189,9 @@ export async function listProfiles(clinicId) {
       .select('*')
       .order('name', { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data || [];
   } catch (error) {
     console.error('Erro ao listar perfis:', error);
@@ -193,13 +204,11 @@ export async function listProfiles(clinicId) {
  */
 export async function getProfile(roleId, clinicId) {
   try {
-    const { data, error } = await supabase
-      .from('roles')
-      .select('*')
-      .eq('id', roleId)
-      .single();
+    const { data, error } = await supabase.from('roles').select('*').eq('id', roleId).single();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data;
   } catch (error) {
     console.error('Erro ao buscar perfil:', error);
@@ -217,13 +226,15 @@ export async function createProfile(profileData, clinicId) {
       .insert([
         {
           ...profileData,
-          created_at: new Date().toISOString()
-        }
+          created_at: new Date().toISOString(),
+        },
       ])
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data;
   } catch (error) {
     console.error('Erro ao criar perfil:', error);
@@ -240,7 +251,7 @@ export async function updateProfile(roleId, profileData, clinicId) {
       .from('roles')
       .update({
         ...profileData,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq('id', roleId)
       .select();
@@ -250,7 +261,9 @@ export async function updateProfile(roleId, profileData, clinicId) {
     }
     return data[0];
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data;
   } catch (error) {
     console.error('Erro ao atualizar perfil:', error);
@@ -263,12 +276,11 @@ export async function updateProfile(roleId, profileData, clinicId) {
  */
 export async function deleteProfile(roleId, clinicId) {
   try {
-    const { error } = await supabase
-      .from('roles')
-      .delete()
-      .eq('id', roleId);
+    const { error } = await supabase.from('roles').delete().eq('id', roleId);
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return true;
   } catch (error) {
     console.error('Erro ao deletar perfil:', error);
@@ -287,7 +299,9 @@ export async function countUsersByProfile(roleId, clinicId) {
       .eq('role', roleId)
       .eq('clinic_id', clinicId);
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return count || 0;
   } catch (error) {
     console.error('Erro ao contar usuários:', error);
@@ -307,7 +321,9 @@ export async function listUsersByProfile(roleId, clinicId) {
       .eq('clinic_id', clinicId)
       .order('full_name', { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data || [];
   } catch (error) {
     console.error('Erro ao listar usuários do perfil:', error);

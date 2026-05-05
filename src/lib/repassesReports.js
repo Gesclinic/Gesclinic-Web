@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/customSupabaseClient.js";
+import { supabase } from '@/lib/customSupabaseClient.js';
 
 /**
  * 🔍 getRepassesReport
@@ -13,25 +13,24 @@ import { supabase } from "@/lib/customSupabaseClient.js";
  *  2️⃣ Se não existir, faz SELECT direto da view `view_doctor_commissions_summary`
  */
 export async function getRepassesReport(clinicId, year) {
-  if (!clinicId) throw new Error("Clinic ID é obrigatório.");
+  if (!clinicId) {
+    throw new Error('Clinic ID é obrigatório.');
+  }
 
   try {
     // ✅ 1️⃣ Tentativa via função RPC (ideal para performance)
-    const { data: rpcData, error: rpcError } = await supabase.rpc(
-      "get_repasses_annual_report",
-      {
-        p_clinic_id: clinicId,
-        p_year: year,
-      }
-    );
+    const { data: rpcData, error: rpcError } = await supabase.rpc('get_repasses_annual_report', {
+      p_clinic_id: clinicId,
+      p_year: year,
+    });
 
-    if (rpcError && !rpcError.message.includes("does not exist")) {
+    if (rpcError && !rpcError.message.includes('does not exist')) {
       throw rpcError;
     }
 
     // Se RPC retornou dados válidos
     if (rpcData && rpcData.length > 0) {
-      console.log("✅ Dados carregados via RPC get_repasses_annual_report");
+      console.log('✅ Dados carregados via RPC get_repasses_annual_report');
       return rpcData.map((r) => ({
         profissional_nome: r.profissional_nome,
         convenio_nome: r.convenio_nome,
@@ -46,7 +45,7 @@ export async function getRepassesReport(clinicId, year) {
 
     // ✅ 2️⃣ Fallback: SELECT direto da view pública (sem RPC)
     const { data: viewData, error: viewError } = await supabase
-      .from("view_doctor_commissions_summary")
+      .from('view_doctor_commissions_summary')
       .select(
         `
         profissional_nome,
@@ -58,25 +57,27 @@ export async function getRepassesReport(clinicId, year) {
         percentual_repasse,
         total_repasse,
         status
-      `
+      `,
       )
-      .eq("clinic_id", clinicId)
-      .eq("reference_year", year)
-      .order("reference_month", { ascending: true });
+      .eq('clinic_id', clinicId)
+      .eq('reference_year', year)
+      .order('reference_month', { ascending: true });
 
-    if (viewError) throw viewError;
+    if (viewError) {
+      throw viewError;
+    }
 
-    console.log("✅ Dados carregados via view view_doctor_commissions_summary");
+    console.log('✅ Dados carregados via view view_doctor_commissions_summary');
 
     return (viewData || []).map((r) => ({
       profissional_nome: r.profissional_nome,
       convenio_nome: r.convenio_nome,
-      mes: `${String(r.reference_month).padStart(2, "0")}/${r.reference_year}`,
+      mes: `${String(r.reference_month).padStart(2, '0')}/${r.reference_year}`,
       total_servicos: r.total_services || 0,
       valor_bruto: r.total_bruto || 0,
       percentual_repasse: r.percentual_repasse || 0,
       valor_repasse: r.total_repasse || 0,
-      status: r.status || "pendente",
+      status: r.status || 'pendente',
     }));
 
     // ✅ 3️⃣ Fallback adicional: usar agregação da view `repasse_dashboard`
@@ -86,9 +87,11 @@ export async function getRepassesReport(clinicId, year) {
       .select('doctor, service, revenue_total, repasse_total, margin')
       .eq('clinic_id', clinicId);
 
-    if (repError) throw repError;
+    if (repError) {
+      throw repError;
+    }
     if (Array.isArray(repDash) && repDash.length > 0) {
-      return repDash.map(r => ({
+      return repDash.map((r) => ({
         profissional_nome: r.doctor,
         convenio_nome: r.service, // usamos service como natureza aqui
         mes: '-',
@@ -101,7 +104,7 @@ export async function getRepassesReport(clinicId, year) {
       }));
     }
   } catch (error) {
-    console.error("❌ Erro ao carregar relatório de repasses:", error.message);
+    console.error('❌ Erro ao carregar relatório de repasses:', error.message);
     throw error;
   }
 }

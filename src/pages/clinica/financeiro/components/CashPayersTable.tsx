@@ -5,7 +5,7 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
+  TableRow,
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -25,14 +25,11 @@ interface CashPayersTableProps {
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
-    currency: 'BRL'
+    currency: 'BRL',
   }).format(value);
 };
 
-export const CashPayersTable: React.FC<CashPayersTableProps> = ({
-  payers,
-  loading = false
-}) => {
+export const CashPayersTable: React.FC<CashPayersTableProps> = ({ payers, loading = false }) => {
   return (
     <Card className="border-0 shadow-sm">
       <CardHeader>
@@ -47,9 +44,7 @@ export const CashPayersTable: React.FC<CashPayersTableProps> = ({
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
           </div>
         ) : payers.length === 0 ? (
-          <div className="text-center py-8 text-slate-400">
-            Nenhum convênio encontrado
-          </div>
+          <div className="text-center py-8 text-slate-400">Nenhum convênio encontrado</div>
         ) : (
           <div className="overflow-x-auto">
             <Table>
@@ -78,9 +73,7 @@ export const CashPayersTable: React.FC<CashPayersTableProps> = ({
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-white text-sm font-bold">
                           {index + 1}
                         </div>
-                        <span className="font-medium text-slate-900">
-                          {payer.payer_name}
-                        </span>
+                        <span className="font-medium text-slate-900">{payer.payer_name}</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
@@ -92,9 +85,7 @@ export const CashPayersTable: React.FC<CashPayersTableProps> = ({
                       {formatCurrency(payer.total)}
                     </TableCell>
                     <TableCell className="text-right">
-                      <span className="text-slate-600">
-                        {formatCurrency(payer.ticketMedio)}
-                      </span>
+                      <span className="text-slate-600">{formatCurrency(payer.ticketMedio)}</span>
                     </TableCell>
                   </TableRow>
                 ))}

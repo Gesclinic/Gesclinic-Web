@@ -3,18 +3,18 @@
 // CRUD Completo de Salas - Base do Sistema com M:M Recursos
 // ============================================================
 
-import React, { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
-import { useClinicContext } from "@/contexts/ClinicContext";
-import BaseSystemHeader from "@/components/layout/BaseSystemHeader";
-import { Alert } from "@/components/layout/BaseSystemAlert";
-import EmptyState from "@/components/layout/EmptyState";
-import * as roomsApi from "@/lib/roomsApi";
-import * as servicesApi from "@/lib/servicesApi";
-import { ROOM_STATUS } from "@/lib/selectConstants";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { AlertCircle, Plus, Edit2, Trash2, Check, X, DoorOpen } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useClinicContext } from '@/contexts/ClinicContext';
+import BaseSystemHeader from '@/components/layout/BaseSystemHeader';
+import { Alert } from '@/components/layout/BaseSystemAlert';
+import EmptyState from '@/components/layout/EmptyState';
+import * as roomsApi from '@/lib/roomsApi';
+import * as servicesApi from '@/lib/servicesApi';
+import { ROOM_STATUS } from '@/lib/selectConstants';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { AlertCircle, Plus, Edit2, Trash2, Check, X, DoorOpen } from 'lucide-react';
 
 export function SalasPage() {
   const { user, isAuthenticated } = useAuth();
@@ -35,23 +35,23 @@ export function SalasPage() {
   const [tabLoading, setTabLoading] = useState(false);
   const [showResourceForm, setShowResourceForm] = useState(false);
   const [resourceFormData, setResourceFormData] = useState({
-    resource_name: "",
+    resource_name: '',
     quantity: 1,
   });
 
   const [formData, setFormData] = useState({
-    name: "",
-    room_number: "",
-    type: "",
-    unit: "",
-    floor: "",
-    wing: "",
-    section: "",
-    description: "",
+    name: '',
+    room_number: '',
+    type: '',
+    unit: '',
+    floor: '',
+    wing: '',
+    section: '',
+    description: '',
     capacity: 1,
     has_bathroom: false,
     has_ac: false,
-    notes: "",
+    notes: '',
     active: true,
   });
   const [submitting, setSubmitting] = useState(false);
@@ -74,13 +74,13 @@ export function SalasPage() {
       setError(null);
       const data = await roomsApi.listRooms(clinicId);
       // Filtrar itens nulos e garantir que name e clinic_id existem
-      const filteredRooms = Array.isArray(data) 
-        ? data.filter(room => room && room.name && room.clinic_id)
+      const filteredRooms = Array.isArray(data)
+        ? data.filter((room) => room && room.name && room.clinic_id)
         : [];
       setRooms(filteredRooms);
     } catch (err) {
-      setError(err.message || "Erro ao carregar salas");
-      console.error("Erro:", err);
+      setError(err.message || 'Erro ao carregar salas');
+      console.error('Erro:', err);
       setRooms([]);
     } finally {
       setLoading(false);
@@ -88,11 +88,13 @@ export function SalasPage() {
   };
 
   const loadResourcesTab = async () => {
-    if (!selectedRoom) return;
+    if (!selectedRoom) {
+      return;
+    }
     try {
       setTabLoading(true);
       setError(null);
-      
+
       // Carregar lista de serviços disponíveis
       const srvs = await servicesApi.listServices(clinicId);
       setServices(Array.isArray(srvs) ? srvs : []);
@@ -112,8 +114,8 @@ export function SalasPage() {
         setRoomResources([]);
       }
     } catch (err) {
-      setError(err.message || "Erro ao carregar recursos");
-      console.error("Erro:", err);
+      setError(err.message || 'Erro ao carregar recursos');
+      console.error('Erro:', err);
     } finally {
       setTabLoading(false);
     }
@@ -121,20 +123,20 @@ export function SalasPage() {
 
   const handleNew = () => {
     setEditingId(null);
-    setFormData({ 
-      name: "", 
-      room_number: "", 
-      type: "",
-      unit: "",
-      floor: "",
-      wing: "",
-      section: "",
-      description: "", 
+    setFormData({
+      name: '',
+      room_number: '',
+      type: '',
+      unit: '',
+      floor: '',
+      wing: '',
+      section: '',
+      description: '',
       capacity: 1,
       has_bathroom: false,
       has_ac: false,
-      notes: "",
-      active: true 
+      notes: '',
+      active: true,
     });
     setShowForm(true);
     setError(null);
@@ -143,18 +145,18 @@ export function SalasPage() {
   const handleEdit = (room) => {
     setEditingId(room.id);
     setFormData({
-      name: room.name || "",
-      room_number: room.room_number || "",
-      type: room.type || "",
-      unit: room.unit || "",
-      floor: room.floor || "",
-      wing: room.wing || "",
-      section: room.section || "",
-      description: room.description || "",
+      name: room.name || '',
+      room_number: room.room_number || '',
+      type: room.type || '',
+      unit: room.unit || '',
+      floor: room.floor || '',
+      wing: room.wing || '',
+      section: room.section || '',
+      description: room.description || '',
       capacity: room.capacity || 1,
       has_bathroom: room.has_bathroom || false,
       has_ac: room.has_ac || false,
-      notes: room.notes || "",
+      notes: room.notes || '',
       active: room.is_active !== false,
     });
     setShowForm(true);
@@ -164,35 +166,43 @@ export function SalasPage() {
   const closeForm = () => {
     setShowForm(false);
     setEditingId(null);
-    setFormData({ 
-      name: "", 
-      room_number: "", 
-      type: "",
-      unit: "",
-      floor: "",
-      wing: "",
-      section: "",
-      description: "", 
+    setFormData({
+      name: '',
+      room_number: '',
+      type: '',
+      unit: '',
+      floor: '',
+      wing: '',
+      section: '',
+      description: '',
       capacity: 1,
       has_bathroom: false,
       has_ac: false,
-      notes: "",
-      active: true 
+      notes: '',
+      active: true,
     });
     setSubmitting(false);
   };
 
   const handleCloseWithCheck = () => {
     const hasData = Object.entries(formData).some(([key, value]) => {
-      if (typeof value === "string") return value.trim() !== "";
-      if (typeof value === "number") return value !== 0;
-      if (typeof value === "boolean") return value !== true;
-      if (Array.isArray(value)) return value.length > 0;
+      if (typeof value === 'string') {
+        return value.trim() !== '';
+      }
+      if (typeof value === 'number') {
+        return value !== 0;
+      }
+      if (typeof value === 'boolean') {
+        return value !== true;
+      }
+      if (Array.isArray(value)) {
+        return value.length > 0;
+      }
       return false;
     });
 
     if (hasData) {
-      if (window.confirm("Tem certeza que deseja sair? As alterações não salvas serão perdidas.")) {
+      if (window.confirm('Tem certeza que deseja sair? As alterações não salvas serão perdidas.')) {
         closeForm();
       }
     } else {
@@ -203,7 +213,7 @@ export function SalasPage() {
   const closeResourceForm = () => {
     setShowResourceForm(false);
     setResourceFormData({
-      resource_name: "",
+      resource_name: '',
       quantity: 1,
     });
   };
@@ -219,12 +229,12 @@ export function SalasPage() {
 
   const addResource = () => {
     if (!resourceFormData.resource_name.trim()) {
-      setError("Nome do recurso é obrigatório");
+      setError('Nome do recurso é obrigatório');
       return;
     }
 
     if (resourceFormData.quantity < 1) {
-      setError("Quantidade deve ser maior que 0");
+      setError('Quantidade deve ser maior que 0');
       return;
     }
 
@@ -242,12 +252,12 @@ export function SalasPage() {
       setError(null);
       closeResourceForm();
     } catch (err) {
-      setError(err.message || "Erro ao adicionar recurso");
+      setError(err.message || 'Erro ao adicionar recurso');
     }
   };
 
   const deleteResource = (resourceId) => {
-    if (!window.confirm("Tem certeza que deseja remover este recurso?")) {
+    if (!window.confirm('Tem certeza que deseja remover este recurso?')) {
       return;
     }
 
@@ -255,21 +265,21 @@ export function SalasPage() {
       setRoomResources(roomResources.filter((r) => r.id !== resourceId));
       setError(null);
     } catch (err) {
-      setError(err.message || "Erro ao remover recurso");
+      setError(err.message || 'Erro ao remover recurso');
     }
   };
 
   const validateForm = () => {
     if (!formData.name.trim()) {
-      setError("Nome da sala é obrigatório");
+      setError('Nome da sala é obrigatório');
       return false;
     }
     if (formData.capacity && isNaN(parseInt(formData.capacity))) {
-      setError("Capacidade deve ser um número");
+      setError('Capacidade deve ser um número');
       return false;
     }
     if (parseInt(formData.capacity) < 1) {
-      setError("Capacidade deve ser no mínimo 1");
+      setError('Capacidade deve ser no mínimo 1');
       return false;
     }
     return true;
@@ -288,28 +298,24 @@ export function SalasPage() {
 
       const dataToSave = {
         clinic_id: clinicId,
-        name: (formData.name || "").trim(),
-        room_number: (formData.room_number || "").trim(),
-        type: (formData.type || "").trim() || null,
-        unit: (formData.unit || "").trim() || null,
+        name: (formData.name || '').trim(),
+        room_number: (formData.room_number || '').trim(),
+        type: (formData.type || '').trim() || null,
+        unit: (formData.unit || '').trim() || null,
         floor: formData.floor ? parseInt(formData.floor) : null,
-        wing: (formData.wing || "").trim() || null,
-        section: (formData.section || "").trim() || null,
-        description: (formData.description || "").trim(),
+        wing: (formData.wing || '').trim() || null,
+        section: (formData.section || '').trim() || null,
+        description: (formData.description || '').trim(),
         capacity: formData.capacity ? parseInt(formData.capacity) : 1,
         has_bathroom: formData.has_bathroom || false,
         has_ac: formData.has_ac || false,
-        notes: (formData.notes || "").trim() || null,
+        notes: (formData.notes || '').trim() || null,
         is_active: formData.active !== undefined ? formData.active : true,
       };
 
       if (editingId) {
         await roomsApi.updateRoom(editingId, dataToSave);
-        setRooms(
-          rooms.map((r) =>
-            r.id === editingId ? { ...r, ...dataToSave } : r
-          )
-        );
+        setRooms(rooms.map((r) => (r.id === editingId ? { ...r, ...dataToSave } : r)));
       } else {
         const newRoom = await roomsApi.createRoom(dataToSave);
         setRooms([...rooms, newRoom]);
@@ -318,8 +324,8 @@ export function SalasPage() {
       closeForm();
       loadRooms(); // Recarrega a lista para garantir sincronização
     } catch (err) {
-      setError(err.message || "Erro ao salvar sala");
-      console.error("Erro:", err);
+      setError(err.message || 'Erro ao salvar sala');
+      console.error('Erro:', err);
     } finally {
       setSubmitting(false);
     }
@@ -335,8 +341,8 @@ export function SalasPage() {
       await roomsApi.deleteRoom(id);
       setRooms(rooms.filter((r) => r.id !== id));
     } catch (err) {
-      setError(err.message || "Erro ao deletar sala");
-      console.error("Erro:", err);
+      setError(err.message || 'Erro ao deletar sala');
+      console.error('Erro:', err);
     }
   };
 
@@ -360,8 +366,8 @@ export function SalasPage() {
           ← Voltar à lista
         </button>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">{selectedRoom?.name || "Sem nome"}</h1>
-          <p className="text-gray-600 mt-1">Sala {selectedRoom?.room_number || "#"}</p>
+          <h1 className="text-3xl font-bold text-gray-900">{selectedRoom?.name || 'Sem nome'}</h1>
+          <p className="text-gray-600 mt-1">Sala {selectedRoom?.room_number || '#'}</p>
         </div>
 
         {error && (
@@ -388,15 +394,15 @@ export function SalasPage() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Tipo</p>
-                  <p className="font-medium text-gray-900">{selectedRoom?.type || "-"}</p>
+                  <p className="font-medium text-gray-900">{selectedRoom?.type || '-'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Unidade</p>
-                  <p className="font-medium text-gray-900">{selectedRoom?.unit || "-"}</p>
+                  <p className="font-medium text-gray-900">{selectedRoom?.unit || '-'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Descrição</p>
-                  <p className="text-sm text-gray-700">{selectedRoom?.description || "-"}</p>
+                  <p className="text-sm text-gray-700">{selectedRoom?.description || '-'}</p>
                 </div>
               </div>
             </CardContent>
@@ -529,14 +535,7 @@ export function SalasPage() {
         subtitle="Gerencie as salas da clínica"
       />
 
-      {error && (
-        <Alert
-          type="error"
-          title="Aviso"
-          message={error}
-          onClose={() => setError(null)}
-        />
-      )}
+      {error && <Alert type="error" title="Aviso" message={error} onClose={() => setError(null)} />}
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-4">
@@ -556,10 +555,7 @@ export function SalasPage() {
               title="Nenhuma sala cadastrada"
               description="Comece criando sua primeira sala para gerenciar os espaços da clínica"
               action={
-                <Button
-                  onClick={handleNew}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
+                <Button onClick={handleNew} className="bg-blue-600 hover:bg-blue-700">
                   Cadastrar Primeira Sala
                 </Button>
               }
@@ -570,82 +566,63 @@ export function SalasPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-gray-50">
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                        Nome
-                      </th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                        Tipo
-                      </th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Nome</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Tipo</th>
                       <th className="text-left py-3 px-4 font-semibold text-gray-700">
                         Capacidade
                       </th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                        Descrição
-                      </th>
-                      <th className="text-center py-3 px-4 font-semibold text-gray-700">
-                        Status
-                    </th>
-                    <th className="text-center py-3 px-4 font-semibold text-gray-700">
-                      Ações
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rooms.map((room) => (
-                    room && room.id ? (
-                    <tr
-                      key={room.id}
-                      className="border-b hover:bg-gray-50 transition"
-                    >
-                      <td 
-                        className="py-3 px-4 font-medium text-blue-600 cursor-pointer hover:text-blue-700"
-                        onClick={() => selectRoom(room)}
-                      >
-                        {room?.name || "Sem nome"}
-                      </td>
-                      <td className="py-3 px-4 text-gray-600">
-                        {room?.type || "-"}
-                      </td>
-                      <td className="py-3 px-4 text-gray-600">
-                        {room?.capacity || "-"}
-                      </td>
-                      <td className="py-3 px-4 text-gray-600">
-                        {room?.description || "-"}
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        {room?.active ? (
-                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            <Check className="w-3 h-3" />
-                            Ativo
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                            <X className="w-3 h-3" />
-                            Inativo
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 flex justify-center gap-2">
-                        <button
-                          onClick={() => handleEdit(room)}
-                          className="p-2 hover:bg-blue-100 rounded-lg text-blue-600 transition"
-                          disabled={submitting}
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(room.id, room?.name || "Sem nome")}
-                          className="p-2 hover:bg-red-100 rounded-lg text-red-600 transition"
-                          disabled={submitting}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Descrição</th>
+                      <th className="text-center py-3 px-4 font-semibold text-gray-700">Status</th>
+                      <th className="text-center py-3 px-4 font-semibold text-gray-700">Ações</th>
                     </tr>
-                    ) : null
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {rooms.map((room) =>
+                      room && room.id ? (
+                        <tr key={room.id} className="border-b hover:bg-gray-50 transition">
+                          <td
+                            className="py-3 px-4 font-medium text-blue-600 cursor-pointer hover:text-blue-700"
+                            onClick={() => selectRoom(room)}
+                          >
+                            {room?.name || 'Sem nome'}
+                          </td>
+                          <td className="py-3 px-4 text-gray-600">{room?.type || '-'}</td>
+                          <td className="py-3 px-4 text-gray-600">{room?.capacity || '-'}</td>
+                          <td className="py-3 px-4 text-gray-600">{room?.description || '-'}</td>
+                          <td className="py-3 px-4 text-center">
+                            {room?.active ? (
+                              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                <Check className="w-3 h-3" />
+                                Ativo
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                <X className="w-3 h-3" />
+                                Inativo
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 flex justify-center gap-2">
+                            <button
+                              onClick={() => handleEdit(room)}
+                              className="p-2 hover:bg-blue-100 rounded-lg text-blue-600 transition"
+                              disabled={submitting}
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(room.id, room?.name || 'Sem nome')}
+                              className="p-2 hover:bg-red-100 rounded-lg text-red-600 transition"
+                              disabled={submitting}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ) : null,
+                    )}
+                  </tbody>
+                </table>
               </div>
             </>
           )}
@@ -661,7 +638,7 @@ export function SalasPage() {
                 <div className="flex items-center gap-3">
                   <DoorOpen size={24} className="text-white" />
                   <h2 className="text-xl font-bold text-white">
-                    {editingId ? "✏️ Editar Sala" : "➕ Nova Sala"}
+                    {editingId ? '✏️ Editar Sala' : '➕ Nova Sala'}
                   </h2>
                 </div>
                 <button
@@ -676,14 +653,22 @@ export function SalasPage() {
 
               {/* Content */}
               <CardContent className="app-modal-body p-6 modal-content-scroll">
-                <form id="salas-form" onSubmit={handleSubmit} className="space-y-5" style={{flex: 1, overflow: "visible"}}>
-                  <div style={{flex: 1, overflowY: "auto", paddingRight: "8px"}}>
-
+                <form
+                  id="salas-form"
+                  onSubmit={handleSubmit}
+                  className="space-y-5"
+                  style={{ flex: 1, overflow: 'visible' }}
+                >
+                  <div style={{ flex: 1, overflowY: 'auto', paddingRight: '8px' }}>
                     {/* SEÇÃO 1: IDENTIFICAÇÃO DA SALA */}
                     <div className="bg-white border border-gray-200 rounded-lg p-5 space-y-4">
                       <div className="border-b pb-3">
-                        <h3 className="text-lg font-bold text-gray-900">🚪 Identificação da Sala</h3>
-                        <p className="text-sm text-gray-600 mt-1">Informações básicas e tipo de sala</p>
+                        <h3 className="text-lg font-bold text-gray-900">
+                          🚪 Identificação da Sala
+                        </h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Informações básicas e tipo de sala
+                        </p>
                       </div>
 
                       {/* Nome */}
@@ -694,16 +679,16 @@ export function SalasPage() {
                         <input
                           type="text"
                           value={formData.name}
-                          onChange={(e) =>
-                            setFormData({ ...formData, name: e.target.value })
-                          }
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                           placeholder="Ex: Consultório 1, Sala de Cirurgia A"
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           required
                           disabled={submitting}
                           autoFocus
                         />
-                        <p className="text-xs text-gray-500 mt-2">Nome único e descritivo da sala</p>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Nome único e descritivo da sala
+                        </p>
                       </div>
 
                       {/* Número/Identificação e Tipo */}
@@ -730,9 +715,7 @@ export function SalasPage() {
                           </label>
                           <select
                             value={formData.type}
-                            onChange={(e) =>
-                              setFormData({ ...formData, type: e.target.value })
-                            }
+                            onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
                             disabled={submitting}
                           >
@@ -757,14 +740,14 @@ export function SalasPage() {
                         <input
                           type="text"
                           value={formData.unit}
-                          onChange={(e) =>
-                            setFormData({ ...formData, unit: e.target.value })
-                          }
+                          onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
                           placeholder="Ex: Prédio Principal, Anexo"
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           disabled={submitting}
                         />
-                        <p className="text-xs text-gray-500 mt-2">Unidade ou prédio ao qual pertence</p>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Unidade ou prédio ao qual pertence
+                        </p>
                       </div>
                     </div>
 
@@ -784,9 +767,7 @@ export function SalasPage() {
                           <input
                             type="number"
                             value={formData.floor}
-                            onChange={(e) =>
-                              setFormData({ ...formData, floor: e.target.value })
-                            }
+                            onChange={(e) => setFormData({ ...formData, floor: e.target.value })}
                             placeholder="Ex: 1, 2, 3"
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             disabled={submitting}
@@ -800,9 +781,7 @@ export function SalasPage() {
                           <input
                             type="text"
                             value={formData.wing}
-                            onChange={(e) =>
-                              setFormData({ ...formData, wing: e.target.value })
-                            }
+                            onChange={(e) => setFormData({ ...formData, wing: e.target.value })}
                             placeholder="Ex: Ala Norte, Bloco A"
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             disabled={submitting}
@@ -816,9 +795,7 @@ export function SalasPage() {
                           <input
                             type="text"
                             value={formData.section}
-                            onChange={(e) =>
-                              setFormData({ ...formData, section: e.target.value })
-                            }
+                            onChange={(e) => setFormData({ ...formData, section: e.target.value })}
                             placeholder="Ex: A, B, C"
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             disabled={submitting}
@@ -832,7 +809,9 @@ export function SalasPage() {
                     <div className="bg-white border border-gray-200 rounded-lg p-5 space-y-4">
                       <div className="border-b pb-3">
                         <h3 className="text-lg font-bold text-gray-900">⚙️ Características</h3>
-                        <p className="text-sm text-gray-600 mt-1">Capacidade e informações da sala</p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Capacidade e informações da sala
+                        </p>
                       </div>
 
                       {/* Capacidade */}
@@ -852,7 +831,9 @@ export function SalasPage() {
                           required
                           disabled={submitting}
                         />
-                        <p className="text-xs text-gray-500 mt-2">Capacidade máxima de pessoas na sala</p>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Capacidade máxima de pessoas na sala
+                        </p>
                       </div>
 
                       {/* Descrição */}
@@ -870,7 +851,9 @@ export function SalasPage() {
                           rows={3}
                           disabled={submitting}
                         />
-                        <p className="text-xs text-gray-500 mt-2">Detalhes adicionais sobre a sala</p>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Detalhes adicionais sobre a sala
+                        </p>
                       </div>
 
                       {/* Observações */}
@@ -880,15 +863,15 @@ export function SalasPage() {
                         </label>
                         <textarea
                           value={formData.notes}
-                          onChange={(e) =>
-                            setFormData({ ...formData, notes: e.target.value })
-                          }
+                          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                           placeholder="Notas adicionais, restrições, etc..."
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                           rows={3}
                           disabled={submitting}
                         />
-                        <p className="text-xs text-gray-500 mt-2">Informações adicionais sobre a sala</p>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Informações adicionais sobre a sala
+                        </p>
                       </div>
                     </div>
 
@@ -926,9 +909,7 @@ export function SalasPage() {
                             type="checkbox"
                             id="has_ac"
                             checked={formData.has_ac}
-                            onChange={(e) =>
-                              setFormData({ ...formData, has_ac: e.target.checked })
-                            }
+                            onChange={(e) => setFormData({ ...formData, has_ac: e.target.checked })}
                             className="w-5 h-5 rounded border border-gray-300 cursor-pointer accent-blue-600"
                             disabled={submitting}
                           />
@@ -946,9 +927,7 @@ export function SalasPage() {
                             type="checkbox"
                             id="active"
                             checked={formData.active}
-                            onChange={(e) =>
-                              setFormData({ ...formData, active: e.target.checked })
-                            }
+                            onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
                             className="w-5 h-5 rounded border border-gray-300 cursor-pointer accent-blue-600"
                             disabled={submitting}
                           />
@@ -959,13 +938,15 @@ export function SalasPage() {
                         </label>
                       </div>
                     </div>
-
                   </div>
                 </form>
               </CardContent>
 
               {/* Footer */}
-              <div style={{flexShrink: 0}} className="border-t bg-gradient-to-r from-gray-50 to-white px-6 py-4 flex gap-3 justify-end rounded-b-lg">
+              <div
+                style={{ flexShrink: 0 }}
+                className="border-t bg-gradient-to-r from-gray-50 to-white px-6 py-4 flex gap-3 justify-end rounded-b-lg"
+              >
                 <Button
                   type="button"
                   onClick={handleCloseWithCheck}
@@ -987,9 +968,9 @@ export function SalasPage() {
                       Salvando...
                     </>
                   ) : editingId ? (
-                    "✓ Atualizar"
+                    '✓ Atualizar'
                   ) : (
-                    "✓ Criar"
+                    '✓ Criar'
                   )}
                 </Button>
               </div>
@@ -1000,4 +981,3 @@ export function SalasPage() {
     </div>
   );
 }
-

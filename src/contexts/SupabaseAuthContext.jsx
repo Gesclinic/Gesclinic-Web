@@ -1,12 +1,12 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { supabase } from "@/lib/customSupabaseClient";
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/lib/customSupabaseClient';
 
 const AuthContext = createContext(null);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };
@@ -17,114 +17,115 @@ export function AuthProvider({ children }) {
   const [clinicId, setClinicId] = useState(null);
   const [currentRole, setCurrentRole] = useState(null);
 
-  const loadUserData = useCallback(
-    async (currentUser) => {
-      console.log("🚀 [loadUserData] INICIANDO...", currentUser?.id, currentUser?.email);
-      
-      if (!currentUser) {
-        console.log("❌ [loadUserData] Usuário é null, retornando");
-        setClinicId(null);
-        setCurrentRole(null);
-        return;
-      }
+  const loadUserData = useCallback(async (currentUser) => {
+    console.log('🚀 [loadUserData] INICIANDO...', currentUser?.id, currentUser?.email);
 
-      try {
-        // Buscar dados do usuário por ID
-        let { data: userData, error: userError } = await supabase
-          .from("users")
-          .select("clinic_id, role")
-          .eq("id", currentUser.id)
+    if (!currentUser) {
+      console.log('❌ [loadUserData] Usuário é null, retornando');
+      setClinicId(null);
+      setCurrentRole(null);
+      return;
+    }
+
+    try {
+      // Buscar dados do usuário por ID
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('clinic_id, role')
+        .eq('id', currentUser.id)
+        .maybeSingle();
+
+      console.log('🔍 Query resultado:', { userData, userError, currentUserId: currentUser.id });
+
+      // Se não encontrou por ID, tentar buscar por email
+      if (!userData && !userError) {
+        console.log('Usuário não encontrado por ID, procurando por email...');
+
+        const { data: userByEmail, error: emailError } = await supabase
+          .from('users')
+          .select('id, clinic_id, role')
+          .eq('email', currentUser.email)
           .maybeSingle();
 
-        console.log("🔍 Query resultado:", { userData, userError, currentUserId: currentUser.id });
-
-        // Se não encontrou por ID, tentar buscar por email
-        if (!userData && !userError) {
-          console.log("Usuário não encontrado por ID, procurando por email...");
-          
-          const { data: userByEmail, error: emailError } = await supabase
-            .from("users")
-            .select("id, clinic_id, role")
-            .eq("email", currentUser.email)
+        if (userByEmail) {
+          // Encontrou por email, fazer upsert para atualizar o ID se necessário
+          const { data: updated, error: updateError } = await supabase
+            .from('users')
+            .upsert(
+              {
+                id: currentUser.id,
+                email: currentUser.email,
+                name: currentUser.user_metadata?.name || currentUser.email,
+                role: userByEmail.role || 'recepcao',
+                clinic_id: userByEmail.clinic_id,
+              },
+              { onConflict: 'email' },
+            )
+            .select('clinic_id, role')
             .maybeSingle();
 
-          if (userByEmail) {
-            // Encontrou por email, fazer upsert para atualizar o ID se necessário
-            const { data: updated, error: updateError } = await supabase
-              .from("users")
-              .upsert(
-                {
-                  id: currentUser.id,
-                  email: currentUser.email,
-                  name: currentUser.user_metadata?.name || currentUser.email,
-                  role: userByEmail.role || "recepcao",
-                  clinic_id: userByEmail.clinic_id
-                },
-                { onConflict: "email" }
-              )
-              .select("clinic_id, role")
-              .maybeSingle();
-
-            if (updateError) {
-              console.error("Erro ao atualizar usuário:", updateError);
-              setClinicId(userByEmail.clinic_id);
-              setCurrentRole(userByEmail.role || "recepcao");
-            } else {
-              setClinicId(updated?.clinic_id);
-              setCurrentRole(updated?.role || "recepcao");
-            }
+          if (updateError) {
+            console.error('Erro ao atualizar usuário:', updateError);
+            setClinicId(userByEmail.clinic_id);
+            setCurrentRole(userByEmail.role || 'recepcao');
           } else {
-            // Não encontrou por email, criar novo
-            console.log("Usuário não encontrado, criando novo...");
-            const { data: insertedUser, error: insertError } = await supabase
-              .from("users")
-              .insert([
-                {
-                  id: currentUser.id,
-                  email: currentUser.email,
-                  name: currentUser.user_metadata?.name || currentUser.email,
-                  role: "recepcao"
-                }
-              ])
-              .select("clinic_id, role")
-              .maybeSingle();
-
-            if (insertError) {
-              console.error("Erro ao criar usuário:", insertError);
-              setClinicId(null);
-              setCurrentRole("recepcao");
-            } else {
-              setClinicId(insertedUser?.clinic_id);
-              setCurrentRole(insertedUser?.role || "recepcao");
-            }
+            setClinicId(updated?.clinic_id);
+            setCurrentRole(updated?.role || 'recepcao');
           }
-        } else if (userError) {
-          console.warn("Erro ao buscar usuário:", userError);
-          setClinicId(null);
-          setCurrentRole(null);
         } else {
-          // Garantir que clinic_id seja setado se existir
-          console.log("✅ Usuário encontrado no banco:", { id: currentUser.id, clinic_id: userData?.clinic_id, role: userData?.role });
-          
-          // Importante: O clinic_id pode estar vazio/null no banco
-          if (userData?.clinic_id) {
-            console.log("✅ Clinic ID encontrado:", userData.clinic_id);
-            setClinicId(userData.clinic_id);
-          } else {
-            console.warn("⚠️ Clinic ID está vazio no banco para este usuário");
+          // Não encontrou por email, criar novo
+          console.log('Usuário não encontrado, criando novo...');
+          const { data: insertedUser, error: insertError } = await supabase
+            .from('users')
+            .insert([
+              {
+                id: currentUser.id,
+                email: currentUser.email,
+                name: currentUser.user_metadata?.name || currentUser.email,
+                role: 'recepcao',
+              },
+            ])
+            .select('clinic_id, role')
+            .maybeSingle();
+
+          if (insertError) {
+            console.error('Erro ao criar usuário:', insertError);
             setClinicId(null);
+            setCurrentRole('recepcao');
+          } else {
+            setClinicId(insertedUser?.clinic_id);
+            setCurrentRole(insertedUser?.role || 'recepcao');
           }
-          
-          setCurrentRole(userData?.role || "recepcao");
         }
-      } catch (error) {
-        console.error("Erro ao carregar dados do usuário:", error);
+      } else if (userError) {
+        console.warn('Erro ao buscar usuário:', userError);
         setClinicId(null);
         setCurrentRole(null);
+      } else {
+        // Garantir que clinic_id seja setado se existir
+        console.log('✅ Usuário encontrado no banco:', {
+          id: currentUser.id,
+          clinic_id: userData?.clinic_id,
+          role: userData?.role,
+        });
+
+        // Importante: O clinic_id pode estar vazio/null no banco
+        if (userData?.clinic_id) {
+          console.log('✅ Clinic ID encontrado:', userData.clinic_id);
+          setClinicId(userData.clinic_id);
+        } else {
+          console.warn('⚠️ Clinic ID está vazio no banco para este usuário');
+          setClinicId(null);
+        }
+
+        setCurrentRole(userData?.role || 'recepcao');
       }
-    },
-    []
-  );
+    } catch (error) {
+      console.error('Erro ao carregar dados do usuário:', error);
+      setClinicId(null);
+      setCurrentRole(null);
+    }
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -132,61 +133,68 @@ export function AuthProvider({ children }) {
 
     async function initAuth() {
       try {
-        console.log("🔄 [initAuth] Iniciando...");
+        console.log('🔄 [initAuth] Iniciando...');
         // Verificar sessão atual
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        console.log("📋 [initAuth] Sessão obtida:", { 
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession();
+
+        console.log('📋 [initAuth] Sessão obtida:', {
           session_exists: !!session,
           user_id: session?.user?.id,
           user_email: session?.user?.email,
-          sessionError 
+          sessionError,
         });
 
         // Se não houver sessão do Supabase, tentar restaurar do localStorage (login customizado)
         if (!session) {
-          console.log("🔍 [initAuth] Tentando restaurar sessão do localStorage...");
-          const savedSession = localStorage.getItem("gesclinic_session");
+          console.log('🔍 [initAuth] Tentando restaurar sessão do localStorage...');
+          const savedSession = localStorage.getItem('gesclinic_session');
           if (savedSession) {
             try {
               const sessionData = JSON.parse(savedSession);
-              console.log("✅ [initAuth] Sessão do localStorage restaurada:", sessionData);
-              
+              console.log('✅ [initAuth] Sessão do localStorage restaurada:', sessionData);
+
               // Agora buscar os dados do usuário no banco
               if (sessionData.user_id) {
                 const { data: userData, error: userError } = await supabase
-                  .from("users")
-                  .select("clinic_id, role")
-                  .eq("id", sessionData.user_id)
+                  .from('users')
+                  .select('clinic_id, role')
+                  .eq('id', sessionData.user_id)
                   .maybeSingle();
-                
+
                 if (!userError && userData?.clinic_id) {
-                  console.log("✅ [initAuth] Clinic ID carregado do banco:", userData.clinic_id);
+                  console.log('✅ [initAuth] Clinic ID carregado do banco:', userData.clinic_id);
                   setClinicId(userData.clinic_id);
-                  setCurrentRole(userData.role || "recepcao");
+                  setCurrentRole(userData.role || 'recepcao');
                   setUser({ id: sessionData.user_id, email: sessionData.email });
                   setLoading(false);
                   return;
                 }
               }
             } catch (e) {
-              console.warn("⚠️ [initAuth] Erro ao restaurar do localStorage:", e);
+              console.warn('⚠️ [initAuth] Erro ao restaurar do localStorage:', e);
             }
           }
         }
 
         if (sessionError) {
-          console.error("Erro ao obter sessão:", sessionError);
-          if (sessionError.message?.includes("Refresh Token Not Found") || sessionError.message?.includes("Invalid Refresh Token") || sessionError.message?.includes("missing sub claim")) {
-            console.warn("Sessão inválida. Deslogando usuário...");
+          console.error('Erro ao obter sessão:', sessionError);
+          if (
+            sessionError.message?.includes('Refresh Token Not Found') ||
+            sessionError.message?.includes('Invalid Refresh Token') ||
+            sessionError.message?.includes('missing sub claim')
+          ) {
+            console.warn('Sessão inválida. Deslogando usuário...');
             await supabase.auth.signOut();
             setUser(null);
             setClinicId(null);
             setCurrentRole(null);
             setLoading(false);
             // Redirecionar para login
-            if (mounted && window.location.pathname !== "/login") {
-              window.location.href = "/login";
+            if (mounted && window.location.pathname !== '/login') {
+              window.location.href = '/login';
             }
             return;
           }
@@ -194,35 +202,37 @@ export function AuthProvider({ children }) {
 
         if (mounted) {
           const currentUser = session?.user ?? null;
-          console.log("✅ [initAuth] Setando user e chamando loadUserData:", { 
-            mounted, 
+          console.log('✅ [initAuth] Setando user e chamando loadUserData:', {
+            mounted,
             currentUser_id: currentUser?.id,
-            currentUser_email: currentUser?.email 
+            currentUser_email: currentUser?.email,
           });
           setUser(currentUser);
 
           if (currentUser) {
-            console.log("🚀 [initAuth] Chamando loadUserData para:", currentUser.id);
+            console.log('🚀 [initAuth] Chamando loadUserData para:', currentUser.id);
             await loadUserData(currentUser);
           } else {
-            console.warn("⚠️ [initAuth] currentUser é null, não chamando loadUserData");
+            console.warn('⚠️ [initAuth] currentUser é null, não chamando loadUserData');
           }
 
           setLoading(false);
         }
 
         // Configurar listener de mudanças de autenticação
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-          console.log("🔔 [onAuthStateChange] Evento:", _event, "Session existe:", !!session);
+        const {
+          data: { subscription },
+        } = supabase.auth.onAuthStateChange(async (_event, session) => {
+          console.log('🔔 [onAuthStateChange] Evento:', _event, 'Session existe:', !!session);
           if (mounted) {
             const currentUser = session?.user ?? null;
             setUser(currentUser);
 
             if (currentUser) {
-              console.log("🚀 [onAuthStateChange] Chamando loadUserData para:", currentUser.id);
+              console.log('🚀 [onAuthStateChange] Chamando loadUserData para:', currentUser.id);
               await loadUserData(currentUser);
             } else {
-              console.warn("⚠️ [onAuthStateChange] currentUser é null");
+              console.warn('⚠️ [onAuthStateChange] currentUser é null');
               setClinicId(null);
               setCurrentRole(null);
             }
@@ -231,15 +241,15 @@ export function AuthProvider({ children }) {
 
         authSubscription = subscription;
       } catch (err) {
-        console.error("Erro na inicialização da autenticação:", err);
-        if (err.message?.includes("missing sub claim")) {
-          console.warn("JWT inválido. Deslogando usuário...");
+        console.error('Erro na inicialização da autenticação:', err);
+        if (err.message?.includes('missing sub claim')) {
+          console.warn('JWT inválido. Deslogando usuário...');
           await supabase.auth.signOut();
           if (mounted) {
             setUser(null);
             setLoading(false);
-            if (window.location.pathname !== "/login") {
-              window.location.href = "/login";
+            if (window.location.pathname !== '/login') {
+              window.location.href = '/login';
             }
           }
         } else if (mounted) {
@@ -254,7 +264,7 @@ export function AuthProvider({ children }) {
     // Timeout de segurança (3 segundos)
     const timeout = setTimeout(() => {
       if (mounted && loading) {
-        console.warn("⚠️ Timeout na autenticação - forçando conclusão");
+        console.warn('⚠️ Timeout na autenticação - forçando conclusão');
         setLoading(false);
       }
     }, 3000);
@@ -273,17 +283,19 @@ export function AuthProvider({ children }) {
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
       if (data.user) {
         // Aguardar um pouco para garantir que a sessão seja salva
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
         await loadUserData(data.user);
       }
 
       return { data, error: null };
     } catch (error) {
-      console.error("Erro no login:", error);
+      console.error('Erro no login:', error);
       return { data: null, error };
     }
   };
@@ -298,11 +310,13 @@ export function AuthProvider({ children }) {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
       return { data, error: null };
     } catch (error) {
-      console.error("Erro no cadastro:", error);
+      console.error('Erro no cadastro:', error);
       return { data: null, error };
     }
   };
@@ -310,7 +324,9 @@ export function AuthProvider({ children }) {
   const signOut = async () => {
     try {
       const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
 
       setUser(null);
       setClinicId(null);
@@ -318,7 +334,7 @@ export function AuthProvider({ children }) {
 
       return { error: null };
     } catch (error) {
-      console.error("Erro no logout:", error);
+      console.error('Erro no logout:', error);
       return { error };
     }
   };
@@ -339,7 +355,7 @@ export function AuthProvider({ children }) {
 
   // PASSO 5: Log de debug (temporário) - mostra quem está logado
   if (user && !loading) {
-    console.log("👤 [AUTH] Usuário logado:", {
+    console.log('👤 [AUTH] Usuário logado:', {
       id: user.id,
       email: user.email,
       clinicId,
@@ -359,9 +375,5 @@ export function AuthProvider({ children }) {
     );
   }
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

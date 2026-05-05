@@ -34,23 +34,37 @@ export const saveCheckInFinancialData = async (appointmentId, financialData) => 
       .single();
 
     if (aptError || !appointment) {
-      return { error: true, message: `❌ Agendamento não encontrado: ${aptError?.message || 'desconhecido'}` };
+      return {
+        error: true,
+        message: `❌ Agendamento não encontrado: ${aptError?.message || 'desconhecido'}`,
+      };
     }
 
     console.log('✅ Agendamento carregado:', appointment);
 
     // 🆕 1️⃣ Atualizar dados do paciente se fornecidos
-    if (financialData.patient_name || financialData.patient_email || financialData.patient_cpf || financialData.patient_phone) {
+    if (
+      financialData.patient_name ||
+      financialData.patient_email ||
+      financialData.patient_cpf ||
+      financialData.patient_phone
+    ) {
       console.log('👤 Atualizando dados do paciente...');
       const patientUpdate = {};
-      if (financialData.patient_name) patientUpdate.name = financialData.patient_name;
-      if (financialData.patient_email) patientUpdate.email = financialData.patient_email;
-      if (financialData.patient_cpf) patientUpdate.cpf = financialData.patient_cpf;
-      if (financialData.patient_phone) patientUpdate.phone = financialData.patient_phone;
+      if (financialData.patient_name) {
+        patientUpdate.name = financialData.patient_name;
+      }
+      if (financialData.patient_email) {
+        patientUpdate.email = financialData.patient_email;
+      }
+      if (financialData.patient_cpf) {
+        patientUpdate.cpf = financialData.patient_cpf;
+      }
+      if (financialData.patient_phone) {
+        patientUpdate.phone = financialData.patient_phone;
+      }
 
-      await supabase
-        .from('patients')
-        .update(patientUpdate).eq('id', appointment.patient_id);
+      await supabase.from('patients').update(patientUpdate).eq('id', appointment.patient_id);
 
       console.log('✅ Dados do paciente atualizados:', patientUpdate);
     }
@@ -129,17 +143,20 @@ const createAccountsReceivable = async (appointmentId, appointment, financialDat
     // 2. Valor no appointment
     // 3. Preço do serviço relacionado
     let finalValue = parseFloat(financialData.value) || 0;
-    
+
     if (!finalValue || isNaN(finalValue)) {
       console.log('   ⚠️ Valor de financialData está vazio, buscando no serviço...');
-      
+
       const { data: service } = await supabase
-        .from('services').select('price, name')
+        .from('services')
+        .select('price, name')
         .eq('id', appointment.service_id);
 
-if (!data || data.length === 0) { throw new Error('Record not found'); }
-return data[0];
-      
+      if (!data || data.length === 0) {
+        throw new Error('Record not found');
+      }
+      return data[0];
+
       if (service?.price) {
         finalValue = parseFloat(service.price);
         console.log(`   ✅ Valor obtido do serviço: R$ ${finalValue}`);
@@ -153,7 +170,9 @@ return data[0];
     const discount = parseFloat(financialData.discount || 0) || 0;
     const netValue = Math.max(finalValue - discount, 0);
 
-    console.log(`   Valores: Bruto=${finalValue}, Desconto=${discount}, Copagamento=${copayment}, Líquido=${netValue}`);
+    console.log(
+      `   Valores: Bruto=${finalValue}, Desconto=${discount}, Copagamento=${copayment}, Líquido=${netValue}`,
+    );
 
     // 2️⃣ Inserir Conta a Receber na tabela correta (ar_receivables)
     const { data: receivable, error: receivableError } = await supabase
@@ -164,13 +183,15 @@ return data[0];
           appointment_id: appointmentId,
           paciente_id: appointment.patient_id,
           payer_name: financialData.patient_name || 'Paciente Particular',
-          descricao: financialData.patient_name 
+          descricao: financialData.patient_name
             ? `Atendimento de ${financialData.patient_name} - ${new Date(appointment.appointment_date).toLocaleDateString('pt-BR')}`
             : `Atendimento - ${new Date(appointment.appointment_date).toLocaleDateString('pt-BR')}`,
           valor_bruto: finalValue,
           descontos: discount,
           data_emissao: new Date().toISOString().split('T')[0],
-          data_vencimento: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          data_vencimento: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000)
+            .toISOString()
+            .split('T')[0],
           status: 'open',
           forma_prevista: financialData.payment_method || null,
           origem: 'Agenda',
@@ -233,16 +254,18 @@ const createBillingGuide = async (appointmentId, appointment, financialData) => 
 
     // Obter valor do serviço se não fornecido
     let finalValue = financialData.value || 0;
-    
+
     if (!finalValue) {
       const { data: service } = await supabase
         .from('services')
         .select('price')
         .eq('id', appointment.service_id);
 
-if (!data || data.length === 0) { throw new Error('Record not found'); }
-return data[0];
-      
+      if (!data || data.length === 0) {
+        throw new Error('Record not found');
+      }
+      return data[0];
+
       finalValue = service?.price || 0;
     }
 
@@ -291,18 +314,16 @@ return data[0];
         .single();
 
       if (service) {
-        await supabase
-          .from('invoice_items')
-          .insert([
-            {
-              invoice_id: invoice[0]?.id,
-              appointment_id: appointmentId,
-              description: service.name,
-              quantity: 1,
-              unit_value: finalValue,
-              total_value: finalValue,
-            },
-          ]);
+        await supabase.from('invoice_items').insert([
+          {
+            invoice_id: invoice[0]?.id,
+            appointment_id: appointmentId,
+            description: service.name,
+            quantity: 1,
+            unit_value: finalValue,
+            total_value: finalValue,
+          },
+        ]);
       }
     }
 
@@ -353,7 +374,9 @@ export const listPendingReceivables = async (clinicId) => {
       .eq('status', 'open')
       .order('data_vencimento', { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data || [];
   } catch (err) {
     console.error('❌ Erro ao listar Contas a Receber:', err);
@@ -373,7 +396,9 @@ export const listPendingBillingGuides = async (clinicId) => {
       .eq('status', 'pending_submission')
       .order('created_at', { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data || [];
   } catch (err) {
     console.error('❌ Erro ao listar Guias de Faturamento:', err);

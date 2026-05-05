@@ -1,16 +1,22 @@
-import React from "react";
-import PageLayout from "@/components/ui/PageLayout";
-import { useBreadcrumbs } from "@/hooks/useBreadcrumbs";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { Search, Plus, FileCheck } from "lucide-react";
+import React from 'react';
+import PageLayout from '@/components/ui/PageLayout';
+import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Search, Plus, FileCheck } from 'lucide-react';
 
 export default function Guias() {
   const breadcrumbs = useBreadcrumbs([
-    { label: "Faturamento", path: "/clinica/faturamento" },
-    { label: "Guias" }
+    { label: 'Faturamento', path: '/clinica/faturamento' },
+    { label: 'Guias' },
   ]);
 
   return (
@@ -29,9 +35,11 @@ export default function Guias() {
         <div className="grid md:grid-cols-5 gap-3 mb-4">
           <Input placeholder="Paciente" />
           <Input placeholder="Número da guia" />
-          
+
           <Select>
-            <SelectTrigger><SelectValue placeholder="Convênio" /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue placeholder="Convênio" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos</SelectItem>
               <SelectItem value="unimed">Unimed</SelectItem>
@@ -40,7 +48,9 @@ export default function Guias() {
           </Select>
 
           <Select>
-            <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="aberto">Aberto</SelectItem>
               <SelectItem value="enviado">Enviado</SelectItem>
@@ -69,7 +79,7 @@ export default function Guias() {
                 <th className="px-4 py-2 text-right">Ações</th>
               </tr>
             </thead>
-            
+
             <tbody>
               <tr>
                 <td colSpan="7" className="text-center py-10 text-gray-500">
@@ -79,9 +89,7 @@ export default function Guias() {
             </tbody>
           </table>
         </div>
-
       </Card>
     </PageLayout>
   );
 }
-

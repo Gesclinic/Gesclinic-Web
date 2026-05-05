@@ -6,14 +6,14 @@ import discountApprovalsApi from '@/lib/discountApprovalsApi';
 const DiscountApprovalsPage = () => {
   const { user } = useAuth();
   const { clinic, clinicId } = useClinicContext();
-  
+
   const [authorizations, setAuthorizations] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [dateRange, setDateRange] = useState({
     from: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
-    to: new Date().toISOString().split('T')[0]
+    to: new Date().toISOString().split('T')[0],
   });
 
   useEffect(() => {
@@ -21,15 +21,20 @@ const DiscountApprovalsPage = () => {
   }, [clinicId, dateRange]);
 
   const loadData = async () => {
-    if (!clinicId) return;
-    
+    if (!clinicId) {
+      return;
+    }
+
     setLoading(true);
     try {
       const [auths, summ] = await Promise.all([
-        discountApprovalsApi.listDiscountAuthorizations(clinicId, { from_date: dateRange.from, to_date: dateRange.to }),
-        discountApprovalsApi.getDiscountSummary(clinicId, dateRange.from, dateRange.to)
+        discountApprovalsApi.listDiscountAuthorizations(clinicId, {
+          from_date: dateRange.from,
+          to_date: dateRange.to,
+        }),
+        discountApprovalsApi.getDiscountSummary(clinicId, dateRange.from, dateRange.to),
       ]);
-      
+
       setAuthorizations(auths);
       setSummary(summ);
     } catch (err) {
@@ -40,8 +45,10 @@ const DiscountApprovalsPage = () => {
   };
 
   const handleRemoveDiscount = async (appointmentId) => {
-    if (!confirm('Remover este desconto?')) return;
-    
+    if (!confirm('Remover este desconto?')) {
+      return;
+    }
+
     try {
       await discountApprovalsApi.removeDiscount(appointmentId);
       await loadData();
@@ -51,8 +58,10 @@ const DiscountApprovalsPage = () => {
   };
 
   const handleApproveDiscount = async (auth) => {
-    if (!confirm(`Aprovar desconto de R$ ${auth.discount_amount.toFixed(2)}?`)) return;
-    
+    if (!confirm(`Aprovar desconto de R$ ${auth.discount_amount.toFixed(2)}?`)) {
+      return;
+    }
+
     try {
       await discountApprovalsApi.approveDiscount(auth.appointment_id, user?.id);
       await loadData();
@@ -62,8 +71,10 @@ const DiscountApprovalsPage = () => {
   };
 
   const handleRejectDiscount = async (auth) => {
-    if (!confirm(`Rejeitar desconto de R$ ${auth.discount_amount.toFixed(2)}?`)) return;
-    
+    if (!confirm(`Rejeitar desconto de R$ ${auth.discount_amount.toFixed(2)}?`)) {
+      return;
+    }
+
     try {
       await discountApprovalsApi.rejectDiscount(auth.appointment_id);
       await loadData();
@@ -73,8 +84,10 @@ const DiscountApprovalsPage = () => {
   };
 
   const handleCancelDiscount = async (auth) => {
-    if (!confirm(`Cancelar desconto de R$ ${auth.discount_amount.toFixed(2)}?`)) return;
-    
+    if (!confirm(`Cancelar desconto de R$ ${auth.discount_amount.toFixed(2)}?`)) {
+      return;
+    }
+
     try {
       await discountApprovalsApi.cancelDiscount(auth.appointment_id);
       await loadData();
@@ -83,15 +96,21 @@ const DiscountApprovalsPage = () => {
     }
   };
 
-  if (loading) return <div className="p-6 text-center">Carregando...</div>;
+  if (loading) {
+    return <div className="p-6 text-center">Carregando...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Gestão Administrativa - Autorizações de Desconto</h1>
-          <p className="text-gray-600">Visualize e gerencie todas as autorizações de desconto concedidas</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Gestão Administrativa - Autorizações de Desconto
+          </h1>
+          <p className="text-gray-600">
+            Visualize e gerencie todas as autorizações de desconto concedidas
+          </p>
         </div>
 
         {/* Error Alert */}
@@ -166,7 +185,7 @@ const DiscountApprovalsPage = () => {
                       className="bg-blue-500 h-6 rounded-full flex items-center justify-end pr-2"
                       style={{
                         width: `${(reason.total / summary.totalDiscounts) * 100}%`,
-                        minWidth: '40px'
+                        minWidth: '40px',
                       }}
                     >
                       <span className="text-white text-xs font-bold">
@@ -190,14 +209,24 @@ const DiscountApprovalsPage = () => {
             <thead className="bg-gray-50 border-b">
               <tr>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Data</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Paciente</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Profissional</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">
+                  Paciente
+                </th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">
+                  Profissional
+                </th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Serviço</th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Convênio</th>
+                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">
+                  Convênio
+                </th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Motivo</th>
-                <th className="px-6 py-3 text-right text-sm font-semibold text-gray-700">Desconto</th>
+                <th className="px-6 py-3 text-right text-sm font-semibold text-gray-700">
+                  Desconto
+                </th>
                 <th className="px-6 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
-                <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">Decisão</th>
+                <th className="px-6 py-3 text-center text-sm font-semibold text-gray-700">
+                  Decisão
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -219,12 +248,8 @@ const DiscountApprovalsPage = () => {
                     <td className="px-6 py-3 text-sm text-gray-700">
                       {auth.professional_name || '—'}
                     </td>
-                    <td className="px-6 py-3 text-sm text-gray-700">
-                      {auth.service_name || '—'}
-                    </td>
-                    <td className="px-6 py-3 text-sm text-gray-700">
-                      {auth.payer_name || '—'}
-                    </td>
+                    <td className="px-6 py-3 text-sm text-gray-700">{auth.service_name || '—'}</td>
+                    <td className="px-6 py-3 text-sm text-gray-700">{auth.payer_name || '—'}</td>
                     <td className="px-6 py-3 text-sm text-gray-700">
                       {auth.discount_reason || 'Sem motivo'}
                     </td>
@@ -232,7 +257,9 @@ const DiscountApprovalsPage = () => {
                       R$ {auth.discount_amount.toFixed(2)}
                     </td>
                     <td className="px-6 py-3 text-sm">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${discountApprovalsApi.getStatusColor(auth.status)}`}>
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-medium ${discountApprovalsApi.getStatusColor(auth.status)}`}
+                      >
                         {discountApprovalsApi.getStatusLabel(auth.status)}
                       </span>
                     </td>
@@ -275,8 +302,9 @@ const DiscountApprovalsPage = () => {
         {/* Notes */}
         <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
           <p className="text-sm text-blue-800">
-            <strong>Nota:</strong> Todos os descontos são registrados automaticamente quando criados na modal de agendamento.
-            Esta página oferece uma visão consolidada para auditoria e análise de tendências.
+            <strong>Nota:</strong> Todos os descontos são registrados automaticamente quando criados
+            na modal de agendamento. Esta página oferece uma visão consolidada para auditoria e
+            análise de tendências.
           </p>
         </div>
       </div>

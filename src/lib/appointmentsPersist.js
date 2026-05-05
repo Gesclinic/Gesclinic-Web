@@ -9,7 +9,9 @@ const norm = (v) =>
     .replace(/[\u0300-\u036f]/g, '');
 
 const toDbStatus = (s) => {
-  if (s == null || s === '') return undefined;
+  if (s == null || s === '') {
+    return undefined;
+  }
   const k = norm(s);
   const map = {
     livre: 'scheduled', // Livre vira agendado
@@ -33,7 +35,9 @@ const toDbStatus = (s) => {
 };
 
 const toIso = (v) => {
-  if (v == null || v === '') return undefined;
+  if (v == null || v === '') {
+    return undefined;
+  }
   // Se vier string, retorna como está (frontend já converte para UTC)
   if (typeof v === 'string') {
     return v;
@@ -46,7 +50,9 @@ const toIso = (v) => {
 };
 
 const toNumberOrNull = (v) => {
-  if (v == null || v === '') return null;
+  if (v == null || v === '') {
+    return null;
+  }
   const n = typeof v === 'number' ? v : parseFloat(String(v).replace(',', '.'));
   return Number.isFinite(n) ? n : null;
 };
@@ -61,14 +67,10 @@ const isOverlapError = (err) =>
 function normalizeAppointmentPayload(payload, { includeClinicId = false, clinicId } = {}) {
   const p = {};
 
-  for (const key of [
-    'patient_id',
-    'professional_id',
-    'service_id',
-    'payer_id',
-    'plan_id',
-  ]) {
-    if (key in payload && payload[key] && payload[key] !== 'NONE') p[key] = payload[key];
+  for (const key of ['patient_id', 'professional_id', 'service_id', 'payer_id', 'plan_id']) {
+    if (key in payload && payload[key] && payload[key] !== 'NONE') {
+      p[key] = payload[key];
+    }
   }
 
   // Incluir patient_name para pacientes não cadastrados
@@ -89,10 +91,16 @@ function normalizeAppointmentPayload(payload, { includeClinicId = false, clinicI
     }
   }
 
-  if ('price' in payload) p.price = toNumberOrNull(payload.price);
+  if ('price' in payload) {
+    p.price = toNumberOrNull(payload.price);
+  }
 
-  if ('start_time' in payload) p.start_time = toIso(payload.start_time) ?? null;
-  if ('end_time' in payload) p.end_time = toIso(payload.end_time) ?? null;
+  if ('start_time' in payload) {
+    p.start_time = toIso(payload.start_time) ?? null;
+  }
+  if ('end_time' in payload) {
+    p.end_time = toIso(payload.end_time) ?? null;
+  }
 
   if ('start' in payload && !('start_time' in payload)) {
     p.start_time = toIso(payload.start) ?? null;
@@ -103,11 +111,16 @@ function normalizeAppointmentPayload(payload, { includeClinicId = false, clinicI
 
   if ('status' in payload) {
     const dbStatus = toDbStatus(payload.status);
-    if (dbStatus) p.status = dbStatus;
-    else if (payload.status == null) p.status = null;
+    if (dbStatus) {
+      p.status = dbStatus;
+    } else if (payload.status == null) {
+      p.status = null;
+    }
   }
 
-  if (includeClinicId) p.clinic_id = clinicId;
+  if (includeClinicId) {
+    p.clinic_id = clinicId;
+  }
 
   Object.keys(p).forEach((k) => {
     if (p[k] === undefined || p[k] === null || p[k] === 'NONE') {
@@ -124,7 +137,9 @@ const RETURN_COLUMNS = APPOINTMENT_COLUMNS_SAFE;
  * CREATE
  * ------------------------------------------------------------ */
 export async function createAppointment(clinicId, payload) {
-  if (!clinicId) throw new Error('Clínica não selecionada.');
+  if (!clinicId) {
+    throw new Error('Clínica não selecionada.');
+  }
 
   const body = normalizeAppointmentPayload(payload, { includeClinicId: true, clinicId });
 
@@ -154,12 +169,12 @@ export async function createAppointment(clinicId, payload) {
     console.error('Erro ao criar agendamento:', error);
     if (isOverlapError(error)) {
       throw new Error(
-        'Conflito de horário: já existe um agendamento para este profissional no intervalo escolhido.'
+        'Conflito de horário: já existe um agendamento para este profissional no intervalo escolhido.',
       );
     }
     if (isStatusCheckError(error)) {
       throw new Error(
-        'Status inválido. Use: scheduled, confirmed, present, in_office, attended, no_show ou cancelled.'
+        'Status inválido. Use: scheduled, confirmed, present, in_office, attended, no_show ou cancelled.',
       );
     }
     if (error.code === '23502' && /professional_id/i.test(error.message || '')) {
@@ -175,7 +190,9 @@ export async function createAppointment(clinicId, payload) {
  * UPDATE
  * ------------------------------------------------------------ */
 export async function updateAppointment(id, clinicId, payload) {
-  if (!id || !clinicId) throw new Error('ID do agendamento e da clínica são obrigatórios.');
+  if (!id || !clinicId) {
+    throw new Error('ID do agendamento e da clínica são obrigatórios.');
+  }
 
   // 🧩 Evita update de slots livres com id fake
   if (String(id).startsWith('free-')) {
@@ -195,29 +212,32 @@ export async function updateAppointment(id, clinicId, payload) {
     throw new Error('Horário final deve ser maior que o inicial.');
   }
 
-  if (Object.keys(body).length === 0) return await getAppointmentById(id, clinicId);
+  if (Object.keys(body).length === 0) {
+    return await getAppointmentById(id, clinicId);
+  }
 
   const { data, error } = await supabase
     .from('appointments')
-    .update(body).eq('id', id)
-    .eq('clinic_id', clinicId).select(RETURN_COLUMNS);
+    .update(body)
+    .eq('id', id)
+    .eq('clinic_id', clinicId)
+    .select(RETURN_COLUMNS);
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
+  if (!data || data.length === 0) {
+    throw new Error('Record not found');
+  }
+  return data[0];
 
   if (error) {
     console.error('Erro ao atualizar agendamento:', error);
     if (isOverlapError(error)) {
       throw new Error(
-        'Conflito de horário: já existe um agendamento para este profissional no intervalo escolhido.'
-
+        'Conflito de horário: já existe um agendamento para este profissional no intervalo escolhido.',
       );
     }
     if (isStatusCheckError(error)) {
       throw new Error(
-        'Status inválido. Use: scheduled, confirmed, present, in_office, attended, no_show ou cancelled.'
+        'Status inválido. Use: scheduled, confirmed, present, in_office, attended, no_show ou cancelled.',
       );
     }
     throw new Error(`Falha ao atualizar agendamento: ${error.message}`);
@@ -230,7 +250,9 @@ export async function updateAppointment(id, clinicId, payload) {
  * DELETE
  * ------------------------------------------------------------ */
 export async function deleteAppointment(id, clinicId) {
-  if (!id || !clinicId) throw new Error('ID do agendamento e da clínica são obrigatórios.');
+  if (!id || !clinicId) {
+    throw new Error('ID do agendamento e da clínica são obrigatórios.');
+  }
 
   // 🧩 Evita tentar deletar slots livres
   if (String(id).startsWith('free-')) {
@@ -266,7 +288,8 @@ async function getAppointmentById(id, clinicId) {
 
   const { data, error } = await supabase
     .from('appointments')
-    .select(`
+    .select(
+      `
       *,
       patients:patient_id(id, name, document_id, phone, cell_phone, prontuario_numero),
       professionals:professional_id(id, name),
@@ -274,13 +297,18 @@ async function getAppointmentById(id, clinicId) {
       rooms:room_id(id, name),
       payers:payer_id(id, name, active),
       plans:plan_id(id, name, code)
-    `)
+    `,
+    )
     .eq('id', id)
     .eq('clinic_id', clinicId);
 
-if (!data || data.length === 0) { throw new Error('Record not found'); }
-return data[0];
+  if (!data || data.length === 0) {
+    throw new Error('Record not found');
+  }
+  return data[0];
 
-  if (error) throw new Error(`Falha ao ler agendamento: ${error.message}`);
+  if (error) {
+    throw new Error(`Falha ao ler agendamento: ${error.message}`);
+  }
   return data;
 }

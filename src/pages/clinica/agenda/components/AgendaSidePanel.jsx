@@ -1,19 +1,13 @@
-import React from "react";
-import { X } from "lucide-react";
+import React from 'react';
+import { X } from 'lucide-react';
 
-export default function AgendaSidePanel({
-  open,
-  onClose,
-  data,
-  logs = [],
-  onConfirm,
-  onCancel,
-}) {
-  if (!open) return null;
+export default function AgendaSidePanel({ open, onClose, data, logs = [], onConfirm, onCancel }) {
+  if (!open) {
+    return null;
+  }
 
   return (
     <div className="fixed right-0 top-0 h-full w-96 bg-white border-l shadow-xl p-5 z-50 animate-slide-left">
-
       {/* HEADER */}
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold text-primary">Detalhes</h2>
@@ -25,10 +19,18 @@ export default function AgendaSidePanel({
       {/* CONTEÚDO */}
       {data ? (
         <div className="space-y-3 text-sm">
-          <p><b>Paciente:</b> {data.patient_name}</p>
-          <p><b>Profissional:</b> {data.professional_name}</p>
-          <p><b>Serviço:</b> {data.service_name}</p>
-          <p><b>Horário:</b> {data.start_time?.slice(11, 16)}</p>
+          <p>
+            <b>Paciente:</b> {data.patient_name}
+          </p>
+          <p>
+            <b>Profissional:</b> {data.professional_name}
+          </p>
+          <p>
+            <b>Serviço:</b> {data.service_name}
+          </p>
+          <p>
+            <b>Horário:</b> {data.start_time?.slice(11, 16)}
+          </p>
 
           <div className="pt-3">
             <button
@@ -67,4 +69,3 @@ export default function AgendaSidePanel({
     </div>
   );
 }
-
