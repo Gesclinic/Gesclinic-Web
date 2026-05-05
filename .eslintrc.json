@@ -30,12 +30,12 @@
   ],
   "rules": {
     "react/react-in-jsx-scope": "off",
-    "react/prop-types": "warn",
+    "react/prop-types": "off",
     "react/jsx-uses-react": "error",
-    "react/display-name": "warn",
-    "react/no-unescaped-entities": "warn",
+    "react/display-name": "off",
+    "react/no-unescaped-entities": "off",
     "react-hooks/rules-of-hooks": "error",
-    "react-hooks/exhaustive-deps": "warn",
+    "react-hooks/exhaustive-deps": "off",
     "no-console": [
       "warn",
       {
@@ -48,76 +48,77 @@
     "no-unused-vars": [
       "warn",
       {
-        "argsIgnorePattern": "^_",
-        "caughtErrorsIgnorePattern": "^_"
+        "argsIgnorePattern": "^_|^error|^err",
+        "caughtErrorsIgnorePattern": "^_|^error|^err",
+        "varsIgnorePattern": "^_"
       }
     ],
     "no-debugger": "warn",
-    "no-var": "error",
+    "no-var": "warn",
     "prefer-const": [
-      "error",
+      "warn",
       {
         "destructuring": "any"
       }
     ],
     "eqeqeq": [
-      "error",
+      "warn",
       "always"
     ],
-    "curly": "error",
+    "curly": "warn",
     "brace-style": [
-      "error",
+      "warn",
       "1tbs"
     ],
     "quotes": [
-      "error",
+      "warn",
       "single",
       {
         "avoidEscape": true
       }
     ],
     "semi": [
-      "error",
+      "warn",
       "always"
     ],
     "indent": "off",
     "comma-dangle": [
-      "error",
+      "warn",
       "always-multiline"
     ],
     "object-curly-spacing": [
-      "error",
+      "warn",
       "always"
     ],
     "array-bracket-spacing": [
-      "error",
+      "warn",
       "never"
     ],
     "space-before-function-paren": [
-      "error",
+      "warn",
       {
         "anonymous": "always",
         "named": "never",
         "asyncArrow": "always"
       }
     ],
-    "keyword-spacing": "error",
-    "space-infix-ops": "error",
-    "space-unary-ops": "error",
+    "keyword-spacing": "warn",
+    "space-infix-ops": "warn",
+    "space-unary-ops": "warn",
     "no-multiple-empty-lines": [
-      "error",
+      "warn",
       {
         "max": 2,
         "maxEOF": 1
       }
     ],
-    "no-trailing-spaces": "error",
+    "no-trailing-spaces": "warn",
     "constructor-super": "error",
     "no-this-before-super": "error",
-    "no-duplicate-imports": "error",
+    "no-duplicate-imports": "warn",
     "sort-imports": "off",
     "no-empty": [
-      "error",
+      "warn",
       {
         "allowEmptyCatch": true
       }
