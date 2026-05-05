@@ -3,7 +3,7 @@
 
 import React, { useState, useRef } from 'react';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
 import { useBankStatementParser } from '@/hooks/useConciliation';
 import { IMPORT_FORMATS, TRANSACTION_TYPE } from '@/lib/conciliationStatus';
 import { formatCurrency } from '@/lib/formatters';
