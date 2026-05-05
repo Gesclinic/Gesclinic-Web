@@ -176,20 +176,8 @@ jobs:
           name: dist
           path: dist/
 
-      - name: Install Vercel CLI
-        run: npm install -g vercel
-
-      - name: Pull config
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
-      - name: Build
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Deploy
-        run: vercel deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Deploy to Vercel
+        run: npx vercel --prod --yes --token=${{ secrets.VERCEL_TOKEN }}
 
   # Job 7: Preview Deployment (On pull requests)
   preview:
@@ -216,20 +204,8 @@ jobs:
           name: dist
           path: dist/
 
-      - name: Install Vercel CLI
-        run: npm install -g vercel
-
-      - name: Pull config
-        run: vercel pull --yes --token=${{ secrets.VERCEL_TOKEN }}
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
-      - name: Build
-        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Deploy
-        run: vercel deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Deploy to Vercel
+        run: npx vercel --yes --token=${{ secrets.VERCEL_TOKEN }}
 
   # Job 8: Notifications
   notify:
