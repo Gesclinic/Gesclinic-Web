@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/customSupabaseClient";
+import { supabase } from '@/lib/customSupabaseClient';
 
 /**
  * LEGACY: NÃO USAR MAIS NA AGENDA
@@ -31,24 +31,24 @@ export async function salvarAgendamento(payload) {
     payer_id,
     plan_id,
     notes,
-    status = "agendado"
+    status = 'agendado',
   } = payload;
 
   if (!clinicId || !start_time || !end_time) {
-    throw new Error("Dados obrigatórios não informados");
+    throw new Error('Dados obrigatórios não informados');
   }
 
   // 🔒 Verificar conflito de horário
   const { data: conflitos } = await supabase
-    .from("appointments")
-    .select("id")
-    .eq("clinic_id", clinicId)
-    .neq("id", id || "00000000-0000-0000-0000-000000000000")
-    .lt("start_time", end_time)
-    .gt("end_time", start_time);
+    .from('appointments')
+    .select('id')
+    .eq('clinic_id', clinicId)
+    .neq('id', id || '00000000-0000-0000-0000-000000000000')
+    .lt('start_time', end_time)
+    .gt('end_time', start_time);
 
   if (conflitos?.length) {
-    throw new Error("Conflito de horário com outro agendamento");
+    throw new Error('Conflito de horário com outro agendamento');
   }
 
   const data = {
@@ -63,13 +63,13 @@ export async function salvarAgendamento(payload) {
     payer_id,
     plan_id,
     notes,
-    status
+    status,
   };
 
   if (id) {
-    await supabase.from("appointments").update(data).eq("id", id);
+    await supabase.from('appointments').update(data).eq('id', id);
   } else {
-    await supabase.from("appointments").insert(data);
+    await supabase.from('appointments').insert(data);
   }
 }
 
@@ -80,5 +80,5 @@ export async function salvarAgendamento(payload) {
  */
 // NÃO USAR MAIS: atualizarStatus
 export async function atualizarStatus(id, status) {
-  await supabase.from("appointments").update({ status }).eq("id", id);
+  await supabase.from('appointments').update({ status }).eq('id', id);
 }

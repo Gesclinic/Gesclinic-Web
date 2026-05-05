@@ -4,7 +4,7 @@ import StatusChip from './StatusChip';
 
 /**
  * AgendaGridNew - Grid/tabela com alta densidade visual
- * 
+ *
  * Props:
  * - appointments: array de agendamentos
  * - metadata: { professionals, rooms, services, payers }
@@ -67,9 +67,7 @@ export default function AgendaGridNew({
     const slots = [];
     for (let hour = 8; hour < 18; hour++) {
       for (let minute = 0; minute < 60; minute += 30) {
-        slots.push(
-          `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
-        );
+        slots.push(`${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`);
       }
     }
     return slots;
@@ -85,27 +83,13 @@ export default function AgendaGridNew({
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="px-4 py-3 text-left font-semibold text-gray-700 w-20">
-                Horário
-              </th>
-              <th className="px-4 py-3 text-left font-semibold text-gray-700">
-                Paciente
-              </th>
-              <th className="px-4 py-3 text-left font-semibold text-gray-700">
-                Profissional
-              </th>
-              <th className="px-4 py-3 text-left font-semibold text-gray-700">
-                Serviço
-              </th>
-              <th className="px-4 py-3 text-left font-semibold text-gray-700 w-24">
-                Sala
-              </th>
-              <th className="px-4 py-3 text-left font-semibold text-gray-700 w-24">
-                Status
-              </th>
-              <th className="px-4 py-3 text-right font-semibold text-gray-700 w-20">
-                Ações
-              </th>
+              <th className="px-4 py-3 text-left font-semibold text-gray-700 w-20">Horário</th>
+              <th className="px-4 py-3 text-left font-semibold text-gray-700">Paciente</th>
+              <th className="px-4 py-3 text-left font-semibold text-gray-700">Profissional</th>
+              <th className="px-4 py-3 text-left font-semibold text-gray-700">Serviço</th>
+              <th className="px-4 py-3 text-left font-semibold text-gray-700 w-24">Sala</th>
+              <th className="px-4 py-3 text-left font-semibold text-gray-700 w-24">Status</th>
+              <th className="px-4 py-3 text-right font-semibold text-gray-700 w-20">Ações</th>
             </tr>
           </thead>
 
@@ -122,9 +106,7 @@ export default function AgendaGridNew({
                     onMouseEnter={() => setHoveredRowId(`available-${time}`)}
                     onMouseLeave={() => setHoveredRowId(null)}
                   >
-                    <td className="px-4 py-3 font-semibold text-gray-900">
-                      {time}
-                    </td>
+                    <td className="px-4 py-3 font-semibold text-gray-900">{time}</td>
                     <td colSpan="5" className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <StatusChip status="disponivel" size="sm" />
@@ -231,4 +213,3 @@ export default function AgendaGridNew({
     </div>
   );
 }
-

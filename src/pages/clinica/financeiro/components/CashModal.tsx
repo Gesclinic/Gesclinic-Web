@@ -30,7 +30,7 @@ export const CashModal: React.FC<CashModalProps> = ({
   professionals,
   services,
   payers,
-  clinicId
+  clinicId,
 }) => {
   const [activeTab, setActiveTab] = useState<'manual' | 'linked'>('linked');
   const [loading, setLoading] = useState(false);
@@ -44,7 +44,7 @@ export const CashModal: React.FC<CashModalProps> = ({
     amount: '',
     payment_method: 'DINHEIRO',
     description: '',
-    status: 'confirmado' as const
+    status: 'confirmado' as const,
   });
 
   const [linkedForm, setLinkedForm] = useState({
@@ -54,7 +54,7 @@ export const CashModal: React.FC<CashModalProps> = ({
     payer_type: 'particular' as const,
     payer_id: '',
     discount: '',
-    status: 'confirmado' as const
+    status: 'confirmado' as const,
   });
 
   useEffect(() => {
@@ -64,7 +64,7 @@ export const CashModal: React.FC<CashModalProps> = ({
         amount: '',
         payment_method: 'DINHEIRO',
         description: '',
-        status: 'confirmado'
+        status: 'confirmado',
       });
       setLinkedForm({
         patient_id: '',
@@ -73,7 +73,7 @@ export const CashModal: React.FC<CashModalProps> = ({
         payer_type: 'particular',
         payer_id: '',
         discount: '',
-        status: 'confirmado'
+        status: 'confirmado',
       });
       setValidationError(null);
     }
@@ -106,7 +106,7 @@ export const CashModal: React.FC<CashModalProps> = ({
       setValidationError('Atendimento não liberado para profissional ainda');
       toastService.error(
         'Atendimento não pronto',
-        'Recepção precisa confirmar pagamento/guia e liberar para o profissional'
+        'Recepção precisa confirmar pagamento/guia e liberar para o profissional',
       );
       return false;
     }
@@ -160,12 +160,12 @@ export const CashModal: React.FC<CashModalProps> = ({
         payment_method: manualForm.payment_method,
         description: manualForm.description,
         status: manualForm.status,
-        origin: 'manual'
+        origin: 'manual',
       });
 
       toastService.success(
         'Movimento manual registrado',
-        `R$ ${parseFloat(manualForm.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+        `R$ ${parseFloat(manualForm.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
       );
 
       setManualForm({
@@ -173,7 +173,7 @@ export const CashModal: React.FC<CashModalProps> = ({
         amount: '',
         payment_method: 'DINHEIRO',
         description: '',
-        status: 'confirmado'
+        status: 'confirmado',
       });
 
       onSuccess?.();
@@ -207,14 +207,14 @@ export const CashModal: React.FC<CashModalProps> = ({
         payer_id: linkedForm.payer_type === 'convenio' ? linkedForm.payer_id : undefined,
         status: linkedForm.status,
         origin: 'agenda',
-        discount: discount > 0 ? discount : undefined
+        discount: discount > 0 ? discount : undefined,
       });
 
       const patientName = patients.find((p) => p.id === linkedForm.patient_id)?.name || 'Paciente';
 
       toastService.success(
         'Movimento vinculado com sucesso',
-        `${patientName} - R$ ${netAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+        `${patientName} - R$ ${netAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
       );
 
       setLinkedForm({
@@ -224,7 +224,7 @@ export const CashModal: React.FC<CashModalProps> = ({
         payer_type: 'particular',
         payer_id: '',
         discount: '',
-        status: 'confirmado'
+        status: 'confirmado',
       });
 
       onSuccess?.();
@@ -305,7 +305,8 @@ export const CashModal: React.FC<CashModalProps> = ({
               <div>
                 <p className="font-semibold text-amber-900 text-sm">Recomendação</p>
                 <p className="text-amber-700 text-xs mt-1">
-                  Prefira "Vincular Atendimento" para registrar automaticamente o repasse ao profissional
+                  Prefira "Vincular Atendimento" para registrar automaticamente o repasse ao
+                  profissional
                 </p>
               </div>
             </div>
@@ -364,7 +365,9 @@ export const CashModal: React.FC<CashModalProps> = ({
                   </label>
                   <select
                     value={linkedForm.professional_id}
-                    onChange={(e) => setLinkedForm({ ...linkedForm, professional_id: e.target.value })}
+                    onChange={(e) =>
+                      setLinkedForm({ ...linkedForm, professional_id: e.target.value })
+                    }
                     disabled={loading}
                     aria-label="Profissional"
                     className="w-full px-3 py-2.5 border-2 border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none transition disabled:opacity-50"
@@ -396,7 +399,8 @@ export const CashModal: React.FC<CashModalProps> = ({
                     <option value="">Selecione um serviço</option>
                     {services.map((s) => (
                       <option key={s.id} value={s.id}>
-                        {s.name} - R$ {s.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        {s.name} - R${' '}
+                        {s.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </option>
                     ))}
                   </select>
@@ -414,7 +418,7 @@ export const CashModal: React.FC<CashModalProps> = ({
                       setLinkedForm({
                         ...linkedForm,
                         payer_type: e.target.value as 'particular' | 'convenio',
-                        payer_id: ''
+                        payer_id: '',
                       })
                     }
                     disabled={loading}
@@ -477,7 +481,7 @@ export const CashModal: React.FC<CashModalProps> = ({
                     onChange={(e) =>
                       setLinkedForm({
                         ...linkedForm,
-                        status: e.target.value as 'confirmado' | 'pendente' | 'estornado'
+                        status: e.target.value as 'confirmado' | 'pendente' | 'estornado',
                       })
                     }
                     disabled={loading}
@@ -503,7 +507,10 @@ export const CashModal: React.FC<CashModalProps> = ({
                     <div className="flex justify-between">
                       <span className="text-slate-600">Serviço:</span>
                       <span className="font-semibold">
-                        R$ {(selectedService.price ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        R${' '}
+                        {(selectedService.price ?? 0).toLocaleString('pt-BR', {
+                          minimumFractionDigits: 2,
+                        })}
                       </span>
                     </div>
 
@@ -531,7 +538,10 @@ export const CashModal: React.FC<CashModalProps> = ({
                             Repasse:
                           </span>
                           <span className="font-bold text-orange-600">
-                            R$ {(repasseData.commission ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            R${' '}
+                            {(repasseData.commission ?? 0).toLocaleString('pt-BR', {
+                              minimumFractionDigits: 2,
+                            })}
                           </span>
                         </div>
                         <p className="text-xs text-slate-500 mt-1">{repasseData.description}</p>
@@ -548,9 +558,7 @@ export const CashModal: React.FC<CashModalProps> = ({
             <form onSubmit={handleManualSubmit} className="space-y-5">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    Tipo
-                  </label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Tipo</label>
                   <select
                     value={manualForm.type}
                     onChange={(e) =>
@@ -606,9 +614,7 @@ export const CashModal: React.FC<CashModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Descrição
-                </label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Descrição</label>
                 <textarea
                   value={manualForm.description}
                   onChange={(e) => setManualForm({ ...manualForm, description: e.target.value })}
@@ -621,15 +627,13 @@ export const CashModal: React.FC<CashModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Status
-                </label>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Status</label>
                 <select
                   value={manualForm.status}
                   onChange={(e) =>
                     setManualForm({
                       ...manualForm,
-                      status: e.target.value as 'confirmado' | 'pendente' | 'estornado'
+                      status: e.target.value as 'confirmado' | 'pendente' | 'estornado',
                     })
                   }
                   disabled={loading}
@@ -679,9 +683,7 @@ export const CashModal: React.FC<CashModalProps> = ({
                     Vincular Movimento
                   </>
                 ) : (
-                  <>
-                    📝 Registrar Movimento
-                  </>
+                  <>📝 Registrar Movimento</>
                 )}
               </>
             )}

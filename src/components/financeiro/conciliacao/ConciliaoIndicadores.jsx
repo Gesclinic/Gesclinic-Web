@@ -4,10 +4,7 @@
 import React from 'react';
 import { Card } from '@/components/ui/Card';
 import { formatCurrency } from '@/lib/formatters';
-import {
-  CONCILIATION_STATUS_VISUAL,
-  CONCILIATION_STATUS
-} from '@/lib/conciliationStatus';
+import { CONCILIATION_STATUS_VISUAL, CONCILIATION_STATUS } from '@/lib/conciliationStatus';
 
 export function ConciliaoIndicadores({ indicators, loading }) {
   if (loading) {

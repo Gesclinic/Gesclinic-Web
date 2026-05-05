@@ -1,21 +1,19 @@
-import React, { useState } from "react";
-import { Outlet } from "react-router-dom";
+import React, { useState } from 'react';
+import { Outlet } from 'react-router-dom';
 
-import Sidebar from "./Sidebar";
-import Header from "./Header";
+import Sidebar from './Sidebar';
+import Header from './Header';
 
 export default function AppLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
-
       {/* SIDEBAR */}
       <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
       {/* ÁREA PRINCIPAL */}
       <div className="flex-1 flex flex-col overflow-hidden">
-
         {/* HEADER */}
         <Header onToggleMenu={() => setIsSidebarOpen(!isSidebarOpen)} />
 
@@ -26,7 +24,6 @@ export default function AppLayout() {
             <Outlet />
           </div>
         </main>
-
       </div>
     </div>
   );

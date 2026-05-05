@@ -8,7 +8,7 @@
 /* -------------------------------------------------------
    CUSTOMIZAÃ‡Ã•ES EXTERNAS (depois do Tailwind)
 ------------------------------------------------------- */
-@import "./react-calendar-custom.css";
+@import './react-calendar-custom.css';
 
 /* -------------------------------------------------------
    BASE THEME VARIABLES â€” GESCLINIC PREMIUM
@@ -231,7 +231,7 @@
 }
 
 .week-day-active::before {
-  content: "";
+  content: '';
   position: absolute;
   top: 0;
   left: 0;
@@ -335,17 +335,17 @@
    INPUT DATE - Remove setas nativas (chevrons)
    Permite apenas navegaÃ§Ã£o through buttons customizados
 ------------------------------------------------------- */
-input[type="date"]::-webkit-calendar-picker-indicator {
+input[type='date']::-webkit-calendar-picker-indicator {
   display: none !important;
 }
 
-input[type="date"]::-webkit-outer-spin-button,
-input[type="date"]::-webkit-inner-spin-button {
+input[type='date']::-webkit-outer-spin-button,
+input[type='date']::-webkit-inner-spin-button {
   display: none !important;
   -webkit-appearance: none;
   margin: 0;
 }
 
-input[type="date"]::-moz-calendar-picker-indicator {
+input[type='date']::-moz-calendar-picker-indicator {
   display: none !important;
 }

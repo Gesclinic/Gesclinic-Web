@@ -4,12 +4,25 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
-import { 
-  ChartBar, 
-  Download, 
+import {
+  ChartBar,
+  Download,
   Calendar,
   DollarSign,
   User,
@@ -18,7 +31,7 @@ import {
   FileSpreadsheet,
   FileText,
   Search,
-  Filter
+  Filter,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 
@@ -30,7 +43,9 @@ export default function RelatorioProducaoConvenio() {
   const { clinicId } = useAuth();
   const [relatorioData, setRelatorioData] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [dataInicial, setDataInicial] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]);
+  const [dataInicial, setDataInicial] = useState(
+    new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+  );
   const [dataFinal, setDataFinal] = useState(new Date().toISOString().split('T')[0]);
   const [convenioFilter, setConvenioFilter] = useState('all');
 
@@ -42,7 +57,7 @@ export default function RelatorioProducaoConvenio() {
       tipo_convenio: 'Médico',
       total_guias: 125,
       total_procedimentos: 340,
-      valor_bruto: 45650.80,
+      valor_bruto: 45650.8,
       valor_desconto: 2282.54,
       valor_liquido: 43368.26,
       percentual_total: 35.2,
@@ -51,10 +66,10 @@ export default function RelatorioProducaoConvenio() {
       guias_glosadas: 3,
       valor_medio_guia: 365.41,
       procedimentos_principais: [
-        { codigo: '10101012', nome: 'Consulta Médica', quantidade: 85, valor_total: 8500.00 },
-        { codigo: '20101020', nome: 'ECG', quantidade: 45, valor_total: 4500.00 },
-        { codigo: '30301150', nome: 'Ultrassom Abdominal', quantidade: 30, valor_total: 7500.00 }
-      ]
+        { codigo: '10101012', nome: 'Consulta Médica', quantidade: 85, valor_total: 8500.0 },
+        { codigo: '20101020', nome: 'ECG', quantidade: 45, valor_total: 4500.0 },
+        { codigo: '30301150', nome: 'Ultrassom Abdominal', quantidade: 30, valor_total: 7500.0 },
+      ],
     },
     {
       convenio_id: 'conv_002',
@@ -62,7 +77,7 @@ export default function RelatorioProducaoConvenio() {
       tipo_convenio: 'Médico',
       total_guias: 98,
       total_procedimentos: 245,
-      valor_bruto: 32140.60,
+      valor_bruto: 32140.6,
       valor_desconto: 1607.03,
       valor_liquido: 30533.57,
       percentual_total: 24.8,
@@ -71,10 +86,10 @@ export default function RelatorioProducaoConvenio() {
       guias_glosadas: 2,
       valor_medio_guia: 327.96,
       procedimentos_principais: [
-        { codigo: '10101012', nome: 'Consulta Médica', quantidade: 65, valor_total: 6500.00 },
-        { codigo: '40201040', nome: 'Raio-X Tórax', quantidade: 35, valor_total: 3500.00 },
-        { codigo: '30301150', nome: 'Ultrassom Abdominal', quantidade: 20, valor_total: 5000.00 }
-      ]
+        { codigo: '10101012', nome: 'Consulta Médica', quantidade: 65, valor_total: 6500.0 },
+        { codigo: '40201040', nome: 'Raio-X Tórax', quantidade: 35, valor_total: 3500.0 },
+        { codigo: '30301150', nome: 'Ultrassom Abdominal', quantidade: 20, valor_total: 5000.0 },
+      ],
     },
     {
       convenio_id: 'conv_003',
@@ -82,7 +97,7 @@ export default function RelatorioProducaoConvenio() {
       tipo_convenio: 'Médico',
       total_guias: 76,
       total_procedimentos: 198,
-      valor_bruto: 28750.40,
+      valor_bruto: 28750.4,
       valor_desconto: 1437.52,
       valor_liquido: 27312.88,
       percentual_total: 22.1,
@@ -91,10 +106,10 @@ export default function RelatorioProducaoConvenio() {
       guias_glosadas: 1,
       valor_medio_guia: 378.29,
       procedimentos_principais: [
-        { codigo: '10101012', nome: 'Consulta Médica', quantidade: 50, valor_total: 5000.00 },
-        { codigo: '30501170', nome: 'Ecocardiograma', quantidade: 25, valor_total: 6250.00 },
-        { codigo: '20101020', nome: 'ECG', quantidade: 30, valor_total: 3000.00 }
-      ]
+        { codigo: '10101012', nome: 'Consulta Médica', quantidade: 50, valor_total: 5000.0 },
+        { codigo: '30501170', nome: 'Ecocardiograma', quantidade: 25, valor_total: 6250.0 },
+        { codigo: '20101020', nome: 'ECG', quantidade: 30, valor_total: 3000.0 },
+      ],
     },
     {
       convenio_id: 'conv_004',
@@ -102,19 +117,19 @@ export default function RelatorioProducaoConvenio() {
       tipo_convenio: 'Particular',
       total_guias: 45,
       total_procedimentos: 85,
-      valor_bruto: 18950.00,
-      valor_desconto: 947.50,
-      valor_liquido: 18002.50,
+      valor_bruto: 18950.0,
+      valor_desconto: 947.5,
+      valor_liquido: 18002.5,
       percentual_total: 14.6,
       guias_pagas: 42,
       guias_pendentes: 2,
       guias_glosadas: 1,
       valor_medio_guia: 421.11,
       procedimentos_principais: [
-        { codigo: '10101012', nome: 'Consulta Médica', quantidade: 25, valor_total: 3750.00 },
-        { codigo: '90416090', nome: 'Check-up Executivo', quantidade: 15, valor_total: 12000.00 },
-        { codigo: '30301150', nome: 'Ultrassom Abdominal', quantidade: 10, valor_total: 2500.00 }
-      ]
+        { codigo: '10101012', nome: 'Consulta Médica', quantidade: 25, valor_total: 3750.0 },
+        { codigo: '90416090', nome: 'Check-up Executivo', quantidade: 15, valor_total: 12000.0 },
+        { codigo: '30301150', nome: 'Ultrassom Abdominal', quantidade: 10, valor_total: 2500.0 },
+      ],
     },
     {
       convenio_id: 'conv_005',
@@ -122,7 +137,7 @@ export default function RelatorioProducaoConvenio() {
       tipo_convenio: 'Médico',
       total_guias: 34,
       total_procedimentos: 78,
-      valor_bruto: 11240.80,
+      valor_bruto: 11240.8,
       valor_desconto: 562.04,
       valor_liquido: 10678.76,
       percentual_total: 8.7,
@@ -131,11 +146,11 @@ export default function RelatorioProducaoConvenio() {
       guias_glosadas: 1,
       valor_medio_guia: 330.61,
       procedimentos_principais: [
-        { codigo: '10101012', nome: 'Consulta Médica', quantidade: 20, valor_total: 2000.00 },
-        { codigo: '20101020', nome: 'ECG', quantidade: 18, valor_total: 1800.00 },
-        { codigo: '40201040', nome: 'Raio-X Tórax', quantidade: 15, valor_total: 1500.00 }
-      ]
-    }
+        { codigo: '10101012', nome: 'Consulta Médica', quantidade: 20, valor_total: 2000.0 },
+        { codigo: '20101020', nome: 'ECG', quantidade: 18, valor_total: 1800.0 },
+        { codigo: '40201040', nome: 'Raio-X Tórax', quantidade: 15, valor_total: 1500.0 },
+      ],
+    },
   ];
 
   useEffect(() => {
@@ -147,10 +162,10 @@ export default function RelatorioProducaoConvenio() {
     try {
       // Simular busca no banco com filtros
       let filteredData = mockRelatorioData;
-      
+
       if (convenioFilter !== 'all') {
-        filteredData = filteredData.filter(item => 
-          item.tipo_convenio.toLowerCase().includes(convenioFilter.toLowerCase())
+        filteredData = filteredData.filter((item) =>
+          item.tipo_convenio.toLowerCase().includes(convenioFilter.toLowerCase()),
         );
       }
 
@@ -158,9 +173,9 @@ export default function RelatorioProducaoConvenio() {
     } catch (error) {
       console.error('Erro ao buscar relatório:', error);
       toast({
-        title: "Erro",
-        description: "Não foi possível carregar o relatório.",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Não foi possível carregar o relatório.',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -170,8 +185,18 @@ export default function RelatorioProducaoConvenio() {
   const exportarCSV = () => {
     try {
       const csvContent = [
-        ['Convênio', 'Tipo', 'Total Guias', 'Total Procedimentos', 'Valor Bruto', 'Desconto', 'Valor Líquido', 'Percentual', 'Valor Médio/Guia'],
-        ...relatorioData.map(item => [
+        [
+          'Convênio',
+          'Tipo',
+          'Total Guias',
+          'Total Procedimentos',
+          'Valor Bruto',
+          'Desconto',
+          'Valor Líquido',
+          'Percentual',
+          'Valor Médio/Guia',
+        ],
+        ...relatorioData.map((item) => [
           item.convenio_nome,
           item.tipo_convenio,
           item.total_guias,
@@ -180,9 +205,11 @@ export default function RelatorioProducaoConvenio() {
           item.valor_desconto.toFixed(2),
           item.valor_liquido.toFixed(2),
           item.percentual_total.toFixed(1) + '%',
-          item.valor_medio_guia.toFixed(2)
-        ])
-      ].map(row => row.join(',')).join('\n');
+          item.valor_medio_guia.toFixed(2),
+        ]),
+      ]
+        .map((row) => row.join(','))
+        .join('\n');
 
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
@@ -191,14 +218,14 @@ export default function RelatorioProducaoConvenio() {
       link.click();
 
       toast({
-        title: "Exportação concluída",
-        description: "Relatório exportado para CSV com sucesso."
+        title: 'Exportação concluída',
+        description: 'Relatório exportado para CSV com sucesso.',
       });
     } catch (error) {
       toast({
-        title: "Erro na exportação",
-        description: "Não foi possível exportar o relatório.",
-        variant: "destructive"
+        title: 'Erro na exportação',
+        description: 'Não foi possível exportar o relatório.',
+        variant: 'destructive',
       });
     }
   };
@@ -207,45 +234,60 @@ export default function RelatorioProducaoConvenio() {
     try {
       // Simular exportação para Excel
       console.log('Exportando para Excel:', relatorioData);
-      
+
       toast({
-        title: "Exportação iniciada",
-        description: "Relatório Excel será baixado em instantes."
+        title: 'Exportação iniciada',
+        description: 'Relatório Excel será baixado em instantes.',
       });
     } catch (error) {
       toast({
-        title: "Erro na exportação",
-        description: "Não foi possível exportar para Excel.",
-        variant: "destructive"
+        title: 'Erro na exportação',
+        description: 'Não foi possível exportar para Excel.',
+        variant: 'destructive',
       });
     }
   };
 
   const getTotalGeral = () => {
-    return relatorioData.reduce((acc, item) => ({
-      total_guias: acc.total_guias + item.total_guias,
-      total_procedimentos: acc.total_procedimentos + item.total_procedimentos,
-      valor_bruto: acc.valor_bruto + item.valor_bruto,
-      valor_desconto: acc.valor_desconto + item.valor_desconto,
-      valor_liquido: acc.valor_liquido + item.valor_liquido
-    }), {
-      total_guias: 0,
-      total_procedimentos: 0,
-      valor_bruto: 0,
-      valor_desconto: 0,
-      valor_liquido: 0
-    });
+    return relatorioData.reduce(
+      (acc, item) => ({
+        total_guias: acc.total_guias + item.total_guias,
+        total_procedimentos: acc.total_procedimentos + item.total_procedimentos,
+        valor_bruto: acc.valor_bruto + item.valor_bruto,
+        valor_desconto: acc.valor_desconto + item.valor_desconto,
+        valor_liquido: acc.valor_liquido + item.valor_liquido,
+      }),
+      {
+        total_guias: 0,
+        total_procedimentos: 0,
+        valor_bruto: 0,
+        valor_desconto: 0,
+        valor_liquido: 0,
+      },
+    );
   };
 
   const getStatusBadge = (guias_pagas, total_guias) => {
     const percentualPago = (guias_pagas / total_guias) * 100;
-    
+
     if (percentualPago >= 90) {
-      return <Badge variant="default" className="text-green-600">Excelente</Badge>;
+      return (
+        <Badge variant="default" className="text-green-600">
+          Excelente
+        </Badge>
+      );
     } else if (percentualPago >= 70) {
-      return <Badge variant="secondary" className="text-blue-600">Bom</Badge>;
+      return (
+        <Badge variant="secondary" className="text-blue-600">
+          Bom
+        </Badge>
+      );
     } else {
-      return <Badge variant="destructive" className="text-red-600">Atenção</Badge>;
+      return (
+        <Badge variant="destructive" className="text-red-600">
+          Atenção
+        </Badge>
+      );
     }
   };
 
@@ -475,7 +517,9 @@ export default function RelatorioProducaoConvenio() {
                         <TableRow key={index}>
                           <TableCell className="font-mono text-sm">{proc.codigo}</TableCell>
                           <TableCell>{proc.nome}</TableCell>
-                          <TableCell className="text-center font-semibold">{proc.quantidade}</TableCell>
+                          <TableCell className="text-center font-semibold">
+                            {proc.quantidade}
+                          </TableCell>
                           <TableCell className="text-right font-semibold text-green-600">
                             R$ {proc.valor_total.toFixed(2)}
                           </TableCell>
@@ -492,4 +536,3 @@ export default function RelatorioProducaoConvenio() {
     </div>
   );
 }
-

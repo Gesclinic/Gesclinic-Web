@@ -1,18 +1,17 @@
 /**
  * PHASE 2: Appointment Financial Integration API
  * Wraps PHASE 1 database triggers & functions
- * 
+ *
  * Responsibilities:
  * - Finalize appointment → trigger AR/TISS guide auto-creation
  * - Fetch auto-created financial records
  * - Cancel appointment → trigger AR soft-delete
  * - Error handling & idempotency
- * 
+ *
  * Date: April 11, 2026
  */
 
 import { customSupabaseClient } from './customSupabaseClient';
-
 
 // ============================================================================
 // 1. FINALIZE APPOINTMENT (triggers AR + Guide creation via PHASE 1 triggers)
@@ -20,11 +19,11 @@ import { customSupabaseClient } from './customSupabaseClient';
 
 /**
  * Mark appointment as "attended" → auto-triggers:
- *   - create_ar_receivable_from_appointment() 
+ *   - create_ar_receivable_from_appointment()
  *   - create_tiss_guide_from_appointment() (if convênio)
- * 
- * @param {UUID} appointmentId 
- * @param {UUID} clinicId 
+ *
+ * @param {UUID} appointmentId
+ * @param {UUID} clinicId
  * @returns {Promise<{success: boolean, appointment: object, ar: object|null, guide: object|null}>}
  */
 export async function finalizeAppointmentWithFinancials(appointmentId, clinicId) {
@@ -43,7 +42,7 @@ export async function finalizeAppointmentWithFinancials(appointmentId, clinicId)
         payer_id, 
         professional_id,
         service_id
-      `
+      `,
       )
       .eq('id', appointmentId)
       .eq('clinic_id', clinicId)
@@ -65,8 +64,12 @@ export async function finalizeAppointmentWithFinancials(appointmentId, clinicId)
       })
       .eq('id', appointmentId)
       .eq('clinic_id', clinicId)
-      .select()
-      .single();
+      .select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
 
     if (updateError) {
       return {
@@ -80,8 +83,12 @@ export async function finalizeAppointmentWithFinancials(appointmentId, clinicId)
       .from('ar_receivables')
       .select('*')
       .eq('appointment_id', appointmentId)
-      .eq('clinic_id', clinicId)
-      .single();
+      .eq('clinic_id', clinicId);
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
 
     // Step 4: Fetch auto-created TISS guide (if convênio)
     let guideRecord = null;
@@ -90,8 +97,12 @@ export async function finalizeAppointmentWithFinancials(appointmentId, clinicId)
         .from('billing_guides')
         .select('*')
         .eq('appointment_id', appointmentId)
-        .eq('clinic_id', clinicId)
-        .single();
+        .eq('clinic_id', clinicId);
+
+      if (!data || data.length === 0) {
+        throw new Error('Record not found');
+      }
+      return data[0];
       guideRecord = guide;
     }
 
@@ -117,9 +128,9 @@ export async function finalizeAppointmentWithFinancials(appointmentId, clinicId)
 
 /**
  * Fetch AR receivable created by trigger
- * 
- * @param {UUID} appointmentId 
- * @param {UUID} clinicId 
+ *
+ * @param {UUID} appointmentId
+ * @param {UUID} clinicId
  * @returns {Promise<object>}
  */
 export async function getARFromAppointment(appointmentId, clinicId) {
@@ -140,16 +151,14 @@ export async function getARFromAppointment(appointmentId, clinicId) {
         descricao,
         created_at,
         updated_at
-      `
+      `,
       )
       .eq('appointment_id', appointmentId)
       .eq('clinic_id', clinicId)
       .single();
 
     if (error) {
-      console.warn(
-        `AR not found for appointment ${appointmentId}: ${error.message}`
-      );
+      console.warn(`AR not found for appointment ${appointmentId}: ${error.message}`);
       return null;
     }
 
@@ -166,9 +175,9 @@ export async function getARFromAppointment(appointmentId, clinicId) {
 
 /**
  * Fetch TISS billing guide created by trigger
- * 
- * @param {UUID} appointmentId 
- * @param {UUID} clinicId 
+ *
+ * @param {UUID} appointmentId
+ * @param {UUID} clinicId
  * @returns {Promise<object>}
  */
 export async function getTISSGuideFromAppointment(appointmentId, clinicId) {
@@ -187,16 +196,14 @@ export async function getTISSGuideFromAppointment(appointmentId, clinicId) {
         status,
         created_at,
         updated_at
-      `
+      `,
       )
       .eq('appointment_id', appointmentId)
       .eq('clinic_id', clinicId)
       .single();
 
     if (error) {
-      console.warn(
-        `Guide not found for appointment ${appointmentId}: ${error.message}`
-      );
+      console.warn(`Guide not found for appointment ${appointmentId}: ${error.message}`);
       return null;
     }
 
@@ -213,9 +220,9 @@ export async function getTISSGuideFromAppointment(appointmentId, clinicId) {
 
 /**
  * Cancel appointment → soft-delete AR via PHASE 1 trigger
- * 
- * @param {UUID} appointmentId 
- * @param {UUID} clinicId 
+ *
+ * @param {UUID} appointmentId
+ * @param {UUID} clinicId
  * @returns {Promise<{success: boolean, message: string}>}
  */
 export async function cancelAppointmentFinancials(appointmentId, clinicId) {
@@ -244,8 +251,12 @@ export async function cancelAppointmentFinancials(appointmentId, clinicId) {
       .from('ar_receivables')
       .select('status')
       .eq('appointment_id', appointmentId)
-      .eq('clinic_id', clinicId)
-      .single();
+      .eq('clinic_id', clinicId);
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
 
     return {
       success: true,
@@ -267,9 +278,9 @@ export async function cancelAppointmentFinancials(appointmentId, clinicId) {
 
 /**
  * Check if appointment has auto-created financial records
- * 
- * @param {UUID} appointmentId 
- * @param {UUID} clinicId 
+ *
+ * @param {UUID} appointmentId
+ * @param {UUID} clinicId
  * @returns {Promise<{appointment: object, ar: object|null, guide: object|null, status: string}>}
  */
 export async function validateFinancialIntegration(appointmentId, clinicId) {
@@ -281,8 +292,12 @@ export async function validateFinancialIntegration(appointmentId, clinicId) {
       .from('appointments')
       .select('id, status, total_value, payer_id')
       .eq('id', appointmentId)
-      .eq('clinic_id', clinicId)
-      .single();
+      .eq('clinic_id', clinicId);
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
 
     // Get AR
     const { data: ar } = await supabase
@@ -335,8 +350,8 @@ export async function validateFinancialIntegration(appointmentId, clinicId) {
 
 /**
  * Get appointments within date range with their financial integration status
- * 
- * @param {UUID} clinicId 
+ *
+ * @param {UUID} clinicId
  * @param {string} startDate (ISO format)
  * @param {string} endDate (ISO format)
  * @returns {Promise<Array>}
@@ -360,7 +375,7 @@ export async function listAppointmentsWithFinancialStatus(clinicId, startDate, e
         appointment_time,
         ar_receivables(id, status, valor),
         billing_guides(id, status, guide_number)
-      `
+      `,
       )
       .eq('clinic_id', clinicId)
       .gte('appointment_time', startDate)
@@ -389,8 +404,8 @@ export async function listAppointmentsWithFinancialStatus(clinicId, startDate, e
 
 /**
  * Determine financial integration status from appointment + related records
- * 
- * @param {object} appointment 
+ *
+ * @param {object} appointment
  * @returns {string}
  */
 function deriveFinancialStatus(appointment) {
@@ -423,9 +438,9 @@ function deriveFinancialStatus(appointment) {
 /**
  * Check multiple appointments for financial status
  * Useful for dashboard/reports
- * 
- * @param {UUID} clinicId 
- * @param {Array<UUID>} appointmentIds 
+ *
+ * @param {UUID} clinicId
+ * @param {Array<UUID>} appointmentIds
  * @returns {Promise<Array>}
  */
 export async function bulkValidateFinancialIntegration(clinicId, appointmentIds) {
@@ -442,7 +457,7 @@ export async function bulkValidateFinancialIntegration(clinicId, appointmentIds)
         total_value,
         ar_receivables(id, status),
         billing_guides(id, status)
-      `
+      `,
       )
       .eq('clinic_id', clinicId)
       .in('id', appointmentIds);

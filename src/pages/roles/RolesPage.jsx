@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react";
-import { supabase } from "@/lib/customSupabaseClient";
-import RolesTable from "@/components/roles/RolesTable";
-import EditRoleModal from "@/components/roles/EditRoleModal";
-import { Button } from "@/components/ui/button";
+import React, { useEffect, useState } from 'react';
+import { supabase } from '@/lib/customSupabaseClient';
+import RolesTable from '@/components/roles/RolesTable';
+import EditRoleModal from '@/components/roles/EditRoleModal';
+import { Button } from '@/components/ui/button';
 
 export default function RolesPage() {
   const [roles, setRoles] = useState([]);
@@ -10,10 +10,7 @@ export default function RolesPage() {
   const [loading, setLoading] = useState(true);
 
   async function loadRoles() {
-    const { data } = await supabase
-      .from("roles")
-      .select("*")
-      .order("role_name");
+    const { data } = await supabase.from('roles').select('*').order('role_name');
 
     setRoles(data || []);
     setLoading(false);
@@ -24,7 +21,7 @@ export default function RolesPage() {
   }, []);
 
   function openCreate() {
-    setEditingRole({ isNew: true, role_name: "", description: "" });
+    setEditingRole({ isNew: true, role_name: '', description: '' });
   }
 
   return (
@@ -35,11 +32,7 @@ export default function RolesPage() {
         <Button onClick={openCreate}>+ Criar Papel</Button>
       </div>
 
-      {loading ? (
-        <p>Carregando...</p>
-      ) : (
-        <RolesTable roles={roles} onEdit={setEditingRole} />
-      )}
+      {loading ? <p>Carregando...</p> : <RolesTable roles={roles} onEdit={setEditingRole} />}
 
       {editingRole && (
         <EditRoleModal

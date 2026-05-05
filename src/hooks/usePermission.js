@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/customSupabaseClient";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
-import { useClinic } from "@/contexts/useClinicContext";
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/customSupabaseClient';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useClinic } from '@/contexts/useClinicContext';
 
 export function usePermission(submoduleId) {
   const { session } = useAuth();
@@ -17,21 +17,23 @@ export function usePermission(submoduleId) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!userId || !clinic?.id || !submoduleId) return;
+    if (!userId || !clinic?.id || !submoduleId) {
+      return;
+    }
 
     async function load() {
       setLoading(true);
 
       const { data, error } = await supabase
-        .from("user_permissions")
-        .select("can_view, can_edit, can_delete")
-        .eq("user_id", userId)
-        .eq("clinic_id", clinic.id)
-        .eq("submodule_id", submoduleId)
-        .single();
+        .from('user_permissions')
+        .select('can_view, can_edit, can_delete')
+        .eq('user_id', userId)
+        .eq('clinic_id', clinic.id)
+        .eq('submodule_id', submoduleId)
+        .maybeSingle();
 
-      if (error && error.code !== "PGRST116") {
-        console.error("❌ usePermission load error:", error);
+      if (error && error.code !== 'PGRST116') {
+        console.error('❌ usePermission load error:', error);
       }
 
       setPerm({

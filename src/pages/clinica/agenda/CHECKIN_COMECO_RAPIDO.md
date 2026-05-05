@@ -3,12 +3,15 @@
 ## Em 3 passos simples:
 
 ### Passo 1️⃣: Copie os Componentes (30 segundos)
+
 Crie a pasta `src/pages/clinica/agenda/views/components/` e copie:
+
 - `CheckinChecklist.jsx`
 - `CheckinFinanceiro.jsx`
 - `CheckinAcoes.jsx`
 
 E copie também:
+
 - `CheckinRecepacao.jsx` para `src/pages/clinica/agenda/views/`
 
 ### Passo 2️⃣: Registre a Rota (1 minuto)
@@ -42,7 +45,7 @@ import CheckinRecepacao from "@/pages/clinica/agenda/views/CheckinRecepacao";
 ✅ **Checklist inteligente (dinâmico por tipo de convênio)**  
 ✅ **Bloqueia liberação sem dados completos**  
 ✅ **Registra WHO liberou, WHEN liberou**  
-✅ **Sem glosa, sem conflito, sem erro operacional**  
+✅ **Sem glosa, sem conflito, sem erro operacional**
 
 ---
 
@@ -82,26 +85,28 @@ R: Profissional não vê o paciente (fica invisível para ele)
 
 ## 📁 Arquivos Importantes
 
-| Arquivo | O que é |
-|---------|---------|
-| `CheckinRecepacao.jsx` | Tela principal |
-| `CheckinChecklist.jsx` | Aba do checklist |
-| `CheckinFinanceiro.jsx` | Aba de convênio/pagamento |
-| `CheckinAcoes.jsx` | Aba de botões (liberar, marcar falta) |
-| `CHECKIN_RECEPACAO_GUIA.md` | Guia técnico completo |
-| `CHECKIN_TESTE_RAPIDO.md` | Como testar |
+| Arquivo                     | O que é                               |
+| --------------------------- | ------------------------------------- |
+| `CheckinRecepacao.jsx`      | Tela principal                        |
+| `CheckinChecklist.jsx`      | Aba do checklist                      |
+| `CheckinFinanceiro.jsx`     | Aba de convênio/pagamento             |
+| `CheckinAcoes.jsx`          | Aba de botões (liberar, marcar falta) |
+| `CHECKIN_RECEPACAO_GUIA.md` | Guia técnico completo                 |
+| `CHECKIN_TESTE_RAPIDO.md`   | Como testar                           |
 
 ---
 
 ## ⚡ O Que Muda
 
 **Antes:**
+
 - Recepção marca chegada em algum lugar
 - Não há validação clara
 - Profissional vê todos os pacientes (até incompletos)
 - Resulta em: glosa, conflito, erro
 
 **Depois:**
+
 - Recepção faz check-in estruturado com checklist
 - Validações claras (dados, convênio, pagamento)
 - Profissional vê APENAS liberados
@@ -112,20 +117,25 @@ R: Profissional não vê o paciente (fica invisível para ele)
 ## 🎓 Conceitos
 
 ### Checklist Inteligente
+
 Itens mudam conforme tipo de paciente:
+
 - **Particular:** Forma de pagamento + Pagamento
 - **Convênio:** Convênio OK + Carteira + Autorização + Guia
 
 Sem tudo = não libera
 
 ### Bloqueios Automáticos
+
 - Sem dados cadastrais → 🔴 Bloqueado
 - Sem guia de convênio → 🔴 Bloqueado
 - Sem forma de pagamento → 🔴 Bloqueado
 - Tudo OK → ✅ Pode liberar
 
 ### Rastreamento
+
 Registra automaticamente:
+
 - **Quem** liberou (user_id)
 - **Quando** liberou (data/hora)
 - **O quê** (paciente X foi liberado para Y)
@@ -162,24 +172,24 @@ Se PARTICULAR:
 RECEPÇÃO                          PROFISSIONAL
 ═════════════════════════════════════════════════════
 
-Acessa /checkin                   
-    │                             
-    ├─ Seleciona paciente         
-    │                             
+Acessa /checkin
+    │
+    ├─ Seleciona paciente
+    │
     ├─ Confere:
-    │  • Dados                    
-    │  • Convênio/Pagto           
-    │                             
-    ├─ Clica LIBERAR              
-    │                             
-    ├─ Status muda para:          
-    │  LIBERADO_PARA_ATENDIMENTO  
+    │  • Dados
+    │  • Convênio/Pagto
+    │
+    ├─ Clica LIBERAR
+    │
+    ├─ Status muda para:
+    │  LIBERADO_PARA_ATENDIMENTO
     │                                   ↓
     │                             Vê paciente na 📅 Agenda
-    │                             
+    │
     │                             Inicia atendimento
     │                             (marca EM_ATENDIMENTO)
-    │                             
+    │
     │                             Finaliza
     │                             (marca FINALIZADO)
 ```
@@ -193,7 +203,7 @@ Acessa /checkin
 📱 **Responsivo:** Funciona em desktop e tablet  
 ⚡ **Rápido:** Polling a cada 30s, dados sempre atualizados  
 📝 **Rastreado:** WHO + WHEN + WHAT registrado  
-🎨 **Bonito:** Cores visuais claras, ícones, mensagens  
+🎨 **Bonito:** Cores visuais claras, ícones, mensagens
 
 ---
 
@@ -231,6 +241,7 @@ Tudo já existe no projeto! Nenhuma dependência nova.
 Agora você tem a **Tela de Check-in da Recepção** completa e funcionando.
 
 **Próximos passos:**
+
 1. Integre (3 passos acima)
 2. Teste (5 minutos em CHECKIN_TESTE_RAPIDO.md)
 3. Implante (seu ciclo normal)

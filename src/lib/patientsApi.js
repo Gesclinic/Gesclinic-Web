@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/customSupabaseClient";
+import { supabase } from '@/lib/customSupabaseClient';
 
 /**
  * ======================================================
@@ -6,20 +6,21 @@ import { supabase } from "@/lib/customSupabaseClient";
  * ======================================================
  */
 export async function listPatients(clinicId, filters = {}) {
-  console.log("📌 listPatients():", { clinicId, filters });
+  console.log('📌 listPatients():', { clinicId, filters });
 
-  if (!clinicId) return [];
+  if (!clinicId) {
+    return [];
+  }
 
-  const uuidRegex =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
   if (!uuidRegex.test(clinicId)) {
-    console.error("❌ ClinicId inválido:", clinicId);
+    console.error('❌ ClinicId inválido:', clinicId);
     return [];
   }
 
   let query = supabase
-    .from("patients")
+    .from('patients')
     .select(
       `
       id,
@@ -39,10 +40,10 @@ export async function listPatients(clinicId, filters = {}) {
       state,
       zip_code,
       photo_url
-    `
+    `,
     )
-    .eq("clinic_id", clinicId)
-    .order("name", { ascending: true })
+    .eq('clinic_id', clinicId)
+    .order('name', { ascending: true })
     .limit(40);
 
   /**
@@ -56,14 +57,14 @@ export async function listPatients(clinicId, filters = {}) {
   /**
    * 🟣 Filtro por gênero
    */
-  if (filters.gender && filters.gender !== "Todos") {
-    query = query.eq("gender", filters.gender);
+  if (filters.gender && filters.gender !== 'Todos') {
+    query = query.eq('gender', filters.gender);
   }
 
   const { data, error } = await query;
 
   if (error) {
-    console.error("❌ Erro ao buscar pacientes:", error);
+    console.error('❌ Erro ao buscar pacientes:', error);
     return [];
   }
 
@@ -77,18 +78,19 @@ export async function listPatients(clinicId, filters = {}) {
  * ======================================================
  */
 export async function getPatientById(patientId) {
-  if (!patientId) return null;
+  if (!patientId) {
+    return null;
+  }
 
-  const uuidRegex =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
   if (!uuidRegex.test(patientId)) {
-    console.error("❌ patientId inválido:", patientId);
-    throw new Error("ID inválido");
+    console.error('❌ patientId inválido:', patientId);
+    throw new Error('ID inválido');
   }
 
   const { data, error } = await supabase
-    .from("patients")
+    .from('patients')
     .select(
       `
       id,
@@ -118,13 +120,13 @@ export async function getPatientById(patientId) {
       clinic_id,
       record_number,
       photo_url
-    `
+    `,
     )
-    .eq("id", patientId)
+    .eq('id', patientId)
     .maybeSingle();
 
   if (error) {
-    console.error("❌ Erro ao buscar paciente:", error);
+    console.error('❌ Erro ao buscar paciente:', error);
     throw error;
   }
 
@@ -138,7 +140,7 @@ export async function getPatientById(patientId) {
  */
 export async function uploadPatientPhoto(clinicId, patientId, photoDataUrl) {
   if (!patientId || !photoDataUrl) {
-    throw new Error("Parâmetros inválidos para upload (patientId e photoDataUrl são obrigatórios)");
+    throw new Error('Parâmetros inválidos para upload (patientId e photoDataUrl são obrigatórios)');
   }
 
   try {
@@ -154,22 +156,22 @@ export async function uploadPatientPhoto(clinicId, patientId, photoDataUrl) {
 
     // Upload para Supabase Storage - SEM upsert para evitar novo "row"
     const { error: uploadError, data } = await supabase.storage
-      .from("patient-photos")
+      .from('patient-photos')
       .upload(fileName, blob, {
-        contentType: "image/jpeg",
+        contentType: 'image/jpeg',
         upsert: false, // Não create "new row" - atualizar se existir
       });
 
     // Se o arquivo já existe, tenta com update
-    if (uploadError && uploadError.message.includes("already exists")) {
+    if (uploadError && uploadError.message.includes('already exists')) {
       console.log('📸 Arquivo existe, tentando update...');
       const { error: updateError, data: updateData } = await supabase.storage
-        .from("patient-photos")
+        .from('patient-photos')
         .update(fileName, blob, {
-          contentType: "image/jpeg",
+          contentType: 'image/jpeg',
           upsert: true,
         });
-      
+
       if (updateError) {
         throw updateError;
       }
@@ -180,14 +182,12 @@ export async function uploadPatientPhoto(clinicId, patientId, photoDataUrl) {
     console.log('✅ Upload/Update concluído');
 
     // Obter URL pública
-    const { data: publicUrlData } = supabase.storage
-      .from("patient-photos")
-      .getPublicUrl(fileName);
+    const { data: publicUrlData } = supabase.storage.from('patient-photos').getPublicUrl(fileName);
 
     console.log('✅ URL Pública gerada:', publicUrlData.publicUrl);
     return publicUrlData.publicUrl;
   } catch (error) {
-    console.error("❌ Erro ao processar foto:", error);
+    console.error('❌ Erro ao processar foto:', error);
     throw error;
   }
 }
@@ -198,17 +198,19 @@ export async function uploadPatientPhoto(clinicId, patientId, photoDataUrl) {
  * ======================================================
  */
 export async function updatePatientPhoto(patientId, photoUrl) {
-  if (!patientId) return null;
+  if (!patientId) {
+    return null;
+  }
 
   const { data, error } = await supabase
-    .from("patients")
+    .from('patients')
     .update({ photo_url: photoUrl })
-    .eq("id", patientId)
+    .eq('id', patientId)
     .select()
     .maybeSingle();
 
   if (error) {
-    console.error("❌ Erro ao atualizar foto:", error);
+    console.error('❌ Erro ao atualizar foto:', error);
     throw error;
   }
 
@@ -221,14 +223,31 @@ export async function updatePatientPhoto(patientId, photoUrl) {
  * ======================================================
  */
 export async function createPatientWithPhoto(clinicId, patientData, photoDataUrl = null) {
-  if (!clinicId) throw new Error("Clínica não informada!");
+  if (!clinicId) {
+    throw new Error('Clínica não informada!');
+  }
 
   // Lista de colunas válidas na tabela 'patients'
   const allowedFields = [
-    'name', 'document_id', 'birthdate', 'gender', 'cell_phone', 'phone',
-    'email', 'city', 'address', 'state', 'zip_code', 'prontuario_numero',
-    'payer_id', 'plan_id', 'insurance_id_number', 'responsible_name',
-    'responsible_relationship', 'record_number', 'photo_url'
+    'name',
+    'document_id',
+    'birthdate',
+    'gender',
+    'cell_phone',
+    'phone',
+    'email',
+    'city',
+    'address',
+    'state',
+    'zip_code',
+    'prontuario_numero',
+    'payer_id',
+    'plan_id',
+    'insurance_id_number',
+    'responsible_name',
+    'responsible_relationship',
+    'record_number',
+    'photo_url',
   ];
 
   // Monta o payload apenas com campos permitidos
@@ -239,14 +258,10 @@ export async function createPatientWithPhoto(clinicId, patientData, photoDataUrl
     }
   }
 
-  const { data, error } = await supabase
-    .from("patients")
-    .insert(payload)
-    .select()
-    .maybeSingle();
+  const { data, error } = await supabase.from('patients').insert(payload).select().maybeSingle();
 
   if (error) {
-    console.error("❌ Erro ao criar paciente:", error);
+    console.error('❌ Erro ao criar paciente:', error);
     throw error;
   }
 
@@ -257,7 +272,7 @@ export async function createPatientWithPhoto(clinicId, patientData, photoDataUrl
       const updated = await updatePatientPhoto(data.id, photoUrl);
       return updated || data;
     } catch (photoError) {
-      console.warn("⚠️ Paciente criado, mas erro ao salvar foto:", photoError);
+      console.warn('⚠️ Paciente criado, mas erro ao salvar foto:', photoError);
       return data; // Retornar paciente mesmo se foto falhar
     }
   }
@@ -271,15 +286,31 @@ export async function createPatientWithPhoto(clinicId, patientData, photoDataUrl
  * ======================================================
  */
 export async function createPatient(clinicId, patientData) {
-  if (!clinicId) throw new Error("Clínica não informada!");
-
+  if (!clinicId) {
+    throw new Error('Clínica não informada!');
+  }
 
   // Lista de colunas válidas na tabela 'patients'
   const allowedFields = [
-    'name', 'document_id', 'birthdate', 'gender', 'cell_phone', 'phone',
-    'email', 'city', 'address', 'state', 'zip_code', 'prontuario_numero',
-    'payer_id', 'plan_id', 'insurance_id_number', 'responsible_name',
-    'responsible_relationship', 'record_number', 'photo_url'
+    'name',
+    'document_id',
+    'birthdate',
+    'gender',
+    'cell_phone',
+    'phone',
+    'email',
+    'city',
+    'address',
+    'state',
+    'zip_code',
+    'prontuario_numero',
+    'payer_id',
+    'plan_id',
+    'insurance_id_number',
+    'responsible_name',
+    'responsible_relationship',
+    'record_number',
+    'photo_url',
   ];
 
   // Monta o payload apenas com campos permitidos
@@ -290,14 +321,10 @@ export async function createPatient(clinicId, patientData) {
     }
   }
 
-  const { data, error } = await supabase
-    .from("patients")
-    .insert(payload)
-    .select()
-    .maybeSingle();
+  const { data, error } = await supabase.from('patients').insert(payload).select().maybeSingle();
 
   if (error) {
-    console.error("❌ Erro ao criar paciente:", error);
+    console.error('❌ Erro ao criar paciente:', error);
     throw error;
   }
 
@@ -310,7 +337,9 @@ export async function createPatient(clinicId, patientData) {
  * ======================================================
  */
 export async function updatePatient(patientId, patientData) {
-  if (!patientId) return null;
+  if (!patientId) {
+    return null;
+  }
 
   // Remover campo address se existir
   if ('address' in patientData) {
@@ -318,14 +347,14 @@ export async function updatePatient(patientId, patientData) {
   }
 
   const { data, error } = await supabase
-    .from("patients")
+    .from('patients')
     .update(patientData)
-    .eq("id", patientId)
+    .eq('id', patientId)
     .select()
     .maybeSingle();
 
-  if (error && error.code !== "PGRST116") {
-    console.error("❌ Erro ao atualizar paciente:", error);
+  if (error && error.code !== 'PGRST116') {
+    console.error('❌ Erro ao atualizar paciente:', error);
     throw error;
   }
 
@@ -338,15 +367,14 @@ export async function updatePatient(patientId, patientData) {
  * ======================================================
  */
 export async function deletePatient(patientId) {
-  if (!patientId) return false;
+  if (!patientId) {
+    return false;
+  }
 
-  const { error } = await supabase
-    .from("patients")
-    .delete()
-    .eq("id", patientId);
+  const { error } = await supabase.from('patients').delete().eq('id', patientId);
 
   if (error) {
-    console.error("❌ Erro ao deletar paciente:", error);
+    console.error('❌ Erro ao deletar paciente:', error);
     throw error;
   }
 
@@ -359,15 +387,19 @@ export async function deletePatient(patientId) {
  * ======================================================
  */
 export async function fetchPayersForSelect(clinicId) {
-  if (!clinicId) return [];
+  if (!clinicId) {
+    return [];
+  }
 
   const { data, error } = await supabase
-    .from("payers")
-    .select("id, name")
-    .eq("clinic_id", clinicId)
-    .order("name");
+    .from('payers')
+    .select('id, name')
+    .eq('clinic_id', clinicId)
+    .order('name');
 
-  if (error) return [];
+  if (error) {
+    return [];
+  }
   return data || [];
 }
 
@@ -377,15 +409,19 @@ export async function fetchPayersForSelect(clinicId) {
  * ======================================================
  */
 export async function fetchPlansForSelect(clinicId) {
-  if (!clinicId) return [];
+  if (!clinicId) {
+    return [];
+  }
 
   const { data, error } = await supabase
-    .from("plans")
-    .select("id, name, payer_id")
-    .eq("clinic_id", clinicId)
-    .order("name");
+    .from('plans')
+    .select('id, name, payer_id')
+    .eq('clinic_id', clinicId)
+    .order('name');
 
-  if (error) return [];
+  if (error) {
+    return [];
+  }
   return data || [];
 }
 
@@ -395,18 +431,20 @@ export async function fetchPlansForSelect(clinicId) {
  * ======================================================
  */
 export async function checkPatientExists({ clinicId, cpf }) {
-  if (!clinicId || !cpf) return false;
+  if (!clinicId || !cpf) {
+    return false;
+  }
 
   const { data, error } = await supabase
-    .from("patients")
-    .select("id")
-    .eq("clinic_id", clinicId)
-    .eq("cpf", cpf)
+    .from('patients')
+    .select('id')
+    .eq('clinic_id', clinicId)
+    .eq('cpf', cpf)
     .limit(1)
     .maybeSingle();
 
-  if (error && error.code !== "PGRST116") {
-    console.error("❌ Erro ao verificar duplicidade:", error);
+  if (error && error.code !== 'PGRST116') {
+    console.error('❌ Erro ao verificar duplicidade:', error);
     return false;
   }
 
@@ -421,43 +459,51 @@ export async function checkPatientExists({ clinicId, cpf }) {
  */
 export async function generateProntuarioForPatient(patientId, clinicCode) {
   if (!patientId || !clinicCode) {
-    throw new Error("patientId e clinicCode são obrigatórios");
+    throw new Error('patientId e clinicCode são obrigatórios');
   }
 
   try {
     // Busca o maior número de prontuário para esta clínica
     const { data: existingProntuarios, error: fetchError } = await supabase
-      .from("patients")
-      .select("prontuario_numero")
-      .like("prontuario_numero", `${clinicCode}-%`)
-      .order("prontuario_numero", { ascending: false })
+      .from('patients')
+      .select('prontuario_numero')
+      .like('prontuario_numero', `${clinicCode}-%`)
+      .order('prontuario_numero', { ascending: false })
       .limit(1);
 
-    if (fetchError) throw fetchError;
+    if (fetchError) {
+      throw fetchError;
+    }
 
     let nextNumber = 1000; // Padrão
     if (existingProntuarios && existingProntuarios.length > 0) {
       const lastProntuario = existingProntuarios[0].prontuario_numero;
-      const lastNumber = parseInt(lastProntuario.split("-")[1]);
+      const lastNumber = parseInt(lastProntuario.split('-')[1]);
       nextNumber = lastNumber + 1;
     }
 
-    const newProntuario = `${clinicCode}-${String(nextNumber).padStart(4, "0")}`;
+    const newProntuario = `${clinicCode}-${String(nextNumber).padStart(4, '0')}`;
 
     // Atualiza o paciente com o novo prontuário
     const { data, error: updateError } = await supabase
-      .from("patients")
+      .from('patients')
       .update({ prontuario_numero: newProntuario })
-      .eq("id", patientId)
-      .select()
-      .single();
+      .eq('id', patientId)
+      .select();
 
-    if (updateError) throw updateError;
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
 
-    console.log("✅ Prontuário gerado:", newProntuario);
+    if (updateError) {
+      throw updateError;
+    }
+
+    console.log('✅ Prontuário gerado:', newProntuario);
     return data;
   } catch (error) {
-    console.error("❌ Erro ao gerar prontuário:", error);
+    console.error('❌ Erro ao gerar prontuário:', error);
     throw error;
   }
 }

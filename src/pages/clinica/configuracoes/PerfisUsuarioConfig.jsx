@@ -1,26 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { useClinicContext } from '@/contexts/ClinicContext';
-import PageLayout from "@/components/ui/PageLayout";
-import { useBreadcrumbs } from "@/hooks/useBreadcrumbs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PROFILES_CONFIG, listProfiles, countUsersByProfile, listUsersByProfile } from '@/lib/profilesApi';
+import PageLayout from '@/components/ui/PageLayout';
+import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  PROFILES_CONFIG,
+  listProfiles,
+  countUsersByProfile,
+  listUsersByProfile,
+} from '@/lib/profilesApi';
 import EditProfileModal from '@/components/configuracoes/EditProfileModal';
-import { 
-  Users, 
-  Shield, 
-  Lock, 
-  CheckCircle2, 
-  Eye, 
+import {
+  Users,
+  Shield,
+  Lock,
+  CheckCircle2,
+  Eye,
   Settings,
   ChevronRight,
-  AlertCircle
+  AlertCircle,
 } from 'lucide-react';
 
 export default function PerfisUsuarioConfig() {
   const breadcrumbs = useBreadcrumbs([
-    { label: "Clínica", path: "/clinica" },
-    { label: "Configurações" },
-    { label: "Perfis de Usuário" }
+    { label: 'Clínica', path: '/clinica' },
+    { label: 'Configurações' },
+    { label: 'Perfis de Usuário' },
   ]);
 
   const { clinicId } = useClinicContext();
@@ -42,12 +47,14 @@ export default function PerfisUsuarioConfig() {
   }, [selectedProfile]);
 
   const loadProfiles = async () => {
-    if (!clinicId) return;
+    if (!clinicId) {
+      return;
+    }
     setLoading(true);
     try {
       const data = await listProfiles(clinicId);
       setProfiles(data.length > 0 ? data : []);
-      
+
       // Contar usuários por perfil
       const counts = {};
       for (const role of Object.keys(PROFILES_CONFIG)) {
@@ -62,7 +69,9 @@ export default function PerfisUsuarioConfig() {
   };
 
   const loadProfileUsers = async (roleId) => {
-    if (!clinicId) return;
+    if (!clinicId) {
+      return;
+    }
     try {
       const data = await listUsersByProfile(roleId, clinicId);
       setProfileUsers(data);
@@ -72,7 +81,7 @@ export default function PerfisUsuarioConfig() {
   };
 
   const ProfileCard = ({ profile, config }) => (
-    <Card 
+    <Card
       className={`cursor-pointer transition-all hover:shadow-lg ${
         selectedProfile?.id === profile.id ? 'ring-2 ring-blue-500' : ''
       }`}
@@ -92,12 +101,15 @@ export default function PerfisUsuarioConfig() {
           <Users className="w-4 h-4 text-gray-500" />
           <span className="font-medium">{userCounts[profile.id] || 0} usuário(s)</span>
         </div>
-        
+
         <div className="bg-gray-50 rounded p-3 space-y-2">
           <div className="font-semibold text-sm text-gray-700">Módulos Acessíveis:</div>
           <div className="flex flex-wrap gap-1">
             {config.modules.map((module) => (
-              <span key={module} className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+              <span
+                key={module}
+                className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded"
+              >
                 {module}
               </span>
             ))}
@@ -118,7 +130,9 @@ export default function PerfisUsuarioConfig() {
   );
 
   const PermissionCategory = ({ title, permissions, allPermissions }) => {
-    const categoryPermissions = allPermissions.filter(p => p.startsWith(title.toLowerCase().replace(/\s/g, '_') + '.'));
+    const categoryPermissions = allPermissions.filter((p) =>
+      p.startsWith(title.toLowerCase().replace(/\s/g, '_') + '.'),
+    );
     return (
       <div className="space-y-2">
         <h4 className="font-semibold text-sm text-gray-700">{title}</h4>
@@ -126,7 +140,9 @@ export default function PerfisUsuarioConfig() {
           {categoryPermissions.map((perm) => (
             <div key={perm} className="flex items-center gap-2 text-sm">
               <CheckCircle2 className="w-4 h-4 text-green-600" />
-              <span className="text-gray-600">{perm.split('.')[1]?.replace(/_/g, ' ') || perm}</span>
+              <span className="text-gray-600">
+                {perm.split('.')[1]?.replace(/_/g, ' ') || perm}
+              </span>
             </div>
           ))}
         </div>
@@ -145,7 +161,11 @@ export default function PerfisUsuarioConfig() {
         <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
         <div className="text-sm text-blue-900">
           <p className="font-semibold mb-1">Sobre Perfis e Permissões</p>
-          <p>Os perfis determinam quais módulos e funcionalidades cada usuário pode acessar no sistema. Cada perfil possui um conjunto de permissões específicas que controlam as ações disponíveis.</p>
+          <p>
+            Os perfis determinam quais módulos e funcionalidades cada usuário pode acessar no
+            sistema. Cada perfil possui um conjunto de permissões específicas que controlam as ações
+            disponíveis.
+          </p>
         </div>
       </div>
 
@@ -162,11 +182,7 @@ export default function PerfisUsuarioConfig() {
               </Card>
             ) : (
               Object.entries(PROFILES_CONFIG).map(([key, config]) => (
-                <ProfileCard 
-                  key={key} 
-                  profile={{ id: key }} 
-                  config={config}
-                />
+                <ProfileCard key={key} profile={{ id: key }} config={config} />
               ))
             )}
           </div>
@@ -203,11 +219,15 @@ export default function PerfisUsuarioConfig() {
                 {/* Usuários do Perfil */}
                 {profileUsers.length > 0 && (
                   <div>
-                    <p className="text-xs font-semibold text-gray-700 mb-2">Usuários ({profileUsers.length})</p>
+                    <p className="text-xs font-semibold text-gray-700 mb-2">
+                      Usuários ({profileUsers.length})
+                    </p>
                     <div className="space-y-1 max-h-40 overflow-y-auto">
                       {profileUsers.map((user) => (
                         <div key={user.id} className="text-xs p-1 bg-gray-50 rounded">
-                          <p className="font-medium text-gray-800">{user.full_name || user.email}</p>
+                          <p className="font-medium text-gray-800">
+                            {user.full_name || user.email}
+                          </p>
                           <p className="text-gray-500">{user.email}</p>
                         </div>
                       ))}
@@ -220,7 +240,10 @@ export default function PerfisUsuarioConfig() {
                   <p className="text-xs font-semibold text-gray-700 mb-2">Módulos Acessíveis</p>
                   <div className="flex flex-wrap gap-1">
                     {PROFILES_CONFIG[selectedProfile.id]?.modules.map((module) => (
-                      <span key={module} className="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
+                      <span
+                        key={module}
+                        className="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded"
+                      >
                         {module}
                       </span>
                     ))}
@@ -265,53 +288,97 @@ export default function PerfisUsuarioConfig() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <PermissionCategory 
-                title="Dashboard" 
+              <PermissionCategory
+                title="Dashboard"
                 permissions={['visualizar']}
                 allPermissions={PROFILES_CONFIG[selectedProfile.id]?.permissions || []}
               />
-              <PermissionCategory 
-                title="Agenda" 
-                permissions={['visualizar', 'criar', 'editar', 'deletar', 'confirmacao', 'lista_espera', 'relatorios', 'notificacoes']}
+              <PermissionCategory
+                title="Agenda"
+                permissions={[
+                  'visualizar',
+                  'criar',
+                  'editar',
+                  'deletar',
+                  'confirmacao',
+                  'lista_espera',
+                  'relatorios',
+                  'notificacoes',
+                ]}
                 allPermissions={PROFILES_CONFIG[selectedProfile.id]?.permissions || []}
               />
-              <PermissionCategory 
-                title="Pacientes" 
-                permissions={['visualizar', 'criar', 'editar', 'deletar', 'documentos', 'historico']}
+              <PermissionCategory
+                title="Pacientes"
+                permissions={[
+                  'visualizar',
+                  'criar',
+                  'editar',
+                  'deletar',
+                  'documentos',
+                  'historico',
+                ]}
                 allPermissions={PROFILES_CONFIG[selectedProfile.id]?.permissions || []}
               />
-              <PermissionCategory 
-                title="Profissionais" 
+              <PermissionCategory
+                title="Profissionais"
                 permissions={['visualizar', 'criar', 'editar', 'deletar']}
                 allPermissions={PROFILES_CONFIG[selectedProfile.id]?.permissions || []}
               />
-              <PermissionCategory 
-                title="Financeiro" 
-                permissions={['dashboard', 'contas_pagar', 'contas_receber', 'fluxo_caixa', 'plano_contas', 'centro_custos', 'conciliacao', 'automacao', 'repasse_medico']}
+              <PermissionCategory
+                title="Financeiro"
+                permissions={[
+                  'dashboard',
+                  'contas_pagar',
+                  'contas_receber',
+                  'fluxo_caixa',
+                  'plano_contas',
+                  'centro_custos',
+                  'conciliacao',
+                  'automacao',
+                  'repasse_medico',
+                ]}
                 allPermissions={PROFILES_CONFIG[selectedProfile.id]?.permissions || []}
               />
-              <PermissionCategory 
-                title="Estoque" 
-                permissions={['dashboard', 'produtos', 'categorias', 'fornecedores', 'movimentacoes', 'transferencias', 'requisicoes', 'inventario', 'relatorios']}
+              <PermissionCategory
+                title="Estoque"
+                permissions={[
+                  'dashboard',
+                  'produtos',
+                  'categorias',
+                  'fornecedores',
+                  'movimentacoes',
+                  'transferencias',
+                  'requisicoes',
+                  'inventario',
+                  'relatorios',
+                ]}
                 allPermissions={PROFILES_CONFIG[selectedProfile.id]?.permissions || []}
               />
-              <PermissionCategory 
-                title="Faturamento" 
+              <PermissionCategory
+                title="Faturamento"
                 permissions={['visualizar', 'criar', 'editar']}
                 allPermissions={PROFILES_CONFIG[selectedProfile.id]?.permissions || []}
               />
-              <PermissionCategory 
-                title="Atendimento" 
+              <PermissionCategory
+                title="Atendimento"
                 permissions={['visualizar', 'criar', 'editar']}
                 allPermissions={PROFILES_CONFIG[selectedProfile.id]?.permissions || []}
               />
-              <PermissionCategory 
-                title="Configurações" 
-                permissions={['gerais', 'perfis', 'permissoes', 'agenda', 'conta', 'faturamento', 'estoque']}
+              <PermissionCategory
+                title="Configurações"
+                permissions={[
+                  'gerais',
+                  'perfis',
+                  'permissoes',
+                  'agenda',
+                  'conta',
+                  'faturamento',
+                  'estoque',
+                ]}
                 allPermissions={PROFILES_CONFIG[selectedProfile.id]?.permissions || []}
               />
-              <PermissionCategory 
-                title="Administração" 
+              <PermissionCategory
+                title="Administração"
                 permissions={['usuarios', 'clinicas']}
                 allPermissions={PROFILES_CONFIG[selectedProfile.id]?.permissions || []}
               />
@@ -332,7 +399,14 @@ export default function PerfisUsuarioConfig() {
                 <tr className="border-b">
                   <th className="text-left py-2 px-3 font-semibold text-gray-700">Módulo</th>
                   {/* Ordem fixa dos perfis para garantir consistência */}
-                  {['admin', 'financeiro', 'recepcao', 'profissional', 'estoque', 'faturamento'].map((key) => {
+                  {[
+                    'admin',
+                    'financeiro',
+                    'recepcao',
+                    'profissional',
+                    'estoque',
+                    'faturamento',
+                  ].map((key) => {
                     const config = PROFILES_CONFIG[key];
                     return config ? (
                       <th key={key} className="text-center py-2 px-3 font-semibold text-gray-700">
@@ -353,12 +427,19 @@ export default function PerfisUsuarioConfig() {
                   { module: 'Faturamento', key: 'faturamento' },
                   { module: 'Configurações', key: 'configuracoes' },
                   { module: 'Administração', key: 'administracao' },
-                  { module: 'Atendimento', key: 'atendimento' }
+                  { module: 'Atendimento', key: 'atendimento' },
                 ].map((item) => (
                   <tr key={item.key} className="border-b hover:bg-gray-50">
                     <td className="py-2 px-3 font-medium text-gray-700">{item.module}</td>
                     {/* Ordem fixa dos perfis */}
-                    {['admin', 'financeiro', 'recepcao', 'profissional', 'estoque', 'faturamento'].map((key) => {
+                    {[
+                      'admin',
+                      'financeiro',
+                      'recepcao',
+                      'profissional',
+                      'estoque',
+                      'faturamento',
+                    ].map((key) => {
                       const config = PROFILES_CONFIG[key];
                       return config ? (
                         <td key={key} className="text-center py-2 px-3">
@@ -391,4 +472,3 @@ export default function PerfisUsuarioConfig() {
     </PageLayout>
   );
 }
-

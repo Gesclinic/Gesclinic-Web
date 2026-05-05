@@ -1,13 +1,6 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  DollarSign,
-  TrendingUp,
-  TrendingDown,
-  Percent,
-  Users,
-  Building2
-} from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Percent, Users, Building2 } from 'lucide-react';
 
 interface CashCardsProps {
   totalReceita: number;
@@ -22,7 +15,7 @@ const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
-    minimumFractionDigits: 2
+    minimumFractionDigits: 2,
   }).format(value);
 };
 
@@ -38,13 +31,9 @@ const CardItem: React.FC<{
     <CardContent className="p-6">
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">
-            {title}
-          </p>
+          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">{title}</p>
           <h3 className="text-2xl font-bold text-slate-900 mb-1">{value}</h3>
-          {description && (
-            <p className="text-xs text-slate-400 mt-2">{description}</p>
-          )}
+          {description && <p className="text-xs text-slate-400 mt-2">{description}</p>}
         </div>
         <div className="ml-4 text-slate-200">{icon}</div>
       </div>
@@ -58,7 +47,7 @@ export const CashCards: React.FC<CashCardsProps> = ({
   resultado,
   receitaParticular,
   receitaConvenio,
-  repasseTotal
+  repasseTotal,
 }) => {
   const margin = totalReceita > 0 ? ((resultado / totalReceita) * 100).toFixed(1) : '0';
 

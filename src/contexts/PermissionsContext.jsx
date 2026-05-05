@@ -1,5 +1,5 @@
-import { createContext, useContext, useEffect, useState } from "react";
-import { useAuth } from "./SupabaseAuthContext";
+import { createContext, useContext, useEffect, useState } from 'react';
+import { useAuth } from './SupabaseAuthContext';
 
 const PermissionsContext = createContext(null);
 
@@ -14,21 +14,23 @@ export function PermissionsProvider({ children }) {
     }
 
     async function load() {
-      if (user.role === "admin") {
+      if (user.role === 'admin') {
         // Admin tem todas as permissões
-        setPermissions(["*"]);
+        setPermissions(['*']);
         return;
       }
 
       // Aqui você pode futuramente puxar permissões reais via Supabase
-      setPermissions(["clinic.read", "agenda.read"]);
+      setPermissions(['clinic.read', 'agenda.read']);
     }
 
     load();
   }, [user]);
 
   function hasPermission(key) {
-    if (permissions.includes("*")) return true;
+    if (permissions.includes('*')) {
+      return true;
+    }
     return permissions.includes(key);
   }
 

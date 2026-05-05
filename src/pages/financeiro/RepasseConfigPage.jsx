@@ -34,7 +34,9 @@ const RepasseConfigPage = () => {
   }, [clinicId]);
 
   const carregarDados = async () => {
-    if (!clinicId) return;
+    if (!clinicId) {
+      return;
+    }
 
     setLoading(true);
     setErro(null);
@@ -86,7 +88,7 @@ const RepasseConfigPage = () => {
       // Validar percentuais
       const pProf = parseFloat(formData.percentual_profissional || 70);
       const pClinica = parseFloat(formData.percentual_clinica || 30);
-      
+
       if (pProf + pClinica !== 100) {
         setErro('A soma dos percentuais deve ser 100%');
         setLoading(false);
@@ -156,9 +158,7 @@ const RepasseConfigPage = () => {
                   key={prof.id}
                   className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition"
                 >
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    {prof.name}
-                  </h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">{prof.name}</h3>
 
                   {config ? (
                     <div className="space-y-3">
@@ -217,9 +217,7 @@ const RepasseConfigPage = () => {
           >
             ← Voltar
           </button>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Editar Configuração de Repasse
-          </h1>
+          <h1 className="text-3xl font-bold text-gray-900">Editar Configuração de Repasse</h1>
         </div>
 
         {/* Alertas */}
@@ -233,9 +231,7 @@ const RepasseConfigPage = () => {
         <form onSubmit={handleSalvarConfig} className="bg-white rounded-lg shadow p-6 space-y-6">
           {/* Profissional */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Profissional
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Profissional</label>
             <div className="px-4 py-2 bg-gray-100 rounded border border-gray-300">
               {profissionais.find((p) => p.id === formData.professional_id)?.name || 'Selecionar'}
             </div>
@@ -284,9 +280,7 @@ const RepasseConfigPage = () => {
               <input
                 type="checkbox"
                 checked={formData.aplicar_imposto}
-                onChange={(e) =>
-                  setFormData({ ...formData, aplicar_imposto: e.target.checked })
-                }
+                onChange={(e) => setFormData({ ...formData, aplicar_imposto: e.target.checked })}
                 className="mr-3"
               />
               <span className="text-sm text-gray-700">
@@ -297,9 +291,7 @@ const RepasseConfigPage = () => {
               <input
                 type="checkbox"
                 checked={formData.aplicar_glosa}
-                onChange={(e) =>
-                  setFormData({ ...formData, aplicar_glosa: e.target.checked })
-                }
+                onChange={(e) => setFormData({ ...formData, aplicar_glosa: e.target.checked })}
                 className="mr-3"
               />
               <span className="text-sm text-gray-700">
@@ -310,14 +302,10 @@ const RepasseConfigPage = () => {
               <input
                 type="checkbox"
                 checked={formData.ativo}
-                onChange={(e) =>
-                  setFormData({ ...formData, ativo: e.target.checked })
-                }
+                onChange={(e) => setFormData({ ...formData, ativo: e.target.checked })}
                 className="mr-3"
               />
-              <span className="text-sm text-gray-700">
-                Configuração ativa
-              </span>
+              <span className="text-sm text-gray-700">Configuração ativa</span>
             </label>
           </div>
 

@@ -1,12 +1,12 @@
-import React, { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAgendaConfig } from "@/hooks/useAgendaConfig";
-import { format, addDays, startOfWeek, isSameDay } from "date-fns";
-import { utcToZonedTime } from "date-fns-tz";
-import { ptBR } from "date-fns/locale";
-import { Button } from "@/components/ui/button";
-import { Edit, Trash2 } from "lucide-react";
-import StatusSelector from "./StatusSelector";
+import React, { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAgendaConfig } from '@/hooks/useAgendaConfig';
+import { format, addDays, startOfWeek, isSameDay } from 'date-fns';
+import { utcToZonedTime } from 'date-fns-tz';
+import { ptBR } from 'date-fns/locale';
+import { Button } from '@/components/ui/button';
+import { Edit, Trash2 } from 'lucide-react';
+import StatusSelector from './StatusSelector';
 
 export default function AgendaWeekView({
   appointments = [],
@@ -29,51 +29,45 @@ export default function AgendaWeekView({
   const timeSlots = useMemo(() => {
     const slots = [];
 
-    const [startHour, startMinute] =
-      (agendaConfig.horario_abertura || "08:00").split(":").map(Number);
-    const [endHour, endMinute] =
-      (agendaConfig.horario_fechamento || "18:00").split(":").map(Number);
+    const [startHour, startMinute] = (agendaConfig.horario_abertura || '08:00')
+      .split(':')
+      .map(Number);
+    const [endHour, endMinute] = (agendaConfig.horario_fechamento || '18:00')
+      .split(':')
+      .map(Number);
 
-    const slotSize =
-      agendaConfig.slot_agenda ||
-      agendaConfig.tempo_medio_atendimento ||
-      15;
+    const slotSize = agendaConfig.slot_agenda || agendaConfig.tempo_medio_atendimento || 15;
 
     // Almoço
     let almocoStart = null,
       almocoEnd = null;
 
-    if (
-      agendaConfig.horario_almoco_inicio &&
-      agendaConfig.horario_almoco_fim
-    ) {
-      const [h1, m1] = agendaConfig.horario_almoco_inicio.split(":").map(Number);
-      const [h2, m2] = agendaConfig.horario_almoco_fim.split(":").map(Number);
+    if (agendaConfig.horario_almoco_inicio && agendaConfig.horario_almoco_fim) {
+      const [h1, m1] = agendaConfig.horario_almoco_inicio.split(':').map(Number);
+      const [h2, m2] = agendaConfig.horario_almoco_fim.split(':').map(Number);
 
       almocoStart = h1 * 60 + m1;
       almocoEnd = h2 * 60 + m2;
     }
 
-    let current = new Date(selectedDate);
+    const current = new Date(selectedDate);
     current.setHours(startHour, startMinute, 0, 0);
 
     const end = new Date(selectedDate);
     end.setHours(endHour, endMinute, 0, 0);
 
     while (current <= end) {
-      const t = current.getHours().toString().padStart(2, "0") +
-        ":" +
-        current.getMinutes().toString().padStart(2, "0");
+      const t =
+        current.getHours().toString().padStart(2, '0') +
+        ':' +
+        current.getMinutes().toString().padStart(2, '0');
 
       const min = current.getHours() * 60 + current.getMinutes();
 
       slots.push({
         time: t,
         isAlmoco:
-          almocoStart !== null &&
-          almocoEnd !== null &&
-          min >= almocoStart &&
-          min < almocoEnd,
+          almocoStart !== null && almocoEnd !== null && min >= almocoStart && min < almocoEnd,
       });
 
       current.setMinutes(current.getMinutes() + slotSize);
@@ -87,14 +81,16 @@ export default function AgendaWeekView({
     const map = {};
 
     weekDays.forEach((day) => {
-      map[format(day, "yyyy-MM-dd")] = [];
+      map[format(day, 'yyyy-MM-dd')] = [];
     });
 
     appointments.forEach((apt) => {
       try {
-        const zoned = utcToZonedTime(apt.start_time, "America/Sao_Paulo");
-        const key = format(zoned, "yyyy-MM-dd");
-        if (!map[key]) return;
+        const zoned = utcToZonedTime(apt.start_time, 'America/Sao_Paulo');
+        const key = format(zoned, 'yyyy-MM-dd');
+        if (!map[key]) {
+          return;
+        }
         map[key].push(apt);
       } catch {}
     });
@@ -104,7 +100,7 @@ export default function AgendaWeekView({
 
   // Novo agendamento via clique
   const handleTimeSlotClick = (time, day) => {
-    const [h, m] = time.split(":").map(Number);
+    const [h, m] = time.split(':').map(Number);
 
     const start = new Date(day);
     start.setHours(h, m, 0, 0);
@@ -117,7 +113,6 @@ export default function AgendaWeekView({
 
   return (
     <div className="h-full bg-white flex flex-col">
-
       {/* Cabeçalho */}
       <div className="sticky top-0 z-20 bg-white border-b-2 border-gray-300 shadow-sm">
         <div className="grid grid-cols-8">
@@ -126,12 +121,9 @@ export default function AgendaWeekView({
           </div>
 
           {weekDays.map((day) => (
-            <div
-              key={day}
-              className="p-3 border-r border-gray-300 bg-gray-100 text-center"
-            >
-              <div className="text-sm">{format(day, "EEE", { locale: ptBR })}</div>
-              <div className="text-lg font-semibold">{format(day, "dd/MM")}</div>
+            <div key={day} className="p-3 border-r border-gray-300 bg-gray-100 text-center">
+              <div className="text-sm">{format(day, 'EEE', { locale: ptBR })}</div>
+              <div className="text-lg font-semibold">{format(day, 'dd/MM')}</div>
             </div>
           ))}
         </div>
@@ -143,37 +135,28 @@ export default function AgendaWeekView({
           <div
             key={slot.time}
             className={`grid grid-cols-8 border-b border-gray-200 min-h-[80px] ${
-              slot.isAlmoco ? "bg-yellow-50" : ""
+              slot.isAlmoco ? 'bg-yellow-50' : ''
             }`}
           >
             {/* Hora */}
             <div className="p-3 border-r border-gray-300 bg-gray-50 text-center font-mono text-sm flex items-center justify-center">
               {slot.time}
-              {slot.isAlmoco && (
-                <span className="ml-2 text-yellow-700 font-semibold">
-                  Almoço
-                </span>
-              )}
+              {slot.isAlmoco && <span className="ml-2 text-yellow-700 font-semibold">Almoço</span>}
             </div>
 
             {/* Colunas dos dias */}
             {weekDays.map((day) => {
-              const key = format(day, "yyyy-MM-dd");
+              const key = format(day, 'yyyy-MM-dd');
               const dayAppointments = appointmentsByDay[key] || [];
 
               // Encontrar agendamento no horário
-              const [h, m] = slot.time.split(":").map(Number);
+              const [h, m] = slot.time.split(':').map(Number);
 
               const appointment = dayAppointments.find((apt) => {
                 try {
-                  const zoned = utcToZonedTime(
-                    apt.start_time,
-                    "America/Sao_Paulo"
-                  );
+                  const zoned = utcToZonedTime(apt.start_time, 'America/Sao_Paulo');
                   return (
-                    zoned.getHours() === h &&
-                    zoned.getMinutes() === m &&
-                    isSameDay(zoned, day)
+                    zoned.getHours() === h && zoned.getMinutes() === m && isSameDay(zoned, day)
                   );
                 } catch {
                   return false;
@@ -193,18 +176,16 @@ export default function AgendaWeekView({
                     }
                   }}
                   className={`p-2 border-r-2 flex items-center relative cursor-pointer transition-all duration-200 rounded-sm ${
-                    slot.isAlmoco 
-                      ? "bg-yellow-50 border-yellow-200" 
+                    slot.isAlmoco
+                      ? 'bg-yellow-50 border-yellow-200'
                       : appointment
-                      ? "border-gray-200 hover:bg-gray-50"
-                      : "bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:from-green-100 hover:to-green-200"
+                        ? 'border-gray-200 hover:bg-gray-50'
+                        : 'bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:from-green-100 hover:to-green-200'
                   }`}
                 >
                   {/* Almoço */}
                   {slot.isAlmoco ? (
-                    <div className="text-yellow-700 text-xs italic">
-                      Horário de Almoço
-                    </div>
+                    <div className="text-yellow-700 text-xs italic">Horário de Almoço</div>
                   ) : appointment ? (
                     <div className="w-full group">
                       {/* BLOQUEADO */}
@@ -214,7 +195,7 @@ export default function AgendaWeekView({
                           <div className="opacity-80 text-xs">
                             {appointment.notes ||
                               appointment.block_reason ||
-                              "Motivo não informado"}
+                              'Motivo não informado'}
                           </div>
 
                           {/* Ações */}
@@ -247,15 +228,15 @@ export default function AgendaWeekView({
                       ) : (
                         <div className="bg-blue-600 text-white text-xs p-2 rounded relative">
                           <div className="font-semibold truncate">
-                            {appointment.patient_name || "Paciente"}
+                            {appointment.patient_name || 'Paciente'}
                           </div>
 
                           <div className="text-xs opacity-90">
-                            {appointment.service_name || "Serviço"}
+                            {appointment.service_name || 'Serviço'}
                           </div>
 
                           <div className="text-xs opacity-80">
-                            {appointment.professional_name || "Profissional"}
+                            {appointment.professional_name || 'Profissional'}
                           </div>
 
                           <StatusSelector

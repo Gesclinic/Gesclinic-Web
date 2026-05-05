@@ -6,7 +6,13 @@ import { FileSpreadsheet, Plus, Search, Filter, Trash2, Pencil, ListChecks } fro
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 
 import { useOrcamentos } from '@/hooks/clinic/useOrcamentos';
@@ -18,14 +24,31 @@ export default function Orcamentos() {
 
   const {
     // dados
-    items, loading, page, pageCount, total,
+    items,
+    loading,
+    page,
+    pageCount,
+    total,
     // filtros
-    query, setQuery, status, setStatus, validFrom, setValidFrom, validTo, setValidTo,
+    query,
+    setQuery,
+    status,
+    setStatus,
+    validFrom,
+    setValidFrom,
+    validTo,
+    setValidTo,
     setPage,
     // ops
-    fetchList, createOrcamento, updateOrcamento, deleteOrcamento,
+    fetchList,
+    createOrcamento,
+    updateOrcamento,
+    deleteOrcamento,
     // itens
-    listItens, addItem, updateItem, deleteItem,
+    listItens,
+    addItem,
+    updateItem,
+    deleteItem,
   } = useOrcamentos();
 
   // Dialogs de orçamento (cabeçalho)
@@ -38,10 +61,13 @@ export default function Orcamentos() {
   const [itensOrcamento, setItensOrcamento] = useState(null);
 
   // Filtros
-  const onBuscar = useCallback((e) => {
-    e.preventDefault();
-    fetchList();
-  }, [fetchList]);
+  const onBuscar = useCallback(
+    (e) => {
+      e.preventDefault();
+      fetchList();
+    },
+    [fetchList],
+  );
 
   const limparFiltros = useCallback(() => {
     setQuery('');
@@ -63,27 +89,33 @@ export default function Orcamentos() {
     setDlgOpen(true);
   }, []);
 
-  const salvarDialog = useCallback(async (payload) => {
-    try {
-      setDlgLoading(true);
-      if (editing?.id) {
-        await updateOrcamento(editing.id, payload);
-        toast({ title: 'Orçamento atualizado' });
-      } else {
-        await createOrcamento(payload);
-        toast({ title: 'Orçamento criado' });
+  const salvarDialog = useCallback(
+    async (payload) => {
+      try {
+        setDlgLoading(true);
+        if (editing?.id) {
+          await updateOrcamento(editing.id, payload);
+          toast({ title: 'Orçamento atualizado' });
+        } else {
+          await createOrcamento(payload);
+          toast({ title: 'Orçamento criado' });
+        }
+        setDlgOpen(false);
+      } catch (e) {
+        toast({ variant: 'destructive', title: 'Erro ao salvar', description: e.message });
+      } finally {
+        setDlgLoading(false);
       }
-      setDlgOpen(false);
-    } catch (e) {
-      toast({ variant: 'destructive', title: 'Erro ao salvar', description: e.message });
-    } finally {
-      setDlgLoading(false);
-    }
-  }, [editing, createOrcamento, updateOrcamento, toast]);
+    },
+    [editing, createOrcamento, updateOrcamento, toast],
+  );
 
-  const excluir = useCallback(async (id) => {
-    await deleteOrcamento(id);
-  }, [deleteOrcamento]);
+  const excluir = useCallback(
+    async (id) => {
+      await deleteOrcamento(id);
+    },
+    [deleteOrcamento],
+  );
 
   // Itens
   const abrirItens = useCallback((orc) => {
@@ -94,19 +126,30 @@ export default function Orcamentos() {
   return (
     <div className="space-y-6">
       {/* Topbar */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex justify-between items-center">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex justify-between items-center"
+      >
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Orçamentos</h1>
           <p className="text-gray-600 mt-1">Crie e gerencie orçamentos para pacientes</p>
         </div>
-        <Button onClick={novo} className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700">
+        <Button
+          onClick={novo}
+          className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+        >
           <Plus className="w-4 h-4 mr-2" />
           Novo Orçamento
         </Button>
       </motion.div>
 
       {/* Filtros */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+      >
         <Card>
           <CardContent className="p-6">
             <form onSubmit={onBuscar} className="grid grid-cols-1 md:grid-cols-5 gap-3">
@@ -122,7 +165,9 @@ export default function Orcamentos() {
 
               <div>
                 <Select value={status} onValueChange={setStatus}>
-                  <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todos">Todos</SelectItem>
                     <SelectItem value="aberto">Aberto</SelectItem>
@@ -134,10 +179,18 @@ export default function Orcamentos() {
               </div>
 
               <div>
-                <Input type="date" value={validFrom || ''} onChange={(e) => setValidFrom(e.target.value || null)} />
+                <Input
+                  type="date"
+                  value={validFrom || ''}
+                  onChange={(e) => setValidFrom(e.target.value || null)}
+                />
               </div>
               <div>
-                <Input type="date" value={validTo || ''} onChange={(e) => setValidTo(e.target.value || null)} />
+                <Input
+                  type="date"
+                  value={validTo || ''}
+                  onChange={(e) => setValidTo(e.target.value || null)}
+                />
               </div>
 
               <div className="md:col-span-5 flex gap-2 justify-end">
@@ -156,11 +209,17 @@ export default function Orcamentos() {
       </motion.div>
 
       {/* Lista */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Resultados ({total})</CardTitle>
-            <div className="text-sm text-gray-500">Página {page} de {pageCount}</div>
+            <div className="text-sm text-gray-500">
+              Página {page} de {pageCount}
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -182,7 +241,11 @@ export default function Orcamentos() {
                 </thead>
                 <tbody>
                   {loading && (
-                    <tr><td className="px-4 py-6 text-center text-gray-500" colSpan={11}>Carregando…</td></tr>
+                    <tr>
+                      <td className="px-4 py-6 text-center text-gray-500" colSpan={11}>
+                        Carregando…
+                      </td>
+                    </tr>
                   )}
 
                   {!loading && items.length === 0 && (
@@ -196,49 +259,78 @@ export default function Orcamentos() {
                     </tr>
                   )}
 
-                  {!loading && items.map((it) => {
-                    // Helper to get first service and professional
-                    const firstItem = it.orcamento_itens?.[0];
-                    const serviceName = firstItem?.service_name || '-';
-                    const professionalName = firstItem?.professionals?.name || '-';
-                    const moreItems = (it.orcamento_itens?.length || 0) > 1;
+                  {!loading &&
+                    items.map((it) => {
+                      // Helper to get first service and professional
+                      const firstItem = it.orcamento_itens?.[0];
+                      const serviceName = firstItem?.service_name || '-';
+                      const professionalName = firstItem?.professionals?.name || '-';
+                      const moreItems = (it.orcamento_itens?.length || 0) > 1;
 
-                    return (
-                      <tr key={it.id} className="border-t hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-2 font-medium">{it.numero || '-'}</td>
-                        <td className="px-4 py-2">{it.patients?.full_name || '-'}</td>
-                        <td className="px-4 py-2">
-                          {serviceName}
-                          {moreItems && <span className="text-xs text-gray-400 ml-1">(+{it.orcamento_itens.length - 1})</span>}
-                        </td>
-                        <td className="px-4 py-2">{it.payers?.name || '-'}</td>
-                        <td className="px-4 py-2">{professionalName}</td>
-                        <td className="px-4 py-2">
-                          <span className={`px-2 py-1 rounded-full text-xs font-semibold 
-                            ${it.status === 'aprovado' ? 'bg-green-100 text-green-700' : 
-                              it.status === 'reprovado' ? 'bg-red-100 text-red-700' : 
-                              it.status === 'cancelado' ? 'bg-gray-100 text-gray-700' : 
-                              'bg-blue-100 text-blue-700'}`}>
-                            {it.status}
-                          </span>
-                        </td>
-                        <td className="px-4 py-2">{it.validade ? new Date(it.validade).toLocaleDateString('pt-BR') : '-'}</td>
-                        <td className="px-4 py-2">R$ {Number(it.valor_bruto || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                        <td className="px-4 py-2">R$ {Number(it.desconto || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                        <td className="px-4 py-2 font-bold text-green-600">R$ {Number(it.valor_final || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                        <td className="px-4 py-2">
-                          <div className="flex gap-2 justify-end">
-                            <Button size="sm" variant="ghost" onClick={() => editar(it)}>
-                              <Pencil className="w-4 h-4 text-blue-600" />
-                            </Button>
-                            <Button size="sm" variant="ghost" onClick={() => excluir(it.id)}>
-                              <Trash2 className="w-4 h-4 text-red-600" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                      return (
+                        <tr key={it.id} className="border-t hover:bg-gray-50 transition-colors">
+                          <td className="px-4 py-2 font-medium">{it.numero || '-'}</td>
+                          <td className="px-4 py-2">{it.patients?.full_name || '-'}</td>
+                          <td className="px-4 py-2">
+                            {serviceName}
+                            {moreItems && (
+                              <span className="text-xs text-gray-400 ml-1">
+                                (+{it.orcamento_itens.length - 1})
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2">{it.payers?.name || '-'}</td>
+                          <td className="px-4 py-2">{professionalName}</td>
+                          <td className="px-4 py-2">
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-semibold 
+                            ${
+                        it.status === 'aprovado'
+                          ? 'bg-green-100 text-green-700'
+                          : it.status === 'reprovado'
+                            ? 'bg-red-100 text-red-700'
+                            : it.status === 'cancelado'
+                              ? 'bg-gray-100 text-gray-700'
+                              : 'bg-blue-100 text-blue-700'
+                        }`}
+                            >
+                              {it.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2">
+                            {it.validade ? new Date(it.validade).toLocaleDateString('pt-BR') : '-'}
+                          </td>
+                          <td className="px-4 py-2">
+                            R${' '}
+                            {Number(it.valor_bruto || 0).toLocaleString('pt-BR', {
+                              minimumFractionDigits: 2,
+                            })}
+                          </td>
+                          <td className="px-4 py-2">
+                            R${' '}
+                            {Number(it.desconto || 0).toLocaleString('pt-BR', {
+                              minimumFractionDigits: 2,
+                            })}
+                          </td>
+                          <td className="px-4 py-2 font-bold text-green-600">
+                            R${' '}
+                            {Number(it.valor_final || 0).toLocaleString('pt-BR', {
+                              minimumFractionDigits: 2,
+                            })}
+                          </td>
+                          <td className="px-4 py-2">
+                            <div className="flex gap-2 justify-end">
+                              <Button size="sm" variant="ghost" onClick={() => editar(it)}>
+                                <Pencil className="w-4 h-4 text-blue-600" />
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => excluir(it.id)}>
+                                <Trash2 className="w-4 h-4 text-red-600" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                 </tbody>
               </table>
             </div>
@@ -247,8 +339,22 @@ export default function Orcamentos() {
             <div className="flex items-center justify-between p-4">
               <div className="text-xs text-gray-500">Total: {total}</div>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>Anterior</Button>
-                <Button variant="outline" size="sm" disabled={page >= pageCount} onClick={() => setPage(page + 1)}>Próxima</Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => setPage(page - 1)}
+                >
+                  Anterior
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= pageCount}
+                  onClick={() => setPage(page + 1)}
+                >
+                  Próxima
+                </Button>
               </div>
             </div>
           </CardContent>
@@ -277,4 +383,3 @@ export default function Orcamentos() {
     </div>
   );
 }
-

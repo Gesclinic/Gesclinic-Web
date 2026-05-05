@@ -2,15 +2,31 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { logReceivableCreated, logPaymentReceived } from '@/lib/auditFinancialIntegration.js';
 
 function normalizeArStatus(s) {
-  if (!s) return null;
+  if (!s) {
+    return null;
+  }
   const v = String(s).toLowerCase();
-  if (['open','em aberto','aberto','pendente'].includes(v)) return 'open';
-  if (['planned','previsto','previsao','estimado'].includes(v)) return 'planned';
-  if (['received','recebido','pago','quitado'].includes(v)) return 'received';
-  if (['partial','parcial','recebido parcial'].includes(v)) return 'partial';
-  if (['overdue','em atraso','atrasado'].includes(v)) return 'overdue';
-  if (['canceled','cancelado','cancelada'].includes(v)) return 'canceled';
-  if (['glossed','glosado','glosa'].includes(v)) return 'glossed';
+  if (['open', 'em aberto', 'aberto', 'pendente'].includes(v)) {
+    return 'open';
+  }
+  if (['planned', 'previsto', 'previsao', 'estimado'].includes(v)) {
+    return 'planned';
+  }
+  if (['received', 'recebido', 'pago', 'quitado'].includes(v)) {
+    return 'received';
+  }
+  if (['partial', 'parcial', 'recebido parcial'].includes(v)) {
+    return 'partial';
+  }
+  if (['overdue', 'em atraso', 'atrasado'].includes(v)) {
+    return 'overdue';
+  }
+  if (['canceled', 'cancelado', 'cancelada'].includes(v)) {
+    return 'canceled';
+  }
+  if (['glossed', 'glosado', 'glosa'].includes(v)) {
+    return 'glossed';
+  }
   return null;
 }
 
@@ -45,7 +61,7 @@ export async function listReceivables({
   });
 
   // 🔍 PRIMEIRO: Buscar TODOS os registros sem filtro para debug
-  let debugQuery = supabase
+  const debugQuery = supabase
     .from('ar_receivables')
     .select('id, profissional_id, origem, status, payer_name, descricao')
     .eq('clinic_id', clinicId)
@@ -55,7 +71,9 @@ export async function listReceivables({
   console.log('📊 [DEBUG] Todos os registros na tabela (SEM FILTRO):');
   if (debugData && debugData.length > 0) {
     debugData.forEach((row, idx) => {
-      console.log(`   [${idx}] profissional_id=${row.profissional_id}, origem=${row.origem}, status=${row.status}, payer=${row.payer_name}`);
+      console.log(
+        `   [${idx}] profissional_id=${row.profissional_id}, origem=${row.origem}, status=${row.status}, payer=${row.payer_name}`,
+      );
     });
   } else {
     console.log('   ⚠️ Nenhum registro encontrado na tabela!');
@@ -148,17 +166,19 @@ export async function listReceivables({
 
   console.log('📡 [listReceivables] Executando query...');
   const { data, error } = await query;
-  
+
   if (error) {
     console.error('❌ listReceivables error:', error);
     throw new Error(error.message);
   }
-  
+
   console.log('📡 [listReceivables] ✅ Resultado:', data?.length || 0, 'linhas');
   if (data && data.length > 0) {
     console.log('📋 Registros retornados:');
     data.forEach((row, idx) => {
-      console.log(`   [${idx}] ${row.payer_name || row.descricao} | status=${row.status} | origem=${row.origem}`);
+      console.log(
+        `   [${idx}] ${row.payer_name || row.descricao} | status=${row.status} | origem=${row.origem}`,
+      );
     });
   }
   return data || [];
@@ -180,7 +200,7 @@ export async function createReceivable(clinicId, payload) {
     valor_bruto: Number(payload.valor_bruto || payload.valor || 0),
     descontos: Number(payload.descontos || 0),
     forma_prevista: payload.forma_prevista || null,
-    data_emissao: payload.data_emissao || new Date().toISOString().slice(0,10),
+    data_emissao: payload.data_emissao || new Date().toISOString().slice(0, 10),
     data_vencimento: payload.data_vencimento || null,
     status: normalizeArStatus(payload.status) || 'open',
     parcelado: !!payload.parcelado,
@@ -191,7 +211,9 @@ export async function createReceivable(clinicId, payload) {
 
   const parcels = Math.max(1, Number(payload.total_parcelas || 1));
   const isParcelado = parcels > 1 || !!payload.parcelado;
-  const groupId = isParcelado ? (payload.grupo_parcelamento_id || (crypto?.randomUUID ? crypto.randomUUID() : null)) : null;
+  const groupId = isParcelado
+    ? payload.grupo_parcelamento_id || (crypto?.randomUUID ? crypto.randomUUID() : null)
+    : null;
 
   if (!isParcelado) {
     const { data, error } = await supabase
@@ -199,22 +221,19 @@ export async function createReceivable(clinicId, payload) {
       .insert({ ...base, parcelado: false })
       .select()
       .single();
-    if (error) throw new Error(error.message);
-    
+    if (error) {
+      throw new Error(error.message);
+    }
+
     // Log: Conta a receber criada
     if (data && payload.appointment_id) {
-      logReceivableCreated(
-        payload.appointment_id,
-        data.id,
-        data.valor_bruto,
-        { 
-          payer_name: data.payer_name,
-          description: data.descricao,
-          due_date: data.data_vencimento 
-        }
-      ).catch(err => console.warn('Auditoria log failed:', err));
+      logReceivableCreated(payload.appointment_id, data.id, data.valor_bruto, {
+        payer_name: data.payer_name,
+        description: data.descricao,
+        due_date: data.data_vencimento,
+      }).catch((err) => console.warn('Auditoria log failed:', err));
     }
-    
+
     return data;
   }
 
@@ -225,7 +244,7 @@ export async function createReceivable(clinicId, payload) {
   for (let i = 1; i <= parcels; i++) {
     const d = new Date(start);
     d.setMonth(d.getMonth() + (i - 1));
-    const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     rows.push({
       ...base,
       parcelado: true,
@@ -238,45 +257,46 @@ export async function createReceivable(clinicId, payload) {
     });
   }
   const { data, error } = await supabase.from('ar_receivables').insert(rows).select();
-  if (error) throw new Error(error.message);
-  
+  if (error) {
+    throw new Error(error.message);
+  }
+
   // Log: Conta a receber criada (primeira parcela)
   if (data?.[0] && payload.appointment_id) {
-    logReceivableCreated(
-      payload.appointment_id,
-      data[0].id,
-      data[0].valor_bruto,
-      { 
-        payer_name: data[0].payer_name,
-        description: data[0].descricao,
-        due_date: data[0].data_vencimento,
-        installments: parcels 
-      }
-    ).catch(err => console.warn('Auditoria log failed:', err));
+    logReceivableCreated(payload.appointment_id, data[0].id, data[0].valor_bruto, {
+      payer_name: data[0].payer_name,
+      description: data[0].descricao,
+      due_date: data[0].data_vencimento,
+      installments: parcels,
+    }).catch((err) => console.warn('Auditoria log failed:', err));
   }
-  
+
   return data?.[0] || null;
 }
 
 export async function updateReceivable(id, patch) {
   const upd = { ...patch };
-  
+
   // Fetch dados atuais para audit trail
   const { data: currentData } = await supabase
     .from('ar_receivables')
     .select('*')
     .eq('id', id)
     .single();
-  
-  if ('status' in upd) upd.status = normalizeArStatus(upd.status) || undefined;
-  const { data, error } = await supabase
-    .from('ar_receivables')
-    .update(upd)
-    .eq('id', id)
-    .select()
-    .single();
-  if (error) throw new Error(error.message);
-  
+
+  if ('status' in upd) {
+    upd.status = normalizeArStatus(upd.status) || undefined;
+  }
+  const { data, error } = await supabase.from('ar_receivables').update(upd).eq('id', id).select();
+
+  if (!data || data.length === 0) {
+    throw new Error('Record not found');
+  }
+  return data[0];
+  if (error) {
+    throw new Error(error.message);
+  }
+
   // Log: Pagamento recebido (se status mudou para received ou partial)
   if (data && currentData && (upd.status === 'received' || upd.status === 'partial')) {
     if (currentData.status !== upd.status) {
@@ -289,27 +309,32 @@ export async function updateReceivable(id, patch) {
         {
           payer_name: data.payer_name,
           previous_status: currentData.status,
-          new_status: upd.status
-        }
-      ).catch(err => console.warn('Auditoria log failed:', err));
+          new_status: upd.status,
+        },
+      ).catch((err) => console.warn('Auditoria log failed:', err));
     }
   }
-  
+
   return data;
 }
 
 export async function deleteReceivable(id) {
   const { error } = await supabase.from('ar_receivables').delete().eq('id', id);
-  if (error) throw new Error(error.message);
+  if (error) {
+    throw new Error(error.message);
+  }
 }
 
 export async function getReceivableById(id) {
-  const { data, error } = await supabase
-    .from('ar_receivables')
-    .select('*')
-    .eq('id', id)
-    .single();
-  if (error) throw new Error(error.message);
+  const { data, error } = await supabase.from('ar_receivables').select('*').eq('id', id);
+
+  if (!data || data.length === 0) {
+    throw new Error('Record not found');
+  }
+  return data[0];
+  if (error) {
+    throw new Error(error.message);
+  }
   return data;
 }
 

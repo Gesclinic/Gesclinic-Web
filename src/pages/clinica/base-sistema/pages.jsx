@@ -5,17 +5,17 @@
 // ============================================================
 
 // Imports dos componentes reais
-import { ServicosPage as ServicesPageComponent } from "./ServicosPage";
-import { ProfessionalsPage as ProfessionalsPageComponent } from "./ProfessionalsPage";
-import { ConveniosPage as HealthInsurancesPageComponent } from "./ConveniosPage";
-import { SalasPage as RoomsPageComponent } from "./SalasPage";
-import { RecursosPage as ResourcesPageComponent } from "./RecursosPage";
-import { ProfessionalServicesPage as ProfessionalServicesPageComponent } from "./ProfessionalServicesPage";
-import { AgendaRulesPage as AgendaRulesPageComponent } from "./AgendaRulesPage";
-import { RoomResourcesPage as RoomResourcesPageComponent } from "./RoomServicesPage";
-import { ProfessionalSchedulePage as ProfessionalSchedulePageComponent } from "./ProfessionalSchedulePage";
-import { ServicePricesPage as ServicePricesPageComponent } from "./ServicePricesPage";
-import { ProfessionalPayerPage as ProfessionalPayerPageComponent } from "./ProfessionalPayerPage";
+import { ServicosPage as ServicesPageComponent } from './ServicosPage';
+import { ProfessionalsPage as ProfessionalsPageComponent } from './ProfessionalsPage';
+import { ConveniosPage as HealthInsurancesPageComponent } from './ConveniosPage';
+import { SalasPage as RoomsPageComponent } from './SalasPage';
+import { RecursosPage as ResourcesPageComponent } from './RecursosPage';
+import { ProfessionalServicesPage as ProfessionalServicesPageComponent } from './ProfessionalServicesPage';
+import { AgendaRulesPage as AgendaRulesPageComponent } from './AgendaRulesPage';
+import { RoomResourcesPage as RoomResourcesPageComponent } from './RoomServicesPage';
+import { ProfessionalSchedulePage as ProfessionalSchedulePageComponent } from './ProfessionalSchedulePage';
+import { ServicePricesPage as ServicePricesPageComponent } from './ServicePricesPage';
+import { ProfessionalPayerPage as ProfessionalPayerPageComponent } from './ProfessionalPayerPage';
 
 // ============================================================
 // EXPORTAÇÕES - Mapear para rotas em AppRoutes.jsx
@@ -75,4 +75,3 @@ export function ServicePricesPage() {
 export function ProfessionalPayerPage() {
   return <ProfessionalPayerPageComponent />;
 }
-

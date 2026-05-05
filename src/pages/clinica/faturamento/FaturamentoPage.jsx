@@ -85,14 +85,16 @@ export default function FaturamentoPage() {
               onClick={() => navigate(module.path)}
             >
               <CardHeader className="pb-3">
-                <div className={`w-12 h-12 rounded-lg ${module.color} flex items-center justify-center mb-3`}>
+                <div
+                  className={`w-12 h-12 rounded-lg ${module.color} flex items-center justify-center mb-3`}
+                >
                   <Icon size={24} />
                 </div>
                 <CardTitle className="text-lg">{module.title}</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-gray-600 mb-4">{module.description}</p>
-                
+
                 {/* Submódulos */}
                 <ul className="space-y-2">
                   {module.items.map((item, idx) => (
@@ -143,4 +145,3 @@ export default function FaturamentoPage() {
     </div>
   );
 }
-

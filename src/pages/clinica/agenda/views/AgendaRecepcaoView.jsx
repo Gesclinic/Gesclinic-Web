@@ -1,47 +1,51 @@
 /**
  * AgendaRecepcaoView.jsx
- * 
+ *
  * 🏥 Tela da Recepção (Check-in)
- * 
+ *
  * Responsabilidades:
  * - Conferência de pacientes no dia
  * - Checklist obrigatório (dados, convênio, documentos)
  * - Processamento financeiro
  * - Liberação para atendimento
- * 
+ *
  * Fluxo:
  * CONFIRMADO → AGUARDANDO → (PENDENTE / FINANCEIRO_PENDENTE) → LIBERADO_PARA_ATENDIMENTO
  */
 
-import React, { useState, useMemo, useCallback } from "react";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
-import { useClinicContext } from "@/contexts/ClinicContext";
+import React, { useState, useMemo, useCallback } from 'react';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useClinicContext } from '@/contexts/ClinicContext';
 import {
   BOOKING_STATUSES,
   SERVICE_STATUSES,
   getStatusConfig,
   getStatusLabelOnly,
-} from "@/lib/appointmentStatusConstants";
-import { updateAppointment } from "@/lib/appointmentsApi";
-import { ChevronDown, CheckCircle2, AlertCircle, Clock } from "lucide-react";
+} from '@/lib/appointmentStatusConstants';
+import { updateAppointment } from '@/lib/appointmentsApi';
+import { ChevronDown, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
 
 export default function AgendaRecepcaoView({ appointments = [], onRefresh }) {
   const { user, currentRole } = useAuth();
   const { clinicId } = useClinicContext();
   const [expandedId, setExpandedId] = useState(null);
   const [loadingId, setLoadingId] = useState(null);
-  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterStatus, setFilterStatus] = useState('all');
 
   // Filtra agendamentos do dia que estão na fase de recepção
   const receptionAppointments = useMemo(() => {
-    if (!appointments) return [];
+    if (!appointments) {
+      return [];
+    }
 
     return appointments.filter((apt) => {
       // Apenas agendamentos de hoje em dia
-      const today = new Date().toISOString().split("T")[0];
-      const aptDate = apt.scheduled_date?.split("T")[0];
+      const today = new Date().toISOString().split('T')[0];
+      const aptDate = apt.scheduled_date?.split('T')[0];
 
-      if (aptDate !== today) return false;
+      if (aptDate !== today) {
+        return false;
+      }
 
       // Filtra por status visível na recepção (novo sistema)
       const isReception =
@@ -54,10 +58,14 @@ export default function AgendaRecepcaoView({ appointments = [], onRefresh }) {
           SERVICE_STATUSES.ATTENDED,
         ].indexOf(apt.status) >= 0;
 
-      if (!isReception) return false;
+      if (!isReception) {
+        return false;
+      }
 
       // Aplica filtro selecionado
-      if (filterStatus === "all") return true;
+      if (filterStatus === 'all') {
+        return true;
+      }
       return apt.status === filterStatus;
     });
   }, [appointments, filterStatus]);
@@ -75,13 +83,13 @@ export default function AgendaRecepcaoView({ appointments = [], onRefresh }) {
         });
         onRefresh?.();
       } catch (error) {
-        console.error("Erro ao atualizar status:", error);
-        alert("Erro ao atualizar agendamento");
+        console.error('Erro ao atualizar status:', error);
+        alert('Erro ao atualizar agendamento');
       } finally {
         setLoadingId(null);
       }
     },
-    [onRefresh]
+    [onRefresh],
   );
 
   /**
@@ -97,11 +105,7 @@ export default function AgendaRecepcaoView({ appointments = [], onRefresh }) {
    * Libera para atendimento (ação crítica)
    */
   const handleReleaseForCare = (apt) => {
-    if (
-      confirm(
-        `Liberar ${apt.patient_name} para atendimento com ${apt.professional_name}?`
-      )
-    ) {
+    if (confirm(`Liberar ${apt.patient_name} para atendimento com ${apt.professional_name}?`)) {
       updateStatus(apt.id, SERVICE_STATUSES.AWAITING_PROFESSIONAL);
     }
   };
@@ -148,11 +152,11 @@ export default function AgendaRecepcaoView({ appointments = [], onRefresh }) {
       {/* Filtros */}
       <div className="flex gap-2 flex-wrap">
         <button
-          onClick={() => setFilterStatus("all")}
+          onClick={() => setFilterStatus('all')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-            filterStatus === "all"
-              ? "bg-blue-600 text-white"
-              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            filterStatus === 'all'
+              ? 'bg-blue-600 text-white'
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
           }`}
         >
           Todos ({receptionAppointments.length})
@@ -161,8 +165,8 @@ export default function AgendaRecepcaoView({ appointments = [], onRefresh }) {
           onClick={() => setFilterStatus(BOOKING_STATUSES.CONFIRMED)}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
             filterStatus === BOOKING_STATUSES.CONFIRMED
-              ? "bg-cyan-600 text-white"
-              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              ? 'bg-cyan-600 text-white'
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
           }`}
         >
           Confirmado ({groupedByStatus[BOOKING_STATUSES.CONFIRMED]?.length || 0})
@@ -171,8 +175,8 @@ export default function AgendaRecepcaoView({ appointments = [], onRefresh }) {
           onClick={() => setFilterStatus(BOOKING_STATUSES.AT_RECEPTION)}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
             filterStatus === BOOKING_STATUSES.AT_RECEPTION
-              ? "bg-yellow-600 text-white"
-              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              ? 'bg-yellow-600 text-white'
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
           }`}
         >
           Na Recepção ({groupedByStatus[BOOKING_STATUSES.AT_RECEPTION]?.length || 0})
@@ -181,8 +185,8 @@ export default function AgendaRecepcaoView({ appointments = [], onRefresh }) {
           onClick={() => setFilterStatus(SERVICE_STATUSES.AWAITING_PROFESSIONAL)}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
             filterStatus === SERVICE_STATUSES.AWAITING_PROFESSIONAL
-              ? "bg-green-600 text-white"
-              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              ? 'bg-green-600 text-white'
+              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
           }`}
         >
           Liberado ({groupedByStatus[SERVICE_STATUSES.AWAITING_PROFESSIONAL]?.length || 0})
@@ -203,12 +207,12 @@ export default function AgendaRecepcaoView({ appointments = [], onRefresh }) {
               style={{
                 borderLeftColor:
                   apt.status === SERVICE_STATUSES.AWAITING_PROFESSIONAL
-                    ? "#10b981"
+                    ? '#10b981'
                     : apt.status === SERVICE_STATUSES.IN_SERVICE
-                    ? "#6366f1"
-                    : apt.status === SERVICE_STATUSES.ATTENDED
-                    ? "#4f46e5"
-                    : "#fbbf24",
+                      ? '#6366f1'
+                      : apt.status === SERVICE_STATUSES.ATTENDED
+                        ? '#4f46e5'
+                        : '#fbbf24',
               }}
             >
               {/* Card Principal */}
@@ -216,9 +220,7 @@ export default function AgendaRecepcaoView({ appointments = [], onRefresh }) {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-bold text-gray-900">
-                        {apt.patient_name || "Paciente"}
-                      </h3>
+                      <h3 className="font-bold text-gray-900">{apt.patient_name || 'Paciente'}</h3>
                       <span
                         className={`px-2 py-1 rounded text-xs font-medium ${getStatusConfig(apt.status).textColor} ${getStatusConfig(apt.status).color}`}
                       >
@@ -226,22 +228,19 @@ export default function AgendaRecepcaoView({ appointments = [], onRefresh }) {
                       </span>
                     </div>
                     <p className="text-sm text-gray-600">
-                      🕐 {apt.start_time?.substring(0, 5)} | 👨‍⚕️ {apt.professional_name || "S/ prof"} | 🛏️ {apt.room || "S/ sala"}
+                      🕐 {apt.start_time?.substring(0, 5)} | 👨‍⚕️ {apt.professional_name || 'S/ prof'}{' '}
+                      | 🛏️ {apt.room || 'S/ sala'}
                     </p>
                   </div>
 
                   {/* Botão de Expansão */}
                   <button
-                    onClick={() =>
-                      setExpandedId(expandedId === apt.id ? null : apt.id)
-                    }
+                    onClick={() => setExpandedId(expandedId === apt.id ? null : apt.id)}
                     className="p-2 hover:bg-gray-100 rounded-lg"
                   >
                     <ChevronDown
                       size={20}
-                      className={`transition ${
-                        expandedId === apt.id ? "rotate-180" : ""
-                      }`}
+                      className={`transition ${expandedId === apt.id ? 'rotate-180' : ''}`}
                     />
                   </button>
                 </div>
@@ -256,35 +255,19 @@ export default function AgendaRecepcaoView({ appointments = [], onRefresh }) {
                       </h4>
                       <div className="space-y-2 text-sm">
                         <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            defaultChecked={true}
-                            className="w-4 h-4"
-                          />
+                          <input type="checkbox" defaultChecked={true} className="w-4 h-4" />
                           <span>Dados cadastrais conferidos</span>
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            defaultChecked={true}
-                            className="w-4 h-4"
-                          />
+                          <input type="checkbox" defaultChecked={true} className="w-4 h-4" />
                           <span>Convênio / Plano verificado</span>
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            defaultChecked={true}
-                            className="w-4 h-4"
-                          />
+                          <input type="checkbox" defaultChecked={true} className="w-4 h-4" />
                           <span>Serviço correto confirmado</span>
                         </label>
                         <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            defaultChecked={true}
-                            className="w-4 h-4"
-                          />
+                          <input type="checkbox" defaultChecked={true} className="w-4 h-4" />
                           <span>Documentos / Autorização OK</span>
                         </label>
                       </div>
@@ -311,7 +294,7 @@ export default function AgendaRecepcaoView({ appointments = [], onRefresh }) {
                             disabled={loadingId === apt.id}
                             className="w-full px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded text-sm font-medium disabled:opacity-50 transition"
                           >
-                            {loadingId === apt.id ? "..." : "📍 Marcar Chegada"}
+                            {loadingId === apt.id ? '...' : '📍 Marcar Chegada'}
                           </button>
                         )}
 
@@ -322,9 +305,7 @@ export default function AgendaRecepcaoView({ appointments = [], onRefresh }) {
                             disabled={loadingId === apt.id}
                             className="w-full px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-bold disabled:opacity-50 transition"
                           >
-                            {loadingId === apt.id
-                              ? "..."
-                              : "✅ LIBERAR PARA ATENDIMENTO"}
+                            {loadingId === apt.id ? '...' : '✅ LIBERAR PARA ATENDIMENTO'}
                           </button>
                         )}
 
@@ -332,14 +313,14 @@ export default function AgendaRecepcaoView({ appointments = [], onRefresh }) {
                         {apt.status !== SERVICE_STATUSES.NO_SHOW &&
                           apt.status !== SERVICE_STATUSES.ATTENDED &&
                           apt.status !== SERVICE_STATUSES.CANCELED && (
-                            <button
-                              onClick={() => handleMarkNoShow(apt)}
-                              disabled={loadingId === apt.id}
-                              className="w-full px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded text-sm font-medium disabled:opacity-50 transition"
-                            >
-                              {loadingId === apt.id ? "..." : "❌ Marcar Falta"}
-                            </button>
-                          )}
+                          <button
+                            onClick={() => handleMarkNoShow(apt)}
+                            disabled={loadingId === apt.id}
+                            className="w-full px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded text-sm font-medium disabled:opacity-50 transition"
+                          >
+                            {loadingId === apt.id ? '...' : '❌ Marcar Falta'}
+                          </button>
+                        )}
                       </div>
                     </div>
 
@@ -348,7 +329,8 @@ export default function AgendaRecepcaoView({ appointments = [], onRefresh }) {
                       <div className="bg-green-50 border border-green-200 p-3 rounded-lg flex items-start gap-2">
                         <CheckCircle2 className="text-green-600 flex-shrink-0 mt-0.5" size={18} />
                         <p className="text-sm text-green-800">
-                          <strong>Pronto para atendimento!</strong> Paciente está liberado e o profissional pode iniciar.
+                          <strong>Pronto para atendimento!</strong> Paciente está liberado e o
+                          profissional pode iniciar.
                         </p>
                       </div>
                     )}
@@ -362,4 +344,3 @@ export default function AgendaRecepcaoView({ appointments = [], onRefresh }) {
     </div>
   );
 }
-

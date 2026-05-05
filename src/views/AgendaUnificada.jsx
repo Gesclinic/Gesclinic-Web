@@ -1,7 +1,7 @@
 // src/views/AgendaUnificada.jsx
 import React, { useState } from 'react';
 import { useClinicContext } from '../contexts/useClinicContext';
-import { listarAgenda } from '../services/agendaService';
+import { listarAgenda } from '@/modules/agenda/services/agenda.api.complex';
 import { mapAgendaItem } from '@/modules/agenda/services/agendaMapper';
 
 export function AgendaUnificada() {
@@ -15,22 +15,26 @@ export function AgendaUnificada() {
     setLoading(true);
     setError(null);
     const { data, error } = await listarAgenda({ clinicId: clinic.id, date });
-    if (error) setError('Erro ao buscar agendamentos');
+    if (error) {
+      setError('Erro ao buscar agendamentos');
+    }
     setAgendas(Array.isArray(data) ? data.map(mapAgendaItem) : []);
     setLoading(false);
   }
 
   React.useEffect(() => {
-    if (clinic?.id && date) fetchAgenda();
+    if (clinic?.id && date) {
+      fetchAgenda();
+    }
     // eslint-disable-next-line
   }, [clinic?.id, date]);
 
   return (
     <div>
       <h2>Agenda Unificada</h2>
-      <input type="date" value={date} onChange={e => setDate(e.target.value)} />
+      <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
       {loading && <p>Carregando...</p>}
-      {error && <p style={{color: 'red'}}>{error}</p>}
+      {error && <p style={{ color: 'red' }}>{error}</p>}
       {!loading && agendas.length === 0 && <p>Nenhum agendamento encontrado</p>}
       {!loading && agendas.length > 0 && (
         <table>
@@ -49,9 +53,13 @@ export function AgendaUnificada() {
           <tbody>
             {agendas
               .sort((a, b) => a.startTime - b.startTime)
-              .map(a => (
+              .map((a) => (
                 <tr key={a.id}>
-                  <td>{a.startTime ? a.startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}</td>
+                  <td>
+                    {a.startTime
+                      ? a.startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                      : '—'}
+                  </td>
                   <td>{a.patient}</td>
                   <td>{a.professional}</td>
                   <td>{a.service}</td>

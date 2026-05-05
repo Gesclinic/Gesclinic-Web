@@ -1,14 +1,17 @@
-import { supabase } from "@/lib/customSupabaseClient";
+import { supabase } from '@/lib/customSupabaseClient';
 
-const LOCAL_STORAGE_KEY = "gesclinic-local-patient-records";
+const LOCAL_STORAGE_KEY = 'gesclinic-local-patient-records';
 let patientRecordsTableUnavailable = false;
 
 function shouldUseLocalFallback(error) {
-  return ["42501", "42P01", "PGRST205"].includes(error?.code) || /row-level security|unauthorized|patient_records/i.test(error?.message || "");
+  return (
+    ['42501', '42P01', 'PGRST205'].includes(error?.code) ||
+    /row-level security|unauthorized|patient_records/i.test(error?.message || '')
+  );
 }
 
 function markTableUnavailableIfNeeded(error) {
-  if (["42P01", "PGRST205"].includes(error?.code)) {
+  if (['42P01', 'PGRST205'].includes(error?.code)) {
     patientRecordsTableUnavailable = true;
   }
 }
@@ -32,13 +35,13 @@ function saveLocalRows(rows) {
 }
 
 function markRemoteRow(row) {
-  return row ? { ...row, _storage_mode: "supabase" } : row;
+  return row ? { ...row, _storage_mode: 'supabase' } : row;
 }
 
 function sortRows(rows) {
   return [...rows].sort((left, right) => {
-    const leftDate = `${left.record_date || ""}T${left.record_time || "00:00"}`;
-    const rightDate = `${right.record_date || ""}T${right.record_time || "00:00"}`;
+    const leftDate = `${left.record_date || ''}T${left.record_time || '00:00'}`;
+    const rightDate = `${right.record_date || ''}T${right.record_time || '00:00'}`;
     return new Date(rightDate).getTime() - new Date(leftDate).getTime();
   });
 }
@@ -50,9 +53,13 @@ function listLocalRows(patientId) {
 function mergeRows(remoteRows, localRows) {
   const merged = new Map();
 
-  for (const row of remoteRows) merged.set(row.id, row);
+  for (const row of remoteRows) {
+    merged.set(row.id, row);
+  }
   for (const row of localRows) {
-    if (!merged.has(row.id)) merged.set(row.id, row);
+    if (!merged.has(row.id)) {
+      merged.set(row.id, row);
+    }
   }
 
   return sortRows(Array.from(merged.values()));
@@ -65,7 +72,7 @@ function createLocalRow(payload) {
     ...payload,
     created_at: payload.created_at || now,
     updated_at: now,
-    _storage_mode: "local",
+    _storage_mode: 'local',
   };
 
   const rows = loadLocalRows();
@@ -77,12 +84,14 @@ function createLocalRow(payload) {
 function updateLocalRow(id, updates) {
   let updatedRow = null;
   const nextRows = loadLocalRows().map((row) => {
-    if (row.id !== id) return row;
+    if (row.id !== id) {
+      return row;
+    }
     updatedRow = {
       ...row,
       ...updates,
       updated_at: new Date().toISOString(),
-      _storage_mode: "local",
+      _storage_mode: 'local',
     };
     return updatedRow;
   });
@@ -91,27 +100,29 @@ function updateLocalRow(id, updates) {
 }
 
 async function runRemoteInsert(payload) {
-  return supabase
-    .from("patient_records")
-    .insert([payload])
-    .select()
-    .single();
+  return supabase.from('patient_records').insert([payload]).select().single();
 }
 
 async function runRemoteUpdate(id, updates) {
   return supabase
-    .from("patient_records")
+    .from('patient_records')
     .update({
       ...updates,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", id)
-    .select()
-    .single();
+    .eq('id', id)
+    .select();
+
+  if (!data || data.length === 0) {
+    throw new Error('Record not found');
+  }
+  return data[0];
 }
 
 export async function listPatientRecords(patientId) {
-  if (!patientId) return [];
+  if (!patientId) {
+    return [];
+  }
 
   const localRows = listLocalRows(patientId);
 
@@ -120,11 +131,11 @@ export async function listPatientRecords(patientId) {
   }
 
   const { data, error } = await supabase
-    .from("patient_records")
-    .select("*")
-    .eq("patient_id", patientId)
-    .order("record_date", { ascending: false })
-    .order("record_time", { ascending: false });
+    .from('patient_records')
+    .select('*')
+    .eq('patient_id', patientId)
+    .order('record_date', { ascending: false })
+    .order('record_time', { ascending: false });
 
   if (error) {
     if (shouldUseLocalFallback(error)) {
@@ -166,7 +177,9 @@ export async function createPatientRecord(payload) {
 export async function updatePatientRecord(id, updates) {
   if (patientRecordsTableUnavailable) {
     const row = updateLocalRow(id, updates);
-    if (row) return row;
+    if (row) {
+      return row;
+    }
   }
 
   const { data, error } = await runRemoteUpdate(id, updates);
@@ -175,7 +188,9 @@ export async function updatePatientRecord(id, updates) {
     if (shouldUseLocalFallback(error)) {
       markTableUnavailableIfNeeded(error);
       const row = updateLocalRow(id, updates);
-      if (row) return row;
+      if (row) {
+        return row;
+      }
     }
     throw error;
   }
@@ -204,15 +219,22 @@ export async function syncLocalPatientRecords(patientId) {
     delete payload._storage_mode;
 
     const { data, error } = await supabase
-      .from("patient_records")
-      .upsert([
-        {
-          ...payload,
-          updated_at: new Date().toISOString(),
-        },
-      ], { onConflict: "id" })
-      .select()
-      .single();
+      .from('patient_records')
+      .upsert(
+        [
+          {
+            ...payload,
+            updated_at: new Date().toISOString(),
+          },
+        ],
+        { onConflict: 'id' },
+      )
+      .select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
 
     if (error) {
       failedRows.push({ row, error });

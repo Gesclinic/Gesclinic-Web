@@ -9,7 +9,13 @@ export interface Appointment {
   professional?: { name: string };
   service_id: string;
   service?: { name: string; price: number };
-  status: 'agendado' | 'confirmado' | 'aguardando_profissional' | 'em_atendimento' | 'concluido' | 'cancelado';
+  status:
+    | 'agendado'
+    | 'confirmado'
+    | 'aguardando_profissional'
+    | 'em_atendimento'
+    | 'concluido'
+    | 'cancelado';
   start_time: string;
   end_time: string;
   clinic_id: string;
@@ -42,7 +48,7 @@ export function useAppointments(clinicId: string) {
           patients(name),
           professionals(name),
           services(name, price)
-        `
+        `,
         )
         .eq('clinic_id', clinicId)
         .eq('status', 'aguardando_profissional')
@@ -50,21 +56,19 @@ export function useAppointments(clinicId: string) {
 
       if (err) throw err;
 
-      const appointmentsWithRelations: Appointment[] = (data || []).map(
-        (apt: any) => ({
-          id: apt.id,
-          patient_id: apt.patient_id,
-          patient: apt.patients,
-          professional_id: apt.professional_id,
-          professional: apt.professionals,
-          service_id: apt.service_id,
-          service: apt.services,
-          status: apt.status,
-          start_time: apt.start_time,
-          end_time: apt.end_time,
-          clinic_id: apt.clinic_id
-        })
-      );
+      const appointmentsWithRelations: Appointment[] = (data || []).map((apt: any) => ({
+        id: apt.id,
+        patient_id: apt.patient_id,
+        patient: apt.patients,
+        professional_id: apt.professional_id,
+        professional: apt.professionals,
+        service_id: apt.service_id,
+        service: apt.services,
+        status: apt.status,
+        start_time: apt.start_time,
+        end_time: apt.end_time,
+        clinic_id: apt.clinic_id,
+      }));
 
       setAppointments(appointmentsWithRelations);
     } catch (err) {
@@ -82,7 +86,9 @@ export function useAppointments(clinicId: string) {
 
   // Find appointments for a specific patient
   const findPatientAppointments = (patientId: string) => {
-    return appointments.filter((apt) => apt.patient_id === patientId && apt.status === 'aguardando_profissional');
+    return appointments.filter(
+      (apt) => apt.patient_id === patientId && apt.status === 'aguardando_profissional',
+    );
   };
 
   // Find ready appointments (awaiting professional)
@@ -96,6 +102,6 @@ export function useAppointments(clinicId: string) {
     error,
     fetchAppointments,
     findPatientAppointments,
-    getReadyAppointments
+    getReadyAppointments,
   };
 }

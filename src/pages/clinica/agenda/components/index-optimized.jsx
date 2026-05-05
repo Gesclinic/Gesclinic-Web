@@ -6,13 +6,13 @@ import AgendaGridOptimized from './AgendaGridOptimized';
 
 /**
  * AgendaPage - Exemplo de integração completa com componentes otimizados
- * 
+ *
  * Layout compacto:
  * - Header: 44px (navegação + modo visualização + novo)
  * - Toolbar: 40px (segmented control + dropdown perfil)
  * - Filters: 40px (busca + toggle), expande até 280px quando aberto
  * - Grid: Dinâmica (apenas colunas necessárias)
- * 
+ *
  * Total vertical: ~620px para 8h de agenda com filtros fechados
  * (vs 1480px antes - 58% de redução!)
  */
@@ -20,13 +20,45 @@ export default function AgendaPage() {
   // Simulação de dados - em produção vem da API
   const mockAppointments = [
     { id: 1, horário: '08:00', status: 'disponivel' },
-    { id: 2, horário: '08:30', paciente: 'João Silva', profissional: 'Dr. Carlos', serviço: 'Consulta', sala: '1', status: 'confirmado' },
+    {
+      id: 2,
+      horário: '08:30',
+      paciente: 'João Silva',
+      profissional: 'Dr. Carlos',
+      serviço: 'Consulta',
+      sala: '1',
+      status: 'confirmado',
+    },
     { id: 3, horário: '09:00', status: 'disponivel' },
-    { id: 4, horário: '09:30', paciente: 'Maria Santos', profissional: 'Dra. Ana', serviço: 'Limpeza', sala: '2', status: 'confirmado' },
+    {
+      id: 4,
+      horário: '09:30',
+      paciente: 'Maria Santos',
+      profissional: 'Dra. Ana',
+      serviço: 'Limpeza',
+      sala: '2',
+      status: 'confirmado',
+    },
     { id: 5, horário: '10:00', status: 'bloqueado' },
-    { id: 6, horário: '10:30', paciente: 'Pedro Costa', profissional: 'Dr. Carlos', serviço: 'Extração', sala: '1', status: 'aguardando' },
+    {
+      id: 6,
+      horário: '10:30',
+      paciente: 'Pedro Costa',
+      profissional: 'Dr. Carlos',
+      serviço: 'Extração',
+      sala: '1',
+      status: 'aguardando',
+    },
     { id: 7, horário: '11:00', status: 'disponivel' },
-    { id: 8, horário: '11:30', paciente: 'Ana Oliveira', profissional: 'Dra. Ana', serviço: 'Raiz', sala: '3', status: 'falta' },
+    {
+      id: 8,
+      horário: '11:30',
+      paciente: 'Ana Oliveira',
+      profissional: 'Dra. Ana',
+      serviço: 'Raiz',
+      sala: '3',
+      status: 'falta',
+    },
   ];
 
   const mockProfessionals = [
@@ -139,16 +171,14 @@ export default function AgendaPage() {
     // Filtro por busca (paciente)
     if (searchText) {
       filtered = filtered.filter((appt) =>
-        (appt.paciente || '').toLowerCase().includes(searchText.toLowerCase())
+        (appt.paciente || '').toLowerCase().includes(searchText.toLowerCase()),
       );
     }
 
     // Filtro por profissional
     if (selectedFilters.profissionalId) {
       filtered = filtered.filter((appt) => {
-        const profId = mockProfessionals.find(
-          (p) => p.name === appt.profissional
-        )?.id;
+        const profId = mockProfessionals.find((p) => p.name === appt.profissional)?.id;
         return profId === selectedFilters.profissionalId;
       });
     }
@@ -163,9 +193,7 @@ export default function AgendaPage() {
 
     // Filtro por status
     if (selectedFilters.statusList?.length > 0) {
-      filtered = filtered.filter((appt) =>
-        selectedFilters.statusList.includes(appt.status)
-      );
+      filtered = filtered.filter((appt) => selectedFilters.statusList.includes(appt.status));
     }
 
     return filtered;
@@ -181,7 +209,8 @@ export default function AgendaPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-gray-900">📅 Agenda</h1>
         <div className="text-xs text-gray-500">
-          {viewMode === 'week' ? 'Semana' : 'Mês'} • {agendaMode.charAt(0).toUpperCase() + agendaMode.slice(1)}
+          {viewMode === 'week' ? 'Semana' : 'Mês'} •{' '}
+          {agendaMode.charAt(0).toUpperCase() + agendaMode.slice(1)}
         </div>
       </div>
 
@@ -234,11 +263,8 @@ export default function AgendaPage() {
           {filteredAppointments.length} horários
           {searchText || Object.keys(selectedFilters).length > 0 ? ' (filtrados)' : ''}
         </span>
-        <span>
-          {filteredAppointments.filter((a) => !a.paciente).length} disponíveis
-        </span>
+        <span>{filteredAppointments.filter((a) => !a.paciente).length} disponíveis</span>
       </div>
     </div>
   );
 }
-

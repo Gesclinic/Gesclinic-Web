@@ -1,13 +1,15 @@
 // src/lib/AgendaSlotGenerator.js
 
-import { format, startOfDay, endOfDay, isSameDay } from "date-fns";
+import { format, startOfDay, endOfDay, isSameDay } from 'date-fns';
 
 /**
  * Normaliza o objeto recebido da API list_appointments_v4
  * Garante que o calendário receba dados consistentes.
  */
 export function normalizeAppointment(raw) {
-  if (!raw) return null;
+  if (!raw) {
+    return null;
+  }
 
   return {
     id: raw.id || raw.appointment_id,
@@ -53,8 +55,10 @@ export function groupByDay(appointments) {
   const map = {};
 
   appointments.forEach((a) => {
-    const d = format(a.start_time, "yyyy-MM-dd");
-    if (!map[d]) map[d] = [];
+    const d = format(a.start_time, 'yyyy-MM-dd');
+    if (!map[d]) {
+      map[d] = [];
+    }
     map[d].push(a);
   });
 
@@ -89,12 +93,12 @@ export function groupByRoom(appointments) {
   const map = {};
 
   appointments.forEach((a) => {
-    const roomKey = a.room_id || "SEM_SALA";
+    const roomKey = a.room_id || 'SEM_SALA';
 
     if (!map[roomKey]) {
       map[roomKey] = {
         room_id: a.room_id,
-        room_name: a.room_name || "Sala não definida",
+        room_name: a.room_name || 'Sala não definida',
         slots: [],
       };
     }
@@ -108,11 +112,15 @@ export function groupByRoom(appointments) {
 /**
  * Gera estrutura final baseada no modo atual da agenda
  */
-export function generateAgendaStructure(appointments, mode = "unificada") {
+export function generateAgendaStructure(appointments, mode = 'unificada') {
   const normalized = appointments.map(normalizeAppointment);
 
-  if (mode === "profissional") return groupByProfessional(normalized);
-  if (mode === "sala") return groupByRoom(normalized);
+  if (mode === 'profissional') {
+    return groupByProfessional(normalized);
+  }
+  if (mode === 'sala') {
+    return groupByRoom(normalized);
+  }
 
   // Unificada (geral)
   return groupByDay(normalized);

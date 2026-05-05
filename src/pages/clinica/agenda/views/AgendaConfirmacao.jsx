@@ -1,5 +1,5 @@
 // src/pages/clinica/agenda/views/AgendaConfirmacao.jsx
-import React from "react";
+import React from 'react';
 
 export default function AgendaConfirmacao() {
   return (
@@ -13,4 +13,3 @@ export default function AgendaConfirmacao() {
     </div>
   );
 }
-

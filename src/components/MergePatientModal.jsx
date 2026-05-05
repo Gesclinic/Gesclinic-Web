@@ -1,13 +1,13 @@
 /**
  * MergePatientModal.jsx
- * 
+ *
  * 🔄 MODAL PARA MERGE PRÉ-PACIENTE → PACIENTE
- * 
+ *
  * Fluxo com 3 etapas:
  * 1. Buscar paciente existente (CPF, Nome, Telefone)
  * 2. Criar novo paciente (formulário mínimo)
  * 3. Confirmar merge (resumo + confirmação)
- * 
+ *
  * Props:
  * - isOpen: boolean
  * - appointment: { id, lead_name, lead_phone, lead_mobile, ... }
@@ -19,12 +19,7 @@ import React, { useState, useMemo } from 'react';
 import { X, Search, Plus, CheckCircle2, AlertCircle, Loader } from 'lucide-react';
 import { formatPhone } from '@/utils/formatters/formatPhone';
 
-export default function MergePatientModal({
-  isOpen,
-  appointment,
-  onClose,
-  onSuccess,
-}) {
+export default function MergePatientModal({ isOpen, appointment, onClose, onSuccess }) {
   const [step, setStep] = useState(1); // 1, 2, ou 3
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -52,7 +47,9 @@ export default function MergePatientModal({
     phone: '',
   });
 
-  if (!isOpen || !appointment) return null;
+  if (!isOpen || !appointment) {
+    return null;
+  }
 
   // ============================================
   // ETAPA 1: BUSCAR PACIENTE EXISTENTE
@@ -201,9 +198,7 @@ export default function MergePatientModal({
       <div className="app-modal-shell app-modal-shell--compact rounded-lg bg-white shadow-xl overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50">
-          <h2 className="text-xl font-bold text-gray-900">
-            🧾 Finalizar Cadastro do Paciente
-          </h2>
+          <h2 className="text-xl font-bold text-gray-900">🧾 Finalizar Cadastro do Paciente</h2>
           <button
             onClick={onClose}
             disabled={loading}
@@ -216,7 +211,7 @@ export default function MergePatientModal({
         {/* Indicador de Progresso */}
         <div className="border-b border-gray-200 px-6 py-3 bg-gray-50">
           <div className="flex gap-4">
-            {[1, 2, 3].map(s => (
+            {[1, 2, 3].map((s) => (
               <button
                 key={s}
                 onClick={() => s < step && setStep(s)}
@@ -225,8 +220,8 @@ export default function MergePatientModal({
                   s === step
                     ? 'bg-blue-600 text-white'
                     : s < step
-                    ? 'bg-green-100 text-green-700 hover:bg-green-200 cursor-pointer'
-                    : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                      ? 'bg-green-100 text-green-700 hover:bg-green-200 cursor-pointer'
+                      : 'bg-gray-200 text-gray-500 cursor-not-allowed'
                 }`}
               >
                 {s < step ? (
@@ -255,14 +250,13 @@ export default function MergePatientModal({
           {step === 1 && (
             <div className="space-y-4">
               <p className="text-gray-600 text-sm">
-                Busque um paciente existente por CPF, nome ou telefone. Se não encontrar, crie um novo.
+                Busque um paciente existente por CPF, nome ou telefone. Se não encontrar, crie um
+                novo.
               </p>
 
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    CPF
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">CPF</label>
                   <input
                     type="text"
                     value={searchForm.cpf}
@@ -278,9 +272,7 @@ export default function MergePatientModal({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nome
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
                   <input
                     type="text"
                     value={searchForm.name}
@@ -296,9 +288,7 @@ export default function MergePatientModal({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Telefone
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
                   <input
                     type="tel"
                     value={searchForm.phone}
@@ -330,7 +320,10 @@ export default function MergePatientModal({
                         <div>
                           <p className="font-medium text-gray-900">{patient.name}</p>
                           <p className="text-sm text-gray-600">
-                            CPF: {patient.cpf ? `${patient.cpf.slice(0, 3)}.${patient.cpf.slice(3, 6)}.${patient.cpf.slice(6, 9)}-${patient.cpf.slice(9)}` : 'N/A'}
+                            CPF:{' '}
+                            {patient.cpf
+                              ? `${patient.cpf.slice(0, 3)}.${patient.cpf.slice(3, 6)}.${patient.cpf.slice(6, 9)}-${patient.cpf.slice(9)}`
+                              : 'N/A'}
                           </p>
                           {patient.birth_date && (
                             <p className="text-sm text-gray-600">
@@ -352,9 +345,7 @@ export default function MergePatientModal({
           {/* ETAPA 2: CRIAR NOVO */}
           {step === 2 && (
             <div className="space-y-4">
-              <p className="text-gray-600 text-sm">
-                Preencha os dados mínimos do novo paciente.
-              </p>
+              <p className="text-gray-600 text-sm">Preencha os dados mínimos do novo paciente.</p>
 
               <div className="space-y-3">
                 <div>
@@ -376,9 +367,7 @@ export default function MergePatientModal({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    CPF *
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">CPF *</label>
                   <input
                     type="text"
                     value={newPatientForm.cpf}
@@ -412,9 +401,7 @@ export default function MergePatientModal({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Telefone *
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Telefone *</label>
                   <input
                     type="tel"
                     value={newPatientForm.phone}
@@ -463,14 +450,10 @@ export default function MergePatientModal({
                 <div className="space-y-1 mb-4">
                   <p className="font-medium text-gray-900">{appointment.lead_name}</p>
                   {appointment.lead_mobile && (
-                    <p className="text-sm text-gray-600">
-                      Celular: {appointment.lead_mobile}
-                    </p>
+                    <p className="text-sm text-gray-600">Celular: {appointment.lead_mobile}</p>
                   )}
                   {appointment.lead_phone && (
-                    <p className="text-sm text-gray-600">
-                      Telefone: {appointment.lead_phone}
-                    </p>
+                    <p className="text-sm text-gray-600">Telefone: {appointment.lead_phone}</p>
                   )}
                 </div>
 
@@ -483,7 +466,8 @@ export default function MergePatientModal({
                   <p className="font-medium text-gray-900">{selectedPatient.name}</p>
                   {selectedPatient.cpf && (
                     <p className="text-sm text-gray-600">
-                      CPF: {selectedPatient.cpf.slice(0, 3)}.{selectedPatient.cpf.slice(3, 6)}.{selectedPatient.cpf.slice(6, 9)}-{selectedPatient.cpf.slice(9)}
+                      CPF: {selectedPatient.cpf.slice(0, 3)}.{selectedPatient.cpf.slice(3, 6)}.
+                      {selectedPatient.cpf.slice(6, 9)}-{selectedPatient.cpf.slice(9)}
                     </p>
                   )}
                   {selectedPatient.birth_date && (
@@ -503,7 +487,8 @@ export default function MergePatientModal({
                     className="mt-1 w-4 h-4 accent-blue-600"
                   />
                   <span className="text-sm text-gray-700">
-                    ✅ <strong>Confirmo que os dados estão corretos</strong> e autorizo o vínculo deste paciente ao agendamento.
+                    ✅ <strong>Confirmo que os dados estão corretos</strong> e autorizo o vínculo
+                    deste paciente ao agendamento.
                   </span>
                 </label>
               </div>

@@ -20,7 +20,9 @@ export function RulesAlert() {
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
-    if (loadingClinic || !clinic?.id) return;
+    if (loadingClinic || !clinic?.id) {
+      return;
+    }
 
     loadRules();
   }, [clinic?.id, loadingClinic]);
@@ -54,8 +56,8 @@ export function RulesAlert() {
   }
 
   // Contar regras ativas
-  const agendaActive = rules.agendaRules.filter(r => r.is_active).length;
-  const checkinActive = rules.checkinRules.filter(r => r.is_active).length;
+  const agendaActive = rules.agendaRules.filter((r) => r.is_active).length;
+  const checkinActive = rules.checkinRules.filter((r) => r.is_active).length;
 
   // Determinar nível de alerta
   const totalRules = rules.agendaRules.length + rules.checkinRules.length;
@@ -110,15 +112,17 @@ export function RulesAlert() {
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-start gap-3 flex-1">
-          <IconComponent className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
-            alertLevel === 'error' ? 'text-red-600' :
-            alertLevel === 'warning' ? 'text-yellow-600' :
-            'text-blue-600'
-          }`} />
+          <IconComponent
+            className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
+              alertLevel === 'error'
+                ? 'text-red-600'
+                : alertLevel === 'warning'
+                  ? 'text-yellow-600'
+                  : 'text-blue-600'
+            }`}
+          />
           <div className="flex-1 min-w-0">
-            <p className={`font-semibold text-sm ${textVariants[alertLevel]}`}>
-              {message}
-            </p>
+            <p className={`font-semibold text-sm ${textVariants[alertLevel]}`}>{message}</p>
             {expanded && (
               <div className="mt-2 text-xs space-y-2">
                 {rules.agendaRules.length > 0 && (
@@ -128,7 +132,9 @@ export function RulesAlert() {
                     ) : (
                       <AlertCircle className="w-4 h-4 text-orange-600" />
                     )}
-                    <span>Regras de Agenda: {agendaActive}/{rules.agendaRules.length}</span>
+                    <span>
+                      Regras de Agenda: {agendaActive}/{rules.agendaRules.length}
+                    </span>
                   </div>
                 )}
                 {rules.checkinRules.length > 0 && (
@@ -138,7 +144,9 @@ export function RulesAlert() {
                     ) : (
                       <AlertCircle className="w-4 h-4 text-orange-600" />
                     )}
-                    <span>Regras de Check-in: {checkinActive}/{rules.checkinRules.length}</span>
+                    <span>
+                      Regras de Check-in: {checkinActive}/{rules.checkinRules.length}
+                    </span>
                   </div>
                 )}
                 <div className="mt-2 pt-2 border-t border-current border-opacity-20">
@@ -155,17 +163,25 @@ export function RulesAlert() {
         </div>
         <button className="flex-shrink-0">
           {expanded ? (
-            <ChevronUp className={`w-4 h-4 ${
-              alertLevel === 'error' ? 'text-red-600' :
-              alertLevel === 'warning' ? 'text-yellow-600' :
-              'text-blue-600'
-            }`} />
+            <ChevronUp
+              className={`w-4 h-4 ${
+                alertLevel === 'error'
+                  ? 'text-red-600'
+                  : alertLevel === 'warning'
+                    ? 'text-yellow-600'
+                    : 'text-blue-600'
+              }`}
+            />
           ) : (
-            <ChevronDown className={`w-4 h-4 ${
-              alertLevel === 'error' ? 'text-red-600' :
-              alertLevel === 'warning' ? 'text-yellow-600' :
-              'text-blue-600'
-            }`} />
+            <ChevronDown
+              className={`w-4 h-4 ${
+                alertLevel === 'error'
+                  ? 'text-red-600'
+                  : alertLevel === 'warning'
+                    ? 'text-yellow-600'
+                    : 'text-blue-600'
+              }`}
+            />
           )}
         </button>
       </div>
@@ -186,7 +202,9 @@ export function RulesSummaryCard() {
   });
 
   useEffect(() => {
-    if (loadingClinic || !clinic?.id) return;
+    if (loadingClinic || !clinic?.id) {
+      return;
+    }
 
     loadCounts();
   }, [clinic?.id, loadingClinic]);
@@ -208,9 +226,9 @@ export function RulesSummaryCard() {
 
       setCounts({
         agendaTotal: agendaRes.data?.length || 0,
-        agendaActive: agendaRes.data?.filter(r => r.is_active).length || 0,
+        agendaActive: agendaRes.data?.filter((r) => r.is_active).length || 0,
         checkinTotal: checkinRes.data?.length || 0,
-        checkinActive: checkinRes.data?.filter(r => r.is_active).length || 0,
+        checkinActive: checkinRes.data?.filter((r) => r.is_active).length || 0,
       });
     } catch (error) {
       console.error('Erro ao carregar contadores:', error);
@@ -236,8 +254,7 @@ export function RulesSummaryCard() {
         <div className="border-t border-gray-200 pt-2 mt-2 flex justify-between items-center font-semibold">
           <span className="text-gray-900">Total:</span>
           <span className="text-blue-600">
-            {counts.agendaActive + counts.checkinActive}/
-            {counts.agendaTotal + counts.checkinTotal}
+            {counts.agendaActive + counts.checkinActive}/{counts.agendaTotal + counts.checkinTotal}
           </span>
         </div>
       </div>

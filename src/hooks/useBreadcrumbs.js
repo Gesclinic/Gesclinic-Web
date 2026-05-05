@@ -1,8 +1,10 @@
-import { useMemo } from "react";
+import { useMemo } from 'react';
 
 export function useBreadcrumbs(custom) {
   return useMemo(() => {
-    if (!custom || !Array.isArray(custom)) return null;
+    if (!custom || !Array.isArray(custom)) {
+      return null;
+    }
 
     return custom.map((c) => ({
       label: c.label,

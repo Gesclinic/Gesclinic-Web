@@ -4,22 +4,41 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Microscope, 
-  Plus, 
-  Edit, 
-  Trash2, 
+import {
+  Microscope,
+  Plus,
+  Edit,
+  Trash2,
   Save,
   Search,
   Calendar,
   User,
-  Stethoscope
+  Stethoscope,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 
@@ -47,7 +66,7 @@ export default function NovaGuiaSADT() {
     executante: '',
     data_solicitacao: new Date().toISOString().split('T')[0],
     data_execucao: '',
-    observacoes: ''
+    observacoes: '',
   });
 
   // Mock data para demonstração
@@ -63,25 +82,25 @@ export default function NovaGuiaSADT() {
       data_execucao: '2025-10-30',
       status: 'Em Andamento',
       total_procedimentos: 2,
-      valor_total: 320.00,
+      valor_total: 320.0,
       procedimentos: [
         {
           id: 'P1',
           codigo_tuss: '40301010',
           descricao: 'Eletrocardiograma',
           quantidade: 1,
-          valor_unitario: 80.00,
-          valor_total: 80.00
+          valor_unitario: 80.0,
+          valor_total: 80.0,
         },
         {
           id: 'P2',
           codigo_tuss: '40201027',
           descricao: 'Ecocardiograma Transtorácico',
           quantidade: 1,
-          valor_unitario: 240.00,
-          valor_total: 240.00
-        }
-      ]
+          valor_unitario: 240.0,
+          valor_total: 240.0,
+        },
+      ],
     },
     {
       id: 'SADT002',
@@ -94,45 +113,45 @@ export default function NovaGuiaSADT() {
       data_execucao: '2025-10-30',
       status: 'Finalizada',
       total_procedimentos: 3,
-      valor_total: 150.00,
+      valor_total: 150.0,
       procedimentos: [
         {
           id: 'P3',
           codigo_tuss: '40301150',
           descricao: 'Hemograma Completo',
           quantidade: 1,
-          valor_unitario: 50.00,
-          valor_total: 50.00
+          valor_unitario: 50.0,
+          valor_total: 50.0,
         },
         {
           id: 'P4',
           codigo_tuss: '40301230',
           descricao: 'Glicemia de Jejum',
           quantidade: 1,
-          valor_unitario: 25.00,
-          valor_total: 25.00
+          valor_unitario: 25.0,
+          valor_total: 25.0,
         },
         {
           id: 'P5',
           codigo_tuss: '40301190',
           descricao: 'Colesterol Total e Frações',
           quantidade: 1,
-          valor_unitario: 75.00,
-          valor_total: 75.00
-        }
-      ]
-    }
+          valor_unitario: 75.0,
+          valor_total: 75.0,
+        },
+      ],
+    },
   ];
 
   // Mock procedimentos disponíveis
   const mockProcedimentos = [
-    { codigo_tuss: '40301010', descricao: 'Eletrocardiograma', valor_referencia: 80.00 },
-    { codigo_tuss: '40201027', descricao: 'Ecocardiograma Transtorácico', valor_referencia: 240.00 },
-    { codigo_tuss: '40301150', descricao: 'Hemograma Completo', valor_referencia: 50.00 },
-    { codigo_tuss: '40301230', descricao: 'Glicemia de Jejum', valor_referencia: 25.00 },
-    { codigo_tuss: '40301190', descricao: 'Colesterol Total e Frações', valor_referencia: 75.00 },
-    { codigo_tuss: '40201020', descricao: 'Ultrassom Abdominal Total', valor_referencia: 120.00 },
-    { codigo_tuss: '40401030', descricao: 'Raio X de Tórax PA', valor_referencia: 60.00 }
+    { codigo_tuss: '40301010', descricao: 'Eletrocardiograma', valor_referencia: 80.0 },
+    { codigo_tuss: '40201027', descricao: 'Ecocardiograma Transtorácico', valor_referencia: 240.0 },
+    { codigo_tuss: '40301150', descricao: 'Hemograma Completo', valor_referencia: 50.0 },
+    { codigo_tuss: '40301230', descricao: 'Glicemia de Jejum', valor_referencia: 25.0 },
+    { codigo_tuss: '40301190', descricao: 'Colesterol Total e Frações', valor_referencia: 75.0 },
+    { codigo_tuss: '40201020', descricao: 'Ultrassom Abdominal Total', valor_referencia: 120.0 },
+    { codigo_tuss: '40401030', descricao: 'Raio X de Tórax PA', valor_referencia: 60.0 },
   ];
 
   useEffect(() => {
@@ -147,9 +166,9 @@ export default function NovaGuiaSADT() {
     } catch (error) {
       console.error('Erro ao buscar guias SADT:', error);
       toast({
-        title: "Erro",
-        description: "Não foi possível carregar as guias SADT.",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Não foi possível carregar as guias SADT.',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -166,12 +185,12 @@ export default function NovaGuiaSADT() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (selectedProcedimentos.length === 0) {
       toast({
-        title: "Procedimentos obrigatórios",
-        description: "Adicione pelo menos um procedimento à guia.",
-        variant: "destructive"
+        title: 'Procedimentos obrigatórios',
+        description: 'Adicione pelo menos um procedimento à guia.',
+        variant: 'destructive',
       });
       return;
     }
@@ -181,14 +200,14 @@ export default function NovaGuiaSADT() {
         ...formData,
         numero_guia: editingGuia ? editingGuia.numero_guia : generateGuiaNumber(),
         procedimentos: selectedProcedimentos,
-        valor_total: selectedProcedimentos.reduce((sum, proc) => sum + proc.valor_total, 0)
+        valor_total: selectedProcedimentos.reduce((sum, proc) => sum + proc.valor_total, 0),
       };
 
       console.log('Salvando guia SADT:', guiaData);
 
       toast({
-        title: editingGuia ? "Guia atualizada" : "Guia criada",
-        description: `Guia SADT ${editingGuia ? 'atualizada' : 'criada'} com sucesso.`
+        title: editingGuia ? 'Guia atualizada' : 'Guia criada',
+        description: `Guia SADT ${editingGuia ? 'atualizada' : 'criada'} com sucesso.`,
       });
 
       setIsDialogOpen(false);
@@ -197,9 +216,9 @@ export default function NovaGuiaSADT() {
       fetchGuiasSADT();
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Não foi possível salvar a guia SADT.",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Não foi possível salvar a guia SADT.',
+        variant: 'destructive',
       });
     }
   };
@@ -214,7 +233,7 @@ export default function NovaGuiaSADT() {
       executante: '',
       data_solicitacao: new Date().toISOString().split('T')[0],
       data_execucao: '',
-      observacoes: ''
+      observacoes: '',
     });
     setSelectedProcedimentos([]);
   };
@@ -225,15 +244,15 @@ export default function NovaGuiaSADT() {
       id: Date.now().toString(),
       quantidade: 1,
       valor_unitario: procedimento.valor_referencia,
-      valor_total: procedimento.valor_referencia
+      valor_total: procedimento.valor_referencia,
     };
 
     setSelectedProcedimentos([...selectedProcedimentos, newProc]);
   };
 
   const updateProcedimento = (id, field, value) => {
-    setSelectedProcedimentos(procs => 
-      procs.map(proc => {
+    setSelectedProcedimentos((procs) =>
+      procs.map((proc) => {
         if (proc.id === id) {
           const updated = { ...proc, [field]: value };
           if (field === 'quantidade' || field === 'valor_unitario') {
@@ -242,12 +261,12 @@ export default function NovaGuiaSADT() {
           return updated;
         }
         return proc;
-      })
+      }),
     );
   };
 
   const removeProcedimento = (id) => {
-    setSelectedProcedimentos(procs => procs.filter(proc => proc.id !== id));
+    setSelectedProcedimentos((procs) => procs.filter((proc) => proc.id !== id));
   };
 
   const handleEdit = (guia) => {
@@ -260,7 +279,7 @@ export default function NovaGuiaSADT() {
       executante: guia.executante,
       data_solicitacao: guia.data_solicitacao,
       data_execucao: guia.data_execucao,
-      observacoes: guia.observacoes || ''
+      observacoes: guia.observacoes || '',
     });
     setSelectedProcedimentos(guia.procedimentos || []);
     setIsDialogOpen(true);
@@ -269,12 +288,12 @@ export default function NovaGuiaSADT() {
   const getStatusBadge = (status) => {
     const statusConfig = {
       'Em Andamento': { variant: 'secondary', color: 'text-blue-600' },
-      'Finalizada': { variant: 'default', color: 'text-green-600' },
-      'Cancelada': { variant: 'destructive', color: 'text-red-600' }
+      Finalizada: { variant: 'default', color: 'text-green-600' },
+      Cancelada: { variant: 'destructive', color: 'text-red-600' },
     };
 
     const config = statusConfig[status] || { variant: 'outline', color: 'text-gray-600' };
-    
+
     return (
       <Badge variant={config.variant} className={config.color}>
         {status}
@@ -282,10 +301,12 @@ export default function NovaGuiaSADT() {
     );
   };
 
-  const filteredGuias = guiasSADT.filter(guia => {
-    return guia.paciente_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           guia.numero_guia.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           guia.solicitante.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredGuias = guiasSADT.filter((guia) => {
+    return (
+      guia.paciente_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      guia.numero_guia.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      guia.solicitante.toLowerCase().includes(searchTerm.toLowerCase())
+    );
   });
 
   return (
@@ -311,9 +332,7 @@ export default function NovaGuiaSADT() {
           </DialogTrigger>
           <DialogContent className="app-dialog-shell app-dialog-shell--content app-dialog-shell--wide overflow-y-auto modal-content-scroll">
             <DialogHeader>
-              <DialogTitle>
-                {editingGuia ? 'Editar Guia SADT' : 'Nova Guia SADT'}
-              </DialogTitle>
+              <DialogTitle>{editingGuia ? 'Editar Guia SADT' : 'Nova Guia SADT'}</DialogTitle>
             </DialogHeader>
 
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -332,16 +351,18 @@ export default function NovaGuiaSADT() {
                       <Input
                         id="paciente_nome"
                         value={formData.paciente_nome}
-                        onChange={(e) => setFormData({...formData, paciente_nome: e.target.value})}
+                        onChange={(e) =>
+                          setFormData({ ...formData, paciente_nome: e.target.value })
+                        }
                         required
                       />
                     </div>
 
                     <div>
                       <Label htmlFor="convenio_id">Convênio</Label>
-                      <Select 
+                      <Select
                         value={formData.convenio_id}
-                        onValueChange={(value) => setFormData({...formData, convenio_id: value})}
+                        onValueChange={(value) => setFormData({ ...formData, convenio_id: value })}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione o convênio" />
@@ -360,7 +381,7 @@ export default function NovaGuiaSADT() {
                       <Input
                         id="solicitante"
                         value={formData.solicitante}
-                        onChange={(e) => setFormData({...formData, solicitante: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, solicitante: e.target.value })}
                         required
                       />
                     </div>
@@ -370,7 +391,7 @@ export default function NovaGuiaSADT() {
                       <Input
                         id="executante"
                         value={formData.executante}
-                        onChange={(e) => setFormData({...formData, executante: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, executante: e.target.value })}
                         required
                       />
                     </div>
@@ -381,7 +402,9 @@ export default function NovaGuiaSADT() {
                         id="data_solicitacao"
                         type="date"
                         value={formData.data_solicitacao}
-                        onChange={(e) => setFormData({...formData, data_solicitacao: e.target.value})}
+                        onChange={(e) =>
+                          setFormData({ ...formData, data_solicitacao: e.target.value })
+                        }
                         required
                       />
                     </div>
@@ -392,7 +415,9 @@ export default function NovaGuiaSADT() {
                         id="data_execucao"
                         type="date"
                         value={formData.data_execucao}
-                        onChange={(e) => setFormData({...formData, data_execucao: e.target.value})}
+                        onChange={(e) =>
+                          setFormData({ ...formData, data_execucao: e.target.value })
+                        }
                       />
                     </div>
                   </div>
@@ -402,7 +427,7 @@ export default function NovaGuiaSADT() {
                     <Textarea
                       id="observacoes"
                       value={formData.observacoes}
-                      onChange={(e) => setFormData({...formData, observacoes: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
                       rows={3}
                     />
                   </div>
@@ -471,7 +496,13 @@ export default function NovaGuiaSADT() {
                                     type="number"
                                     min="1"
                                     value={proc.quantidade}
-                                    onChange={(e) => updateProcedimento(proc.id, 'quantidade', parseInt(e.target.value))}
+                                    onChange={(e) =>
+                                      updateProcedimento(
+                                        proc.id,
+                                        'quantidade',
+                                        parseInt(e.target.value),
+                                      )
+                                    }
                                     className="w-20"
                                   />
                                 </TableCell>
@@ -480,7 +511,13 @@ export default function NovaGuiaSADT() {
                                     type="number"
                                     step="0.01"
                                     value={proc.valor_unitario}
-                                    onChange={(e) => updateProcedimento(proc.id, 'valor_unitario', parseFloat(e.target.value))}
+                                    onChange={(e) =>
+                                      updateProcedimento(
+                                        proc.id,
+                                        'valor_unitario',
+                                        parseFloat(e.target.value),
+                                      )
+                                    }
                                     className="w-24"
                                   />
                                 </TableCell>
@@ -508,7 +545,10 @@ export default function NovaGuiaSADT() {
                           <div className="flex justify-between items-center">
                             <span className="font-semibold">Total da Guia:</span>
                             <span className="text-xl font-bold text-green-600">
-                              R$ {selectedProcedimentos.reduce((sum, proc) => sum + proc.valor_total, 0).toFixed(2)}
+                              R${' '}
+                              {selectedProcedimentos
+                                .reduce((sum, proc) => sum + proc.valor_total, 0)
+                                .toFixed(2)}
                             </span>
                           </div>
                         </div>
@@ -519,8 +559,8 @@ export default function NovaGuiaSADT() {
               </Tabs>
 
               <div className="flex justify-end gap-2 pt-4">
-                <Button 
-                  type="button" 
+                <Button
+                  type="button"
                   variant="outline"
                   onClick={() => {
                     setIsDialogOpen(false);
@@ -577,7 +617,7 @@ export default function NovaGuiaSADT() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-blue-600">
-              {guiasSADT.filter(g => g.status === 'Em Andamento').length}
+              {guiasSADT.filter((g) => g.status === 'Em Andamento').length}
             </div>
             <p className="text-sm text-muted-foreground">Em Andamento</p>
           </CardContent>
@@ -586,7 +626,7 @@ export default function NovaGuiaSADT() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-green-600">
-              {guiasSADT.filter(g => g.status === 'Finalizada').length}
+              {guiasSADT.filter((g) => g.status === 'Finalizada').length}
             </div>
             <p className="text-sm text-muted-foreground">Finalizadas</p>
           </CardContent>
@@ -625,9 +665,7 @@ export default function NovaGuiaSADT() {
             <TableBody>
               {filteredGuias.map((guia) => (
                 <TableRow key={guia.id}>
-                  <TableCell className="font-mono text-sm">
-                    {guia.numero_guia}
-                  </TableCell>
+                  <TableCell className="font-mono text-sm">{guia.numero_guia}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <User className="w-4 h-4 text-muted-foreground" />
@@ -648,23 +686,15 @@ export default function NovaGuiaSADT() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary">
-                      {guia.total_procedimentos} procedimentos
-                    </Badge>
+                    <Badge variant="secondary">{guia.total_procedimentos} procedimentos</Badge>
                   </TableCell>
                   <TableCell className="text-right font-semibold">
                     R$ {guia.valor_total.toFixed(2)}
                   </TableCell>
-                  <TableCell>
-                    {getStatusBadge(guia.status)}
-                  </TableCell>
+                  <TableCell>{getStatusBadge(guia.status)}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleEdit(guia)}
-                      >
+                      <Button size="sm" variant="outline" onClick={() => handleEdit(guia)}>
                         <Edit className="w-3 h-3" />
                       </Button>
                     </div>
@@ -675,10 +705,9 @@ export default function NovaGuiaSADT() {
               {filteredGuias.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                    {searchTerm 
+                    {searchTerm
                       ? 'Nenhuma guia SADT encontrada com os filtros aplicados.'
-                      : 'Nenhuma guia SADT criada ainda.'
-                    }
+                      : 'Nenhuma guia SADT criada ainda.'}
                   </TableCell>
                 </TableRow>
               )}
@@ -689,4 +718,3 @@ export default function NovaGuiaSADT() {
     </div>
   );
 }
-

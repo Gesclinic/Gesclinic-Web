@@ -1,7 +1,7 @@
 // src/lib/repassePdfApi.js
 /**
  * Exportação de PDF para Repassos
- * 
+ *
  * Gera recibos profissionais com:
  * - Detalhes do repasse
  * - Assinatura da clínica
@@ -130,7 +130,7 @@ export async function gerarReciboPDF(repasse, profissional, clinic) {
     const imgData = canvas.toDataURL('image/png');
     const imgWidth = 210; // A4 width em mm
     const pageHeight = 297; // A4 height em mm
-    let heightLeft = canvas.height * imgWidth / canvas.width;
+    let heightLeft = (canvas.height * imgWidth) / canvas.width;
     let position = 0;
 
     pdf.addImage(imgData, 'PNG', 0, position, imgWidth, heightLeft);
@@ -178,7 +178,9 @@ export async function gerarRelatorioPDF(repasses, clinic) {
           <th style="padding: 10px; border: 1px solid #ddd; text-align: right;">Repasse</th>
           <th style="padding: 10px; border: 1px solid #ddd;">Status</th>
         </tr>
-        ${repasses.map(r => `
+        ${repasses
+    .map(
+      (r) => `
           <tr>
             <td style="padding: 10px; border: 1px solid #ddd;">${r.profissional?.name || 'N/A'}</td>
             <td style="padding: 10px; border: 1px solid #ddd;">${r.periodo_inicio} a ${r.periodo_fim}</td>
@@ -186,7 +188,9 @@ export async function gerarRelatorioPDF(repasses, clinic) {
             <td style="padding: 10px; border: 1px solid #ddd; text-align: right; font-weight: bold;">R$ ${(r.valor_profissional || 0).toFixed(2).replace('.', ',')}</td>
             <td style="padding: 10px; border: 1px solid #ddd;">${r.status}</td>
           </tr>
-        `).join('')}
+        `,
+    )
+    .join('')}
       </table>
     </div>
   `;
@@ -198,10 +202,10 @@ export async function gerarRelatorioPDF(repasses, clinic) {
     const pdf = new jsPDF();
     const imgData = canvas.toDataURL('image/png');
     pdf.addImage(imgData, 'PNG', 0, 0, 210, 297);
-    
+
     const filename = `relatorio-repassos-${new Date().toISOString().split('T')[0]}.pdf`;
     pdf.save(filename);
-    
+
     console.log('✅ Relatório PDF gerado:', filename);
   } finally {
     document.body.removeChild(relatorioContainer);
@@ -212,9 +216,18 @@ export async function gerarRelatorioPDF(repasses, clinic) {
  * Exportar para Excel (alternativa ao PDF)
  */
 export function exportarExcel(repasses, clinic) {
-  const headers = ['Profissional', 'Período Início', 'Período Fim', 'Total Bruto', 'Total Líquido', 'Repasse', 'Lucro Clínica', 'Status'];
-  
-  const rows = repasses.map(r => [
+  const headers = [
+    'Profissional',
+    'Período Início',
+    'Período Fim',
+    'Total Bruto',
+    'Total Líquido',
+    'Repasse',
+    'Lucro Clínica',
+    'Status',
+  ];
+
+  const rows = repasses.map((r) => [
     r.profissional?.name || 'N/A',
     r.periodo_inicio,
     r.periodo_fim,
@@ -227,22 +240,22 @@ export function exportarExcel(repasses, clinic) {
 
   // Criar CSV
   let csv = headers.join(',') + '\n';
-  rows.forEach(row => {
-    csv += row.map(cell => `"${cell}"`).join(',') + '\n';
+  rows.forEach((row) => {
+    csv += row.map((cell) => `"${cell}"`).join(',') + '\n';
   });
 
   // Download
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   const url = URL.createObjectURL(blob);
-  
+
   link.setAttribute('href', url);
   link.setAttribute('download', `repassos-${new Date().toISOString().split('T')[0]}.csv`);
   link.style.visibility = 'hidden';
-  
+
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  
+
   console.log('✅ Excel exportado');
 }

@@ -1,9 +1,8 @@
-
-import { useEffect, useState, useMemo } from "react";
-import { format } from "date-fns";
-import { listarAgenda } from "../services/agendaService";
-import { mapAgendaItem } from "@/modules/agenda/services/agendaMapper";
-import { useClinicContext } from "@/contexts/ClinicContext";
+import { useEffect, useState, useMemo } from 'react';
+import { format } from 'date-fns';
+import { listarAgenda } from '@/modules/agenda/services/agenda.api.complex';
+import { mapAgendaItem } from '@/modules/agenda/services/agendaMapper';
+import { useClinicContext } from '@/contexts/ClinicContext';
 import AgendaFilters from '@/components/agenda/AgendaFilters';
 import AgendamentoDetalhesModal from '../components/AgendamentoDetalhesModal';
 import ModalCriarAgendamento from '../components/ModalCriarAgendamento';
@@ -24,7 +23,9 @@ function AgendaSala() {
   const [roomId, setRoomId] = useState(undefined);
 
   useEffect(() => {
-    if (!clinic?.id) return;
+    if (!clinic?.id) {
+      return;
+    }
     listarAgenda({ clinicId: clinic.id, date })
       .then((data) => data.map(mapAgendaItem))
       .then(setItems);
@@ -34,11 +35,25 @@ function AgendaSala() {
   }, [clinic, date]);
 
   // Salas para filtro
-  const rooms = useMemo(() => Array.from(new Set(items.map(a => a.roomId && a.room ? JSON.stringify({ id: a.roomId, name: a.room }) : null).filter(Boolean))).map(str => JSON.parse(str)), [items]);
+  const rooms = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          items
+            .map((a) =>
+              a.roomId && a.room ? JSON.stringify({ id: a.roomId, name: a.room }) : null,
+            )
+            .filter(Boolean),
+        ),
+      ).map((str) => JSON.parse(str)),
+    [items],
+  );
   // Filtrar por sala
   const filteredItems = useMemo(() => {
-    if (!roomId || roomId === 'all') return items;
-    return items.filter(a => a.roomId === roomId);
+    if (!roomId || roomId === 'all') {
+      return items;
+    }
+    return items.filter((a) => a.roomId === roomId);
   }, [items, roomId]);
   const grouped = filteredItems.reduce((acc, a) => {
     acc[a.room] = acc[a.room] || [];
@@ -91,7 +106,7 @@ function AgendaSala() {
                         <AgendaSlotCard
                           id={a.id}
                           data={date}
-                          horario={format(new Date(a.startTime), "HH:mm")}
+                          horario={format(new Date(a.startTime), 'HH:mm')}
                           profissionalId={a.professionalId}
                           salaId={a.roomId}
                           agendamento={a}
@@ -100,10 +115,10 @@ function AgendaSala() {
                               setModalDetalhesId(a.id);
                             } else {
                               setNovoAgendamento({
-                                horario: format(new Date(a.startTime), "HH:mm"),
+                                horario: format(new Date(a.startTime), 'HH:mm'),
                                 date,
                                 professionalId: a.professionalId,
-                                salaId: a.roomId
+                                salaId: a.roomId,
                               });
                             }
                           }}
@@ -119,18 +134,25 @@ function AgendaSala() {
       )}
       {/* Modal de detalhes do agendamento */}
       {modalDetalhesId && (
-        <AgendamentoDetalhesModal agendamentoId={modalDetalhesId} onClose={() => setModalDetalhesId(null)} />
+        <AgendamentoDetalhesModal
+          agendamentoId={modalDetalhesId}
+          onClose={() => setModalDetalhesId(null)}
+        />
       )}
       {/* Modal de novo agendamento */}
       {novoAgendamento && (
         <ModalCriarAgendamento
           open={!!novoAgendamento}
-          onOpenChange={open => { if (!open) setNovoAgendamento(null); }}
+          onOpenChange={(open) => {
+            if (!open) {
+              setNovoAgendamento(null);
+            }
+          }}
           data={{
             date: novoAgendamento.date,
             time: novoAgendamento.horario,
             professionalId: novoAgendamento.professionalId,
-            salaId: novoAgendamento.salaId
+            salaId: novoAgendamento.salaId,
           }}
           professionals={professionals}
           services={services}
@@ -142,4 +164,3 @@ function AgendaSala() {
 }
 
 export default AgendaSala;
-

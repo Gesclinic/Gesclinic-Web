@@ -1,46 +1,49 @@
-import React, { useEffect, useState } from "react";
-import PageLayout from "@/components/ui/PageLayout";
-import { useBreadcrumbs } from "@/hooks/useBreadcrumbs";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ClipboardCheck, Filter, Download, MoreVertical } from "lucide-react";
-import { useClinicContext } from "@/contexts/useClinicContext";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
-import { useToast } from "@/components/ui/use-toast";
-import InventoryDialog from "@/components/clinica/estoque/InventoryDialog";
+import React, { useEffect, useState } from 'react';
+import PageLayout from '@/components/ui/PageLayout';
+import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { ClipboardCheck, Filter, Download, MoreVertical } from 'lucide-react';
+import { useClinicContext } from '@/contexts/useClinicContext';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useToast } from '@/components/ui/use-toast';
+import InventoryDialog from '@/components/clinica/estoque/InventoryDialog';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
 
 export default function Inventario() {
   const breadcrumbs = useBreadcrumbs([
-    { label: "Estoque", path: "/clinica/estoque" },
-    { label: "Inventário" }
+    { label: 'Estoque', path: '/clinica/estoque' },
+    { label: 'Inventário' },
   ]);
 
   const { clinicId } = useClinicContext();
   const { user } = useAuth();
   const { toast } = useToast();
-  
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState("");
-  const [reasonFilter, setReasonFilter] = useState("");
-  const [dateStart, setDateStart] = useState("");
-  const [dateEnd, setDateEnd] = useState("");
-  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState('');
+  const [reasonFilter, setReasonFilter] = useState('');
+  const [dateStart, setDateStart] = useState('');
+  const [dateEnd, setDateEnd] = useState('');
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     loadInventories();
   }, [clinicId]);
 
   const loadInventories = async () => {
-    if (!clinicId) { setLoading(false); return; }
+    if (!clinicId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       // TODO: Implement API call to fetch inventories
@@ -48,7 +51,11 @@ export default function Inventario() {
       setRows([]);
     } catch (err) {
       console.error('Erro ao carregar inventários:', err);
-      toast({ variant: 'destructive', title: 'Erro ao carregar inventários', description: err.message });
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao carregar inventários',
+        description: err.message,
+      });
     } finally {
       setLoading(false);
     }
@@ -61,7 +68,11 @@ export default function Inventario() {
       setDialogOpen(false);
       await loadInventories();
     } catch (err) {
-      toast({ variant: 'destructive', title: 'Erro ao criar inventário', description: err.message });
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao criar inventário',
+        description: err.message,
+      });
     }
   };
 
@@ -82,8 +93,8 @@ export default function Inventario() {
       subtitle="Realize inventários periódicos para controlar o saldo físico do estoque."
       actions={
         <div className="flex gap-2">
-          <Button 
-            className="bg-purple-600 text-white hover:bg-purple-700 flex items-center" 
+          <Button
+            className="bg-purple-600 text-white hover:bg-purple-700 flex items-center"
             onClick={() => setDialogOpen(true)}
           >
             <ClipboardCheck className="mr-2 w-4 h-4" /> Novo Inventário
@@ -98,9 +109,9 @@ export default function Inventario() {
       <div className="flex flex-wrap gap-3 items-end mt-4">
         <div>
           <label className="block text-xs text-gray-600 mb-1">Status</label>
-          <select 
-            className="border rounded px-3 py-2 text-sm" 
-            value={statusFilter} 
+          <select
+            className="border rounded px-3 py-2 text-sm"
+            value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
             <option value="">Todos</option>
@@ -112,9 +123,9 @@ export default function Inventario() {
 
         <div>
           <label className="block text-xs text-gray-600 mb-1">Motivo</label>
-          <select 
-            className="border rounded px-3 py-2 text-sm" 
-            value={reasonFilter} 
+          <select
+            className="border rounded px-3 py-2 text-sm"
+            value={reasonFilter}
             onChange={(e) => setReasonFilter(e.target.value)}
           >
             <option value="">Todos</option>
@@ -128,28 +139,34 @@ export default function Inventario() {
 
         <div>
           <label className="block text-xs text-gray-600 mb-1">De</label>
-          <input 
-            type="date" 
-            className="border rounded px-3 py-2 text-sm" 
-            value={dateStart} 
-            onChange={(e) => setDateStart(e.target.value)} 
+          <input
+            type="date"
+            className="border rounded px-3 py-2 text-sm"
+            value={dateStart}
+            onChange={(e) => setDateStart(e.target.value)}
           />
         </div>
 
         <div>
           <label className="block text-xs text-gray-600 mb-1">Até</label>
-          <input 
-            type="date" 
-            className="border rounded px-3 py-2 text-sm" 
-            value={dateEnd} 
-            onChange={(e) => setDateEnd(e.target.value)} 
+          <input
+            type="date"
+            className="border rounded px-3 py-2 text-sm"
+            value={dateEnd}
+            onChange={(e) => setDateEnd(e.target.value)}
           />
         </div>
 
         <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={() => setPeriod(0)}>Hoje</Button>
-          <Button size="sm" variant="outline" onClick={() => setPeriod(7)}>Últimos 7 dias</Button>
-          <Button size="sm" variant="outline" onClick={() => setPeriod(30)}>Últimos 30 dias</Button>
+          <Button size="sm" variant="outline" onClick={() => setPeriod(0)}>
+            Hoje
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setPeriod(7)}>
+            Últimos 7 dias
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setPeriod(30)}>
+            Últimos 30 dias
+          </Button>
         </div>
 
         <div className="flex-1 min-w-[250px]">
@@ -163,14 +180,14 @@ export default function Inventario() {
           />
         </div>
 
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           onClick={() => {
-            setStatusFilter("");
-            setReasonFilter("");
-            setDateStart("");
-            setDateEnd("");
-            setSearch("");
+            setStatusFilter('');
+            setReasonFilter('');
+            setDateStart('');
+            setDateEnd('');
+            setSearch('');
           }}
         >
           Limpar
@@ -189,9 +206,13 @@ export default function Inventario() {
         ) : rows.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-5xl mb-2">📊</div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-1">Nenhum inventário registrado</h3>
-            <p className="text-gray-600 mb-6">Comece a fazer controles de estoque iniciando o primeiro inventário</p>
-            <Button 
+            <h3 className="text-lg font-semibold text-gray-900 mb-1">
+              Nenhum inventário registrado
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Comece a fazer controles de estoque iniciando o primeiro inventário
+            </p>
+            <Button
               className="bg-purple-600 text-white hover:bg-purple-700"
               onClick={() => setDialogOpen(true)}
             >
@@ -220,13 +241,20 @@ export default function Inventario() {
                     <td className="px-4 py-3">{r.reason}</td>
                     <td className="px-4 py-3">{r.conducted_by}</td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                        r.status === 'em_progresso' ? 'bg-yellow-100 text-yellow-800' :
-                        r.status === 'concluido' ? 'bg-blue-100 text-blue-800' :
-                        'bg-green-100 text-green-800'
-                      }`}>
-                        {r.status === 'em_progresso' ? 'Em Progresso' :
-                         r.status === 'concluido' ? 'Concluído' : 'Finalizado'}
+                      <span
+                        className={`px-2 py-1 rounded text-xs font-semibold ${
+                          r.status === 'em_progresso'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : r.status === 'concluido'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-green-100 text-green-800'
+                        }`}
+                      >
+                        {r.status === 'em_progresso'
+                          ? 'Em Progresso'
+                          : r.status === 'concluido'
+                            ? 'Concluído'
+                            : 'Finalizado'}
                       </span>
                     </td>
                     <td className="px-4 py-3">{r.items_count || 0}</td>
@@ -263,4 +291,3 @@ export default function Inventario() {
     </PageLayout>
   );
 }
-

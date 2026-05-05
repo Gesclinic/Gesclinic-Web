@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useClinicContext } from '@/contexts/ClinicContext';
-import PageLayout from "@/components/ui/PageLayout";
-import { useBreadcrumbs } from "@/hooks/useBreadcrumbs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PERMISSIONS_BY_MODULE, listUserPermissions, grantPermission, revokePermission } from '@/lib/permissionsApi';
-import { 
+import PageLayout from '@/components/ui/PageLayout';
+import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  PERMISSIONS_BY_MODULE,
+  listUserPermissions,
+  grantPermission,
+  revokePermission,
+} from '@/lib/permissionsApi';
+import {
   CheckCircle2,
   XCircle,
   Lock,
@@ -14,14 +19,14 @@ import {
   Filter,
   Copy,
   Trash2,
-  X
+  X,
 } from 'lucide-react';
 
 export default function PermissoesConfig() {
   const breadcrumbs = useBreadcrumbs([
-    { label: "Clínica", path: "/clinica" },
-    { label: "Configurações" },
-    { label: "Permissões" }
+    { label: 'Clínica', path: '/clinica' },
+    { label: 'Configurações' },
+    { label: 'Permissões' },
   ]);
 
   const { clinicId } = useClinicContext();
@@ -35,9 +40,9 @@ export default function PermissoesConfig() {
   const modules = Object.entries(PERMISSIONS_BY_MODULE);
 
   const handlePermissionToggle = (permissionId) => {
-    setSelectedPermissions(prev => {
+    setSelectedPermissions((prev) => {
       if (prev.includes(permissionId)) {
-        return prev.filter(id => id !== permissionId);
+        return prev.filter((id) => id !== permissionId);
       } else {
         return [...prev, permissionId];
       }
@@ -46,14 +51,14 @@ export default function PermissoesConfig() {
 
   const handleSelectModule = (moduleName) => {
     const module = PERMISSIONS_BY_MODULE[moduleName];
-    const allPermissions = module.permissions.map(p => p.id);
+    const allPermissions = module.permissions.map((p) => p.id);
     setSelectedPermissions(allPermissions);
   };
 
   const handleDeselectModule = (moduleName) => {
     const module = PERMISSIONS_BY_MODULE[moduleName];
-    const modulePermissions = module.permissions.map(p => p.id);
-    setSelectedPermissions(prev => prev.filter(p => !modulePermissions.includes(p)));
+    const modulePermissions = module.permissions.map((p) => p.id);
+    setSelectedPermissions((prev) => prev.filter((p) => !modulePermissions.includes(p)));
   };
 
   const clearAllPermissions = () => {
@@ -66,20 +71,22 @@ export default function PermissoesConfig() {
   };
 
   // Filtrar módulos baseado no termo de busca
-  const filteredModules = modules.filter(([key, module]) =>
-    module.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    module.permissions.some(p => 
-      p.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.description.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+  const filteredModules = modules.filter(
+    ([key, module]) =>
+      module.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      module.permissions.some(
+        (p) =>
+          p.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          p.description.toLowerCase().includes(searchTerm.toLowerCase()),
+      ),
   );
 
   const PermissionItem = ({ permission, isSelected, onToggle }) => (
-    <div 
+    <div
       onClick={() => onToggle(permission.id)}
       className={`p-3 rounded-lg border cursor-pointer transition ${
-        isSelected 
-          ? 'bg-green-50 border-green-300' 
+        isSelected
+          ? 'bg-green-50 border-green-300'
           : 'bg-gray-50 border-gray-200 hover:border-blue-300'
       }`}
     >
@@ -113,7 +120,11 @@ export default function PermissoesConfig() {
         <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
         <div className="text-sm text-blue-900">
           <p className="font-semibold mb-1">Sistema de Permissões</p>
-          <p>As permissões são organizadas por módulo e controlam quais ações cada usuário pode executar. Selecione as permissões desejadas e atribua-as aos usuários conforme necessário.</p>
+          <p>
+            As permissões são organizadas por módulo e controlam quais ações cada usuário pode
+            executar. Selecione as permissões desejadas e atribua-as aos usuários conforme
+            necessário.
+          </p>
         </div>
       </div>
 
@@ -156,10 +167,15 @@ export default function PermissoesConfig() {
               {/* Lista de Selecionadas */}
               {selectedPermissions.length > 0 && (
                 <div className="pt-3 border-t">
-                  <p className="text-xs font-semibold text-gray-700 mb-2">Permissões Selecionadas:</p>
+                  <p className="text-xs font-semibold text-gray-700 mb-2">
+                    Permissões Selecionadas:
+                  </p>
                   <div className="space-y-1 max-h-40 overflow-y-auto">
                     {selectedPermissions.map((perm) => (
-                      <div key={perm} className="text-xs p-1 bg-green-50 rounded flex items-center justify-between">
+                      <div
+                        key={perm}
+                        className="text-xs p-1 bg-green-50 rounded flex items-center justify-between"
+                      >
                         <span className="text-green-700 font-medium truncate">{perm}</span>
                         <button
                           onClick={() => handlePermissionToggle(perm)}
@@ -203,9 +219,13 @@ export default function PermissoesConfig() {
               </Card>
             ) : (
               filteredModules.map(([moduleName, module]) => {
-                const modulePermissions = module.permissions.map(p => p.id);
-                const allModuleSelected = modulePermissions.every(p => selectedPermissions.includes(p));
-                const someModuleSelected = modulePermissions.some(p => selectedPermissions.includes(p));
+                const modulePermissions = module.permissions.map((p) => p.id);
+                const allModuleSelected = modulePermissions.every((p) =>
+                  selectedPermissions.includes(p),
+                );
+                const someModuleSelected = modulePermissions.some((p) =>
+                  selectedPermissions.includes(p),
+                );
 
                 return (
                   <Card key={moduleName}>
@@ -274,13 +294,20 @@ export default function PermissoesConfig() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {modules.map(([moduleName, module]) => {
-                const modulePermissions = module.permissions.map(p => p.id);
-                const selectedCount = modulePermissions.filter(p => selectedPermissions.includes(p)).length;
+                const modulePermissions = module.permissions.map((p) => p.id);
+                const selectedCount = modulePermissions.filter((p) =>
+                  selectedPermissions.includes(p),
+                ).length;
 
-                if (selectedCount === 0) return null;
+                if (selectedCount === 0) {
+                  return null;
+                }
 
                 return (
-                  <div key={moduleName} className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div
+                    key={moduleName}
+                    className="p-3 bg-green-50 border border-green-200 rounded-lg"
+                  >
                     <p className="font-semibold text-green-900 text-sm mb-2">{module.label}</p>
                     <p className="text-xs text-green-700">
                       {selectedCount} de {module.permissions.length} permissão(ões) selecionada(s)
@@ -301,4 +328,3 @@ export default function PermissoesConfig() {
     </PageLayout>
   );
 }
-

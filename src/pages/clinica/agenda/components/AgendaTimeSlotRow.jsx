@@ -13,7 +13,7 @@ export default function AgendaTimeSlotRow({ horario, agendamento, onClick, statu
   // Obter cor baseada no status real do agendamento
   let bg = '#f6f6f6'; // cinza claro padrão para slots livres
   let textColor = '#000';
-  
+
   if (agendamento?.status) {
     // Usar o status real do agendamento
     const { background, color } = getStatusStyle(agendamento.status);
@@ -36,7 +36,11 @@ export default function AgendaTimeSlotRow({ horario, agendamento, onClick, statu
       onClick={onClick}
       title={!agendamento ? 'Novo agendamento' : 'Ver detalhes'}
     >
-      <td style={{ fontWeight: 600, background: '#f9f9f9', position: 'sticky', left: 0, zIndex: 2 }}>{horario}</td>
+      <td
+        style={{ fontWeight: 600, background: '#f9f9f9', position: 'sticky', left: 0, zIndex: 2 }}
+      >
+        {horario}
+      </td>
       <td>{agendamento?.protocolo || '—'}</td>
       <td>{agendamento?.paciente || (!agendamento ? 'Disponível' : '—')}</td>
       <td>{agendamento?.servico || '—'}</td>
@@ -49,4 +53,3 @@ export default function AgendaTimeSlotRow({ horario, agendamento, onClick, statu
     </tr>
   );
 }
-

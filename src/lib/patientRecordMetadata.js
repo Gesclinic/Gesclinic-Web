@@ -1,30 +1,36 @@
-const META_START = "[[GESCLINIC_PATIENT_RECORD_META]]";
-const META_END = "[[/GESCLINIC_PATIENT_RECORD_META]]";
+const META_START = '[[GESCLINIC_PATIENT_RECORD_META]]';
+const META_END = '[[/GESCLINIC_PATIENT_RECORD_META]]';
 
 function sanitizeMetadata(metadata = {}) {
   return Object.fromEntries(
     Object.entries(metadata).filter(([, value]) => {
-      if (value === undefined || value === null) return false;
-      if (typeof value === "string") return value.trim() !== "";
-      if (typeof value === "object") return Object.keys(value).length > 0;
+      if (value === undefined || value === null) {
+        return false;
+      }
+      if (typeof value === 'string') {
+        return value.trim() !== '';
+      }
+      if (typeof value === 'object') {
+        return Object.keys(value).length > 0;
+      }
       return true;
-    })
+    }),
   );
 }
 
-export function buildPatientRecordPrescription(notes = "", metadata = {}) {
-  const normalizedNotes = (notes || "").trim();
+export function buildPatientRecordPrescription(notes = '', metadata = {}) {
+  const normalizedNotes = (notes || '').trim();
   const normalizedMetadata = sanitizeMetadata(metadata);
 
   if (!Object.keys(normalizedMetadata).length) {
     return normalizedNotes;
   }
 
-  return `${META_START}${JSON.stringify(normalizedMetadata)}${META_END}${normalizedNotes ? `\n${normalizedNotes}` : ""}`;
+  return `${META_START}${JSON.stringify(normalizedMetadata)}${META_END}${normalizedNotes ? `\n${normalizedNotes}` : ''}`;
 }
 
-export function parsePatientRecordPrescription(rawValue = "") {
-  const raw = rawValue || "";
+export function parsePatientRecordPrescription(rawValue = '') {
+  const raw = rawValue || '';
 
   if (!raw.startsWith(META_START)) {
     return { metadata: {}, notes: raw };

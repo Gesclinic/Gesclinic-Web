@@ -2,25 +2,25 @@ import { useState, useMemo } from 'react';
 
 /**
  * Hook para Paginação de Dados
- * 
+ *
  * Gerencia paginação de um array de dados com interface simples.
  * Útil para listas que precisam de navegação por páginas.
- * 
+ *
  * @param {Array} items - Array de itens a paginar
  * @param {number} itemsPerPage - Quantidade de itens por página (default: 20)
  * @param {number} initialPage - Página inicial (default: 1)
- * 
+ *
  * @returns {Object} Objeto com paginação
- * 
+ *
  * @example
- * const { items, page, totalPages, nextPage, prevPage, goToPage } = 
+ * const { items, page, totalPages, nextPage, prevPage, goToPage } =
  *   usePagination(professionals, 20);
- * 
+ *
  * return (
  *   <>
  *     {items.map(item => <Card key={item.id} item={item} />)}
- *     <Pagination 
- *       page={page} 
+ *     <Pagination
+ *       page={page}
  *       totalPages={totalPages}
  *       onNext={nextPage}
  *       onPrev={prevPage}
@@ -28,16 +28,14 @@ import { useState, useMemo } from 'react';
  *   </>
  * );
  */
-export function usePagination(
-  items = [],
-  itemsPerPage = 20,
-  initialPage = 1
-) {
+export function usePagination(items = [], itemsPerPage = 20, initialPage = 1) {
   const [page, setPage] = useState(Math.max(1, initialPage));
 
   // Calcular items paginados
   const paginated = useMemo(() => {
-    if (!items || items.length === 0) return [];
+    if (!items || items.length === 0) {
+      return [];
+    }
     const start = (page - 1) * itemsPerPage;
     const end = start + itemsPerPage;
     return items.slice(start, end);
@@ -46,7 +44,7 @@ export function usePagination(
   // Calcular total de páginas
   const totalPages = useMemo(
     () => Math.ceil((items?.length || 0) / itemsPerPage),
-    [items, itemsPerPage]
+    [items, itemsPerPage],
   );
 
   // Funções de navegação
@@ -77,7 +75,7 @@ export function usePagination(
   return {
     // Items da página atual
     items: paginated,
-    
+
     // Navegação
     page,
     totalPages,
@@ -86,13 +84,13 @@ export function usePagination(
     prevPage,
     goToFirst,
     goToLast,
-    
+
     // Status
     hasNextPage,
     hasPrevPage,
     itemsCount,
     itemsPerPage,
-    
+
     // Informações úteis
     startIndex,
     endIndex,
@@ -105,16 +103,16 @@ export function usePagination(
 
 /**
  * Hook para Paginação com Tamanho Dinâmico
- * 
+ *
  * Permite trocar o itemsPerPage dinamicamente.
- * 
+ *
  * @param {Array} items
  * @param {number} initialItemsPerPage
  * @returns {Object} { ...usePagination + setItemsPerPage }
- * 
+ *
  * @example
  * const { items, page, setItemsPerPage } = useDynamicPagination(data, 20);
- * 
+ *
  * return (
  *   <>
  *     <select onChange={(e) => setItemsPerPage(Number(e.target.value))}>
@@ -128,7 +126,7 @@ export function usePagination(
  */
 export function useDynamicPagination(items = [], initialItemsPerPage = 20) {
   const [itemsPerPage, setItemsPerPage] = useState(initialItemsPerPage);
-  
+
   const pagination = usePagination(items, itemsPerPage, 1);
 
   // Resetar para página 1 quando trocar itemsPerPage
@@ -146,13 +144,13 @@ export function useDynamicPagination(items = [], initialItemsPerPage = 20) {
 
 /**
  * Componente: Controle de Paginação
- * 
+ *
  * Componente UI pronto para usar com usePagination.
- * 
+ *
  * @example
- * const { items, page, totalPages, nextPage, prevPage, goToPage } = 
+ * const { items, page, totalPages, nextPage, prevPage, goToPage } =
  *   usePagination(data, 20);
- * 
+ *
  * return (
  *   <>
  *     <List items={items} />
@@ -216,17 +214,17 @@ export function PaginationControl({
 
 /**
  * Hook para Paginação Lazy (carrega mais quando scrola)
- * 
+ *
  * Ao invés de dividir em páginas, carrega mais items quando
  * o usuário scrola até o final (infinite scroll).
- * 
+ *
  * @param {Array} items
  * @param {number} itemsPerLoad - Quantos items carregar por vez
  * @returns {Object} { displayedItems, hasMore, loadMore, reset }
- * 
+ *
  * @example
  * const { displayedItems, hasMore, loadMore } = useLazyPagination(data, 20);
- * 
+ *
  * const observerTarget = useRef(null);
  * useEffect(() => {
  *   const observer = new IntersectionObserver(entries => {
@@ -235,7 +233,7 @@ export function PaginationControl({
  *   observer.observe(observerTarget.current);
  *   return () => observer.disconnect();
  * }, [hasMore, loadMore]);
- * 
+ *
  * return (
  *   <>
  *     {displayedItems.map(item => <Card key={item.id} item={item} />)}
@@ -248,7 +246,7 @@ export function useLazyPagination(items = [], itemsPerLoad = 20) {
 
   const displayedItems = useMemo(
     () => (items || []).slice(0, displayedCount),
-    [items, displayedCount]
+    [items, displayedCount],
   );
 
   const hasMore = displayedCount < (items?.length || 0);

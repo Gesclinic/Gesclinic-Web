@@ -5,7 +5,7 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow
+  TableRow,
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -24,13 +24,13 @@ interface CashProfessionalsTableProps {
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
-    currency: 'BRL'
+    currency: 'BRL',
   }).format(value);
 };
 
 export const CashProfessionalsTable: React.FC<CashProfessionalsTableProps> = ({
   professionals,
-  loading = false
+  loading = false,
 }) => {
   return (
     <Card className="border-0 shadow-sm">
@@ -46,9 +46,7 @@ export const CashProfessionalsTable: React.FC<CashProfessionalsTableProps> = ({
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
           </div>
         ) : professionals.length === 0 ? (
-          <div className="text-center py-8 text-slate-400">
-            Nenhum profissional encontrado
-          </div>
+          <div className="text-center py-8 text-slate-400">Nenhum profissional encontrado</div>
         ) : (
           <div className="overflow-x-auto">
             <Table>
@@ -77,9 +75,7 @@ export const CashProfessionalsTable: React.FC<CashProfessionalsTableProps> = ({
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-sm font-bold">
                           {index + 1}
                         </div>
-                        <span className="font-medium text-slate-900">
-                          {prof.professional_name}
-                        </span>
+                        <span className="font-medium text-slate-900">{prof.professional_name}</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-right">

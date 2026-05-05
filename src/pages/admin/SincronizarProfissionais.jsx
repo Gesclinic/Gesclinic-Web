@@ -4,17 +4,25 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { AlertCircle, CheckCircle2, Loader2, ArrowLeft, GitMerge, Users, Sparkles } from 'lucide-react';
+import {
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+  ArrowLeft,
+  GitMerge,
+  Users,
+  Sparkles,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function SincronizarProfissionais() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
   const [results, setResults] = useState(null);
-  
+
   const [step, setStep] = useState('detecting'); // detecting, review, merging, done
   const [duplicates, setDuplicates] = useState([]);
   const [selectedForMerge, setSelectedForMerge] = useState({});
@@ -28,13 +36,15 @@ export default function SincronizarProfissionais() {
   }, []);
 
   const normalizeString = (str) => {
-    if (!str) return '';
+    if (!str) {
+      return '';
+    }
     return str.toLowerCase().trim().replace(/\s+/g, ' ');
   };
 
   const detectDuplicates = async () => {
     setLoading(true);
-    setError("");
+    setError('');
 
     try {
       console.log('🔍 [SINCRONIZAÇÃO] Procurando duplicatas...');
@@ -45,7 +55,9 @@ export default function SincronizarProfissionais() {
         .select('id, email, full_name, cpf, clinic_id')
         .eq('role', 'profissional');
 
-      if (usersError) throw usersError;
+      if (usersError) {
+        throw usersError;
+      }
 
       // Buscar todos os profissionais
       const { data: allProfessionals, error: profsError } = await supabase
@@ -53,7 +65,9 @@ export default function SincronizarProfissionais() {
         .select('id, name, email, cpf, clinic_id')
         .order('name', { ascending: true });
 
-      if (profsError) throw profsError;
+      if (profsError) {
+        throw profsError;
+      }
 
       console.log('📊 [SINCRONIZAÇÃO] Dados coletados:', {
         profUsers: profUsers?.length || 0,
@@ -62,8 +76,8 @@ export default function SincronizarProfissionais() {
 
       // Agrupar profissionais por nome normalizado
       const grouped = {};
-      
-      allProfessionals?.forEach(prof => {
+
+      allProfessionals?.forEach((prof) => {
         const nameKey = normalizeString(prof.name);
         if (!grouped[nameKey]) {
           grouped[nameKey] = [];
@@ -73,7 +87,7 @@ export default function SincronizarProfissionais() {
 
       // Encontrar duplicatas (mesmo nome ou email)
       const foundDuplicates = [];
-      
+
       Object.entries(grouped).forEach(([nameKey, profs]) => {
         if (profs.length > 1) {
           foundDuplicates.push({
@@ -88,7 +102,7 @@ export default function SincronizarProfissionais() {
 
       // Também verificar email duplicado
       const emailGrouped = {};
-      allProfessionals?.forEach(prof => {
+      allProfessionals?.forEach((prof) => {
         if (prof.email) {
           const emailKey = prof.email.toLowerCase();
           if (!emailGrouped[emailKey]) {
@@ -101,9 +115,7 @@ export default function SincronizarProfissionais() {
       Object.entries(emailGrouped).forEach(([email, profs]) => {
         if (profs.length > 1) {
           // Verificar se já foi adicionado por nome
-          const exists = foundDuplicates.some(d => 
-            d.records.some(r => r.id === profs[0].id)
-          );
+          const exists = foundDuplicates.some((d) => d.records.some((r) => r.id === profs[0].id));
           if (!exists) {
             foundDuplicates.push({
               name: profs[0].name,
@@ -118,25 +130,27 @@ export default function SincronizarProfissionais() {
 
       // Mapeamento de usuários profissionais para auxiliar na seleção
       const userMap = {};
-      profUsers?.forEach(u => {
+      profUsers?.forEach((u) => {
         userMap[normalizeString(u.full_name)] = u;
       });
 
-      setDuplicates(foundDuplicates.map(dup => ({
-        ...dup,
-        relatedUser: userMap[normalizeString(dup.name)],
-      })));
+      setDuplicates(
+        foundDuplicates.map((dup) => ({
+          ...dup,
+          relatedUser: userMap[normalizeString(dup.name)],
+        })),
+      );
 
       setStep(foundDuplicates.length > 0 ? 'review' : 'merging');
-      
+
       console.log('✅ [SINCRONIZAÇÃO] Duplicatas encontradas:', foundDuplicates.length);
     } catch (err) {
-      console.error("❌ Erro ao detectar duplicatas:", err);
-      setError(err.message || "Erro ao detectar duplicatas");
+      console.error('❌ Erro ao detectar duplicatas:', err);
+      setError(err.message || 'Erro ao detectar duplicatas');
       toast({
         variant: 'destructive',
         title: 'Erro ao detectar duplicatas',
-        description: err.message || 'Não foi possível analisar os profissionais agora.'
+        description: err.message || 'Não foi possível analisar os profissionais agora.',
       });
     }
 
@@ -144,7 +158,7 @@ export default function SincronizarProfissionais() {
   };
 
   const handleSelectForMerge = (dupIndex, profId) => {
-    setSelectedForMerge(prev => ({
+    setSelectedForMerge((prev) => ({
       ...prev,
       [dupIndex]: profId,
     }));
@@ -152,7 +166,7 @@ export default function SincronizarProfissionais() {
 
   const executeMerge = async () => {
     setMerging(true);
-    setError("");
+    setError('');
 
     try {
       console.log('🔗 [SINCRONIZAÇÃO] Iniciando mesclagem de duplicatas...');
@@ -170,11 +184,11 @@ export default function SincronizarProfissionais() {
           continue;
         }
 
-        const keepProf = dup.records.find(p => p.id === selectedId);
-        const deleteProfs = dup.records.filter(p => p.id !== selectedId);
+        const keepProf = dup.records.find((p) => p.id === selectedId);
+        const deleteProfs = dup.records.filter((p) => p.id !== selectedId);
 
         console.log(`🔀 [SINCRONIZAÇÃO] Mantendo: ${keepProf.name} (${selectedId})`);
-        console.log(`🗑️ [SINCRONIZAÇÃO] Deletando: ${deleteProfs.map(p => p.id).join(', ')}`);
+        console.log(`🗑️ [SINCRONIZAÇÃO] Deletando: ${deleteProfs.map((p) => p.id).join(', ')}`);
 
         // Mesclar dados: pegar informações empty do principal de outros registros
         const mergedData = {
@@ -219,10 +233,12 @@ export default function SincronizarProfissionais() {
       });
 
       setStep('done');
-      setMessage(`✅ Duplicatas mescladas! ${mergedCount} registros principais atualizados, ${deletedCount} deletados.`);
+      setMessage(
+        `✅ Duplicatas mescladas! ${mergedCount} registros principais atualizados, ${deletedCount} deletados.`,
+      );
       toast({
         title: 'Mesclagem concluída',
-        description: `${mergedCount} registro(s) principal(is) atualizado(s) e ${deletedCount} duplicata(s) removida(s).`
+        description: `${mergedCount} registro(s) principal(is) atualizado(s) e ${deletedCount} duplicata(s) removida(s).`,
       });
 
       console.log('✅ [SINCRONIZAÇÃO] Mesclagem concluída:', {
@@ -230,12 +246,12 @@ export default function SincronizarProfissionais() {
         deleted: deletedCount,
       });
     } catch (err) {
-      console.error("❌ Erro na mesclagem:", err);
-      setError(err.message || "Erro ao mesclar duplicatas");
+      console.error('❌ Erro na mesclagem:', err);
+      setError(err.message || 'Erro ao mesclar duplicatas');
       toast({
         variant: 'destructive',
         title: 'Erro ao mesclar duplicatas',
-        description: err.message || 'Revise as seleções e tente novamente.'
+        description: err.message || 'Revise as seleções e tente novamente.',
       });
     }
 
@@ -244,7 +260,7 @@ export default function SincronizarProfissionais() {
 
   const executeFullSync = async () => {
     setMerging(true);
-    setError("");
+    setError('');
 
     try {
       console.log('🔗 [SINCRONIZAÇÃO] Iniciando sincronização completa...');
@@ -255,12 +271,14 @@ export default function SincronizarProfissionais() {
         .select('id, email, full_name, cpf, clinic_id')
         .eq('role', 'profissional');
 
-      if (usersError) throw usersError;
+      if (usersError) {
+        throw usersError;
+      }
 
       let created = 0;
       let updated = 0;
-      let createdList = [];
-      let updatedList = [];
+      const createdList = [];
+      const updatedList = [];
 
       for (const user of profUsers || []) {
         const { data: existingProf } = await supabase
@@ -299,8 +317,12 @@ export default function SincronizarProfissionais() {
               active: true,
               cpf: user.cpf || null,
             })
-            .select()
-            .single();
+            .select();
+
+          if (!data || data.length === 0) {
+            throw new Error('Record not found');
+          }
+          return data[0];
 
           if (!createError && createdProf) {
             created++;
@@ -326,15 +348,15 @@ export default function SincronizarProfissionais() {
       setStep('done');
       toast({
         title: 'Sincronização concluída',
-        description: `${created} profissional(is) criado(s) e ${updated} atualizado(s).`
+        description: `${created} profissional(is) criado(s) e ${updated} atualizado(s).`,
       });
     } catch (err) {
-      console.error("❌ Erro na sincronização:", err);
-      setError(err.message || "Erro ao sincronizar");
+      console.error('❌ Erro na sincronização:', err);
+      setError(err.message || 'Erro ao sincronizar');
       toast({
         variant: 'destructive',
         title: 'Erro ao sincronizar profissionais',
-        description: err.message || 'Tente novamente em alguns instantes.'
+        description: err.message || 'Tente novamente em alguns instantes.',
       });
     }
 
@@ -345,7 +367,10 @@ export default function SincronizarProfissionais() {
     <div className="min-h-screen bg-slate-50 p-6">
       <Helmet>
         <title>Sincronizar Profissionais - Gesclinic</title>
-        <meta name="description" content="Elimine duplicatas e sincronize usuários profissionais com a base de profissionais." />
+        <meta
+          name="description"
+          content="Elimine duplicatas e sincronize usuários profissionais com a base de profissionais."
+        />
       </Helmet>
 
       <div className="mx-auto max-w-6xl space-y-6">
@@ -363,14 +388,18 @@ export default function SincronizarProfissionais() {
                 Administração
               </span>
               <div>
-                <h1 className="text-4xl font-bold tracking-tight text-slate-950">Sincronizar Profissionais</h1>
+                <h1 className="text-4xl font-bold tracking-tight text-slate-950">
+                  Sincronizar Profissionais
+                </h1>
                 <p className="mt-2 max-w-2xl text-sm text-slate-600">
-                  Revise duplicatas, escolha o registro principal e mantenha usuários profissionais alinhados com a tabela de profissionais.
+                  Revise duplicatas, escolha o registro principal e mantenha usuários profissionais
+                  alinhados com a tabela de profissionais.
                 </p>
               </div>
             </div>
             <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 md:max-w-xs">
-              A sincronização preserva o vínculo por clínica e prioriza dados já preenchidos no registro mantido.
+              A sincronização preserva o vínculo por clínica e prioriza dados já preenchidos no
+              registro mantido.
             </div>
           </div>
         </div>
@@ -380,7 +409,9 @@ export default function SincronizarProfissionais() {
             <CardContent className="p-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Duplicatas</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Duplicatas
+                  </p>
                   <p className="mt-2 text-3xl font-bold text-slate-950">{duplicates.length}</p>
                 </div>
                 <GitMerge className="h-10 w-10 text-amber-500 opacity-30" />
@@ -392,8 +423,12 @@ export default function SincronizarProfissionais() {
             <CardContent className="p-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Seleções feitas</p>
-                  <p className="mt-2 text-3xl font-bold text-slate-950">{Object.keys(selectedForMerge).length}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Seleções feitas
+                  </p>
+                  <p className="mt-2 text-3xl font-bold text-slate-950">
+                    {Object.keys(selectedForMerge).length}
+                  </p>
                 </div>
                 <Users className="h-10 w-10 text-[hsl(var(--primary))] opacity-25" />
               </div>
@@ -404,9 +439,17 @@ export default function SincronizarProfissionais() {
             <CardContent className="p-5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Etapa atual</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Etapa atual
+                  </p>
                   <p className="mt-2 text-lg font-bold text-slate-950 capitalize">
-                    {step === 'detecting' ? 'Analisando' : step === 'review' ? 'Revisão' : step === 'merging' ? 'Sincronização' : 'Concluído'}
+                    {step === 'detecting'
+                      ? 'Analisando'
+                      : step === 'review'
+                        ? 'Revisão'
+                        : step === 'merging'
+                          ? 'Sincronização'
+                          : 'Concluído'}
                   </p>
                 </div>
                 <Sparkles className="h-10 w-10 text-emerald-500 opacity-25" />
@@ -417,9 +460,12 @@ export default function SincronizarProfissionais() {
 
         <Card className="rounded-3xl border-slate-200 shadow-sm">
           <CardHeader className="border-b border-slate-100 bg-slate-50/80">
-            <CardTitle className="text-2xl text-slate-950">Integração Inteligente de Profissionais</CardTitle>
+            <CardTitle className="text-2xl text-slate-950">
+              Integração Inteligente de Profissionais
+            </CardTitle>
             <CardDescription>
-              O fluxo detecta registros repetidos, permite escolher qual manter e depois sincroniza a base com os usuários de perfil profissional.
+              O fluxo detecta registros repetidos, permite escolher qual manter e depois sincroniza
+              a base com os usuários de perfil profissional.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -441,7 +487,9 @@ export default function SincronizarProfissionais() {
               <div className="space-y-4">
                 <div className="flex items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-white py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-[hsl(var(--primary))]" />
-                  <span className="ml-3 text-lg font-medium text-slate-700">Detectando duplicatas...</span>
+                  <span className="ml-3 text-lg font-medium text-slate-700">
+                    Detectando duplicatas...
+                  </span>
                 </div>
               </div>
             )}
@@ -449,15 +497,21 @@ export default function SincronizarProfissionais() {
             {step === 'review' && duplicates.length > 0 && (
               <div className="space-y-6">
                 <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                  <h3 className="mb-2 font-semibold text-amber-900">{duplicates.length} duplicata(s) encontrada(s)</h3>
+                  <h3 className="mb-2 font-semibold text-amber-900">
+                    {duplicates.length} duplicata(s) encontrada(s)
+                  </h3>
                   <p className="text-sm text-amber-800">
-                    Selecione qual registro de profissional manter para cada grupo duplicado. Os dados serão mesclados.
+                    Selecione qual registro de profissional manter para cada grupo duplicado. Os
+                    dados serão mesclados.
                   </p>
                 </div>
 
                 <div className="space-y-4">
                   {duplicates.map((dup, idx) => (
-                    <div key={idx} className="space-y-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <div
+                      key={idx}
+                      className="space-y-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"
+                    >
                       <div className="flex items-center gap-2">
                         <GitMerge className="h-5 w-5 text-amber-600" />
                         <h4 className="font-semibold text-slate-900">
@@ -467,7 +521,8 @@ export default function SincronizarProfissionais() {
 
                       {dup.relatedUser && (
                         <div className="rounded-2xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
-                          <strong>Usuário associado:</strong> {dup.relatedUser.full_name} ({dup.relatedUser.email})
+                          <strong>Usuário associado:</strong> {dup.relatedUser.full_name} (
+                          {dup.relatedUser.email})
                         </div>
                       )}
 
@@ -488,7 +543,9 @@ export default function SincronizarProfissionais() {
                             />
                             <div className="flex-1 text-sm">
                               <div className="font-medium text-slate-900">{prof.name}</div>
-                              <div className="text-slate-500">{prof.email || '-'} | CPF: {prof.cpf || '-'}</div>
+                              <div className="text-slate-500">
+                                {prof.email || '-'} | CPF: {prof.cpf || '-'}
+                              </div>
                             </div>
                           </label>
                         ))}
@@ -522,9 +579,12 @@ export default function SincronizarProfissionais() {
             {(step === 'merging' || step === 'done') && duplicates.length === 0 && (
               <div className="space-y-4">
                 <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-                  <h3 className="mb-2 font-semibold text-emerald-900">Nenhuma duplicata encontrada</h3>
+                  <h3 className="mb-2 font-semibold text-emerald-900">
+                    Nenhuma duplicata encontrada
+                  </h3>
                   <p className="text-sm text-green-800">
-                    Agora você pode sincronizar usuários profissionais com a tabela de profissionais.
+                    Agora você pode sincronizar usuários profissionais com a tabela de
+                    profissionais.
                   </p>
                 </div>
 
@@ -585,7 +645,9 @@ export default function SincronizarProfissionais() {
                     <ul className="divide-y divide-blue-100">
                       {results.createdList.map((prof) => (
                         <li key={prof.id} className="py-2 text-sm">
-                          <span className="font-medium text-blue-900">{prof.name}</span> — <span className="text-blue-700">{prof.email}</span> | CPF: <span className="text-blue-700">{prof.cpf || '-'}</span>
+                          <span className="font-medium text-blue-900">{prof.name}</span> —{' '}
+                          <span className="text-blue-700">{prof.email}</span> | CPF:{' '}
+                          <span className="text-blue-700">{prof.cpf || '-'}</span>
                         </li>
                       ))}
                     </ul>
@@ -599,7 +661,9 @@ export default function SincronizarProfissionais() {
                     <ul className="divide-y divide-blue-100">
                       {results.updatedList.map((prof) => (
                         <li key={prof.id} className="py-2 text-sm">
-                          <span className="font-medium text-blue-900">{prof.name}</span> — <span className="text-blue-700">{prof.email}</span> | CPF: <span className="text-blue-700">{prof.cpf || '-'}</span>
+                          <span className="font-medium text-blue-900">{prof.name}</span> —{' '}
+                          <span className="text-blue-700">{prof.email}</span> | CPF:{' '}
+                          <span className="text-blue-700">{prof.cpf || '-'}</span>
                         </li>
                       ))}
                     </ul>

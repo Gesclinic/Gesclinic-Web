@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from "react";
-import { supabase } from "@/lib/customSupabaseClient";
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
-import { 
-  Loader2, 
-  AlertCircle, 
-  CheckCircle2, 
-  Eye, 
+import React, { useEffect, useState } from 'react';
+import { supabase } from '@/lib/customSupabaseClient';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
+import {
+  Loader2,
+  AlertCircle,
+  CheckCircle2,
+  Eye,
   EyeOff,
   Mail,
   User,
@@ -16,95 +16,159 @@ import {
   ArrowLeft,
   Info,
   ChevronDown,
-  ChevronUp
-} from "lucide-react";
-import { useNavigate, useParams } from "react-router-dom";
+  ChevronUp,
+} from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
 
 // Papéis disponíveis
 const AVAILABLE_ROLES = {
   admin: {
-    label: "Administrador",
-    description: "Acesso total ao sistema e gerenciamento de usuários",
-    color: "bg-red-50 border-red-200"
+    label: 'Administrador',
+    description: 'Acesso total ao sistema e gerenciamento de usuários',
+    color: 'bg-red-50 border-red-200',
   },
   recepcao: {
-    label: "Recepção",
-    description: "Acesso a agenda, pacientes e atendimentos",
-    color: "bg-blue-50 border-blue-200"
+    label: 'Recepção',
+    description: 'Acesso a agenda, pacientes e atendimentos',
+    color: 'bg-blue-50 border-blue-200',
   },
   profissional: {
-    label: "Profissional",
-    description: "Acesso a agenda, pacientes e prontuário",
-    color: "bg-purple-50 border-purple-200"
+    label: 'Profissional',
+    description: 'Acesso a agenda, pacientes e prontuário',
+    color: 'bg-purple-50 border-purple-200',
   },
   faturamento: {
-    label: "Faturamento",
-    description: "Acesso a emissão de notas fiscais e faturas",
-    color: "bg-amber-50 border-amber-200"
+    label: 'Faturamento',
+    description: 'Acesso a emissão de notas fiscais e faturas',
+    color: 'bg-amber-50 border-amber-200',
   },
   estoque: {
-    label: "Estoque",
-    description: "Acesso ao controle de estoque e movimentações",
-    color: "bg-orange-50 border-orange-200"
+    label: 'Estoque',
+    description: 'Acesso ao controle de estoque e movimentações',
+    color: 'bg-orange-50 border-orange-200',
   },
   financeiro: {
-    label: "Financeiro",
-    description: "Acesso a contas a pagar/receber e fluxo de caixa",
-    color: "bg-green-50 border-green-200"
-  }
+    label: 'Financeiro',
+    description: 'Acesso a contas a pagar/receber e fluxo de caixa',
+    color: 'bg-green-50 border-green-200',
+  },
 };
 
 // Permissões por módulo
 const PERMISSIONS_BY_MODULE = {
   agenda: {
-    label: "Agenda",
+    label: 'Agenda',
     permissions: [
-      { id: "agenda.view", label: "Visualizar Agenda", description: "Ver compromissos agendados" },
-      { id: "agenda.criar", label: "Criar Agendamentos", description: "Criar novos compromissos" },
-      { id: "agenda.editar", label: "Editar Agendamentos", description: "Modificar compromissos existentes" },
-      { id: "agenda.deletar", label: "Deletar Agendamentos", description: "Remover compromissos" },
-      { id: "agenda.confirmacoes", label: "Confirmações", description: "Gerenciar confirmações de pacientes" },
-    ]
+      { id: 'agenda.view', label: 'Visualizar Agenda', description: 'Ver compromissos agendados' },
+      { id: 'agenda.criar', label: 'Criar Agendamentos', description: 'Criar novos compromissos' },
+      {
+        id: 'agenda.editar',
+        label: 'Editar Agendamentos',
+        description: 'Modificar compromissos existentes',
+      },
+      { id: 'agenda.deletar', label: 'Deletar Agendamentos', description: 'Remover compromissos' },
+      {
+        id: 'agenda.confirmacoes',
+        label: 'Confirmações',
+        description: 'Gerenciar confirmações de pacientes',
+      },
+    ],
   },
   pacientes: {
-    label: "Pacientes",
+    label: 'Pacientes',
     permissions: [
-      { id: "pacientes.view", label: "Visualizar Pacientes", description: "Ver lista de pacientes" },
-      { id: "pacientes.criar", label: "Criar Pacientes", description: "Cadastrar novos pacientes" },
-      { id: "pacientes.editar", label: "Editar Pacientes", description: "Atualizar dados de pacientes" },
-      { id: "pacientes.deletar", label: "Deletar Pacientes", description: "Remover pacientes" },
-      { id: "pacientes.prontuario", label: "Prontuário", description: "Acessar prontuário eletrônico" },
-    ]
+      {
+        id: 'pacientes.view',
+        label: 'Visualizar Pacientes',
+        description: 'Ver lista de pacientes',
+      },
+      { id: 'pacientes.criar', label: 'Criar Pacientes', description: 'Cadastrar novos pacientes' },
+      {
+        id: 'pacientes.editar',
+        label: 'Editar Pacientes',
+        description: 'Atualizar dados de pacientes',
+      },
+      { id: 'pacientes.deletar', label: 'Deletar Pacientes', description: 'Remover pacientes' },
+      {
+        id: 'pacientes.prontuario',
+        label: 'Prontuário',
+        description: 'Acessar prontuário eletrônico',
+      },
+    ],
   },
   financeiro: {
-    label: "Financeiro",
+    label: 'Financeiro',
     permissions: [
-      { id: "financeiro.view", label: "Visualizar", description: "Ver dados financeiros" },
-      { id: "financeiro.contas_pagar", label: "Contas a Pagar", description: "Gerenciar contas a pagar" },
-      { id: "financeiro.contas_receber", label: "Contas a Receber", description: "Gerenciar contas a receber" },
-      { id: "financeiro.fluxo_caixa", label: "Fluxo de Caixa", description: "Controlar fluxo de caixa" },
-      { id: "financeiro.relatorios", label: "Relatórios", description: "Acessar relatórios financeiros" },
-    ]
+      { id: 'financeiro.view', label: 'Visualizar', description: 'Ver dados financeiros' },
+      {
+        id: 'financeiro.contas_pagar',
+        label: 'Contas a Pagar',
+        description: 'Gerenciar contas a pagar',
+      },
+      {
+        id: 'financeiro.contas_receber',
+        label: 'Contas a Receber',
+        description: 'Gerenciar contas a receber',
+      },
+      {
+        id: 'financeiro.fluxo_caixa',
+        label: 'Fluxo de Caixa',
+        description: 'Controlar fluxo de caixa',
+      },
+      {
+        id: 'financeiro.relatorios',
+        label: 'Relatórios',
+        description: 'Acessar relatórios financeiros',
+      },
+    ],
   },
   estoque: {
-    label: "Estoque",
+    label: 'Estoque',
     permissions: [
-      { id: "estoque.view", label: "Visualizar", description: "Ver produtos do estoque" },
-      { id: "estoque.adicionar", label: "Adicionar Produtos", description: "Adicionar novos produtos" },
-      { id: "estoque.editar", label: "Editar Produtos", description: "Modificar produtos" },
-      { id: "estoque.movimentacoes", label: "Movimentações", description: "Registrar movimentações" },
-      { id: "estoque.relatorios", label: "Relatórios", description: "Acessar relatórios de estoque" },
-    ]
+      { id: 'estoque.view', label: 'Visualizar', description: 'Ver produtos do estoque' },
+      {
+        id: 'estoque.adicionar',
+        label: 'Adicionar Produtos',
+        description: 'Adicionar novos produtos',
+      },
+      { id: 'estoque.editar', label: 'Editar Produtos', description: 'Modificar produtos' },
+      {
+        id: 'estoque.movimentacoes',
+        label: 'Movimentações',
+        description: 'Registrar movimentações',
+      },
+      {
+        id: 'estoque.relatorios',
+        label: 'Relatórios',
+        description: 'Acessar relatórios de estoque',
+      },
+    ],
   },
   admin: {
-    label: "Administração",
+    label: 'Administração',
     permissions: [
-      { id: "admin.usuarios", label: "Gerenciar Usuários", description: "Criar, editar e deletar usuários" },
-      { id: "admin.clinicas", label: "Gerenciar Clínicas", description: "Criar, editar e deletar clínicas" },
-      { id: "admin.permissoes", label: "Gerenciar Permissões", description: "Atribuir permissões a usuários" },
-      { id: "admin.configuracoes", label: "Configurações", description: "Acessar configurações gerais" },
-    ]
-  }
+      {
+        id: 'admin.usuarios',
+        label: 'Gerenciar Usuários',
+        description: 'Criar, editar e deletar usuários',
+      },
+      {
+        id: 'admin.clinicas',
+        label: 'Gerenciar Clínicas',
+        description: 'Criar, editar e deletar clínicas',
+      },
+      {
+        id: 'admin.permissoes',
+        label: 'Gerenciar Permissões',
+        description: 'Atribuir permissões a usuários',
+      },
+      {
+        id: 'admin.configuracoes',
+        label: 'Configurações',
+        description: 'Acessar configurações gerais',
+      },
+    ],
+  },
 };
 
 export default function EditUser() {
@@ -113,22 +177,22 @@ export default function EditUser() {
   const [clinics, setClinics] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [newPassword, setNewPassword] = useState("");
+  const [newPassword, setNewPassword] = useState('');
   const [passwordChanging, setPasswordChanging] = useState(false);
   const [selectedPermissions, setSelectedPermissions] = useState([]);
   const [showPermissionsPanel, setShowPermissionsPanel] = useState(false);
 
   const [form, setForm] = useState({
-    full_name: "",
-    email: "",
-    username: "",
-    cpf: "",
-    birthdate: "",
-    role: "recepcao",
-    clinic_id: "",
+    full_name: '',
+    email: '',
+    username: '',
+    cpf: '',
+    birthdate: '',
+    role: 'recepcao',
+    clinic_id: '',
   });
 
   useEffect(() => {
@@ -138,10 +202,10 @@ export default function EditUser() {
 
   const loadClinics = async () => {
     try {
-      const { data } = await supabase.from("clinics").select("id, name");
+      const { data } = await supabase.from('clinics').select('id, name');
       setClinics(data || []);
     } catch (err) {
-      console.error("Erro ao carregar clínicas:", err);
+      console.error('Erro ao carregar clínicas:', err);
     }
   };
 
@@ -149,29 +213,31 @@ export default function EditUser() {
     setLoading(true);
     try {
       const { data: user, error: userError } = await supabase
-        .from("users")
-        .select("id, full_name, email, username, cpf, birthdate, role, clinic_id")
-        .eq("id", id)
+        .from('users')
+        .select('id, full_name, email, username, cpf, birthdate, role, clinic_id')
+        .eq('id', id)
         .single();
 
-      if (userError) throw userError;
+      if (userError) {
+        throw userError;
+      }
 
       setForm({
-        full_name: user.full_name || "",
-        email: user.email || "",
-        username: user.username || "",
-        cpf: user.cpf || "",
-        birthdate: user.birthdate || "",
-        role: user.role || "recepcao",
-        clinic_id: user.clinic_id || "",
+        full_name: user.full_name || '',
+        email: user.email || '',
+        username: user.username || '',
+        cpf: user.cpf || '',
+        birthdate: user.birthdate || '',
+        role: user.role || 'recepcao',
+        clinic_id: user.clinic_id || '',
       });
 
       // Inicializar permissões com os padrões do papel
-      const defaultPerms = getDefaultPermissionsForRole(user.role || "recepcao");
+      const defaultPerms = getDefaultPermissionsForRole(user.role || 'recepcao');
       setSelectedPermissions(defaultPerms);
     } catch (err) {
-      console.error("Erro ao carregar usuário:", err);
-      setError(err.message || "Erro ao carregar usuário");
+      console.error('Erro ao carregar usuário:', err);
+      setError(err.message || 'Erro ao carregar usuário');
     } finally {
       setLoading(false);
     }
@@ -180,24 +246,73 @@ export default function EditUser() {
   // Obter permissões padrão para cada papel
   const getDefaultPermissionsForRole = (role) => {
     const defaults = {
-      admin: ["agenda.view", "agenda.criar", "agenda.editar", "agenda.deletar", "agenda.confirmacoes", 
-              "pacientes.view", "pacientes.criar", "pacientes.editar", "pacientes.deletar", "pacientes.prontuario",
-              "financeiro.view", "financeiro.contas_pagar", "financeiro.contas_receber", "financeiro.fluxo_caixa", "financeiro.relatorios",
-              "estoque.view", "estoque.adicionar", "estoque.editar", "estoque.movimentacoes", "estoque.relatorios",
-              "admin.usuarios", "admin.clinicas", "admin.permissoes", "admin.configuracoes"],
-      recepcao: ["agenda.view", "agenda.criar", "agenda.editar", "agenda.confirmacoes", "pacientes.view", "pacientes.criar", "pacientes.editar"],
-      profissional: ["agenda.view", "agenda.criar", "agenda.editar", "agenda.confirmacoes", "pacientes.view", "pacientes.editar", "pacientes.prontuario"],
-      faturamento: ["financeiro.view", "financeiro.relatorios"],
-      estoque: ["estoque.view", "estoque.adicionar", "estoque.editar", "estoque.movimentacoes", "estoque.relatorios"],
-      financeiro: ["financeiro.view", "financeiro.contas_pagar", "financeiro.contas_receber", "financeiro.fluxo_caixa", "financeiro.relatorios"]
+      admin: [
+        'agenda.view',
+        'agenda.criar',
+        'agenda.editar',
+        'agenda.deletar',
+        'agenda.confirmacoes',
+        'pacientes.view',
+        'pacientes.criar',
+        'pacientes.editar',
+        'pacientes.deletar',
+        'pacientes.prontuario',
+        'financeiro.view',
+        'financeiro.contas_pagar',
+        'financeiro.contas_receber',
+        'financeiro.fluxo_caixa',
+        'financeiro.relatorios',
+        'estoque.view',
+        'estoque.adicionar',
+        'estoque.editar',
+        'estoque.movimentacoes',
+        'estoque.relatorios',
+        'admin.usuarios',
+        'admin.clinicas',
+        'admin.permissoes',
+        'admin.configuracoes',
+      ],
+      recepcao: [
+        'agenda.view',
+        'agenda.criar',
+        'agenda.editar',
+        'agenda.confirmacoes',
+        'pacientes.view',
+        'pacientes.criar',
+        'pacientes.editar',
+      ],
+      profissional: [
+        'agenda.view',
+        'agenda.criar',
+        'agenda.editar',
+        'agenda.confirmacoes',
+        'pacientes.view',
+        'pacientes.editar',
+        'pacientes.prontuario',
+      ],
+      faturamento: ['financeiro.view', 'financeiro.relatorios'],
+      estoque: [
+        'estoque.view',
+        'estoque.adicionar',
+        'estoque.editar',
+        'estoque.movimentacoes',
+        'estoque.relatorios',
+      ],
+      financeiro: [
+        'financeiro.view',
+        'financeiro.contas_pagar',
+        'financeiro.contas_receber',
+        'financeiro.fluxo_caixa',
+        'financeiro.relatorios',
+      ],
     };
     return defaults[role] || [];
   };
 
   const handlePermissionToggle = (permissionId) => {
-    setSelectedPermissions(prev => {
+    setSelectedPermissions((prev) => {
       if (prev.includes(permissionId)) {
-        return prev.filter(id => id !== permissionId);
+        return prev.filter((id) => id !== permissionId);
       } else {
         return [...prev, permissionId];
       }
@@ -205,50 +320,50 @@ export default function EditUser() {
   };
 
   const handlePermissionCheckAll = (modulePermissions) => {
-    const moduleIds = modulePermissions.map(p => p.id);
-    const allSelected = moduleIds.every(id => selectedPermissions.includes(id));
-    
+    const moduleIds = modulePermissions.map((p) => p.id);
+    const allSelected = moduleIds.every((id) => selectedPermissions.includes(id));
+
     if (allSelected) {
-      setSelectedPermissions(prev => prev.filter(id => !moduleIds.includes(id)));
+      setSelectedPermissions((prev) => prev.filter((id) => !moduleIds.includes(id)));
     } else {
-      setSelectedPermissions(prev => [...new Set([...prev, ...moduleIds])]);
+      setSelectedPermissions((prev) => [...new Set([...prev, ...moduleIds])]);
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
-    setError("");
-    setMessage("");
+    setError('');
+    setMessage('');
 
     // Validações
     if (!form.full_name.trim()) {
-      setError("Nome é obrigatório");
+      setError('Nome é obrigatório');
       setSaving(false);
       return;
     }
     if (!form.email.trim()) {
-      setError("Email é obrigatório");
+      setError('Email é obrigatório');
       setSaving(false);
       return;
     }
     if (!form.username.trim()) {
-      setError("Nome de usuário é obrigatório");
+      setError('Nome de usuário é obrigatório');
       setSaving(false);
       return;
     }
     if (!form.cpf.trim()) {
-      setError("CPF é obrigatório");
+      setError('CPF é obrigatório');
       setSaving(false);
       return;
     }
     if (!form.birthdate) {
-      setError("Data de nascimento é obrigatória");
+      setError('Data de nascimento é obrigatória');
       setSaving(false);
       return;
     }
     if (!form.clinic_id) {
-      setError("Clínica é obrigatória");
+      setError('Clínica é obrigatória');
       setSaving(false);
       return;
     }
@@ -264,7 +379,7 @@ export default function EditUser() {
         .maybeSingle();
 
       if (existingEmail) {
-        setError("Este email já está cadastrado nesta clínica");
+        setError('Este email já está cadastrado nesta clínica');
         setSaving(false);
         return;
       }
@@ -278,7 +393,7 @@ export default function EditUser() {
         .maybeSingle();
 
       if (existingUsername) {
-        setError("Este nome de usuário já está cadastrado nesta clínica");
+        setError('Este nome de usuário já está cadastrado nesta clínica');
         setSaving(false);
         return;
       }
@@ -292,7 +407,7 @@ export default function EditUser() {
         .maybeSingle();
 
       if (existingCpf) {
-        setError("Este CPF já está cadastrado nesta clínica");
+        setError('Este CPF já está cadastrado nesta clínica');
         setSaving(false);
         return;
       }
@@ -312,7 +427,7 @@ export default function EditUser() {
       // Se uma nova senha foi inserida
       if (newPassword && newPassword.trim()) {
         if (newPassword.length < 6) {
-          setError("A senha deve ter pelo menos 6 caracteres");
+          setError('A senha deve ter pelo menos 6 caracteres');
           setSaving(false);
           return;
         }
@@ -322,17 +437,16 @@ export default function EditUser() {
         setPasswordChanging(false);
       }
 
-      const { error: updateError } = await supabase
-        .from("users")
-        .update(updateData)
-        .eq("id", id);
+      const { error: updateError } = await supabase.from('users').update(updateData).eq('id', id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        throw updateError;
+      }
 
       // 🔗 Se é profissional, sincronizar com tabela professionals
       if (form.role === 'profissional') {
         console.log('🔗 [INTEGRAÇÃO] Sincronizando profissional para:', form.full_name);
-        
+
         // Primeiro, buscar se já existe um profissional com este email
         const { data: existingProf } = await supabase
           .from('professionals')
@@ -340,7 +454,7 @@ export default function EditUser() {
           .eq('email', form.email)
           .eq('clinic_id', form.clinic_id)
           .maybeSingle();
-        
+
         if (existingProf?.id) {
           // Atualizar profissional existente
           const { error: profUpdateError } = await supabase
@@ -351,24 +465,25 @@ export default function EditUser() {
               active: true,
             })
             .eq('id', existingProf.id);
-          
+
           if (profUpdateError) {
-            console.warn('⚠️ [INTEGRAÇÃO] Aviso ao atualizar profissional:', profUpdateError.message);
+            console.warn(
+              '⚠️ [INTEGRAÇÃO] Aviso ao atualizar profissional:',
+              profUpdateError.message,
+            );
           } else {
             console.log('✅ [INTEGRAÇÃO] Profissional atualizado com sucesso');
           }
         } else {
           // Criar novo profissional
-          const { error: profCreateError } = await supabase
-            .from('professionals')
-            .insert({
-              name: form.full_name,
-              email: form.email,
-              clinic_id: form.clinic_id,
-              active: true,
-              cpf: form.cpf || null,
-            });
-          
+          const { error: profCreateError } = await supabase.from('professionals').insert({
+            name: form.full_name,
+            email: form.email,
+            clinic_id: form.clinic_id,
+            active: true,
+            cpf: form.cpf || null,
+          });
+
           if (profCreateError) {
             console.warn('⚠️ [INTEGRAÇÃO] Aviso ao criar profissional:', profCreateError.message);
           } else {
@@ -382,22 +497,22 @@ export default function EditUser() {
           .update({ active: false })
           .eq('email', form.email)
           .eq('clinic_id', form.clinic_id);
-        
+
         if (deactivateError) {
           console.warn('⚠️ [INTEGRAÇÃO] Aviso ao desativar profissional:', deactivateError.message);
         }
       }
 
       setMessage(`✓ Usuário ${form.full_name} atualizado com sucesso!`);
-      setNewPassword("");
+      setNewPassword('');
       setShowPassword(false);
 
       setTimeout(() => {
-        navigate("/clinica/administracao/usuarios");
+        navigate('/clinica/administracao/usuarios');
       }, 2000);
     } catch (err) {
-      console.error("Erro ao atualizar usuário:", err);
-      setError(err.message || "Erro ao atualizar usuário");
+      console.error('Erro ao atualizar usuário:', err);
+      setError(err.message || 'Erro ao atualizar usuário');
     }
 
     setSaving(false);
@@ -413,15 +528,17 @@ export default function EditUser() {
 
   const roleConfig = AVAILABLE_ROLES[form.role];
   const selectedClinic = clinics.find((clinic) => clinic.id === form.clinic_id);
-  const inputClassName = "w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[hsl(var(--primary))] focus:ring-4 focus:ring-[hsl(var(--primary))]/10 disabled:bg-slate-50 disabled:text-slate-500";
-  const iconInputClassName = "w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[hsl(var(--primary))] focus:ring-4 focus:ring-[hsl(var(--primary))]/10 disabled:bg-slate-50 disabled:text-slate-500";
+  const inputClassName =
+    'w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[hsl(var(--primary))] focus:ring-4 focus:ring-[hsl(var(--primary))]/10 disabled:bg-slate-50 disabled:text-slate-500';
+  const iconInputClassName =
+    'w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[hsl(var(--primary))] focus:ring-4 focus:ring-[hsl(var(--primary))]/10 disabled:bg-slate-50 disabled:text-slate-500';
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 p-6">
       <div className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-white to-slate-50 p-6 shadow-sm md:flex-row md:items-start md:justify-between">
         <div className="flex items-start gap-4">
           <button
-            onClick={() => navigate("/clinica/administracao/usuarios")}
+            onClick={() => navigate('/clinica/administracao/usuarios')}
             className="mt-1 rounded-2xl border border-slate-200 bg-white p-3 text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -433,7 +550,8 @@ export default function EditUser() {
             <div>
               <h1 className="text-4xl font-bold tracking-tight text-slate-950">Editar Usuário</h1>
               <p className="mt-2 max-w-2xl text-sm text-slate-600">
-                Atualize dados de acesso, vínculo e permissões com um resumo lateral para revisão antes de salvar.
+                Atualize dados de acesso, vínculo e permissões com um resumo lateral para revisão
+                antes de salvar.
               </p>
             </div>
           </div>
@@ -445,12 +563,14 @@ export default function EditUser() {
             <p className="mt-2 text-2xl font-bold text-slate-900">{clinics.length}</p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Permissões</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Permissões
+            </p>
             <p className="mt-2 text-2xl font-bold text-slate-900">{selectedPermissions.length}</p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Papel</p>
-            <p className="mt-2 text-lg font-bold text-slate-900">{roleConfig?.label || "-"}</p>
+            <p className="mt-2 text-lg font-bold text-slate-900">{roleConfig?.label || '-'}</p>
           </div>
         </div>
       </div>
@@ -483,25 +603,54 @@ export default function EditUser() {
                 </span>
                 Informações do Usuário
               </CardTitle>
-              <CardDescription>Revise identidade, login, data de nascimento e contato do usuário.</CardDescription>
+              <CardDescription>
+                Revise identidade, login, data de nascimento e contato do usuário.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-8 p-6">
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700">Nome Completo *</label>
-                  <input type="text" value={form.full_name} onChange={(e) => setForm((prev) => ({ ...prev, full_name: e.target.value }))} className={inputClassName} placeholder="João Silva" />
+                  <input
+                    type="text"
+                    value={form.full_name}
+                    onChange={(e) => setForm((prev) => ({ ...prev, full_name: e.target.value }))}
+                    className={inputClassName}
+                    placeholder="João Silva"
+                  />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700">Nome de Usuário (Login) *</label>
-                  <input type="text" value={form.username} onChange={(e) => setForm((prev) => ({ ...prev, username: e.target.value }))} className={inputClassName} placeholder="joao.silva" />
+                  <label className="text-sm font-semibold text-slate-700">
+                    Nome de Usuário (Login) *
+                  </label>
+                  <input
+                    type="text"
+                    value={form.username}
+                    onChange={(e) => setForm((prev) => ({ ...prev, username: e.target.value }))}
+                    className={inputClassName}
+                    placeholder="joao.silva"
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700">CPF *</label>
-                  <input type="text" value={form.cpf} onChange={(e) => setForm((prev) => ({ ...prev, cpf: e.target.value }))} className={inputClassName} placeholder="123.456.789-00" />
+                  <input
+                    type="text"
+                    value={form.cpf}
+                    onChange={(e) => setForm((prev) => ({ ...prev, cpf: e.target.value }))}
+                    className={inputClassName}
+                    placeholder="123.456.789-00"
+                  />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700">Data de Nascimento *</label>
-                  <input type="date" value={form.birthdate} onChange={(e) => setForm((prev) => ({ ...prev, birthdate: e.target.value }))} className={inputClassName} />
+                  <label className="text-sm font-semibold text-slate-700">
+                    Data de Nascimento *
+                  </label>
+                  <input
+                    type="date"
+                    value={form.birthdate}
+                    onChange={(e) => setForm((prev) => ({ ...prev, birthdate: e.target.value }))}
+                    className={inputClassName}
+                  />
                 </div>
               </div>
 
@@ -510,7 +659,13 @@ export default function EditUser() {
                   <label className="text-sm font-semibold text-slate-700">Email *</label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-3.5 h-5 w-5 text-slate-400" />
-                    <input type="email" value={form.email} onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))} className={iconInputClassName} placeholder="joao@example.com" />
+                    <input
+                      type="email"
+                      value={form.email}
+                      onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+                      className={iconInputClassName}
+                      placeholder="joao@example.com"
+                    />
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -518,7 +673,7 @@ export default function EditUser() {
                   <div className="relative">
                     <Lock className="absolute left-3 top-3.5 h-5 w-5 text-slate-400" />
                     <input
-                      type={showPassword ? "text" : "password"}
+                      type={showPassword ? 'text' : 'password'}
                       value={newPassword}
                       onChange={(e) => {
                         setNewPassword(e.target.value);
@@ -531,12 +686,20 @@ export default function EditUser() {
                       }`}
                       placeholder="Deixe em branco para manter a senha atual"
                     />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 text-slate-400 transition hover:text-slate-600">
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-3 text-slate-400 transition hover:text-slate-600"
+                    >
                       {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
                   </div>
-                  {newPassword && newPassword.length < 6 && <p className="text-xs text-red-600">Mínimo 6 caracteres.</p>}
-                  {newPassword && newPassword.length >= 6 && <p className="text-xs text-emerald-600">Senha pronta para atualização.</p>}
+                  {newPassword && newPassword.length < 6 && (
+                    <p className="text-xs text-red-600">Mínimo 6 caracteres.</p>
+                  )}
+                  {newPassword && newPassword.length >= 6 && (
+                    <p className="text-xs text-emerald-600">Senha pronta para atualização.</p>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -550,17 +713,25 @@ export default function EditUser() {
                 </span>
                 Vínculo e Papel
               </CardTitle>
-              <CardDescription>Reconfigure a clínica vinculada e o papel base do usuário.</CardDescription>
+              <CardDescription>
+                Reconfigure a clínica vinculada e o papel base do usuário.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-8 p-6">
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-slate-700">Clínica Vinculada *</label>
                 <div className="relative">
                   <Building className="absolute left-3 top-3.5 h-5 w-5 text-slate-400" />
-                  <select value={form.clinic_id} onChange={(e) => setForm((prev) => ({ ...prev, clinic_id: e.target.value }))} className="w-full appearance-none rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-10 text-sm text-slate-900 outline-none transition focus:border-[hsl(var(--primary))] focus:ring-4 focus:ring-[hsl(var(--primary))]/10">
+                  <select
+                    value={form.clinic_id}
+                    onChange={(e) => setForm((prev) => ({ ...prev, clinic_id: e.target.value }))}
+                    className="w-full appearance-none rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-10 text-sm text-slate-900 outline-none transition focus:border-[hsl(var(--primary))] focus:ring-4 focus:ring-[hsl(var(--primary))]/10"
+                  >
                     <option value="">Selecione uma clínica</option>
                     {clinics.map((clinic) => (
-                      <option key={clinic.id} value={clinic.id}>{clinic.name}</option>
+                      <option key={clinic.id} value={clinic.id}>
+                        {clinic.name}
+                      </option>
                     ))}
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-3 top-3.5 h-5 w-5 text-slate-400" />
@@ -571,15 +742,31 @@ export default function EditUser() {
                 <label className="text-sm font-semibold text-slate-700">Papel de Acesso *</label>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   {Object.entries(AVAILABLE_ROLES).map(([roleKey, roleInfo]) => (
-                    <label key={roleKey} className={`group rounded-2xl border p-4 transition ${form.role === roleKey ? 'border-[hsl(var(--primary))] bg-[hsl(var(--primary))]/5 shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
+                    <label
+                      key={roleKey}
+                      className={`group rounded-2xl border p-4 transition ${form.role === roleKey ? 'border-[hsl(var(--primary))] bg-[hsl(var(--primary))]/5 shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300'}`}
+                    >
                       <div className="flex items-start gap-3">
-                        <input type="radio" name="role" value={roleKey} checked={form.role === roleKey} onChange={(e) => setForm((prev) => ({ ...prev, role: e.target.value }))} className="mt-1 h-4 w-4" />
+                        <input
+                          type="radio"
+                          name="role"
+                          value={roleKey}
+                          checked={form.role === roleKey}
+                          onChange={(e) => setForm((prev) => ({ ...prev, role: e.target.value }))}
+                          className="mt-1 h-4 w-4"
+                        />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-2">
                             <p className="font-semibold text-slate-900">{roleInfo.label}</p>
-                            <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${roleInfo.color}`}>Perfil</span>
+                            <span
+                              className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${roleInfo.color}`}
+                            >
+                              Perfil
+                            </span>
                           </div>
-                          <p className="mt-1 text-xs leading-5 text-slate-600">{roleInfo.description}</p>
+                          <p className="mt-1 text-xs leading-5 text-slate-600">
+                            {roleInfo.description}
+                          </p>
                         </div>
                       </div>
                     </label>
@@ -609,43 +796,81 @@ export default function EditUser() {
                 </span>
                 Permissões Detalhadas
               </CardTitle>
-              <CardDescription>Abra o painel apenas se precisar refinar além do papel selecionado.</CardDescription>
+              <CardDescription>
+                Abra o painel apenas se precisar refinar além do papel selecionado.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 p-6">
-              <button type="button" onClick={() => setShowPermissionsPanel(!showPermissionsPanel)} className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left font-medium text-slate-800 transition hover:border-slate-300 hover:bg-slate-50">
+              <button
+                type="button"
+                onClick={() => setShowPermissionsPanel(!showPermissionsPanel)}
+                className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left font-medium text-slate-800 transition hover:border-slate-300 hover:bg-slate-50"
+              >
                 <span>Customizar Permissões Detalhadas</span>
-                {showPermissionsPanel ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                {showPermissionsPanel ? (
+                  <ChevronUp className="h-5 w-5" />
+                ) : (
+                  <ChevronDown className="h-5 w-5" />
+                )}
               </button>
 
               {showPermissionsPanel && (
                 <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
                   <div className="flex items-center justify-between gap-3">
                     <h3 className="font-semibold text-slate-900">Permissões selecionadas</h3>
-                    <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">{selectedPermissions.length} ativas</span>
+                    <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">
+                      {selectedPermissions.length} ativas
+                    </span>
                   </div>
                   {Object.entries(PERMISSIONS_BY_MODULE).map(([moduleName, module]) => {
                     const modulePermissions = module.permissions;
-                    const selectedCount = modulePermissions.filter((permission) => selectedPermissions.includes(permission.id)).length;
-                    const allSelected = modulePermissions.every((permission) => selectedPermissions.includes(permission.id));
+                    const selectedCount = modulePermissions.filter((permission) =>
+                      selectedPermissions.includes(permission.id),
+                    ).length;
+                    const allSelected = modulePermissions.every((permission) =>
+                      selectedPermissions.includes(permission.id),
+                    );
                     return (
-                      <div key={moduleName} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <div
+                        key={moduleName}
+                        className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                      >
                         <div className="mb-3 flex items-center justify-between gap-3">
                           <label className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                            <input type="checkbox" checked={allSelected} onChange={() => handlePermissionCheckAll(modulePermissions)} className="h-4 w-4 rounded" />
+                            <input
+                              type="checkbox"
+                              checked={allSelected}
+                              onChange={() => handlePermissionCheckAll(modulePermissions)}
+                              className="h-4 w-4 rounded"
+                            />
                             {module.label}
                           </label>
-                          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">{selectedCount}/{modulePermissions.length}</span>
+                          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                            {selectedCount}/{modulePermissions.length}
+                          </span>
                         </div>
                         <div className="grid gap-2">
                           {modulePermissions.map((permission) => {
                             const isSelected = selectedPermissions.includes(permission.id);
                             return (
-                              <label key={permission.id} className={`rounded-xl border p-3 transition ${isSelected ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200 bg-slate-50 hover:border-slate-300'}`}>
+                              <label
+                                key={permission.id}
+                                className={`rounded-xl border p-3 transition ${isSelected ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200 bg-slate-50 hover:border-slate-300'}`}
+                              >
                                 <div className="flex items-start gap-3">
-                                  <input type="checkbox" checked={isSelected} onChange={() => handlePermissionToggle(permission.id)} className="mt-1 h-4 w-4 rounded" />
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={() => handlePermissionToggle(permission.id)}
+                                    className="mt-1 h-4 w-4 rounded"
+                                  />
                                   <div className="min-w-0 flex-1">
-                                    <p className="text-sm font-medium text-slate-900">{permission.label}</p>
-                                    <p className="mt-1 text-xs text-slate-500">{permission.description}</p>
+                                    <p className="text-sm font-medium text-slate-900">
+                                      {permission.label}
+                                    </p>
+                                    <p className="mt-1 text-xs text-slate-500">
+                                      {permission.description}
+                                    </p>
                                   </div>
                                 </div>
                               </label>
@@ -664,7 +889,9 @@ export default function EditUser() {
                     <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" />
                     <div>
                       <p className="font-semibold">Alteração de senha pendente</p>
-                      <p className="mt-1">Ao salvar, o usuário passará a acessar com a nova senha.</p>
+                      <p className="mt-1">
+                        Ao salvar, o usuário passará a acessar com a nova senha.
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -681,19 +908,33 @@ export default function EditUser() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="rounded-2xl bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Usuário</p>
-                <p className="mt-2 font-semibold text-slate-900">{form.full_name || 'Nome não preenchido'}</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Usuário
+                </p>
+                <p className="mt-2 font-semibold text-slate-900">
+                  {form.full_name || 'Nome não preenchido'}
+                </p>
                 <p className="mt-1 text-sm text-slate-600">{form.email || 'Email não informado'}</p>
               </div>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
                 <div className="rounded-2xl border border-slate-200 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Clínica</p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">{selectedClinic?.name || 'Selecione uma clínica'}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Clínica
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-slate-900">
+                    {selectedClinic?.name || 'Selecione uma clínica'}
+                  </p>
                 </div>
                 <div className="rounded-2xl border border-slate-200 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Papel</p>
-                  <p className="mt-2 text-sm font-semibold text-slate-900">{roleConfig?.label || 'Selecione um papel'}</p>
-                  <p className="mt-1 text-xs text-slate-500">{roleConfig?.description || 'As permissões base seguem o papel escolhido.'}</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Papel
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-slate-900">
+                    {roleConfig?.label || 'Selecione um papel'}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {roleConfig?.description || 'As permissões base seguem o papel escolhido.'}
+                  </p>
                 </div>
               </div>
               <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
@@ -707,7 +948,11 @@ export default function EditUser() {
 
           <Card className="rounded-3xl border-slate-200 shadow-sm">
             <CardContent className="space-y-3 p-6">
-              <button type="submit" disabled={saving} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[hsl(var(--primary))] px-4 py-3.5 font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50">
+              <button
+                type="submit"
+                disabled={saving}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[hsl(var(--primary))] px-4 py-3.5 font-semibold text-white transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
+              >
                 {saving ? (
                   <>
                     <Loader2 className="h-5 w-5 animate-spin" />
@@ -720,7 +965,11 @@ export default function EditUser() {
                   </>
                 )}
               </button>
-              <button type="button" onClick={() => navigate("/clinica/administracao/usuarios")} className="w-full rounded-2xl border border-slate-200 px-4 py-3 font-medium text-slate-700 transition hover:bg-slate-50">
+              <button
+                type="button"
+                onClick={() => navigate('/clinica/administracao/usuarios')}
+                className="w-full rounded-2xl border border-slate-200 px-4 py-3 font-medium text-slate-700 transition hover:bg-slate-50"
+              >
                 Cancelar
               </button>
             </CardContent>

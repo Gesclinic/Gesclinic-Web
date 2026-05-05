@@ -1,20 +1,20 @@
 /**
  * CheckinDrawer.jsx
- * 
+ *
  * 🎯 CHECK-IN INLINE NA AGENDA
- * 
+ *
  * Padrão ERP Profissional:
  * - Abre como Drawer lateral (desktop) ou Modal full-screen (mobile)
  * - Sem mudar de rota
  * - Contexto visual mantido (usuário vê a agenda ao fundo)
- * 
+ *
  * Fluxo:
  * 1. Recepção clica em "Check-in" na linha do agendamento
  * 2. Drawer abre com 3 abas: Checklist, Financeiro, Ações
  * 3. Confirma dados, resolve pendências
  * 4. Clica em "Liberar para Atendimento"
  * 5. Drawer fecha, paciente aparece para profissional
- * 
+ *
  * Props:
  * - isOpen: bool
  * - appointment: object (agendamento completo)
@@ -22,33 +22,28 @@
  * - onStatusChange: (appointmentId, newStatus) => void
  */
 
-import React, { useState, useMemo } from "react";
-import { X, CheckCircle2, AlertCircle, Zap, Play, Clock, TrendingUp } from "lucide-react";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
-import { updateAppointment } from "@/lib/appointmentsApi";
-import { logCheckinStarted } from "@/lib/auditApi";
+import React, { useState, useMemo } from 'react';
+import { X, CheckCircle2, AlertCircle, Zap, Play, Clock, TrendingUp } from 'lucide-react';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { updateAppointment } from '@/lib/appointmentsApi';
+import { logCheckinStarted } from '@/lib/auditApi';
 import {
   validateCheckinData,
   getCheckinSummary,
   confirmCheckin,
-} from "@/lib/checkinIntegrationApi";
-import { finalizeAppointmentWithFinancials } from "@/lib/appointmentFinancialIntegrationApi";
-import MergePatientModal from "@/components/MergePatientModal";
-import CheckinChecklist from "../views/components/CheckinChecklist";
-import CheckinFinanceiro from "../views/components/CheckinFinanceiro";
-import CheckinAcoes from "../views/components/CheckinAcoes";
-import CheckinItemModal from "../views/components/CheckinItemModal";
-import AppointmentAuditTimeline from "./AppointmentAuditTimeline";
-import AppointmentFinancialAuditTimeline from "./AppointmentFinancialAuditTimeline";
+} from '@/lib/checkinIntegrationApi';
+import { finalizeAppointmentWithFinancials } from '@/lib/appointmentFinancialIntegrationApi';
+import MergePatientModal from '@/components/MergePatientModal';
+import CheckinChecklist from '../views/components/CheckinChecklist';
+import CheckinFinanceiro from '../views/components/CheckinFinanceiro';
+import CheckinAcoes from '../views/components/CheckinAcoes';
+import CheckinItemModal from '../views/components/CheckinItemModal';
+import AppointmentAuditTimeline from './AppointmentAuditTimeline';
+import AppointmentFinancialAuditTimeline from './AppointmentFinancialAuditTimeline';
 
-export default function CheckinDrawer({
-  isOpen,
-  appointment,
-  onClose,
-  onStatusChange,
-}) {
+export default function CheckinDrawer({ isOpen, appointment, onClose, onStatusChange }) {
   const { currentRole } = useAuth();
-  const [activeTab, setActiveTab] = useState("checklist");
+  const [activeTab, setActiveTab] = useState('checklist');
   const [loading, setLoading] = useState(false);
   const [checklistComplete, setChecklistComplete] = useState(false);
   const [financialOk, setFinancialOk] = useState(false);
@@ -60,15 +55,13 @@ export default function CheckinDrawer({
   const [itemModalOpen, setItemModalOpen] = useState(false);
 
   // Validações de permissão
-  const canAccessCheckin = ["admin", "gestor", "recepcao"].includes(
-    currentRole?.toLowerCase?.()
-  );
+  const canAccessCheckin = ['admin', 'gestor', 'recepcao'].includes(currentRole?.toLowerCase?.());
 
   // Log de auditoria quando drawer abre (check-in iniciado)
   React.useEffect(() => {
     if (isOpen && appointment?.id) {
-      logCheckinStarted(appointment.id).catch(err =>
-        console.warn("Erro ao logar check-in iniciado:", err)
+      logCheckinStarted(appointment.id).catch((err) =>
+        console.warn('Erro ao logar check-in iniciado:', err),
       );
       // Atualizar currentAppointment sempre que appointment muda
       setCurrentAppointment(appointment);
@@ -81,12 +74,12 @@ export default function CheckinDrawer({
 
   // Validar se agendamento pode receber check-in
   const eligibleStatuses = [
-    "confirmado",
-    "a_confirmar",
-    "aguardando",
-    "pendente",
-    "presente",
-    "financeiro_pendente",
+    'confirmado',
+    'a_confirmar',
+    'aguardando',
+    'pendente',
+    'presente',
+    'financeiro_pendente',
   ];
   const isEligible = eligibleStatuses.includes(appointment.status?.toLowerCase?.());
 
@@ -94,12 +87,8 @@ export default function CheckinDrawer({
     return (
       <div className="app-modal-overlay">
         <div className="app-modal-shell app-modal-shell--compact rounded-lg bg-white p-6 shadow-xl">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            ⚠️ Check-in não disponível
-          </h3>
-          <p className="text-gray-600 mb-4">
-            Este agendamento já foi liberado ou cancelado.
-          </p>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">⚠️ Check-in não disponível</h3>
+          <p className="text-gray-600 mb-4">Este agendamento já foi liberado ou cancelado.</p>
           <button
             onClick={onClose}
             className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -118,20 +107,20 @@ export default function CheckinDrawer({
       console.log('📍 Registrando presença do paciente...');
       console.log('🔍 currentAppointment:', currentAppointment);
       console.log('🔍 ID:', currentAppointment?.id);
-      
+
       const result = await updateAppointment(currentAppointment.id, {
-        status: "presente",
+        status: 'presente',
         chegada_em: new Date().toISOString(),
       });
 
       console.log('✅ Presença registrada. Resultado:', result);
       console.log('✅ Novo status:', result?.status);
-      onStatusChange(currentAppointment.id, "presente");
-      
+      onStatusChange(currentAppointment.id, 'presente');
+
       // Atualizar estado local
-      setCurrentAppointment({ ...currentAppointment, status: "presente" });
+      setCurrentAppointment({ ...currentAppointment, status: 'presente' });
     } catch (error) {
-      console.error("❌ Erro ao registrar presença:", error);
+      console.error('❌ Erro ao registrar presença:', error);
       setErrors([`Erro ao registrar presença: ${error.message}`]);
     } finally {
       setLoading(false);
@@ -146,16 +135,18 @@ export default function CheckinDrawer({
 
     // ⚠️ Validar se é pré-paciente
     if (currentAppointment.patient_type === 'PRE_PATIENT') {
-      setErrors(["Cadastro Incompleto - Este paciente foi agendado por telefone e precisa de cadastro completo. Finalize o cadastro clicando no botão abaixo."]);
+      setErrors([
+        'Cadastro Incompleto - Este paciente foi agendado por telefone e precisa de cadastro completo. Finalize o cadastro clicando no botão abaixo.',
+      ]);
       return;
     }
 
     const validationErrors = [];
     if (!checklistComplete) {
-      validationErrors.push("Checklist não foi concluído");
+      validationErrors.push('Checklist não foi concluído');
     }
     if (!financialOk) {
-      validationErrors.push("Situação financeira não foi resolvida");
+      validationErrors.push('Situação financeira não foi resolvida');
     }
 
     if (validationErrors.length > 0) {
@@ -195,11 +186,11 @@ export default function CheckinDrawer({
         {
           patient: { id: currentAppointment.patient_id },
           insuranceAuthorized: true,
-        }
+        },
       );
 
       if (!checkinResult.confirmed) {
-        setErrors(checkinResult.errors || ["Erro desconhecido ao confirmar check-in"]);
+        setErrors(checkinResult.errors || ['Erro desconhecido ao confirmar check-in']);
         return;
       }
 
@@ -210,12 +201,12 @@ export default function CheckinDrawer({
 
       // Atualizar status para liberado
       await updateAppointment(currentAppointment.id, {
-        status: "pronto_atendimento",
+        status: 'pronto_atendimento',
         liberado_em: new Date().toISOString(),
       });
 
       console.log('💰 [Liberação] Processando registros financeiros...');
-      
+
       // 🆕 Chamar integração financeira para criar:
       // - Produção Médica
       // - Repasse Médico
@@ -223,7 +214,7 @@ export default function CheckinDrawer({
       // - Contas a Receber (PARTICULAR) ou Guia de Faturamento (CONVÊNIO)
       const financialResult = await finalizeAppointmentWithFinancials(
         currentAppointment.id,
-        currentAppointment.clinic_id
+        currentAppointment.clinic_id,
       );
 
       if (financialResult.success) {
@@ -236,10 +227,10 @@ export default function CheckinDrawer({
         setWarnings([...warnings, `⚠️ ${financialResult.message}`]);
       }
 
-      onStatusChange(currentAppointment.id, "liberado_para_atendimento");
+      onStatusChange(currentAppointment.id, 'liberado_para_atendimento');
       onClose();
     } catch (error) {
-      console.error("Erro ao liberar:", error);
+      console.error('Erro ao liberar:', error);
       setErrors([`Erro ao liberar paciente: ${error.message}`]);
     } finally {
       setLoading(false);
@@ -255,7 +246,8 @@ export default function CheckinDrawer({
   };
 
   // Calcular se botão de liberar está habilitado
-  const canRelease = checklistComplete && financialOk && currentAppointment?.patient_type !== 'PRE_PATIENT';
+  const canRelease =
+    checklistComplete && financialOk && currentAppointment?.patient_type !== 'PRE_PATIENT';
 
   // Se não houver agendamento, não renderizar
   if (!currentAppointment) {
@@ -281,12 +273,14 @@ export default function CheckinDrawer({
       {/* Drawer */}
       <div className="fixed right-0 top-0 h-full w-full sm:w-[600px] bg-white shadow-2xl z-50 flex flex-col overflow-hidden animate-in slide-in-from-right duration-300">
         {/* Alert para pré-paciente */}
-      {currentAppointment?.patient_type === 'PRE_PATIENT' && (
+        {currentAppointment?.patient_type === 'PRE_PATIENT' && (
           <div className="bg-red-50 border-b border-red-200 px-6 py-3">
             <div className="flex gap-3">
               <span className="text-xl">🚨</span>
               <div>
-                <p className="font-semibold text-red-900 text-sm">Cadastro Incompleto - Ação Obrigatória</p>
+                <p className="font-semibold text-red-900 text-sm">
+                  Cadastro Incompleto - Ação Obrigatória
+                </p>
                 <p className="text-xs text-red-800 mt-1">
                   Paciente agendado por telefone. Finalize o cadastro clicando no botão abaixo.
                 </p>
@@ -298,12 +292,10 @@ export default function CheckinDrawer({
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 text-white flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold">
-              📋 Check-in do Paciente
-            </h2>
+            <h2 className="text-xl font-bold">📋 Check-in do Paciente</h2>
             <p className="text-blue-100 text-sm mt-1">
-              {currentAppointment.patient_name || currentAppointment.lead_name} • {currentAppointment.start_time?.slice(11, 16)} •{" "}
-              {currentAppointment.service_name}
+              {currentAppointment.patient_name || currentAppointment.lead_name} •{' '}
+              {currentAppointment.start_time?.slice(11, 16)} • {currentAppointment.service_name}
             </p>
           </div>
           <button
@@ -320,11 +312,15 @@ export default function CheckinDrawer({
           <div className="space-y-3">
             {/* Passo 1: Checklist */}
             <div className="flex items-start gap-3">
-              <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-sm ${checklistComplete ? 'bg-green-500' : 'bg-blue-500'}`}>
+              <div
+                className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-sm ${checklistComplete ? 'bg-green-500' : 'bg-blue-500'}`}
+              >
                 {checklistComplete ? '✓' : '1'}
               </div>
               <div className="flex-1 mt-0.5">
-                <p className={`font-semibold text-sm ${checklistComplete ? 'text-green-700' : 'text-blue-900'}`}>
+                <p
+                  className={`font-semibold text-sm ${checklistComplete ? 'text-green-700' : 'text-blue-900'}`}
+                >
                   Checklist de Documentação
                 </p>
                 <p className="text-xs text-gray-600 mt-0.5">
@@ -343,15 +339,21 @@ export default function CheckinDrawer({
 
             {/* Passo 2: Financeiro */}
             <div className="flex items-start gap-3">
-              <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-sm ${financialOk ? 'bg-green-500' : 'bg-gray-400'}`}>
+              <div
+                className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-sm ${financialOk ? 'bg-green-500' : 'bg-gray-400'}`}
+              >
                 {financialOk ? '✓' : '2'}
               </div>
               <div className="flex-1 mt-0.5">
-                <p className={`font-semibold text-sm ${financialOk ? 'text-green-700' : 'text-gray-700'}`}>
+                <p
+                  className={`font-semibold text-sm ${financialOk ? 'text-green-700' : 'text-gray-700'}`}
+                >
                   Validação Financeira
                 </p>
                 <p className="text-xs text-gray-600 mt-0.5">
-                  {financialOk ? '✅ OK - Sem restrições' : '⏳ Pendente - Verifique situação financeira'}
+                  {financialOk
+                    ? '✅ OK - Sem restrições'
+                    : '⏳ Pendente - Verifique situação financeira'}
                 </p>
               </div>
               {!financialOk && checklistComplete && (
@@ -374,15 +376,21 @@ export default function CheckinDrawer({
 
             {/* Passo 3: Liberar */}
             <div className="flex items-start gap-3">
-              <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-sm ${checklistComplete && financialOk ? 'bg-green-500' : 'bg-gray-400'}`}>
+              <div
+                className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-white text-sm ${checklistComplete && financialOk ? 'bg-green-500' : 'bg-gray-400'}`}
+              >
                 3
               </div>
               <div className="flex-1 mt-0.5">
-                <p className={`font-semibold text-sm ${checklistComplete && financialOk ? 'text-green-700' : 'text-gray-700'}`}>
+                <p
+                  className={`font-semibold text-sm ${checklistComplete && financialOk ? 'text-green-700' : 'text-gray-700'}`}
+                >
                   Liberar para Atendimento
                 </p>
                 <p className="text-xs text-gray-600 mt-0.5">
-                  {checklistComplete && financialOk ? '✅ Pronto para liberar' : '⏳ Aguarde conclusão dos passos anteriores'}
+                  {checklistComplete && financialOk
+                    ? '✅ Pronto para liberar'
+                    : '⏳ Aguarde conclusão dos passos anteriores'}
                 </p>
               </div>
               {checklistComplete && financialOk && (
@@ -400,11 +408,11 @@ export default function CheckinDrawer({
         {/* Tabs */}
         <div className="flex gap-0 border-b bg-gray-50 px-6 overflow-x-auto">
           <button
-            onClick={() => setActiveTab("checklist")}
+            onClick={() => setActiveTab('checklist')}
             className={`flex items-center gap-2 px-4 py-3 font-medium border-b-2 transition-colors whitespace-nowrap ${
-              activeTab === "checklist"
-                ? "border-blue-600 text-blue-600"
-                : "border-transparent text-gray-600 hover:text-gray-900"
+              activeTab === 'checklist'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
           >
             <CheckCircle2 size={18} />
@@ -420,11 +428,11 @@ export default function CheckinDrawer({
             )}
           </button>
           <button
-            onClick={() => setActiveTab("financeiro")}
+            onClick={() => setActiveTab('financeiro')}
             className={`flex items-center gap-2 px-4 py-3 font-medium border-b-2 transition-colors whitespace-nowrap ${
-              activeTab === "financeiro"
-                ? "border-blue-600 text-blue-600"
-                : "border-transparent text-gray-600 hover:text-gray-900"
+              activeTab === 'financeiro'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
           >
             <Zap size={18} />
@@ -440,34 +448,34 @@ export default function CheckinDrawer({
             )}
           </button>
           <button
-            onClick={() => setActiveTab("acoes")}
+            onClick={() => setActiveTab('acoes')}
             className={`flex items-center gap-2 px-4 py-3 font-medium border-b-2 transition-colors whitespace-nowrap ${
-              activeTab === "acoes"
-                ? "border-blue-600 text-blue-600"
-                : "border-transparent text-gray-600 hover:text-gray-900"
+              activeTab === 'acoes'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
           >
             <Play size={18} />
             Ações
           </button>
           <button
-            onClick={() => setActiveTab("historico")}
+            onClick={() => setActiveTab('historico')}
             className={`flex items-center gap-2 px-4 py-3 font-medium border-b-2 transition-colors whitespace-nowrap ${
-              activeTab === "historico"
-                ? "border-blue-600 text-blue-600"
-                : "border-transparent text-gray-600 hover:text-gray-900"
+              activeTab === 'historico'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
           >
             <Clock size={18} />
             Histórico
           </button>
-          {["admin", "gestor", "financeiro"].includes(currentRole?.toLowerCase?.()) && (
+          {['admin', 'gestor', 'financeiro'].includes(currentRole?.toLowerCase?.()) && (
             <button
-              onClick={() => setActiveTab("auditoria_financeira")}
+              onClick={() => setActiveTab('auditoria_financeira')}
               className={`flex items-center gap-2 px-4 py-3 font-medium border-b-2 transition-colors whitespace-nowrap ${
-                activeTab === "auditoria_financeira"
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-gray-600 hover:text-gray-900"
+                activeTab === 'auditoria_financeira'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
               <TrendingUp size={18} />
@@ -478,7 +486,7 @@ export default function CheckinDrawer({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-6 py-6 scrollbar-custom">
-          {activeTab === "checklist" && (
+          {activeTab === 'checklist' && (
             <CheckinChecklist
               appointment={currentAppointment}
               onStatusChange={(complete) => setChecklistComplete(complete)}
@@ -489,14 +497,14 @@ export default function CheckinDrawer({
             />
           )}
 
-          {activeTab === "financeiro" && (
+          {activeTab === 'financeiro' && (
             <CheckinFinanceiro
               appointment={currentAppointment}
               onStatusChange={(ok) => setFinancialOk(ok)}
             />
           )}
 
-          {activeTab === "acoes" && (
+          {activeTab === 'acoes' && (
             <CheckinAcoes
               appointment={currentAppointment}
               onStatusChange={onStatusChange}
@@ -504,14 +512,14 @@ export default function CheckinDrawer({
             />
           )}
 
-          {activeTab === "historico" && (
+          {activeTab === 'historico' && (
             <AppointmentAuditTimeline
               appointmentId={currentAppointment.id}
               currentRole={currentRole}
             />
           )}
 
-          {activeTab === "auditoria_financeira" && (
+          {activeTab === 'auditoria_financeira' && (
             <AppointmentFinancialAuditTimeline
               appointmentId={currentAppointment.id}
               compact={false}
@@ -561,22 +569,16 @@ export default function CheckinDrawer({
             <div className="flex items-center gap-2">
               <div
                 className={`w-3 h-3 rounded-full ${
-                  checklistComplete ? "bg-green-500" : "bg-red-500"
+                  checklistComplete ? 'bg-green-500' : 'bg-red-500'
                 }`}
               />
-              <span className="text-gray-700">
-                Checklist: {checklistComplete ? "✅" : "❌"}
-              </span>
+              <span className="text-gray-700">Checklist: {checklistComplete ? '✅' : '❌'}</span>
             </div>
             <div className="flex items-center gap-2">
               <div
-                className={`w-3 h-3 rounded-full ${
-                  financialOk ? "bg-green-500" : "bg-red-500"
-                }`}
+                className={`w-3 h-3 rounded-full ${financialOk ? 'bg-green-500' : 'bg-red-500'}`}
               />
-              <span className="text-gray-700">
-                Financeiro: {financialOk ? "✅" : "❌"}
-              </span>
+              <span className="text-gray-700">Financeiro: {financialOk ? '✅' : '❌'}</span>
             </div>
           </div>
 
@@ -599,30 +601,37 @@ export default function CheckinDrawer({
           <div className="flex flex-col gap-3">
             {/* Fluxo de Status - Redesenhado */}
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-xs font-bold text-blue-900 mb-3 uppercase tracking-wide">Fluxo de Check-in</p>
-              
+              <p className="text-xs font-bold text-blue-900 mb-3 uppercase tracking-wide">
+                Fluxo de Check-in
+              </p>
+
               {/* Step 1: Marcar como Presente */}
               <div className="mb-3">
                 <div className="flex items-center gap-2 mb-2">
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs ${
-                    currentAppointment?.status === 'presente' || currentAppointment?.status === 'pronto_atendimento' 
-                      ? 'bg-green-500' 
-                      : 'bg-blue-500'
-                  }`}>
+                  <div
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs ${
+                      currentAppointment?.status === 'presente' ||
+                      currentAppointment?.status === 'pronto_atendimento'
+                        ? 'bg-green-500'
+                        : 'bg-blue-500'
+                    }`}
+                  >
                     1
                   </div>
                   <span className="text-sm font-semibold text-gray-900">Confirmar Presença</span>
                 </div>
-                {currentAppointment?.status !== 'presente' && currentAppointment?.status !== 'pronto_atendimento' && (
+                {currentAppointment?.status !== 'presente' &&
+                  currentAppointment?.status !== 'pronto_atendimento' && (
                   <button
                     onClick={handleRegistrarPresenca}
                     disabled={loading}
                     className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors text-sm"
                   >
-                    📍 Registrar Presença
+                      📍 Registrar Presença
                   </button>
                 )}
-                {(currentAppointment?.status === 'presente' || currentAppointment?.status === 'pronto_atendimento') && (
+                {(currentAppointment?.status === 'presente' ||
+                  currentAppointment?.status === 'pronto_atendimento') && (
                   <p className="text-xs text-green-700 font-semibold">✅ Presença registrada</p>
                 )}
               </div>
@@ -630,53 +639,76 @@ export default function CheckinDrawer({
               {/* Step 2: Verificar Checklist */}
               <div className="mb-3 pb-3 border-b border-blue-200">
                 <div className="flex items-center gap-2 mb-2">
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs ${
-                    checklistComplete ? 'bg-green-500' : 'bg-gray-400'
-                  }`}>
+                  <div
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs ${
+                      checklistComplete ? 'bg-green-500' : 'bg-gray-400'
+                    }`}
+                  >
                     2
                   </div>
                   <span className="text-sm font-semibold text-gray-900">Completar Checklist</span>
                   {checklistComplete ? (
-                    <span className="ml-auto text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded font-semibold">✓ OK</span>
+                    <span className="ml-auto text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded font-semibold">
+                      ✓ OK
+                    </span>
                   ) : (
-                    <span className="ml-auto text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded font-semibold">Pendente</span>
+                    <span className="ml-auto text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded font-semibold">
+                      Pendente
+                    </span>
                   )}
                 </div>
                 {!checklistComplete && (
-                  <p className="text-xs text-gray-600 ml-8">Clique na aba "Checklist" para completar os itens pendentes</p>
+                  <p className="text-xs text-gray-600 ml-8">
+                    Clique na aba "Checklist" para completar os itens pendentes
+                  </p>
                 )}
               </div>
 
               {/* Step 3: Liberar para Atendimento */}
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs ${
-                    currentAppointment?.status === 'pronto_atendimento' ? 'bg-green-500' : 'bg-gray-400'
-                  }`}>
+                  <div
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs ${
+                      currentAppointment?.status === 'pronto_atendimento'
+                        ? 'bg-green-500'
+                        : 'bg-gray-400'
+                    }`}
+                  >
                     3
                   </div>
-                  <span className="text-sm font-semibold text-gray-900">Liberar para Atendimento</span>
+                  <span className="text-sm font-semibold text-gray-900">
+                    Liberar para Atendimento
+                  </span>
                 </div>
                 {currentAppointment?.status !== 'pronto_atendimento' && (
                   <button
                     onClick={handleLiberar}
-                    disabled={!canRelease || loading || (currentAppointment?.status === 'presente' && (!checklistComplete || !financialOk))}
+                    disabled={
+                      !canRelease ||
+                      loading ||
+                      (currentAppointment?.status === 'presente' &&
+                        (!checklistComplete || !financialOk))
+                    }
                     className={`w-full px-4 py-2 rounded-lg font-medium text-white transition-colors flex items-center justify-center gap-2 text-sm ${
-                      canRelease && !(currentAppointment?.status === 'presente' && (!checklistComplete || !financialOk))
-                        ? "bg-green-600 hover:bg-green-700"
-                        : "bg-gray-400 cursor-not-allowed"
-                  }`}
-                >
-                  🟢 Liberar para Atendimento
-                </button>
-              )}
+                      canRelease &&
+                      !(
+                        currentAppointment?.status === 'presente' &&
+                        (!checklistComplete || !financialOk)
+                      )
+                        ? 'bg-green-600 hover:bg-green-700'
+                        : 'bg-gray-400 cursor-not-allowed'
+                    }`}
+                  >
+                    🟢 Liberar para Atendimento
+                  </button>
+                )}
 
-              {currentAppointment?.status === 'pronto_atendimento' && (
-                <div className="w-full px-4 py-2 bg-green-100 border border-green-300 rounded-lg text-green-800 text-center font-medium">
-                  ✅ Paciente pronto para atendimento
-                </div>
-              )}
-            </div>
+                {currentAppointment?.status === 'pronto_atendimento' && (
+                  <div className="w-full px-4 py-2 bg-green-100 border border-green-300 rounded-lg text-green-800 text-center font-medium">
+                    ✅ Paciente pronto para atendimento
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Botões de Ação */}
@@ -710,67 +742,67 @@ export default function CheckinDrawer({
           onSave={async (itemId, formData) => {
             try {
               setLoading(true);
-              
+
               // Mapear itemId para campo de appointment
               const updateData = {};
-              
+
               switch (itemId) {
-                case "dados_cadastrais":
-                  Object.assign(updateData, {
-                    patient_name: formData.patient_name,
-                    patient_cpf: formData.patient_cpf,
-                    patient_phone: formData.patient_phone,
-                    patient_verified: true,
-                  });
-                  break;
-                case "convenio":
-                  Object.assign(updateData, {
-                    payer_name: formData.payer_name,
-                    payer_type: formData.payer_type,
-                    authorization_number: formData.authorization_number,
-                  });
-                  break;
-                case "carteirinha":
-                  Object.assign(updateData, {
-                    card_number: formData.card_number,
-                    insurance_card_verified: formData.insurance_card_verified,
-                  });
-                  break;
-                case "autorizacao":
-                  Object.assign(updateData, {
-                    authorization_date: formData.authorization_date,
-                    authorization_verified: formData.authorization_verified,
-                  });
-                  break;
-                case "guia":
-                  Object.assign(updateData, {
-                    guide_number: formData.guide_number,
-                    guide_generated: formData.guide_generated,
-                  });
-                  break;
-                case "pagamento":
-                  Object.assign(updateData, {
-                    payment_method: formData.payment_method,
-                    payment_status: formData.payment_status,
-                  });
-                  break;
+              case 'dados_cadastrais':
+                Object.assign(updateData, {
+                  patient_name: formData.patient_name,
+                  patient_cpf: formData.patient_cpf,
+                  patient_phone: formData.patient_phone,
+                  patient_verified: true,
+                });
+                break;
+              case 'convenio':
+                Object.assign(updateData, {
+                  payer_name: formData.payer_name,
+                  payer_type: formData.payer_type,
+                  authorization_number: formData.authorization_number,
+                });
+                break;
+              case 'carteirinha':
+                Object.assign(updateData, {
+                  card_number: formData.card_number,
+                  insurance_card_verified: formData.insurance_card_verified,
+                });
+                break;
+              case 'autorizacao':
+                Object.assign(updateData, {
+                  authorization_date: formData.authorization_date,
+                  authorization_verified: formData.authorization_verified,
+                });
+                break;
+              case 'guia':
+                Object.assign(updateData, {
+                  guide_number: formData.guide_number,
+                  guide_generated: formData.guide_generated,
+                });
+                break;
+              case 'pagamento':
+                Object.assign(updateData, {
+                  payment_method: formData.payment_method,
+                  payment_status: formData.payment_status,
+                });
+                break;
               }
 
               // Salvar no banco de dados
               const updated = await updateAppointment(currentAppointment.id, updateData);
-              
+
               // Atualizar estado local
               setCurrentAppointment({ ...currentAppointment, ...updateData });
-              
+
               // Fechar modal e recarregar checklist
               setItemModalOpen(false);
               setEditingItemId(null);
-              
+
               // Força re-render do checklist
               setChecklistComplete(false);
               setChecklistComplete(true);
             } catch (error) {
-              console.error("Erro ao salvar item:", error);
+              console.error('Erro ao salvar item:', error);
               throw error;
             } finally {
               setLoading(false);
@@ -781,4 +813,3 @@ export default function CheckinDrawer({
     </>
   );
 }
-

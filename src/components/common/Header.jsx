@@ -1,25 +1,22 @@
-import React from "react";
-import { Link } from "react-router-dom";
-import { supabase } from "@/lib/customSupabaseClient";
-import { LogOut, Home, CalendarDays, Settings } from "lucide-react";
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { supabase } from '@/lib/customSupabaseClient';
+import { LogOut, Home, CalendarDays, Settings } from 'lucide-react';
 
 export default function Header() {
-  const clinic = JSON.parse(localStorage.getItem("clinic") || "null");
+  const clinic = JSON.parse(localStorage.getItem('clinic') || 'null');
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    localStorage.removeItem("clinic");
-    window.location.href = "/login";
+    localStorage.removeItem('clinic');
+    window.location.href = '/login';
   };
 
   return (
     <header className="w-full bg-white shadow-sm border-b px-6 py-4 flex items-center justify-between">
       {/* ESQUERDA */}
       <div className="flex items-center gap-4">
-        <Link
-          to="/clinica/dashboard"
-          className="text-xl font-semibold text-gray-800"
-        >
+        <Link to="/clinica/dashboard" className="text-xl font-semibold text-gray-800">
           Gesclinic Web
         </Link>
 

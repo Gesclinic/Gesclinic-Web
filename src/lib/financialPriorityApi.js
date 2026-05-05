@@ -1,6 +1,6 @@
 /**
  * Financial Priority Suggestion API
- * 
+ *
  * Sistema de Sugestão por Prioridade Financeira
  * Calcula score de viabilidade financeira de encaixes baseado em:
  * - Valor do serviço
@@ -9,7 +9,7 @@
  * - Margem estimada (receita líquida)
  * - Histórico de no-show do paciente (risco)
  * - Tipo de atendimento
- * 
+ *
  * Score: 0-100 (quanto maior, melhor o retorno financeiro)
  * Não persiste scores - calcula em tempo real
  */
@@ -37,34 +37,34 @@ export const SERVICE_TYPES = {
 
 // Pesos padrão (podem ser sobrescritos por clínica)
 export const DEFAULT_WEIGHTS = {
-  valor_servico: 0.30,      // 30% do score é baseado no valor
-  margem_estimada: 0.35,    // 35% baseado na margem
-  receita_por_hora: 0.20,   // 20% baseado em receita/hora
-  tipo_pagamento: 0.10,     // 10% bônus por tipo (PARTICULAR)
-  tipo_atendimento: 0.05,   // 5% ajuste por tipo (procedimentos worth more)
+  valor_servico: 0.3, // 30% do score é baseado no valor
+  margem_estimada: 0.35, // 35% baseado na margem
+  receita_por_hora: 0.2, // 20% baseado em receita/hora
+  tipo_pagamento: 0.1, // 10% bônus por tipo (PARTICULAR)
+  tipo_atendimento: 0.05, // 5% ajuste por tipo (procedimentos worth more)
 };
 
 // Penalidades por histórico de no-show
 export const NO_SHOW_PENALTIES = {
-  0: 1.0,      // Sem no-show: 100% do score
-  1: 0.85,     // 1 no-show: -15%
-  2: 0.70,     // 2 no-shows: -30%
-  3: 0.50,     // 3+ no-shows: -50%
+  0: 1.0, // Sem no-show: 100% do score
+  1: 0.85, // 1 no-show: -15%
+  2: 0.7, // 2 no-shows: -30%
+  3: 0.5, // 3+ no-shows: -50%
 };
 
 // Multiplicadores por tipo de pagamento
 export const PAYMENT_TYPE_MULTIPLIERS = {
-  [PAYMENT_TYPES.PARTICULAR]: 1.2,  // +20% PARTICULAR é mais seguro
-  [PAYMENT_TYPES.PLANO]: 1.0,       // Neutro
-  [PAYMENT_TYPES.CONVENIO]: 0.85,   // -15% CONVENIO tem repasse menor
+  [PAYMENT_TYPES.PARTICULAR]: 1.2, // +20% PARTICULAR é mais seguro
+  [PAYMENT_TYPES.PLANO]: 1.0, // Neutro
+  [PAYMENT_TYPES.CONVENIO]: 0.85, // -15% CONVENIO tem repasse menor
 };
 
 // Multiplicadores por tipo de atendimento
 export const SERVICE_TYPE_MULTIPLIERS = {
-  [SERVICE_TYPES.PROCEDIMENTO]: 1.3,  // +30% Procedimentos mais lucrativos
-  [SERVICE_TYPES.EXAME]: 1.15,        // +15% Exames
-  [SERVICE_TYPES.CONSULTA]: 1.0,      // Neutro
-  [SERVICE_TYPES.RETORNO]: 0.8,       // -20% Retornos menos rentáveis
+  [SERVICE_TYPES.PROCEDIMENTO]: 1.3, // +30% Procedimentos mais lucrativos
+  [SERVICE_TYPES.EXAME]: 1.15, // +15% Exames
+  [SERVICE_TYPES.CONSULTA]: 1.0, // Neutro
+  [SERVICE_TYPES.RETORNO]: 0.8, // -20% Retornos menos rentáveis
 };
 
 export const PRIORITY_LEVELS = {
@@ -79,7 +79,7 @@ export const PRIORITY_LEVELS = {
 
 /**
  * Calcula score de prioridade financeira (0-100)
- * 
+ *
  * @param {Object} params
  * @param {number} params.valor_servico - Valor do serviço em R$
  * @param {string} params.tipo_pagamento - PARTICULAR | CONVENIO | PLANO
@@ -124,7 +124,7 @@ export function calculateFinancialPriorityScore(params) {
   // 3. Score de Receita por Hora
   // Quanto maior a receita por hora, melhor
   // Exemplo: R$ 100 em 30min = R$ 200/hora
-  const receitaPorHora = (valor_servico / (duracao_servico / 60));
+  const receitaPorHora = valor_servico / (duracao_servico / 60);
   const maxReceitaHora = 400; // R$ 400/hora = score 100
   const scoreReceitaPorHora = Math.min((receitaPorHora / maxReceitaHora) * 100, 100);
 
@@ -135,20 +135,19 @@ export function calculateFinancialPriorityScore(params) {
   const multiplierAtendimento = SERVICE_TYPE_MULTIPLIERS[tipo_atendimento] || 1.0;
 
   // 6. Penalidade por No-Show
-  const penaltyNoShow = NO_SHOW_PENALTIES[
-    Math.min(no_show_count, Object.keys(NO_SHOW_PENALTIES).length - 1)
-  ] || 0.5;
+  const penaltyNoShow =
+    NO_SHOW_PENALTIES[Math.min(no_show_count, Object.keys(NO_SHOW_PENALTIES).length - 1)] || 0.5;
 
   // ========================================
   // SCORE FINAL
   // ========================================
 
-  let score = 
-    (scoreValor * weights.valor_servico) +
-    (scoreMargem * weights.margem_estimada) +
-    (scoreReceitaPorHora * weights.receita_por_hora) +
-    ((multiplierPagamento - 1) * 100 * weights.tipo_pagamento) +
-    ((multiplierAtendimento - 1) * 100 * weights.tipo_atendimento);
+  let score =
+    scoreValor * weights.valor_servico +
+    scoreMargem * weights.margem_estimada +
+    scoreReceitaPorHora * weights.receita_por_hora +
+    (multiplierPagamento - 1) * 100 * weights.tipo_pagamento +
+    (multiplierAtendimento - 1) * 100 * weights.tipo_atendimento;
 
   // Aplicar penalidade de no-show
   score = score * penaltyNoShow;
@@ -180,8 +179,12 @@ export function getServiceTypeMultiplier(tipoAtendimento) {
 // ============================================================================
 
 export function getPriorityLevelFromScore(score) {
-  if (score >= 75) return PRIORITY_LEVELS.ALTA;
-  if (score >= 50) return PRIORITY_LEVELS.MEDIA;
+  if (score >= 75) {
+    return PRIORITY_LEVELS.ALTA;
+  }
+  if (score >= 50) {
+    return PRIORITY_LEVELS.MEDIA;
+  }
   return PRIORITY_LEVELS.BAIXA;
 }
 
@@ -198,7 +201,9 @@ async function getPatientNoShowHistory(clinicId, patientId) {
       .eq('patient_id', patientId)
       .eq('status', 'falta');
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
 
     return data?.length || 0;
   } catch (error) {
@@ -245,12 +250,14 @@ async function getServiceDetails(serviceId) {
          duration_minutes,
          type,
          default_repasse,
-         is_active`
+         is_active`,
       )
       .eq('id', serviceId)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
 
     return data;
   } catch (error) {
@@ -275,7 +282,7 @@ async function getWaitlistPatients(clinicId, limit = 20) {
          priority_level,
          created_at,
          patients:patient_id(id, name, email, phone),
-         services:service_id(id, name, value, duration_minutes, type)`
+         services:service_id(id, name, value, duration_minutes, type)`,
       )
       .eq('clinic_id', clinicId)
       .eq('status', 'ativo')
@@ -283,7 +290,9 @@ async function getWaitlistPatients(clinicId, limit = 20) {
       .order('created_at', { ascending: true })
       .limit(limit);
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
 
     return data || [];
   } catch (error) {
@@ -306,19 +315,21 @@ async function getProfessionalAvailability(clinicId, date, durationMinutes) {
          start_time,
          end_time,
          status,
-         professionals:professional_id(id, name, specialization)`
+         professionals:professional_id(id, name, specialization)`,
       )
       .eq('clinic_id', clinicId)
       .eq('date', date)
       .in('status', ['agendado', 'confirmado', 'realizado']);
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
 
     // Grupos por profissional
     const slots = {};
-    
+
     if (appointments) {
-      appointments.forEach(apt => {
+      appointments.forEach((apt) => {
         const profId = apt.professional_id;
         if (!slots[profId]) {
           slots[profId] = {
@@ -348,7 +359,7 @@ function findAvailableSlots(
   appointments,
   workdayStart = '08:00',
   workdayEnd = '18:00',
-  durationMinutes = 30
+  durationMinutes = 30,
 ) {
   const slots = [];
   const workStart = timeToMinutes(workdayStart);
@@ -356,7 +367,7 @@ function findAvailableSlots(
 
   // Converter appointments para minutos
   const busy = appointments
-    .map(apt => ({
+    .map((apt) => ({
       start: timeToMinutes(apt.start),
       end: timeToMinutes(apt.end),
     }))
@@ -409,7 +420,7 @@ function minutesToTime(minutes) {
 
 /**
  * Gera sugestões ranqueadas por prioridade financeira
- * 
+ *
  * @param {string} clinicId - ID da clínica
  * @param {string} date - Data no formato YYYY-MM-DD
  * @param {Object} config - Configurações
@@ -418,10 +429,7 @@ function minutesToTime(minutes) {
  * @returns {Promise<Array>} Array de sugestões ordenadas por score
  */
 export async function generateFinancialPrioritySuggestions(clinicId, date, config = {}) {
-  const {
-    limit = 5,
-    minPriority = PRIORITY_LEVELS.BAIXA,
-  } = config;
+  const { limit = 5, minPriority = PRIORITY_LEVELS.BAIXA } = config;
 
   try {
     // 1. Obter configurações da clínica
@@ -449,13 +457,12 @@ export async function generateFinancialPrioritySuggestions(clinicId, date, confi
 
       // Obter detalhes do serviço
       const service = await getServiceDetails(waitlistItem.service_id);
-      if (!service) continue;
+      if (!service) {
+        continue;
+      }
 
       // Obter histórico de no-show do paciente
-      const noShowCount = await getPatientNoShowHistory(
-        clinicId,
-        waitlistItem.patient_id
-      );
+      const noShowCount = await getPatientNoShowHistory(clinicId, waitlistItem.patient_id);
 
       // Calcular margem estimada
       const valorServico = service.value || 0;
@@ -506,9 +513,9 @@ export async function generateFinancialPrioritySuggestions(clinicId, date, confi
     // 5. Filtrar por prioridade mínima
     const priorityOrder = [PRIORITY_LEVELS.ALTA, PRIORITY_LEVELS.MEDIA, PRIORITY_LEVELS.BAIXA];
     const minPriorityIndex = priorityOrder.indexOf(minPriority);
-    
-    const filtered = suggestions.filter(s => 
-      priorityOrder.indexOf(s.prioridade) <= minPriorityIndex
+
+    const filtered = suggestions.filter(
+      (s) => priorityOrder.indexOf(s.prioridade) <= minPriorityIndex,
     );
 
     // 6. Ordenar por score (maior primeiro)
@@ -571,7 +578,7 @@ function generateJustification(params) {
 
 /**
  * Registra auditoria quando sugestão financeira é aplicada
- * 
+ *
  * @param {Object} params
  * @param {string} params.clinic_id - ID da clínica
  * @param {string} params.appointment_id - ID do agendamento criado
@@ -581,13 +588,7 @@ function generateJustification(params) {
  * @returns {Promise<Object>} Resultado da inserção
  */
 export async function logFinancialSuggestionAction(params) {
-  const {
-    clinic_id,
-    appointment_id,
-    score_financeiro,
-    valor_estimado,
-    executed_by,
-  } = params;
+  const { clinic_id, appointment_id, score_financeiro, valor_estimado, executed_by } = params;
 
   try {
     const { data, error } = await supabase
@@ -610,7 +611,9 @@ export async function logFinancialSuggestionAction(params) {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
 
     console.log('[Financial Audit] Ação registrada:', data.id);
     return { success: true, data };
@@ -626,7 +629,7 @@ export async function logFinancialSuggestionAction(params) {
 
 /**
  * Obtém histórico de sugestões financeiras aplicadas
- * 
+ *
  * @param {string} clinicId - ID da clínica
  * @param {Object} filters - Filtros opcionais
  * @returns {Promise<Array>} Histórico de sugestões
@@ -653,7 +656,9 @@ export async function getFinancialSuggestionHistory(clinicId, filters = {}) {
 
     const { data, error } = await query.limit(100);
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
 
     return data || [];
   } catch (error) {
@@ -668,7 +673,7 @@ export async function getFinancialSuggestionHistory(clinicId, filters = {}) {
 
 /**
  * Calcula estatísticas financeiras aplicadas via sugestões
- * 
+ *
  * @param {string} clinicId - ID da clínica
  * @param {number} days - Número de dias para análise (default: 30)
  * @returns {Promise<Object>} Estatísticas
@@ -696,7 +701,7 @@ export async function getFinancialSuggestionsStats(clinicId, days = 30) {
     let totalScores = 0;
     const byPriority = {};
 
-    history.forEach(log => {
+    history.forEach((log) => {
       const result = log.result || {};
       totalValue += result.valor_estimado || 0;
       totalScores += result.score_financeiro || 0;

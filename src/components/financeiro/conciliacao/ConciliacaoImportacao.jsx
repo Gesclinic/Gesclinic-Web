@@ -19,10 +19,12 @@ export function ConciliacaoImportacao({ bankAccounts, onImportSuccess }) {
 
   const handleFileSelect = async (e) => {
     const selectedFile = e.target.files?.[0];
-    if (!selectedFile) return;
+    if (!selectedFile) {
+      return;
+    }
 
     setFile(selectedFile);
-    
+
     try {
       const content = await selectedFile.text();
       let statements = [];
@@ -58,7 +60,7 @@ export function ConciliacaoImportacao({ bankAccounts, onImportSuccess }) {
       }
 
       await onImportSuccess(statements, accountId);
-      
+
       // Limpar
       setFile(null);
       setPreview(null);
@@ -85,9 +87,7 @@ export function ConciliacaoImportacao({ bankAccounts, onImportSuccess }) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         {/* Conta Bancária */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Conta Bancária
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Conta Bancária</label>
           <select
             value={accountId || ''}
             onChange={(e) => setAccountId(e.target.value || null)}
@@ -104,9 +104,7 @@ export function ConciliacaoImportacao({ bankAccounts, onImportSuccess }) {
 
         {/* Formato */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Formato
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Formato</label>
           <select
             value={format}
             onChange={(e) => setFormat(e.target.value)}
@@ -119,9 +117,7 @@ export function ConciliacaoImportacao({ bankAccounts, onImportSuccess }) {
 
         {/* Arquivo */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Arquivo
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Arquivo</label>
           <input
             ref={fileInputRef}
             type="file"
@@ -140,10 +136,19 @@ export function ConciliacaoImportacao({ bankAccounts, onImportSuccess }) {
           </p>
           <div className="space-y-2 max-h-48 overflow-y-auto">
             {preview.map((stmt, idx) => (
-              <div key={idx} className="flex justify-between text-xs p-2 bg-white rounded border border-gray-200">
+              <div
+                key={idx}
+                className="flex justify-between text-xs p-2 bg-white rounded border border-gray-200"
+              >
                 <span className="font-medium">{stmt.date}</span>
                 <span className="text-gray-600">{stmt.description.substring(0, 30)}</span>
-                <span className={stmt.type === TRANSACTION_TYPE.CREDIT ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
+                <span
+                  className={
+                    stmt.type === TRANSACTION_TYPE.CREDIT
+                      ? 'text-green-600 font-medium'
+                      : 'text-red-600 font-medium'
+                  }
+                >
                   {formatCurrency(stmt.amount)} {stmt.type === TRANSACTION_TYPE.CREDIT ? '+' : '-'}
                 </span>
               </div>
@@ -165,7 +170,9 @@ export function ConciliacaoImportacao({ bankAccounts, onImportSuccess }) {
           onClick={() => {
             setFile(null);
             setPreview(null);
-            if (fileInputRef.current) fileInputRef.current.value = '';
+            if (fileInputRef.current) {
+              fileInputRef.current.value = '';
+            }
           }}
           variant="outline"
         >

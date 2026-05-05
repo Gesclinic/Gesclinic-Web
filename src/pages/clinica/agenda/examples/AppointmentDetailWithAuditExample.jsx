@@ -1,19 +1,28 @@
 /**
  * 📋 EXEMPLO DE INTEGRAÇÃO - MODAL/DRAWER COM AUDITORIA FINANCEIRA
- * 
+ *
  * Este componente mostra como integrar o AppointmentFinancialAuditTimeline
  * em um modal/drawer de detalhes do atendimento
- * 
+ *
  * Use como referência para integrar em seus componentes existentes
  */
 
-import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTabs, DialogTabsContent, DialogTabsList, DialogTabsTrigger } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { X, FileText, Clock, AlertCircle } from "lucide-react";
-import { AppointmentFinancialAuditTimeline } from "@/pages/clinica/agenda/components/AppointmentFinancialAuditTimeline";
-import { useAppointmentFinancialAudit } from "@/pages/clinica/agenda/hooks/useAppointmentFinancialAudit";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
+import React, { useState, useEffect } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTabs,
+  DialogTabsContent,
+  DialogTabsList,
+  DialogTabsTrigger,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { X, FileText, Clock, AlertCircle } from 'lucide-react';
+import { AppointmentFinancialAuditTimeline } from '@/pages/clinica/agenda/components/AppointmentFinancialAuditTimeline';
+import { useAppointmentFinancialAudit } from '@/pages/clinica/agenda/hooks/useAppointmentFinancialAudit';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
 
 /**
  * Exemplo de Modal com Abas
@@ -25,11 +34,11 @@ export function AppointmentDetailModalWithAudit({
   appointmentData,
 }) {
   const { currentRole } = useAuth();
-  const [activeTab, setActiveTab] = useState("details");
-  
+  const [activeTab, setActiveTab] = useState('details');
+
   const { hasDivergences, divergences } = useAppointmentFinancialAudit(
     appointmentId,
-    { autoLoad: true, refreshInterval: 30000 } // Atualiza a cada 30s
+    { autoLoad: true, refreshInterval: 30000 }, // Atualiza a cada 30s
   );
 
   return (
@@ -46,11 +55,7 @@ export function AppointmentDetailModalWithAudit({
                 </div>
               )}
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-            >
+            <Button variant="ghost" size="icon" onClick={onClose}>
               <X className="w-4 h-4" />
             </Button>
           </div>
@@ -62,8 +67,8 @@ export function AppointmentDetailModalWithAudit({
               <FileText className="w-4 h-4" />
               Detalhes
             </DialogTabsTrigger>
-            
-            {["GESTOR", "FINANCEIRO", "ADMIN"].includes(currentRole) && (
+
+            {['GESTOR', 'FINANCEIRO', 'ADMIN'].includes(currentRole) && (
               <DialogTabsTrigger value="financial" className="flex items-center gap-2">
                 <Clock className="w-4 h-4" />
                 Auditoria Financeira
@@ -74,7 +79,7 @@ export function AppointmentDetailModalWithAudit({
                 )}
               </DialogTabsTrigger>
             )}
-            
+
             <DialogTabsTrigger value="notes">Observações</DialogTabsTrigger>
           </DialogTabsList>
 
@@ -83,43 +88,47 @@ export function AppointmentDetailModalWithAudit({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-xs font-semibold text-gray-600">Paciente</label>
-                <p className="text-sm mt-1">{appointmentData?.patient_name || "—"}</p>
+                <p className="text-sm mt-1">{appointmentData?.patient_name || '—'}</p>
               </div>
               <div>
                 <label className="text-xs font-semibold text-gray-600">Profissional</label>
-                <p className="text-sm mt-1">{appointmentData?.professional_name || "—"}</p>
+                <p className="text-sm mt-1">{appointmentData?.professional_name || '—'}</p>
               </div>
               <div>
                 <label className="text-xs font-semibold text-gray-600">Data/Hora</label>
-                <p className="text-sm mt-1">{appointmentData?.scheduled_date || "—"}</p>
+                <p className="text-sm mt-1">{appointmentData?.scheduled_date || '—'}</p>
               </div>
               <div>
                 <label className="text-xs font-semibold text-gray-600">Status</label>
                 <p className="text-sm mt-1">
-                  <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                    appointmentData?.status === "confirmado" ? "bg-green-100 text-green-800" :
-                    appointmentData?.status === "cancelado" ? "bg-red-100 text-red-800" :
-                    "bg-gray-100 text-gray-800"
-                  }`}>
-                    {appointmentData?.status || "—"}
+                  <span
+                    className={`px-2 py-1 rounded text-xs font-semibold ${
+                      appointmentData?.status === 'confirmado'
+                        ? 'bg-green-100 text-green-800'
+                        : appointmentData?.status === 'cancelado'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-gray-100 text-gray-800'
+                    }`}
+                  >
+                    {appointmentData?.status || '—'}
                   </span>
                 </p>
               </div>
               <div>
                 <label className="text-xs font-semibold text-gray-600">Convênio</label>
-                <p className="text-sm mt-1">{appointmentData?.payer_name || "Particular"}</p>
+                <p className="text-sm mt-1">{appointmentData?.payer_name || 'Particular'}</p>
               </div>
               <div>
                 <label className="text-xs font-semibold text-gray-600">Valor</label>
                 <p className="text-sm mt-1 font-semibold text-green-600">
-                  R$ {appointmentData?.value ? Number(appointmentData.value).toFixed(2) : "—"}
+                  R$ {appointmentData?.value ? Number(appointmentData.value).toFixed(2) : '—'}
                 </p>
               </div>
             </div>
           </DialogTabsContent>
 
           {/* TAB: Auditoria Financeira */}
-          {["GESTOR", "FINANCEIRO", "ADMIN"].includes(currentRole) && (
+          {['GESTOR', 'FINANCEIRO', 'ADMIN'].includes(currentRole) && (
             <DialogTabsContent value="financial" className="space-y-4">
               <AppointmentFinancialAuditTimeline
                 appointmentId={appointmentId}
@@ -133,7 +142,7 @@ export function AppointmentDetailModalWithAudit({
             <div>
               <label className="text-xs font-semibold text-gray-600">Observações Gerais</label>
               <p className="text-sm mt-2 text-gray-700 whitespace-pre-wrap">
-                {appointmentData?.notes || "Sem observações"}
+                {appointmentData?.notes || 'Sem observações'}
               </p>
             </div>
           </DialogTabsContent>
@@ -144,9 +153,7 @@ export function AppointmentDetailModalWithAudit({
           <Button variant="outline" onClick={onClose}>
             Fechar
           </Button>
-          <Button>
-            Editar Atendimento
-          </Button>
+          <Button>Editar Atendimento</Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -167,7 +174,7 @@ export function AppointmentDetailDrawerWithAudit({
   return (
     <div
       className={`fixed right-0 top-0 h-full w-96 bg-white shadow-lg transform transition-transform duration-300 z-50 overflow-y-auto ${
-        isOpen ? "translate-x-0" : "translate-x-full"
+        isOpen ? 'translate-x-0' : 'translate-x-full'
       }`}
     >
       {/* Header */}
@@ -186,19 +193,19 @@ export function AppointmentDetailDrawerWithAudit({
           <div className="space-y-2 text-sm">
             <div>
               <span className="text-gray-600">Paciente:</span>
-              <p className="font-semibold">{appointmentData?.patient_name || "—"}</p>
+              <p className="font-semibold">{appointmentData?.patient_name || '—'}</p>
             </div>
             <div>
               <span className="text-gray-600">Profissional:</span>
-              <p className="font-semibold">{appointmentData?.professional_name || "—"}</p>
+              <p className="font-semibold">{appointmentData?.professional_name || '—'}</p>
             </div>
             <div>
               <span className="text-gray-600">Data/Hora:</span>
-              <p className="font-semibold">{appointmentData?.scheduled_date || "—"}</p>
+              <p className="font-semibold">{appointmentData?.scheduled_date || '—'}</p>
             </div>
             <div>
               <span className="text-gray-600">Status:</span>
-              <p className="font-semibold">{appointmentData?.status || "—"}</p>
+              <p className="font-semibold">{appointmentData?.status || '—'}</p>
             </div>
           </div>
         </section>
@@ -209,19 +216,19 @@ export function AppointmentDetailDrawerWithAudit({
           <div className="space-y-2 text-sm">
             <div>
               <span className="text-gray-600">Convênio:</span>
-              <p className="font-semibold">{appointmentData?.payer_name || "Particular"}</p>
+              <p className="font-semibold">{appointmentData?.payer_name || 'Particular'}</p>
             </div>
             <div>
               <span className="text-gray-600">Valor:</span>
               <p className="font-semibold text-green-600">
-                R$ {appointmentData?.value ? Number(appointmentData.value).toFixed(2) : "—"}
+                R$ {appointmentData?.value ? Number(appointmentData.value).toFixed(2) : '—'}
               </p>
             </div>
           </div>
         </section>
 
         {/* Seção: Auditoria Financeira (apenas para roles autorizadas) */}
-        {["GESTOR", "FINANCEIRO", "ADMIN"].includes(currentRole) && (
+        {['GESTOR', 'FINANCEIRO', 'ADMIN'].includes(currentRole) && (
           <section className="border-t pt-4">
             <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
               <Clock className="w-4 h-4" />
@@ -239,9 +246,7 @@ export function AppointmentDetailDrawerWithAudit({
         {appointmentData?.notes && (
           <section className="border-t pt-4">
             <h3 className="font-semibold text-gray-900 mb-3">Observações</h3>
-            <p className="text-sm text-gray-700 whitespace-pre-wrap">
-              {appointmentData.notes}
-            </p>
+            <p className="text-sm text-gray-700 whitespace-pre-wrap">{appointmentData.notes}</p>
           </section>
         )}
       </div>
@@ -251,9 +256,7 @@ export function AppointmentDetailDrawerWithAudit({
         <Button variant="outline" className="flex-1" onClick={onClose}>
           Fechar
         </Button>
-        <Button className="flex-1">
-          Editar
-        </Button>
+        <Button className="flex-1">Editar</Button>
       </div>
     </div>
   );
@@ -263,4 +266,3 @@ export default {
   AppointmentDetailModalWithAudit,
   AppointmentDetailDrawerWithAudit,
 };
-

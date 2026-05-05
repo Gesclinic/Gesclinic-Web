@@ -2,45 +2,45 @@
  * ============================================
  * FamiliaresTab - Aba de Dados Familiares
  * ============================================
- * 
+ *
  * Listagem e edição de familiares do paciente com design moderno
  * Sem rota própria - parte do PatientDetailPage
  */
 
-import React, { useEffect, useState } from "react";
-import { useToast } from "@/components/ui/use-toast";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { motion } from "framer-motion";
-import { Plus, Edit, Trash2, Users, Phone, Heart } from "lucide-react";
+import React, { useEffect, useState } from 'react';
+import { useToast } from '@/components/ui/use-toast';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { motion } from 'framer-motion';
+import { Plus, Edit, Trash2, Users, Phone, Heart } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select';
 
 const RELATIONSHIP_OPTIONS = [
-  "Cônjuge",
-  "Filho/Filha",
-  "Pai/Mãe",
-  "Avô/Avó",
-  "Irmão/Irmã",
-  "Tio/Tia",
-  "Primo/Prima",
-  "Outro",
+  'Cônjuge',
+  'Filho/Filha',
+  'Pai/Mãe',
+  'Avô/Avó',
+  'Irmão/Irmã',
+  'Tio/Tia',
+  'Primo/Prima',
+  'Outro',
 ];
 
 export default function FamiliaresTab({ patientId, patientData, updatePatientData }) {
@@ -49,9 +49,9 @@ export default function FamiliaresTab({ patientId, patientData, updatePatientDat
   const [loading, setLoading] = useState(false);
   const [showFamiliarDialog, setShowFamiliarDialog] = useState(false);
   const [familiarData, setFamiliarData] = useState({
-    name: "",
-    relationship: "Cônjuge",
-    phone: "",
+    name: '',
+    relationship: 'Cônjuge',
+    phone: '',
     isPrimaryContact: false,
   });
 
@@ -67,9 +67,9 @@ export default function FamiliaresTab({ patientId, patientData, updatePatientDat
       setFamiliares([]);
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Falha ao carregar dados familiares",
-        variant: "destructive",
+        title: 'Erro',
+        description: 'Falha ao carregar dados familiares',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -79,17 +79,17 @@ export default function FamiliaresTab({ patientId, patientData, updatePatientDat
   const handleDelete = (id) => {
     setFamiliares(familiares.filter((f) => f.id !== id));
     toast({
-      title: "Sucesso",
-      description: "Familiar removido",
+      title: 'Sucesso',
+      description: 'Familiar removido',
     });
   };
 
   const handleAddFamiliar = () => {
     if (!familiarData.name.trim() || !familiarData.phone.trim()) {
       toast({
-        title: "Erro",
-        description: "Preencha o nome e telefone do familiar",
-        variant: "destructive",
+        title: 'Erro',
+        description: 'Preencha o nome e telefone do familiar',
+        variant: 'destructive',
       });
       return;
     }
@@ -104,34 +104,40 @@ export default function FamiliaresTab({ patientId, patientData, updatePatientDat
     setFamiliares([novoFamiliar, ...familiares]);
     setShowFamiliarDialog(false);
     setFamiliarData({
-      name: "",
-      relationship: "Cônjuge",
-      phone: "",
+      name: '',
+      relationship: 'Cônjuge',
+      phone: '',
       isPrimaryContact: false,
     });
     toast({
-      title: "Sucesso",
-      description: "Familiar adicionado com sucesso",
+      title: 'Sucesso',
+      description: 'Familiar adicionado com sucesso',
     });
   };
 
   const formatPhone = (value) => {
-    const cleaned = value.replace(/\D/g, "");
-    if (cleaned.length <= 2) return cleaned.length > 0 ? `(${cleaned}` : "";
-    if (cleaned.length <= 6) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
-    if (cleaned.length <= 10) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`;
+    const cleaned = value.replace(/\D/g, '');
+    if (cleaned.length <= 2) {
+      return cleaned.length > 0 ? `(${cleaned}` : '';
+    }
+    if (cleaned.length <= 6) {
+      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
+    }
+    if (cleaned.length <= 10) {
+      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`;
+    }
     return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`;
   };
 
   return (
-    <motion.div 
+    <motion.div
       className="space-y-6"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
       {/* Cabeçalho com Botão Adicionar */}
-      <motion.div 
+      <motion.div
         className="flex justify-between items-start gap-4"
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -171,9 +177,7 @@ export default function FamiliaresTab({ patientId, patientData, updatePatientDat
           <Card className="border-0 shadow-sm border-l-4 border-green-500 bg-green-50">
             <CardContent className="pt-12 pb-12 text-center">
               <Users className="w-12 h-12 text-green-300 mx-auto mb-4" />
-              <p className="text-gray-600 mb-4 font-medium">
-                Nenhum familiar registrado
-              </p>
+              <p className="text-gray-600 mb-4 font-medium">Nenhum familiar registrado</p>
               <p className="text-sm text-gray-500 mb-6">
                 Adicione familiares e contatos de emergência para este paciente
               </p>
@@ -188,7 +192,7 @@ export default function FamiliaresTab({ patientId, patientData, updatePatientDat
           </Card>
         </motion.div>
       ) : (
-        <motion.div 
+        <motion.div
           className="space-y-3"
           variants={{
             hidden: { opacity: 0 },
@@ -214,9 +218,7 @@ export default function FamiliaresTab({ patientId, patientData, updatePatientDat
                   <div className="flex justify-between items-start gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <h4 className="font-semibold text-gray-900 text-lg">
-                          {familiar.name}
-                        </h4>
+                        <h4 className="font-semibold text-gray-900 text-lg">{familiar.name}</h4>
                         <Badge className="bg-purple-100 text-purple-800 text-xs">
                           {familiar.relationship}
                         </Badge>
@@ -226,12 +228,10 @@ export default function FamiliaresTab({ patientId, patientData, updatePatientDat
                           </Badge>
                         )}
                       </div>
-                      
+
                       <div className="flex items-center gap-2 text-gray-600 mt-3">
                         <Phone className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm font-medium text-gray-900">
-                          {familiar.phone}
-                        </span>
+                        <span className="text-sm font-medium text-gray-900">{familiar.phone}</span>
                       </div>
                     </div>
                     <div className="flex gap-2 ml-4 flex-shrink-0">
@@ -269,69 +269,76 @@ export default function FamiliaresTab({ patientId, patientData, updatePatientDat
           </DialogHeader>
           <div className="flex-1 overflow-y-auto px-6 py-6">
             <div className="space-y-5">
-            <div>
-              <Label htmlFor="name" className="text-sm font-medium text-gray-700">Nome <span className="text-red-500">*</span></Label>
-              <Input
-                id="name"
-                placeholder="Nome completo do familiar"
-                value={familiarData.name}
-                onChange={(e) =>
-                  setFamiliarData({ ...familiarData, name: e.target.value })
-                }
-                className="border-gray-200 focus:border-green-500 focus:ring-1 focus:ring-green-500 mt-1.5"
-              />
-            </div>
-            <div>
-              <Label htmlFor="relationship" className="text-sm font-medium text-gray-700">Parentesco <span className="text-red-500">*</span></Label>
-              <Select 
-                value={familiarData.relationship}
-                onValueChange={(value) =>
-                  setFamiliarData({ ...familiarData, relationship: value })
-                }
-              >
-                <SelectTrigger className="border-gray-200 focus:border-green-500 focus:ring-1 focus:ring-green-500 mt-1.5">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {RELATIONSHIP_OPTIONS.map((rel) => (
-                    <SelectItem key={rel} value={rel}>
-                      {rel}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="phone" className="text-sm font-medium text-gray-700">Telefone <span className="text-red-500">*</span></Label>
-              <Input
-                id="phone"
-                placeholder="Ex: (11) 99999-9999"
-                maxLength="15"
-                value={familiarData.phone}
-                onChange={(e) =>
-                  setFamiliarData({
-                    ...familiarData,
-                    phone: formatPhone(e.target.value),
-                  })
-                }
-                className="border-gray-200 focus:border-green-500 focus:ring-1 focus:ring-green-500 mt-1.5"
-              />
-            </div>
-            <div className="flex items-center gap-3 pt-2">
-              <Checkbox
-                id="primary"
-                checked={familiarData.isPrimaryContact}
-                onCheckedChange={(checked) =>
-                  setFamiliarData({
-                    ...familiarData,
-                    isPrimaryContact: checked,
-                  })
-                }
-              />
-              <Label htmlFor="primary" className="text-sm text-gray-700 font-medium cursor-pointer">
-                É o contato principal
-              </Label>
-            </div>
+              <div>
+                <Label htmlFor="name" className="text-sm font-medium text-gray-700">
+                  Nome <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="name"
+                  placeholder="Nome completo do familiar"
+                  value={familiarData.name}
+                  onChange={(e) => setFamiliarData({ ...familiarData, name: e.target.value })}
+                  className="border-gray-200 focus:border-green-500 focus:ring-1 focus:ring-green-500 mt-1.5"
+                />
+              </div>
+              <div>
+                <Label htmlFor="relationship" className="text-sm font-medium text-gray-700">
+                  Parentesco <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={familiarData.relationship}
+                  onValueChange={(value) =>
+                    setFamiliarData({ ...familiarData, relationship: value })
+                  }
+                >
+                  <SelectTrigger className="border-gray-200 focus:border-green-500 focus:ring-1 focus:ring-green-500 mt-1.5">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {RELATIONSHIP_OPTIONS.map((rel) => (
+                      <SelectItem key={rel} value={rel}>
+                        {rel}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
+                  Telefone <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="phone"
+                  placeholder="Ex: (11) 99999-9999"
+                  maxLength="15"
+                  value={familiarData.phone}
+                  onChange={(e) =>
+                    setFamiliarData({
+                      ...familiarData,
+                      phone: formatPhone(e.target.value),
+                    })
+                  }
+                  className="border-gray-200 focus:border-green-500 focus:ring-1 focus:ring-green-500 mt-1.5"
+                />
+              </div>
+              <div className="flex items-center gap-3 pt-2">
+                <Checkbox
+                  id="primary"
+                  checked={familiarData.isPrimaryContact}
+                  onCheckedChange={(checked) =>
+                    setFamiliarData({
+                      ...familiarData,
+                      isPrimaryContact: checked,
+                    })
+                  }
+                />
+                <Label
+                  htmlFor="primary"
+                  className="text-sm text-gray-700 font-medium cursor-pointer"
+                >
+                  É o contato principal
+                </Label>
+              </div>
             </div>
           </div>
           <DialogFooter className="gap-3 border-t border-gray-200 px-6 pb-6 pt-6 bg-white">

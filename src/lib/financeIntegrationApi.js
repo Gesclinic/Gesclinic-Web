@@ -4,10 +4,10 @@
 // ============================================================
 // Funções auxiliares para cálculos financeiros integrados
 
-import * as revenueRulesApi from "@/lib/revenueRulesApi";
-import * as servicepricesApi from "@/lib/servicepricesApi";
-import * as healthInsurancesApi from "@/lib/healthInsurancesApi";
-import { supabase } from "@/lib/customSupabaseClient";
+import * as revenueRulesApi from '@/lib/revenueRulesApi';
+import * as servicepricesApi from '@/lib/servicepricesApi';
+import * as healthInsurancesApi from '@/lib/healthInsurancesApi';
+import { supabase } from '@/lib/customSupabaseClient';
 
 /**
  * Calcula repasse automático baseado em regras
@@ -20,7 +20,7 @@ export async function calculateAutomaticRepasse(params) {
     professionalId,
     serviceId,
     baseAmount,
-    appointmentStatus = "completed",
+    appointmentStatus = 'completed',
     healthInsuranceId,
   } = params;
 
@@ -31,11 +31,7 @@ export async function calculateAutomaticRepasse(params) {
     let effectiveAmount = baseAmount;
 
     if (!baseAmount && serviceId) {
-      const price = await servicepricesApi.getServicePrice(
-        serviceId,
-        clinicId,
-        healthInsuranceId
-      );
+      const price = await servicepricesApi.getServicePrice(serviceId, clinicId, healthInsuranceId);
       effectiveAmount = price?.price || 0;
     }
 
@@ -45,25 +41,21 @@ export async function calculateAutomaticRepasse(params) {
       serviceId,
       clinicId,
       effectiveAmount,
-      appointmentStatus
+      appointmentStatus,
     );
 
     // 3. Validar se há regra configurada
     if (!repasseData.ruleId) {
-      warnings.push("Nenhuma regra de repasse configurada para este profissional");
+      warnings.push('Nenhuma regra de repasse configurada para este profissional');
     }
 
     // 4. Checar limites
     if (repasseData.amount < (repasseData.rule?.minimum_amount || 0)) {
-      warnings.push(
-        `Repasse abaixo do mínimo: R$ ${repasseData.rule?.minimum_amount || 0}`
-      );
+      warnings.push(`Repasse abaixo do mínimo: R$ ${repasseData.rule?.minimum_amount || 0}`);
     }
 
     if (repasseData.rule?.maximum_amount && repasseData.amount > repasseData.rule.maximum_amount) {
-      warnings.push(
-        `Repasse acima do máximo: R$ ${repasseData.rule.maximum_amount}`
-      );
+      warnings.push(`Repasse acima do máximo: R$ ${repasseData.rule.maximum_amount}`);
     }
 
     return {
@@ -79,12 +71,12 @@ export async function calculateAutomaticRepasse(params) {
       valid: warnings.length === 0,
     };
   } catch (error) {
-    console.error("Erro ao calcular repasse:", error);
+    console.error('Erro ao calcular repasse:', error);
     return {
       repasse: baseAmount || 0,
       rule: null,
       breakdown: null,
-      warnings: ["Erro ao calcular repasse automático"],
+      warnings: ['Erro ao calcular repasse automático'],
       valid: false,
       error: error.message,
     };
@@ -99,10 +91,7 @@ export async function calculateAutomaticRepasse(params) {
  */
 export async function simulateRepasse(baseAmount, options = {}) {
   try {
-    const simulation = await revenueRulesApi.simulateRepasse(
-      baseAmount,
-      options
-    );
+    const simulation = await revenueRulesApi.simulateRepasse(baseAmount, options);
 
     return {
       baseAmount,
@@ -117,7 +106,7 @@ export async function simulateRepasse(baseAmount, options = {}) {
       },
     };
   } catch (error) {
-    console.error("Erro ao simular repasse:", error);
+    console.error('Erro ao simular repasse:', error);
     return {
       baseAmount,
       simulatedRepasse: baseAmount,
@@ -134,10 +123,7 @@ export async function simulateRepasse(baseAmount, options = {}) {
  */
 export async function getProfessionalRepasseRules(clinicId, professionalId) {
   try {
-    const rules = await revenueRulesApi.getProfessionalRevenueRules(
-      professionalId,
-      clinicId
-    );
+    const rules = await revenueRulesApi.getProfessionalRevenueRules(professionalId, clinicId);
 
     return rules.map((rule) => ({
       id: rule.id,
@@ -149,7 +135,7 @@ export async function getProfessionalRepasseRules(clinicId, professionalId) {
       active: rule.active,
     }));
   } catch (error) {
-    console.error("Erro ao buscar regras de repasse:", error);
+    console.error('Erro ao buscar regras de repasse:', error);
     return [];
   }
 }
@@ -162,21 +148,18 @@ export async function getProfessionalRepasseRules(clinicId, professionalId) {
  */
 export async function getServicePricesByInsurance(clinicId, serviceId) {
   try {
-    const prices = await servicepricesApi.listServicePrices(
-      serviceId,
-      clinicId
-    );
+    const prices = await servicepricesApi.listServicePrices(serviceId, clinicId);
 
     return Promise.all(
       prices.map(async (price) => {
-        let insuranceName = "Particular";
+        let insuranceName = 'Particular';
 
         if (price.health_insurance_id) {
           const insurance = await healthInsurancesApi.getHealthInsurance(
             price.health_insurance_id,
-            clinicId
+            clinicId,
           );
-          insuranceName = insurance?.name || "Convênio";
+          insuranceName = insurance?.name || 'Convênio';
         }
 
         return {
@@ -184,12 +167,12 @@ export async function getServicePricesByInsurance(clinicId, serviceId) {
           insuranceId: price.health_insurance_id,
           insuranceName,
           price: price.price,
-          currency: price.currency || "BRL",
+          currency: price.currency || 'BRL',
         };
-      })
+      }),
     );
   } catch (error) {
-    console.error("Erro ao buscar preços:", error);
+    console.error('Erro ao buscar preços:', error);
     return [];
   }
 }
@@ -201,10 +184,9 @@ export async function getServicePricesByInsurance(clinicId, serviceId) {
  */
 export async function getActiveHealthInsurances(clinicId) {
   try {
-    const insurances = await healthInsurancesApi.listHealthInsurances(
-      clinicId,
-      { includeInactive: false }
-    );
+    const insurances = await healthInsurancesApi.listHealthInsurances(clinicId, {
+      includeInactive: false,
+    });
 
     return insurances.map((i) => ({
       id: i.id,
@@ -213,7 +195,7 @@ export async function getActiveHealthInsurances(clinicId) {
       requiresAuthorization: i.requires_authorization,
     }));
   } catch (error) {
-    console.error("Erro ao buscar convênios:", error);
+    console.error('Erro ao buscar convênios:', error);
     return [];
   }
 }
@@ -227,16 +209,16 @@ export function formatRuleDescription(rule) {
   const type = rule.rule_type || rule.type;
 
   switch (type) {
-    case "percentage":
-      return `${rule.rule_value || rule.value}% de repasse`;
-    case "fixed_value":
-      return `R$ ${(rule.rule_value || rule.value).toFixed(2)} fixo`;
-    case "commission":
-      return `Comissão de ${rule.rule_value || rule.value}%`;
-    case "none":
-      return "Sem repasse";
-    default:
-      return "Repasse personalizado";
+  case 'percentage':
+    return `${rule.rule_value || rule.value}% de repasse`;
+  case 'fixed_value':
+    return `R$ ${(rule.rule_value || rule.value).toFixed(2)} fixo`;
+  case 'commission':
+    return `Comissão de ${rule.rule_value || rule.value}%`;
+  case 'none':
+    return 'Sem repasse';
+  default:
+    return 'Repasse personalizado';
   }
 }
 
@@ -246,23 +228,20 @@ export function formatRuleDescription(rule) {
  * @param {string} professionalId
  * @returns {Promise<{valid: boolean, message: string, rules: Array}>}
  */
-export async function validateProfessionalRepasseEligibility(
-  clinicId,
-  professionalId
-) {
+export async function validateProfessionalRepasseEligibility(clinicId, professionalId) {
   try {
     // Verificar se profissional existe e está ativo
     const { data: professional } = await supabase
-      .from("professionals")
-      .select("id, active, name")
-      .eq("id", professionalId)
-      .eq("clinic_id", clinicId)
+      .from('professionals')
+      .select('id, active, name')
+      .eq('id', professionalId)
+      .eq('clinic_id', clinicId)
       .single();
 
     if (!professional || !professional.active) {
       return {
         valid: false,
-        message: "Profissional não encontrado ou inativo",
+        message: 'Profissional não encontrado ou inativo',
         rules: [],
       };
     }
@@ -273,9 +252,9 @@ export async function validateProfessionalRepasseEligibility(
     if (rules.length === 0) {
       return {
         valid: true,
-        message: "Profissional elegível, mas sem regras configuradas",
+        message: 'Profissional elegível, mas sem regras configuradas',
         rules: [],
-        warnings: ["Configure regras de repasse para este profissional"],
+        warnings: ['Configure regras de repasse para este profissional'],
       };
     }
 
@@ -285,10 +264,10 @@ export async function validateProfessionalRepasseEligibility(
       rules,
     };
   } catch (error) {
-    console.error("Erro ao validar elegibilidade:", error);
+    console.error('Erro ao validar elegibilidade:', error);
     return {
       valid: false,
-      message: "Erro ao validar elegibilidade",
+      message: 'Erro ao validar elegibilidade',
       rules: [],
       error: error.message,
     };
@@ -304,26 +283,21 @@ export async function validateProfessionalRepasseEligibility(
  */
 export async function generateRepasseReport(clinicId, professionalId, params = {}) {
   try {
-    const {
-      startDate,
-      endDate,
-      includeProcessed = true,
-      includePending = true,
-    } = params;
+    const { startDate, endDate, includeProcessed = true, includePending = true } = params;
 
     // Buscar appointments do profissional no período
     let query = supabase
-      .from("appointments")
-      .select("id, service_id, price, appointment_status, date")
-      .eq("clinic_id", clinicId)
-      .eq("professional_id", professionalId)
-      .eq("active", true);
+      .from('appointments')
+      .select('id, service_id, price, appointment_status, date')
+      .eq('clinic_id', clinicId)
+      .eq('professional_id', professionalId)
+      .eq('active', true);
 
     if (startDate) {
-      query = query.gte("date", startDate);
+      query = query.gte('date', startDate);
     }
     if (endDate) {
-      query = query.lte("date", endDate);
+      query = query.lte('date', endDate);
     }
 
     const { data: appointments } = await query;
@@ -356,7 +330,7 @@ export async function generateRepasseReport(clinicId, professionalId, params = {
           repasse: repasse.repasse,
           percentage: repasse.breakdown?.percentage,
         };
-      })
+      }),
     );
 
     const totalAmount = breakdown.reduce((sum, item) => sum + item.baseAmount, 0);
@@ -371,7 +345,7 @@ export async function generateRepasseReport(clinicId, professionalId, params = {
       breakdown,
     };
   } catch (error) {
-    console.error("Erro ao gerar relatório:", error);
+    console.error('Erro ao gerar relatório:', error);
     return {
       error: error.message,
       period: params,
@@ -389,9 +363,9 @@ export async function generateRepasseReport(clinicId, professionalId, params = {
  * @param {string} currency
  * @returns {string}
  */
-export function formatCurrency(value, currency = "BRL") {
-  const formatter = new Intl.NumberFormat("pt-BR", {
-    style: "currency",
+export function formatCurrency(value, currency = 'BRL') {
+  const formatter = new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
     currency,
   });
   return formatter.format(value);

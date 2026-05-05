@@ -21,7 +21,14 @@ export default function EstoqueProdutos() {
   const [deleteAlertOpen, setDeleteAlertOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
 
-  console.log('EstoqueProdutos render. clinicId:', clinicId, 'loading:', loading, 'items:', items.length);
+  console.log(
+    'EstoqueProdutos render. clinicId:',
+    clinicId,
+    'loading:',
+    loading,
+    'items:',
+    items.length,
+  );
 
   const fetchItems = useCallback(async () => {
     console.log('fetchItems called. clinicId:', clinicId);
@@ -38,7 +45,11 @@ export default function EstoqueProdutos() {
       setItems(data || []);
     } catch (error) {
       console.error('Error fetching items:', error);
-      toast({ variant: 'destructive', title: 'Erro ao buscar produtos', description: error.message });
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao buscar produtos',
+        description: error.message,
+      });
     } finally {
       setLoading(false);
     }
@@ -70,7 +81,11 @@ export default function EstoqueProdutos() {
       fetchItems();
       handleCloseDialog();
     } catch (error) {
-      toast({ variant: 'destructive', title: 'Erro ao salvar produto', description: error.message });
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao salvar produto',
+        description: error.message,
+      });
     }
   };
 
@@ -80,22 +95,29 @@ export default function EstoqueProdutos() {
   };
 
   const handleDelete = async () => {
-    if (!itemToDelete) return;
+    if (!itemToDelete) {
+      return;
+    }
     try {
       await stockItemsApi.remove(itemToDelete.id);
       toast({ title: 'Produto excluído com sucesso!' });
       fetchItems();
     } catch (error) {
-      toast({ variant: 'destructive', title: 'Erro ao excluir produto', description: error.message });
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao excluir produto',
+        description: error.message,
+      });
     } finally {
       setDeleteAlertOpen(false);
       setItemToDelete(null);
     }
   };
 
-  const filteredItems = items.filter(item =>
-    item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (item.sku && item.sku.toLowerCase().includes(searchTerm.toLowerCase()))
+  const filteredItems = items.filter(
+    (item) =>
+      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.sku && item.sku.toLowerCase().includes(searchTerm.toLowerCase())),
   );
 
   return (
@@ -135,37 +157,57 @@ export default function EstoqueProdutos() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan="8" className="p-4 text-center">Carregando...</td></tr>
-                ) : filteredItems.map(item => (
-                  <tr key={item.id} className="border-b">
-                    <td className="p-3 font-medium">{item.name}</td>
-                    <td className="p-3 text-muted-foreground">{item.sku || '-'}</td>
-                    <td className="p-3 text-muted-foreground">{item.category_name || '-'}</td>
-                    <td className="p-3 text-center text-muted-foreground">{item.min_stock || '-'}</td>
-                    <td className="p-3 text-center text-muted-foreground">{item.max_stock || '-'}</td>
-                    <td className="p-3 text-center">
-                      <span className={item.total_balance < (item.min_stock || 0) ? 'text-red-600 font-semibold' : ''}>
-                        {`${item.total_balance || 0} ${item.unit_symbol || 'un'}`}
-                      </span>
-                    </td>
-                    <td className="p-3">
-                      <Badge variant={item.is_active ? 'default' : 'outline'}>
-                        {item.is_active ? 'Ativo' : 'Inativo'}
-                      </Badge>
-                    </td>
-                    <td className="p-3 flex justify-end gap-2">
-                      <Button variant="outline" size="sm" onClick={() => handleOpenDialog(item)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="destructive" size="sm" onClick={() => openDeleteAlert(item)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                  <tr>
+                    <td colSpan="8" className="p-4 text-center">
+                      Carregando...
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  filteredItems.map((item) => (
+                    <tr key={item.id} className="border-b">
+                      <td className="p-3 font-medium">{item.name}</td>
+                      <td className="p-3 text-muted-foreground">{item.sku || '-'}</td>
+                      <td className="p-3 text-muted-foreground">{item.category_name || '-'}</td>
+                      <td className="p-3 text-center text-muted-foreground">
+                        {item.min_stock || '-'}
+                      </td>
+                      <td className="p-3 text-center text-muted-foreground">
+                        {item.max_stock || '-'}
+                      </td>
+                      <td className="p-3 text-center">
+                        <span
+                          className={
+                            item.total_balance < (item.min_stock || 0)
+                              ? 'text-red-600 font-semibold'
+                              : ''
+                          }
+                        >
+                          {`${item.total_balance || 0} ${item.unit_symbol || 'un'}`}
+                        </span>
+                      </td>
+                      <td className="p-3">
+                        <Badge variant={item.is_active ? 'default' : 'outline'}>
+                          {item.is_active ? 'Ativo' : 'Inativo'}
+                        </Badge>
+                      </td>
+                      <td className="p-3 flex justify-end gap-2">
+                        <Button variant="outline" size="sm" onClick={() => handleOpenDialog(item)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => openDeleteAlert(item)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
-             {!loading && filteredItems.length === 0 && (
+            {!loading && filteredItems.length === 0 && (
               <p className="text-muted-foreground text-center py-4">Nenhum produto encontrado.</p>
             )}
           </div>
@@ -192,4 +234,3 @@ export default function EstoqueProdutos() {
     </div>
   );
 }
-

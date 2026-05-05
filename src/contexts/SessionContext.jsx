@@ -1,10 +1,10 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState } from 'react';
 
 const SessionContext = createContext(null);
 
 export function SessionProvider({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [theme, setTheme] = useState("light");
+  const [theme, setTheme] = useState('light');
 
   return (
     <SessionContext.Provider

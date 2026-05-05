@@ -24,9 +24,9 @@ const getStatusColor = (status: CashMovementStatus) => {
 const formatCurrency = (value: number, isEntry: boolean) => {
   const formatted = value.toLocaleString('pt-BR', {
     style: 'currency',
-    currency: 'BRL'
+    currency: 'BRL',
   });
-  
+
   return isEntry ? (
     <span className="text-green-600 font-semibold">{formatted}</span>
   ) : (
@@ -37,7 +37,7 @@ const formatCurrency = (value: number, isEntry: boolean) => {
 const formatTime = (dateString: string) => {
   return new Date(dateString).toLocaleTimeString('pt-BR', {
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   });
 };
 
@@ -63,8 +63,16 @@ export const CashTable: React.FC<CashTableProps> = ({ movements, loading, onDele
       <table className="w-full border-collapse" style={{ tableLayout: 'auto' }}>
         <thead className="bg-slate-50 border-b border-slate-100 sticky top-0 z-20">
           <tr>
-            <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider sticky bg-slate-50 z-30 border-r border-slate-100" style={{ left: '0px' }}>⏰ Hora</th>
-            <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider sticky bg-slate-50 z-30 border-r border-slate-100" style={{ left: '100px' }}>
+            <th
+              className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider sticky bg-slate-50 z-30 border-r border-slate-100"
+              style={{ left: '0px' }}
+            >
+              ⏰ Hora
+            </th>
+            <th
+              className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider sticky bg-slate-50 z-30 border-r border-slate-100"
+              style={{ left: '100px' }}
+            >
               <User className="inline mr-1 w-4 h-4" /> Paciente
             </th>
             <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
@@ -73,30 +81,42 @@ export const CashTable: React.FC<CashTableProps> = ({ movements, loading, onDele
             <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
               <Building2 className="inline mr-1 w-4 h-4" /> Convênio
             </th>
-            <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">📌 Tipo</th>
+            <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
+              📌 Tipo
+            </th>
             <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
               <Stethoscope className="inline mr-1 w-4 h-4" /> Profissional
             </th>
             <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
               <Wallet className="inline mr-1 w-4 h-4" /> Forma Pgto
             </th>
-            <th className="px-4 py-4 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">💰 Valor</th>
-            <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">✓ Status</th>
-            <th className="px-4 py-4 text-center text-xs font-bold text-slate-600 uppercase tracking-wider sticky right-0 bg-slate-50 z-30 border-l border-slate-100">Ação</th>
+            <th className="px-4 py-4 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">
+              💰 Valor
+            </th>
+            <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
+              ✓ Status
+            </th>
+            <th className="px-4 py-4 text-center text-xs font-bold text-slate-600 uppercase tracking-wider sticky right-0 bg-slate-50 z-30 border-l border-slate-100">
+              Ação
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-50">
           {movements.map((movement) => (
             <tr key={movement.id} className="hover:bg-slate-50/50 transition-colors">
-              <td className="px-4 py-3 text-sm text-slate-700 font-medium sticky bg-white z-10 border-r border-slate-100" style={{ left: '0px' }}>
+              <td
+                className="px-4 py-3 text-sm text-slate-700 font-medium sticky bg-white z-10 border-r border-slate-100"
+                style={{ left: '0px' }}
+              >
                 {formatTime(movement.created_at)}
               </td>
-              <td className="px-4 py-3 text-sm text-slate-700 sticky bg-white z-10 border-r border-slate-100" style={{ left: '100px' }}>
+              <td
+                className="px-4 py-3 text-sm text-slate-700 sticky bg-white z-10 border-r border-slate-100"
+                style={{ left: '100px' }}
+              >
                 {movement.patient?.name || '—'}
               </td>
-              <td className="px-4 py-3 text-sm text-slate-700">
-                {movement.service?.name || '—'}
-              </td>
+              <td className="px-4 py-3 text-sm text-slate-700">{movement.service?.name || '—'}</td>
               <td className="px-4 py-3 text-sm text-slate-700">
                 {movement.payer_type === 'convenio' && movement.payer
                   ? movement.payer.name
@@ -110,14 +130,14 @@ export const CashTable: React.FC<CashTableProps> = ({ movements, loading, onDele
               <td className="px-4 py-3 text-sm text-slate-700">
                 {movement.professional?.name || '—'}
               </td>
-              <td className="px-4 py-3 text-sm text-slate-700">
-                {movement.payment_method || '—'}
-              </td>
+              <td className="px-4 py-3 text-sm text-slate-700">{movement.payment_method || '—'}</td>
               <td className="px-4 py-3 text-sm text-right">
                 {formatCurrency(movement.amount, movement.type === 'entrada')}
               </td>
               <td className="px-4 py-3 text-sm">
-                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusColor(movement.status)}`}>
+                <span
+                  className={`px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusColor(movement.status)}`}
+                >
                   {movement.status.charAt(0).toUpperCase() + movement.status.slice(1)}
                 </span>
               </td>

@@ -5,11 +5,11 @@
  * Status de um lançamento de extrato bancário
  */
 export const CONCILIATION_STATUS = {
-  PENDING: 'pending',      // 🟡 Ainda não conciliado
+  PENDING: 'pending', // 🟡 Ainda não conciliado
   CONCILIATED: 'conciliated', // 🟢 Casado com lançamento
-  ADJUSTED: 'adjusted',    // 🔵 Gerou lançamento automático
-  DIVERGENT: 'divergent',  // 🔴 Valor ou data não batem
-  IGNORED: 'ignored'       // ⚠ Não entra no financeiro
+  ADJUSTED: 'adjusted', // 🔵 Gerou lançamento automático
+  DIVERGENT: 'divergent', // 🔴 Valor ou data não batem
+  IGNORED: 'ignored', // ⚠ Não entra no financeiro
 };
 
 /**
@@ -20,40 +20,40 @@ export const CONCILIATION_STATUS_VISUAL = {
     label: 'Pendente',
     color: 'yellow',
     icon: '🟡',
-    className: 'bg-yellow-100 text-yellow-800'
+    className: 'bg-yellow-100 text-yellow-800',
   },
   [CONCILIATION_STATUS.CONCILIATED]: {
     label: 'Conciliado',
     color: 'green',
     icon: '🟢',
-    className: 'bg-green-100 text-green-800'
+    className: 'bg-green-100 text-green-800',
   },
   [CONCILIATION_STATUS.ADJUSTED]: {
     label: 'Ajustado',
     color: 'blue',
     icon: '🔵',
-    className: 'bg-blue-100 text-blue-800'
+    className: 'bg-blue-100 text-blue-800',
   },
   [CONCILIATION_STATUS.DIVERGENT]: {
     label: 'Divergente',
     color: 'red',
     icon: '🔴',
-    className: 'bg-red-100 text-red-800'
+    className: 'bg-red-100 text-red-800',
   },
   [CONCILIATION_STATUS.IGNORED]: {
     label: 'Ignorado',
     color: 'gray',
     icon: '⚠',
-    className: 'bg-gray-100 text-gray-800'
-  }
+    className: 'bg-gray-100 text-gray-800',
+  },
 };
 
 /**
  * Tipo de transação bancária
  */
 export const TRANSACTION_TYPE = {
-  CREDIT: 'credit',   // Entrada
-  DEBIT: 'debit'      // Saída
+  CREDIT: 'credit', // Entrada
+  DEBIT: 'debit', // Saída
 };
 
 /**
@@ -61,34 +61,34 @@ export const TRANSACTION_TYPE = {
  */
 export const TRANSACTION_TYPE_LABELS = {
   [TRANSACTION_TYPE.CREDIT]: 'Crédito (Entrada)',
-  [TRANSACTION_TYPE.DEBIT]: 'Débito (Saída)'
+  [TRANSACTION_TYPE.DEBIT]: 'Débito (Saída)',
 };
 
 /**
  * Tipos de lançamentos financeiros vinculáveis
  */
 export const FINANCIAL_LINK_TYPE = {
-  PAYABLE: 'payable',     // Contas a Pagar
-  RECEIVABLE: 'receivable' // Contas a Receber
+  PAYABLE: 'payable', // Contas a Pagar
+  RECEIVABLE: 'receivable', // Contas a Receber
 };
 
 /**
  * Ações de conciliação (para histórico)
  */
 export const CONCILIATION_ACTION = {
-  CONCILIATE: 'conciliate',   // Vinculou com lançamento existente
-  ADJUST: 'adjust',           // Criou lançamento automático
-  DIVERGENT: 'divergent',     // Marcou como divergente
-  IGNORE: 'ignore',           // Ignorou
-  UNLINK: 'unlink'            // Desvinculou
+  CONCILIATE: 'conciliate', // Vinculou com lançamento existente
+  ADJUST: 'adjust', // Criou lançamento automático
+  DIVERGENT: 'divergent', // Marcou como divergente
+  IGNORE: 'ignore', // Ignorou
+  UNLINK: 'unlink', // Desvinculou
 };
 
 /**
  * Limites padrão para sugestão automática
  */
 export const SUGGESTION_LIMITS = {
-  MAX_DAYS_DIFFERENCE: 2,    // Máximo 2 dias de diferença
-  MIN_MATCH_SCORE: 0.7       // Mínimo 70% de similaridade
+  MAX_DAYS_DIFFERENCE: 2, // Máximo 2 dias de diferença
+  MIN_MATCH_SCORE: 0.7, // Mínimo 70% de similaridade
 };
 
 /**
@@ -100,39 +100,39 @@ export const DEFAULT_AUTO_RULES = [
     pattern_keywords: ['tarifa', 'taxa', 'saldo', 'manutenção', 'juros'],
     transaction_type: TRANSACTION_TYPE.DEBIT,
     default_category: 'Tarifas Bancárias',
-    priority: 100
+    priority: 100,
   },
   {
     rule_name: 'DOC/TED Enviado',
     pattern_keywords: ['doc', 'ted', 'transferência', 'enviado'],
     transaction_type: TRANSACTION_TYPE.DEBIT,
     default_category: 'Transferências Bancárias',
-    priority: 90
+    priority: 90,
   },
   {
     rule_name: 'PIX Recebido',
     pattern_keywords: ['pix', 'recebido'],
     transaction_type: TRANSACTION_TYPE.CREDIT,
     default_category: 'Receita de Serviços',
-    priority: 85
+    priority: 85,
   },
   {
     rule_name: 'Cheque Depositado',
     pattern_keywords: ['cheque', 'compensação'],
     transaction_type: TRANSACTION_TYPE.CREDIT,
     default_category: 'Receita de Serviços',
-    priority: 80
-  }
+    priority: 80,
+  },
 ];
 
 /**
  * Métodos padrão de importação
  */
 export const IMPORT_FORMATS = {
-  OFX: 'ofx',   // Open Financial Exchange
-  CSV: 'csv',   // Comma-Separated Values
-  TSV: 'tsv',   // Tab-Separated Values
-  JSON: 'json'  // JSON format
+  OFX: 'ofx', // Open Financial Exchange
+  CSV: 'csv', // Comma-Separated Values
+  TSV: 'tsv', // Tab-Separated Values
+  JSON: 'json', // JSON format
 };
 
 /**
@@ -142,7 +142,7 @@ export const IMPORT_FORMAT_FIELDS = {
   [IMPORT_FORMATS.CSV]: ['data', 'descricao', 'valor', 'tipo'],
   [IMPORT_FORMATS.TSV]: ['data', 'descricao', 'valor', 'tipo'],
   [IMPORT_FORMATS.OFX]: ['dtposted', 'memo', 'trnamt'],
-  [IMPORT_FORMATS.JSON]: ['date', 'description', 'amount', 'type']
+  [IMPORT_FORMATS.JSON]: ['date', 'description', 'amount', 'type'],
 };
 
 /**
@@ -157,5 +157,5 @@ export const CONCILIATION_MESSAGES = {
   CREATE_ERROR: 'Erro ao criar lançamento',
   DIVERGENT_SUCCESS: 'Marcado como divergente',
   IGNORE_SUCCESS: 'Lançamento ignorado',
-  UNLINK_SUCCESS: 'Vínculo removido'
+  UNLINK_SUCCESS: 'Vínculo removido',
 };

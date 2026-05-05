@@ -7,13 +7,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { useClinicContext } from '../../contexts/ClinicContext';
-import { 
-  salvarDadosBancarios, 
+import {
+  salvarDadosBancarios,
   obterDadosBancarios,
   processarTransferenciasLote,
   obterHistoricoTransferencias,
 } from '@/lib/repasseBancariaApi';
-import { 
+import {
   salvarConfiguracaoEmail,
   obterConfiguracaoEmail,
   enviarNotificacoesEmLote,
@@ -23,14 +23,14 @@ import { listProfessionals } from '@/lib/professionalsApi';
 export default function RepasseTransferenciaPage() {
   const { user } = useAuth();
   const { clinic, clinicId } = useClinicContext();
-  
+
   // Estados
   const [abaSelecionada, setAbaSelecionada] = useState('dados-bancarios'); // 'dados-bancarios', 'email', 'historico'
   const [profissionais, setProfissionais] = useState([]);
   const [bancos, setBancos] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [mensagem, setMensagem] = useState(null);
-  
+
   // Formulário - Dados Bancários
   const [selectedProfessional, setSelectedProfessional] = useState(null);
   const [dadosBancarios, setDadosBancarios] = useState({
@@ -43,7 +43,7 @@ export default function RepasseTransferenciaPage() {
     chave_pix: '',
     titular: '',
   });
-  
+
   // Formulário - Email
   const [configEmail, setConfigEmail] = useState({
     provedor: 'sendgrid',
@@ -51,21 +51,21 @@ export default function RepasseTransferenciaPage() {
     email_remetente: '',
     nome_remetente: clinic?.name || 'Gesclinic',
   });
-  
+
   // Histórico
   const [historico, setHistorico] = useState([]);
-  
+
   // Carregar dados iniciais
   useEffect(() => {
     carregarDados();
   }, [clinicId]);
-  
+
   const carregarDados = async () => {
     try {
       setCarregando(true);
       const profList = await listProfessionals(clinicId);
       setProfissionais(profList);
-      
+
       // Hardcoded popular Brazilian banks
       const bancosList = [
         { code: '001', name: 'Bradesco' },
@@ -83,7 +83,7 @@ export default function RepasseTransferenciaPage() {
       setCarregando(false);
     }
   };
-  
+
   // Carregar dados bancários do profissional
   const carregarDadosProfissional = async (profId) => {
     try {
@@ -107,7 +107,7 @@ export default function RepasseTransferenciaPage() {
       setMensagem({ tipo: 'erro', texto: 'Erro ao carregar dados' });
     }
   };
-  
+
   // Salvar dados bancários
   const handleSalvarDadosBancarios = async () => {
     try {
@@ -115,7 +115,7 @@ export default function RepasseTransferenciaPage() {
         setMensagem({ tipo: 'aviso', texto: 'Selecione um profissional' });
         return;
       }
-      
+
       setCarregando(true);
       await salvarDadosBancarios(selectedProfessional, clinicId, dadosBancarios);
       setMensagem({ tipo: 'sucesso', texto: 'Dados bancários salvos com sucesso!' });
@@ -125,7 +125,7 @@ export default function RepasseTransferenciaPage() {
       setCarregando(false);
     }
   };
-  
+
   // Salvar configuração de email
   const handleSalvarEmail = async () => {
     try {
@@ -138,7 +138,7 @@ export default function RepasseTransferenciaPage() {
       setCarregando(false);
     }
   };
-  
+
   // Carregar histórico
   const handleCarregarHistorico = async () => {
     try {
@@ -151,11 +151,11 @@ export default function RepasseTransferenciaPage() {
       setCarregando(false);
     }
   };
-  
+
   if (carregando && abaSelecionada === 'historico') {
     handleCarregarHistorico();
   }
-  
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto">
@@ -164,18 +164,22 @@ export default function RepasseTransferenciaPage() {
           <h1 className="text-3xl font-bold text-gray-900">Configuração de Transferências</h1>
           <p className="text-gray-600 mt-2">PIX, TED e automação de pagamentos</p>
         </div>
-        
+
         {/* Mensagens */}
         {mensagem && (
-          <div className={`mb-6 p-4 rounded-lg ${
-            mensagem.tipo === 'sucesso' ? 'bg-green-100 text-green-800' :
-            mensagem.tipo === 'erro' ? 'bg-red-100 text-red-800' :
-            'bg-yellow-100 text-yellow-800'
-          }`}>
+          <div
+            className={`mb-6 p-4 rounded-lg ${
+              mensagem.tipo === 'sucesso'
+                ? 'bg-green-100 text-green-800'
+                : mensagem.tipo === 'erro'
+                  ? 'bg-red-100 text-red-800'
+                  : 'bg-yellow-100 text-yellow-800'
+            }`}
+          >
             {mensagem.texto}
           </div>
         )}
-        
+
         {/* Tabs */}
         <div className="flex gap-2 mb-6 border-b border-gray-200">
           <button
@@ -212,7 +216,7 @@ export default function RepasseTransferenciaPage() {
             📊 Histórico de Transferências
           </button>
         </div>
-        
+
         {/* Conteúdo da Aba 1: Dados Bancários */}
         {abaSelecionada === 'dados-bancarios' && (
           <div className="space-y-6">
@@ -220,7 +224,7 @@ export default function RepasseTransferenciaPage() {
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-xl font-bold mb-4">Selecionar Profissional</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {profissionais.map(prof => (
+                {profissionais.map((prof) => (
                   <button
                     key={prof.id}
                     onClick={() => carregarDadosProfissional(prof.id)}
@@ -236,27 +240,31 @@ export default function RepasseTransferenciaPage() {
                 ))}
               </div>
             </div>
-            
+
             {/* Formulário de Dados Bancários */}
             {selectedProfessional && (
               <div className="bg-white rounded-lg shadow p-6 space-y-4">
                 <h2 className="text-xl font-bold">Dados Bancários</h2>
-                
+
                 {/* Banco */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Banco</label>
                   <select
                     value={dadosBancarios.banco}
-                    onChange={(e) => setDadosBancarios({...dadosBancarios, banco: e.target.value})}
+                    onChange={(e) =>
+                      setDadosBancarios({ ...dadosBancarios, banco: e.target.value })
+                    }
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Selecione o banco</option>
-                    {bancos.map(banco => (
-                      <option key={banco.code} value={banco.name}>{banco.name}</option>
+                    {bancos.map((banco) => (
+                      <option key={banco.code} value={banco.name}>
+                        {banco.name}
+                      </option>
                     ))}
                   </select>
                 </div>
-                
+
                 {/* Agência e Conta */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -264,7 +272,9 @@ export default function RepasseTransferenciaPage() {
                     <input
                       type="text"
                       value={dadosBancarios.agencia}
-                      onChange={(e) => setDadosBancarios({...dadosBancarios, agencia: e.target.value})}
+                      onChange={(e) =>
+                        setDadosBancarios({ ...dadosBancarios, agencia: e.target.value })
+                      }
                       placeholder="0001"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     />
@@ -274,47 +284,59 @@ export default function RepasseTransferenciaPage() {
                     <input
                       type="text"
                       value={dadosBancarios.conta}
-                      onChange={(e) => setDadosBancarios({...dadosBancarios, conta: e.target.value})}
+                      onChange={(e) =>
+                        setDadosBancarios({ ...dadosBancarios, conta: e.target.value })
+                      }
                       placeholder="123456-7"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
                 </div>
-                
+
                 {/* Tipo de Conta */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Conta</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tipo de Conta
+                  </label>
                   <select
                     value={dadosBancarios.tipo_conta}
-                    onChange={(e) => setDadosBancarios({...dadosBancarios, tipo_conta: e.target.value})}
+                    onChange={(e) =>
+                      setDadosBancarios({ ...dadosBancarios, tipo_conta: e.target.value })
+                    }
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="corrente">Corrente</option>
                     <option value="poupança">Poupança</option>
                   </select>
                 </div>
-                
+
                 {/* CPF/CNPJ */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">CPF/CNPJ</label>
                   <input
                     type="text"
                     value={dadosBancarios.cpf_cnpj}
-                    onChange={(e) => setDadosBancarios({...dadosBancarios, cpf_cnpj: e.target.value})}
+                    onChange={(e) =>
+                      setDadosBancarios({ ...dadosBancarios, cpf_cnpj: e.target.value })
+                    }
                     placeholder="123.456.789-00"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-                
+
                 {/* PIX */}
                 <div className="border-t pt-4">
                   <h3 className="font-semibold mb-4">Configuração PIX</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Chave</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Tipo de Chave
+                      </label>
                       <select
                         value={dadosBancarios.tipo_chave}
-                        onChange={(e) => setDadosBancarios({...dadosBancarios, tipo_chave: e.target.value})}
+                        onChange={(e) =>
+                          setDadosBancarios({ ...dadosBancarios, tipo_chave: e.target.value })
+                        }
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="cpf">CPF</option>
@@ -324,30 +346,38 @@ export default function RepasseTransferenciaPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Chave PIX</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Chave PIX
+                      </label>
                       <input
                         type="text"
                         value={dadosBancarios.chave_pix}
-                        onChange={(e) => setDadosBancarios({...dadosBancarios, chave_pix: e.target.value})}
+                        onChange={(e) =>
+                          setDadosBancarios({ ...dadosBancarios, chave_pix: e.target.value })
+                        }
                         placeholder="seu.email@exemplo.com"
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Titular */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Titular da Conta</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Titular da Conta
+                  </label>
                   <input
                     type="text"
                     value={dadosBancarios.titular}
-                    onChange={(e) => setDadosBancarios({...dadosBancarios, titular: e.target.value})}
+                    onChange={(e) =>
+                      setDadosBancarios({ ...dadosBancarios, titular: e.target.value })
+                    }
                     placeholder="Nome completo"
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-                
+
                 {/* Botão Salvar */}
                 <button
                   onClick={handleSalvarDadosBancarios}
@@ -360,18 +390,18 @@ export default function RepasseTransferenciaPage() {
             )}
           </div>
         )}
-        
+
         {/* Conteúdo da Aba 2: Email */}
         {abaSelecionada === 'email' && (
           <div className="bg-white rounded-lg shadow p-6 space-y-4">
             <h2 className="text-xl font-bold mb-4">Configuração de Email</h2>
-            
+
             {/* Provedor */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Provedor</label>
               <select
                 value={configEmail.provedor}
-                onChange={(e) => setConfigEmail({...configEmail, provedor: e.target.value})}
+                onChange={(e) => setConfigEmail({ ...configEmail, provedor: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
                 <option value="sendgrid">SendGrid</option>
@@ -380,14 +410,14 @@ export default function RepasseTransferenciaPage() {
                 <option value="smtp">SMTP Customizado</option>
               </select>
             </div>
-            
+
             {/* Chave API */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Chave API</label>
               <input
                 type="password"
                 value={configEmail.chave_api}
-                onChange={(e) => setConfigEmail({...configEmail, chave_api: e.target.value})}
+                onChange={(e) => setConfigEmail({ ...configEmail, chave_api: e.target.value })}
                 placeholder="Insira sua chave de API"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               />
@@ -395,30 +425,34 @@ export default function RepasseTransferenciaPage() {
                 Obtenha a chave em seu painel do {configEmail.provedor}
               </p>
             </div>
-            
+
             {/* Email Remetente */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email Remetente</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Email Remetente
+              </label>
               <input
                 type="email"
                 value={configEmail.email_remetente}
-                onChange={(e) => setConfigEmail({...configEmail, email_remetente: e.target.value})}
+                onChange={(e) =>
+                  setConfigEmail({ ...configEmail, email_remetente: e.target.value })
+                }
                 placeholder="noreply@clinica.com.br"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            
+
             {/* Nome Remetente */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nome Remetente</label>
               <input
                 type="text"
                 value={configEmail.nome_remetente}
-                onChange={(e) => setConfigEmail({...configEmail, nome_remetente: e.target.value})}
+                onChange={(e) => setConfigEmail({ ...configEmail, nome_remetente: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            
+
             {/* Botão Salvar */}
             <button
               onClick={handleSalvarEmail}
@@ -429,12 +463,12 @@ export default function RepasseTransferenciaPage() {
             </button>
           </div>
         )}
-        
+
         {/* Conteúdo da Aba 3: Histórico */}
         {abaSelecionada === 'historico' && (
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-bold mb-4">Histórico de Transferências</h2>
-            
+
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="border-b border-gray-200">
@@ -447,17 +481,21 @@ export default function RepasseTransferenciaPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {historico.map(trans => (
+                  {historico.map((trans) => (
                     <tr key={trans.id} className="border-b border-gray-100 hover:bg-gray-50">
                       <td className="py-3 px-4">{trans.professional?.name || 'N/A'}</td>
                       <td className="py-3 px-4 font-semibold">R$ {trans.valor?.toFixed(2)}</td>
                       <td className="py-3 px-4">{trans.metodo.toUpperCase()}</td>
                       <td className="py-3 px-4">
-                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                          trans.status === 'concluido' ? 'bg-green-100 text-green-800' :
-                          trans.status === 'pendente' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
+                        <span
+                          className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                            trans.status === 'concluido'
+                              ? 'bg-green-100 text-green-800'
+                              : trans.status === 'pendente'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-red-100 text-red-800'
+                          }`}
+                        >
                           {trans.status.charAt(0).toUpperCase() + trans.status.slice(1)}
                         </span>
                       </td>

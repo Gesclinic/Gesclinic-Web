@@ -41,11 +41,7 @@ const isFeriado = (date) => {
  * - Render estável e previsível
  */
 
-export default function DatePickerPopover({
-  selectedDate,
-  onChange,
-  agendaSummary = {},
-}) {
+export default function DatePickerPopover({ selectedDate, onChange, agendaSummary = {} }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const modalRef = useRef(null);
@@ -59,11 +55,7 @@ export default function DatePickerPopover({
   }, [selectedDate]);
 
   const [viewDate, setViewDate] = useState(() => {
-    return new Date(
-      validSelectedDate.getFullYear(),
-      validSelectedDate.getMonth(),
-      1
-    );
+    return new Date(validSelectedDate.getFullYear(), validSelectedDate.getMonth(), 1);
   });
 
   const viewYear = viewDate.getFullYear();
@@ -72,30 +64,21 @@ export default function DatePickerPopover({
   // ✅ SINCRONIZAÇÃO CORRETA com selectedDate
   // (depende apenas de valores primitivos)
   useEffect(() => {
-    setViewDate(
-      new Date(
-        validSelectedDate.getFullYear(),
-        validSelectedDate.getMonth(),
-        1
-      )
-    );
-  }, [
-    validSelectedDate.getFullYear(),
-    validSelectedDate.getMonth(),
-  ]);
+    setViewDate(new Date(validSelectedDate.getFullYear(), validSelectedDate.getMonth(), 1));
+  }, [validSelectedDate.getFullYear(), validSelectedDate.getMonth()]);
 
   // 🔹 Dias do mês (memoizado) - incluindo dias vazios do mês anterior/próximo
   const days = useMemo(() => {
     const firstDay = new Date(viewYear, viewMonth, 1);
     const lastDay = new Date(viewYear, viewMonth + 1, 0);
     const startDate = new Date(firstDay);
-    
+
     // Volta para o domingo anterior ao primeiro dia do mês
     startDate.setDate(startDate.getDate() - firstDay.getDay());
-    
+
     const result = [];
     const currentDate = new Date(startDate);
-    
+
     // Adiciona 42 dias (6 semanas) para cobrir o calendário inteiro
     while (result.length < 42) {
       result.push(new Date(currentDate));
@@ -121,13 +104,19 @@ export default function DatePickerPopover({
     setViewDate((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
   }, []);
 
-  const setViewMonth = useCallback((m) => {
-    setViewDate(new Date(viewYear, m, 1));
-  }, [viewYear]);
+  const setViewMonth = useCallback(
+    (m) => {
+      setViewDate(new Date(viewYear, m, 1));
+    },
+    [viewYear],
+  );
 
-  const setViewYear = useCallback((y) => {
-    setViewDate(new Date(y, viewMonth, 1));
-  }, [viewMonth]);
+  const setViewYear = useCallback(
+    (y) => {
+      setViewDate(new Date(y, viewMonth, 1));
+    },
+    [viewMonth],
+  );
 
   const handleSelectDate = useCallback(
     (date) => {
@@ -135,7 +124,7 @@ export default function DatePickerPopover({
       // ✅ NÃO fecha o calendário aqui!
       // O calendário fecha apenas ao clicar fora
     },
-    [onChange]
+    [onChange],
   );
 
   const handleGoToday = useCallback(() => {
@@ -159,7 +148,9 @@ export default function DatePickerPopover({
 
   // 🔹 Fechar ao clicar fora (detectar clicks no documento)
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
 
     const handleClickOutside = (e) => {
       // Se clicou na ref (botão picker), não fecha
@@ -187,7 +178,9 @@ export default function DatePickerPopover({
 
   // 🔹 Atalho teclado (ESC para fechar)
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
 
     const handleKey = (e) => {
       if (e.key === 'Escape') {
@@ -250,24 +243,27 @@ export default function DatePickerPopover({
           title={displayMeta?.label || ''}
           className={`relative h-9 rounded font-medium transition-all
             ${
-              !isCurrentMonth
-                ? 'text-gray-300 cursor-default'
-                : isSelected
-                ? 'bg-blue-500 text-white'
-                : isToday
-                ? 'border border-dashed border-gray-400'
-                : 'text-gray-700 hover:bg-gray-100'
-            }
+        !isCurrentMonth
+          ? 'text-gray-300 cursor-default'
+          : isSelected
+            ? 'bg-blue-500 text-white'
+            : isToday
+              ? 'border border-dashed border-gray-400'
+              : 'text-gray-700 hover:bg-gray-100'
+        }
           `}
         >
           {date.getDate()}
           {isCurrentMonth && displayMeta && (
             <span
               className={`absolute bottom-1 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full ${
-                displayMeta.status === 'full' ? 'bg-red-500' :
-                displayMeta.status === 'partial' ? 'bg-yellow-400' :
-                displayMeta.status === 'holiday' ? 'bg-purple-500' :
-                'bg-green-500'
+                displayMeta.status === 'full'
+                  ? 'bg-red-500'
+                  : displayMeta.status === 'partial'
+                    ? 'bg-yellow-400'
+                    : displayMeta.status === 'holiday'
+                      ? 'bg-purple-500'
+                      : 'bg-green-500'
               }`}
             />
           )}
@@ -290,9 +286,7 @@ export default function DatePickerPopover({
           className="flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded-md hover:bg-gray-50"
         >
           <div className="flex flex-col text-left">
-            <span className="text-sm font-semibold">
-              {format(validSelectedDate, 'dd/MM/yyyy')}
-            </span>
+            <span className="text-sm font-semibold">{format(validSelectedDate, 'dd/MM/yyyy')}</span>
             <span className="text-xs text-gray-500">
               {validSelectedDate.toLocaleDateString('pt-BR', { weekday: 'long' })}
             </span>
@@ -304,11 +298,9 @@ export default function DatePickerPopover({
       {open &&
         createPortal(
           <>
-            <div
-              className="fixed inset-0 z-[9998]"
-            />
+            <div className="fixed inset-0 z-[9998]" />
 
-            <div 
+            <div
               ref={modalRef}
               className="fixed top-1/2 left-1/2 z-[9999] w-96 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg border border-gray-300 shadow-lg p-6"
             >
@@ -369,14 +361,14 @@ export default function DatePickerPopover({
               {/* Weekdays */}
               <div className="grid grid-cols-7 text-xs text-center font-semibold text-gray-600 mb-3">
                 {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'].map((d) => (
-                  <div key={d} className="py-2">{d}</div>
+                  <div key={d} className="py-2">
+                    {d}
+                  </div>
                 ))}
               </div>
 
               {/* Days */}
-              <div className="grid grid-cols-7 gap-1.5 mb-4">
-                {dayButtons}
-              </div>
+              <div className="grid grid-cols-7 gap-1.5 mb-4">{dayButtons}</div>
 
               {/* Rodapé com Legenda */}
               <div className="border-t border-gray-100 pt-3">
@@ -409,9 +401,8 @@ export default function DatePickerPopover({
               </div>
             </div>
           </>,
-          document.getElementById('popover-root')
+          document.getElementById('popover-root'),
         )}
     </>
   );
 }
-

@@ -3,7 +3,7 @@
 // API - Room Services (M:M de Salas × Serviços)
 // ============================================================
 
-import { customSupabaseClient as supabase } from "@/lib/customSupabaseClient";
+import { customSupabaseClient as supabase } from '@/lib/customSupabaseClient';
 
 /**
  * Lista todos os serviços atribuídos a salas
@@ -12,19 +12,23 @@ import { customSupabaseClient as supabase } from "@/lib/customSupabaseClient";
  */
 export async function listRoomServices(clinicId) {
   const { data, error } = await supabase
-    .from("room_services")
-    .select(`
+    .from('room_services')
+    .select(
+      `
       id,
       room_id,
       service_id,
       active,
       rooms(id, name),
       services(id, name, code)
-    `)
-    .eq("clinic_id", clinicId)
-    .order("rooms(name)", { ascending: true });
+    `,
+    )
+    .eq('clinic_id', clinicId)
+    .order('rooms(name)', { ascending: true });
 
-  if (error) throw new Error(`Falha ao listar serviços de salas: ${error.message}`);
+  if (error) {
+    throw new Error(`Falha ao listar serviços de salas: ${error.message}`);
+  }
   return data ?? [];
 }
 
@@ -36,19 +40,23 @@ export async function listRoomServices(clinicId) {
  */
 export async function getRoomServices(roomId, clinicId) {
   const { data, error } = await supabase
-    .from("room_services")
-    .select(`
+    .from('room_services')
+    .select(
+      `
       id,
       room_id,
       service_id,
       active,
       services(id, name, code)
-    `)
-    .eq("room_id", roomId)
-    .eq("clinic_id", clinicId)
-    .eq("active", true);
+    `,
+    )
+    .eq('room_id', roomId)
+    .eq('clinic_id', clinicId)
+    .eq('active', true);
 
-  if (error) throw new Error(`Falha ao obter serviços da sala: ${error.message}`);
+  if (error) {
+    throw new Error(`Falha ao obter serviços da sala: ${error.message}`);
+  }
   return data ?? [];
 }
 
@@ -63,19 +71,19 @@ export async function createRoomService(clinicId, data) {
 
   // Verificar se já existe
   const existing = await supabase
-    .from("room_services")
-    .select("id")
-    .eq("room_id", room_id)
-    .eq("service_id", service_id)
-    .eq("clinic_id", clinicId)
+    .from('room_services')
+    .select('id')
+    .eq('room_id', room_id)
+    .eq('service_id', service_id)
+    .eq('clinic_id', clinicId)
     .maybeSingle();
 
   if (existing.data) {
-    throw new Error("Este serviço já está atribuído a esta sala");
+    throw new Error('Este serviço já está atribuído a esta sala');
   }
 
   const { data: roomService, error } = await supabase
-    .from("room_services")
+    .from('room_services')
     .insert([
       {
         clinic_id: clinicId,
@@ -87,7 +95,9 @@ export async function createRoomService(clinicId, data) {
     .select()
     .maybeSingle();
 
-  if (error) throw new Error(`Falha ao criar atribuição: ${error.message}`);
+  if (error) {
+    throw new Error(`Falha ao criar atribuição: ${error.message}`);
+  }
   return roomService;
 }
 
@@ -100,15 +110,21 @@ export async function createRoomService(clinicId, data) {
  */
 export async function updateRoomService(id, clinicId, updates) {
   const { data, error } = await supabase
-    .from("room_services")
+    .from('room_services')
     .update(updates)
-    .eq("id", id)
-    .eq("clinic_id", clinicId)
-    .select()
-    .maybeSingle();
+    .eq('id', id)
+    .eq('clinic_id', clinicId)
+    .select();
 
-  if (error) throw new Error(`Falha ao atualizar atribuição: ${error.message}`);
-  return data;
+  if (error) {
+    throw new Error(`Falha ao atualizar atribuição: ${error.message}`);
+  }
+
+  if (!data || data.length === 0) {
+    throw new Error('Atribuição não encontrada');
+  }
+
+  return data[0];
 }
 
 /**
@@ -119,14 +135,16 @@ export async function updateRoomService(id, clinicId, updates) {
  */
 export async function deleteRoomService(id, clinicId) {
   const { data, error } = await supabase
-    .from("room_services")
+    .from('room_services')
     .delete()
-    .eq("id", id)
-    .eq("clinic_id", clinicId)
+    .eq('id', id)
+    .eq('clinic_id', clinicId)
     .select()
     .maybeSingle();
 
-  if (error) throw new Error(`Falha ao deletar atribuição: ${error.message}`);
+  if (error) {
+    throw new Error(`Falha ao deletar atribuição: ${error.message}`);
+  }
   return data;
 }
 

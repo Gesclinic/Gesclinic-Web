@@ -1,38 +1,45 @@
 // Atualiza agendamento existente
 export async function atualizarAgendamento(agendamentoId, payload) {
   const {
-    date, startTime, endTime, pacienteId,
-    profissionalId, servicoId, salaId, convenioId, planoId, status,
-    observacoes, observacoesInternas
+    date,
+    startTime,
+    endTime,
+    pacienteId,
+    profissionalId,
+    servicoId,
+    salaId,
+    convenioId,
+    status,
+    observacoes,
   } = payload;
   console.log('[atualizarAgendamento] payload:', payload);
-  const start_time = `${date}T${startTime}`;
-  const end_time = `${date}T${endTime}`;
   const { error } = await supabase
     .from('appointments')
     .update({
-      start_time,
-      end_time,
+      scheduled_date: date,
+      scheduled_time: startTime,
+      end_time: endTime,
       patient_id: pacienteId,
       professional_id: profissionalId || null,
       service_id: servicoId || null,
       room_id: salaId || null,
       payer_id: convenioId !== '' ? convenioId : null,
-      plan_id: planoId !== '' ? planoId : null,
       status,
       notes: observacoes || null,
-      internal_notes: observacoesInternas || null,
     })
     .eq('id', agendamentoId);
   console.log('[atualizarAgendamento] resultado:', { error });
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
   return true;
 }
 // Busca agendamento por ID (completo, para modal de detalhes)
 export async function buscarAgendamentoPorId(agendamentoId) {
   const { data, error } = await supabase
     .from('appointments')
-    .select(`
+    .select(
+      `
       *,
       patient:patient_id (id, name, phone, email, cpf),
       professional:professional_id (id, name, specialty, register),
@@ -43,7 +50,8 @@ export async function buscarAgendamentoPorId(agendamentoId) {
       updated_at,
       notes,
       internal_notes
-    `)
+    `,
+    )
     .eq('id', agendamentoId)
     .single();
   return { data, error };
@@ -66,7 +74,7 @@ export async function listarProfissionais({ clinicId }) {
     .eq('clinic_id', clinicId)
     .eq('active', true)
     .order('name', { ascending: true });
-  return (data || []).filter(p => p.active);
+  return (data || []).filter((p) => p.active);
 }
 
 // Lista serviços vinculados ao profissional
@@ -75,7 +83,7 @@ export async function listarServicosPorProfissional({ profissionalId }) {
     .from('professional_services')
     .select('service:service_id(id, name, duration)')
     .eq('professional_id', profissionalId);
-  return (data || []).map(ps => ps.service);
+  return (data || []).map((ps) => ps.service);
 }
 
 // Lista salas da clínica
@@ -112,27 +120,36 @@ export async function listarPlanosPorConvenio({ convenioId }) {
 export async function criarAgendamento(payload) {
   // Monta objeto para tabela appointments
   const {
-    clinicId, date, startTime, endTime, pacienteId,
-    profissionalId, servicoId, salaId, convenioId, planoId, status, observacoes
+    clinicId,
+    date,
+    startTime,
+    endTime,
+    pacienteId,
+    profissionalId,
+    servicoId,
+    salaId,
+    convenioId,
+    status,
+    observacoes,
   } = payload;
-  const start_time = `${date}T${startTime}`;
-  const end_time = `${date}T${endTime}`;
-  const { error } = await supabase
-    .from('appointments')
-    .insert([{
+  const { error } = await supabase.from('appointments').insert([
+    {
       clinic_id: clinicId,
-      start_time,
-      end_time,
+      scheduled_date: date,
+      scheduled_time: startTime,
+      end_time: endTime,
       patient_id: pacienteId,
       professional_id: profissionalId || null,
       service_id: servicoId || null,
       room_id: salaId || null,
       payer_id: convenioId || null,
-      plan_id: planoId || null,
       status,
       notes: observacoes || null,
-    }]);
-  if (error) throw error;
+    },
+  ]);
+  if (error) {
+    throw error;
+  }
   return true;
 }
 // src/services/agendaService.js
@@ -153,21 +170,23 @@ export async function listarAgenda({ clinicId, date }) {
 
   const { data, error } = await supabase
     .from('appointments')
-    .select(`
+    .select(
+      `
       id,
-      start_time,
+      scheduled_date,
+      scheduled_time,
       end_time,
       status,
       patient:patient_id (*),
       professional:professional_id (*),
       service:service_id (*),
       room:room_id (*),
-      payer:payer_id (*),
-      plan:plan_id (*)
-    `)
+      payer:payer_id (*)
+    `,
+    )
     .eq('clinic_id', clinicId)
-    .gte('start_time', start)
-    .lte('start_time', end);
+    .gte('scheduled_date', start)
+    .lte('scheduled_date', end);
 
   // DEBUG: logar resultado para diagnóstico
   console.log('[listarAgenda] params:', { clinicId, date, start, end });

@@ -1,7 +1,7 @@
 /**
  * CollapsibleSection.jsx
  * Componente accordion reutilizável para agrupar seções
- * 
+ *
  * Objetivo: Reduzir clutter da página mantendo acesso a funcionalidades
  * - Resumo sempre visível
  * - Conteúdo colapsável
@@ -65,18 +65,13 @@ export default function CollapsibleSection({
         className={`
           w-full flex justify-between items-center
           transition-colors duration-200
-          ${variant === 'compact' 
-            ? 'p-3 hover:bg-gray-50' 
-            : 'p-4 hover:bg-blue-50'
-          }
+          ${variant === 'compact' ? 'p-3 hover:bg-gray-50' : 'p-4 hover:bg-blue-50'}
           focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2
         `}
       >
         {/* Título + Ícone */}
         <div className="flex items-center gap-3 min-w-0">
-          <span className={variant === 'compact' ? 'text-lg' : 'text-2xl'}>
-            {icon}
-          </span>
+          <span className={variant === 'compact' ? 'text-lg' : 'text-2xl'}>{icon}</span>
           <div className="text-left min-w-0">
             <h3
               className={`
@@ -150,7 +145,7 @@ export function useCollapsibleSections(initialState = {}) {
       Object.keys(prev).reduce((acc, key) => {
         acc[key] = true;
         return acc;
-      }, {})
+      }, {}),
     );
   };
 
@@ -159,7 +154,7 @@ export function useCollapsibleSections(initialState = {}) {
       Object.keys(prev).reduce((acc, key) => {
         acc[key] = false;
         return acc;
-      }, {})
+      }, {}),
     );
   };
 

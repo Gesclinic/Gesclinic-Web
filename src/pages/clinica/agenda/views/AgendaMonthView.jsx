@@ -17,7 +17,7 @@ import { getStatusStyle } from '@/utils/helpers/getStatusStyle';
 
 /**
  * AgendaMonthView - Visualização em calendário mensal
- * 
+ *
  * Props:
  * - date: string (YYYY-MM-DD) - Data selecionada
  * - appointments: array - Lista de agendamentos do mês
@@ -27,6 +27,25 @@ import { getStatusStyle } from '@/utils/helpers/getStatusStyle';
  * - onViewDetails: (appointmentId) => void - ver detalhes (painel lateral)
  * - filteredProfessionalId: string - ID do profissional filtrado (opcional)
  */
+// ✅ Helper: Validar se um valor é uma data válida
+const isValidDate = (date) => {
+  if (!date) {
+    return false;
+  }
+  if (date instanceof Date) {
+    return !isNaN(date.getTime());
+  }
+  if (typeof date === 'string') {
+    try {
+      const parsed = parseISO(date);
+      return !isNaN(parsed.getTime());
+    } catch {
+      return false;
+    }
+  }
+  return false;
+};
+
 export default function AgendaMonthView({
   date,
   appointments = [],
@@ -35,9 +54,9 @@ export default function AgendaMonthView({
   onEditAppointment = () => {},
   onViewDetails = () => {},
   onContextMenu = () => {},
-  filteredProfessionalId = null,  // NOVO: ID do profissional filtrado
-  userRole = null,  // Role do usuário logado
-  userProfessionalId = null,  // ID do profissional logado (se for profissional)
+  filteredProfessionalId = null, // NOVO: ID do profissional filtrado
+  userRole = null, // Role do usuário logado
+  userProfessionalId = null, // ID do profissional logado (se for profissional)
 }) {
   const [professionalAvailabilityByDay, setProfessionalAvailabilityByDay] = useState({}); // NOVO: Disponibilidade por dia
   const [hoveredDay, setHoveredDay] = useState(null); // Rastrear qual dia está com hover
@@ -46,21 +65,31 @@ export default function AgendaMonthView({
 
   // Log de disponibilidade
   useEffect(() => {
-    console.log('📊 [AgendaMonthView] professionalAvailabilityByDay:', Object.keys(professionalAvailabilityByDay).length, 'dias carregados');
+    console.log(
+      '📊 [AgendaMonthView] professionalAvailabilityByDay:',
+      Object.keys(professionalAvailabilityByDay).length,
+      'dias carregados',
+    );
     console.log('🔍 [AgendaMonthView] filteredProfessionalId:', filteredProfessionalId);
     if (filteredProfessionalId) {
-      const unavailableDays = Object.entries(professionalAvailabilityByDay).filter(([_, v]) => !v.hasAvailability);
+      const unavailableDays = Object.entries(professionalAvailabilityByDay).filter(
+        ([_, v]) => !v.hasAvailability,
+      );
       console.log('❌ [AgendaMonthView] Dias INDISPONÍVEIS:', unavailableDays.length);
       if (unavailableDays.length > 0) {
-        console.log('  Exemplos:', unavailableDays.slice(0, 3).map(([d, v]) => d));
+        console.log(
+          '  Exemplos:',
+          unavailableDays.slice(0, 3).map(([d, v]) => d),
+        );
       }
     }
   }, [professionalAvailabilityByDay, filteredProfessionalId]);
 
   // Parse da data
-  const [year, month, day] = date ? date.split('-').map(Number) : 
-    [new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate()];
-  
+  const [year, month, day] = date
+    ? date.split('-').map(Number)
+    : [new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate()];
+
   // ✅ Memoizar dateObj para evitar recriação a cada render (causa blinking)
   const dateObj = useMemo(() => new Date(year, month - 1, day), [year, month, day]);
 
@@ -75,28 +104,33 @@ export default function AgendaMonthView({
   useEffect(() => {
     const loadProfessionalAvailability = async () => {
       const isProfesionalLogged = userRole === 'profissional';
-      const profIdToLoad = filteredProfessionalId || (isProfesionalLogged ? userProfessionalId : null);
+      const profIdToLoad =
+        filteredProfessionalId || (isProfesionalLogged ? userProfessionalId : null);
 
       if (!profIdToLoad) {
-        console.log('🔍 [AgendaMonthView] Nenhum profissional para carregar, limpando disponibilidade');
+        console.log(
+          '🔍 [AgendaMonthView] Nenhum profissional para carregar, limpando disponibilidade',
+        );
         setProfessionalAvailabilityByDay({});
         return;
       }
 
       try {
         const startTime = Date.now();
-        console.log(`🔍 [AgendaMonthView] Carregando disponibilidade para prof ${profIdToLoad} (${monthDays.length} dias de ${format(dateObj, 'MMMM')})`);
-        
+        console.log(
+          `🔍 [AgendaMonthView] Carregando disponibilidade para prof ${profIdToLoad} (${monthDays.length} dias de ${format(dateObj, 'MMMM')})`,
+        );
+
         // ⚡ Carregar TODAS as disponibilidades em paralelo ao invés de sequencial
-        const promises = monthDays.map(day => {
+        const promises = monthDays.map((day) => {
           const dayStr = format(day, 'yyyy-MM-dd');
           return getProfessionalAvailableSlots(profIdToLoad, dayStr)
-            .then(slots => ({
+            .then((slots) => ({
               dayStr,
               hasAvailability: slots && slots.length > 0,
               slots: slots || [],
             }))
-            .catch(err => {
+            .catch((err) => {
               console.error(`❌ [AgendaMonthView] Erro ao carregar ${dayStr}:`, err);
               return {
                 dayStr,
@@ -110,26 +144,35 @@ export default function AgendaMonthView({
         const availability = {};
         let availableCount = 0;
         let unavailableCount = 0;
-        
+
         results.forEach(({ dayStr, hasAvailability, slots }) => {
           availability[dayStr] = { hasAvailability, slots };
-          if (hasAvailability) availableCount++;
-          else unavailableCount++;
+          if (hasAvailability) {
+            availableCount++;
+          } else {
+            unavailableCount++;
+          }
         });
 
-        console.log(`✅ [AgendaMonthView] Disponibilidade carregada: ${availableCount} dias LIVRES + ${unavailableCount} dias FECHADOS`);
+        console.log(
+          `✅ [AgendaMonthView] Disponibilidade carregada: ${availableCount} dias LIVRES + ${unavailableCount} dias FECHADOS`,
+        );
         setProfessionalAvailabilityByDay(availability);
         const elapsed = Date.now() - startTime;
         console.log(`⏱️ [AgendaMonthView] Tempo total: ${elapsed}ms`);
       } catch (error) {
-        console.error('❌ [AgendaMonthView] Erro ao carregar disponibilidade do profissional:', error);
+        console.error(
+          '❌ [AgendaMonthView] Erro ao carregar disponibilidade do profissional:',
+          error,
+        );
         setProfessionalAvailabilityByDay({});
       }
     };
 
     const isProfesionalLogged = userRole === 'profissional';
-    const profIdToLoad = filteredProfessionalId || (isProfesionalLogged ? userProfessionalId : null);
-    
+    const profIdToLoad =
+      filteredProfessionalId || (isProfesionalLogged ? userProfessionalId : null);
+
     if (profIdToLoad) {
       loadProfessionalAvailability();
     }
@@ -144,16 +187,20 @@ export default function AgendaMonthView({
         const start = startOfWeek(startOfMonth(dateObj), { weekStartsOn: 1 });
         const end = endOfWeek(endOfMonth(dateObj), { weekStartsOn: 1 });
         const allDays = eachDayOfInterval({ start, end });
-        const dates = allDays.map(d => format(d, 'yyyy-MM-dd'));
-        
-        console.log('📅 [AgendaMonthView] Carregando feriados do mês:', { 
-          datesCount: dates.length, 
+        const dates = allDays.map((d) => format(d, 'yyyy-MM-dd'));
+
+        console.log('📅 [AgendaMonthView] Carregando feriados do mês:', {
+          datesCount: dates.length,
           firstDate: dates[0],
-          lastDate: dates[dates.length - 1]
+          lastDate: dates[dates.length - 1],
         });
-        
+
         const result = await checkMultipleDates(dates, null);
-        console.log('✅ [AgendaMonthView] Feriados carregados:', Object.keys(result).length, 'encontrados');
+        console.log(
+          '✅ [AgendaMonthView] Feriados carregados:',
+          Object.keys(result).length,
+          'encontrados',
+        );
         setHolidaysMap(result);
       } catch (error) {
         console.warn('⚠️ [AgendaMonthView] Erro ao carregar feriados:', error);
@@ -169,19 +216,19 @@ export default function AgendaMonthView({
   // Agrupar agendamentos por dia
   const appointmentsByDay = useMemo(() => {
     const byDay = {};
-    
+
     monthDays.forEach((d) => {
       const key = format(d, 'yyyy-MM-dd');
       byDay[key] = [];
     });
 
-    console.log('📊 [AgendaMonthView] Mês:', format(dateObj, 'MMMM'))
+    console.log('📊 [AgendaMonthView] Mês:', format(dateObj, 'MMMM'));
     console.log('📊 [AgendaMonthView] Agendamentos recebidos:', appointments.length);
     console.log('📊 [AgendaMonthView] Dias do mês:', monthDays.length);
-    
+
     if (appointments.length > 0) {
       console.log('🔍 [AgendaMonthView] PRIMEIROS 3 AGENDAMENTOS:');
-      appointments.slice(0, 3).forEach(apt => {
+      appointments.slice(0, 3).forEach((apt) => {
         console.log(`  - ${apt.patient_name} @ ${apt.scheduled_date} ${apt.scheduled_time}`);
       });
     }
@@ -190,7 +237,7 @@ export default function AgendaMonthView({
       // Extrair data do agendamento - tentar múltiplas possibilidades
       try {
         let dateKey = null;
-        
+
         // Tentar campos possíveis - scheduled_date é o principal
         if (apt.scheduled_date) {
           dateKey = apt.scheduled_date;
@@ -200,7 +247,7 @@ export default function AgendaMonthView({
           const aptDate = parseISO(apt.start_time);
           dateKey = format(aptDate, 'yyyy-MM-dd');
         }
-        
+
         if (dateKey && byDay[dateKey]) {
           byDay[dateKey].push(apt);
         }
@@ -209,7 +256,11 @@ export default function AgendaMonthView({
       }
     });
 
-    console.log('✅ [AgendaMonthView] appointmentsByDay calculado:', Object.keys(byDay).filter(key => byDay[key].length > 0).length, 'dias com agendamentos');
+    console.log(
+      '✅ [AgendaMonthView] appointmentsByDay calculado:',
+      Object.keys(byDay).filter((key) => byDay[key].length > 0).length,
+      'dias com agendamentos',
+    );
     return byDay;
   }, [appointments, monthDays]);
 
@@ -225,9 +276,15 @@ export default function AgendaMonthView({
   // Obter status de um dia baseado nos agendamentos
   const getDayStatus = (appts) => {
     const total = appts.length;
-    if (total === 0) return 'livre'; // Verde
-    if (total === 1 || total === 2) return 'normal'; // Azul
-    if (total >= 3) return 'lotado'; // Laranja
+    if (total === 0) {
+      return 'livre';
+    } // Verde
+    if (total === 1 || total === 2) {
+      return 'normal';
+    } // Azul
+    if (total >= 3) {
+      return 'lotado';
+    } // Laranja
   };
 
   const statusColors = {
@@ -248,9 +305,16 @@ export default function AgendaMonthView({
       </div>
 
       {/* Grid de dias da semana */}
-      <div className="grid grid-cols-7 border-b border-gray-200 px-6 py-2" style={{ background: '#e7f3ff' }}>
+      <div
+        className="grid grid-cols-7 border-b border-gray-200 px-6 py-2"
+        style={{ background: '#e7f3ff' }}
+      >
         {['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'].map((d) => (
-          <div key={d} className="text-center font-semibold py-2" style={{ color: '#0052cc', fontSize: '13px', fontWeight: 700 }}>
+          <div
+            key={d}
+            className="text-center font-semibold py-2"
+            style={{ color: '#0052cc', fontSize: '13px', fontWeight: 700 }}
+          >
             {d}
           </div>
         ))}
@@ -269,14 +333,18 @@ export default function AgendaMonthView({
 
               // 🆕 NOVO: Verificar disponibilidade do profissional
               const profAvailability = professionalAvailabilityByDay[dayKey];
-              const isProfessionalUnavailable = filteredProfessionalId && profAvailability && !profAvailability.hasAvailability;
-              
-              console.log(`📅 [Day ${dayKey}] filteredProf: ${filteredProfessionalId ? 'YES' : 'NO'} | availability: ${profAvailability ? (profAvailability.hasAvailability ? 'AVAILABLE' : 'UNAVAILABLE') : 'N/A'} | isProfUnavail: ${isProfessionalUnavailable}`);
+              const isProfessionalUnavailable =
+                filteredProfessionalId && profAvailability && !profAvailability.hasAvailability;
+
+              console.log(
+                `📅 [Day ${dayKey}] filteredProf: ${filteredProfessionalId ? 'YES' : 'NO'} | availability: ${profAvailability ? (profAvailability.hasAvailability ? 'AVAILABLE' : 'UNAVAILABLE') : 'N/A'} | isProfUnavail: ${isProfessionalUnavailable}`,
+              );
 
               // 🎉 Verificar se é feriado bloqueado
               const dayHoliday = holidaysMap[dayKey];
               const isMandatoryHoliday = dayHoliday && dayHoliday.is_mandatory !== false;
-              const isHolidayBlocked = isMandatoryHoliday && dayHoliday.is_blocked && !dayHoliday.has_override;
+              const isHolidayBlocked =
+                isMandatoryHoliday && dayHoliday.is_blocked && !dayHoliday.has_override;
 
               return (
                 <div
@@ -299,11 +367,15 @@ export default function AgendaMonthView({
 
                     // Se é profissional logado → OPÇÃO A: sempre abre modal direto
                     if (isProfesionalLogged) {
-                      console.log('👨‍⚕️ [AgendaMonthView] Profissional logado - Verificando disponibilidade');
-                      
+                      console.log(
+                        '👨‍⚕️ [AgendaMonthView] Profissional logado - Verificando disponibilidade',
+                      );
+
                       // Verificar se tem disponibilidade neste dia
                       if (!profAvailability || !profAvailability.hasAvailability) {
-                        console.log('⛔ [AgendaMonthView] Profissional sem disponibilidade neste dia');
+                        console.log(
+                          '⛔ [AgendaMonthView] Profissional sem disponibilidade neste dia',
+                        );
                         return; // Não abre modal se não tem disponibilidade
                       }
 
@@ -322,7 +394,9 @@ export default function AgendaMonthView({
 
                     // Se não é profissional → OPÇÃO B: navegação normal ou filtro profissional
                     if (!filteredProfessionalId) {
-                      console.log('ℹ️ [AgendaMonthView] Sem filtro de profissional, navegando para dia');
+                      console.log(
+                        'ℹ️ [AgendaMonthView] Sem filtro de profissional, navegando para dia',
+                      );
                       onDayClick && onDayClick(dayKey);
                       return;
                     }
@@ -342,10 +416,13 @@ export default function AgendaMonthView({
 
                     // Se está livre e profissional atende, abrir modal de agendamento
                     if (profAvailability && profAvailability.hasAvailability) {
-                      const firstSlot = profAvailability.slots && profAvailability.slots.length > 0 
-                        ? profAvailability.slots[0] 
-                        : '09:00';
-                      console.log('✨ [AgendaMonthView] Abrindo modal de agendamento com filtro profissional');
+                      const firstSlot =
+                        profAvailability.slots && profAvailability.slots.length > 0
+                          ? profAvailability.slots[0]
+                          : '09:00';
+                      console.log(
+                        '✨ [AgendaMonthView] Abrindo modal de agendamento com filtro profissional',
+                      );
                       onBookSlot && onBookSlot({ date: dayKey, time: firstSlot });
                     }
                   }}
@@ -360,10 +437,18 @@ export default function AgendaMonthView({
                   `}
                   style={{
                     background: (() => {
-                      if (!isCurrentMonth) return '#f3f3f3';
-                      if (isHolidayBlocked) return '#f3f3f3';
-                      if (isProfessionalUnavailable) return '#f3f3f3';
-                      if (isToday) return '#fafaf9';
+                      if (!isCurrentMonth) {
+                        return '#f3f3f3';
+                      }
+                      if (isHolidayBlocked) {
+                        return '#f3f3f3';
+                      }
+                      if (isProfessionalUnavailable) {
+                        return '#f3f3f3';
+                      }
+                      if (isToday) {
+                        return '#fafaf9';
+                      }
                       if (dayAppts.length > 0) {
                         // Usar a cor do primeiro agendamento
                         const { background } = getStatusStyle(dayAppts[0]?.status);
@@ -371,14 +456,32 @@ export default function AgendaMonthView({
                       }
                       return '#fafaf9';
                     })(),
-                    borderColor: !isCurrentMonth ? '#e5e7eb' : isHolidayBlocked ? '#e5e7eb' : isProfessionalUnavailable ? '#e5e7eb' : isToday ? '#e5e7eb' : '#e5e7eb',
+                    borderColor: !isCurrentMonth
+                      ? '#e5e7eb'
+                      : isHolidayBlocked
+                        ? '#e5e7eb'
+                        : isProfessionalUnavailable
+                          ? '#e5e7eb'
+                          : isToday
+                            ? '#e5e7eb'
+                            : '#e5e7eb',
                   }}
-                  title={isHolidayBlocked ? 'Feriado - agenda bloqueada' : isProfessionalUnavailable ? 'Agenda fechada' : ''}
+                  title={
+                    isHolidayBlocked
+                      ? 'Feriado - agenda bloqueada'
+                      : isProfessionalUnavailable
+                        ? 'Agenda fechada'
+                        : ''
+                  }
                 >
                   {/* Overlay de Feriado Bloqueado */}
                   {(() => {
                     const dayHoliday = holidaysMap[dayKey];
-                    const isBlocked = dayHoliday && dayHoliday.is_blocked && dayHoliday.is_mandatory !== false && !dayHoliday.has_override;
+                    const isBlocked =
+                      dayHoliday &&
+                      dayHoliday.is_blocked &&
+                      dayHoliday.is_mandatory !== false &&
+                      !dayHoliday.has_override;
                     return isBlocked ? (
                       <div className="absolute inset-0 bg-gray-300/60 flex flex-col items-center justify-center rounded pointer-events-none">
                         <span className="text-2xl">🔒</span>
@@ -392,7 +495,8 @@ export default function AgendaMonthView({
                   {/* Overlay de Feriado Facultativo */}
                   {(() => {
                     const dayHoliday = holidaysMap[dayKey];
-                    const isOptional = dayHoliday && dayHoliday.is_mandatory === false && !dayHoliday.has_override;
+                    const isOptional =
+                      dayHoliday && dayHoliday.is_mandatory === false && !dayHoliday.has_override;
                     return isOptional ? (
                       <div className="absolute inset-0 bg-yellow-200/30 border-2 border-yellow-400/50 rounded pointer-events-none"></div>
                     ) : null;
@@ -407,23 +511,34 @@ export default function AgendaMonthView({
                   })()}
 
                   {/* Número do dia */}
-                  <div className="text-sm font-bold mb-2 text-gray-900">
-                    {format(dayObj, 'd')}
-                  </div>
+                  <div className="text-sm font-bold mb-2 text-gray-900">{format(dayObj, 'd')}</div>
 
                   {/* Conteúdo do dia */}
                   <div className="flex-1 flex items-center justify-center overflow-hidden">
                     {dayAppts.length > 0 && isCurrentMonth && !isHolidayBlocked ? (
                       // Quando tem agendamentos (até 2 exibidos)
                       <div className="w-full text-center">
-                        {dayAppts.slice(0, 2).map(apt => {
-                          const aptTime = (apt.scheduled_time || '').substring(0, 5) || (apt.startTime ? format(apt.startTime, 'HH:mm') : '?');
+                        {dayAppts.slice(0, 2).map((apt) => {
+                          // ✅ Validar antes de formatar data
+                          let aptTime = (apt.scheduled_time || '').substring(0, 5);
+                          if (!aptTime && isValidDate(apt.startTime)) {
+                            try {
+                              aptTime = format(apt.startTime, 'HH:mm');
+                            } catch {
+                              aptTime = '?';
+                            }
+                          }
+                          if (!aptTime) {
+                            aptTime = '?';
+                          }
+
                           const fullName = apt.patient_name || 'Paciente';
-                          const nameParts = fullName.split(' ').filter(p => p.length > 0);
-                          const displayName = nameParts.length > 1
-                            ? `${nameParts[0]} ${nameParts[nameParts.length - 1]}`
-                            : nameParts[0] || 'Paciente';
-                          
+                          const nameParts = fullName.split(' ').filter((p) => p.length > 0);
+                          const displayName =
+                            nameParts.length > 1
+                              ? `${nameParts[0]} ${nameParts[nameParts.length - 1]}`
+                              : nameParts[0] || 'Paciente';
+
                           return (
                             <div
                               key={apt.id}
@@ -445,7 +560,9 @@ export default function AgendaMonthView({
                           );
                         })}
                         {dayAppts.length > 2 && (
-                          <div className="text-xs text-gray-600 mt-1">+{dayAppts.length - 2} mais</div>
+                          <div className="text-xs text-gray-600 mt-1">
+                            +{dayAppts.length - 2} mais
+                          </div>
                         )}
                       </div>
                     ) : isCurrentMonth && !isHolidayBlocked ? (
@@ -455,11 +572,16 @@ export default function AgendaMonthView({
                           // ❌ Profissional indisponível neste dia
                           <div className="flex flex-col items-center justify-center gap-1">
                             <span className="text-lg">🔒</span>
-                            <span className="text-xs font-semibold text-gray-600">Indisponível</span>
+                            <span className="text-xs font-semibold text-gray-600">
+                              Indisponível
+                            </span>
                           </div>
                         ) : (
                           // ✅ Disponível
-                          <div className="text-xs font-black text-center" style={{ color: '#10b981' }}>
+                          <div
+                            className="text-xs font-black text-center"
+                            style={{ color: '#10b981' }}
+                          >
                             <div>Clique para</div>
                             <div>agendar</div>
                           </div>
@@ -473,7 +595,10 @@ export default function AgendaMonthView({
                     <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs rounded px-2 py-1.5 pointer-events-none z-50 max-w-xs">
                       {dayAppts.map((apt, idx) => (
                         <div key={idx} className="whitespace-nowrap truncate">
-                          <span className="font-semibold">{apt.scheduled_time ? apt.scheduled_time.substring(0, 5) : 'S/H'}</span> • {apt.patient_name || 'Paciente'}
+                          <span className="font-semibold">
+                            {apt.scheduled_time ? apt.scheduled_time.substring(0, 5) : 'S/H'}
+                          </span>{' '}
+                          • {apt.patient_name || 'Paciente'}
                         </div>
                       ))}
                       <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-2 border-transparent border-t-gray-900" />
@@ -490,23 +615,38 @@ export default function AgendaMonthView({
       <div className="border-t border-gray-200 bg-gray-50 px-6 py-3 text-xs text-gray-600">
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded" style={{ background: '#fafaf9', border: '1px solid #e5e7eb' }}></span>
+            <span
+              className="w-3 h-3 rounded"
+              style={{ background: '#fafaf9', border: '1px solid #e5e7eb' }}
+            ></span>
             <span>Disponível</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded" style={{ background: '#DBEAFE', border: '1px solid #e5e7eb' }}></span>
+            <span
+              className="w-3 h-3 rounded"
+              style={{ background: '#DBEAFE', border: '1px solid #e5e7eb' }}
+            ></span>
             <span>Agendado</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded" style={{ background: '#CFFAFE', border: '1px solid #e5e7eb' }}></span>
+            <span
+              className="w-3 h-3 rounded"
+              style={{ background: '#CFFAFE', border: '1px solid #e5e7eb' }}
+            ></span>
             <span>Confirmado</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded" style={{ background: '#FEF3C7', border: '1px solid #e5e7eb' }}></span>
+            <span
+              className="w-3 h-3 rounded"
+              style={{ background: '#FEF3C7', border: '1px solid #e5e7eb' }}
+            ></span>
             <span>Atendimento</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded" style={{ background: '#f3f3f3', border: '1px solid #e5e7eb' }}></span>
+            <span
+              className="w-3 h-3 rounded"
+              style={{ background: '#f3f3f3', border: '1px solid #e5e7eb' }}
+            ></span>
             <span>Indisponível</span>
           </div>
           <div className="flex items-center gap-2">
@@ -532,4 +672,3 @@ export default function AgendaMonthView({
     </div>
   );
 }
-

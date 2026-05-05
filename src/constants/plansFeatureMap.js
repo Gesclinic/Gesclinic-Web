@@ -242,7 +242,9 @@ export const PLANS_FEATURES = {
  */
 export function hasFeatureAccess(planSlug, featurePath) {
   const plan = PLANS_FEATURES[planSlug];
-  if (!plan) return false;
+  if (!plan) {
+    return false;
+  }
 
   const keys = featurePath.split('.');
   let feature = plan.features;
@@ -270,7 +272,9 @@ export function getPlanFeatures(planSlug) {
  */
 export function getPlanInfo(planSlug) {
   const plan = PLANS_FEATURES[planSlug];
-  if (!plan) return null;
+  if (!plan) {
+    return null;
+  }
 
   return {
     name: plan.name,

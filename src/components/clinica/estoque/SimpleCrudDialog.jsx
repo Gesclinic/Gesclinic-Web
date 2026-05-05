@@ -1,15 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-export default function SimpleCrudDialog({ 
-  open, 
-  onOpenChange, 
-  onSubmit, 
+export default function SimpleCrudDialog({
+  open,
+  onOpenChange,
+  onSubmit,
   initialData = null,
-  entityName = 'Item'
+  entityName = 'Item',
 }) {
   const [formData, setFormData] = useState({ name: '' });
 
@@ -23,7 +29,9 @@ export default function SimpleCrudDialog({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.name.trim()) return;
+    if (!formData.name.trim()) {
+      return;
+    }
     onSubmit(formData);
   };
 
@@ -31,9 +39,7 @@ export default function SimpleCrudDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="app-dialog-shell app-dialog-shell--compact">
         <DialogHeader>
-          <DialogTitle>
-            {initialData ? `Editar ${entityName}` : `Nova ${entityName}`}
-          </DialogTitle>
+          <DialogTitle>{initialData ? `Editar ${entityName}` : `Nova ${entityName}`}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">
@@ -52,9 +58,7 @@ export default function SimpleCrudDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit">
-              {initialData ? 'Salvar' : 'Criar'}
-            </Button>
+            <Button type="submit">{initialData ? 'Salvar' : 'Criar'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

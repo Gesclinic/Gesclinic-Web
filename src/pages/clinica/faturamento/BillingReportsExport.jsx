@@ -1,28 +1,32 @@
-import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Download, FileText, FileSpreadsheet, Loader2 } from "lucide-react";
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
-import * as XLSX from "xlsx";
-import { useToast } from "@/components/ui/use-toast";
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Download, FileText, FileSpreadsheet, Loader2 } from 'lucide-react';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
+import * as XLSX from 'xlsx';
+import { useToast } from '@/components/ui/use-toast';
 
-export default function BillingReportsExport({ reportId, filename = "relatorio_faturamento" }) {
+export default function BillingReportsExport({ reportId, filename = 'relatorio_faturamento' }) {
   const [exporting, setExporting] = useState(null);
   const { toast } = useToast();
 
   const exportPDF = async () => {
     const element = document.getElementById(reportId);
     if (!element) {
-      toast({ title: "Erro", description: "Elemento do relatório não encontrado.", variant: "destructive" });
+      toast({
+        title: 'Erro',
+        description: 'Elemento do relatório não encontrado.',
+        variant: 'destructive',
+      });
       return;
     }
 
-    setExporting("pdf");
+    setExporting('pdf');
     try {
       const canvas = await html2canvas(element, { scale: 2, useCORS: true });
-      const imgData = canvas.toDataURL("image/png");
+      const imgData = canvas.toDataURL('image/png');
 
-      const pdf = new jsPDF("p", "mm", "a4");
+      const pdf = new jsPDF('p', 'mm', 'a4');
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
 
@@ -31,7 +35,7 @@ export default function BillingReportsExport({ reportId, filename = "relatorio_f
       let heightLeft = imgHeight;
       let position = 15;
 
-      pdf.addImage(imgData, "PNG", 10, position, imgWidth, imgHeight);
+      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
       heightLeft -= pageHeight;
 
       while (heightLeft > 0) {
@@ -40,21 +44,23 @@ export default function BillingReportsExport({ reportId, filename = "relatorio_f
         pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
         heightLeft -= pageHeight;
       }
-      
+
       const pageCount = pdf.internal.getNumberOfPages();
-      for(let i = 1; i <= pageCount; i++) {
+      for (let i = 1; i <= pageCount; i++) {
         pdf.setPage(i);
         pdf.setFontSize(8);
-        pdf.text(`Gerado em: ${new Date().toLocaleString("pt-BR")}`, 10, pageHeight - 10);
-        pdf.text("Sistema Gesclinic - Faturamento TISS", pageWidth - 60, pageHeight - 10);
-        pdf.text(`Página ${i} de ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+        pdf.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 10, pageHeight - 10);
+        pdf.text('Sistema Gesclinic - Faturamento TISS', pageWidth - 60, pageHeight - 10);
+        pdf.text(`Página ${i} de ${pageCount}`, pageWidth / 2, pageHeight - 10, {
+          align: 'center',
+        });
       }
 
       pdf.save(`${filename}.pdf`);
-      toast({ title: "Sucesso", description: "Relatório PDF exportado." });
+      toast({ title: 'Sucesso', description: 'Relatório PDF exportado.' });
     } catch (error) {
       console.error(error);
-      toast({ title: "Erro ao gerar PDF", description: error.message, variant: "destructive" });
+      toast({ title: 'Erro ao gerar PDF', description: error.message, variant: 'destructive' });
     } finally {
       setExporting(null);
     }
@@ -62,13 +68,17 @@ export default function BillingReportsExport({ reportId, filename = "relatorio_f
 
   const exportExcel = async () => {
     const reportElement = document.getElementById(reportId);
-    const tables = reportElement ? reportElement.querySelectorAll("table") : [];
+    const tables = reportElement ? reportElement.querySelectorAll('table') : [];
     if (tables.length === 0) {
-      toast({ title: "Aviso", description: "Nenhuma tabela encontrada no relatório para exportar.", variant: "default" });
+      toast({
+        title: 'Aviso',
+        description: 'Nenhuma tabela encontrada no relatório para exportar.',
+        variant: 'default',
+      });
       return;
     }
 
-    setExporting("excel");
+    setExporting('excel');
     try {
       const wb = XLSX.utils.book_new();
       tables.forEach((table, index) => {
@@ -76,10 +86,10 @@ export default function BillingReportsExport({ reportId, filename = "relatorio_f
         XLSX.utils.book_append_sheet(wb, ws, `Tabela ${index + 1}`);
       });
       XLSX.writeFile(wb, `${filename}.xlsx`);
-      toast({ title: "Sucesso", description: "Relatório Excel exportado." });
+      toast({ title: 'Sucesso', description: 'Relatório Excel exportado.' });
     } catch (error) {
       console.error(error);
-      toast({ title: "Erro ao gerar Excel", description: error.message, variant: "destructive" });
+      toast({ title: 'Erro ao gerar Excel', description: error.message, variant: 'destructive' });
     } finally {
       setExporting(null);
     }
@@ -94,7 +104,11 @@ export default function BillingReportsExport({ reportId, filename = "relatorio_f
         size="sm"
         className="flex items-center gap-2"
       >
-        {exporting === 'pdf' ? <Loader2 className="animate-spin w-4 h-4" /> : <FileText className="w-4 h-4" />}
+        {exporting === 'pdf' ? (
+          <Loader2 className="animate-spin w-4 h-4" />
+        ) : (
+          <FileText className="w-4 h-4" />
+        )}
         Exportar PDF
       </Button>
 
@@ -115,4 +129,3 @@ export default function BillingReportsExport({ reportId, filename = "relatorio_f
     </div>
   );
 }
-

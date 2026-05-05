@@ -42,52 +42,52 @@ const TAILWIND_TEXT_MAP = {
  */
 const STATUS_COLORS_EXTENDED = {
   // Booking statuses
-  'scheduled': { background: '#DBEAFE', color: '#174ea6' },                    // 🗓️ Agendado
-  'agendado': { background: '#DBEAFE', color: '#174ea6' },
-  'confirmed_phone': { background: '#CFFAFE', color: '#164E63' },              // ☎️ Confirmado via Telefone
-  'confirmed_whatsapp': { background: '#CFFAFE', color: '#164E63' },           // 💬 Confirmado via WhatsApp
-  'confirmado': { background: '#CFFAFE', color: '#164E63' },
-  'confirmed': { background: '#CFFAFE', color: '#164E63' },                    // ✅ Confirmado
-  'at_reception': { background: '#FEF3C7', color: '#854D0E' },                 // 📍 Na Recepção
-  'na_recepcao': { background: '#FEF3C7', color: '#854D0E' },
-  'at_checkout': { background: '#FFEDD5', color: '#92400E' },                  // 🪟 No Guichê
-  'squeezein': { background: '#FEF3C7', color: '#854D0E' },                    // 👉 Encaixe
-  'awaiting_insurance': { background: '#FFEDD5', color: '#92400E' },           // 🧡 Aguardando Convênio
-  'blocked': { background: '#F3F4F6', color: '#4B5563' },                      // 🔒 Bloqueado
-  
+  scheduled: { background: '#DBEAFE', color: '#174ea6' }, // 🗓️ Agendado
+  agendado: { background: '#DBEAFE', color: '#174ea6' },
+  confirmed_phone: { background: '#CFFAFE', color: '#164E63' }, // ☎️ Confirmado via Telefone
+  confirmed_whatsapp: { background: '#CFFAFE', color: '#164E63' }, // 💬 Confirmado via WhatsApp
+  confirmado: { background: '#CFFAFE', color: '#164E63' },
+  confirmed: { background: '#CFFAFE', color: '#164E63' }, // ✅ Confirmado
+  at_reception: { background: '#FEF3C7', color: '#854D0E' }, // 📍 Na Recepção
+  na_recepcao: { background: '#FEF3C7', color: '#854D0E' },
+  at_checkout: { background: '#FFEDD5', color: '#92400E' }, // 🪟 No Guichê
+  squeezein: { background: '#FEF3C7', color: '#854D0E' }, // 👉 Encaixe
+  awaiting_insurance: { background: '#FFEDD5', color: '#92400E' }, // 🧡 Aguardando Convênio
+  blocked: { background: '#F3F4F6', color: '#4B5563' }, // 🔒 Bloqueado
+
   // Service statuses
-  'awaiting_professional': { background: '#CFFAFE', color: '#164E63' },        // 👨‍⚕️ Aguardando Profissional
-  'aguardando_profissional': { background: '#CFFAFE', color: '#164E63' },
-  'in_service': { background: '#F3E8FF', color: '#6B21A8' },                   // ⏳ Em Atendimento
-  'em_atendimento': { background: '#F3E8FF', color: '#6B21A8' },
-  'attended': { background: '#CCFBF1', color: '#134E4A' },                     // ✔️ Atendido
-  'atendido': { background: '#CCFBF1', color: '#134E4A' },
-  'done': { background: '#CCFBF1', color: '#134E4A' },
-  'no_show': { background: '#FEF3C7', color: '#854D0E' },                      // ❌ Faltou
-  'falta': { background: '#FEF3C7', color: '#854D0E' },
-  'faltou': { background: '#FEF3C7', color: '#854D0E' },
-  'canceled': { background: '#FEE2E2', color: '#B91C1C' },                     // 🚫 Cancelado
-  'cancelado': { background: '#FEE2E2', color: '#B91C1C' },
-  
+  awaiting_professional: { background: '#CFFAFE', color: '#164E63' }, // 👨‍⚕️ Aguardando Profissional
+  aguardando_profissional: { background: '#CFFAFE', color: '#164E63' },
+  in_service: { background: '#F3E8FF', color: '#6B21A8' }, // ⏳ Em Atendimento
+  em_atendimento: { background: '#F3E8FF', color: '#6B21A8' },
+  attended: { background: '#CCFBF1', color: '#134E4A' }, // ✔️ Atendido
+  atendido: { background: '#CCFBF1', color: '#134E4A' },
+  done: { background: '#CCFBF1', color: '#134E4A' },
+  no_show: { background: '#FEF3C7', color: '#854D0E' }, // ❌ Faltou
+  falta: { background: '#FEF3C7', color: '#854D0E' },
+  faltou: { background: '#FEF3C7', color: '#854D0E' },
+  canceled: { background: '#FEE2E2', color: '#B91C1C' }, // 🚫 Cancelado
+  cancelado: { background: '#FEE2E2', color: '#B91C1C' },
+
   // Management statuses
-  'rescheduled': { background: '#FFEDD5', color: '#92400E' },                  // 📅 Remarcado
-  'remarcado': { background: '#FFEDD5', color: '#92400E' },
-  
+  rescheduled: { background: '#FFEDD5', color: '#92400E' }, // 📅 Remarcado
+  remarcado: { background: '#FFEDD5', color: '#92400E' },
+
   // Financial statuses
-  'awaiting_billing': { background: '#E0E7FF', color: '#312E81' },             // 📋 Aguardando Faturamento
-  'billed': { background: '#DCFCE7', color: '#166534' },                       // 📄 Faturado
-  'faturado': { background: '#DCFCE7', color: '#166534' },
-  'denied': { background: '#FEE2E2', color: '#B91C1C' },                       // ❌ Glosado
-  'glosado': { background: '#FEE2E2', color: '#B91C1C' },
-  'paid': { background: '#BBF7D0', color: '#15803D' },                         // 💰 Pago
-  'pago': { background: '#BBF7D0', color: '#15803D' },
-  'resubmitted': { background: '#CFFAFE', color: '#164E63' },                  // 🔄 Reapresentado
-  'reapresentado': { background: '#CFFAFE', color: '#164E63' },
-  'not_billable': { background: '#F3F4F6', color: '#4B5563' },                 // ⚠️ Perda/Não Faturável
-  
+  awaiting_billing: { background: '#E0E7FF', color: '#312E81' }, // 📋 Aguardando Faturamento
+  billed: { background: '#DCFCE7', color: '#166534' }, // 📄 Faturado
+  faturado: { background: '#DCFCE7', color: '#166534' },
+  denied: { background: '#FEE2E2', color: '#B91C1C' }, // ❌ Glosado
+  glosado: { background: '#FEE2E2', color: '#B91C1C' },
+  paid: { background: '#BBF7D0', color: '#15803D' }, // 💰 Pago
+  pago: { background: '#BBF7D0', color: '#15803D' },
+  resubmitted: { background: '#CFFAFE', color: '#164E63' }, // 🔄 Reapresentado
+  reapresentado: { background: '#CFFAFE', color: '#164E63' },
+  not_billable: { background: '#F3F4F6', color: '#4B5563' }, // ⚠️ Perda/Não Faturável
+
   // Compatibilidade
-  'disponivel': { background: '#F3F4F6', color: '#222' },
-  'disponible': { background: '#F3F4F6', color: '#222' },
+  disponivel: { background: '#F3F4F6', color: '#222' },
+  disponible: { background: '#F3F4F6', color: '#222' },
 };
 
 /**
@@ -96,7 +96,9 @@ const STATUS_COLORS_EXTENDED = {
  * @returns {Object} { background, color } - Cores em hex
  */
 export function getStatusStyle(status) {
-  if (!status) return STATUS_COLORS_EXTENDED['disponivel'];
+  if (!status) {
+    return STATUS_COLORS_EXTENDED['disponivel'];
+  }
 
   // Normalizar status: minúsculas, remover acentos, converter underscore
   const normalized = (status || '')

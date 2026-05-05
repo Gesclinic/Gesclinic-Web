@@ -1,33 +1,28 @@
-import React, { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import React, { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
-import { Calendar, User, Clock, FileText } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+} from '@/components/ui/select';
+import { Card, CardContent } from '@/components/ui/card';
+import { Calendar, User, Clock, FileText } from 'lucide-react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 export default function HistoricoAgendamentosModal({ open, onClose }) {
   const [historico, setHistorico] = useState([]);
   const [filtros, setFiltros] = useState({
-    periodo: "30",
-    status: "todos",
-    profissional: "todos"
+    periodo: '30',
+    status: 'todos',
+    profissional: 'todos',
   });
-  const [busca, setBusca] = useState("");
+  const [busca, setBusca] = useState('');
 
   useEffect(() => {
     if (open) {
@@ -48,35 +43,37 @@ export default function HistoricoAgendamentosModal({ open, onClose }) {
 
   const getStatusBadge = (status) => {
     const variants = {
-      realizado: "bg-green-100 text-green-800",
-      cancelado: "bg-red-100 text-red-800", 
-      reagendado: "bg-orange-100 text-orange-800",
-      faltou: "bg-gray-100 text-gray-800"
+      realizado: 'bg-green-100 text-green-800',
+      cancelado: 'bg-red-100 text-red-800',
+      reagendado: 'bg-orange-100 text-orange-800',
+      faltou: 'bg-gray-100 text-gray-800',
     };
-    
+
     const labels = {
-      realizado: "Realizado",
-      cancelado: "Cancelado",
-      reagendado: "Reagendado", 
-      faltou: "Faltou"
+      realizado: 'Realizado',
+      cancelado: 'Cancelado',
+      reagendado: 'Reagendado',
+      faltou: 'Faltou',
     };
 
     return (
-      <Badge variant="secondary" className={variants[status] || "bg-gray-100 text-gray-800"}>
+      <Badge variant="secondary" className={variants[status] || 'bg-gray-100 text-gray-800'}>
         {labels[status] || status}
       </Badge>
     );
   };
 
-  const historicoFiltrado = historico.filter(item => {
-    const matchBusca = !busca || 
+  const historicoFiltrado = historico.filter((item) => {
+    const matchBusca =
+      !busca ||
       item.paciente.toLowerCase().includes(busca.toLowerCase()) ||
       item.profissional.toLowerCase().includes(busca.toLowerCase()) ||
       item.procedimento.toLowerCase().includes(busca.toLowerCase());
-      
-    const matchStatus = filtros.status === "todos" || item.status === filtros.status;
-    const matchProfissional = filtros.profissional === "todos" || item.profissional === filtros.profissional;
-    
+
+    const matchStatus = filtros.status === 'todos' || item.status === filtros.status;
+    const matchProfissional =
+      filtros.profissional === 'todos' || item.profissional === filtros.profissional;
+
     return matchBusca && matchStatus && matchProfissional;
   });
 
@@ -99,8 +96,11 @@ export default function HistoricoAgendamentosModal({ open, onClose }) {
               onChange={(e) => setBusca(e.target.value)}
             />
           </div>
-          
-          <Select value={filtros.periodo} onValueChange={(v) => setFiltros({...filtros, periodo: v})}>
+
+          <Select
+            value={filtros.periodo}
+            onValueChange={(v) => setFiltros({ ...filtros, periodo: v })}
+          >
             <SelectTrigger className="w-[150px]">
               <SelectValue />
             </SelectTrigger>
@@ -112,7 +112,10 @@ export default function HistoricoAgendamentosModal({ open, onClose }) {
             </SelectContent>
           </Select>
 
-          <Select value={filtros.status} onValueChange={(v) => setFiltros({...filtros, status: v})}>
+          <Select
+            value={filtros.status}
+            onValueChange={(v) => setFiltros({ ...filtros, status: v })}
+          >
             <SelectTrigger className="w-[150px]">
               <SelectValue />
             </SelectTrigger>
@@ -125,7 +128,10 @@ export default function HistoricoAgendamentosModal({ open, onClose }) {
             </SelectContent>
           </Select>
 
-          <Select value={filtros.profissional} onValueChange={(v) => setFiltros({...filtros, profissional: v})}>
+          <Select
+            value={filtros.profissional}
+            onValueChange={(v) => setFiltros({ ...filtros, profissional: v })}
+          >
             <SelectTrigger className="w-[180px]">
               <SelectValue />
             </SelectTrigger>
@@ -155,12 +161,12 @@ export default function HistoricoAgendamentosModal({ open, onClose }) {
                         <span className="font-medium">{item.paciente}</span>
                         {getStatusBadge(item.status)}
                       </div>
-                      
+
                       <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
                         <div className="flex items-center gap-2">
                           <Calendar className="w-4 h-4" />
                           <span>
-                            {format(item.data, "dd/MM/yyyy", { locale: ptBR })} às {item.hora}
+                            {format(item.data, 'dd/MM/yyyy', { locale: ptBR })} às {item.hora}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -176,7 +182,7 @@ export default function HistoricoAgendamentosModal({ open, onClose }) {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="flex gap-2">
                       <Button variant="outline" size="sm">
                         Ver Detalhes
@@ -191,7 +197,9 @@ export default function HistoricoAgendamentosModal({ open, onClose }) {
 
         {/* Summary Footer */}
         <div className="border-t pt-4 flex justify-between items-center text-sm text-muted-foreground">
-          <span>Mostrando {historicoFiltrado.length} de {historico.length} registros</span>
+          <span>
+            Mostrando {historicoFiltrado.length} de {historico.length} registros
+          </span>
           <div className="flex gap-4">
             <Button variant="outline" size="sm">
               Exportar Excel

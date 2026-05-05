@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Building, Target, Users } from 'lucide-react';
@@ -8,14 +7,21 @@ const SobrePage = () => {
     <div className="bg-background text-foreground">
       <Helmet>
         <title>Sobre Nós - Gesclinic Web</title>
-        <meta name="description" content="Conheça a missão, visão e os valores da Gesclinic Web, a plataforma de gestão para clínicas modernas." />
+        <meta
+          name="description"
+          content="Conheça a missão, visão e os valores da Gesclinic Web, a plataforma de gestão para clínicas modernas."
+        />
       </Helmet>
 
       <div className="container mx-auto px-4 py-16 md:py-24">
         <div className="text-center max-w-3xl mx-auto">
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tighter mb-4">Nossa História</h1>
+          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tighter mb-4">
+            Nossa História
+          </h1>
           <p className="text-lg md:text-xl text-muted-foreground">
-            Nascemos da necessidade de simplificar a gestão na área da saúde, combinando tecnologia de ponta com uma interface amigável para transformar o dia a dia de clínicas e consultórios.
+            Nascemos da necessidade de simplificar a gestão na área da saúde, combinando tecnologia
+            de ponta com uma interface amigável para transformar o dia a dia de clínicas e
+            consultórios.
           </p>
         </div>
 
@@ -28,7 +34,9 @@ const SobrePage = () => {
             </div>
             <h2 className="text-2xl font-bold mb-2">Nossa Missão</h2>
             <p className="text-muted-foreground">
-              Empoderar profissionais de saúde com ferramentas inteligentes que otimizam a gestão, melhoram a experiência do paciente e impulsionam o crescimento sustentável de suas clínicas.
+              Empoderar profissionais de saúde com ferramentas inteligentes que otimizam a gestão,
+              melhoram a experiência do paciente e impulsionam o crescimento sustentável de suas
+              clínicas.
             </p>
           </div>
 
@@ -40,7 +48,8 @@ const SobrePage = () => {
             </div>
             <h2 className="text-2xl font-bold mb-2">Nossa Visão</h2>
             <p className="text-muted-foreground">
-              Ser a plataforma de gestão clínica líder em inovação e confiança no Brasil, reconhecida por sua excelência em usabilidade, segurança e suporte ao cliente.
+              Ser a plataforma de gestão clínica líder em inovação e confiança no Brasil,
+              reconhecida por sua excelência em usabilidade, segurança e suporte ao cliente.
             </p>
           </div>
 

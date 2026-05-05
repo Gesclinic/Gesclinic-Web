@@ -1,7 +1,7 @@
 /**
  * @fileoverview API para gerenciar Procedimentos CBHPM
  * @module cbhpmApi
- * 
+ *
  * Funcionalidades:
  * - CRUD de procedimentos CBHPM
  * - Listagem com filtros (ativo, tipo_guia, categoria)
@@ -10,8 +10,8 @@
  * - Mapeamento com serviços
  */
 
-import { supabase } from "@/lib/customSupabaseClient";
-import { normalizeCodeCBHPM } from "@/utils/formatters/formatters";
+import { supabase } from '@/lib/customSupabaseClient';
+import { normalizeCodeCBHPM } from '@/utils/formatters/formatters';
 
 /**
  * Lista procedimentos CBHPM da clínica
@@ -24,49 +24,51 @@ import { normalizeCodeCBHPM } from "@/utils/formatters/formatters";
  * @returns {Promise<Array>}
  */
 export async function listCBHPM(clinicId, filters = {}) {
-  if (!clinicId) throw new Error("clinic_id é obrigatório");
+  if (!clinicId) {
+    throw new Error('clinic_id é obrigatório');
+  }
 
-  console.log("🔍 listCBHPM chamado com:");
-  console.log("   clinicId:", clinicId);
-  console.log("   filters:", filters);
+  console.log('🔍 listCBHPM chamado com:');
+  console.log('   clinicId:', clinicId);
+  console.log('   filters:', filters);
 
   // Query base
   let query = supabase
-    .from("cbhpm_procedures")
-    .select("*")
-    .eq("clinic_id", clinicId)
-    .eq("ativo", true);
+    .from('cbhpm_procedures')
+    .select('*')
+    .eq('clinic_id', clinicId)
+    .eq('ativo', true);
 
   // Filtro por tipo de guia
   if (filters.tipo_guia) {
-    query = query.eq("tipo_guia", filters.tipo_guia);
+    query = query.eq('tipo_guia', filters.tipo_guia);
   }
 
   // Filtro por categoria
   if (filters.categoria) {
-    query = query.eq("categoria", filters.categoria);
+    query = query.eq('categoria', filters.categoria);
   }
 
   // Busca por descrição
   if (filters.search) {
     const searchTerm = filters.search.trim();
-    console.log("📝 Adicionando filtro de busca:", searchTerm);
-    query = query.ilike("descricao_completa", `%${searchTerm}%`);
+    console.log('📝 Adicionando filtro de busca:', searchTerm);
+    query = query.ilike('descricao_completa', `%${searchTerm}%`);
   }
 
   // Ordenar
-  query = query.order("codigo_cbhpm", { ascending: true });
+  query = query.order('codigo_cbhpm', { ascending: true });
 
-  console.log("📡 Executando query Supabase...");
+  console.log('📡 Executando query Supabase...');
   const { data, error } = await query;
 
-  console.log("✅ Query finalizada:");
-  console.log("   Row count:", data?.length || 0);
-  console.log("   Error:", error);
-  console.log("   Amostra:", data?.[0]);
+  console.log('✅ Query finalizada:');
+  console.log('   Row count:', data?.length || 0);
+  console.log('   Error:', error);
+  console.log('   Amostra:', data?.[0]);
 
   if (error) {
-    console.error("❌ ERRO NA QUERY:", error.message, error.code);
+    console.error('❌ ERRO NA QUERY:', error.message, error.code);
     throw error;
   }
 
@@ -79,15 +81,19 @@ export async function listCBHPM(clinicId, filters = {}) {
  * @returns {Promise<Object>}
  */
 export async function getCBHPMById(procedureId) {
-  if (!procedureId) throw new Error("procedure_id é obrigatório");
+  if (!procedureId) {
+    throw new Error('procedure_id é obrigatório');
+  }
 
   const { data, error } = await supabase
-    .from("cbhpm_procedures")
-    .select("*")
-    .eq("id", procedureId)
+    .from('cbhpm_procedures')
+    .select('*')
+    .eq('id', procedureId)
     .single();
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
   return data;
 }
 
@@ -99,19 +105,21 @@ export async function getCBHPMById(procedureId) {
  */
 export async function getCBHPMByCode(clinicId, codigoCBHPM) {
   if (!clinicId || !codigoCBHPM) {
-    throw new Error("clinic_id e codigo_cbhpm são obrigatórios");
+    throw new Error('clinic_id e codigo_cbhpm são obrigatórios');
   }
 
   const normalized = normalizeCodeCBHPM(codigoCBHPM);
 
   const { data, error } = await supabase
-    .from("cbhpm_procedures")
-    .select("*")
-    .eq("clinic_id", clinicId)
-    .eq("codigo_cbhpm", normalized)
+    .from('cbhpm_procedures')
+    .select('*')
+    .eq('clinic_id', clinicId)
+    .eq('codigo_cbhpm', normalized)
     .single();
 
-  if (error && error.code !== "PGRST116") throw error; // PGRST116 = no rows found
+  if (error && error.code !== 'PGRST116') {
+    throw error;
+  } // PGRST116 = no rows found
   return data || null;
 }
 
@@ -123,7 +131,7 @@ export async function getCBHPMByCode(clinicId, codigoCBHPM) {
  */
 export async function createCBHPM(clinicId, procedureData) {
   if (!clinicId || !procedureData.codigo_cbhpm || !procedureData.descricao_completa) {
-    throw new Error("clinic_id, codigo_cbhpm e descricao_completa são obrigatórios");
+    throw new Error('clinic_id, codigo_cbhpm e descricao_completa são obrigatórios');
   }
 
   // Normalizar código CBHPM
@@ -136,7 +144,7 @@ export async function createCBHPM(clinicId, procedureData) {
   }
 
   const { data, error } = await supabase
-    .from("cbhpm_procedures")
+    .from('cbhpm_procedures')
     .insert([
       {
         clinic_id: clinicId,
@@ -168,7 +176,9 @@ export async function createCBHPM(clinicId, procedureData) {
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
   return data;
 }
 
@@ -179,7 +189,9 @@ export async function createCBHPM(clinicId, procedureData) {
  * @returns {Promise<Object>}
  */
 export async function updateCBHPM(procedureId, procedureData) {
-  if (!procedureId) throw new Error("procedure_id é obrigatório");
+  if (!procedureId) {
+    throw new Error('procedure_id é obrigatório');
+  }
 
   const updateData = {
     ...procedureData,
@@ -206,13 +218,19 @@ export async function updateCBHPM(procedureId, procedureData) {
   };
 
   const { data, error } = await supabase
-    .from("cbhpm_procedures")
+    .from('cbhpm_procedures')
     .update(updateData)
-    .eq("id", procedureId)
-    .select()
-    .single();
+    .eq('id', procedureId)
+    .select();
 
-  if (error) throw error;
+  if (!data || data.length === 0) {
+    throw new Error('Record not found');
+  }
+  return data[0];
+
+  if (error) {
+    throw error;
+  }
   return data;
 }
 
@@ -222,7 +240,9 @@ export async function updateCBHPM(procedureId, procedureData) {
  * @returns {Promise<Object>}
  */
 export async function deleteCBHPM(procedureId) {
-  if (!procedureId) throw new Error("procedure_id é obrigatório");
+  if (!procedureId) {
+    throw new Error('procedure_id é obrigatório');
+  }
 
   return updateCBHPM(procedureId, { ativo: false });
 }
@@ -233,7 +253,9 @@ export async function deleteCBHPM(procedureId) {
  * @returns {Promise<Object>}
  */
 export async function restoreCBHPM(procedureId) {
-  if (!procedureId) throw new Error("procedure_id é obrigatório");
+  if (!procedureId) {
+    throw new Error('procedure_id é obrigatório');
+  }
 
   return updateCBHPM(procedureId, { ativo: true });
 }
@@ -247,16 +269,16 @@ export function validateCBHPMCode(codigo) {
   const errors = [];
 
   if (!codigo) {
-    errors.push("Código CBHPM é obrigatório");
+    errors.push('Código CBHPM é obrigatório');
   }
 
   // CBHPM formato: X.XX.XX.XX-X (1.01.01.01-2) ou 10 dígitos (1010101012)
   const formatoValido = /^(\d{1,2}\.\d{2}\.\d{2}\.\d{2}-\d|\d{10})$/.test(
-    codigo?.toString().trim() || ""
+    codigo?.toString().trim() || '',
   );
 
   if (codigo && !formatoValido) {
-    errors.push("Código CBHPM inválido. Use formato: 1.01.01.01-2 ou 1010101012");
+    errors.push('Código CBHPM inválido. Use formato: 1.01.01.01-2 ou 1010101012');
   }
 
   return {
@@ -271,20 +293,22 @@ export function validateCBHPMCode(codigo) {
  * @returns {Promise<Array>}
  */
 export async function listCBHPMCategories(clinicId) {
-  if (!clinicId) throw new Error("clinic_id é obrigatório");
+  if (!clinicId) {
+    throw new Error('clinic_id é obrigatório');
+  }
 
   const { data, error } = await supabase
-    .from("cbhpm_procedures")
-    .select("categoria")
-    .eq("clinic_id", clinicId)
-    .eq("ativo", true)
-    .order("categoria", { ascending: true })
+    .from('cbhpm_procedures')
+    .select('categoria')
+    .eq('clinic_id', clinicId)
+    .eq('ativo', true)
+    .order('categoria', { ascending: true })
     .distinct();
 
-  if (error) throw error;
-  return (data || [])
-    .map((d) => d.categoria)
-    .filter((cat) => cat !== null && cat !== "");
+  if (error) {
+    throw error;
+  }
+  return (data || []).map((d) => d.categoria).filter((cat) => cat !== null && cat !== '');
 }
 
 /**
@@ -293,20 +317,22 @@ export async function listCBHPMCategories(clinicId) {
  * @returns {Promise<Array>}
  */
 export async function listCBHPMGuiaTypes(clinicId) {
-  if (!clinicId) throw new Error("clinic_id é obrigatório");
+  if (!clinicId) {
+    throw new Error('clinic_id é obrigatório');
+  }
 
   const { data, error } = await supabase
-    .from("cbhpm_procedures")
-    .select("tipo_guia")
-    .eq("clinic_id", clinicId)
-    .eq("ativo", true)
-    .order("tipo_guia", { ascending: true })
+    .from('cbhpm_procedures')
+    .select('tipo_guia')
+    .eq('clinic_id', clinicId)
+    .eq('ativo', true)
+    .order('tipo_guia', { ascending: true })
     .distinct();
 
-  if (error) throw error;
-  return (data || [])
-    .map((d) => d.tipo_guia)
-    .filter((type) => type !== null && type !== "");
+  if (error) {
+    throw error;
+  }
+  return (data || []).map((d) => d.tipo_guia).filter((type) => type !== null && type !== '');
 }
 
 /**
@@ -319,11 +345,11 @@ export async function listCBHPMGuiaTypes(clinicId) {
  */
 export async function mapCBHPMToService(cbhpmId, serviceId, clinicId, options = {}) {
   if (!cbhpmId || !serviceId || !clinicId) {
-    throw new Error("cbhpmId, serviceId e clinicId são obrigatórios");
+    throw new Error('cbhpmId, serviceId e clinicId são obrigatórios');
   }
 
   const { data, error } = await supabase
-    .from("cbhpm_service_mapping")
+    .from('cbhpm_service_mapping')
     .insert([
       {
         cbhpm_id: cbhpmId,
@@ -334,13 +360,17 @@ export async function mapCBHPMToService(cbhpmId, serviceId, clinicId, options = 
         valor_especifico: options.valor_especifico ? parseFloat(options.valor_especifico) : null,
       },
     ])
-    .select()
-    .single();
+    .select();
+
+  if (!data || data.length === 0) {
+    throw new Error('Record not found');
+  }
+  return data[0];
 
   if (error) {
-    if (error.code === "23505") {
+    if (error.code === '23505') {
       // Unique constraint violation
-      throw new Error("Este mapeamento já existe");
+      throw new Error('Este mapeamento já existe');
     }
     throw error;
   }
@@ -353,14 +383,15 @@ export async function mapCBHPMToService(cbhpmId, serviceId, clinicId, options = 
  * @returns {Promise<void>}
  */
 export async function unmapCBHPMFromService(mappingId) {
-  if (!mappingId) throw new Error("mapping_id é obrigatório");
+  if (!mappingId) {
+    throw new Error('mapping_id é obrigatório');
+  }
 
-  const { error } = await supabase
-    .from("cbhpm_service_mapping")
-    .delete()
-    .eq("id", mappingId);
+  const { error } = await supabase.from('cbhpm_service_mapping').delete().eq('id', mappingId);
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 }
 
 /**
@@ -369,10 +400,12 @@ export async function unmapCBHPMFromService(mappingId) {
  * @returns {Promise<Array>}
  */
 export async function listServicesForCBHPM(cbhpmId) {
-  if (!cbhpmId) throw new Error("cbhpm_id é obrigatório");
+  if (!cbhpmId) {
+    throw new Error('cbhpm_id é obrigatório');
+  }
 
   const { data, error } = await supabase
-    .from("cbhpm_service_mapping")
+    .from('cbhpm_service_mapping')
     .select(
       `
       id,
@@ -381,11 +414,13 @@ export async function listServicesForCBHPM(cbhpmId) {
       valor_especifico,
       service_id,
       services (id, name, base_value)
-    `
+    `,
     )
-    .eq("cbhpm_id", cbhpmId);
+    .eq('cbhpm_id', cbhpmId);
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
   return data || [];
 }
 
@@ -396,7 +431,9 @@ export async function listServicesForCBHPM(cbhpmId) {
  * @returns {Promise<number>}
  */
 export async function getEffectivePrice(cbhpmId, serviceId) {
-  if (!cbhpmId) throw new Error("cbhpm_id é obrigatório");
+  if (!cbhpmId) {
+    throw new Error('cbhpm_id é obrigatório');
+  }
 
   // Se não tem service, retorna valor base do CBHPM
   if (!serviceId) {
@@ -406,11 +443,15 @@ export async function getEffectivePrice(cbhpmId, serviceId) {
 
   // Buscar mapeamento
   const { data: mapping } = await supabase
-    .from("cbhpm_service_mapping")
-    .select("sobrescreve_valor, valor_especifico")
-    .eq("cbhpm_id", cbhpmId)
-    .eq("service_id", serviceId)
-    .single();
+    .from('cbhpm_service_mapping')
+    .select('sobrescreve_valor, valor_especifico')
+    .eq('cbhpm_id', cbhpmId)
+    .eq('service_id', serviceId);
+
+  if (!data || data.length === 0) {
+    throw new Error('Record not found');
+  }
+  return data[0];
 
   if (mapping && mapping.sobrescreve_valor && mapping.valor_especifico) {
     return mapping.valor_especifico;

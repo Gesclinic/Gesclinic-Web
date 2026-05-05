@@ -1,22 +1,22 @@
 /**
  * useAppointmentPermissions.js
- * 
+ *
  * 🔐 Hook de Permissões para Agendamentos
- * 
+ *
  * Valida e controla o acesso a ações específicas
  * baseado no perfil do usuário e no status do agendamento.
- * 
+ *
  * Uso:
  * const { canRelease, canStartCare, isActionAllowed } = useAppointmentPermissions();
  */
 
-import { useAuth } from "@/contexts/SupabaseAuthContext";
+import { useAuth } from '@/contexts/SupabaseAuthContext';
 import {
   APPOINTMENT_STATUS,
   ROLE_PERMISSIONS,
   canPerformAction,
   getValidStatusTransitions,
-} from "@/lib/appointmentStatusEnums";
+} from '@/lib/appointmentStatusEnums';
 
 export function useAppointmentPermissions() {
   const { currentRole, user } = useAuth();
@@ -27,16 +27,16 @@ export function useAppointmentPermissions() {
 
   const permissions = ROLE_PERMISSIONS[currentRole?.toLowerCase()] ||
     ROLE_PERMISSIONS.reception || {
-      canConfirmAppointment: false,
-      canMarkArrival: false,
-      canMarkPending: false,
-      canProcessPayment: false,
-      canReleaseForCare: false,
-      canStartCare: false,
-      canFinishCare: false,
-      canViewFinance: false,
-      canEditAppointment: false,
-    };
+    canConfirmAppointment: false,
+    canMarkArrival: false,
+    canMarkPending: false,
+    canProcessPayment: false,
+    canReleaseForCare: false,
+    canStartCare: false,
+    canFinishCare: false,
+    canViewFinance: false,
+    canEditAppointment: false,
+  };
 
   // ============================================
   // 2️⃣ FUNÇÕES DE VALIDAÇÃO
@@ -73,11 +73,7 @@ export function useAppointmentPermissions() {
   /**
    * Verifica se a transição de status é válida
    */
-  const isStatusTransitionValid = (
-    currentStatus,
-    nextStatus,
-    actionType = null
-  ) => {
+  const isStatusTransitionValid = (currentStatus, nextStatus, actionType = null) => {
     const validTransitions = getValidStatusTransitions(currentStatus);
 
     if (!validTransitions.includes(nextStatus)) {
@@ -85,26 +81,20 @@ export function useAppointmentPermissions() {
     }
 
     // Validações específicas por perfil
-    if (currentRole?.toLowerCase() === "professional") {
+    if (currentRole?.toLowerCase() === 'professional') {
       // Profissional só pode fazer transições EM_ATENDIMENTO → FINALIZADO
       if (
-        ![
-          APPOINTMENT_STATUS.EM_ATENDIMENTO,
-          APPOINTMENT_STATUS.LIBERADO_PARA_ATENDIMENTO,
-        ].includes(currentStatus)
+        ![APPOINTMENT_STATUS.EM_ATENDIMENTO, APPOINTMENT_STATUS.LIBERADO_PARA_ATENDIMENTO].includes(
+          currentStatus,
+        )
       ) {
         return false;
       }
     }
 
-    if (currentRole?.toLowerCase() === "reception") {
+    if (currentRole?.toLowerCase() === 'reception') {
       // Recepção não pode fazer certas transições
-      if (
-        [
-          APPOINTMENT_STATUS.EM_ATENDIMENTO,
-          APPOINTMENT_STATUS.FINALIZADO,
-        ].includes(nextStatus)
-      ) {
+      if ([APPOINTMENT_STATUS.EM_ATENDIMENTO, APPOINTMENT_STATUS.FINALIZADO].includes(nextStatus)) {
         return false;
       }
     }
@@ -140,7 +130,7 @@ export function useAppointmentPermissions() {
    * Valida se o profissional é o responsável (se necessário)
    */
   const isProfessionalAuthorized = (appointment) => {
-    if (currentRole?.toLowerCase() !== "professional") {
+    if (currentRole?.toLowerCase() !== 'professional') {
       return true; // Recepção e Gestor não precisam dessa validação
     }
 
@@ -168,36 +158,30 @@ export function useAppointmentPermissions() {
 
     // Shortcuts (ações comuns)
     canConfirmAppointment: (apt = null) =>
-      canPerformActionForAppointment("canConfirmAppointment", apt),
-    canMarkArrival: (apt = null) =>
-      canPerformActionForAppointment("canMarkArrival", apt),
-    canMarkPending: (apt = null) =>
-      canPerformActionForAppointment("canMarkPending", apt),
-    canProcessPayment: (apt = null) =>
-      canPerformActionForAppointment("canProcessPayment", apt),
-    canReleaseForCare: (apt = null) =>
-      canPerformActionForAppointment("canReleaseForCare", apt),
+      canPerformActionForAppointment('canConfirmAppointment', apt),
+    canMarkArrival: (apt = null) => canPerformActionForAppointment('canMarkArrival', apt),
+    canMarkPending: (apt = null) => canPerformActionForAppointment('canMarkPending', apt),
+    canProcessPayment: (apt = null) => canPerformActionForAppointment('canProcessPayment', apt),
+    canReleaseForCare: (apt = null) => canPerformActionForAppointment('canReleaseForCare', apt),
     canStartCare: (apt = null) => {
-      if (!canPerformActionForAppointment("canStartCare", apt)) {
+      if (!canPerformActionForAppointment('canStartCare', apt)) {
         return false;
       }
       return isProfessionalAuthorized(apt);
     },
     canFinishCare: (apt = null) => {
-      if (!canPerformActionForAppointment("canFinishCare", apt)) {
+      if (!canPerformActionForAppointment('canFinishCare', apt)) {
         return false;
       }
       return isProfessionalAuthorized(apt);
     },
-    canViewFinance: (apt = null) =>
-      canPerformActionForAppointment("canViewFinance", apt),
-    canEditAppointment: (apt = null) =>
-      canPerformActionForAppointment("canEditAppointment", apt),
+    canViewFinance: (apt = null) => canPerformActionForAppointment('canViewFinance', apt),
+    canEditAppointment: (apt = null) => canPerformActionForAppointment('canEditAppointment', apt),
 
     // Role/Profissional
     currentRole,
-    isReceptionist: currentRole?.toLowerCase() === "reception",
-    isProfessional: currentRole?.toLowerCase() === "professional",
-    isManager: ["manager", "admin"].includes(currentRole?.toLowerCase()),
+    isReceptionist: currentRole?.toLowerCase() === 'reception',
+    isProfessional: currentRole?.toLowerCase() === 'professional',
+    isManager: ['manager', 'admin'].includes(currentRole?.toLowerCase()),
   };
 }

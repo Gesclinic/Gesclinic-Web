@@ -1,20 +1,32 @@
-import React, { useEffect, useState } from "react";
-import { useClinicContext } from "@/contexts/ClinicContext";
-import { useToast } from "@/components/ui/use-toast";
+import React, { useEffect, useState } from 'react';
+import { useClinicContext } from '@/contexts/ClinicContext';
+import { useToast } from '@/components/ui/use-toast';
 import {
   accountTypeColors,
   accountTypeBgColors,
   accountTypeLabels,
   getAccountTypeIcon,
-  financialAccountsApi
-} from "@/lib/financialAccountsApi";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronDown, Plus, Edit2, Trash2, Save, X, AlertTriangle } from "lucide-react";
+  financialAccountsApi,
+} from '@/lib/financialAccountsApi';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { ChevronDown, Plus, Edit2, Trash2, Save, X, AlertTriangle } from 'lucide-react';
 
 export default function PlanoDeContas() {
   const { clinic } = useClinicContext();
@@ -29,9 +41,9 @@ export default function PlanoDeContas() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
   const [newAccountData, setNewAccountData] = useState({
-    name: "",
-    type: "despesa",
-    parent_id: null
+    name: '',
+    type: 'despesa',
+    parent_id: null,
   });
 
   useEffect(() => {
@@ -46,11 +58,11 @@ export default function PlanoDeContas() {
       const data = await financialAccountsApi.listAccounts(clinicId);
       setAccounts(data || []);
     } catch (error) {
-      console.error("Erro ao carregar contas:", error);
+      console.error('Erro ao carregar contas:', error);
       toast({
-        title: "Erro",
-        description: "Não foi possível carregar o plano de contas",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Não foi possível carregar o plano de contas',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -58,18 +70,18 @@ export default function PlanoDeContas() {
   };
 
   const toggleExpand = (accountId) => {
-    setExpandedAccounts(prev => ({
+    setExpandedAccounts((prev) => ({
       ...prev,
-      [accountId]: !prev[accountId]
+      [accountId]: !prev[accountId],
     }));
   };
 
   const handleCreateAccount = async () => {
     if (!newAccountData.name.trim()) {
       toast({
-        title: "Erro",
-        description: "Digite um nome para a conta",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Digite um nome para a conta',
+        variant: 'destructive',
       });
       return;
     }
@@ -79,21 +91,21 @@ export default function PlanoDeContas() {
         clinicId,
         newAccountData.name,
         newAccountData.type,
-        newAccountData.parent_id
+        newAccountData.parent_id,
       );
       toast({
-        title: "Sucesso",
-        description: "Conta criada com sucesso"
+        title: 'Sucesso',
+        description: 'Conta criada com sucesso',
       });
       setShowCreateModal(false);
-      setNewAccountData({ name: "", type: "despesa", parent_id: null });
+      setNewAccountData({ name: '', type: 'despesa', parent_id: null });
       loadAccounts();
     } catch (error) {
-      console.error("Erro ao criar conta:", error);
+      console.error('Erro ao criar conta:', error);
       toast({
-        title: "Erro",
-        description: "Não foi possível criar a conta",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Não foi possível criar a conta',
+        variant: 'destructive',
       });
     }
   };
@@ -102,18 +114,18 @@ export default function PlanoDeContas() {
     try {
       await financialAccountsApi.updateAccount(accountId, editingData);
       toast({
-        title: "Sucesso",
-        description: "Conta atualizada com sucesso"
+        title: 'Sucesso',
+        description: 'Conta atualizada com sucesso',
       });
       setEditingId(null);
       setEditingData({});
       loadAccounts();
     } catch (error) {
-      console.error("Erro ao atualizar conta:", error);
+      console.error('Erro ao atualizar conta:', error);
       toast({
-        title: "Erro",
-        description: "Não foi possível atualizar a conta",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Não foi possível atualizar a conta',
+        variant: 'destructive',
       });
     }
   };
@@ -122,23 +134,23 @@ export default function PlanoDeContas() {
     try {
       await financialAccountsApi.deleteAccount(accountId);
       toast({
-        title: "Sucesso",
-        description: "Conta deletada com sucesso"
+        title: 'Sucesso',
+        description: 'Conta deletada com sucesso',
       });
       setShowDeleteConfirm(null);
       loadAccounts();
     } catch (error) {
-      console.error("Erro ao deletar conta:", error);
+      console.error('Erro ao deletar conta:', error);
       toast({
-        title: "Erro",
-        description: "Não foi possível deletar a conta",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Não foi possível deletar a conta',
+        variant: 'destructive',
       });
     }
   };
 
   const getChildAccounts = (parentId) => {
-    return accounts.filter(a => a.parent_id === parentId);
+    return accounts.filter((a) => a.parent_id === parentId);
   };
 
   const startEditingAccount = (account) => {
@@ -161,7 +173,7 @@ export default function PlanoDeContas() {
           }`}
           style={{
             paddingLeft: `${paddingLeft}px`,
-            borderLeftColor: accountTypeColors[account.type]?.split(' ')[0] || '#3b82f6'
+            borderLeftColor: accountTypeColors[account.type]?.split(' ')[0] || '#3b82f6',
           }}
         >
           {/* Expand Button */}
@@ -171,9 +183,7 @@ export default function PlanoDeContas() {
               className="text-slate-500 hover:text-slate-700 dark:text-slate-400 transition flex-shrink-0 p-1 hover:bg-white/50 dark:hover:bg-slate-700 rounded"
             >
               <ChevronDown
-                className={`w-5 h-5 transition-transform ${
-                  isExpanded ? "rotate-0" : "-rotate-90"
-                }`}
+                className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-0' : '-rotate-90'}`}
               />
             </button>
           ) : (
@@ -181,9 +191,7 @@ export default function PlanoDeContas() {
           )}
 
           {/* Icon */}
-          <span className="text-lg flex-shrink-0">
-            {getAccountTypeIcon(account.type)}
-          </span>
+          <span className="text-lg flex-shrink-0">{getAccountTypeIcon(account.type)}</span>
 
           {/* Name / Edit Input */}
           {isEditing ? (
@@ -219,7 +227,9 @@ export default function PlanoDeContas() {
                 <span className="font-medium text-slate-900 dark:text-slate-100">
                   {account.name}
                 </span>
-                <span className={`text-xs font-bold px-2 py-1 rounded ${accountTypeColors[account.type]} bg-white/30 dark:bg-black/20`}>
+                <span
+                  className={`text-xs font-bold px-2 py-1 rounded ${accountTypeColors[account.type]} bg-white/30 dark:bg-black/20`}
+                >
                   {accountTypeLabels[account.type]}
                 </span>
               </div>
@@ -257,7 +267,7 @@ export default function PlanoDeContas() {
         {/* Children */}
         {hasChildren && isExpanded && (
           <div className="space-y-0 mt-1">
-            {children.map(child => renderAccount(child, level + 1))}
+            {children.map((child) => renderAccount(child, level + 1))}
           </div>
         )}
 
@@ -293,14 +303,14 @@ export default function PlanoDeContas() {
     );
   };
 
-  const rootAccounts = accounts.filter(a => a.level === 1);
+  const rootAccounts = accounts.filter((a) => a.level === 1);
   const statistics = {
-    receita: accounts.filter(a => a.type === "receita").length,
-    deducao: accounts.filter(a => a.type === "deducao").length,
-    custo: accounts.filter(a => a.type === "custo").length,
-    despesa: accounts.filter(a => a.type === "despesa").length,
-    investimento: accounts.filter(a => a.type === "investimento").length,
-    ajuste: accounts.filter(a => a.type === "ajuste").length
+    receita: accounts.filter((a) => a.type === 'receita').length,
+    deducao: accounts.filter((a) => a.type === 'deducao').length,
+    custo: accounts.filter((a) => a.type === 'custo').length,
+    despesa: accounts.filter((a) => a.type === 'despesa').length,
+    investimento: accounts.filter((a) => a.type === 'investimento').length,
+    ajuste: accounts.filter((a) => a.type === 'ajuste').length,
   };
 
   return (
@@ -315,7 +325,7 @@ export default function PlanoDeContas() {
             Gestão hierárquica de receitas, custos, despesas e investimentos
           </p>
         </div>
-        <Button 
+        <Button
           onClick={() => setShowCreateModal(true)}
           className="gap-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg"
         >
@@ -327,23 +337,24 @@ export default function PlanoDeContas() {
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
         {[
-          { type: "receita", icon: "💰", label: "Receitas" },
-          { type: "deducao", icon: "📉", label: "Deduções" },
-          { type: "custo", icon: "🔧", label: "Custos" },
-          { type: "despesa", icon: "💸", label: "Despesas" },
-          { type: "investimento", icon: "📈", label: "Investimentos" },
-          { type: "ajuste", icon: "⚙️", label: "Ajustes" }
+          { type: 'receita', icon: '💰', label: 'Receitas' },
+          { type: 'deducao', icon: '📉', label: 'Deduções' },
+          { type: 'custo', icon: '🔧', label: 'Custos' },
+          { type: 'despesa', icon: '💸', label: 'Despesas' },
+          { type: 'investimento', icon: '📈', label: 'Investimentos' },
+          { type: 'ajuste', icon: '⚙️', label: 'Ajustes' },
         ].map(({ type, icon, label }) => (
-          <Card key={type} className={`border-0 shadow-sm hover:shadow-md transition ${accountTypeBgColors[type]}`}>
+          <Card
+            key={type}
+            className={`border-0 shadow-sm hover:shadow-md transition ${accountTypeBgColors[type]}`}
+          >
             <CardContent className="pt-4">
               <div className="text-center">
                 <div className="text-2xl mb-1">{icon}</div>
                 <div className={`text-2xl font-bold ${accountTypeColors[type]}`}>
                   {statistics[type]}
                 </div>
-                <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                  {label}
-                </div>
+                <div className="text-xs text-slate-600 dark:text-slate-400 mt-1">{label}</div>
               </div>
             </CardContent>
           </Card>
@@ -373,7 +384,7 @@ export default function PlanoDeContas() {
               <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
                 Crie a primeira conta para começar a organizar seu plano de contas
               </p>
-              <Button 
+              <Button
                 onClick={() => setShowCreateModal(true)}
                 className="gap-2 bg-blue-600 hover:bg-blue-700"
               >
@@ -383,7 +394,7 @@ export default function PlanoDeContas() {
             </div>
           ) : (
             <div className="space-y-1 max-h-[700px] overflow-y-auto pr-2">
-              {rootAccounts.map(account => renderAccount(account))}
+              {rootAccounts.map((account) => renderAccount(account))}
             </div>
           )}
         </CardContent>
@@ -395,7 +406,7 @@ export default function PlanoDeContas() {
           <DialogHeader>
             <DialogTitle>Criar Nova Conta</DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div>
               <Label htmlFor="account-name">Nome da Conta *</Label>
@@ -430,15 +441,20 @@ export default function PlanoDeContas() {
             <div>
               <Label htmlFor="account-parent">Conta Pai (opcional)</Label>
               <Select
-                value={newAccountData.parent_id || "none"}
-                onValueChange={(value) => setNewAccountData({ ...newAccountData, parent_id: value === "none" ? null : value })}
+                value={newAccountData.parent_id || 'none'}
+                onValueChange={(value) =>
+                  setNewAccountData({
+                    ...newAccountData,
+                    parent_id: value === 'none' ? null : value,
+                  })
+                }
               >
                 <SelectTrigger id="account-parent" className="mt-2">
                   <SelectValue placeholder="Selecionar conta pai..." />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Nenhuma (Raiz)</SelectItem>
-                  {accounts.map(account => (
+                  {accounts.map((account) => (
                     <SelectItem key={account.id} value={account.id}>
                       {getAccountTypeIcon(account.type)} {account.name}
                     </SelectItem>
@@ -449,16 +465,10 @@ export default function PlanoDeContas() {
           </div>
 
           <DialogFooter className="pt-4">
-            <Button
-              variant="outline"
-              onClick={() => setShowCreateModal(false)}
-            >
+            <Button variant="outline" onClick={() => setShowCreateModal(false)}>
               Cancelar
             </Button>
-            <Button
-              onClick={handleCreateAccount}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
+            <Button onClick={handleCreateAccount} className="bg-blue-600 hover:bg-blue-700">
               Criar Conta
             </Button>
           </DialogFooter>

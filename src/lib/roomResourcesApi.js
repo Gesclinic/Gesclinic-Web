@@ -1,4 +1,4 @@
-import { customSupabaseClient } from "./customSupabaseClient";
+import { customSupabaseClient } from './customSupabaseClient';
 
 /**
  * Room Resources API
@@ -11,14 +11,16 @@ import { customSupabaseClient } from "./customSupabaseClient";
 export async function getRoomResources(roomId) {
   try {
     const { data, error } = await customSupabaseClient
-      .from("resources")
-      .select("*")
-      .eq("room_id", roomId);
+      .from('resources')
+      .select('*')
+      .eq('room_id', roomId);
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data || [];
   } catch (error) {
-    console.error("Error fetching room resources:", error);
+    console.error('Error fetching room resources:', error);
     throw error;
   }
 }
@@ -29,7 +31,7 @@ export async function getRoomResources(roomId) {
 export async function getResourcesByClinic(clinicId) {
   try {
     const { data, error } = await customSupabaseClient
-      .from("resources")
+      .from('resources')
       .select(
         `
         id,
@@ -39,14 +41,16 @@ export async function getResourcesByClinic(clinicId) {
         quantity,
         active,
         rooms:room_id (id, name)
-      `
+      `,
       )
-      .eq("clinic_id", clinicId);
+      .eq('clinic_id', clinicId);
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data || [];
   } catch (error) {
-    console.error("Error fetching resources by clinic:", error);
+    console.error('Error fetching resources by clinic:', error);
     throw error;
   }
 }
@@ -57,7 +61,7 @@ export async function getResourcesByClinic(clinicId) {
 export async function createRoomResource(clinicId, data) {
   try {
     const { data: result, error } = await customSupabaseClient
-      .from("resources")
+      .from('resources')
       .insert([
         {
           clinic_id: clinicId,
@@ -70,10 +74,12 @@ export async function createRoomResource(clinicId, data) {
       ])
       .select();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return result?.[0];
   } catch (error) {
-    console.error("Error creating room resource:", error);
+    console.error('Error creating room resource:', error);
     throw error;
   }
 }
@@ -84,20 +90,22 @@ export async function createRoomResource(clinicId, data) {
 export async function updateRoomResource(id, data) {
   try {
     const { data: result, error } = await customSupabaseClient
-      .from("resources")
+      .from('resources')
       .update({
         name: data.name,
         type: data.type,
         quantity: data.quantity,
         active: data.active,
       })
-      .eq("id", id)
+      .eq('id', id)
       .select();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return result?.[0];
   } catch (error) {
-    console.error("Error updating room resource:", error);
+    console.error('Error updating room resource:', error);
     throw error;
   }
 }
@@ -107,15 +115,14 @@ export async function updateRoomResource(id, data) {
  */
 export async function deleteRoomResource(id) {
   try {
-    const { error } = await customSupabaseClient
-      .from("resources")
-      .delete()
-      .eq("id", id);
+    const { error } = await customSupabaseClient.from('resources').delete().eq('id', id);
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return true;
   } catch (error) {
-    console.error("Error deleting room resource:", error);
+    console.error('Error deleting room resource:', error);
     throw error;
   }
 }
@@ -126,15 +133,17 @@ export async function deleteRoomResource(id) {
 export async function getResourcesByRoomAndClinic(roomId, clinicId) {
   try {
     const { data, error } = await customSupabaseClient
-      .from("resources")
-      .select("*")
-      .eq("room_id", roomId)
-      .eq("clinic_id", clinicId);
+      .from('resources')
+      .select('*')
+      .eq('room_id', roomId)
+      .eq('clinic_id', clinicId);
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data || [];
   } catch (error) {
-    console.error("Error fetching resources by room and clinic:", error);
+    console.error('Error fetching resources by room and clinic:', error);
     throw error;
   }
 }

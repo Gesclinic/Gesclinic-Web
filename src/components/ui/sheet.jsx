@@ -1,12 +1,12 @@
-import * as React from "react"
-import { cn } from "@/lib/utils"
+import * as React from 'react';
+import { cn } from '@/lib/utils';
 
 export function Sheet({ children, open, onOpenChange }) {
   return (
     <div
       className={cn(
-        "fixed inset-0 z-50 transition-all",
-        open ? "pointer-events-auto" : "pointer-events-none"
+        'fixed inset-0 z-50 transition-all',
+        open ? 'pointer-events-auto' : 'pointer-events-none',
       )}
       onClick={() => onOpenChange(false)}
     >
@@ -15,13 +15,13 @@ export function Sheet({ children, open, onOpenChange }) {
   );
 }
 
-export function SheetContent({ side = "right", open, onOpenChange, children }) {
+export function SheetContent({ side = 'right', open, onOpenChange, children }) {
   return (
     <div
       className={cn(
-        "fixed z-50 bg-white shadow-xl transition-transform duration-300 p-6",
-        side === "right" && "top-0 right-0 h-full w-[380px]",
-        open ? "translate-x-0" : "translate-x-full"
+        'fixed z-50 bg-white shadow-xl transition-transform duration-300 p-6',
+        side === 'right' && 'top-0 right-0 h-full w-[380px]',
+        open ? 'translate-x-0' : 'translate-x-full',
       )}
       onClick={(e) => e.stopPropagation()}
     >
@@ -43,5 +43,7 @@ export function SheetDescription({ children }) {
 }
 
 export function SheetFooter({ children, className }) {
-  return <div className={cn("flex items-center justify-end gap-2 pt-4", className)}>{children}</div>;
+  return (
+    <div className={cn('flex items-center justify-end gap-2 pt-4', className)}>{children}</div>
+  );
 }

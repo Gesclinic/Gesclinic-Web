@@ -1,24 +1,26 @@
-import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import AtendimentoTabs from "@/components/clinica/Atendimento/AtendimentoTabs";
-import DadosAtendimentoTab from "@/components/clinica/Atendimento/DadosAtendimentoTab";
-import GuiaConvenioTab from "@/components/clinica/Atendimento/GuiaConvenioTab";
-import EvolucaoAtendimentoTab from "@/components/clinica/Atendimento/EvolucaoAtendimentoTab";
-import FinanceiroAtendimentoTab from "@/components/clinica/Atendimento/FinanceiroAtendimentoTab";
-import DocumentosAtendimentoTab from "@/components/clinica/Atendimento/DocumentosAtendimentoTab";
+import React, { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import AtendimentoTabs from '@/components/clinica/Atendimento/AtendimentoTabs';
+import DadosAtendimentoTab from '@/components/clinica/Atendimento/DadosAtendimentoTab';
+import GuiaConvenioTab from '@/components/clinica/Atendimento/GuiaConvenioTab';
+import EvolucaoAtendimentoTab from '@/components/clinica/Atendimento/EvolucaoAtendimentoTab';
+import FinanceiroAtendimentoTab from '@/components/clinica/Atendimento/FinanceiroAtendimentoTab';
+import DocumentosAtendimentoTab from '@/components/clinica/Atendimento/DocumentosAtendimentoTab';
 
 export default function Atendimento() {
   const { id } = useParams();
   const [appointment, setAppointment] = useState(null);
   const [guide, setGuide] = useState({});
   const [financeiro, setFinanceiro] = useState(null);
-  const [evolucao, setEvolucao] = useState("");
+  const [evolucao, setEvolucao] = useState('');
   const [documentos, setDocumentos] = useState([]);
-  const [activeTab, setActiveTab] = useState("dados");
+  const [activeTab, setActiveTab] = useState('dados');
 
   // Salvar guia do convênio
   async function handleSaveGuide(fields) {
-    if (!id) return;
+    if (!id) {
+      return;
+    }
     // Se já existe guia, faz update, senão insert
     if (guide && guide.id) {
       await supabase
@@ -30,8 +32,12 @@ export default function Atendimento() {
       const { data: newGuide } = await supabase
         .from('appointment_guides')
         .insert([{ ...fields, appointment_id: id }])
-        .select()
-        .single();
+        .select();
+
+      if (!data || data.length === 0) {
+        throw new Error('Record not found');
+      }
+      return data[0];
       setGuide(newGuide);
     }
     alert('Guia salva com sucesso!');
@@ -39,21 +45,31 @@ export default function Atendimento() {
 
   useEffect(() => {
     async function fetchData() {
-      if (!id) return;
+      if (!id) {
+        return;
+      }
       // Buscar atendimento pelo id da URL
       const { data: apptData } = await supabase
         .from('appointments')
         .select('*, patient:patients(*), professional:professionals(*), service:services(*)')
-        .eq('id', id)
-        .single();
+        .eq('id', id);
+
+      if (!data || data.length === 0) {
+        throw new Error('Record not found');
+      }
+      return data[0];
       setAppointment(apptData);
 
       // Buscar guia vinculada
       const { data: guideData } = await supabase
         .from('appointment_guides')
         .select('*')
-        .eq('appointment_id', id)
-        .single();
+        .eq('appointment_id', id);
+
+      if (!data || data.length === 0) {
+        throw new Error('Record not found');
+      }
+      return data[0];
       setGuide(guideData || {});
 
       // Buscar financeiro vinculado
@@ -65,7 +81,7 @@ export default function Atendimento() {
       setFinanceiro(finData || null);
 
       // Buscar evolução (mock)
-      setEvolucao(apptData?.evolucao || "");
+      setEvolucao(apptData?.evolucao || '');
 
       // Buscar documentos (mock)
       setDocumentos([]);
@@ -80,20 +96,41 @@ export default function Atendimento() {
         <>
           <div className="text-sm mb-4 flex flex-col gap-2">
             <div style={{ marginTop: 24 }}></div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '32px', fontSize: '1.15rem', marginBottom: 12 }}>
-              <span><b>Prontuário:</b> {appointment.patient?.record_number || 'Não existe'}</span>
-              <span><b>Paciente:</b> {appointment.patient?.full_name || 'Paciente não informado'}</span>
-              <span><b>Data de nascimento:</b> {appointment.patient?.birth_date || '-'}</span>
-              <span><b>CPF:</b> {appointment.patient?.cpf || '-'}</span>
-              <span><b>Telefone:</b> {appointment.patient?.phone || '-'}</span>
-              <span><b>Celular:</b> {appointment.patient?.cellphone || '-'}</span>
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                gap: '32px',
+                fontSize: '1.15rem',
+                marginBottom: 12,
+              }}
+            >
+              <span>
+                <b>Prontuário:</b> {appointment.patient?.record_number || 'Não existe'}
+              </span>
+              <span>
+                <b>Paciente:</b> {appointment.patient?.full_name || 'Paciente não informado'}
+              </span>
+              <span>
+                <b>Data de nascimento:</b> {appointment.patient?.birth_date || '-'}
+              </span>
+              <span>
+                <b>CPF:</b> {appointment.patient?.cpf || '-'}
+              </span>
+              <span>
+                <b>Telefone:</b> {appointment.patient?.phone || '-'}
+              </span>
+              <span>
+                <b>Celular:</b> {appointment.patient?.cellphone || '-'}
+              </span>
             </div>
           </div>
           <AtendimentoTabs activeTab={activeTab} setActiveTab={setActiveTab}>
-            {activeTab === "dados" && <DadosAtendimentoTab appointment={appointment} />}
-            {activeTab === "guia" && <GuiaConvenioTab guide={guide} onSave={handleSaveGuide} />}
-            {activeTab === "evolucao" && <EvolucaoAtendimentoTab evolucao={evolucao} />}
-            {activeTab === "financeiro" && (
+            {activeTab === 'dados' && <DadosAtendimentoTab appointment={appointment} />}
+            {activeTab === 'guia' && <GuiaConvenioTab guide={guide} onSave={handleSaveGuide} />}
+            {activeTab === 'evolucao' && <EvolucaoAtendimentoTab evolucao={evolucao} />}
+            {activeTab === 'financeiro' && (
               <FinanceiroAtendimentoTab
                 financeiro={financeiro}
                 isConvenio={appointment?.payer_id || appointment?.insurance_id}
@@ -138,24 +175,21 @@ export default function Atendimento() {
                     .single();
                   setFinanceiro(data);
                   // Cria registro de faturamento
-                  await supabase
-                    .from('billing_records')
-                    .insert([
-                      {
-                        appointment_id: id,
-                        insurance_id: appointment?.payer_id || appointment?.insurance_id,
-                        status: 'open',
-                      },
-                    ]);
+                  await supabase.from('billing_records').insert([
+                    {
+                      appointment_id: id,
+                      insurance_id: appointment?.payer_id || appointment?.insurance_id,
+                      status: 'open',
+                    },
+                  ]);
                   alert('Faturamento gerado!');
                 }}
               />
             )}
-            {activeTab === "documentos" && <DocumentosAtendimentoTab documentos={documentos} />}
+            {activeTab === 'documentos' && <DocumentosAtendimentoTab documentos={documentos} />}
           </AtendimentoTabs>
         </>
       )}
     </div>
   );
 }
-

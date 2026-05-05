@@ -1,23 +1,23 @@
-import React, { useEffect, useState, useCallback, useMemo } from "react";
-import { supabase } from "@/lib/customSupabaseClient";
-import { listAppointments } from "@/lib/appointmentsApi";
-import { listProfessionals } from "@/lib/professionalsApi";
-import { listServices } from "@/lib/servicesApi";
-import { listPayers } from "@/lib/payersApi";
-import { useClinicContext } from "@/contexts/ClinicContext";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { supabase } from '@/lib/customSupabaseClient';
+import { listAppointments } from '@/lib/appointmentsApi';
+import { listProfessionals } from '@/lib/professionalsApi';
+import { listServices } from '@/lib/servicesApi';
+import { listPayers } from '@/lib/payersApi';
+import { useClinicContext } from '@/contexts/ClinicContext';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
 
 // COMPONENTES INTERNOS
-import AgendaToolbar from "../components/AgendaToolbar";
-import AgendaCalendar from "../components/AgendaCalendar";
-import AgendaTable from "../components/AgendaTable";
-import AgendaSidePanel from "../components/AgendaSidePanel";
-import ModalCriarAgendamento from "../components/ModalCriarAgendamento";
+import AgendaToolbar from '../components/AgendaToolbar';
+import AgendaCalendar from '../components/AgendaCalendar';
+import AgendaTable from '../components/AgendaTable';
+import AgendaSidePanel from '../components/AgendaSidePanel';
+import ModalCriarAgendamento from '../components/ModalCriarAgendamento';
 
 const VIEW_MODE = {
-  CALENDAR: "calendar",
-  LISTA: "lista",
-  KANBAN: "kanban",
+  CALENDAR: 'calendar',
+  LISTA: 'lista',
+  KANBAN: 'kanban',
 };
 
 export default function AgendaLayout({ mode, professionalId, roomId }) {
@@ -37,7 +37,7 @@ export default function AgendaLayout({ mode, professionalId, roomId }) {
   }, [clinic?.id, loadingClinic]);
 
   const [viewMode, setViewMode] = useState(VIEW_MODE.CALENDAR);
-  const [calendarView, setCalendarView] = useState("day");
+  const [calendarView, setCalendarView] = useState('day');
 
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -60,27 +60,29 @@ export default function AgendaLayout({ mode, professionalId, roomId }) {
         ctxProfessionals.map((p) => ({
           id: p.id,
           name: p.name,
-          color: p.color || "#145B8A",
-        }))
+          color: p.color || '#145B8A',
+        })),
       );
       return;
     }
 
-    if (!clinic?.id) return;
+    if (!clinic?.id) {
+      return;
+    }
 
     const { data } = await supabase
-      .from("professionals")
-      .select("id, name, active")
-      .eq("clinic_id", clinic.id)
-      .eq("active", true);
+      .from('professionals')
+      .select('id, name, active')
+      .eq('clinic_id', clinic.id)
+      .eq('active', true);
 
     if (data) {
       setProfessionals(
         data.map((p) => ({
           id: p.id,
           name: p.name,
-          color: p.color || "#145B8A",
-        }))
+          color: p.color || '#145B8A',
+        })),
       );
     }
   }, [ctxProfessionals, clinic?.id]);
@@ -135,9 +137,9 @@ export default function AgendaLayout({ mode, professionalId, roomId }) {
       setPayers([]);
       return;
     }
-    
+
     console.log('✨ [AgendaLayout CLINIC CHANGE] clinic?.id agora disponível:', clinic.id);
-    
+
     // Chamar inline ao invés de usar callbacks para evitar problemas de dependência
     (async () => {
       try {
@@ -168,10 +170,10 @@ export default function AgendaLayout({ mode, professionalId, roomId }) {
   const [filters, setFilters] = useState({
     clinicId: clinic?.id || null,
     dateStart: null, // Mostra todos os agendamentos anteriores
-    dateEnd: null,   // Mostra todos os agendamentos futuros
+    dateEnd: null, // Mostra todos os agendamentos futuros
     professionalId,
     roomId,
-    query: "",
+    query: '',
     status: null,
     payerId: null,
     serviceId: null,
@@ -185,7 +187,9 @@ export default function AgendaLayout({ mode, professionalId, roomId }) {
 
   // 🔥 Buscar agendamentos
   const loadAppointmentsMemo = useCallback(async () => {
-    if (!filters.clinicId) return;
+    if (!filters.clinicId) {
+      return;
+    }
 
     setLoading(true);
 
@@ -239,9 +243,9 @@ export default function AgendaLayout({ mode, professionalId, roomId }) {
     setPanelData(appointment);
 
     const { data } = await supabase
-      .from("appointment_notification_logs")
-      .select("*")
-      .eq("appointment_id", appointment.id);
+      .from('appointment_notification_logs')
+      .select('*')
+      .eq('appointment_id', appointment.id);
 
     setLogs(data || []);
   };
@@ -254,53 +258,49 @@ export default function AgendaLayout({ mode, professionalId, roomId }) {
 
   // 🔥 Atualizar status
   const updateStatus = async (item, status) => {
-    await supabase.from("appointments").update({ status }).eq("id", item.id);
+    await supabase.from('appointments').update({ status }).eq('id', item.id);
     loadAppointmentsMemo();
   };
 
   // 🔥 Renderizar visualização correta
   const renderView = useMemo(() => {
     switch (viewMode) {
-      case VIEW_MODE.LISTA:
-        return (
-          <AgendaTable
-            appointments={appointments}
-            loading={loading}
-            professionals={professionals}
-            onSelectEvent={openPanel}
-          />
-        );
+    case VIEW_MODE.LISTA:
+      return (
+        <AgendaTable
+          appointments={appointments}
+          loading={loading}
+          professionals={professionals}
+          onSelectEvent={openPanel}
+        />
+      );
 
+    case VIEW_MODE.KANBAN:
+      return (
+        <div className="p-8 text-center text-gray-400">Visualização Kanban não disponível.</div>
+      );
 
-      case VIEW_MODE.KANBAN:
-        return (
-          <div className="p-8 text-center text-gray-400">
-            Visualização Kanban não disponível.
-          </div>
-        );
-
-      default:
-        return (
-          <AgendaCalendar
-            mode={mode}
-            calendarView={calendarView}
-            appointments={appointments}
-            professionals={professionals}
-            filters={filters}
-            loading={loading}
-            onSelectEvent={openPanel}
-            onCreateAtSlot={(info) => {
-              setNovoAgendamentoInfo(info);
-              setModalNovoOpen(true);
-            }}
-          />
-        );
+    default:
+      return (
+        <AgendaCalendar
+          mode={mode}
+          calendarView={calendarView}
+          appointments={appointments}
+          professionals={professionals}
+          filters={filters}
+          loading={loading}
+          onSelectEvent={openPanel}
+          onCreateAtSlot={(info) => {
+            setNovoAgendamentoInfo(info);
+            setModalNovoOpen(true);
+          }}
+        />
+      );
     }
   }, [viewMode, calendarView, appointments, professionals, loading, filters]);
 
   return (
     <div className="w-full h-full flex flex-col">
-
       <AgendaToolbar
         viewMode={viewMode}
         setViewMode={setViewMode}
@@ -320,14 +320,16 @@ export default function AgendaLayout({ mode, professionalId, roomId }) {
         onClose={closePanel}
         data={panelData}
         logs={logs}
-        onConfirm={(a) => updateStatus(a, "confirmed")}
-        onCancel={(a) => updateStatus(a, "canceled")}
+        onConfirm={(a) => updateStatus(a, 'confirmed')}
+        onCancel={(a) => updateStatus(a, 'canceled')}
       />
 
       <ModalCriarAgendamento
         open={modalNovoOpen && !!filters.clinicId}
         onOpenChange={(open) => {
-          if (!open) setModalNovoOpen(false);
+          if (!open) {
+            setModalNovoOpen(false);
+          }
         }}
         clinicId={filters.clinicId}
         data={novoAgendamentoInfo}
@@ -339,4 +341,3 @@ export default function AgendaLayout({ mode, professionalId, roomId }) {
     </div>
   );
 }
-

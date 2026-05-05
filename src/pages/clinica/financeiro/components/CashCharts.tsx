@@ -12,7 +12,7 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer
+  ResponsiveContainer,
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -48,7 +48,7 @@ const CustomTooltip = (props: any) => {
         <p className="text-sm">
           {new Intl.NumberFormat('pt-BR', {
             style: 'currency',
-            currency: 'BRL'
+            currency: 'BRL',
           }).format(payload[0].value)}
         </p>
       </div>
@@ -61,14 +61,14 @@ export const CashCharts: React.FC<CashChartsProps> = ({
   porOrigem,
   porProfissional,
   porServico,
-  evolucaoDiaria
+  evolucaoDiaria,
 }) => {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
       notation: 'compact',
-      compactDisplay: 'short'
+      compactDisplay: 'short',
     }).format(value);
   };
 
@@ -87,10 +87,10 @@ export const CashCharts: React.FC<CashChartsProps> = ({
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={porOrigem.map(item => ({
+                  data={porOrigem.map((item) => ({
                     name: item.origin === 'agenda' ? 'Agenda' : 'Manual',
                     value: item.total,
-                    percentage: item.percentage
+                    percentage: item.percentage,
                   }))}
                   cx="50%"
                   cy="50%"
@@ -142,14 +142,10 @@ export const CashCharts: React.FC<CashChartsProps> = ({
                     backgroundColor: '#1e293b',
                     border: 'none',
                     borderRadius: '8px',
-                    color: '#fff'
+                    color: '#fff',
                   }}
                 />
-                <Bar
-                  dataKey="total"
-                  fill="#3b82f6"
-                  radius={[8, 8, 0, 0]}
-                />
+                <Bar dataKey="total" fill="#3b82f6" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -178,26 +174,17 @@ export const CashCharts: React.FC<CashChartsProps> = ({
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis type="number" hide />
-                <YAxis
-                  dataKey="service_name"
-                  type="category"
-                  tick={{ fontSize: 12 }}
-                  width={190}
-                />
+                <YAxis dataKey="service_name" type="category" tick={{ fontSize: 12 }} width={190} />
                 <Tooltip
                   formatter={(value: number) => formatCurrency(value)}
                   contentStyle={{
                     backgroundColor: '#1e293b',
                     border: 'none',
                     borderRadius: '8px',
-                    color: '#fff'
+                    color: '#fff',
                   }}
                 />
-                <Bar
-                  dataKey="total"
-                  fill="#10b981"
-                  radius={[0, 8, 8, 0]}
-                />
+                <Bar dataKey="total" fill="#10b981" radius={[0, 8, 8, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -240,7 +227,7 @@ export const CashCharts: React.FC<CashChartsProps> = ({
                     backgroundColor: '#1e293b',
                     border: 'none',
                     borderRadius: '8px',
-                    color: '#fff'
+                    color: '#fff',
                   }}
                 />
                 <Legend />

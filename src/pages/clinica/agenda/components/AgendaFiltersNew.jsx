@@ -4,7 +4,7 @@ import { useAgendaFilters } from '../hooks/useAgendaFilters';
 
 /**
  * AgendaFiltersNew - Componente colapsável (accordion) para refinamento de filtros
- * 
+ *
  * Props:
  * - filters: { professional?, room?, status?, payer?, service?, searchText? }
  * - onFilterChange: (key, value) => void
@@ -19,16 +19,25 @@ export default function AgendaFiltersNew({
   metadata = {},
   viewMode = 'geral',
 }) {
-  const { isOpen, toggleOpen, closeFilters, updateActiveFiltersCount } =
-    useAgendaFilters();
+  const { isOpen, toggleOpen, closeFilters, updateActiveFiltersCount } = useAgendaFilters();
 
   const activeFiltersCount = useMemo(() => {
     let count = 0;
-    if (filters.professional_id) count++;
-    if (filters.room_id) count++;
-    if (filters.status) count++;
-    if (filters.payer_id) count++;
-    if (filters.service_id) count++;
+    if (filters.professional_id) {
+      count++;
+    }
+    if (filters.room_id) {
+      count++;
+    }
+    if (filters.status) {
+      count++;
+    }
+    if (filters.payer_id) {
+      count++;
+    }
+    if (filters.service_id) {
+      count++;
+    }
     return count;
   }, [filters]);
 
@@ -73,11 +82,7 @@ export default function AgendaFiltersNew({
                 {activeFiltersCount}
               </span>
             )}
-            <ChevronDown
-              className={`w-4 h-4 transition-transform ${
-                isOpen ? 'rotate-180' : ''
-              }`}
-            />
+            <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
           </button>
         </div>
 
@@ -92,9 +97,7 @@ export default function AgendaFiltersNew({
                 </label>
                 <select
                   value={filters.professional_id || ''}
-                  onChange={(e) =>
-                    onFilterChange?.('professional_id', e.target.value || '')
-                  }
+                  onChange={(e) => onFilterChange?.('professional_id', e.target.value || '')}
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Todos</option>
@@ -108,14 +111,10 @@ export default function AgendaFiltersNew({
 
               {/* Filtro: Sala */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-2">
-                  Sala
-                </label>
+                <label className="block text-xs font-semibold text-gray-700 mb-2">Sala</label>
                 <select
                   value={filters.room_id || ''}
-                  onChange={(e) =>
-                    onFilterChange?.('room_id', e.target.value || '')
-                  }
+                  onChange={(e) => onFilterChange?.('room_id', e.target.value || '')}
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Todas</option>
@@ -129,14 +128,10 @@ export default function AgendaFiltersNew({
 
               {/* Filtro: Status */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-2">
-                  Status
-                </label>
+                <label className="block text-xs font-semibold text-gray-700 mb-2">Status</label>
                 <select
                   value={filters.status || ''}
-                  onChange={(e) =>
-                    onFilterChange?.('status', e.target.value || '')
-                  }
+                  onChange={(e) => onFilterChange?.('status', e.target.value || '')}
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Todos</option>
@@ -151,14 +146,10 @@ export default function AgendaFiltersNew({
 
               {/* Filtro: Convênio */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-2">
-                  Convênio
-                </label>
+                <label className="block text-xs font-semibold text-gray-700 mb-2">Convênio</label>
                 <select
                   value={filters.payer_id || ''}
-                  onChange={(e) =>
-                    onFilterChange?.('payer_id', e.target.value || '')
-                  }
+                  onChange={(e) => onFilterChange?.('payer_id', e.target.value || '')}
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Todos</option>
@@ -172,14 +163,10 @@ export default function AgendaFiltersNew({
 
               {/* Filtro: Serviço */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-2">
-                  Serviço
-                </label>
+                <label className="block text-xs font-semibold text-gray-700 mb-2">Serviço</label>
                 <select
                   value={filters.service_id || ''}
-                  onChange={(e) =>
-                    onFilterChange?.('service_id', e.target.value || '')
-                  }
+                  onChange={(e) => onFilterChange?.('service_id', e.target.value || '')}
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Todos</option>
@@ -210,4 +197,3 @@ export default function AgendaFiltersNew({
     </div>
   );
 }
-

@@ -1,8 +1,8 @@
 /**
  * auditApi.js
- * 
+ *
  * 🕒 AUDITORIA DE ATENDIMENTOS
- * 
+ *
  * Sistema de logging automático:
  * - Imutável (append-only)
  * - Invisível ao usuário comum
@@ -10,25 +10,25 @@
  * - Rastreável e auditável
  */
 
-import { supabase } from "@/lib/customSupabaseClient";
+import { supabase } from '@/lib/customSupabaseClient';
 
 /**
  * Tipos de ações de auditoria
  */
 export const AUDIT_ACTION_TYPES = {
-  APPOINTMENT_CREATED: "APPOINTMENT_CREATED",
-  STATUS_CHANGED: "STATUS_CHANGED",
-  CHECKIN_STARTED: "CHECKIN_STARTED",
-  CHECKLIST_UPDATED: "CHECKLIST_UPDATED",
-  FINANCIAL_VALIDATED: "FINANCIAL_VALIDATED",
-  MERGE_PRE_PATIENT: "MERGE_PRE_PATIENT",
-  PATIENT_LINKED: "PATIENT_LINKED",
-  PATIENT_CREATED: "PATIENT_CREATED",
-  ATTENDANCE_STARTED: "ATTENDANCE_STARTED",
-  ATTENDANCE_FINISHED: "ATTENDANCE_FINISHED",
-  MARKED_NO_SHOW: "MARKED_NO_SHOW",
-  RESCHEDULED: "RESCHEDULED",
-  CANCELLED: "CANCELLED",
+  APPOINTMENT_CREATED: 'APPOINTMENT_CREATED',
+  STATUS_CHANGED: 'STATUS_CHANGED',
+  CHECKIN_STARTED: 'CHECKIN_STARTED',
+  CHECKLIST_UPDATED: 'CHECKLIST_UPDATED',
+  FINANCIAL_VALIDATED: 'FINANCIAL_VALIDATED',
+  MERGE_PRE_PATIENT: 'MERGE_PRE_PATIENT',
+  PATIENT_LINKED: 'PATIENT_LINKED',
+  PATIENT_CREATED: 'PATIENT_CREATED',
+  ATTENDANCE_STARTED: 'ATTENDANCE_STARTED',
+  ATTENDANCE_FINISHED: 'ATTENDANCE_FINISHED',
+  MARKED_NO_SHOW: 'MARKED_NO_SHOW',
+  RESCHEDULED: 'RESCHEDULED',
+  CANCELLED: 'CANCELLED',
 };
 
 /**
@@ -49,17 +49,19 @@ export async function logAppointmentAudit({
   context = null,
 }) {
   if (!appointmentId || !actionType) {
-    console.error("appointmentId e actionType são obrigatórios");
+    console.error('appointmentId e actionType são obrigatórios');
     return null;
   }
 
   try {
     // Obter usuário atual
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     const userId = user?.id || null;
 
     // Obter role do usuário (via RPC ou busca direta)
-    let userRole = null;
+    const userRole = null;
     if (userId) {
       try {
         // ⚠️ COMENTADO: Coluna role_name não existe em user_roles
@@ -72,7 +74,7 @@ export async function logAppointmentAudit({
         //
         // userRole = roleData?.role_name || null;
       } catch (err) {
-        console.warn("Erro ao buscar role do usuário:", err);
+        console.warn('Erro ao buscar role do usuário:', err);
       }
     }
 
@@ -80,7 +82,7 @@ export async function logAppointmentAudit({
     let ipAddress = null;
     let userAgent = null;
     try {
-      const response = await fetch("https://api.ipify.org?format=json");
+      const response = await fetch('https://api.ipify.org?format=json');
       if (response.ok) {
         const data = await response.json();
         ipAddress = data.ip;
@@ -92,7 +94,7 @@ export async function logAppointmentAudit({
 
     // Inserir log de auditoria
     const { data: log, error } = await supabase
-      .from("appointment_audit_logs")
+      .from('appointment_audit_logs')
       .insert([
         {
           appointment_id: appointmentId,
@@ -110,14 +112,14 @@ export async function logAppointmentAudit({
       .single();
 
     if (error) {
-      console.error("Erro ao logar auditoria:", error);
+      console.error('Erro ao logar auditoria:', error);
       return null;
     }
 
     console.log(`[AUDIT] ${actionType} para agendamento ${appointmentId}`);
     return log;
   } catch (err) {
-    console.error("Erro inesperado ao logar auditoria:", err);
+    console.error('Erro inesperado ao logar auditoria:', err);
     return null;
   }
 }
@@ -128,23 +130,25 @@ export async function logAppointmentAudit({
  * @returns {Promise<Array>} Lista de logs
  */
 export async function getAppointmentAuditLogs(appointmentId) {
-  if (!appointmentId) return [];
+  if (!appointmentId) {
+    return [];
+  }
 
   try {
     const { data, error } = await supabase
-      .from("appointment_audit_logs")
-      .select("*")
-      .eq("appointment_id", appointmentId)
-      .order("performed_at", { ascending: true });
+      .from('appointment_audit_logs')
+      .select('*')
+      .eq('appointment_id', appointmentId)
+      .order('performed_at', { ascending: true });
 
     if (error) {
-      console.error("Erro ao buscar logs:", error);
+      console.error('Erro ao buscar logs:', error);
       return [];
     }
 
     return data || [];
   } catch (err) {
-    console.error("Erro inesperado ao buscar logs:", err);
+    console.error('Erro inesperado ao buscar logs:', err);
     return [];
   }
 }
@@ -156,34 +160,30 @@ export async function getAppointmentAuditLogs(appointmentId) {
  * @param {string} actionType - Filtrar por tipo de ação (opcional)
  * @returns {Promise<Array>} Lista de logs
  */
-export async function getAuditLogsByDateRange({
-  startDate,
-  endDate,
-  actionType = null,
-}) {
+export async function getAuditLogsByDateRange({ startDate, endDate, actionType = null }) {
   try {
     let query = supabase
-      .from("appointment_audit_logs")
-      .select("*")
-      .gte("performed_at", startDate)
-      .lte("performed_at", endDate);
+      .from('appointment_audit_logs')
+      .select('*')
+      .gte('performed_at', startDate)
+      .lte('performed_at', endDate);
 
     if (actionType) {
-      query = query.eq("action_type", actionType);
+      query = query.eq('action_type', actionType);
     }
 
-    const { data, error } = await query.order("performed_at", {
+    const { data, error } = await query.order('performed_at', {
       ascending: false,
     });
 
     if (error) {
-      console.error("Erro ao buscar logs por período:", error);
+      console.error('Erro ao buscar logs por período:', error);
       return [];
     }
 
     return data || [];
   } catch (err) {
-    console.error("Erro inesperado:", err);
+    console.error('Erro inesperado:', err);
     return [];
   }
 }
@@ -194,22 +194,24 @@ export async function getAuditLogsByDateRange({
  * @returns {Promise<number>} Quantidade de logs
  */
 export async function countAppointmentAuditLogs(appointmentId) {
-  if (!appointmentId) return 0;
+  if (!appointmentId) {
+    return 0;
+  }
 
   try {
     const { count, error } = await supabase
-      .from("appointment_audit_logs")
-      .select("*", { count: "exact", head: true })
-      .eq("appointment_id", appointmentId);
+      .from('appointment_audit_logs')
+      .select('*', { count: 'exact', head: true })
+      .eq('appointment_id', appointmentId);
 
     if (error) {
-      console.error("Erro ao contar logs:", error);
+      console.error('Erro ao contar logs:', error);
       return 0;
     }
 
     return count || 0;
   } catch (err) {
-    console.error("Erro inesperado:", err);
+    console.error('Erro inesperado:', err);
     return 0;
   }
 }
@@ -240,17 +242,13 @@ export async function logCheckinStarted(appointmentId, context = null) {
 /**
  * Helper: Logar merge de pré-paciente
  */
-export async function logMergePrePatient(
-  appointmentId,
-  linkedPatientId,
-  method
-) {
+export async function logMergePrePatient(appointmentId, linkedPatientId, method) {
   return logAppointmentAudit({
     appointmentId,
     actionType: AUDIT_ACTION_TYPES.MERGE_PRE_PATIENT,
     context: {
-      from: "PRE_PATIENT",
-      to: "PATIENT",
+      from: 'PRE_PATIENT',
+      to: 'PATIENT',
       linked_patient_id: linkedPatientId,
       method: method, // "SEARCH" ou "CREATE"
     },
@@ -354,68 +352,68 @@ export async function logPatientLinked(appointmentId, patientId) {
  */
 export const AUDIT_ACTION_DESCRIPTIONS = {
   [AUDIT_ACTION_TYPES.APPOINTMENT_CREATED]: {
-    label: "Agendamento Criado",
-    icon: "plus",
-    color: "bg-green-100 text-green-800",
+    label: 'Agendamento Criado',
+    icon: 'plus',
+    color: 'bg-green-100 text-green-800',
   },
   [AUDIT_ACTION_TYPES.STATUS_CHANGED]: {
-    label: "Status Alterado",
-    icon: "refresh-cw",
-    color: "bg-blue-100 text-blue-800",
+    label: 'Status Alterado',
+    icon: 'refresh-cw',
+    color: 'bg-blue-100 text-blue-800',
   },
   [AUDIT_ACTION_TYPES.CHECKIN_STARTED]: {
-    label: "Check-in Iniciado",
-    icon: "log-in",
-    color: "bg-purple-100 text-purple-800",
+    label: 'Check-in Iniciado',
+    icon: 'log-in',
+    color: 'bg-purple-100 text-purple-800',
   },
   [AUDIT_ACTION_TYPES.CHECKLIST_UPDATED]: {
-    label: "Checklist Atualizado",
-    icon: "check-square",
-    color: "bg-cyan-100 text-cyan-800",
+    label: 'Checklist Atualizado',
+    icon: 'check-square',
+    color: 'bg-cyan-100 text-cyan-800',
   },
   [AUDIT_ACTION_TYPES.FINANCIAL_VALIDATED]: {
-    label: "Financeiro Validado",
-    icon: "credit-card",
-    color: "bg-green-100 text-green-800",
+    label: 'Financeiro Validado',
+    icon: 'credit-card',
+    color: 'bg-green-100 text-green-800',
   },
   [AUDIT_ACTION_TYPES.MERGE_PRE_PATIENT]: {
-    label: "Pré-paciente Linkado",
-    icon: "merge",
-    color: "bg-orange-100 text-orange-800",
+    label: 'Pré-paciente Linkado',
+    icon: 'merge',
+    color: 'bg-orange-100 text-orange-800',
   },
   [AUDIT_ACTION_TYPES.PATIENT_LINKED]: {
-    label: "Paciente Linkado",
-    icon: "link",
-    color: "bg-orange-100 text-orange-800",
+    label: 'Paciente Linkado',
+    icon: 'link',
+    color: 'bg-orange-100 text-orange-800',
   },
   [AUDIT_ACTION_TYPES.PATIENT_CREATED]: {
-    label: "Paciente Criado",
-    icon: "user-plus",
-    color: "bg-green-100 text-green-800",
+    label: 'Paciente Criado',
+    icon: 'user-plus',
+    color: 'bg-green-100 text-green-800',
   },
   [AUDIT_ACTION_TYPES.ATTENDANCE_STARTED]: {
-    label: "Atendimento Iniciado",
-    icon: "play",
-    color: "bg-blue-100 text-blue-800",
+    label: 'Atendimento Iniciado',
+    icon: 'play',
+    color: 'bg-blue-100 text-blue-800',
   },
   [AUDIT_ACTION_TYPES.ATTENDANCE_FINISHED]: {
-    label: "Atendimento Finalizado",
-    icon: "check-circle",
-    color: "bg-green-100 text-green-800",
+    label: 'Atendimento Finalizado',
+    icon: 'check-circle',
+    color: 'bg-green-100 text-green-800',
   },
   [AUDIT_ACTION_TYPES.MARKED_NO_SHOW]: {
-    label: "Falta Marcada",
-    icon: "x-circle",
-    color: "bg-red-100 text-red-800",
+    label: 'Falta Marcada',
+    icon: 'x-circle',
+    color: 'bg-red-100 text-red-800',
   },
   [AUDIT_ACTION_TYPES.RESCHEDULED]: {
-    label: "Remarcado",
-    icon: "calendar",
-    color: "bg-yellow-100 text-yellow-800",
+    label: 'Remarcado',
+    icon: 'calendar',
+    color: 'bg-yellow-100 text-yellow-800',
   },
   [AUDIT_ACTION_TYPES.CANCELLED]: {
-    label: "Cancelado",
-    icon: "x-circle",
-    color: "bg-red-100 text-red-800",
+    label: 'Cancelado',
+    icon: 'x-circle',
+    color: 'bg-red-100 text-red-800',
   },
 };

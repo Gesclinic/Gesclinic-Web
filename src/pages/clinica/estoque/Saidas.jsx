@@ -1,15 +1,15 @@
-import React, { useEffect, useState } from "react";
-import PageLayout from "@/components/ui/PageLayout";
-import { useBreadcrumbs } from "@/hooks/useBreadcrumbs";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Minus, Pencil, Trash2 } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
-import StockMovementDialog from "@/components/clinica/estoque/StockMovementDialog";
-import { useClinicContext } from "@/contexts/useClinicContext";
-import { stockMovementsApi } from "@/lib/stockApi";
-import { format } from "date-fns";
-import { supabase } from "@/lib/customSupabaseClient";
+import React, { useEffect, useState } from 'react';
+import PageLayout from '@/components/ui/PageLayout';
+import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Minus, Pencil, Trash2 } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
+import StockMovementDialog from '@/components/clinica/estoque/StockMovementDialog';
+import { useClinicContext } from '@/contexts/useClinicContext';
+import { stockMovementsApi } from '@/lib/stockApi';
+import { format } from 'date-fns';
+import { supabase } from '@/lib/customSupabaseClient';
 
 export default function Saidas() {
   const { toast } = useToast();
@@ -19,8 +19,8 @@ export default function Saidas() {
   const [editingMovement, setEditingMovement] = useState(null);
   const { clinicId } = useClinicContext();
   const breadcrumbs = useBreadcrumbs([
-    { label: "Estoque", path: "/clinica/estoque" },
-    { label: "Saídas" }
+    { label: 'Estoque', path: '/clinica/estoque' },
+    { label: 'Saídas' },
   ]);
 
   const loadMovements = async () => {
@@ -30,11 +30,15 @@ export default function Saidas() {
     }
     setLoading(true);
     try {
-      const data = await stockMovementsApi.list(clinicId, { type: "exit" });
+      const data = await stockMovementsApi.list(clinicId, { type: 'exit' });
       setMovements(data);
     } catch (error) {
-      console.error("Erro ao carregar saídas:", error);
-      toast({ variant: "destructive", title: "Erro ao carregar saídas", description: error.message });
+      console.error('Erro ao carregar saídas:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao carregar saídas',
+        description: error.message,
+      });
     } finally {
       setLoading(false);
     }
@@ -58,12 +62,12 @@ export default function Saidas() {
           notes: payload.notes,
           location_id: payload.locationId,
           item_id: product.itemId || editingMovement.item_id,
-          type: "exit",
+          type: 'exit',
         });
-        toast({ title: "Saída atualizada" });
+        toast({ title: 'Saída atualizada' });
       } catch (error) {
-        console.error("Erro ao atualizar saída:", error);
-        toast({ variant: "destructive", title: "Erro ao atualizar", description: error.message });
+        console.error('Erro ao atualizar saída:', error);
+        toast({ variant: 'destructive', title: 'Erro ao atualizar', description: error.message });
         return;
       }
     } else {
@@ -72,7 +76,7 @@ export default function Saidas() {
         const items = products.map((product) => ({
           clinic_id: clinicId,
           item_id: product.itemId,
-          type: "exit",
+          type: 'exit',
           location_id: payload.locationId,
           qty: parseFloat(product.qty) || 0,
           unit_cost: null,
@@ -80,15 +84,19 @@ export default function Saidas() {
           notes: payload.notes,
         }));
 
-        const { error } = await supabase
-          .from('stock_movements')
-          .insert(items);
+        const { error } = await supabase.from('stock_movements').insert(items);
 
-        if (error) throw error;
-        toast({ title: "Saída registrada" });
+        if (error) {
+          throw error;
+        }
+        toast({ title: 'Saída registrada' });
       } catch (error) {
-        console.error("Erro ao registrar saída:", error);
-        toast({ variant: "destructive", title: "Erro ao registrar saída", description: error.message });
+        console.error('Erro ao registrar saída:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Erro ao registrar saída',
+          description: error.message,
+        });
         return;
       }
     }
@@ -99,16 +107,20 @@ export default function Saidas() {
   };
 
   const handleDelete = async (movementId) => {
-    if (!movementId) return;
-    const confirmed = window.confirm("Excluir esta saída de estoque?");
-    if (!confirmed) return;
+    if (!movementId) {
+      return;
+    }
+    const confirmed = window.confirm('Excluir esta saída de estoque?');
+    if (!confirmed) {
+      return;
+    }
     try {
       await stockMovementsApi.remove(movementId);
-      toast({ title: "Saída excluída" });
+      toast({ title: 'Saída excluída' });
       await loadMovements();
     } catch (error) {
-      console.error("Erro ao excluir saída:", error);
-      toast({ variant: "destructive", title: "Erro ao excluir", description: error.message });
+      console.error('Erro ao excluir saída:', error);
+      toast({ variant: 'destructive', title: 'Erro ao excluir', description: error.message });
     }
   };
 
@@ -144,19 +156,27 @@ export default function Saidas() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={5} className="py-10 text-center text-gray-500">Carregando...</td>
+                <td colSpan={5} className="py-10 text-center text-gray-500">
+                  Carregando...
+                </td>
               </tr>
             ) : movements.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-10 text-center text-gray-500">Nenhuma saída registrada.</td>
+                <td colSpan={5} className="py-10 text-center text-gray-500">
+                  Nenhuma saída registrada.
+                </td>
               </tr>
             ) : (
               movements.map((mov) => (
                 <tr key={mov.id} className="border-t hover:bg-gray-50">
-                  <td className="px-4 py-3">{mov.move_date ? format(new Date(mov.move_date + "T00:00:00"), "dd/MM/yyyy") : "-"}</td>
-                  <td className="px-4 py-3">{mov.item?.name || "-"}</td>
+                  <td className="px-4 py-3">
+                    {mov.move_date
+                      ? format(new Date(mov.move_date + 'T00:00:00'), 'dd/MM/yyyy')
+                      : '-'}
+                  </td>
+                  <td className="px-4 py-3">{mov.item?.name || '-'}</td>
                   <td className="px-4 py-3">{mov.qty}</td>
-                  <td className="px-4 py-3 text-gray-600 text-xs">{mov.notes || "-"}</td>
+                  <td className="px-4 py-3 text-gray-600 text-xs">{mov.notes || '-'}</td>
                   <td className="px-4 py-3 text-right space-x-2">
                     <Button
                       size="sm"
@@ -199,4 +219,3 @@ export default function Saidas() {
     </PageLayout>
   );
 }
-

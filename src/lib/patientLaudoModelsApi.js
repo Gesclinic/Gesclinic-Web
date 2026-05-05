@@ -4,8 +4,10 @@ const LOCAL_STORAGE_KEY = 'gesclinic-local-patient-laudo-templates';
 let patientLaudoTemplatesTableUnavailable = false;
 
 function shouldUseLocalFallback(error) {
-  return ['42501', '42P01', 'PGRST205'].includes(error?.code)
-    || /row-level security|unauthorized|patient_laudo_templates/i.test(error?.message || '');
+  return (
+    ['42501', '42P01', 'PGRST205'].includes(error?.code) ||
+    /row-level security|unauthorized|patient_laudo_templates/i.test(error?.message || '')
+  );
 }
 
 function markTableUnavailableIfNeeded(error) {
@@ -37,7 +39,11 @@ function markRemoteRow(row) {
 }
 
 function sortRows(rows) {
-  return [...rows].sort((left, right) => new Date(right.updated_at || right.created_at || 0) - new Date(left.updated_at || left.created_at || 0));
+  return [...rows].sort(
+    (left, right) =>
+      new Date(right.updated_at || right.created_at || 0) -
+      new Date(left.updated_at || left.created_at || 0),
+  );
 }
 
 function listLocalRows(clinicId = null) {
@@ -48,15 +54,20 @@ function sanitizePayload(payload) {
   return {
     ...payload,
     metadata: payload?.metadata && typeof payload.metadata === 'object' ? payload.metadata : {},
-    letterhead: payload?.letterhead && typeof payload.letterhead === 'object' ? payload.letterhead : {},
+    letterhead:
+      payload?.letterhead && typeof payload.letterhead === 'object' ? payload.letterhead : {},
   };
 }
 
 function mergeRows(remoteRows, localRows) {
   const merged = new Map();
-  for (const row of remoteRows || []) merged.set(row.id, row);
+  for (const row of remoteRows || []) {
+    merged.set(row.id, row);
+  }
   for (const row of localRows || []) {
-    if (!merged.has(row.id)) merged.set(row.id, row);
+    if (!merged.has(row.id)) {
+      merged.set(row.id, row);
+    }
   }
   return sortRows(Array.from(merged.values()));
 }
@@ -80,7 +91,9 @@ function createLocalRow(payload) {
 function updateLocalRow(id, updates) {
   let updatedRow = null;
   const nextRows = loadLocalRows().map((row) => {
-    if (row.id !== id) return row;
+    if (row.id !== id) {
+      return row;
+    }
     updatedRow = {
       ...row,
       ...sanitizePayload(updates),
@@ -104,7 +117,10 @@ export async function listPatientLaudoTemplates(clinicId = null) {
     return localRows;
   }
 
-  let query = supabase.from('patient_laudo_templates').select('*').order('updated_at', { ascending: false });
+  let query = supabase
+    .from('patient_laudo_templates')
+    .select('*')
+    .order('updated_at', { ascending: false });
   if (clinicId) {
     query = query.eq('clinic_id', clinicId);
   }
@@ -149,21 +165,29 @@ export async function createPatientLaudoTemplate(payload) {
 export async function updatePatientLaudoTemplate(id, updates) {
   if (patientLaudoTemplatesTableUnavailable) {
     const localRow = updateLocalRow(id, updates);
-    if (localRow) return localRow;
+    if (localRow) {
+      return localRow;
+    }
   }
 
   const { data, error } = await supabase
     .from('patient_laudo_templates')
     .update({ ...sanitizePayload(updates), updated_at: new Date().toISOString() })
     .eq('id', id)
-    .select()
-    .single();
+    .select();
+
+  if (!data || data.length === 0) {
+    throw new Error('Record not found');
+  }
+  return data[0];
 
   if (error) {
     if (shouldUseLocalFallback(error)) {
       markTableUnavailableIfNeeded(error);
       const localRow = updateLocalRow(id, updates);
-      if (localRow) return localRow;
+      if (localRow) {
+        return localRow;
+      }
     }
     throw error;
   }

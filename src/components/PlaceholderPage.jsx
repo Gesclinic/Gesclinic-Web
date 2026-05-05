@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 
 export default function PlaceholderPage({ title }) {
   const location = useLocation();
-  
+
   return (
     <div className="p-8 flex flex-col items-center justify-center h-full text-center space-y-4">
       <div className="p-4 rounded-full bg-muted">
@@ -27,7 +27,8 @@ export default function PlaceholderPage({ title }) {
       </div>
       <h1 className="text-2xl font-bold">{title || 'Página em Construção'}</h1>
       <p className="text-muted-foreground max-w-md">
-        A rota <code>{location.pathname}</code> foi configurada, mas o conteúdo ainda está sendo desenvolvido.
+        A rota <code>{location.pathname}</code> foi configurada, mas o conteúdo ainda está sendo
+        desenvolvido.
       </p>
     </div>
   );

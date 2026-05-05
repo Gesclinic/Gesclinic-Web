@@ -17,39 +17,33 @@ export default function AgendaIndicadores() {
       <div className="w-full mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            📊 Indicadores de Agenda
-          </h1>
-          <p className="text-gray-600">
-            Acompanhe métricas e desempenho dos agendamentos
-          </p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">📊 Indicadores de Agenda</h1>
+          <p className="text-gray-600">Acompanhe métricas e desempenho dos agendamentos</p>
         </div>
 
         {/* Conteúdo principal */}
         <div className="bg-white rounded-lg shadow-lg p-8">
           <div className="flex items-center justify-center h-96">
             <div className="text-center">
-              <svg 
-                className="w-24 h-24 text-green-400 mx-auto mb-4" 
-                fill="none" 
-                stroke="currentColor" 
+              <svg
+                className="w-24 h-24 text-green-400 mx-auto mb-4"
+                fill="none"
+                stroke="currentColor"
                 viewBox="0 0 24 24"
               >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={1.5} 
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" 
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
                 />
               </svg>
-              <h2 className="text-2xl font-semibold text-gray-800 mb-3">
-                Indicadores
-              </h2>
+              <h2 className="text-2xl font-semibold text-gray-800 mb-3">Indicadores</h2>
               <p className="text-gray-600 w-full">
-                Esta página está em desenvolvimento. Aqui você poderá acompanhar indicadores 
-                e métricas de desempenho da agenda.
+                Esta página está em desenvolvimento. Aqui você poderá acompanhar indicadores e
+                métricas de desempenho da agenda.
               </p>
-              
+
               {/* Status Info */}
               <div className="mt-8 grid grid-cols-3 gap-4">
                 <div className="bg-blue-50 p-4 rounded-lg">
@@ -72,4 +66,3 @@ export default function AgendaIndicadores() {
     </div>
   );
 }
-

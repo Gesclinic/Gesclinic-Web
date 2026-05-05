@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Check, ChevronsUpDown, X, Search } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Input } from "@/components/ui/input";
-import { NONE } from "@/lib/selectUtils";
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Check, ChevronsUpDown, X, Search } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Input } from '@/components/ui/input';
+import { NONE } from '@/lib/selectUtils';
 
 /**
  * 🔍 Componente Combobox reutilizável com busca assíncrona.
@@ -15,7 +15,7 @@ export function Combobox({
   textValue,
   onValueChange,
   onTextValueChange,
-  placeholder = "Selecione...",
+  placeholder = 'Selecione...',
   fetcher,
   minLength = 2, // 🔸 número mínimo de caracteres antes de buscar
   debounceMs = 300, // 🔸 tempo de espera após digitar
@@ -39,13 +39,13 @@ export function Combobox({
         const fetchedOptions = await fetcher(query.trim());
         setOptions(fetchedOptions || []);
       } catch (error) {
-        console.error("❌ Falha ao buscar opções no Combobox:", error);
+        console.error('❌ Falha ao buscar opções no Combobox:', error);
         setOptions([]);
       } finally {
         setLoading(false);
       }
     },
-    [fetcher, minLength]
+    [fetcher, minLength],
   );
 
   /**
@@ -57,7 +57,9 @@ export function Combobox({
       return;
     }
 
-    if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
+    if (debounceTimeout.current) {
+      clearTimeout(debounceTimeout.current);
+    }
 
     debounceTimeout.current = setTimeout(() => {
       performFetch(textValue);
@@ -70,20 +72,20 @@ export function Combobox({
    * Seleciona um item da lista.
    */
   const handleSelect = (currentValue) => {
-    console.log("🎯 === INÍCIO HANDLESELECT ===");
-    console.log("🎯 Combobox handleSelect chamado:", currentValue);
-    console.log("🎯 Opções disponíveis:", options);
-    
+    console.log('🎯 === INÍCIO HANDLESELECT ===');
+    console.log('🎯 Combobox handleSelect chamado:', currentValue);
+    console.log('🎯 Opções disponíveis:', options);
+
     const selectedOption = options.find((opt) => opt.value === currentValue);
-    console.log("🎯 Opção encontrada:", selectedOption);
-    
+    console.log('🎯 Opção encontrada:', selectedOption);
+
     if (selectedOption) {
-      const newText = selectedOption.label || "";
-      
-      console.log("🎯 Chamando onValueChange com valor:", currentValue);
-      console.log("🎯 Chamando onValueChange com texto:", newText);
-      console.log("🎯 Tipo da função onValueChange:", typeof onValueChange);
-      
+      const newText = selectedOption.label || '';
+
+      console.log('🎯 Chamando onValueChange com valor:', currentValue);
+      console.log('🎯 Chamando onValueChange com texto:', newText);
+      console.log('🎯 Tipo da função onValueChange:', typeof onValueChange);
+
       try {
         if (onValueChange) {
           onValueChange(currentValue, newText);
@@ -91,18 +93,21 @@ export function Combobox({
         if (onTextValueChange) {
           onTextValueChange(newText);
         }
-        console.log("✅ Callbacks executados com sucesso");
+        console.log('✅ Callbacks executados com sucesso');
         setOpen(false);
-        console.log("✅ Dropdown fechado");
+        console.log('✅ Dropdown fechado');
       } catch (error) {
-        console.error("❌ Erro ao executar callbacks:", error);
+        console.error('❌ Erro ao executar callbacks:', error);
       }
     } else {
-      console.warn("❌ Opção não encontrada para valor:", currentValue);
-      console.log("❌ Valores de opções disponíveis:", options.map(o => o.value));
+      console.warn('❌ Opção não encontrada para valor:', currentValue);
+      console.log(
+        '❌ Valores de opções disponíveis:',
+        options.map((o) => o.value),
+      );
     }
-    
-    console.log("🎯 === FIM HANDLESELECT ===");
+
+    console.log('🎯 === FIM HANDLESELECT ===');
   };
 
   /**
@@ -110,7 +115,9 @@ export function Combobox({
    */
   const handleInputChange = (e) => {
     const newText = e.target.value;
-    if (onTextValueChange) onTextValueChange(newText);
+    if (onTextValueChange) {
+      onTextValueChange(newText);
+    }
   };
 
   /**
@@ -118,12 +125,14 @@ export function Combobox({
    */
   const clearSelection = (e) => {
     e.stopPropagation();
-    onValueChange(NONE, "");
-    if (onTextValueChange) onTextValueChange("");
+    onValueChange(NONE, '');
+    if (onTextValueChange) {
+      onTextValueChange('');
+    }
     setOptions([]);
   };
 
-  const displayValue = textValue || "";
+  const displayValue = textValue || '';
   const hasValue = value && value !== NONE;
 
   return (
@@ -184,15 +193,9 @@ export function Combobox({
             />
           </div>
           <div className="max-h-[300px] overflow-y-auto overflow-x-hidden">
-            {loading && (
-              <div className="py-6 text-center text-sm">
-                Carregando...
-              </div>
-            )}
+            {loading && <div className="py-6 text-center text-sm">Carregando...</div>}
             {!loading && options.length === 0 && textValue.length >= minLength && (
-              <div className="py-6 text-center text-sm">
-                Nenhum resultado encontrado.
-              </div>
+              <div className="py-6 text-center text-sm">Nenhum resultado encontrado.</div>
             )}
             <div className="overflow-hidden p-1 text-foreground">
               {options.map((option, index) => (
@@ -200,52 +203,54 @@ export function Combobox({
                   key={`${option.value}-${index}`}
                   className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                   onClick={(e) => {
-                    console.log("🎯 === CLIQUE DETECTADO ===");
-                    console.log("🎯 Item clicked:", option.value, option.label);
-                    console.log("🎯 Event target:", e.target);
-                    console.log("🎯 Current target:", e.currentTarget);
+                    console.log('🎯 === CLIQUE DETECTADO ===');
+                    console.log('🎯 Item clicked:', option.value, option.label);
+                    console.log('🎯 Event target:', e.target);
+                    console.log('🎯 Current target:', e.currentTarget);
                     e.preventDefault();
                     e.stopPropagation();
-                    
+
                     // Chamada imediata para testar
-                    console.log("🎯 Chamando handleSelect...");
+                    console.log('🎯 Chamando handleSelect...');
                     handleSelect(option.value);
                   }}
                   onMouseDown={(e) => {
-                    console.log("🎯 Item mousedown:", option.value, option.label);
+                    console.log('🎯 Item mousedown:', option.value, option.label);
                     e.preventDefault();
                     e.stopPropagation();
                     handleSelect(option.value);
                   }}
                   onPointerDown={(e) => {
-                    console.log("🎯 Item pointerdown:", option.value, option.label);
+                    console.log('🎯 Item pointerdown:', option.value, option.label);
                     e.preventDefault();
                     e.stopPropagation();
                     handleSelect(option.value);
                   }}
                   onTouchStart={(e) => {
-                    console.log("🎯 Item touchstart:", option.value, option.label);
+                    console.log('🎯 Item touchstart:', option.value, option.label);
                     e.preventDefault();
                     e.stopPropagation();
                     handleSelect(option.value);
                   }}
-                  style={{ 
+                  style={{
                     minHeight: '32px',
                     display: 'flex',
                     alignItems: 'center',
                     userSelect: 'none',
                     WebkitUserSelect: 'none',
                     MozUserSelect: 'none',
-                    msUserSelect: 'none'
+                    msUserSelect: 'none',
                   }}
                 >
                   <Check
                     className={cn(
-                      "mr-2 h-4 w-4 flex-shrink-0",
-                      value === option.value ? "opacity-100" : "opacity-0"
+                      'mr-2 h-4 w-4 flex-shrink-0',
+                      value === option.value ? 'opacity-100' : 'opacity-0',
                     )}
                   />
-                  <span className="flex-1" style={{ pointerEvents: 'none' }}>{option.label}</span>
+                  <span className="flex-1" style={{ pointerEvents: 'none' }}>
+                    {option.label}
+                  </span>
                 </div>
               ))}
             </div>

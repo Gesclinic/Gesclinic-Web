@@ -1,19 +1,13 @@
-import React from "react";
+import React from 'react';
 
-export default function AgendaTable({
-  appointments = [],
-  loading,
-  onClickSlot,
-}) {
-  if (loading)
+export default function AgendaTable({ appointments = [], loading, onClickSlot }) {
+  if (loading) {
     return <p className="text-center py-6 text-gray-500">Carregando…</p>;
+  }
 
-  if (!appointments.length)
-    return (
-      <p className="text-center py-10 text-gray-400">
-        Nenhum agendamento encontrado.
-      </p>
-    );
+  if (!appointments.length) {
+    return <p className="text-center py-10 text-gray-400">Nenhum agendamento encontrado.</p>;
+  }
 
   return (
     <table className="w-full border-collapse">
@@ -43,4 +37,3 @@ export default function AgendaTable({
     </table>
   );
 }
-

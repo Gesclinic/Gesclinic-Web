@@ -2,12 +2,12 @@
 // API para Conciliação Bancária
 
 import { supabase } from '@/lib/customSupabaseClient.js';
-import { 
-  CONCILIATION_STATUS, 
+import {
+  CONCILIATION_STATUS,
   TRANSACTION_TYPE,
   FINANCIAL_LINK_TYPE,
   CONCILIATION_ACTION,
-  SUGGESTION_LIMITS
+  SUGGESTION_LIMITS,
 } from '@/lib/conciliationStatus.js';
 
 /* ============================================
@@ -25,12 +25,10 @@ export async function listBankStatements({
   accountId = null,
   search = null,
   limit = 100,
-  offset = 0
+  offset = 0,
 }) {
   try {
-    let query = supabase
-      .from('conciliation_bank_statements')
-      .select('*', { count: 'exact' });
+    let query = supabase.from('conciliation_bank_statements').select('*', { count: 'exact' });
 
     // Filtros obrigatórios
     query = query.eq('clinic_id', clinicId);
@@ -57,12 +55,14 @@ export async function listBankStatements({
       .order('statement_date', { ascending: false })
       .range(offset, offset + limit - 1);
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
 
     return {
       data: data || [],
       count: count || 0,
-      total: count || 0
+      total: count || 0,
     };
   } catch (error) {
     console.error('Error listing bank statements:', error);
@@ -81,7 +81,9 @@ export async function getBankStatement(id) {
       .eq('id', id)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data;
   } catch (error) {
     console.error('Error getting bank statement:', error);
@@ -96,10 +98,10 @@ export async function importBankStatements({
   clinicId,
   statements,
   batchId = null,
-  accountId = null
+  accountId = null,
 }) {
   try {
-    const records = statements.map(stmt => ({
+    const records = statements.map((stmt) => ({
       clinic_id: clinicId,
       bank_account_id: accountId,
       statement_date: stmt.date || stmt.statement_date,
@@ -108,7 +110,7 @@ export async function importBankStatements({
       transaction_type: stmt.type || stmt.transaction_type,
       status: CONCILIATION_STATUS.PENDING,
       import_batch_id: batchId,
-      created_by: null // será preenchido pelo trigger se houver user_id
+      created_by: null, // será preenchido pelo trigger se houver user_id
     }));
 
     const { data, error } = await supabase
@@ -116,11 +118,13 @@ export async function importBankStatements({
       .insert(records)
       .select();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
 
     return {
       imported: data.length,
-      statements: data
+      statements: data,
     };
   } catch (error) {
     console.error('Error importing bank statements:', error);
@@ -135,7 +139,7 @@ export async function updateBankStatementStatus(id, status, divergenceReason = n
   try {
     const updateData = {
       status,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     };
 
     if (divergenceReason && status === CONCILIATION_STATUS.DIVERGENT) {
@@ -148,7 +152,9 @@ export async function updateBankStatementStatus(id, status, divergenceReason = n
       .eq('id', id)
       .select();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data?.[0];
   } catch (error) {
     console.error('Error updating bank statement status:', error);
@@ -168,19 +174,21 @@ export async function conciliateStatement(statementId, financialId, financialTyp
         status: CONCILIATION_STATUS.CONCILIATED,
         linked_financial_id: financialId,
         linked_type: financialType,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq('id', statementId)
       .select();
 
-    if (updateError) throw updateError;
+    if (updateError) {
+      throw updateError;
+    }
 
     // Registrar no histórico
     await addLinkHistory({
       bank_statement_id: statementId,
       financial_id: financialId,
       financial_type: financialType,
-      action: CONCILIATION_ACTION.CONCILIATE
+      action: CONCILIATION_ACTION.CONCILIATE,
     });
 
     return updated?.[0];
@@ -205,7 +213,7 @@ export async function createAndLinkFinancial({
   paymentMethod = null,
   supplierId = null,
   clientId = null,
-  notes = null
+  notes = null,
 }) {
   try {
     let financialId;
@@ -214,48 +222,58 @@ export async function createAndLinkFinancial({
       // Criar em Contas a Pagar
       const { data, error } = await supabase
         .from('ap_bills')
-        .insert([{
-          clinic_id: clinicId,
-          invoice_number: `AUTO-${Date.now()}`,
-          supplier_id: supplierId,
-          category_id: categoryId,
-          cost_center_id: costCenterId,
-          amount: parseFloat(amount),
-          description: description || 'Lançamento automático - Conciliação Bancária',
-          issue_date: new Date().toISOString().split('T')[0],
-          due_date: dueDate,
-          payment_method: paymentMethod,
-          status: 'open',
-          notes: notes
-        }])
+        .insert([
+          {
+            clinic_id: clinicId,
+            invoice_number: `AUTO-${Date.now()}`,
+            supplier_id: supplierId,
+            category_id: categoryId,
+            cost_center_id: costCenterId,
+            amount: parseFloat(amount),
+            description: description || 'Lançamento automático - Conciliação Bancária',
+            issue_date: new Date().toISOString().split('T')[0],
+            due_date: dueDate,
+            payment_method: paymentMethod,
+            status: 'open',
+            notes: notes,
+          },
+        ])
         .select();
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       financialId = data?.[0]?.id;
     } else if (type === FINANCIAL_LINK_TYPE.RECEIVABLE) {
       // Criar em Contas a Receber
       const { data, error } = await supabase
         .from('ar_invoices')
-        .insert([{
-          clinic_id: clinicId,
-          invoice_number: `AUTO-${Date.now()}`,
-          client_id: clientId,
-          category_id: categoryId,
-          cost_center_id: costCenterId,
-          amount: parseFloat(amount),
-          description: description || 'Lançamento automático - Conciliação Bancária',
-          issue_date: new Date().toISOString().split('T')[0],
-          due_date: dueDate,
-          status: 'open',
-          notes: notes
-        }])
+        .insert([
+          {
+            clinic_id: clinicId,
+            invoice_number: `AUTO-${Date.now()}`,
+            client_id: clientId,
+            category_id: categoryId,
+            cost_center_id: costCenterId,
+            amount: parseFloat(amount),
+            description: description || 'Lançamento automático - Conciliação Bancária',
+            issue_date: new Date().toISOString().split('T')[0],
+            due_date: dueDate,
+            status: 'open',
+            notes: notes,
+          },
+        ])
         .select();
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       financialId = data?.[0]?.id;
     }
 
-    if (!financialId) throw new Error('Failed to create financial record');
+    if (!financialId) {
+      throw new Error('Failed to create financial record');
+    }
 
     // Vincular com extrato
     const { data: updated, error: updateError } = await supabase
@@ -264,12 +282,14 @@ export async function createAndLinkFinancial({
         status: CONCILIATION_STATUS.ADJUSTED,
         linked_financial_id: financialId,
         linked_type: type,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq('id', statementId)
       .select();
 
-    if (updateError) throw updateError;
+    if (updateError) {
+      throw updateError;
+    }
 
     // Registrar no histórico
     await addLinkHistory({
@@ -277,7 +297,7 @@ export async function createAndLinkFinancial({
       financial_id: financialId,
       financial_type: type,
       action: CONCILIATION_ACTION.ADJUST,
-      action_notes: 'Lançamento criado automaticamente'
+      action_notes: 'Lançamento criado automaticamente',
     });
 
     return updated?.[0];
@@ -292,11 +312,7 @@ export async function createAndLinkFinancial({
  */
 export async function markAsDivergent(statementId, reason) {
   try {
-    return await updateBankStatementStatus(
-      statementId,
-      CONCILIATION_STATUS.DIVERGENT,
-      reason
-    );
+    return await updateBankStatementStatus(statementId, CONCILIATION_STATUS.DIVERGENT, reason);
   } catch (error) {
     console.error('Error marking as divergent:', error);
     throw error;
@@ -313,17 +329,19 @@ export async function ignoreStatement(statementId, reason) {
       .update({
         status: CONCILIATION_STATUS.IGNORED,
         divergence_reason: reason,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
       .eq('id', statementId)
       .select();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
 
     await addLinkHistory({
       bank_statement_id: statementId,
       action: CONCILIATION_ACTION.IGNORE,
-      action_notes: reason
+      action_notes: reason,
     });
 
     return data?.[0];
@@ -346,7 +364,7 @@ export async function findSuggestions({
   description,
   transactionType,
   statementDate,
-  maxDaysDifference = SUGGESTION_LIMITS.MAX_DAYS_DIFFERENCE
+  maxDaysDifference = SUGGESTION_LIMITS.MAX_DAYS_DIFFERENCE,
 }) {
   try {
     const suggestions = [];
@@ -363,16 +381,24 @@ export async function findSuggestions({
         .neq('status', 'canceled');
 
       if (apSuggestions) {
-        suggestions.push(...apSuggestions.map(ap => ({
-          id: ap.id,
-          type: FINANCIAL_LINK_TYPE.PAYABLE,
-          description: ap.description,
-          amount: ap.amount,
-          date: ap.due_date,
-          status: ap.status,
-          matchScore: calculateMatchScore(amount, ap.amount, statementDate, ap.due_date, maxDaysDifference),
-          matchReason: 'Valor e data aproximados'
-        })));
+        suggestions.push(
+          ...apSuggestions.map((ap) => ({
+            id: ap.id,
+            type: FINANCIAL_LINK_TYPE.PAYABLE,
+            description: ap.description,
+            amount: ap.amount,
+            date: ap.due_date,
+            status: ap.status,
+            matchScore: calculateMatchScore(
+              amount,
+              ap.amount,
+              statementDate,
+              ap.due_date,
+              maxDaysDifference,
+            ),
+            matchReason: 'Valor e data aproximados',
+          })),
+        );
       }
     }
 
@@ -388,16 +414,24 @@ export async function findSuggestions({
         .neq('status', 'canceled');
 
       if (arSuggestions) {
-        suggestions.push(...arSuggestions.map(ar => ({
-          id: ar.id,
-          type: FINANCIAL_LINK_TYPE.RECEIVABLE,
-          description: ar.description,
-          amount: ar.amount,
-          date: ar.due_date,
-          status: ar.status,
-          matchScore: calculateMatchScore(amount, ar.amount, statementDate, ar.due_date, maxDaysDifference),
-          matchReason: 'Valor e data aproximados'
-        })));
+        suggestions.push(
+          ...arSuggestions.map((ar) => ({
+            id: ar.id,
+            type: FINANCIAL_LINK_TYPE.RECEIVABLE,
+            description: ar.description,
+            amount: ar.amount,
+            date: ar.due_date,
+            status: ar.status,
+            matchScore: calculateMatchScore(
+              amount,
+              ar.amount,
+              statementDate,
+              ar.due_date,
+              maxDaysDifference,
+            ),
+            matchReason: 'Valor e data aproximados',
+          })),
+        );
       }
     }
 
@@ -450,22 +484,26 @@ export async function addLinkHistory({
   financial_type = null,
   action,
   action_notes = null,
-  user_id = null
+  user_id = null,
 }) {
   try {
     const { data, error } = await supabase
       .from('conciliation_link_history')
-      .insert([{
-        bank_statement_id,
-        financial_id,
-        financial_type,
-        action,
-        action_notes,
-        user_id
-      }])
+      .insert([
+        {
+          bank_statement_id,
+          financial_id,
+          financial_type,
+          action,
+          action_notes,
+          user_id,
+        },
+      ])
       .select();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data?.[0];
   } catch (error) {
     console.error('Error adding link history:', error);
@@ -484,7 +522,9 @@ export async function getStatementHistory(statementId) {
       .eq('bank_statement_id', statementId)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data || [];
   } catch (error) {
     console.error('Error getting statement history:', error);
@@ -506,12 +546,20 @@ export async function getIndicators(clinicId, accountId = null, startDate = null
       .select('status, amount, transaction_type');
 
     query = query.eq('clinic_id', clinicId);
-    if (accountId) query = query.eq('bank_account_id', accountId);
-    if (startDate) query = query.gte('statement_date', startDate);
-    if (endDate) query = query.lte('statement_date', endDate);
+    if (accountId) {
+      query = query.eq('bank_account_id', accountId);
+    }
+    if (startDate) {
+      query = query.gte('statement_date', startDate);
+    }
+    if (endDate) {
+      query = query.lte('statement_date', endDate);
+    }
 
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
 
     const indicators = {
       pending: 0,
@@ -521,16 +569,26 @@ export async function getIndicators(clinicId, accountId = null, startDate = null
       ignored: 0,
       totalCredit: 0,
       totalDebit: 0,
-      difference: 0
+      difference: 0,
     };
 
-    data?.forEach(stmt => {
+    data?.forEach((stmt) => {
       // Contar por status
-      if (stmt.status === CONCILIATION_STATUS.PENDING) indicators.pending += stmt.amount;
-      if (stmt.status === CONCILIATION_STATUS.CONCILIATED) indicators.conciliated += stmt.amount;
-      if (stmt.status === CONCILIATION_STATUS.ADJUSTED) indicators.adjusted += stmt.amount;
-      if (stmt.status === CONCILIATION_STATUS.DIVERGENT) indicators.divergent += stmt.amount;
-      if (stmt.status === CONCILIATION_STATUS.IGNORED) indicators.ignored += stmt.amount;
+      if (stmt.status === CONCILIATION_STATUS.PENDING) {
+        indicators.pending += stmt.amount;
+      }
+      if (stmt.status === CONCILIATION_STATUS.CONCILIATED) {
+        indicators.conciliated += stmt.amount;
+      }
+      if (stmt.status === CONCILIATION_STATUS.ADJUSTED) {
+        indicators.adjusted += stmt.amount;
+      }
+      if (stmt.status === CONCILIATION_STATUS.DIVERGENT) {
+        indicators.divergent += stmt.amount;
+      }
+      if (stmt.status === CONCILIATION_STATUS.IGNORED) {
+        indicators.ignored += stmt.amount;
+      }
 
       // Contar créditos e débitos
       if (stmt.transaction_type === TRANSACTION_TYPE.CREDIT) {
@@ -565,7 +623,9 @@ export async function listBankAccounts(clinicId) {
       .eq('active', true)
       .order('account_name');
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data || [];
   } catch (error) {
     console.error('Error listing bank accounts:', error);
@@ -581,22 +641,26 @@ export async function createBankAccount({
   accountName,
   bankName,
   accountNumber,
-  accountHolder
+  accountHolder,
 }) {
   try {
     const { data, error } = await supabase
       .from('clinic_bank_accounts')
-      .insert([{
-        clinic_id: clinicId,
-        account_name: accountName,
-        bank_name: bankName,
-        account_number: accountNumber,
-        account_holder: accountHolder,
-        active: true
-      }])
+      .insert([
+        {
+          clinic_id: clinicId,
+          account_name: accountName,
+          bank_name: bankName,
+          account_number: accountNumber,
+          account_holder: accountHolder,
+          active: true,
+        },
+      ])
       .select();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data?.[0];
   } catch (error) {
     console.error('Error creating bank account:', error);
@@ -614,12 +678,14 @@ export async function updateBankAccountBalance(accountId, bankBalance, systemBal
       .update({
         bank_balance: bankBalance,
         system_balance: systemBalance,
-        last_reconciliation_date: new Date().toISOString().split('T')[0]
+        last_reconciliation_date: new Date().toISOString().split('T')[0],
       })
       .eq('id', accountId)
       .select();
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data?.[0];
   } catch (error) {
     console.error('Error updating bank account balance:', error);

@@ -1,6 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,7 +26,9 @@ export default function OrcamentoItensDialog({
   const [edit, setEdit] = useState(null);
 
   const load = useCallback(async () => {
-    if (!orcamento?.id) return;
+    if (!orcamento?.id) {
+      return;
+    }
     setLoading(true);
     try {
       const data = await listItens(orcamento.id);
@@ -32,11 +39,17 @@ export default function OrcamentoItensDialog({
   }, [orcamento?.id, listItens]);
 
   useEffect(() => {
-    if (open) load();
+    if (open) {
+      load();
+    }
   }, [open, load]);
 
   const subtotalCalc = useMemo(() => {
-    return itens.reduce((acc, it) => acc + Number(it.total_item || (Number(it.quantidade||0)*Number(it.valor_unitario||0))), 0);
+    return itens.reduce(
+      (acc, it) =>
+        acc + Number(it.total_item || Number(it.quantidade || 0) * Number(it.valor_unitario || 0)),
+      0,
+    );
   }, [itens]);
 
   const totalCalc = useMemo(() => {
@@ -45,11 +58,19 @@ export default function OrcamentoItensDialog({
   }, [subtotalCalc, orcamento?.desconto]);
 
   const startNew = () => setEdit({ id: null, descricao: '', quantidade: 1, valor_unitario: 0 });
-  const startEdit = (it) => setEdit({ id: it.id, descricao: it.descricao || '', quantidade: Number(it.quantidade || 1), valor_unitario: Number(it.valor_unitario || 0) });
+  const startEdit = (it) =>
+    setEdit({
+      id: it.id,
+      descricao: it.descricao || '',
+      quantidade: Number(it.quantidade || 1),
+      valor_unitario: Number(it.valor_unitario || 0),
+    });
   const cancelEdit = () => setEdit(null);
 
   const saveEdit = async () => {
-    if (!orcamento?.id) return;
+    if (!orcamento?.id) {
+      return;
+    }
     setLoading(true);
     try {
       if (edit.id) {
@@ -88,7 +109,9 @@ export default function OrcamentoItensDialog({
         <DialogHeader>
           <DialogTitle>Itens do Orçamento</DialogTitle>
           <DialogDescription>
-            {orcamento?.numero ? `#${orcamento.numero} — ${orcamento?.titulo || ''}` : (orcamento?.titulo || '')}
+            {orcamento?.numero
+              ? `#${orcamento.numero} — ${orcamento?.titulo || ''}`
+              : orcamento?.titulo || ''}
           </DialogDescription>
         </DialogHeader>
 
@@ -99,7 +122,9 @@ export default function OrcamentoItensDialog({
               Adicionar item
             </Button>
             <div className="text-sm text-gray-600">
-              Subtotal: <b>R$ {subtotalCalc.toFixed(2)}</b> · Desconto: <b>R$ {Number(orcamento?.desconto || 0).toFixed(2)}</b> · Total: <b>R$ {totalCalc.toFixed(2)}</b>
+              Subtotal: <b>R$ {subtotalCalc.toFixed(2)}</b> · Desconto:{' '}
+              <b>R$ {Number(orcamento?.desconto || 0).toFixed(2)}</b> · Total:{' '}
+              <b>R$ {totalCalc.toFixed(2)}</b>
             </div>
           </div>
 
@@ -116,29 +141,42 @@ export default function OrcamentoItensDialog({
               </thead>
               <tbody>
                 {loading && (
-                  <tr><td colSpan={5} className="px-3 py-6 text-center text-gray-500">Carregando…</td></tr>
-                )}
-                {!loading && itens.length === 0 && (
-                  <tr><td colSpan={5} className="px-3 py-6 text-center text-gray-500">Nenhum item</td></tr>
-                )}
-                {!loading && itens.map((it) => (
-                  <tr key={it.id} className="border-t">
-                    <td className="px-3 py-2">{it.descricao || '-'}</td>
-                    <td className="px-3 py-2 text-right">{Number(it.quantidade || 0)}</td>
-                    <td className="px-3 py-2 text-right">R$ {Number(it.valor_unitario || 0).toFixed(2)}</td>
-                    <td className="px-3 py-2 text-right">R$ {Number(it.total_item || 0).toFixed(2)}</td>
-                    <td className="px-3 py-2">
-                      <div className="flex gap-2 justify-end">
-                        <Button size="sm" variant="secondary" onClick={() => startEdit(it)}>
-                          <Pencil className="w-4 h-4 mr-1" /> Editar
-                        </Button>
-                        <Button size="sm" variant="destructive" onClick={() => removeItem(it.id)}>
-                          <Trash2 className="w-4 h-4 mr-1" /> Remover
-                        </Button>
-                      </div>
+                  <tr>
+                    <td colSpan={5} className="px-3 py-6 text-center text-gray-500">
+                      Carregando…
                     </td>
                   </tr>
-                ))}
+                )}
+                {!loading && itens.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-3 py-6 text-center text-gray-500">
+                      Nenhum item
+                    </td>
+                  </tr>
+                )}
+                {!loading &&
+                  itens.map((it) => (
+                    <tr key={it.id} className="border-t">
+                      <td className="px-3 py-2">{it.descricao || '-'}</td>
+                      <td className="px-3 py-2 text-right">{Number(it.quantidade || 0)}</td>
+                      <td className="px-3 py-2 text-right">
+                        R$ {Number(it.valor_unitario || 0).toFixed(2)}
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        R$ {Number(it.total_item || 0).toFixed(2)}
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="flex gap-2 justify-end">
+                          <Button size="sm" variant="secondary" onClick={() => startEdit(it)}>
+                            <Pencil className="w-4 h-4 mr-1" /> Editar
+                          </Button>
+                          <Button size="sm" variant="destructive" onClick={() => removeItem(it.id)}>
+                            <Trash2 className="w-4 h-4 mr-1" /> Remover
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
@@ -148,20 +186,38 @@ export default function OrcamentoItensDialog({
               <div className="grid grid-cols-1 sm:grid-cols-6 gap-3">
                 <div className="sm:col-span-3 space-y-1">
                   <Label>Descrição</Label>
-                  <Input value={edit.descricao} onChange={(e) => setEdit({ ...edit, descricao: e.target.value })} placeholder="Ex.: Consulta, Procedimento X…" />
+                  <Input
+                    value={edit.descricao}
+                    onChange={(e) => setEdit({ ...edit, descricao: e.target.value })}
+                    placeholder="Ex.: Consulta, Procedimento X…"
+                  />
                 </div>
                 <div className="sm:col-span-1 space-y-1">
                   <Label>Qtd</Label>
-                  <Input type="number" min="0" step="0.01" value={edit.quantidade} onChange={(e) => setEdit({ ...edit, quantidade: e.target.value })} />
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={edit.quantidade}
+                    onChange={(e) => setEdit({ ...edit, quantidade: e.target.value })}
+                  />
                 </div>
                 <div className="sm:col-span-2 space-y-1">
                   <Label>Valor unitário (R$)</Label>
-                  <Input type="number" min="0" step="0.01" value={edit.valor_unitario} onChange={(e) => setEdit({ ...edit, valor_unitario: e.target.value })} />
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={edit.valor_unitario}
+                    onChange={(e) => setEdit({ ...edit, valor_unitario: e.target.value })}
+                  />
                 </div>
               </div>
 
               <div className="flex gap-2 justify-end">
-                <Button variant="outline" onClick={cancelEdit}>Cancelar</Button>
+                <Button variant="outline" onClick={cancelEdit}>
+                  Cancelar
+                </Button>
                 <Button onClick={saveEdit}>Salvar item</Button>
               </div>
             </div>
@@ -169,7 +225,9 @@ export default function OrcamentoItensDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Fechar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Fechar
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -5,14 +5,14 @@
  * /clinica/pacientes/:patientId/familiares
  */
 
-import React, { useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { usePatientContext } from "@/contexts/PatientContext";
-import PageLayout from "@/components/ui/PageLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Helmet } from "react-helmet-async";
-import { Plus, Users } from "lucide-react";
+import React, { useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { usePatientContext } from '@/contexts/PatientContext';
+import PageLayout from '@/components/ui/PageLayout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Helmet } from 'react-helmet-async';
+import { Plus, Users } from 'lucide-react';
 
 export default function PatientFamiliaresPage() {
   const { patientId } = useParams();
@@ -21,9 +21,9 @@ export default function PatientFamiliaresPage() {
 
   // ⚠️ GUARD: Validar patientId
   useEffect(() => {
-    if (!patientId || patientId.trim() === "") {
-      console.warn("❌ PatientFamiliaresPage: patientId inválido ou vazio");
-      navigate("/clinica/pacientes");
+    if (!patientId || patientId.trim() === '') {
+      console.warn('❌ PatientFamiliaresPage: patientId inválido ou vazio');
+      navigate('/clinica/pacientes');
     }
   }, [patientId, navigate]);
 
@@ -46,16 +46,14 @@ export default function PatientFamiliaresPage() {
       <PageLayout
         title={patientData?.name}
         breadcrumbs={[
-          { label: "Pacientes", href: "/clinica/pacientes" },
-          { label: patientData?.name || "Paciente" },
-          { label: "Familiares" },
+          { label: 'Pacientes', href: '/clinica/pacientes' },
+          { label: patientData?.name || 'Paciente' },
+          { label: 'Familiares' },
         ]}
       >
         <div className="w-full mx-auto">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">
-              Dados Familiares
-            </h2>
+            <h2 className="text-2xl font-bold text-gray-900">Dados Familiares</h2>
             <Button className="gap-2">
               <Plus size={18} />
               Adicionar Responsável
@@ -81,4 +79,3 @@ export default function PatientFamiliaresPage() {
     </>
   );
 }
-

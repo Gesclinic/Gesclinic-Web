@@ -1,23 +1,33 @@
-import React, { useState, useEffect } from "react";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { stockLocationsApi } from "@/lib/stockApi";
+import React, { useState, useEffect } from 'react';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { stockLocationsApi } from '@/lib/stockApi';
 
-export default function LocationSelect({ clinicId, value, locationId = "", onChange, required = false, hideLabel = false, label = "Local de Estoque" }) {
+export default function LocationSelect({
+  clinicId,
+  value,
+  locationId = '',
+  onChange,
+  required = false,
+  hideLabel = false,
+  label = 'Local de Estoque',
+}) {
   const [locations, setLocations] = useState([]);
-  const [search, setSearch] = useState(value || "");
+  const [search, setSearch] = useState(value || '');
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!clinicId) return;
+    if (!clinicId) {
+      return;
+    }
     const fetchLocations = async () => {
       try {
         setLoading(true);
         const data = await stockLocationsApi.list(clinicId);
         setLocations(data || []);
       } catch (error) {
-        console.error("Erro ao buscar locais de estoque:", error);
+        console.error('Erro ao buscar locais de estoque:', error);
       } finally {
         setLoading(false);
       }
@@ -27,8 +37,7 @@ export default function LocationSelect({ clinicId, value, locationId = "", onCha
 
   const filtered = locations.filter(
     (loc) =>
-      loc.name.toLowerCase().includes(search.toLowerCase()) ||
-      (loc.id && loc.id.includes(search))
+      loc.name.toLowerCase().includes(search.toLowerCase()) || (loc.id && loc.id.includes(search)),
   );
 
   const selected = locations.find((loc) => loc.id === locationId);
@@ -50,22 +59,30 @@ export default function LocationSelect({ clinicId, value, locationId = "", onCha
   }, [locationId, value, locations]);
 
   const tryResolveTypedLocation = () => {
-    if (!locations?.length || !search?.trim()) return;
-    const exact = locations.find(l => l.name.toLowerCase() === search.trim().toLowerCase());
+    if (!locations?.length || !search?.trim()) {
+      return;
+    }
+    const exact = locations.find((l) => l.name.toLowerCase() === search.trim().toLowerCase());
     if (exact) {
-      if (exact.id !== locationId) onChange?.({ location: exact.name, locationId: exact.id });
+      if (exact.id !== locationId) {
+        onChange?.({ location: exact.name, locationId: exact.id });
+      }
       return;
     }
     if (filtered.length === 1) {
       const only = filtered[0];
-      if (only.id !== locationId) onChange?.({ location: only.name, locationId: only.id });
+      if (only.id !== locationId) {
+        onChange?.({ location: only.name, locationId: only.id });
+      }
     }
   };
 
   return (
     <div className="space-y-2">
       {!hideLabel && (
-        <Label htmlFor="location">{label} {required && <span className="text-red-500">*</span>}</Label>
+        <Label htmlFor="location">
+          {label} {required && <span className="text-red-500">*</span>}
+        </Label>
       )}
       <div className="relative">
         <Input
@@ -78,7 +95,12 @@ export default function LocationSelect({ clinicId, value, locationId = "", onCha
             setOpen(true);
           }}
           onFocus={() => setOpen(true)}
-          onBlur={() => setTimeout(() => { tryResolveTypedLocation(); setOpen(false); }, 200)}
+          onBlur={() =>
+            setTimeout(() => {
+              tryResolveTypedLocation();
+              setOpen(false);
+            }, 200)
+          }
           required={required}
         />
         {open && filtered.length > 0 && (
@@ -89,7 +111,7 @@ export default function LocationSelect({ clinicId, value, locationId = "", onCha
                 type="button"
                 onClick={() => handleSelect(location)}
                 className={`w-full text-left px-4 py-2 hover:bg-blue-50 flex justify-between items-center ${
-                  locationId === location.id ? "bg-blue-100" : ""
+                  locationId === location.id ? 'bg-blue-100' : ''
                 }`}
               >
                 <span>{location.name}</span>

@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from "react";
-import { supabase } from "@/lib/customSupabaseClient";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/lib/customSupabaseClient';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 export default function DiagnosticsPage() {
   const auth = useAuth();
@@ -15,9 +15,14 @@ export default function DiagnosticsPage() {
     async function diagnose() {
       try {
         // 1. Obter sessão
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) throw sessionError;
-        
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession();
+        if (sessionError) {
+          throw sessionError;
+        }
+
         setSessionData({
           user_id: session?.user?.id,
           email: session?.user?.email,
@@ -25,17 +30,19 @@ export default function DiagnosticsPage() {
         });
 
         if (!session?.user?.id) {
-          throw new Error("Nenhuma sessão ativa");
+          throw new Error('Nenhuma sessão ativa');
         }
 
         // 2. Buscar dados do usuário no banco
         const { data: user, error: userError } = await supabase
-          .from("users")
-          .select("id, email, clinic_id, name, role")
-          .eq("id", session.user.id)
+          .from('users')
+          .select('id, email, clinic_id, name, role')
+          .eq('id', session.user.id)
           .single();
 
-        if (userError) throw userError;
+        if (userError) {
+          throw userError;
+        }
 
         setDbData(user);
         setLoading(false);
@@ -71,9 +78,15 @@ export default function DiagnosticsPage() {
           </CardHeader>
           <CardContent>
             <div className="bg-blue-50 border border-blue-200 rounded p-4 text-sm font-mono space-y-2">
-              <div><strong>User ID (Sessão):</strong> {sessionData?.user_id || "❌ NULL"}</div>
-              <div><strong>Email (Sessão):</strong> {sessionData?.email || "❌ NULL"}</div>
-              <div><strong>Nome (Sessão):</strong> {sessionData?.name || "❌ NULL"}</div>
+              <div>
+                <strong>User ID (Sessão):</strong> {sessionData?.user_id || '❌ NULL'}
+              </div>
+              <div>
+                <strong>Email (Sessão):</strong> {sessionData?.email || '❌ NULL'}
+              </div>
+              <div>
+                <strong>Nome (Sessão):</strong> {sessionData?.name || '❌ NULL'}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -90,11 +103,22 @@ export default function DiagnosticsPage() {
             ) : (
               <div className="space-y-2">
                 <div className="bg-blue-50 border border-blue-200 rounded p-4 text-sm font-mono space-y-2">
-                  <div><strong>ID:</strong> {dbData?.id || "❌ NULL"}</div>
-                  <div><strong>Email:</strong> {dbData?.email || "❌ NULL"}</div>
-                  <div><strong>Clinic ID:</strong> {dbData?.clinic_id ? `✅ ${dbData.clinic_id}` : "❌ NULL"}</div>
-                  <div><strong>Nome:</strong> {dbData?.name || "❌ NULL"}</div>
-                  <div><strong>Role:</strong> {dbData?.role || "❌ NULL"}</div>
+                  <div>
+                    <strong>ID:</strong> {dbData?.id || '❌ NULL'}
+                  </div>
+                  <div>
+                    <strong>Email:</strong> {dbData?.email || '❌ NULL'}
+                  </div>
+                  <div>
+                    <strong>Clinic ID:</strong>{' '}
+                    {dbData?.clinic_id ? `✅ ${dbData.clinic_id}` : '❌ NULL'}
+                  </div>
+                  <div>
+                    <strong>Nome:</strong> {dbData?.name || '❌ NULL'}
+                  </div>
+                  <div>
+                    <strong>Role:</strong> {dbData?.role || '❌ NULL'}
+                  </div>
                 </div>
               </div>
             )}
@@ -107,10 +131,18 @@ export default function DiagnosticsPage() {
           </CardHeader>
           <CardContent>
             <div className="bg-blue-50 border border-blue-200 rounded p-4 text-sm font-mono space-y-2">
-              <div><strong>User:</strong> {auth.user?.email || "❌ NULL"}</div>
-              <div><strong>ClinicId:</strong> {auth.clinicId ? `✅ ${auth.clinicId}` : "❌ NULL"}</div>
-              <div><strong>CurrentRole:</strong> {auth.currentRole || "❌ NULL"}</div>
-              <div><strong>Loading:</strong> {auth.loading ? "true" : "false"}</div>
+              <div>
+                <strong>User:</strong> {auth.user?.email || '❌ NULL'}
+              </div>
+              <div>
+                <strong>ClinicId:</strong> {auth.clinicId ? `✅ ${auth.clinicId}` : '❌ NULL'}
+              </div>
+              <div>
+                <strong>CurrentRole:</strong> {auth.currentRole || '❌ NULL'}
+              </div>
+              <div>
+                <strong>Loading:</strong> {auth.loading ? 'true' : 'false'}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -122,9 +154,10 @@ export default function DiagnosticsPage() {
             </CardHeader>
             <CardContent>
               <p className="text-orange-800 mb-4">
-                O banco de dados HAS o clinic_id, mas o AuthContext não carregou. Isso é um problema de timing ou cache.
+                O banco de dados HAS o clinic_id, mas o AuthContext não carregou. Isso é um problema
+                de timing ou cache.
               </p>
-              <Button 
+              <Button
                 onClick={() => window.location.reload()}
                 className="w-full bg-orange-600 hover:bg-orange-700"
               >
@@ -141,11 +174,15 @@ export default function DiagnosticsPage() {
             </CardHeader>
             <CardContent>
               <p className="text-red-800 mb-4">
-                O clinic_id NÃO está salvo no banco para este usuário. Preciso atualizar manualmente no Supabase.
+                O clinic_id NÃO está salvo no banco para este usuário. Preciso atualizar manualmente
+                no Supabase.
               </p>
               <div className="text-sm text-red-700 space-y-2 font-mono bg-red-100 p-3 rounded mb-4">
                 <p>Execute no Supabase SQL Editor:</p>
-                <p className="font-bold">UPDATE users SET clinic_id = 'dcee437c-fd14-463c-b25e-a318f5da60b7'::uuid WHERE email = '{sessionData?.email}';</p>
+                <p className="font-bold">
+                  UPDATE users SET clinic_id = 'dcee437c-fd14-463c-b25e-a318f5da60b7'::uuid WHERE
+                  email = '{sessionData?.email}';
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -158,8 +195,8 @@ export default function DiagnosticsPage() {
             </CardHeader>
             <CardContent>
               <p className="text-green-800 mb-4">Você pode criar pacientes agora!</p>
-              <Button 
-                onClick={() => window.location.href = "/clinica/pacientes/novo"}
+              <Button
+                onClick={() => (window.location.href = '/clinica/pacientes/novo')}
                 className="w-full bg-green-600 hover:bg-green-700"
               >
                 ✅ Ir para Novo Paciente

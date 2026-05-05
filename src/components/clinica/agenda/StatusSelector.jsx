@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
-import { ChevronDown, CheckCircle2, AlertCircle } from "lucide-react";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { ChevronDown, CheckCircle2, AlertCircle } from 'lucide-react';
 import { labelForStatus, colorForStatus } from '@/lib/statusLabels';
 import { updateAppointmentStatus } from '@/lib/agendaApi';
 import { useClinicContext } from '@/contexts/ClinicContext';
@@ -25,11 +25,13 @@ const StatusSelector = ({ appointment, onStatusChange, compact = false }) => {
     { value: 'em_consultorio', label: 'Em Consultório' },
     { value: 'atendido', label: 'Atendido' },
     { value: 'faltou', label: 'Faltou' },
-    { value: 'cancelado', label: 'Cancelado' }
+    { value: 'cancelado', label: 'Cancelado' },
   ];
 
   const handleStatusUpdate = async (newStatus) => {
-    if (newStatus === appointment.status) return;
+    if (newStatus === appointment.status) {
+      return;
+    }
 
     setIsUpdating(true);
     setFinancialStatus(null);
@@ -42,23 +44,20 @@ const StatusSelector = ({ appointment, onStatusChange, compact = false }) => {
 
       // If marking as "attended", trigger financial integration
       if (dbStatus === 'attended' && clinicId) {
-        const financialResult = await finalizeAppointmentWithFinancials(
-          appointment.id,
-          clinicId
-        );
+        const financialResult = await finalizeAppointmentWithFinancials(appointment.id, clinicId);
 
         if (financialResult.success) {
           setFinancialStatus({
             success: true,
             ar: !!financialResult.ar,
             guide: !!financialResult.guide,
-            message: financialResult.message
+            message: financialResult.message,
           });
           console.log('✅ Financial integration completed:', financialResult);
         } else {
           setFinancialStatus({
             success: false,
-            message: financialResult.error || 'Erro ao processar financeiro'
+            message: financialResult.error || 'Erro ao processar financeiro',
           });
           console.warn('⚠️ Financial integration failed:', financialResult);
         }
@@ -69,7 +68,7 @@ const StatusSelector = ({ appointment, onStatusChange, compact = false }) => {
       console.error('Erro ao atualizar status:', error);
       setFinancialStatus({
         success: false,
-        message: error.message
+        message: error.message,
       });
     } finally {
       setIsUpdating(false);
@@ -84,13 +83,13 @@ const StatusSelector = ({ appointment, onStatusChange, compact = false }) => {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             size="sm"
             disabled={isUpdating}
             className="h-auto p-1 hover:bg-gray-50"
           >
-            <Badge 
+            <Badge
               variant="outline"
               className={`${statusColors.bg} ${statusColors.text} ${statusColors.border} cursor-pointer hover:opacity-80`}
             >
@@ -110,7 +109,7 @@ const StatusSelector = ({ appointment, onStatusChange, compact = false }) => {
                 disabled={isUpdating}
                 className="cursor-pointer"
               >
-                <Badge 
+                <Badge
                   variant="outline"
                   className={`${optionColors.bg} ${optionColors.text} ${optionColors.border} text-xs`}
                 >
@@ -126,7 +125,7 @@ const StatusSelector = ({ appointment, onStatusChange, compact = false }) => {
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      <Badge 
+      <Badge
         variant="outline"
         className={`${statusColors.bg} ${statusColors.text} ${statusColors.border}`}
       >
@@ -135,11 +134,11 @@ const StatusSelector = ({ appointment, onStatusChange, compact = false }) => {
 
       {/* Financial Status Feedback */}
       {financialStatus && (
-        <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
-          financialStatus.success
-            ? 'bg-green-100 text-green-800'
-            : 'bg-red-100 text-red-800'
-        }`}>
+        <div
+          className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
+            financialStatus.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+          }`}
+        >
           {financialStatus.success ? (
             <>
               <CheckCircle2 className="w-3 h-3" />
@@ -147,8 +146,8 @@ const StatusSelector = ({ appointment, onStatusChange, compact = false }) => {
                 {financialStatus.ar && financialStatus.guide
                   ? '✅ AR + Guia'
                   : financialStatus.ar
-                  ? '✅ AR'
-                  : '✅ Processado'}
+                    ? '✅ AR'
+                    : '✅ Processado'}
               </span>
             </>
           ) : (
@@ -159,7 +158,7 @@ const StatusSelector = ({ appointment, onStatusChange, compact = false }) => {
           )}
         </div>
       )}
-      
+
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button size="sm" variant="outline" disabled={isUpdating}>
@@ -177,7 +176,7 @@ const StatusSelector = ({ appointment, onStatusChange, compact = false }) => {
                 disabled={isUpdating}
                 className="cursor-pointer"
               >
-                <Badge 
+                <Badge
                   variant="outline"
                   className={`${optionColors.bg} ${optionColors.text} ${optionColors.border} text-xs mr-2`}
                 >

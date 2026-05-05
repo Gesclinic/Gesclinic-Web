@@ -1,10 +1,10 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import AgendaConfigScreen from "@/pages/clinica/agenda/configuracoes/AgendaConfigScreen";
-import PageLayout from "@/components/ui/PageLayout";
-import { useBreadcrumbs } from "@/hooks/useBreadcrumbs";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import AgendaConfigScreen from '@/pages/clinica/agenda/configuracoes/AgendaConfigScreen';
+import PageLayout from '@/components/ui/PageLayout';
+import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 
 export default function AgendaConfig() {
   const { tab } = useParams();
@@ -12,9 +12,9 @@ export default function AgendaConfig() {
   const currentTab = tab || 'central-horarios';
 
   const breadcrumbs = useBreadcrumbs([
-    { label: "Clínica", path: "/clinica" },
-    { label: "Configurações", path: "/clinica/configuracoes" },
-    { label: "Agenda" }
+    { label: 'Clínica', path: '/clinica' },
+    { label: 'Configurações', path: '/clinica/configuracoes' },
+    { label: 'Agenda' },
   ]);
 
   const handleTabChange = (value) => {
@@ -64,8 +64,14 @@ export default function AgendaConfig() {
               <CardTitle>3.2 Profissionais</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <p>Gerencie os profissionais vinculados à agenda no menu <b>Cadastros &gt; Profissionais</b>.</p>
-              <p>Aqui você pode apenas visualizar regras e permissões relacionadas à agenda para cada profissional.</p>
+              <p>
+                Gerencie os profissionais vinculados à agenda no menu{' '}
+                <b>Cadastros &gt; Profissionais</b>.
+              </p>
+              <p>
+                Aqui você pode apenas visualizar regras e permissões relacionadas à agenda para cada
+                profissional.
+              </p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -140,4 +146,3 @@ export default function AgendaConfig() {
     </PageLayout>
   );
 }
-

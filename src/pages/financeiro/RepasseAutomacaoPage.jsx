@@ -26,9 +26,9 @@ export default function RepasseAutomacaoPage() {
   const [logs, setLogs] = useState([]);
 
   const handleToggleAutomacao = (automacao) => {
-    setAutomacoes(prev => ({
+    setAutomacoes((prev) => ({
       ...prev,
-      [automacao]: !prev[automacao]
+      [automacao]: !prev[automacao],
     }));
   };
 
@@ -55,8 +55,8 @@ export default function RepasseAutomacaoPage() {
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h3 className="font-semibold text-blue-900 mb-2">ℹ️ Automações</h3>
         <p className="text-sm text-blue-800">
-          Configure processos automatizados para fechamento de repasses e geração de transferências PIX.
-          As automações serão executadas conforme o cronograma definido.
+          Configure processos automatizados para fechamento de repasses e geração de transferências
+          PIX. As automações serão executadas conforme o cronograma definido.
         </p>
       </div>
 
@@ -67,7 +67,8 @@ export default function RepasseAutomacaoPage() {
           <div>
             <h4 className="font-semibold text-yellow-900">🧪 Modo Teste Ativado</h4>
             <p className="text-sm text-yellow-800">
-              As automações estão em modo teste e não executarão de verdade. Désative para ativar modo produção.
+              As automações estão em modo teste e não executarão de verdade. Désative para ativar
+              modo produção.
             </p>
           </div>
         </div>
@@ -83,7 +84,7 @@ export default function RepasseAutomacaoPage() {
                 Encerre automaticamente o cálculo de repassos em um dia específico do mês
               </CardDescription>
             </div>
-            <Switch 
+            <Switch
               checked={automacoes.fechar_repasse_automatico}
               onCheckedChange={() => handleToggleAutomacao('fechar_repasse_automatico')}
             />
@@ -95,20 +96,26 @@ export default function RepasseAutomacaoPage() {
             <div className="bg-green-50 border border-green-200 rounded p-3 flex items-start gap-2">
               <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
               <div className="text-sm text-green-800">
-                <strong>✓ Ativo:</strong> O repasse será fechado automaticamente no dia {configAutom.dia_fechamento}ํ de cada mês às 00:00
+                <strong>✓ Ativo:</strong> O repasse será fechado automaticamente no dia{' '}
+                {configAutom.dia_fechamento}ํ de cada mês às 00:00
               </div>
             </div>
 
             <div>
               <Label htmlFor="dia-fechamento">Dia do Mês para Fechar Repasse</Label>
               <div className="flex items-center gap-3 mt-2">
-                <input 
+                <input
                   id="dia-fechamento"
-                  type="number" 
-                  min="1" 
+                  type="number"
+                  min="1"
                   max="31"
                   value={configAutom.dia_fechamento}
-                  onChange={(e) => setConfigAutom(prev => ({ ...prev, dia_fechamento: parseInt(e.target.value) }))}
+                  onChange={(e) =>
+                    setConfigAutom((prev) => ({
+                      ...prev,
+                      dia_fechamento: parseInt(e.target.value),
+                    }))
+                  }
                   className="w-20 px-3 py-2 border rounded-lg"
                 />
                 <span className="text-sm text-gray-600">do mês</span>
@@ -124,7 +131,7 @@ export default function RepasseAutomacaoPage() {
               </ul>
             </div>
 
-            <Button 
+            <Button
               onClick={() => handleExecutarAgora('fechar_repasse')}
               variant="outline"
               className="w-full"
@@ -145,7 +152,7 @@ export default function RepasseAutomacaoPage() {
                 Gere automaticamente QR Codes PIX para transferências aos profissionais
               </CardDescription>
             </div>
-            <Switch 
+            <Switch
               checked={automacoes.gerar_pix_automatico}
               onCheckedChange={() => handleToggleAutomacao('gerar_pix_automatico')}
             />
@@ -157,20 +164,23 @@ export default function RepasseAutomacaoPage() {
             <div className="bg-green-50 border border-green-200 rounded p-3 flex items-start gap-2">
               <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
               <div className="text-sm text-green-800">
-                <strong>✓ Ativo:</strong> PIX será gerado automaticamente no dia {configAutom.dia_envio_pix}ํ de cada mês às 08:00
+                <strong>✓ Ativo:</strong> PIX será gerado automaticamente no dia{' '}
+                {configAutom.dia_envio_pix}ํ de cada mês às 08:00
               </div>
             </div>
 
             <div>
               <Label htmlFor="dia-pix">Dia do Mês para Gerar PIX</Label>
               <div className="flex items-center gap-3 mt-2">
-                <input 
+                <input
                   id="dia-pix"
-                  type="number" 
-                  min="1" 
+                  type="number"
+                  min="1"
                   max="31"
                   value={configAutom.dia_envio_pix}
-                  onChange={(e) => setConfigAutom(prev => ({ ...prev, dia_envio_pix: parseInt(e.target.value) }))}
+                  onChange={(e) =>
+                    setConfigAutom((prev) => ({ ...prev, dia_envio_pix: parseInt(e.target.value) }))
+                  }
                   className="w-20 px-3 py-2 border rounded-lg"
                 />
                 <span className="text-sm text-gray-600">do mês</span>
@@ -195,7 +205,7 @@ export default function RepasseAutomacaoPage() {
               </div>
             </div>
 
-            <Button 
+            <Button
               onClick={() => handleExecutarAgora('gerar_pix')}
               variant="outline"
               className="w-full"
@@ -217,9 +227,11 @@ export default function RepasseAutomacaoPage() {
         <CardContent>
           <div className="flex items-center justify-between p-3 bg-gray-50 rounded border">
             <label>Ativar Modo Teste</label>
-            <Switch 
+            <Switch
               checked={configAutom.modo_teste}
-              onCheckedChange={(checked) => setConfigAutom(prev => ({ ...prev, modo_teste: checked }))}
+              onCheckedChange={(checked) =>
+                setConfigAutom((prev) => ({ ...prev, modo_teste: checked }))
+              }
             />
           </div>
         </CardContent>
@@ -229,26 +241,31 @@ export default function RepasseAutomacaoPage() {
       <Card>
         <CardHeader>
           <CardTitle>📋 Histórico de Execuções</CardTitle>
-          <CardDescription>
-            Últimas automações executadas
-          </CardDescription>
+          <CardDescription>Últimas automações executadas</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {logs.map((log, idx) => (
-              <div key={idx} className="flex items-start gap-3 p-3 bg-gray-50 rounded border text-sm">
-                <div className={`w-3 h-3 rounded-full mt-1 flex-shrink-0 ${
-                  log.status === 'sucesso' ? 'bg-green-500' : 'bg-red-500'
-                }`} />
+              <div
+                key={idx}
+                className="flex items-start gap-3 p-3 bg-gray-50 rounded border text-sm"
+              >
+                <div
+                  className={`w-3 h-3 rounded-full mt-1 flex-shrink-0 ${
+                    log.status === 'sucesso' ? 'bg-green-500' : 'bg-red-500'
+                  }`}
+                />
                 <div className="flex-1">
                   <p className="font-medium text-gray-900">{log.evento}</p>
                   <p className="text-xs text-gray-500">{log.data}</p>
                 </div>
                 <div className="text-right">
                   <p className="font-mono text-sm text-gray-900">{log.valor}</p>
-                  <p className={`text-xs font-semibold ${
-                    log.status === 'sucesso' ? 'text-green-600' : 'text-red-600'
-                  }`}>
+                  <p
+                    className={`text-xs font-semibold ${
+                      log.status === 'sucesso' ? 'text-green-600' : 'text-red-600'
+                    }`}
+                  >
                     {log.status === 'sucesso' ? '✓' : '✗'} {log.status}
                   </p>
                 </div>

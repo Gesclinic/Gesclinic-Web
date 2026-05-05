@@ -4,9 +4,9 @@
 // ============================================================
 // Funções auxiliares para validação e cálculo na agenda
 
-import * as agendaRulesApi from "@/lib/agendaRulesApi";
-import * as professionalServicesApi from "@/lib/professionalServicesApi";
-import { supabase } from "@/lib/customSupabaseClient";
+import * as agendaRulesApi from '@/lib/agendaRulesApi';
+import * as professionalServicesApi from '@/lib/professionalServicesApi';
+import { supabase } from '@/lib/customSupabaseClient';
 
 /**
  * Valida se um agendamento é permitido pelas regras
@@ -14,15 +14,7 @@ import { supabase } from "@/lib/customSupabaseClient";
  * @returns {Promise<{valid: boolean, errors: Array, warnings: Array, rule: Object}>}
  */
 export async function validateAppointmentScheduling(params) {
-  const {
-    clinicId,
-    serviceId,
-    professionalId,
-    roomId,
-    startTime,
-    date,
-    patientId,
-  } = params;
+  const { clinicId, serviceId, professionalId, roomId, startTime, date, patientId } = params;
 
   const errors = [];
   const warnings = [];
@@ -33,12 +25,12 @@ export async function validateAppointmentScheduling(params) {
     const canServe = await professionalServicesApi.canProfessionalServe(
       professionalId,
       serviceId,
-      clinicId
+      clinicId,
     );
 
     if (!canServe) {
       errors.push(
-        "Este profissional não está vinculado a este serviço ou a vinculação foi desativada"
+        'Este profissional não está vinculado a este serviço ou a vinculação foi desativada',
       );
     }
 
@@ -46,7 +38,7 @@ export async function validateAppointmentScheduling(params) {
     const ruleValidation = await agendaRulesApi.validateSchedulingByRules(
       serviceId,
       clinicId,
-      date
+      date,
     );
     if (!ruleValidation.valid) {
       errors.push(...ruleValidation.errors);
@@ -55,42 +47,32 @@ export async function validateAppointmentScheduling(params) {
 
     // 3. Validar duração disponível
     if (rule && startTime) {
-      const endTime = await agendaRulesApi.calculateEndTime(
-        startTime,
-        serviceId,
-        clinicId
-      );
+      const endTime = await agendaRulesApi.calculateEndTime(startTime, serviceId, clinicId);
 
       // Verificar se há conflito de horário
       const { data: conflicts } = await supabase
-        .from("appointments")
-        .select("id")
-        .eq("clinic_id", clinicId)
-        .eq("professional_id", professionalId)
-        .eq("date", date)
-        .gte("start_time", startTime)
-        .lt("start_time", endTime)
-        .eq("active", true);
+        .from('appointments')
+        .select('id')
+        .eq('clinic_id', clinicId)
+        .eq('professional_id', professionalId)
+        .eq('date', date)
+        .gte('start_time', startTime)
+        .lt('start_time', endTime)
+        .eq('active', true);
 
       if (conflicts && conflicts.length > 0) {
-        errors.push("Há um conflito de horário com outro agendamento");
+        errors.push('Há um conflito de horário com outro agendamento');
       }
     }
 
     // 4. Verificar slots disponíveis
     if (rule) {
-      const remainingSlots = await agendaRulesApi.getRemainingSlots(
-        serviceId,
-        clinicId,
-        date
-      );
+      const remainingSlots = await agendaRulesApi.getRemainingSlots(serviceId, clinicId, date);
 
       if (remainingSlots <= 0) {
-        errors.push("Não há mais slots disponíveis para este dia");
+        errors.push('Não há mais slots disponíveis para este dia');
       } else if (remainingSlots <= rule.alert_threshold || remainingSlots <= 2) {
-        warnings.push(
-          `Apenas ${remainingSlots} slots disponíveis para este dia`
-        );
+        warnings.push(`Apenas ${remainingSlots} slots disponíveis para este dia`);
       }
     }
 
@@ -101,16 +83,15 @@ export async function validateAppointmentScheduling(params) {
       rule,
       endTime: rule
         ? new Date(
-            new Date(`${date}T${startTime}`).getTime() +
-              rule.default_duration_minutes * 60000
-          )
+          new Date(`${date}T${startTime}`).getTime() + rule.default_duration_minutes * 60000,
+        )
         : null,
     };
   } catch (error) {
-    console.error("Erro ao validar agendamento:", error);
+    console.error('Erro ao validar agendamento:', error);
     return {
       valid: false,
-      errors: ["Erro ao validar agendamento. Tente novamente."],
+      errors: ['Erro ao validar agendamento. Tente novamente.'],
       warnings: [],
       rule: null,
     };
@@ -123,24 +104,14 @@ export async function validateAppointmentScheduling(params) {
  * @returns {Promise<Object>}
  */
 export async function calculateAppointmentData(params) {
-  const {
-    clinicId,
-    serviceId,
-    professionalId,
-    startTime,
-    date,
-  } = params;
+  const { clinicId, serviceId, professionalId, startTime, date } = params;
 
   try {
     const [endTime, rule, psData] = await Promise.all([
       agendaRulesApi.calculateEndTime(startTime, serviceId, clinicId),
       agendaRulesApi.getAgendaRule(serviceId, clinicId),
       professionalServicesApi.getProfessionalServiceData
-        ? professionalServicesApi.getProfessionalServiceData(
-            professionalId,
-            serviceId,
-            clinicId
-          )
+        ? professionalServicesApi.getProfessionalServiceData(professionalId, serviceId, clinicId)
         : Promise.resolve(null),
     ]);
 
@@ -153,7 +124,7 @@ export async function calculateAppointmentData(params) {
       competenceLevel: psData?.competence_level,
     };
   } catch (error) {
-    console.error("Erro ao calcular dados do agendamento:", error);
+    console.error('Erro ao calcular dados do agendamento:', error);
     return {
       startTime,
       endTime: null,
@@ -172,11 +143,10 @@ export async function calculateAppointmentData(params) {
  */
 export async function listProfessionalsForService(clinicId, serviceId) {
   try {
-    const professionals =
-      await professionalServicesApi.listProfessionalsByService(
-        serviceId,
-        clinicId
-      );
+    const professionals = await professionalServicesApi.listProfessionalsByService(
+      serviceId,
+      clinicId,
+    );
 
     return professionals.map((p) => ({
       id: p.professional_id || p.id,
@@ -185,7 +155,7 @@ export async function listProfessionalsForService(clinicId, serviceId) {
       active: p.active,
     }));
   } catch (error) {
-    console.error("Erro ao buscar profissionais:", error);
+    console.error('Erro ao buscar profissionais:', error);
     return [];
   }
 }
@@ -197,21 +167,13 @@ export async function listProfessionalsForService(clinicId, serviceId) {
  * @param {string} professionalId
  * @returns {Promise<number>} Duração em minutos
  */
-export async function getServiceDurationForProfessional(
-  clinicId,
-  serviceId,
-  professionalId
-) {
+export async function getServiceDurationForProfessional(clinicId, serviceId, professionalId) {
   try {
-    const duration = await agendaRulesApi.getServiceDuration(
-      professionalId,
-      serviceId,
-      clinicId
-    );
+    const duration = await agendaRulesApi.getServiceDuration(professionalId, serviceId, clinicId);
 
     return duration || 60; // Default 60 minutos
   } catch (error) {
-    console.error("Erro ao buscar duração:", error);
+    console.error('Erro ao buscar duração:', error);
     return 60;
   }
 }
@@ -222,8 +184,10 @@ export async function getServiceDurationForProfessional(
  * @returns {string}
  */
 export function formatTime(time) {
-  if (!time) return "";
-  const [hours, minutes] = time.split(":");
+  if (!time) {
+    return '';
+  }
+  const [hours, minutes] = time.split(':');
   return `${hours}:${minutes}`;
 }
 
@@ -234,15 +198,17 @@ export function formatTime(time) {
  * @returns {string} Horário fim (HH:MM)
  */
 export function calculateEndTimeFromDuration(startTime, durationMinutes) {
-  if (!startTime || !durationMinutes) return "";
+  if (!startTime || !durationMinutes) {
+    return '';
+  }
 
-  const [hours, minutes] = startTime.split(":").map(Number);
+  const [hours, minutes] = startTime.split(':').map(Number);
   const totalMinutes = hours * 60 + minutes + durationMinutes;
 
   const endHours = Math.floor(totalMinutes / 60);
   const endMinutes = totalMinutes % 60;
 
-  return `${String(endHours).padStart(2, "0")}:${String(endMinutes).padStart(2, "0")}`;
+  return `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
 }
 
 /**
@@ -253,11 +219,13 @@ export function calculateEndTimeFromDuration(startTime, durationMinutes) {
  * @returns {boolean}
  */
 export function isTimeInWorkingHours(time, startHour, endHour) {
-  if (!time || !startHour || !endHour) return true;
+  if (!time || !startHour || !endHour) {
+    return true;
+  }
 
-  const [h, m] = time.split(":").map(Number);
-  const [sh, sm] = startHour.split(":").map(Number);
-  const [eh, em] = endHour.split(":").map(Number);
+  const [h, m] = time.split(':').map(Number);
+  const [sh, sm] = startHour.split(':').map(Number);
+  const [eh, em] = endHour.split(':').map(Number);
 
   const timeMinutes = h * 60 + m;
   const startMinutes = sh * 60 + sm;
@@ -274,7 +242,7 @@ export function isTimeInWorkingHours(time, startHour, endHour) {
  */
 export async function logSchedulingAction(appointmentData, action) {
   try {
-    const { error } = await supabase.from("scheduling_logs").insert({
+    const { error } = await supabase.from('scheduling_logs').insert({
       clinic_id: appointmentData.clinicId,
       action,
       appointment_data: appointmentData,
@@ -282,9 +250,9 @@ export async function logSchedulingAction(appointmentData, action) {
     });
 
     if (error) {
-      console.warn("Erro ao registrar log:", error);
+      console.warn('Erro ao registrar log:', error);
     }
   } catch (error) {
-    console.warn("Erro ao logar ação:", error);
+    console.warn('Erro ao logar ação:', error);
   }
 }

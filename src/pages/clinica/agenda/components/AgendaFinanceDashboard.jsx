@@ -1,7 +1,7 @@
 /**
  * AgendaFinanceDashboard.jsx
  * Dashboard visual Agenda × Financeiro
- * 
+ *
  * Objetivo: Mostrar em 30 segundos a saúde financeira da agenda
  * Sem jargão contábil, apenas dados acionáveis
  */
@@ -107,7 +107,10 @@ export default function AgendaFinanceDashboard({ metrics, loading = false }) {
           </h3>
           <div className="space-y-2">
             {servicosMais.map((srv, idx) => (
-              <div key={srv.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
+              <div
+                key={srv.id}
+                className="flex items-center justify-between p-2 hover:bg-gray-50 rounded"
+              >
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-gray-500 w-5">{idx + 1}.</span>
                   <div>
@@ -136,7 +139,10 @@ export default function AgendaFinanceDashboard({ metrics, loading = false }) {
           </h3>
           <div className="space-y-2">
             {receitaPorProfissional.slice(0, 3).map((prof, idx) => (
-              <div key={prof.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
+              <div
+                key={prof.id}
+                className="flex items-center justify-between p-2 hover:bg-gray-50 rounded"
+              >
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-gray-500 w-5">{idx + 1}.</span>
                   <div>
@@ -162,15 +168,7 @@ export default function AgendaFinanceDashboard({ metrics, loading = false }) {
 /**
  * Card padrão para métrica
  */
-function DashboardCard({
-  icon,
-  title,
-  value,
-  subtitle,
-  color,
-  borderColor,
-  progress,
-}) {
+function DashboardCard({ icon, title, value, subtitle, color, borderColor, progress }) {
   return (
     <div className={`${color} border ${borderColor} rounded-lg p-4 space-y-2`}>
       <div className="flex items-start justify-between">
@@ -181,9 +179,7 @@ function DashboardCard({
         <div className="text-gray-400">{icon}</div>
       </div>
 
-      {subtitle && (
-        <p className="text-xs text-gray-600">{subtitle}</p>
-      )}
+      {subtitle && <p className="text-xs text-gray-600">{subtitle}</p>}
 
       {progress !== undefined && (
         <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
@@ -192,10 +188,10 @@ function DashboardCard({
               progress >= 80
                 ? 'bg-emerald-500'
                 : progress >= 60
-                ? 'bg-blue-500'
-                : progress >= 40
-                ? 'bg-amber-500'
-                : 'bg-red-500'
+                  ? 'bg-blue-500'
+                  : progress >= 40
+                    ? 'bg-amber-500'
+                    : 'bg-red-500'
             }`}
             style={{ width: `${Math.min(progress, 100)}%` }}
           />
@@ -209,14 +205,13 @@ function DashboardCard({
  * Card de status qualitativo
  */
 function StatusCard({ status }) {
-  const bgColor =
-    status.label.includes('Excelente')
-      ? 'bg-emerald-50 border-emerald-200'
-      : status.label.includes('Bom')
+  const bgColor = status.label.includes('Excelente')
+    ? 'bg-emerald-50 border-emerald-200'
+    : status.label.includes('Bom')
       ? 'bg-blue-50 border-blue-200'
       : status.label.includes('Atenção')
-      ? 'bg-amber-50 border-amber-200'
-      : 'bg-red-50 border-red-200';
+        ? 'bg-amber-50 border-amber-200'
+        : 'bg-red-50 border-red-200';
 
   const iconColor = status.label.includes('🔴') ? 'text-red-600' : 'text-gray-600';
 
@@ -246,13 +241,9 @@ function MetaCard({ meta, receitaAtual }) {
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm font-medium text-gray-600">Meta do Dia</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">
-            R$ {receitaAtual.toFixed(2)}
-          </p>
+          <p className="text-2xl font-bold text-gray-900 mt-1">R$ {receitaAtual.toFixed(2)}</p>
         </div>
-        <div className="text-indigo-600 text-xl">
-          {cumpriu ? '✅' : '⏳'}
-        </div>
+        <div className="text-indigo-600 text-xl">{cumpriu ? '✅' : '⏳'}</div>
       </div>
 
       <p className="text-xs text-gray-600">
@@ -279,21 +270,14 @@ function AgendaFinanceDashboardLoading() {
     <div className="space-y-4">
       <div className="grid grid-cols-4 gap-4">
         {[...Array(4)].map((_, i) => (
-          <div
-            key={i}
-            className="bg-gray-100 rounded-lg p-4 h-32 animate-pulse"
-          />
+          <div key={i} className="bg-gray-100 rounded-lg p-4 h-32 animate-pulse" />
         ))}
       </div>
       <div className="grid grid-cols-3 gap-4">
         {[...Array(3)].map((_, i) => (
-          <div
-            key={i}
-            className="bg-gray-100 rounded-lg p-4 h-32 animate-pulse"
-          />
+          <div key={i} className="bg-gray-100 rounded-lg p-4 h-32 animate-pulse" />
         ))}
       </div>
     </div>
   );
 }
-

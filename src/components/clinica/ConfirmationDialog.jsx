@@ -8,7 +8,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 
 export default function ConfirmationDialog({
@@ -17,9 +17,9 @@ export default function ConfirmationDialog({
   onConfirm,
   title,
   description,
-  confirmText = "Confirmar",
-  cancelText = "Cancelar",
-  confirmVariant = "default",
+  confirmText = 'Confirmar',
+  cancelText = 'Cancelar',
+  confirmVariant = 'default',
   confirmDisabled = false,
 }) {
   return (

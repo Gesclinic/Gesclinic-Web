@@ -20,15 +20,34 @@ export async function fixCarnivalHolidays() {
     }
 
     console.log('✅ Deletados');
-    
+
     // Insert
-    const { error: insertError } = await supabase
-      .from('holidays')
-      .insert([
-        { date: '2026-02-13', name: 'Carnaval', scope: 'NACIONAL', is_blocked: false, is_mandatory: false, clinic_id: null },
-        { date: '2026-02-14', name: 'Sexta-feira de Carnaval', scope: 'NACIONAL', is_blocked: false, is_mandatory: false, clinic_id: null },
-        { date: '2026-02-17', name: 'Terça-feira de Carnaval', scope: 'NACIONAL', is_blocked: false, is_mandatory: false, clinic_id: null },
-      ]);
+    const { error: insertError } = await supabase.from('holidays').insert([
+      {
+        date: '2026-02-13',
+        name: 'Carnaval',
+        scope: 'NACIONAL',
+        is_blocked: false,
+        is_mandatory: false,
+        clinic_id: null,
+      },
+      {
+        date: '2026-02-14',
+        name: 'Sexta-feira de Carnaval',
+        scope: 'NACIONAL',
+        is_blocked: false,
+        is_mandatory: false,
+        clinic_id: null,
+      },
+      {
+        date: '2026-02-17',
+        name: 'Terça-feira de Carnaval',
+        scope: 'NACIONAL',
+        is_blocked: false,
+        is_mandatory: false,
+        clinic_id: null,
+      },
+    ]);
 
     if (insertError) {
       console.error('❌ Erro ao reinserir:', insertError);

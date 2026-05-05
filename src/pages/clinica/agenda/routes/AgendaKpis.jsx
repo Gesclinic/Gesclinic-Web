@@ -10,4 +10,3 @@ const AgendaKpis = () => (
 );
 
 export default AgendaKpis;
-

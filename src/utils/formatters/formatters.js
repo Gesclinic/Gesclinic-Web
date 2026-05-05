@@ -12,21 +12,21 @@
  */
 export function normalizeCodeCBHPM(code) {
   // Se não houver código, retornar vazio
-  if (code === null || code === undefined || code === "") {
-    return "";
+  if (code === null || code === undefined || code === '') {
+    return '';
   }
-  
+
   // Converter para string
   const str = String(code);
-  
+
   // Remover espaços extras e converter para maiúsculas
   const normalized = str
-    .trim()                    // Remove espaços início/fim
-    .replace(/\s+/g, " ")      // Remove múltiplos espaços internos
-    .toUpperCase();            // Converte para maiúsculas
-  
+    .trim() // Remove espaços início/fim
+    .replace(/\s+/g, ' ') // Remove múltiplos espaços internos
+    .toUpperCase(); // Converte para maiúsculas
+
   // Retornar valor vazio se result for vazio após trim, senão retornar normalizado
-  return normalized.trim() || "";
+  return normalized.trim() || '';
 }
 
 /**
@@ -35,11 +35,15 @@ export function normalizeCodeCBHPM(code) {
  * @returns {string} CPF formatado
  */
 export function formatCPF(cpf) {
-  if (!cpf) return "—";
-  
+  if (!cpf) {
+    return '—';
+  }
+
   const clean = String(cpf).replace(/\D/g, '');
-  if (clean.length !== 11) return cpf;
-  
+  if (clean.length !== 11) {
+    return cpf;
+  }
+
   return `${clean.slice(0, 3)}.${clean.slice(3, 6)}.${clean.slice(6, 9)}-${clean.slice(9)}`;
 }
 
@@ -49,16 +53,18 @@ export function formatCPF(cpf) {
  * @returns {string} Telefone formatado
  */
 export function formatPhone(phone) {
-  if (!phone) return "—";
-  
+  if (!phone) {
+    return '—';
+  }
+
   const clean = String(phone).replace(/\D/g, '');
-  
+
   if (clean.length === 11) {
     return `(${clean.slice(0, 2)}) ${clean.slice(2, 7)}-${clean.slice(7)}`;
   } else if (clean.length === 10) {
     return `(${clean.slice(0, 2)}) ${clean.slice(2, 6)}-${clean.slice(6)}`;
   }
-  
+
   return phone;
 }
 
@@ -69,10 +75,12 @@ export function formatPhone(phone) {
  * @returns {string} Valor formatado
  */
 export function formatCurrency(value, isCents = false) {
-  if (value === null || value === undefined) return "—";
-  
+  if (value === null || value === undefined) {
+    return '—';
+  }
+
   const numValue = isCents ? value / 100 : value;
-  
+
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
@@ -88,7 +96,9 @@ export function formatCurrency(value, isCents = false) {
  * @returns {string} Percentual formatado
  */
 export function formatPercentage(value, decimals = 2) {
-  if (value === null || value === undefined) return "—";
-  
+  if (value === null || value === undefined) {
+    return '—';
+  }
+
   return `${parseFloat(value).toFixed(decimals)}%`;
 }

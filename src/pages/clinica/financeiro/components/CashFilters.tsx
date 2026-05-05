@@ -1,7 +1,13 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
 import { X } from 'lucide-react';
 
 interface CashFiltersProps {
@@ -22,13 +28,13 @@ export const CashFilters: React.FC<CashFiltersProps> = ({
   filters,
   onFiltersChange,
   professionals,
-  payers
+  payers,
 }) => {
   const handleClearFilters = () => {
     onFiltersChange({});
   };
 
-  const hasActiveFilters = Object.values(filters).some(val => val !== undefined && val !== '');
+  const hasActiveFilters = Object.values(filters).some((val) => val !== undefined && val !== '');
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-slate-100 p-6 w-full">
@@ -40,7 +46,7 @@ export const CashFilters: React.FC<CashFiltersProps> = ({
           onChange={(e) =>
             onFiltersChange({
               ...filters,
-              startDate: e.target.value || undefined
+              startDate: e.target.value || undefined,
             })
           }
           placeholder="Data Inicial"
@@ -54,7 +60,7 @@ export const CashFilters: React.FC<CashFiltersProps> = ({
           onChange={(e) =>
             onFiltersChange({
               ...filters,
-              endDate: e.target.value || undefined
+              endDate: e.target.value || undefined,
             })
           }
           placeholder="Data Final"
@@ -67,7 +73,7 @@ export const CashFilters: React.FC<CashFiltersProps> = ({
           onValueChange={(value) =>
             onFiltersChange({
               ...filters,
-              professionalId: value || undefined
+              professionalId: value || undefined,
             })
           }
         >
@@ -90,7 +96,7 @@ export const CashFilters: React.FC<CashFiltersProps> = ({
           onValueChange={(value) =>
             onFiltersChange({
               ...filters,
-              payerId: value || undefined
+              payerId: value || undefined,
             })
           }
         >
@@ -113,7 +119,7 @@ export const CashFilters: React.FC<CashFiltersProps> = ({
           onValueChange={(value) =>
             onFiltersChange({
               ...filters,
-              type: (value as 'entrada' | 'saida') || undefined
+              type: (value as 'entrada' | 'saida') || undefined,
             })
           }
         >

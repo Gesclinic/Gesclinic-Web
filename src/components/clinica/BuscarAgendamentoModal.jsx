@@ -1,24 +1,30 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 
 export default function BuscarAgendamentoModal({ isOpen = true, onClose, onSelect }) {
-  const [term, setTerm] = useState("");
-  const [date, setDate] = useState("");
+  const [term, setTerm] = useState('');
+  const [date, setDate] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const handleSearch = async (e) => {
-    if (e && e.preventDefault) e.preventDefault();
+    if (e && e.preventDefault) {
+      e.preventDefault();
+    }
     setError(null);
     setLoading(true);
     try {
-      console.log("BuscarAgendamentoModal: buscando", { term, date });
+      console.log('BuscarAgendamentoModal: buscando', { term, date });
       const params = new URLSearchParams();
-      if (term) params.append("q", term);
-      if (date) params.append("date", date);
+      if (term) {
+        params.append('q', term);
+      }
+      if (date) {
+        params.append('date', date);
+      }
       // Ajuste a URL conforme sua API real
       const res = await fetch(`/api/appointments/search?${params.toString()}`, {
-        headers: { "Accept": "application/json" },
+        headers: { Accept: 'application/json' },
       });
       if (!res.ok) {
         throw new Error(`Status ${res.status}`);
@@ -26,8 +32,8 @@ export default function BuscarAgendamentoModal({ isOpen = true, onClose, onSelec
       const data = await res.json();
       setResults(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error("Erro ao buscar agendamentos:", err);
-      setError("Falha ao buscar. Veja o console para detalhes.");
+      console.error('Erro ao buscar agendamentos:', err);
+      setError('Falha ao buscar. Veja o console para detalhes.');
       setResults([]);
     } finally {
       setLoading(false);
@@ -35,18 +41,26 @@ export default function BuscarAgendamentoModal({ isOpen = true, onClose, onSelec
   };
 
   const handleSelect = (item) => {
-    if (onSelect) onSelect(item);
-    if (onClose) onClose();
+    if (onSelect) {
+      onSelect(item);
+    }
+    if (onClose) {
+      onClose();
+    }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    return null;
+  }
 
   return (
     <div className="modal-overlay">
       <div className="modal-card" role="dialog" aria-modal="true">
         <header className="modal-header">
           <h3>Buscar Agendamento</h3>
-          <button type="button" onClick={onClose} aria-label="Fechar">×</button>
+          <button type="button" onClick={onClose} aria-label="Fechar">
+            ×
+          </button>
         </header>
 
         <form onSubmit={handleSearch} className="modal-body">
@@ -57,14 +71,10 @@ export default function BuscarAgendamentoModal({ isOpen = true, onClose, onSelec
               value={term}
               onChange={(e) => setTerm(e.target.value)}
             />
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             {/* botão de submit: type="submit" para funcionar com onSubmit */}
             <button type="submit" disabled={loading}>
-              {loading ? "Buscando..." : "Buscar"}
+              {loading ? 'Buscando...' : 'Buscar'}
             </button>
           </div>
 

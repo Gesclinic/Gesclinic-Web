@@ -1,33 +1,25 @@
 /**
  * CheckinFinanceiro.jsx
- * 
+ *
  * 💰 FINANCEIRO SIMPLIFICADO
- * 
+ *
  * Responsabilidade: Apenas o básico
  * - Particular: registrar pagamento ou autorizar após
  * - Convênio: gerar guia, validar autorização
- * 
+ *
  * NÃO faz DRE, NÃO faz financeiro pesado
  * Apenas resolve bloqueios para atendimento
  */
 
-import React, { useState } from "react";
-import {
-  AlertTriangle,
-  CheckCircle2,
-  CreditCard,
-  FileText,
-  Clock,
-  Info,
-  Plus,
-} from "lucide-react";
+import React, { useState } from 'react';
+import { AlertTriangle, CheckCircle2, CreditCard, FileText, Clock, Info, Plus } from 'lucide-react';
 
 export default function CheckinFinanceiro({ appointment }) {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(
-    appointment?.payment_method || "DEBITO"
+    appointment?.payment_method || 'DEBITO',
   );
   const [authorizingAfter, setAuthorizingAfter] = useState(
-    appointment?.payment_authorized_after || false
+    appointment?.payment_authorized_after || false,
   );
 
   // ============================================
@@ -35,11 +27,11 @@ export default function CheckinFinanceiro({ appointment }) {
   // ============================================
 
   const paymentMethods = [
-    { value: "DEBITO", label: "Débito", icon: "💳" },
-    { value: "CREDITO", label: "Crédito", icon: "💳" },
-    { value: "PIX", label: "PIX", icon: "📱" },
-    { value: "DINHEIRO", label: "Dinheiro", icon: "💵" },
-    { value: "CONVENIO", label: "Convênio", icon: "🏥" },
+    { value: 'DEBITO', label: 'Débito', icon: '💳' },
+    { value: 'CREDITO', label: 'Crédito', icon: '💳' },
+    { value: 'PIX', label: 'PIX', icon: '📱' },
+    { value: 'DINHEIRO', label: 'Dinheiro', icon: '💵' },
+    { value: 'CONVENIO', label: 'Convênio', icon: '🏥' },
   ];
 
   // ============================================
@@ -48,12 +40,10 @@ export default function CheckinFinanceiro({ appointment }) {
 
   return (
     <div className="space-y-6">
-      {appointment?.payer_type === "CONVENIO" || appointment?.payer_name ? (
+      {appointment?.payer_type === 'CONVENIO' || appointment?.payer_name ? (
         // CONVÊNIO
         <div>
-          <h3 className="text-lg font-bold text-gray-900 mb-4">
-            Fluxo de Convênio
-          </h3>
+          <h3 className="text-lg font-bold text-gray-900 mb-4">Fluxo de Convênio</h3>
 
           {/* Informações do Convênio */}
           <div className="space-y-3 mb-6">
@@ -62,9 +52,7 @@ export default function CheckinFinanceiro({ appointment }) {
                 <CreditCard className="text-blue-600" size={20} />
                 <p className="font-semibold text-gray-900">Plano</p>
               </div>
-              <p className="text-gray-700">
-                {appointment?.payer_name || "Convênio não informado"}
-              </p>
+              <p className="text-gray-700">{appointment?.payer_name || 'Convênio não informado'}</p>
             </div>
 
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
@@ -74,9 +62,7 @@ export default function CheckinFinanceiro({ appointment }) {
               </div>
               {appointment?.guide_number ? (
                 <div className="flex items-center justify-between">
-                  <p className="text-gray-700 font-mono">
-                    {appointment.guide_number}
-                  </p>
+                  <p className="text-gray-700 font-mono">{appointment.guide_number}</p>
                   <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
                     ✅ Gerada
                   </span>
@@ -92,9 +78,7 @@ export default function CheckinFinanceiro({ appointment }) {
                   <CheckCircle2 className="text-green-600" size={20} />
                   <p className="font-semibold text-gray-900">Autorização</p>
                 </div>
-                <p className="text-gray-700 font-mono">
-                  {appointment.authorization_number}
-                </p>
+                <p className="text-gray-700 font-mono">{appointment.authorization_number}</p>
               </div>
             )}
           </div>
@@ -113,9 +97,7 @@ export default function CheckinFinanceiro({ appointment }) {
                 )}
                 <p>
                   <span className="font-semibold">Guia gerada</span>
-                  {appointment?.guide_number && (
-                    <span className="text-green-700 ml-1">✅</span>
-                  )}
+                  {appointment?.guide_number && <span className="text-green-700 ml-1">✅</span>}
                 </p>
               </div>
 
@@ -141,9 +123,7 @@ export default function CheckinFinanceiro({ appointment }) {
                 )}
                 <p>
                   <span className="font-semibold">Plano validado</span>
-                  {appointment?.payer_verified && (
-                    <span className="text-green-700 ml-1">✅</span>
-                  )}
+                  {appointment?.payer_verified && <span className="text-green-700 ml-1">✅</span>}
                 </p>
               </div>
             </div>
@@ -160,9 +140,7 @@ export default function CheckinFinanceiro({ appointment }) {
       ) : (
         // PARTICULAR
         <div>
-          <h3 className="text-lg font-bold text-gray-900 mb-4">
-            Fluxo Particular
-          </h3>
+          <h3 className="text-lg font-bold text-gray-900 mb-4">Fluxo Particular</h3>
 
           {/* Valor do Serviço */}
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
@@ -170,39 +148,31 @@ export default function CheckinFinanceiro({ appointment }) {
               <div>
                 <p className="text-sm text-gray-600">Valor do serviço</p>
                 <p className="text-2xl font-bold text-gray-900 mt-1">
-                  {appointment?.price
-                    ? `R$ ${appointment.price.toFixed(2)}`
-                    : "Não informado"}
+                  {appointment?.price ? `R$ ${appointment.price.toFixed(2)}` : 'Não informado'}
                 </p>
               </div>
-              {appointment?.price && (
-                <CreditCard className="text-blue-600" size={40} />
-              )}
+              {appointment?.price && <CreditCard className="text-blue-600" size={40} />}
             </div>
           </div>
 
           {/* Forma de Pagamento */}
           <div className="mb-6">
-            <p className="font-semibold text-gray-900 mb-3">
-              Forma de Pagamento
-            </p>
+            <p className="font-semibold text-gray-900 mb-3">Forma de Pagamento</p>
             <div className="grid grid-cols-2 gap-2">
               {paymentMethods
-                .filter((m) => m.value !== "CONVENIO")
+                .filter((m) => m.value !== 'CONVENIO')
                 .map((method) => (
                   <button
                     key={method.value}
                     onClick={() => setSelectedPaymentMethod(method.value)}
                     className={`p-3 rounded-lg border-2 transition text-center ${
                       selectedPaymentMethod === method.value
-                        ? "border-blue-600 bg-blue-50"
-                        : "border-gray-200 bg-white hover:border-gray-300"
+                        ? 'border-blue-600 bg-blue-50'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
                     }`}
                   >
                     <p className="text-2xl mb-1">{method.icon}</p>
-                    <p className="text-sm font-semibold text-gray-900">
-                      {method.label}
-                    </p>
+                    <p className="text-sm font-semibold text-gray-900">{method.label}</p>
                   </button>
                 ))}
             </div>
@@ -219,9 +189,7 @@ export default function CheckinFinanceiro({ appointment }) {
                 className="mt-1"
               />
               <label htmlFor="pago" className="flex-1 cursor-pointer">
-                <p className="font-semibold text-gray-900">
-                  ✅ Pagamento Recebido
-                </p>
+                <p className="font-semibold text-gray-900">✅ Pagamento Recebido</p>
                 <p className="text-sm text-gray-600 mt-1">
                   Paciente já pagou. Pode liberar para atendimento.
                 </p>
@@ -238,9 +206,7 @@ export default function CheckinFinanceiro({ appointment }) {
                   className="mt-1"
                 />
                 <label htmlFor="apos" className="flex-1 cursor-pointer">
-                  <p className="font-semibold text-gray-900">
-                    ⏳ Pagar Após Atendimento
-                  </p>
+                  <p className="font-semibold text-gray-900">⏳ Pagar Após Atendimento</p>
                   <p className="text-sm text-gray-600 mt-1">
                     Paciente pagará DEPOIS da consulta/procedimento.
                   </p>
@@ -257,8 +223,8 @@ export default function CheckinFinanceiro({ appointment }) {
             </div>
             <p className="text-green-800">
               {authorizingAfter
-                ? "💳 Autorizado para pagar após atendimento"
-                : "✅ Pagamento confirmado"}
+                ? '💳 Autorizado para pagar após atendimento'
+                : '✅ Pagamento confirmado'}
             </p>
           </div>
         </div>
@@ -278,4 +244,3 @@ export default function CheckinFinanceiro({ appointment }) {
     </div>
   );
 }
-

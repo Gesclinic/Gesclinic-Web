@@ -1,6 +1,6 @@
 /**
  * Payment Registration & Accounts Integration
- * 
+ *
  * Integra pagamento com:
  * - Contas a Receber (accounts_receivable)
  * - Plano de Contas (chart_of_accounts)
@@ -9,10 +9,10 @@
  */
 
 import { supabase } from '@/lib/customSupabaseClient';
-import { 
-  getAccountingAccountForPayment, 
+import {
+  getAccountingAccountForPayment,
   getReceivableTypeForPayment,
-  PAYMENT_METHODS 
+  PAYMENT_METHODS,
 } from '@/lib/paymentMethodsConfig';
 
 /**
@@ -29,11 +29,11 @@ export async function registerOrUpdateReceivable({
   receivedBy, // ID do operador/caixa
 }) {
   try {
-    console.log('💰 Registrando conta a receber...', { 
-      appointmentId, 
-      amount, 
+    console.log('💰 Registrando conta a receber...', {
+      appointmentId,
+      amount,
       paymentMethod,
-      receivedBy 
+      receivedBy,
     });
 
     // Verificar se já existe conta a receber para este agendamento
@@ -57,7 +57,7 @@ export async function registerOrUpdateReceivable({
     if (existing) {
       // Atualizar conta existente
       console.log('📝 Atualizando conta a receber existente:', existing.id);
-      
+
       const { data, error } = await supabase
         .from('accounts_receivable')
         .update({
@@ -71,8 +71,12 @@ export async function registerOrUpdateReceivable({
           updated_at: now,
         })
         .eq('id', existing.id)
-        .select()
-        .single();
+        .select();
+
+      if (!data || data.length === 0) {
+        throw new Error('Record not found');
+      }
+      return data[0];
 
       if (error) {
         console.error('❌ Erro UPDATE accounts_receivable:', error);
@@ -82,7 +86,7 @@ export async function registerOrUpdateReceivable({
     } else {
       // Criar nova conta a receber
       console.log('✨ Criando nova conta a receber', { clinicId, appointmentId, amount });
-      
+
       const { data, error } = await supabase
         .from('accounts_receivable')
         .insert({
@@ -102,13 +106,19 @@ export async function registerOrUpdateReceivable({
           created_at: now,
           updated_at: now,
         })
-        .select()
-        .single();
+        .select();
+
+      if (!data || data.length === 0) {
+        throw new Error('Record not found');
+      }
+      return data[0];
 
       if (error) {
         console.error('❌ Erro INSERT accounts_receivable:', error);
         console.error('📋 Detalhes:', { code: error.code, message: error.message });
-        throw new Error(`Falha ao criar conta: ${error.message}. Verifique RLS policies. (${error.code})`);
+        throw new Error(
+          `Falha ao criar conta: ${error.message}. Verifique RLS policies. (${error.code})`,
+        );
       }
       receivable = data;
     }
@@ -134,10 +144,10 @@ export async function recordFinancialEntry({
   cashRegisterId = null,
 }) {
   try {
-    console.log('📊 Registrando lançamento contábil...', { 
-      appointmentId, 
-      amount, 
-      paymentMethod 
+    console.log('📊 Registrando lançamento contábil...', {
+      appointmentId,
+      amount,
+      paymentMethod,
     });
 
     const accountingAccount = getAccountingAccountForPayment(paymentMethod);
@@ -163,17 +173,24 @@ export async function recordFinancialEntry({
         chart_account: chartAccount,
         debit_amount: amount, // Débito = receita entra (aumenta ativo)
         credit_amount: 0,
-        description: description || `Recebimento via ${paymentMethod} - Agendamento #${appointmentId}`,
+        description:
+          description || `Recebimento via ${paymentMethod} - Agendamento #${appointmentId}`,
         entry_date: now,
         entry_type: 'RECEIPT',
         payment_method: paymentMethod,
         cash_register_id: cashRegisterId,
         created_at: now,
       })
-      .select()
-      .single();
+      .select();
 
-    if (error) throw error;
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
+
+    if (error) {
+      throw error;
+    }
 
     console.log('✅ Lançamento contábil registrado:', data.id);
     return data;
@@ -195,18 +212,18 @@ export async function recordToCashRegister({
   appointmentDetails = null,
 }) {
   try {
-    console.log('💵 Registrando no caixa...', { 
-      clinicId, 
-      amount, 
-      paymentMethod, 
-      receivedBy 
+    console.log('💵 Registrando no caixa...', {
+      clinicId,
+      amount,
+      paymentMethod,
+      receivedBy,
     });
 
     const now = new Date().toISOString();
 
     // Obter ou criar caixa do dia
     const today = new Date().toISOString().split('T')[0];
-    
+
     const { data: cashSession, error: cashError } = await supabase
       .from('cash_register_sessions')
       .select('id, opening_balance, current_balance')
@@ -242,10 +259,16 @@ export async function recordToCashRegister({
           status: 'open',
           opened_at: now,
         })
-        .select('id')
-        .single();
+        .select('id');
 
-      if (sessionError) throw sessionError;
+      if (!data || data.length === 0) {
+        throw new Error('Record not found');
+      }
+      return data[0];
+
+      if (sessionError) {
+        throw sessionError;
+      }
       sessionId = newSession.id;
     }
 
@@ -264,10 +287,16 @@ export async function recordToCashRegister({
           : `Recebimento via ${paymentMethod}`,
         recorded_at: now,
       })
-      .select()
-      .single();
+      .select();
 
-    if (movementError) throw movementError;
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
+
+    if (movementError) {
+      throw movementError;
+    }
 
     console.log('✅ Caixa atualizado:', { sessionId, movementId: movement.id });
     return { sessionId, movementId: movement.id };
@@ -292,10 +321,10 @@ export async function auditPaymentRecord({
   action = 'PAYMENT_RECORDED',
 }) {
   try {
-    console.log('🔍 Registrando auditoria...', { 
-      appointmentId, 
-      amount, 
-      action 
+    console.log('🔍 Registrando auditoria...', {
+      appointmentId,
+      amount,
+      action,
     });
 
     const now = new Date().toISOString();
@@ -315,10 +344,16 @@ export async function auditPaymentRecord({
         ip_address: null, // Pode capturar do navegador se necessário
         user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
       })
-      .select()
-      .single();
+      .select();
 
-    if (error) throw error;
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
+
+    if (error) {
+      throw error;
+    }
 
     console.log('✅ Auditoria registrada:', data.id);
     return data;
@@ -362,7 +397,7 @@ export async function processPaymentComplete({
       appointmentId,
       amount,
       paymentMethod,
-      description: appointmentDetails?.patientName 
+      description: appointmentDetails?.patientName
         ? `Recebimento de ${appointmentDetails.patientName}`
         : undefined,
     });
@@ -417,15 +452,19 @@ export async function getCashRegisterMovements(clinicId, sessionDate) {
   try {
     const { data, error } = await supabase
       .from('cash_register_movements')
-      .select(`
+      .select(
+        `
         *,
         operator:received_by(id, name)
-      `)
+      `,
+      )
       .eq('clinic_id', clinicId)
       .filter('recorded_at', 'gte', sessionDate)
       .order('recorded_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data || [];
   } catch (error) {
     console.error('❌ Erro ao listar movimentos do caixa:', error);
@@ -452,10 +491,16 @@ export async function closeCashRegister(sessionId, closedBy, discrepancy = 0) {
         discrepancy: discrepancy,
       })
       .eq('id', sessionId)
-      .select()
-      .single();
+      .select();
 
-    if (error) throw error;
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
+
+    if (error) {
+      throw error;
+    }
 
     console.log('✅ Caixa fechado:', data.id);
     return data;

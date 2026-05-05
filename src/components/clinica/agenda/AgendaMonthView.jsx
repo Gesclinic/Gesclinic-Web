@@ -1,6 +1,6 @@
-import React, { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAgendaConfig } from "@/hooks/useAgendaConfig";
+import React, { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAgendaConfig } from '@/hooks/useAgendaConfig';
 import {
   format,
   startOfMonth,
@@ -10,14 +10,14 @@ import {
   eachDayOfInterval,
   isSameMonth,
   isSameDay,
-} from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { utcToZonedTime, format as formatTz } from "date-fns-tz";
+} from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { utcToZonedTime, format as formatTz } from 'date-fns-tz';
 
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2 } from "lucide-react";
-import StatusSelector from "./StatusSelector";
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Edit, Trash2 } from 'lucide-react';
+import StatusSelector from './StatusSelector';
 
 export default function AgendaMonthView({
   appointments = [],
@@ -42,14 +42,14 @@ export default function AgendaMonthView({
     const byDay = {};
 
     monthDays.forEach((day) => {
-      const key = format(day, "yyyy-MM-dd");
+      const key = format(day, 'yyyy-MM-dd');
       byDay[key] = [];
     });
 
     appointments.forEach((apt) => {
       try {
-        const zoned = utcToZonedTime(apt.start_time, "America/Sao_Paulo");
-        const key = format(zoned, "yyyy-MM-dd");
+        const zoned = utcToZonedTime(apt.start_time, 'America/Sao_Paulo');
+        const key = format(zoned, 'yyyy-MM-dd');
 
         if (byDay[key]) {
           byDay[key].push(apt);
@@ -62,9 +62,7 @@ export default function AgendaMonthView({
 
   // 🔵 Criar novo agendamento ao clicar no dia
   const handleDayClick = (date) => {
-    const [h, m] = (agendaConfig.horario_abertura || "08:00")
-      .split(":")
-      .map(Number);
+    const [h, m] = (agendaConfig.horario_abertura || '08:00').split(':').map(Number);
 
     const start = new Date(date);
     start.setHours(h, m, 0, 0);
@@ -95,11 +93,8 @@ export default function AgendaMonthView({
         </div>
 
         <div className="grid grid-cols-7 bg-gray-100">
-          {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map((d) => (
-            <div
-              key={d}
-              className="p-3 border-r border-gray-300 font-semibold text-center text-sm"
-            >
+          {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((d) => (
+            <div key={d} className="p-3 border-r border-gray-300 font-semibold text-center text-sm">
               {d}
             </div>
           ))}
@@ -111,7 +106,7 @@ export default function AgendaMonthView({
         {weeks.map((week, wi) => (
           <div key={wi} className="grid grid-cols-7 border-b border-gray-200">
             {week.map((day) => {
-              const key = format(day, "yyyy-MM-dd");
+              const key = format(day, 'yyyy-MM-dd');
               const list = appointmentsByDay[key] || [];
 
               const isCurrentMonth = isSameMonth(day, selectedDate);
@@ -122,12 +117,14 @@ export default function AgendaMonthView({
                   key={day}
                   className={`
                     min-h-[130px] p-2 border-r border-gray-200 cursor-pointer transition-colors
-                    ${isCurrentMonth ? "bg-white" : "bg-gray-100 text-gray-400"}
-                    ${isToday ? "bg-blue-50 border-blue-300" : ""}
+                    ${isCurrentMonth ? 'bg-white' : 'bg-gray-100 text-gray-400'}
+                    ${isToday ? 'bg-blue-50 border-blue-300' : ''}
                     hover:bg-gray-50
                   `}
                   onClick={(e) => {
-                    if (e.target.closest(".appointment-card")) return;
+                    if (e.target.closest('.appointment-card')) {
+                      return;
+                    }
                     handleDayClick(day);
                   }}
                 >
@@ -135,21 +132,18 @@ export default function AgendaMonthView({
                   <div
                     className={`
                       text-sm font-semibold mb-1
-                      ${isToday ? "bg-blue-600 text-white rounded-full w-7 h-7 flex items-center justify-center" : ""}
+                      ${isToday ? 'bg-blue-600 text-white rounded-full w-7 h-7 flex items-center justify-center' : ''}
                     `}
                   >
-                    {format(day, "d")}
+                    {format(day, 'd')}
                   </div>
 
                   {/* Agendamentos */}
                   <div className="space-y-1">
                     {list.slice(0, 3).map((apt) => {
-                      const zoned = utcToZonedTime(
-                        apt.start_time,
-                        "America/Sao_Paulo"
-                      );
-                      const startTime = formatTz(zoned, "HH:mm", {
-                        timeZone: "America/Sao_Paulo",
+                      const zoned = utcToZonedTime(apt.start_time, 'America/Sao_Paulo');
+                      const startTime = formatTz(zoned, 'HH:mm', {
+                        timeZone: 'America/Sao_Paulo',
                       });
 
                       const isBlocked = apt.is_blocked;
@@ -161,10 +155,10 @@ export default function AgendaMonthView({
                             appointment-card text-xs p-2 rounded relative group
                             text-white
                             ${
-                              isBlocked
-                                ? "bg-red-500 hover:bg-red-600"
-                                : "bg-blue-600 hover:bg-blue-700"
-                            }
+                        isBlocked
+                          ? 'bg-red-500 hover:bg-red-600'
+                          : 'bg-blue-600 hover:bg-blue-700'
+                        }
                           `}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -201,18 +195,11 @@ export default function AgendaMonthView({
                           {/* Conteúdo */}
                           {isBlocked ? (
                             <>
-                              <div className="font-semibold truncate">
-                                {startTime} - Bloqueado
-                              </div>
+                              <div className="font-semibold truncate">{startTime} - Bloqueado</div>
                               <div className="text-xs opacity-80 truncate">
-                                {apt.notes ||
-                                  apt.block_reason ||
-                                  "Motivo não informado"}
+                                {apt.notes || apt.block_reason || 'Motivo não informado'}
                               </div>
-                              <Badge
-                                variant="outline"
-                                className="mt-1 bg-red-100 text-red-800"
-                              >
+                              <Badge variant="outline" className="mt-1 bg-red-100 text-red-800">
                                 Bloqueado
                               </Badge>
                             </>
@@ -222,21 +209,18 @@ export default function AgendaMonthView({
                                 className="font-semibold truncate cursor-pointer hover:underline"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  navigate(
-                                    `/clinica/atendimento/${apt.id}`
-                                  );
+                                  navigate(`/clinica/atendimento/${apt.id}`);
                                 }}
                               >
-                                {startTime} •{" "}
-                                {(apt.patient_name || "").split(" ")[0]}
+                                {startTime} • {(apt.patient_name || '').split(' ')[0]}
                               </div>
 
                               <div className="text-xs opacity-80 truncate">
-                                {apt.service_name || "Serviço"}
+                                {apt.service_name || 'Serviço'}
                               </div>
 
                               <div className="text-xs opacity-70 truncate">
-                                {apt.professional_name || "Profissional"}
+                                {apt.professional_name || 'Profissional'}
                               </div>
 
                               <div className="mt-1">

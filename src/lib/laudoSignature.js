@@ -45,12 +45,14 @@ export async function generateLaudoSignatureHash(payload) {
   if (globalThis.crypto?.subtle) {
     const encoded = new TextEncoder().encode(serialized);
     const hashBuffer = await globalThis.crypto.subtle.digest('SHA-256', encoded);
-    return Array.from(new Uint8Array(hashBuffer)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
+    return Array.from(new Uint8Array(hashBuffer))
+      .map((byte) => byte.toString(16).padStart(2, '0'))
+      .join('');
   }
 
   let hash = 0;
   for (let index = 0; index < serialized.length; index += 1) {
-    hash = ((hash << 5) - hash) + serialized.charCodeAt(index);
+    hash = (hash << 5) - hash + serialized.charCodeAt(index);
     hash |= 0;
   }
   return String(hash >>> 0);
@@ -58,5 +60,7 @@ export async function generateLaudoSignatureHash(payload) {
 
 export function hasStoredLaudoSignature(signature = {}) {
   const normalized = normalizeLaudoSignature(signature);
-  return Boolean(normalized.visual_signature_data_url || normalized.certificate_id || normalized.signature_hash);
+  return Boolean(
+    normalized.visual_signature_data_url || normalized.certificate_id || normalized.signature_hash,
+  );
 }

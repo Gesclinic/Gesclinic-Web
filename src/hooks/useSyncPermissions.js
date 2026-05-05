@@ -1,7 +1,7 @@
-import { useEffect } from "react";
-import { syncUserWithRole } from "@/api/permissions/syncUserWithRole";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
-import { useClinic } from "@/contexts/useClinicContext";
+import { useEffect } from 'react';
+import { syncUserWithRole } from '@/api/permissions/syncUserWithRole';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useClinic } from '@/contexts/useClinicContext';
 
 export function useSyncPermissions(roleId) {
   const { session } = useAuth();
@@ -9,7 +9,9 @@ export function useSyncPermissions(roleId) {
   const userId = session?.user?.id;
 
   useEffect(() => {
-    if (!roleId || !userId || !clinic?.id) return;
+    if (!roleId || !userId || !clinic?.id) {
+      return;
+    }
 
     syncUserWithRole({
       userId,

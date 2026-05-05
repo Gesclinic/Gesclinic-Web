@@ -12,10 +12,7 @@ import { supabase } from './customSupabaseClient';
  */
 export async function listarGuias(clinicId, filters = {}) {
   try {
-    let query = supabase
-      .from('billing_guides')
-      .select('*')
-      .eq('clinic_id', clinicId);
+    let query = supabase.from('billing_guides').select('*').eq('clinic_id', clinicId);
 
     // Aplicar filtros opcionais
     if (filters.tipo) {
@@ -25,9 +22,7 @@ export async function listarGuias(clinicId, filters = {}) {
       query = query.eq('status', filters.status);
     }
     if (filters.dataInicio && filters.dataFim) {
-      query = query
-        .gte('data_criacao', filters.dataInicio)
-        .lte('data_criacao', filters.dataFim);
+      query = query.gte('data_criacao', filters.dataInicio).lte('data_criacao', filters.dataFim);
     }
 
     const { data, error } = await query.order('data_criacao', { ascending: false });
@@ -78,19 +73,20 @@ export async function criarGuia(clinicId, dadosGuia) {
     // 🚀 BLOCKER 2 FIX: Allow optional patient/card validation for auto-creation from appointments
     // If appointment_id is provided, we're in auto-creation mode
     const isAutoCreation = !!dadosGuia.appointment_id;
-    
+
     if (!isAutoCreation && (!dadosGuia.paciente_nome || !dadosGuia.numero_carteirinha)) {
       throw new Error('Nome do paciente e número de carteirinha são obrigatórios');
     }
 
     const guiaData = {
       clinic_id: clinicId,
-      appointment_id: dadosGuia.appointment_id || null,  // NEW: FK link to appointment
+      appointment_id: dadosGuia.appointment_id || null, // NEW: FK link to appointment
       tipo_guia: dadosGuia.tipo_guia || 'SP',
       paciente_nome: (dadosGuia.paciente_nome || '').trim() || 'Paciente',
       convenio: dadosGuia.convenio?.trim() || dadosGuia.payer_name?.trim() || null,
       plano: dadosGuia.plano?.trim() || dadosGuia.plan_name?.trim() || null,
-      numero_carteirinha: (dadosGuia.numero_carteirinha || '').trim() || dadosGuia.card_number?.trim() || null,
+      numero_carteirinha:
+        (dadosGuia.numero_carteirinha || '').trim() || dadosGuia.card_number?.trim() || null,
       profissional: dadosGuia.profissional?.trim() || dadosGuia.professional_name?.trim() || null,
       codigo_cbhpm: dadosGuia.codigo_cbhpm?.trim() || dadosGuia.service_code?.trim() || null,
       valor: parseFloat(dadosGuia.valor || dadosGuia.value) || 0,
@@ -152,8 +148,12 @@ export async function atualizarGuia(guiaId, dadosGuia) {
       .from('billing_guides')
       .update(guiaData)
       .eq('id', guiaId)
-      .select()
-      .single();
+      .select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
 
     if (error) {
       throw error;
@@ -176,10 +176,7 @@ export async function deletarGuia(guiaId) {
   try {
     console.log('🗑️ Deletando guia:', guiaId);
 
-    const { error } = await supabase
-      .from('billing_guides')
-      .delete()
-      .eq('id', guiaId);
+    const { error } = await supabase.from('billing_guides').delete().eq('id', guiaId);
 
     if (error) {
       throw error;
@@ -207,8 +204,12 @@ export async function atualizarStatusGuia(guiaId, novoStatus) {
         data_atualizacao: new Date().toISOString(),
       })
       .eq('id', guiaId)
-      .select()
-      .single();
+      .select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
 
     if (error) {
       throw error;
@@ -218,41 +219,5 @@ export async function atualizarStatusGuia(guiaId, novoStatus) {
   } catch (error) {
     console.error('❌ Erro ao atualizar status:', error);
     throw error;
-  }
-}
-
-/**
- * Gerar números de guia únicos
- * @param {string} clinicId - ID da clínica
- * @returns {Promise<string>} Número da guia
- */
-export async function gerarNumeroGuia(clinicId) {
-  try {
-    // Buscar última guia para incrementar número
-    const { data, error } = await supabase
-      .from('billing_guides')
-      .select('numero_guia')
-      .eq('clinic_id', clinicId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    let proximoNumero = 1;
-
-    if (data && data.numero_guia) {
-      // Extrair número da última guia (formato: GC001-2025-001)
-      const match = data.numero_guia.match(/(\d+)$/);
-      if (match) {
-        proximoNumero = parseInt(match[1]) + 1;
-      }
-    }
-
-    const ano = new Date().getFullYear();
-    const numeroFormatado = String(proximoNumero).padStart(3, '0');
-    return `GC${numeroFormatado}-${ano}-001`;
-  } catch (error) {
-    console.error('❌ Erro ao gerar número de guia:', error);
-    // Retornar um número genérico em caso de erro
-    return `GC${Date.now()}-001`;
   }
 }

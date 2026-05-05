@@ -4,19 +4,19 @@
 // Gestão de valores e tarifas por serviço
 // ============================================================
 
-import React, { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
-import { useClinicContext } from "@/contexts/ClinicContext";
-import BaseSystemHeader from "@/components/layout/BaseSystemHeader";
-import { Alert } from "@/components/layout/BaseSystemAlert";
-import EmptyState from "@/components/layout/EmptyState";
-import * as servicesApi from "@/lib/servicesApi";
-import * as servicePricesApi from "@/lib/servicePricesApi";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Plus, Edit2, Trash2, X, DollarSign, Filter, ArrowRight } from "lucide-react";
-import { customSupabaseClient } from "@/lib/customSupabaseClient";
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useClinicContext } from '@/contexts/ClinicContext';
+import BaseSystemHeader from '@/components/layout/BaseSystemHeader';
+import { Alert } from '@/components/layout/BaseSystemAlert';
+import EmptyState from '@/components/layout/EmptyState';
+import * as servicesApi from '@/lib/servicesApi';
+import * as servicePricesApi from '@/lib/servicePricesApi';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Plus, Edit2, Trash2, X, DollarSign, Filter, ArrowRight } from 'lucide-react';
+import { customSupabaseClient } from '@/lib/customSupabaseClient';
 
 export function ServicePricesPage() {
   const navigate = useNavigate();
@@ -31,28 +31,28 @@ export function ServicePricesPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
-    service_id: "",
-    payer_id: "",
-    price: "",
-    cost: "",
-    currency: "BRL",
-    plan: "",
+    service_id: '',
+    payer_id: '',
+    price: '',
+    cost: '',
+    currency: 'BRL',
+    plan: '',
     active: true,
   });
   const [submitting, setSubmitting] = useState(false);
 
   // Filtros
-  const [filterService, setFilterService] = useState("");
-  const [filterPayer, setFilterPayer] = useState("");
-  const [filterPlan, setFilterPlan] = useState("");
+  const [filterService, setFilterService] = useState('');
+  const [filterPayer, setFilterPayer] = useState('');
+  const [filterPlan, setFilterPlan] = useState('');
 
   useEffect(() => {
     if (clinicId && isAuthenticated) {
       loadData();
-      
+
       // Verifica se voltou de criar serviço
       const params = new URLSearchParams(window.location.search);
-      if (params.get("openForm") === "true") {
+      if (params.get('openForm') === 'true') {
         setShowForm(true);
         // Remove o param da URL
         window.history.replaceState({}, document.title, window.location.pathname);
@@ -70,22 +70,23 @@ export function ServicePricesPage() {
       setServices(Array.isArray(servicesData) ? servicesData : []);
 
       // Carregar convênios
-      const { data: payersData, error: payersError } =
-        await customSupabaseClient
-          .from("payers")
-          .select("*")
-          .eq("clinic_id", clinicId)
-          .order("name", { ascending: true });
+      const { data: payersData, error: payersError } = await customSupabaseClient
+        .from('payers')
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .order('name', { ascending: true });
 
-      if (payersError) throw payersError;
+      if (payersError) {
+        throw payersError;
+      }
       setPayers(Array.isArray(payersData) ? payersData : []);
 
       // Carregar preços com relacionamentos
       const pricesData = await servicePricesApi.getServicePrices(clinicId);
       setPrices(Array.isArray(pricesData) ? pricesData : []);
     } catch (err) {
-      setError(err.message || "Erro ao carregar dados");
-      console.error("Erro:", err);
+      setError(err.message || 'Erro ao carregar dados');
+      console.error('Erro:', err);
     } finally {
       setLoading(false);
     }
@@ -113,12 +114,12 @@ export function ServicePricesPage() {
   const handleNew = () => {
     setEditingId(null);
     setFormData({
-      service_id: "",
-      payer_id: "",
-      price: "",
-      cost: "",
-      currency: "BRL",
-      plan: "",
+      service_id: '',
+      payer_id: '',
+      price: '',
+      cost: '',
+      currency: 'BRL',
+      plan: '',
       active: true,
     });
     setShowForm(true);
@@ -128,12 +129,12 @@ export function ServicePricesPage() {
   const handleEdit = (priceEntry) => {
     setEditingId(priceEntry.id);
     setFormData({
-      service_id: priceEntry.service_id || "",
-      payer_id: priceEntry.payer_id || "",
-      price: priceEntry.price?.toString() || "",
-      cost: priceEntry.cost?.toString() || "",
-      currency: priceEntry.currency || "BRL",
-      plan: priceEntry.plan || "",
+      service_id: priceEntry.service_id || '',
+      payer_id: priceEntry.payer_id || '',
+      price: priceEntry.price?.toString() || '',
+      cost: priceEntry.cost?.toString() || '',
+      currency: priceEntry.currency || 'BRL',
+      plan: priceEntry.plan || '',
       active: priceEntry.active !== false,
     });
     setShowForm(true);
@@ -144,12 +145,12 @@ export function ServicePricesPage() {
     setShowForm(false);
     setEditingId(null);
     setFormData({
-      service_id: "",
-      payer_id: "",
-      price: "",
-      cost: "",
-      currency: "BRL",
-      plan: "",
+      service_id: '',
+      payer_id: '',
+      price: '',
+      cost: '',
+      currency: 'BRL',
+      plan: '',
       active: true,
     });
     setSubmitting(false);
@@ -157,15 +158,23 @@ export function ServicePricesPage() {
 
   const handleCloseWithCheck = () => {
     const hasData = Object.entries(formData).some(([key, value]) => {
-      if (typeof value === "string") return value.trim() !== "";
-      if (typeof value === "number") return value !== 0;
-      if (typeof value === "boolean") return value !== true;
-      if (Array.isArray(value)) return value.length > 0;
+      if (typeof value === 'string') {
+        return value.trim() !== '';
+      }
+      if (typeof value === 'number') {
+        return value !== 0;
+      }
+      if (typeof value === 'boolean') {
+        return value !== true;
+      }
+      if (Array.isArray(value)) {
+        return value.length > 0;
+      }
       return false;
     });
 
     if (hasData) {
-      if (window.confirm("Tem certeza que deseja sair? As alterações não salvas serão perdidas.")) {
+      if (window.confirm('Tem certeza que deseja sair? As alterações não salvas serão perdidas.')) {
         closeForm();
       }
     } else {
@@ -175,20 +184,20 @@ export function ServicePricesPage() {
 
   const validateForm = () => {
     if (!formData.service_id.trim()) {
-      setError("Serviço é obrigatório");
+      setError('Serviço é obrigatório');
       return false;
     }
 
     const price = parseFloat(formData.price);
     if (isNaN(price) || price <= 0) {
-      setError("Preço deve ser um valor maior que zero");
+      setError('Preço deve ser um valor maior que zero');
       return false;
     }
 
     if (formData.cost) {
       const cost = parseFloat(formData.cost);
       if (isNaN(cost) || cost < 0) {
-        setError("Custo deve ser um valor válido");
+        setError('Custo deve ser um valor válido');
         return false;
       }
     }
@@ -219,11 +228,7 @@ export function ServicePricesPage() {
 
       if (editingId) {
         await servicePricesApi.updateServicePrice(editingId, dataToSave);
-        setPrices(
-          prices.map((p) =>
-            p.id === editingId ? { ...p, ...dataToSave } : p
-          )
-        );
+        setPrices(prices.map((p) => (p.id === editingId ? { ...p, ...dataToSave } : p)));
       } else {
         const newPrice = await servicePricesApi.createServicePrice(clinicId, dataToSave);
         setPrices([...prices, newPrice]);
@@ -231,15 +236,15 @@ export function ServicePricesPage() {
 
       closeForm();
     } catch (err) {
-      setError(err.message || "Erro ao salvar preço");
-      console.error("Erro:", err);
+      setError(err.message || 'Erro ao salvar preço');
+      console.error('Erro:', err);
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Deseja deletar essa tabela de preços?")) {
+    if (!window.confirm('Deseja deletar essa tabela de preços?')) {
       return;
     }
 
@@ -248,75 +253,83 @@ export function ServicePricesPage() {
       await servicePricesApi.deleteServicePrice(id);
       setPrices(prices.filter((p) => p.id !== id));
     } catch (err) {
-      setError(err.message || "Erro ao deletar preço");
-      console.error("Erro:", err);
+      setError(err.message || 'Erro ao deletar preço');
+      console.error('Erro:', err);
     }
   };
 
   const getServiceName = (id) => {
-    return services.find((s) => s.id === id)?.name || "Desconhecido";
+    return services.find((s) => s.id === id)?.name || 'Desconhecido';
   };
 
   const getServiceCode = (id) => {
     const service = services.find((s) => s.id === id);
-    console.log("🔎 Procurando código para service_id:", id);
-    console.log("🔎 Serviço encontrado:", service);
-    return service?.code || "-";
+    console.log('🔎 Procurando código para service_id:', id);
+    console.log('🔎 Serviço encontrado:', service);
+    return service?.code || '-';
   };
 
   const getServiceCategory = (priceEntry) => {
     const categoryMap = {
-      consultation: "📋 Consulta",
-      exam: "🔬 Exame/SADT",
-      procedure: "🏥 Procedimento",
-      surgery: "🏨 Cirurgia",
-      other: "📝 Outro",
+      consultation: '📋 Consulta',
+      exam: '🔬 Exame/SADT',
+      procedure: '🏥 Procedimento',
+      surgery: '🏨 Cirurgia',
+      other: '📝 Outro',
     };
-    
+
     // Tenta primeiro do relacionamento carregado
     if (priceEntry.services?.service_category) {
-      return categoryMap[priceEntry.services.service_category] || priceEntry.services.service_category;
+      return (
+        categoryMap[priceEntry.services.service_category] || priceEntry.services.service_category
+      );
     }
-    
+
     // Depois tenta do array de serviços
     const service = services.find((s) => s.id === priceEntry.service_id);
-    return service?.service_category ? categoryMap[service.service_category] || service.service_category : "-";
+    return service?.service_category
+      ? categoryMap[service.service_category] || service.service_category
+      : '-';
   };
 
   const getPayerName = (id) => {
-    return payers.find((p) => p.id === id)?.name || "Desconhecido";
+    return payers.find((p) => p.id === id)?.name || 'Desconhecido';
   };
 
   // Função auxiliar para extrair código do objeto de preço (se tiver relacionamento carregado)
   const getServiceCodeFromPrice = (priceEntry) => {
-    console.log("🔍 Buscando código para serviço:", { 
-      service_id: priceEntry.service_id, 
+    console.log('🔍 Buscando código para serviço:', {
+      service_id: priceEntry.service_id,
       hasServicesRelation: !!priceEntry.services,
-      servicesObj: priceEntry.services
+      servicesObj: priceEntry.services,
     });
-    
+
     // Tenta primeiro do relacionamento carregado
     if (priceEntry.services?.code) {
-      console.log("✅ Código encontrado no relacionamento:", priceEntry.services.code);
+      console.log('✅ Código encontrado no relacionamento:', priceEntry.services.code);
       return priceEntry.services.code;
     }
-    
+
     // Depois tenta do array de serviços
     const codeFromArray = getServiceCode(priceEntry.service_id);
-    console.log("✅ Código buscado do array:", codeFromArray);
+    console.log('✅ Código buscado do array:', codeFromArray);
     return codeFromArray;
   };
 
   const formatCurrency = (value, currency) => {
-    if (!value) return "-";
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: currency || "BRL",
+    if (!value) {
+      return '-';
+    }
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: currency || 'BRL',
     }).format(value);
   };
 
   const calculateMargin = (price, cost) => {
-    if (!price || !cost || cost === 0) return null;
+    if (!price || !cost || cost === 0) {
+      return null;
+    }
     const margin = ((price - cost) / price) * 100;
     return margin.toFixed(1);
   };
@@ -340,14 +353,7 @@ export function ServicePricesPage() {
       />
 
       {/* ALERTA */}
-      {error && (
-        <Alert
-          type="error"
-          title="Aviso"
-          message={error}
-          onClose={() => setError(null)}
-        />
-      )}
+      {error && <Alert type="error" title="Aviso" message={error} onClose={() => setError(null)} />}
 
       {services.length === 0 ? (
         <EmptyState
@@ -369,9 +375,7 @@ export function ServicePricesPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Filtro Serviço */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Serviço
-                  </label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Serviço</label>
                   <select
                     value={filterService}
                     onChange={(e) => setFilterService(e.target.value)}
@@ -388,9 +392,7 @@ export function ServicePricesPage() {
 
                 {/* Filtro Convênio */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Convênio
-                  </label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Convênio</label>
                   <select
                     value={filterPayer}
                     onChange={(e) => setFilterPayer(e.target.value)}
@@ -407,9 +409,7 @@ export function ServicePricesPage() {
 
                 {/* Filtro Plano */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Plano
-                  </label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Plano</label>
                   <input
                     type="text"
                     value={filterPlan}
@@ -425,9 +425,7 @@ export function ServicePricesPage() {
           {/* TABELA DE PREÇOS */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-4">
-              <CardTitle>
-                Preços Cadastrados ({filteredPrices.length})
-              </CardTitle>
+              <CardTitle>Preços Cadastrados ({filteredPrices.length})</CardTitle>
               <Button
                 onClick={handleNew}
                 className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
@@ -443,8 +441,8 @@ export function ServicePricesPage() {
                   title="Nenhum preço encontrado"
                   description={
                     prices.length === 0
-                      ? "Comece adicionando o preço de um serviço"
-                      : "Nenhum resultado com os filtros selecionados"
+                      ? 'Comece adicionando o preço de um serviço'
+                      : 'Nenhum resultado com os filtros selecionados'
                   }
                 />
               ) : (
@@ -455,9 +453,7 @@ export function ServicePricesPage() {
                         <th className="text-left py-3 px-4 font-semibold text-gray-700 whitespace-nowrap">
                           Código CBHPM
                         </th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                          Serviço
-                        </th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Serviço</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700">
                           Categoria
                         </th>
@@ -467,20 +463,13 @@ export function ServicePricesPage() {
                         <th className="text-left py-3 px-4 font-semibold text-gray-700">
                           Convênio
                         </th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                          Plano
-                        </th>
-                        <th className="text-center py-3 px-4 font-semibold text-gray-700">
-                          Ações
-                        </th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Plano</th>
+                        <th className="text-center py-3 px-4 font-semibold text-gray-700">Ações</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredPrices.map((priceEntry) => (
-                        <tr
-                          key={priceEntry.id}
-                          className="border-b hover:bg-gray-50 transition"
-                        >
+                        <tr key={priceEntry.id} className="border-b hover:bg-gray-50 transition">
                           <td className="py-3 px-4 font-mono text-gray-700 whitespace-nowrap font-semibold">
                             {getServiceCodeFromPrice(priceEntry)}
                           </td>
@@ -496,9 +485,7 @@ export function ServicePricesPage() {
                           <td className="py-3 px-4 text-gray-700">
                             {getPayerName(priceEntry.payer_id)}
                           </td>
-                          <td className="py-3 px-4 text-gray-600">
-                            {priceEntry.plan || "-"}
-                          </td>
+                          <td className="py-3 px-4 text-gray-600">{priceEntry.plan || '-'}</td>
                           <td className="py-3 px-4 flex justify-center gap-2">
                             <button
                               onClick={() => handleEdit(priceEntry)}
@@ -535,7 +522,7 @@ export function ServicePricesPage() {
                 <div className="flex items-center gap-3">
                   <DollarSign size={24} className="text-white" />
                   <h2 className="text-xl font-bold text-white">
-                    {editingId ? "✏️ Editar Preço" : "➕ Novo Preço"}
+                    {editingId ? '✏️ Editar Preço' : '➕ Novo Preço'}
                   </h2>
                 </div>
                 <button
@@ -550,14 +537,20 @@ export function ServicePricesPage() {
 
               {/* Content */}
               <CardContent className="app-modal-body p-6 modal-content-scroll">
-                <form id="service-prices-form" onSubmit={handleSubmit} className="space-y-5" style={{flex: 1, overflow: "visible"}}>
-                  <div style={{flex: 1, overflowY: "auto", paddingRight: "8px"}}>
-
+                <form
+                  id="service-prices-form"
+                  onSubmit={handleSubmit}
+                  className="space-y-5"
+                  style={{ flex: 1, overflow: 'visible' }}
+                >
+                  <div style={{ flex: 1, overflowY: 'auto', paddingRight: '8px' }}>
                     {/* SEÇÃO 1: DADOS DO PREÇO */}
                     <div className="bg-white border border-gray-200 rounded-lg p-5 space-y-4">
                       <div className="border-b pb-3">
                         <h3 className="text-lg font-bold text-gray-900">💰 Dados do Preço</h3>
-                        <p className="text-sm text-gray-600 mt-1">Configure o preço do serviço e sua moeda</p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Configure o preço do serviço e sua moeda
+                        </p>
                       </div>
 
                       {/* Serviço */}
@@ -585,7 +578,9 @@ export function ServicePricesPage() {
                           </select>
                           <button
                             type="button"
-                            onClick={() => navigate("/clinica/base-sistema/servicos?returnTo=service-prices")}
+                            onClick={() =>
+                              navigate('/clinica/base-sistema/servicos?returnTo=service-prices')
+                            }
                             className="px-4 py-2 bg-slate-500 hover:bg-slate-600 text-white rounded-lg transition flex items-center gap-2 whitespace-nowrap"
                             title="Criar novo serviço"
                           >
@@ -593,7 +588,9 @@ export function ServicePricesPage() {
                             Novo
                           </button>
                         </div>
-                        <p className="text-xs text-gray-500 mt-2">Escolha o serviço para definir o preço</p>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Escolha o serviço para definir o preço
+                        </p>
                       </div>
 
                       {/* Layout: Convênio e Plano em 2 colunas */}
@@ -605,9 +602,7 @@ export function ServicePricesPage() {
                           </label>
                           <select
                             value={formData.payer_id}
-                            onChange={(e) =>
-                              setFormData({ ...formData, payer_id: e.target.value })
-                            }
+                            onChange={(e) => setFormData({ ...formData, payer_id: e.target.value })}
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
                             disabled={submitting}
                           >
@@ -618,7 +613,9 @@ export function ServicePricesPage() {
                               </option>
                             ))}
                           </select>
-                          <p className="text-xs text-gray-500 mt-2">Opcional. Deixe em branco para preço genérico</p>
+                          <p className="text-xs text-gray-500 mt-2">
+                            Opcional. Deixe em branco para preço genérico
+                          </p>
                         </div>
 
                         {/* Plano */}
@@ -629,9 +626,7 @@ export function ServicePricesPage() {
                           <input
                             type="text"
                             value={formData.plan}
-                            onChange={(e) =>
-                              setFormData({ ...formData, plan: e.target.value })
-                            }
+                            onChange={(e) => setFormData({ ...formData, plan: e.target.value })}
                             placeholder="Ex: Plano Gold, Plano Básico..."
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             disabled={submitting}
@@ -649,9 +644,7 @@ export function ServicePricesPage() {
                           </label>
                           <select
                             value={formData.currency}
-                            onChange={(e) =>
-                              setFormData({ ...formData, currency: e.target.value })
-                            }
+                            onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
                             disabled={submitting}
                           >
@@ -672,9 +665,7 @@ export function ServicePricesPage() {
                             step="0.01"
                             min="0"
                             value={formData.price}
-                            onChange={(e) =>
-                              setFormData({ ...formData, price: e.target.value })
-                            }
+                            onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                             placeholder="0.00"
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             required
@@ -689,7 +680,9 @@ export function ServicePricesPage() {
                     <div className="bg-white border border-gray-200 rounded-lg p-5 space-y-4">
                       <div className="border-b pb-3">
                         <h3 className="text-lg font-bold text-gray-900">✓ Status</h3>
-                        <p className="text-sm text-gray-600 mt-1">Controle a disponibilidade deste preço</p>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Controle a disponibilidade deste preço
+                        </p>
                       </div>
 
                       {/* Status */}
@@ -699,9 +692,7 @@ export function ServicePricesPage() {
                             type="checkbox"
                             id="active"
                             checked={formData.active}
-                            onChange={(e) =>
-                              setFormData({ ...formData, active: e.target.checked })
-                            }
+                            onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
                             className="w-5 h-5 rounded border border-gray-300 cursor-pointer accent-blue-600"
                             disabled={submitting}
                           />
@@ -712,13 +703,15 @@ export function ServicePricesPage() {
                         </label>
                       </div>
                     </div>
-
                   </div>
                 </form>
               </CardContent>
 
               {/* Footer */}
-              <div style={{flexShrink: 0}} className="border-t bg-gradient-to-r from-gray-50 to-white px-6 py-4 flex gap-3 justify-end rounded-b-lg">
+              <div
+                style={{ flexShrink: 0 }}
+                className="border-t bg-gradient-to-r from-gray-50 to-white px-6 py-4 flex gap-3 justify-end rounded-b-lg"
+              >
                 <Button
                   type="button"
                   onClick={handleCloseWithCheck}
@@ -740,9 +733,9 @@ export function ServicePricesPage() {
                       Salvando...
                     </>
                   ) : editingId ? (
-                    "✓ Atualizar"
+                    '✓ Atualizar'
                   ) : (
-                    "✓ Criar"
+                    '✓ Criar'
                   )}
                 </Button>
               </div>
@@ -753,4 +746,3 @@ export function ServicePricesPage() {
     </div>
   );
 }
-

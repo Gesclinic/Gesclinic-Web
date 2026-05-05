@@ -1,10 +1,17 @@
-import React, { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Clock } from "lucide-react";
-import { supabase } from "@/lib/customSupabaseClient";
-import { useToast } from "@/components/ui/use-toast";
+import React, { useEffect, useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Clock } from 'lucide-react';
+import { supabase } from '@/lib/customSupabaseClient';
+import { useToast } from '@/components/ui/use-toast';
 
 export default function ListaEsperaModal({ open, onClose, profissionalId, onAgendar }) {
   const [lista, setLista] = useState([]);
@@ -13,14 +20,20 @@ export default function ListaEsperaModal({ open, onClose, profissionalId, onAgen
 
   useEffect(() => {
     const load = async () => {
-      if (!profissionalId || !open) return;
+      if (!profissionalId || !open) {
+        return;
+      }
       setLoading(true);
-      const { data, error } = await supabase.rpc("get_waiting_list_by_professional", {
+      const { data, error } = await supabase.rpc('get_waiting_list_by_professional', {
         p_professional_id: profissionalId,
       });
 
       if (error) {
-        toast({ title: "Erro ao carregar lista de espera", description: error.message, variant: "destructive" });
+        toast({
+          title: 'Erro ao carregar lista de espera',
+          description: error.message,
+          variant: 'destructive',
+        });
       } else {
         setLista(data || []);
       }
@@ -49,7 +62,11 @@ export default function ListaEsperaModal({ open, onClose, profissionalId, onAgen
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan="5" className="text-center py-4">Carregando...</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan="5" className="text-center py-4">
+                    Carregando...
+                  </TableCell>
+                </TableRow>
               ) : lista.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan="5" className="text-center text-gray-500 py-4">
@@ -64,11 +81,7 @@ export default function ListaEsperaModal({ open, onClose, profissionalId, onAgen
                     <TableCell>{item.payer_name}</TableCell>
                     <TableCell>{item.service_name}</TableCell>
                     <TableCell>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => onAgendar(item)}
-                      >
+                      <Button size="sm" variant="outline" onClick={() => onAgendar(item)}>
                         <Clock size={14} className="mr-1" /> Agendar
                       </Button>
                     </TableCell>

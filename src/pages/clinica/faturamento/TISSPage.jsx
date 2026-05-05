@@ -6,29 +6,24 @@
  * - Status de submissões
  * - Histórico de enviados
  * - Métricas e relatórios
- * 
+ *
  * Data: Abril 10, 2026
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
+import { AlertCircle, CheckCircle, Download, RefreshCw, Send, Trash2, XCircle } from 'lucide-react';
+import { useClinicContext } from '@/contexts/ClinicContext';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TISSSubmissionDialog } from '@/components/TISSSubmissionDialog';
+import { listPendingTISSGuides, getTISSTAuditHistory } from '@/lib/tissApi';
 import {
-  AlertCircle,
-  CheckCircle,
-  Download,
-  RefreshCw,
-  Send,
-  Trash2,
-  XCircle,
-} from "lucide-react";
-import { useClinicContext } from "@/contexts/ClinicContext";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TISSSubmissionDialog } from "@/components/TISSSubmissionDialog";
-import { listPendingTISSGuides, getTISSTAuditHistory } from "@/lib/tissApi";
-import { getTISSSubmissionSummary, getRejectedTISSSubmissions } from "@/lib/tissSubmissionServiceApi";
+  getTISSSubmissionSummary,
+  getRejectedTISSSubmissions,
+} from '@/lib/tissSubmissionServiceApi';
 
 export function TISSPage() {
   const { clinicId } = useClinicContext();
@@ -64,7 +59,7 @@ export function TISSPage() {
         setAuditLogs((prev) => ({ ...prev, [guide.id]: logs }));
       }
     } catch (error) {
-      console.error("Erro ao carregar dados TISS:", error);
+      console.error('Erro ao carregar dados TISS:', error);
     } finally {
       setLoading(false);
     }
@@ -96,9 +91,7 @@ export function TISSPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">TISS - Guias</h1>
-          <p className="text-gray-600 mt-1">
-            Envio de Guias para Operadoras de Saúde
-          </p>
+          <p className="text-gray-600 mt-1">Envio de Guias para Operadoras de Saúde</p>
         </div>
         <Button onClick={loadData} variant="outline" size="sm">
           <RefreshCw className="w-4 h-4 mr-2" />
@@ -112,9 +105,7 @@ export function TISSPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center">
-                <p className="text-3xl font-bold text-blue-600">
-                  {summary.total}
-                </p>
+                <p className="text-3xl font-bold text-blue-600">{summary.total}</p>
                 <p className="text-xs text-gray-600 mt-1">Total</p>
               </div>
             </CardContent>
@@ -122,9 +113,7 @@ export function TISSPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center">
-                <p className="text-3xl font-bold text-yellow-600">
-                  {summary.pending}
-                </p>
+                <p className="text-3xl font-bold text-yellow-600">{summary.pending}</p>
                 <p className="text-xs text-gray-600 mt-1">Pendentes</p>
               </div>
             </CardContent>
@@ -132,9 +121,7 @@ export function TISSPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center">
-                <p className="text-3xl font-bold text-blue-600">
-                  {summary.sent}
-                </p>
+                <p className="text-3xl font-bold text-blue-600">{summary.sent}</p>
                 <p className="text-xs text-gray-600 mt-1">Enviadas</p>
               </div>
             </CardContent>
@@ -142,9 +129,7 @@ export function TISSPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center">
-                <p className="text-3xl font-bold text-purple-600">
-                  {summary.processing}
-                </p>
+                <p className="text-3xl font-bold text-purple-600">{summary.processing}</p>
                 <p className="text-xs text-gray-600 mt-1">Processando</p>
               </div>
             </CardContent>
@@ -152,9 +137,7 @@ export function TISSPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center">
-                <p className="text-3xl font-bold text-green-600">
-                  {summary.accepted}
-                </p>
+                <p className="text-3xl font-bold text-green-600">{summary.accepted}</p>
                 <p className="text-xs text-gray-600 mt-1">Aceitas</p>
               </div>
             </CardContent>
@@ -162,9 +145,7 @@ export function TISSPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center">
-                <p className="text-3xl font-bold text-red-600">
-                  {summary.rejected}
-                </p>
+                <p className="text-3xl font-bold text-red-600">{summary.rejected}</p>
                 <p className="text-xs text-gray-600 mt-1">Rejeitadas</p>
               </div>
             </CardContent>
@@ -175,12 +156,8 @@ export function TISSPage() {
       {/* ======== TABS ======== */}
       <Tabs defaultValue="pending" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="pending">
-            Aguardando Envio ({pendingGuides.length})
-          </TabsTrigger>
-          <TabsTrigger value="rejected">
-            Rejeitadas ({rejectedGuides.length})
-          </TabsTrigger>
+          <TabsTrigger value="pending">Aguardando Envio ({pendingGuides.length})</TabsTrigger>
+          <TabsTrigger value="rejected">Rejeitadas ({rejectedGuides.length})</TabsTrigger>
           <TabsTrigger value="info">Informações</TabsTrigger>
         </TabsList>
 
@@ -190,9 +167,7 @@ export function TISSPage() {
             <Card>
               <CardContent className="pt-6 text-center">
                 <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-3" />
-                <p className="text-gray-600">
-                  Nenhuma guia aguardando envio! 🎉
-                </p>
+                <p className="text-gray-600">Nenhuma guia aguardando envio! 🎉</p>
               </CardContent>
             </Card>
           ) : (
@@ -202,21 +177,15 @@ export function TISSPage() {
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
-                        <p className="font-semibold">
-                          Guia: {guide.guide_number}
+                        <p className="font-semibold">Guia: {guide.guide_number}</p>
+                        <p className="text-sm text-gray-600">
+                          Paciente: {guide.appointments?.[0]?.patients?.[0]?.name || 'N/A'}
                         </p>
                         <p className="text-sm text-gray-600">
-                          Paciente:{" "}
-                          {guide.appointments?.[0]?.patients?.[0]?.name ||
-                            "N/A"}
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          Operadora:{" "}
-                          {guide.health_insurances?.name || "N/A"}
+                          Operadora: {guide.health_insurances?.name || 'N/A'}
                         </p>
                         <p className="text-xs text-gray-500 mt-2">
-                          Criada em:{" "}
-                          {new Date(guide.created_at).toLocaleString("pt-BR")}
+                          Criada em: {new Date(guide.created_at).toLocaleString('pt-BR')}
                         </p>
                       </div>
                       <Button
@@ -255,7 +224,7 @@ export function TISSPage() {
                           Guia: {item.billing_guides?.guide_number}
                         </p>
                         <p className="text-sm text-red-800 mt-2">
-                          Motivo: {item.error_message || "Não especificado"}
+                          Motivo: {item.error_message || 'Não especificado'}
                         </p>
                         {item.response_data?.errors && (
                           <ul className="text-xs text-red-700 mt-2 ml-4 list-disc">
@@ -265,8 +234,7 @@ export function TISSPage() {
                           </ul>
                         )}
                         <p className="text-xs text-gray-600 mt-2">
-                          Rejeitada em:{" "}
-                          {new Date(item.created_at).toLocaleString("pt-BR")}
+                          Rejeitada em: {new Date(item.created_at).toLocaleString('pt-BR')}
                         </p>
                       </div>
                       <Button
@@ -294,9 +262,9 @@ export function TISSPage() {
             </CardHeader>
             <CardContent className="space-y-4 text-sm">
               <p>
-                <strong>TISS (Troca de Informações em Saúde Suplementar)</strong>
-                é o padrão de intercâmbio de dados entre prestadores de saúde e
-                operadoras de planos de saúde, regulado pela
+                <strong>TISS (Troca de Informações em Saúde Suplementar)</strong>é o padrão de
+                intercâmbio de dados entre prestadores de saúde e operadoras de planos de saúde,
+                regulado pela
                 <strong> Agência Nacional de Saúde Suplementar (ANS)</strong>.
               </p>
 
@@ -335,7 +303,7 @@ export function TISSPage() {
               <Alert>
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  Dúvidas? Consulte a ANS em{" "}
+                  Dúvidas? Consulte a ANS em{' '}
                   <a
                     href="https://www.ans.gov.br"
                     target="_blank"
@@ -354,14 +322,11 @@ export function TISSPage() {
               <CardTitle>Configuração por Operadora</CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-gray-600">
-              <p>
-                Para configurar credenciais e endpoints TISS para cada
-                operadora, acesse:
-              </p>
+              <p>Para configurar credenciais e endpoints TISS para cada operadora, acesse:</p>
               <Button
                 variant="link"
                 className="mt-2 px-0"
-                onClick={() => (window.location.href = "/clinica/base-sistema/convenios")}
+                onClick={() => (window.location.href = '/clinica/base-sistema/convenios')}
               >
                 Convênios e Operadoras →
               </Button>

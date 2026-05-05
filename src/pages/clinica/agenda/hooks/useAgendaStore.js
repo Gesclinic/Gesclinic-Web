@@ -23,12 +23,12 @@ export function useAgendaStore() {
 
   // 🔍 Filtros combinativos
   const [filters, setFilters] = useState({
-    professional: null,      // ID do profissional
-    room: null,              // ID da sala
-    status: null,            // Confirmado, A confirmar, Faltou, Encaixe, Disponível
-    payer: null,             // ID do convênio/pagador
-    service: null,           // ID do serviço
-    searchText: '',          // Busca por paciente ou serviço
+    professional: null, // ID do profissional
+    room: null, // ID da sala
+    status: null, // Confirmado, A confirmar, Faltou, Encaixe, Disponível
+    payer: null, // ID do convênio/pagador
+    service: null, // ID do serviço
+    searchText: '', // Busca por paciente ou serviço
   });
 
   // 📊 Agendamentos carregados
@@ -51,9 +51,9 @@ export function useAgendaStore() {
 
   // 🔧 Atualizar um filtro específico
   const updateFilter = useCallback((key, value) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
-      [key]: value
+      [key]: value,
     }));
   }, []);
 
@@ -71,9 +71,9 @@ export function useAgendaStore() {
 
   // 🔧 Atualizar filtros múltiplos de uma vez
   const setMultipleFilters = useCallback((newFilters) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
-      ...newFilters
+      ...newFilters,
     }));
   }, []);
 
@@ -128,19 +128,17 @@ export function useAgendaStore() {
 
   // 🎯 Atualizar agendamento na lista local
   const updateAppointmentLocal = useCallback((id, updates) => {
-    setAppointments(prev => 
-      prev.map(apt => apt.id === id ? { ...apt, ...updates } : apt)
-    );
+    setAppointments((prev) => prev.map((apt) => (apt.id === id ? { ...apt, ...updates } : apt)));
   }, []);
 
   // 🎯 Remover agendamento da lista local
   const removeAppointmentLocal = useCallback((id) => {
-    setAppointments(prev => prev.filter(apt => apt.id !== id));
+    setAppointments((prev) => prev.filter((apt) => apt.id !== id));
   }, []);
 
   // 🎯 Adicionar agendamento na lista local
   const addAppointmentLocal = useCallback((appointment) => {
-    setAppointments(prev => [...prev, appointment]);
+    setAppointments((prev) => [...prev, appointment]);
   }, []);
 
   /**
@@ -152,35 +150,36 @@ export function useAgendaStore() {
 
     // Filtrar por profissional (se definido)
     if (filters.professional) {
-      result = result.filter(apt => apt.professional_id === filters.professional);
+      result = result.filter((apt) => apt.professional_id === filters.professional);
     }
 
     // Filtrar por sala (se definido)
     if (filters.room) {
-      result = result.filter(apt => apt.room_id === filters.room);
+      result = result.filter((apt) => apt.room_id === filters.room);
     }
 
     // Filtrar por status (se definido)
     if (filters.status) {
-      result = result.filter(apt => apt.status === filters.status);
+      result = result.filter((apt) => apt.status === filters.status);
     }
 
     // Filtrar por convênio (se definido)
     if (filters.payer) {
-      result = result.filter(apt => apt.payer_id === filters.payer);
+      result = result.filter((apt) => apt.payer_id === filters.payer);
     }
 
     // Filtrar por serviço (se definido)
     if (filters.service) {
-      result = result.filter(apt => apt.service_id === filters.service);
+      result = result.filter((apt) => apt.service_id === filters.service);
     }
 
     // Filtrar por busca de texto (paciente ou serviço)
     if (filters.searchText) {
       const search = filters.searchText.toLowerCase();
-      result = result.filter(apt => 
-        apt.patient_name?.toLowerCase().includes(search) ||
-        apt.service_name?.toLowerCase().includes(search)
+      result = result.filter(
+        (apt) =>
+          apt.patient_name?.toLowerCase().includes(search) ||
+          apt.service_name?.toLowerCase().includes(search),
       );
     }
 
@@ -193,9 +192,9 @@ export function useAgendaStore() {
    */
   const indicators = useMemo(() => {
     const total = filteredAppointments.length;
-    const confirmed = filteredAppointments.filter(apt => apt.status === 'confirmado').length;
-    const noShow = filteredAppointments.filter(apt => apt.status === 'faltou').length;
-    const fitting = filteredAppointments.filter(apt => apt.status === 'encaixe').length;
+    const confirmed = filteredAppointments.filter((apt) => apt.status === 'confirmado').length;
+    const noShow = filteredAppointments.filter((apt) => apt.status === 'faltou').length;
+    const fitting = filteredAppointments.filter((apt) => apt.status === 'encaixe').length;
 
     // Taxa de ocupação: confirmados / total
     const occupationRate = total > 0 ? ((confirmed / total) * 100).toFixed(1) : 0;
@@ -205,7 +204,7 @@ export function useAgendaStore() {
       confirmed,
       noShow,
       fitting,
-      occupationRate
+      occupationRate,
     };
   }, [filteredAppointments]);
 

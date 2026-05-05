@@ -9,7 +9,9 @@ export const formatPhone = (value) => {
   const numbers = value.replace(/\D/g, '');
 
   // Limita a 11 dígitos
-  if (numbers.length > 11) return value;
+  if (numbers.length > 11) {
+    return value;
+  }
 
   // Formata progressivamente
   if (numbers.length === 0) {
@@ -22,7 +24,7 @@ export const formatPhone = (value) => {
     // Celular (9 dígitos + DDD = 11): (XX) 9 XXXX-XXXX
     // Fixo (8 dígitos + DDD = 10): (XX) XXXX-XXXX
     const isCell = numbers.length >= 11 || (numbers.length > 7 && numbers[2] === '9');
-    
+
     if (isCell && numbers.length === 11) {
       // Formato celular: (XX) 9 XXXX-XXXX
       return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 3)} ${numbers.slice(3, 7)}-${numbers.slice(7)}`;

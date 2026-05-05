@@ -1,17 +1,19 @@
-/**
- * FLUXO_COMPLETO_ATENDIMENTO_GUIA.md
- * 
- * 🧠 GUIA COMPLETO DE USO - FLUXO DE ATENDIMENTO
- * 
- * Este documento descreve como usar e integrar o novo sistema
- * de fluxo de atendimento com separação de responsabilidades.
- */
+/\*\*
+
+- FLUXO_COMPLETO_ATENDIMENTO_GUIA.md
+-
+- 🧠 GUIA COMPLETO DE USO - FLUXO DE ATENDIMENTO
+-
+- Este documento descreve como usar e integrar o novo sistema
+- de fluxo de atendimento com separação de responsabilidades.
+  \*/
 
 # 📋 FLUXO COMPLETO DE ATENDIMENTO — GUIA TÉCNICO
 
 ## 🎯 Objetivo
 
 Implementar um fluxo real de clínica com separação clara de responsabilidades entre:
+
 - **Recepção** (check-in, validação, liberação)
 - **Profissional** (atendimento limpo, sem distrações)
 - **Gestor** (visão completa, controle total)
@@ -65,17 +67,17 @@ AGUARDANDO
 
 ```javascript
 export const APPOINTMENT_STATUS = {
-  AGENDADO: "agendado",
-  CONFIRMADO: "confirmado",
-  AGUARDANDO: "aguardando",
-  PENDENTE: "pendente",
-  FINANCEIRO_PENDENTE: "financeiro_pendente",
-  LIBERADO_PARA_ATENDIMENTO: "liberado_para_atendimento",
-  EM_ATENDIMENTO: "em_atendimento",
-  FINALIZADO: "finalizado",
-  FALTA: "falta",
-  CANCELADO: "cancelado",
-  REMARCADO: "remarcado",
+  AGENDADO: 'agendado',
+  CONFIRMADO: 'confirmado',
+  AGUARDANDO: 'aguardando',
+  PENDENTE: 'pendente',
+  FINANCEIRO_PENDENTE: 'financeiro_pendente',
+  LIBERADO_PARA_ATENDIMENTO: 'liberado_para_atendimento',
+  EM_ATENDIMENTO: 'em_atendimento',
+  FINALIZADO: 'finalizado',
+  FALTA: 'falta',
+  CANCELADO: 'cancelado',
+  REMARCADO: 'remarcado',
 };
 ```
 
@@ -84,17 +86,17 @@ export const APPOINTMENT_STATUS = {
 ```javascript
 import {
   APPOINTMENT_STATUS,
-  getStatusLabel,        // "agendado" → "Agendado"
-  getStatusColor,        // "agendado" → "bg-blue-100..."
-  isReadyForCare,        // Verifica se pode iniciar atendimento
-  isInCare,              // Verifica se está em atendimento
-  isCareCompleted,       // Verifica se finalizou
-  isPendingAction,       // Verifica se aguarda ação da recepção
+  getStatusLabel, // "agendado" → "Agendado"
+  getStatusColor, // "agendado" → "bg-blue-100..."
+  isReadyForCare, // Verifica se pode iniciar atendimento
+  isInCare, // Verifica se está em atendimento
+  isCareCompleted, // Verifica se finalizou
+  isPendingAction, // Verifica se aguarda ação da recepção
   getValidStatusTransitions, // Transições válidas
-  canPerformAction,      // Valida ação por role
-  getVisibleStatusByRole,// Status visíveis por perfil
-  getAgendaModeForRole,  // Determina view
-} from "@/lib/appointmentStatusEnums";
+  canPerformAction, // Valida ação por role
+  getVisibleStatusByRole, // Status visíveis por perfil
+  getAgendaModeForRole, // Determina view
+} from '@/lib/appointmentStatusEnums';
 ```
 
 ---
@@ -106,7 +108,7 @@ import {
 **Arquivo:** `src/pages/clinica/agenda/AgendaPage.jsx`
 
 ```javascript
-import AgendaFluxoCompleto from "./views/AgendaFluxoCompleto";
+import AgendaFluxoCompleto from './views/AgendaFluxoCompleto';
 
 export default function AgendaPage() {
   return <AgendaFluxoCompleto />;
@@ -116,27 +118,18 @@ export default function AgendaPage() {
 ### 2️⃣ Usar Hook de Permissões
 
 ```javascript
-import { useAppointmentPermissions } from "@/pages/clinica/agenda/hooks/useAppointmentPermissions";
+import { useAppointmentPermissions } from '@/pages/clinica/agenda/hooks/useAppointmentPermissions';
 
 export function MyComponent() {
-  const {
-    canReleaseForCare,
-    canStartCare,
-    canFinishCare,
-    getBlockReason,
-    isProfessional,
-  } = useAppointmentPermissions();
+  const { canReleaseForCare, canStartCare, canFinishCare, getBlockReason, isProfessional } =
+    useAppointmentPermissions();
 
   return (
     <>
-      {canReleaseForCare() && (
-        <button onClick={handleRelease}>Liberar para Atendimento</button>
-      )}
+      {canReleaseForCare() && <button onClick={handleRelease}>Liberar para Atendimento</button>}
 
       {!canReleaseForCare() && (
-        <p className="text-red-600">
-          {getBlockReason("canReleaseForCare")}
-        </p>
+        <p className="text-red-600">{getBlockReason('canReleaseForCare')}</p>
       )}
     </>
   );
@@ -150,6 +143,7 @@ export function MyComponent() {
 ### 1️⃣ AgendaRecepcaoView (Recepção/Check-in)
 
 **Responsabilidades:**
+
 - ✅ Marcar chegada do paciente
 - ✅ Conferir checklist obrigatório
 - ✅ Processar financeiro
@@ -157,12 +151,14 @@ export function MyComponent() {
 - ✅ Marcar faltas
 
 **Estados Visíveis:**
+
 ```
-AGENDADO, CONFIRMADO, AGUARDANDO, PENDENTE, 
+AGENDADO, CONFIRMADO, AGUARDANDO, PENDENTE,
 FINANCEIRO_PENDENTE, LIBERADO_PARA_ATENDIMENTO, FALTA
 ```
 
 **Fluxo:**
+
 ```
 Paciente chega → CONFIRMADO → AGUARDANDO
                           ↓ (conferir)
@@ -174,12 +170,9 @@ Paciente chega → CONFIRMADO → AGUARDANDO
 **Exemplo de Uso:**
 
 ```javascript
-import AgendaRecepcaoView from "@/pages/clinica/agenda/views/AgendaRecepcaoView";
+import AgendaRecepcaoView from '@/pages/clinica/agenda/views/AgendaRecepcaoView';
 
-<AgendaRecepcaoView 
-  appointments={appointments} 
-  onRefresh={handleRefresh} 
-/>
+<AgendaRecepcaoView appointments={appointments} onRefresh={handleRefresh} />;
 ```
 
 ---
@@ -187,6 +180,7 @@ import AgendaRecepcaoView from "@/pages/clinica/agenda/views/AgendaRecepcaoView"
 ### 2️⃣ AgendaProfessionalView (Atendimento)
 
 **Responsabilidades:**
+
 - ✅ Visualizar **APENAS** agendamentos liberados
 - ✅ Iniciar atendimento (registra hora_inicio)
 - ✅ Finalizar atendimento (registra hora_fim)
@@ -195,11 +189,13 @@ import AgendaRecepcaoView from "@/pages/clinica/agenda/views/AgendaRecepcaoView"
 - ❌ NÃO pode liberar pacientes
 
 **Estados Visíveis:**
+
 ```
 LIBERADO_PARA_ATENDIMENTO, EM_ATENDIMENTO
 ```
 
 **Fluxo:**
+
 ```
 LIBERADO_PARA_ATENDIMENTO
   ↓ (Clica "Iniciar")
@@ -211,13 +207,13 @@ FINALIZADO (registra care_end_time)
 **Exemplo de Uso:**
 
 ```javascript
-import AgendaProfessionalView from "@/pages/clinica/agenda/views/AgendaProfessionalView";
+import AgendaProfessionalView from '@/pages/clinica/agenda/views/AgendaProfessionalView';
 
-<AgendaProfessionalView 
-  appointments={appointments} 
+<AgendaProfessionalView
+  appointments={appointments}
   onRefresh={handleRefresh}
   professionalId={user.id}
-/>
+/>;
 ```
 
 **⚠️ IMPORTANTE:** O profissional só vê seus próprios agendamentos!
@@ -227,6 +223,7 @@ import AgendaProfessionalView from "@/pages/clinica/agenda/views/AgendaProfessio
 ### 3️⃣ AgendaGestorView (Visão Completa)
 
 **Responsabilidades:**
+
 - ✅ Visualizar **TODOS** os status
 - ✅ Controlar transições de status (dropdown)
 - ✅ Ver relatórios e KPIs
@@ -234,6 +231,7 @@ import AgendaProfessionalView from "@/pages/clinica/agenda/views/AgendaProfessio
 - ✅ Agrupar por profissional
 
 **KPIs Disponíveis:**
+
 ```
 - Total de agendamentos
 - Aguardando liberação
@@ -245,12 +243,9 @@ import AgendaProfessionalView from "@/pages/clinica/agenda/views/AgendaProfessio
 **Exemplo de Uso:**
 
 ```javascript
-import AgendaGestorView from "@/pages/clinica/agenda/views/AgendaGestorView";
+import AgendaGestorView from '@/pages/clinica/agenda/views/AgendaGestorView';
 
-<AgendaGestorView 
-  appointments={appointments} 
-  onRefresh={handleRefresh}
-/>
+<AgendaGestorView appointments={appointments} onRefresh={handleRefresh} />;
 ```
 
 ---
@@ -259,15 +254,15 @@ import AgendaGestorView from "@/pages/clinica/agenda/views/AgendaGestorView";
 
 ### Tabela de Controle de Acesso
 
-| Ação | Recepção | Profissional | Gestor |
-|------|----------|--------------|--------|
-| Liberar atendimento | ✅ | ❌ | ✅ |
-| Iniciar atendimento | ❌ | ✅ | ❌ |
-| Finalizar atendimento | ❌ | ✅ | ❌ |
-| Ver financeiro | ❌ | ❌ | ✅ |
-| Editar agendamento | ✅ | ❌ | ✅ |
-| Marcar chegada | ✅ | ❌ | ✅ |
-| Marcar falta | ✅ | ❌ | ✅ |
+| Ação                  | Recepção | Profissional | Gestor |
+| --------------------- | -------- | ------------ | ------ |
+| Liberar atendimento   | ✅       | ❌           | ✅     |
+| Iniciar atendimento   | ❌       | ✅           | ❌     |
+| Finalizar atendimento | ❌       | ✅           | ❌     |
+| Ver financeiro        | ❌       | ❌           | ✅     |
+| Editar agendamento    | ✅       | ❌           | ✅     |
+| Marcar chegada        | ✅       | ❌           | ✅     |
+| Marcar falta          | ✅       | ❌           | ✅     |
 
 ### Implementação
 
@@ -350,13 +345,15 @@ await updateAppointment(apt.id, {
 ### Validações Críticas
 
 1. **Profissional só vê seus agendamentos**
+
    ```javascript
-   if (apt.professional_id !== user.id && role === "professional") {
+   if (apt.professional_id !== user.id && role === 'professional') {
      return false; // Bloqueado
    }
    ```
 
 2. **Profissional não pode pular etapas**
+
    ```javascript
    if (currentStatus !== LIBERADO_PARA_ATENDIMENTO) {
      // Não pode iniciar
@@ -365,6 +362,7 @@ await updateAppointment(apt.id, {
    ```
 
 3. **Status final é imutável**
+
    ```javascript
    if ([FINALIZADO, CANCELADO, FALTA].includes(status)) {
      return false; // Não pode mudar
@@ -373,7 +371,7 @@ await updateAppointment(apt.id, {
 
 4. **Recepção não vê financeiro**
    ```javascript
-   if (role === "reception" && action === "canViewFinance") {
+   if (role === 'reception' && action === 'canViewFinance') {
      return false; // Bloqueado
    }
    ```
@@ -385,6 +383,7 @@ await updateAppointment(apt.id, {
 ### Checklist de Testes
 
 **Recepção:**
+
 - [ ] Visualiza agendamentos do dia
 - [ ] Clica "Marcar Chegada" → status muda para AGUARDANDO
 - [ ] Faz checklist
@@ -393,6 +392,7 @@ await updateAppointment(apt.id, {
 - [ ] Não consegue ver financeiro
 
 **Profissional:**
+
 - [ ] Visualiza APENAS agendamentos LIBERADO_PARA_ATENDIMENTO
 - [ ] Clica "Iniciar" → status muda para EM_ATENDIMENTO
 - [ ] Visualiza "Em Atendimento Agora" em destaque
@@ -402,6 +402,7 @@ await updateAppointment(apt.id, {
 - [ ] Filtra por seus agendamentos
 
 **Gestor:**
+
 - [ ] Visualiza TODOS os agendamentos
 - [ ] Vê todos os status
 - [ ] Dropdown para mudar status
@@ -458,6 +459,7 @@ await updateAppointment(apt.id, {
 ## 📞 SUPORTE
 
 Para dúvidas sobre:
+
 - **Status e fluxo**: Ver `appointmentStatusEnums.js`
 - **Permissões**: Ver `ROLE_PERMISSIONS` em `appointmentStatusEnums.js`
 - **Views**: Ver componentes em `views/`
@@ -476,6 +478,7 @@ Este sistema fornece:
 ✔️ **Base Sólida para Escalar**
 
 Cada etapa tem:
+
 - ✅ Dono claro (Recepção/Profissional/Gestor)
 - ✅ Objetivo específico
 - ✅ Ações permitidas

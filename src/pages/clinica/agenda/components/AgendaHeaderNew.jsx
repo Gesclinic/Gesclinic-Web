@@ -8,9 +8,9 @@ import { useAuth } from '@/contexts/SupabaseAuthContext';
 
 /**
  * AgendaHeaderNew - Header otimizado com 3 blocos visuais claros
- * 
+ *
  * 🅐 Navegação de data (esq) | 🅑 Modo (centro) | 🅒 Ação (dir)
- * 
+ *
  * Props:
  * - date: string (YYYY-MM-DD)
  * - onPreviousDay: () => void
@@ -36,12 +36,13 @@ export default function AgendaHeaderNew({
   const auth = useAuth();
   const currentRole = auth?.currentRole?.toLowerCase();
   const accessibleTabs = getAccessibleAgendaTabs(currentRole);
-  
-  const [year, month, day] = date ? date.split('-').map(Number) : 
-    [new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate()];
-  
+
+  const [year, month, day] = date
+    ? date.split('-').map(Number)
+    : [new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate()];
+
   const dateObj = new Date(year, month - 1, day);
-  
+
   if (isNaN(dateObj.getTime())) {
     return (
       <div className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm px-6 py-2">
@@ -49,7 +50,7 @@ export default function AgendaHeaderNew({
       </div>
     );
   }
-  
+
   const today = new Date();
   const isToday = dateObj.toDateString() === today.toDateString();
 
@@ -67,7 +68,6 @@ export default function AgendaHeaderNew({
   return (
     <div className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
       <div className="px-6 py-2.5 flex items-center justify-between gap-6">
-        
         {/* 🅐 BLOCO A: Navegação de Data */}
         <div className="flex items-center gap-2">
           {/* Seta Esquerda */}
@@ -115,7 +115,7 @@ export default function AgendaHeaderNew({
             const isAccessible = accessibleTabs.includes(mode);
             const isActive = viewMode === mode;
             const tabLabel = AGENDA_TAB_LABELS[mode];
-            
+
             // Se não tem acesso, mostrar desabilitado
             if (!isAccessible) {
               return (
@@ -129,7 +129,7 @@ export default function AgendaHeaderNew({
                 </button>
               );
             }
-            
+
             return (
               <button
                 key={mode}
@@ -138,10 +138,11 @@ export default function AgendaHeaderNew({
                 title={tabLabel.fullLabel}
                 className={`
                   px-3 py-1.5 text-xs font-medium rounded transition-all whitespace-nowrap disabled:opacity-50
-                  ${isActive 
-                    ? 'bg-white text-blue-600 shadow-sm' 
-                    : 'text-gray-600 hover:text-gray-900'
-                  }
+                  ${
+              isActive
+                ? 'bg-white text-blue-600 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+              }
                 `}
               >
                 {tabLabel.label}
@@ -163,4 +164,3 @@ export default function AgendaHeaderNew({
     </div>
   );
 }
-

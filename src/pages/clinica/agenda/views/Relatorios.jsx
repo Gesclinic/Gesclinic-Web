@@ -1,12 +1,10 @@
 // src/pages/clinica/agenda/views/Relatorios.jsx
-import React from "react";
+import React from 'react';
 
 export default function Relatorios() {
   return (
     <div>
-      <h2 className="text-lg font-semibold text-[hsl(var(--primary))]">
-        Relatórios da Agenda
-      </h2>
+      <h2 className="text-lg font-semibold text-[hsl(var(--primary))]">Relatórios da Agenda</h2>
 
       <p className="text-gray-600 mb-4">Relatórios gerenciais e operacionais.</p>
 
@@ -24,4 +22,3 @@ export default function Relatorios() {
     </div>
   );
 }
-

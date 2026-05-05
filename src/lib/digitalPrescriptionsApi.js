@@ -1,11 +1,11 @@
-import { supabase } from "@/lib/customSupabaseClient";
+import { supabase } from '@/lib/customSupabaseClient';
 
-const OPTIONAL_COLUMNS = new Set(["professional_specialty", "professional_rqe"]);
+const OPTIONAL_COLUMNS = new Set(['professional_specialty', 'professional_rqe']);
 const unsupportedColumns = new Set();
-const LOCAL_STORAGE_KEY = "gesclinic-local-digital-prescriptions";
+const LOCAL_STORAGE_KEY = 'gesclinic-local-digital-prescriptions';
 
 function markRemoteRow(row) {
-  return row ? { ...row, _storage_mode: "supabase" } : row;
+  return row ? { ...row, _storage_mode: 'supabase' } : row;
 }
 
 function markRemoteRows(rows) {
@@ -26,12 +26,12 @@ function mergePrescriptionRows(remoteRows, localRows) {
   }
 
   return Array.from(mergedMap.values()).sort(
-    (left, right) => new Date(right.created_at || 0) - new Date(left.created_at || 0)
+    (left, right) => new Date(right.created_at || 0) - new Date(left.created_at || 0),
   );
 }
 
 function shouldUseLocalFallback(error) {
-  return error?.code === "42501" || /row-level security|unauthorized/i.test(error?.message || "");
+  return error?.code === '42501' || /row-level security|unauthorized/i.test(error?.message || '');
 }
 
 function loadLocalRows() {
@@ -62,7 +62,7 @@ function createLocalRow(payload) {
     ...sanitizePayload(payload),
     created_at: payload.created_at || timestamp,
     updated_at: timestamp,
-    _storage_mode: "local",
+    _storage_mode: 'local',
   };
 
   const rows = loadLocalRows();
@@ -74,12 +74,16 @@ function createLocalRow(payload) {
 function updateLocalRow(id, updates) {
   const rows = loadLocalRows();
   const timestamp = new Date().toISOString();
-  const nextRows = rows.map((row) => row.id === id ? {
-    ...row,
-    ...sanitizePayload(updates),
-    updated_at: timestamp,
-    _storage_mode: "local",
-  } : row);
+  const nextRows = rows.map((row) =>
+    row.id === id
+      ? {
+        ...row,
+        ...sanitizePayload(updates),
+        updated_at: timestamp,
+        _storage_mode: 'local',
+      }
+      : row,
+  );
 
   saveLocalRows(nextRows);
   return nextRows.find((row) => row.id === id) || null;
@@ -92,12 +96,12 @@ function deleteLocalRow(id) {
 
 function sanitizePayload(payload) {
   return Object.fromEntries(
-    Object.entries(payload).filter(([key]) => !unsupportedColumns.has(key))
+    Object.entries(payload).filter(([key]) => !unsupportedColumns.has(key)),
   );
 }
 
 function getMissingColumn(error) {
-  const message = error?.message || "";
+  const message = error?.message || '';
   const match = message.match(/'([^']+)' column/i);
   return match?.[1] || null;
 }
@@ -108,7 +112,11 @@ async function runWithOptionalColumnFallback(executor, payload) {
   while (result.error) {
     const missingColumn = getMissingColumn(result.error);
 
-    if (!missingColumn || !OPTIONAL_COLUMNS.has(missingColumn) || unsupportedColumns.has(missingColumn)) {
+    if (
+      !missingColumn ||
+      !OPTIONAL_COLUMNS.has(missingColumn) ||
+      unsupportedColumns.has(missingColumn)
+    ) {
       return result;
     }
 
@@ -121,20 +129,22 @@ async function runWithOptionalColumnFallback(executor, payload) {
 
 function buildListQuery(patientId, clinicId) {
   let query = supabase
-    .from("digital_prescriptions")
-    .select("*")
-    .eq("patient_id", patientId)
-    .order("created_at", { ascending: false });
+    .from('digital_prescriptions')
+    .select('*')
+    .eq('patient_id', patientId)
+    .order('created_at', { ascending: false });
 
   if (clinicId) {
-    query = query.eq("clinic_id", clinicId);
+    query = query.eq('clinic_id', clinicId);
   }
 
   return query;
 }
 
 export async function listPatientDigitalPrescriptions(patientId, clinicId = null) {
-  if (!patientId) return [];
+  if (!patientId) {
+    return [];
+  }
 
   const localRows = listLocalRows(patientId, clinicId);
 
@@ -144,7 +154,7 @@ export async function listPatientDigitalPrescriptions(patientId, clinicId = null
     if (shouldUseLocalFallback(error)) {
       return localRows;
     }
-    console.error("❌ Erro ao listar receita:", error);
+    console.error('❌ Erro ao listar receita:', error);
     throw error;
   }
 
@@ -153,24 +163,25 @@ export async function listPatientDigitalPrescriptions(patientId, clinicId = null
 
 export async function createDigitalPrescription(payload) {
   const { data, error } = await runWithOptionalColumnFallback(
-    (sanitizedPayload) => supabase
-      .from("digital_prescriptions")
-      .insert([
-        {
-          ...sanitizedPayload,
-          updated_at: new Date().toISOString(),
-        },
-      ])
-      .select()
-      .single(),
-    payload
+    (sanitizedPayload) =>
+      supabase
+        .from('digital_prescriptions')
+        .insert([
+          {
+            ...sanitizedPayload,
+            updated_at: new Date().toISOString(),
+          },
+        ])
+        .select()
+        .single(),
+    payload,
   );
 
   if (error) {
     if (shouldUseLocalFallback(error)) {
       return createLocalRow(payload);
     }
-    console.error("❌ Erro ao criar receita:", error);
+    console.error('❌ Erro ao criar receita:', error);
     throw error;
   }
 
@@ -179,16 +190,16 @@ export async function createDigitalPrescription(payload) {
 
 export async function updateDigitalPrescription(id, updates) {
   const { data, error } = await runWithOptionalColumnFallback(
-    (sanitizedPayload) => supabase
-      .from("digital_prescriptions")
-      .update({
-        ...sanitizedPayload,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", id)
-      .select()
-      .single(),
-    updates
+    (sanitizedPayload) =>
+      supabase
+        .from('digital_prescriptions')
+        .update({
+          ...sanitizedPayload,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', id)
+        .select(),
+    updates,
   );
 
   if (error) {
@@ -198,25 +209,25 @@ export async function updateDigitalPrescription(id, updates) {
         return localRow;
       }
     }
-    console.error("❌ Erro ao atualizar receita:", error);
     throw error;
   }
 
-  return markRemoteRow(data);
+  if (!data || data.length === 0) {
+    throw new Error('Record not found');
+  }
+
+  return data[0];
 }
 
 export async function deleteDigitalPrescription(id) {
-  const { error } = await supabase
-    .from("digital_prescriptions")
-    .delete()
-    .eq("id", id);
+  const { error } = await supabase.from('digital_prescriptions').delete().eq('id', id);
 
   if (error) {
     if (shouldUseLocalFallback(error)) {
       deleteLocalRow(id);
       return true;
     }
-    console.error("❌ Erro ao deletar receita:", error);
+    console.error('❌ Erro ao deletar receita:', error);
     throw error;
   }
 
@@ -242,17 +253,20 @@ export async function syncLocalDigitalPrescriptions(patientId, clinicId = null) 
     delete payload._storage_mode;
 
     const { data, error } = await runWithOptionalColumnFallback(
-      (sanitizedPayload) => supabase
-        .from("digital_prescriptions")
-        .upsert([
-          {
-            ...sanitizedPayload,
-            updated_at: new Date().toISOString(),
-          },
-        ], { onConflict: "id" })
-        .select()
-        .single(),
-      payload
+      (sanitizedPayload) =>
+        supabase
+          .from('digital_prescriptions')
+          .upsert(
+            [
+              {
+                ...sanitizedPayload,
+                updated_at: new Date().toISOString(),
+              },
+            ],
+            { onConflict: 'id' },
+          )
+          .select(),
+      payload,
     );
 
     if (error) {
@@ -266,10 +280,15 @@ export async function syncLocalDigitalPrescriptions(patientId, clinicId = null) 
         };
       }
 
+      failedRows[failedRows.length - 1].error = error;
       continue;
     }
 
-    syncedRows.push(markRemoteRow(data));
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+
+    syncedRows.push(data[0]);
   }
 
   if (syncedRows.length) {

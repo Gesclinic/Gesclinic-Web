@@ -3,6 +3,7 @@
 ## 🧭 NAVEGAÇÃO RÁPIDA
 
 ### 🚀 Para Começar Agora (5 minutos)
+
 1. **Comece aqui:** [CHECKIN_README.txt](./CHECKIN_README.txt)
 2. **Depois leia:** [CHECKIN_RECEPACAO_GUIA.md](./CHECKIN_RECEPACAO_GUIA.md)
 3. **Integre:** [CHECKIN_INTEGRACAO_EXEMPLO.jsx](./CHECKIN_INTEGRACAO_EXEMPLO.jsx)
@@ -11,48 +12,57 @@
 ### 📁 ARQUIVOS CRIADOS
 
 #### Componentes React (Implementação)
-| Arquivo | Linhas | Responsabilidade |
-|---------|--------|-----------------|
-| [CheckinRecepacao.jsx](./CheckinRecepacao.jsx) | ~400 | Principal — Layout 2 colunas, lista, painel, tabs |
-| [CheckinChecklist.jsx](./components/CheckinChecklist.jsx) | ~250 | Checklist inteligente e dinâmico |
-| [CheckinFinanceiro.jsx](./components/CheckinFinanceiro.jsx) | ~250 | Validações de convênio/particular |
-| [CheckinAcoes.jsx](./components/CheckinAcoes.jsx) | ~300 | Botões de ação (liberar, marcar falta, etc) |
+
+| Arquivo                                                     | Linhas | Responsabilidade                                  |
+| ----------------------------------------------------------- | ------ | ------------------------------------------------- |
+| [CheckinRecepacao.jsx](./CheckinRecepacao.jsx)              | ~400   | Principal — Layout 2 colunas, lista, painel, tabs |
+| [CheckinChecklist.jsx](./components/CheckinChecklist.jsx)   | ~250   | Checklist inteligente e dinâmico                  |
+| [CheckinFinanceiro.jsx](./components/CheckinFinanceiro.jsx) | ~250   | Validações de convênio/particular                 |
+| [CheckinAcoes.jsx](./components/CheckinAcoes.jsx)           | ~300   | Botões de ação (liberar, marcar falta, etc)       |
 
 **Total de código:** ~1.200 linhas
 
 #### Documentação (Guias)
-| Arquivo | Tipo | Para Quem |
-|---------|------|----------|
-| [CHECKIN_README.txt](./CHECKIN_README.txt) | Resumo | Todos (começa aqui) |
-| [CHECKIN_RECEPACAO_GUIA.md](./CHECKIN_RECEPACAO_GUIA.md) | Guia Técnico | Desenvolvedores/Arquitetos |
-| [CHECKIN_INTEGRACAO_EXEMPLO.jsx](./CHECKIN_INTEGRACAO_EXEMPLO.jsx) | Código Exemplo | Desenvolvedores |
-| [CHECKIN_TESTE_RAPIDO.md](./CHECKIN_TESTE_RAPIDO.md) | QA/Testes | Testers/QA |
-| [CHECKIN_TESTES_COMPLETOS.js](./CHECKIN_TESTES_COMPLETOS.js) | Test Suite | Desenvolvedores (Jest/Vitest) |
-| [CHECKIN_INDICE.md](./CHECKIN_INDICE.md) | Índice | Este arquivo |
+
+| Arquivo                                                            | Tipo           | Para Quem                     |
+| ------------------------------------------------------------------ | -------------- | ----------------------------- |
+| [CHECKIN_README.txt](./CHECKIN_README.txt)                         | Resumo         | Todos (começa aqui)           |
+| [CHECKIN_RECEPACAO_GUIA.md](./CHECKIN_RECEPACAO_GUIA.md)           | Guia Técnico   | Desenvolvedores/Arquitetos    |
+| [CHECKIN_INTEGRACAO_EXEMPLO.jsx](./CHECKIN_INTEGRACAO_EXEMPLO.jsx) | Código Exemplo | Desenvolvedores               |
+| [CHECKIN_TESTE_RAPIDO.md](./CHECKIN_TESTE_RAPIDO.md)               | QA/Testes      | Testers/QA                    |
+| [CHECKIN_TESTES_COMPLETOS.js](./CHECKIN_TESTES_COMPLETOS.js)       | Test Suite     | Desenvolvedores (Jest/Vitest) |
+| [CHECKIN_INDICE.md](./CHECKIN_INDICE.md)                           | Índice         | Este arquivo                  |
 
 ---
 
 ## 🎯 SELETOR POR NECESSIDADE
 
 ### "Quero entender o conceito"
+
 → Leia: [CHECKIN_RECEPACAO_GUIA.md](./CHECKIN_RECEPACAO_GUIA.md) — Seção: **🧠 CONCEITO E OBJETIVO**
 
 ### "Quero integrar agora"
+
 → Siga: [CHECKIN_INTEGRACAO_EXEMPLO.jsx](./CHECKIN_INTEGRACAO_EXEMPLO.jsx) — Copy/paste na rota
 
 ### "Quero testar"
+
 → Siga: [CHECKIN_TESTE_RAPIDO.md](./CHECKIN_TESTE_RAPIDO.md) — 5 minutos e tudo funciona
 
 ### "Preciso entender a UX"
+
 → Leia: [CHECKIN_RECEPACAO_GUIA.md](./CHECKIN_RECEPACAO_GUIA.md) — Seção: **🎨 UX DETALHADA**
 
 ### "Quero escrever testes"
+
 → Use: [CHECKIN_TESTES_COMPLETOS.js](./CHECKIN_TESTES_COMPLETOS.js) — 50+ casos prontos
 
 ### "Quero modificar componentes"
+
 → Estude: [CheckinRecepacao.jsx](./CheckinRecepacao.jsx) e seus sub-componentes
 
 ### "Preciso de detalhes técnicos"
+
 → Leia: [CHECKIN_RECEPACAO_GUIA.md](./CHECKIN_RECEPACAO_GUIA.md) — Seção: **🛠️ INTEGRAÇÃO TÉCNICA**
 
 ---
@@ -120,16 +130,19 @@ RECEPCIONISTA ACESSA /clinica/agenda/checkin
 ## ✅ CHECKLIST DE IMPLEMENTAÇÃO
 
 ### Fase 1: Setup (5 min)
+
 - [ ] Crie pasta `views/components/` se não existir
 - [ ] Copie os 4 componentes React
 - [ ] Verifique imports (useAuth, useClinicContext, appointmentsApi)
 
 ### Fase 2: Integração (1 min)
+
 - [ ] Importe CheckinRecepacao em AppRoutes.jsx
 - [ ] Registre rota `/clinica/agenda/checkin`
 - [ ] Teste acesso
 
 ### Fase 3: Testes (10 min)
+
 - [ ] Faça login como recepcionista
 - [ ] Navegue até /clinica/agenda/checkin
 - [ ] Selecione um paciente
@@ -137,6 +150,7 @@ RECEPCIONISTA ACESSA /clinica/agenda/checkin
 - [ ] Tente liberar
 
 ### Fase 4: Validação (5 min)
+
 - [ ] Profissional NÃO consegue acessar
 - [ ] Profissional vê APENAS liberados
 - [ ] Liberação registra data/hora/usuário
@@ -146,6 +160,7 @@ RECEPCIONISTA ACESSA /clinica/agenda/checkin
 ## 🎓 CONCEITOS-CHAVE
 
 ### Checklist Inteligente
+
 - **Definição:** Itens dinâmicos baseados em dados do agendamento
 - **Base:** Sempre 3 itens (dados, serviço, profissional)
 - **Extras:** Variam conforme payer_type (CONVENIO ou PARTICULAR)
@@ -153,12 +168,14 @@ RECEPCIONISTA ACESSA /clinica/agenda/checkin
 - **Arquivo:** [CheckinChecklist.jsx](./components/CheckinChecklist.jsx)
 
 ### Bloqueios de Liberação
+
 - **Regra 1:** Checklist deve estar 100% completo
 - **Regra 2:** Financeiro deve estar resolvido
 - **Regra 3:** Status não pode ser final (CANCELADO, FALTA, FINALIZADO)
 - **Implementação:** Hook `canReleaseForCare()` em [CheckinAcoes.jsx](./components/CheckinAcoes.jsx)
 
 ### Rastreamento
+
 - **O quê:** Registra WHO liberou, WHEN liberou
 - **Como:** Campos `liberado_em`, `liberado_por`
 - **Onde:** Banco de dados appointments
@@ -168,22 +185,23 @@ RECEPCIONISTA ACESSA /clinica/agenda/checkin
 
 ## 🔧 VARIÁVEIS DE ESTADO IMPORTANTES
 
-| Variável | Tipo | Descrição |
-|----------|------|-----------|
-| `appointments` | Array | Lista de agendamentos do dia |
-| `selectedAptId` | String | ID do paciente selecionado |
-| `activeTab` | String | Aba ativa (checklist, financeiro, acoes) |
-| `loading` | Boolean | Carregando agendamentos |
-| `loadingAction` | String\|null | ID de agendamento sendo atualizado |
-| `isChecklistComplete` | Boolean | Checklist 100% completo |
-| `isFinanceResolved` | Boolean | Financeiro resolvido |
-| `canRelease` | Boolean | Pode liberar (checklist + financeiro OK) |
+| Variável              | Tipo         | Descrição                                |
+| --------------------- | ------------ | ---------------------------------------- |
+| `appointments`        | Array        | Lista de agendamentos do dia             |
+| `selectedAptId`       | String       | ID do paciente selecionado               |
+| `activeTab`           | String       | Aba ativa (checklist, financeiro, acoes) |
+| `loading`             | Boolean      | Carregando agendamentos                  |
+| `loadingAction`       | String\|null | ID de agendamento sendo atualizado       |
+| `isChecklistComplete` | Boolean      | Checklist 100% completo                  |
+| `isFinanceResolved`   | Boolean      | Financeiro resolvido                     |
+| `canRelease`          | Boolean      | Pode liberar (checklist + financeiro OK) |
 
 ---
 
 ## 📡 INTEGRAÇÃO COM API
 
 ### Dados Carregados
+
 ```javascript
 // Em CheckinRecepacao.jsx
 const appointments = await listAppointments({
@@ -194,10 +212,11 @@ const appointments = await listAppointments({
 ```
 
 ### Dados Atualizados
+
 ```javascript
 // Em CheckinAcoes.jsx
 await updateAppointment(appointmentId, {
-  status: "LIBERADO_PARA_ATENDIMENTO",
+  status: 'LIBERADO_PARA_ATENDIMENTO',
   liberado_em: now(),
   liberado_por: userId,
 });
@@ -207,15 +226,15 @@ await updateAppointment(appointmentId, {
 
 ## 🎨 CORES E ÍCONES
 
-| Status | Cor | Ícone |
-|--------|-----|-------|
-| 🟡 Aguardando | Amarelo | Clock |
-| 🔴 Pendente | Laranja | AlertTriangle |
-| 🔵 Fin. Pendente | Vermelho | AlertCircle |
-| 🟢 Liberado | Verde | CheckCircle2 |
-| ✅ Checklist OK | Verde | CheckCircle2 |
-| ❌ Bloqueado | Cinza | Lock |
-| 💳 Financeiro | Azul | CreditCard |
+| Status           | Cor      | Ícone         |
+| ---------------- | -------- | ------------- |
+| 🟡 Aguardando    | Amarelo  | Clock         |
+| 🔴 Pendente      | Laranja  | AlertTriangle |
+| 🔵 Fin. Pendente | Vermelho | AlertCircle   |
+| 🟢 Liberado      | Verde    | CheckCircle2  |
+| ✅ Checklist OK  | Verde    | CheckCircle2  |
+| ❌ Bloqueado     | Cinza    | Lock          |
+| 💳 Financeiro    | Azul     | CreditCard    |
 
 ---
 
@@ -263,21 +282,23 @@ R: Sim, altere em AppRoutes.jsx. Mas `/clinica/agenda/checkin` é o padrão.
 
 ## 📝 VERSIONAMENTO
 
-| Versão | Data | Mudanças |
-|--------|------|----------|
-| 1.0 | 14/01/2026 | Versão inicial completa |
+| Versão | Data       | Mudanças                |
+| ------ | ---------- | ----------------------- |
+| 1.0    | 14/01/2026 | Versão inicial completa |
 
 ---
 
 ## 👨‍💻 DESENVOLVIMENTO
 
 **Stack:**
+
 - React 18+
 - Tailwind CSS
 - Lucide Icons
 - Supabase (API)
 
 **Padrões:**
+
 - Functional Components
 - React Hooks
 - Context API para estado global
@@ -294,7 +315,7 @@ R: Sim, altere em AppRoutes.jsx. Mas `/clinica/agenda/checkin` é o padrão.
 ✅ **Rastreamento Completo** — WHO + WHEN + WHAT  
 ✅ **UX Clara** — Mensagens específicas de bloqueio  
 ✅ **Polling Real-time** — Atualização a cada 30s  
-✅ **Bem Documentado** — 5 guias + 50+ testes  
+✅ **Bem Documentado** — 5 guias + 50+ testes
 
 ---
 

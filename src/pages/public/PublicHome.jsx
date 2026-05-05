@@ -1,13 +1,13 @@
-import React, { useState } from "react";
-import { Helmet } from "react-helmet-async";
-import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
-import { ArrowRight, CalendarDays, Stethoscope, DollarSign, Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import React, { useState } from 'react';
+import { Helmet } from 'react-helmet-async';
+import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
+import { ArrowRight, CalendarDays, Stethoscope, DollarSign, Check } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function PublicHome() {
   const [billingCycle, setBillingCycle] = useState('monthly');
-  
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { opacity: 1, transition: { staggerChildren: 0.2 } },
@@ -31,14 +31,17 @@ export default function PublicHome() {
           animate="visible"
           className="flex flex-col md:flex-row items-center justify-between px-8 md:px-24 py-20 bg-gradient-to-r from-primary to-secondary text-white overflow-hidden"
         >
-          <motion.div variants={itemVariants} className="max-w-xl space-y-6 text-center md:text-left">
+          <motion.div
+            variants={itemVariants}
+            className="max-w-xl space-y-6 text-center md:text-left"
+          >
             <h1 className="text-4xl md:text-5xl font-bold leading-tight">
-              Transforme a gestão da sua clínica com o{" "}
+              Transforme a gestão da sua clínica com o{' '}
               <span className="text-yellow-300">Gesclinic Web</span>
             </h1>
             <p className="text-lg text-white/90">
-              Sistema completo de gestão em saúde — agenda inteligente, faturamento TISS, prontuário eletrônico e
-              controle financeiro.
+              Sistema completo de gestão em saúde — agenda inteligente, faturamento TISS, prontuário
+              eletrônico e controle financeiro.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
               <Link to="/register">
@@ -66,7 +69,7 @@ export default function PublicHome() {
             className="hidden md:block mt-10 md:mt-0"
             initial={{ x: 100, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
+            transition={{ duration: 0.8, ease: 'easeOut' }}
           >
             <img
               alt="Painel Gesclinic"
@@ -85,8 +88,12 @@ export default function PublicHome() {
           variants={containerVariants}
         >
           <div className="text-center mb-12 px-4">
-            <h2 className="text-3xl font-bold text-gray-800 mb-2">Tudo o que sua clínica precisa</h2>
-            <p className="text-gray-500 max-w-2xl mx-auto">Recursos integrados para gestão completa.</p>
+            <h2 className="text-3xl font-bold text-gray-800 mb-2">
+              Tudo o que sua clínica precisa
+            </h2>
+            <p className="text-gray-500 max-w-2xl mx-auto">
+              Recursos integrados para gestão completa.
+            </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-10 max-w-6xl mx-auto px-6">
@@ -96,7 +103,9 @@ export default function PublicHome() {
             >
               <CalendarDays className="mx-auto text-primary h-12 w-12 mb-4" />
               <h3 className="text-xl font-semibold">Agenda Inteligente</h3>
-              <p className="text-gray-500">Confirmações automáticas e integração com prontuário e faturamento.</p>
+              <p className="text-gray-500">
+                Confirmações automáticas e integração com prontuário e faturamento.
+              </p>
             </motion.div>
 
             <motion.div
@@ -105,7 +114,9 @@ export default function PublicHome() {
             >
               <Stethoscope className="mx-auto text-primary h-12 w-12 mb-4" />
               <h3 className="text-xl font-semibold">Prontuário Completo</h3>
-              <p className="text-gray-500">Registro clínico seguro, anexos de exames e histórico de atendimento.</p>
+              <p className="text-gray-500">
+                Registro clínico seguro, anexos de exames e histórico de atendimento.
+              </p>
             </motion.div>
 
             <motion.div
@@ -114,7 +125,9 @@ export default function PublicHome() {
             >
               <DollarSign className="mx-auto text-primary h-12 w-12 mb-4" />
               <h3 className="text-xl font-semibold">Financeiro e Faturamento</h3>
-              <p className="text-gray-500">Faturamento TISS, geração de XML ANS, repasse médico e contas.</p>
+              <p className="text-gray-500">
+                Faturamento TISS, geração de XML ANS, repasse médico e contas.
+              </p>
             </motion.div>
           </div>
         </motion.section>
@@ -181,9 +194,7 @@ export default function PublicHome() {
                     /{billingCycle === 'monthly' ? 'mês' : 'ano'}
                   </span>
                 </div>
-                {billingCycle === 'annual' && (
-                  <p className="text-sm text-gray-500">R$ 82.50/mês</p>
-                )}
+                {billingCycle === 'annual' && <p className="text-sm text-gray-500">R$ 82.50/mês</p>}
               </div>
 
               <div className="border-t border-gray-200 pt-6 mb-6">

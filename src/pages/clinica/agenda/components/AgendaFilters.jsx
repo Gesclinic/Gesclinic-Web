@@ -4,11 +4,11 @@ import { ChevronDown, X } from 'lucide-react';
 
 /**
  * AgendaFilters - Filtros combinativos para a Agenda
- * 
+ *
  * Oculta:
  * - Filtro de profissional em modo 'profissional' OU quando currentRole é 'profissional'
  * - Filtro de sala em modo 'sala'
- * 
+ *
  * Props:
  * - viewMode: 'geral' | 'profissional' | 'sala'
  * - filters: { professional, room, status, payer, service, searchText }
@@ -37,7 +37,7 @@ export default function AgendaFilters({
   ];
 
   // Contar filtros ativos
-  const activeFilterCount = Object.values(filters).filter(v => v !== null && v !== '').length;
+  const activeFilterCount = Object.values(filters).filter((v) => v !== null && v !== '').length;
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
@@ -80,11 +80,13 @@ export default function AgendaFilters({
         {viewMode !== 'sala' && currentRole?.toLowerCase?.() !== 'profissional' && (
           <FilterDropdown
             label="Profissional"
-            options={metadata.professionals?.map(p => ({ id: p.id, label: p.name }))}
+            options={metadata.professionals?.map((p) => ({ id: p.id, label: p.name }))}
             value={filters.professional}
             onChange={(val) => onFilterChange('professional', val)}
             isExpanded={expandedFilter === 'professional'}
-            onToggleExpand={() => setExpandedFilter(expandedFilter === 'professional' ? null : 'professional')}
+            onToggleExpand={() =>
+              setExpandedFilter(expandedFilter === 'professional' ? null : 'professional')
+            }
           />
         )}
 
@@ -92,7 +94,7 @@ export default function AgendaFilters({
         {viewMode !== 'profissional' && (
           <FilterDropdown
             label="Sala"
-            options={metadata.rooms?.map(r => ({ id: r.id, label: r.name }))}
+            options={metadata.rooms?.map((r) => ({ id: r.id, label: r.name }))}
             value={filters.room}
             onChange={(val) => onFilterChange('room', val)}
             isExpanded={expandedFilter === 'room'}
@@ -113,7 +115,7 @@ export default function AgendaFilters({
         {/* Filtro: Convênio */}
         <FilterDropdown
           label="Convênio"
-          options={metadata.payers?.map(p => ({ id: p.id, label: p.name }))}
+          options={metadata.payers?.map((p) => ({ id: p.id, label: p.name }))}
           value={filters.payer}
           onChange={(val) => onFilterChange('payer', val)}
           isExpanded={expandedFilter === 'payer'}
@@ -123,7 +125,7 @@ export default function AgendaFilters({
         {/* Filtro: Serviço */}
         <FilterDropdown
           label="Serviço"
-          options={metadata.services?.map(s => ({ id: s.id, label: s.name }))}
+          options={metadata.services?.map((s) => ({ id: s.id, label: s.name }))}
           value={filters.service}
           onChange={(val) => onFilterChange('service', val)}
           isExpanded={expandedFilter === 'service'}
@@ -137,15 +139,8 @@ export default function AgendaFilters({
 /**
  * FilterDropdown - Componente auxiliar para dropdown de filtro
  */
-function FilterDropdown({
-  label,
-  options = [],
-  value,
-  onChange,
-  isExpanded,
-  onToggleExpand,
-}) {
-  const selectedOption = options?.find(opt => opt.id === value);
+function FilterDropdown({ label, options = [], value, onChange, isExpanded, onToggleExpand }) {
+  const selectedOption = options?.find((opt) => opt.id === value);
 
   return (
     <div className="relative">
@@ -153,16 +148,17 @@ function FilterDropdown({
         onClick={onToggleExpand}
         className={`
           w-full px-3 py-2 text-sm border rounded-lg transition text-left flex items-center justify-between
-          ${value 
-            ? 'border-blue-500 bg-blue-50 text-blue-900 font-medium'
-            : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
-          }
+          ${
+    value
+      ? 'border-blue-500 bg-blue-50 text-blue-900 font-medium'
+      : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+    }
         `}
       >
-        <span className="truncate">
-          {selectedOption ? selectedOption.label : label}
-        </span>
-        <ChevronDown className={`w-4 h-4 transition-transform flex-shrink-0 ml-1 ${isExpanded ? 'rotate-180' : ''}`} />
+        <span className="truncate">{selectedOption ? selectedOption.label : label}</span>
+        <ChevronDown
+          className={`w-4 h-4 transition-transform flex-shrink-0 ml-1 ${isExpanded ? 'rotate-180' : ''}`}
+        />
       </button>
 
       {/* Dropdown menu */}
@@ -183,7 +179,7 @@ function FilterDropdown({
               Sem opções disponíveis
             </div>
           ) : (
-            options.map(option => (
+            options.map((option) => (
               <button
                 key={option.id}
                 onClick={() => {
@@ -192,13 +188,16 @@ function FilterDropdown({
                 }}
                 className={`
                   w-full px-3 py-2 text-sm text-left transition
-                  ${value === option.id
-                    ? 'bg-blue-100 text-blue-900 font-medium'
-                    : 'hover:bg-gray-100 text-gray-700'
-                  }
+                  ${
+              value === option.id
+                ? 'bg-blue-100 text-blue-900 font-medium'
+                : 'hover:bg-gray-100 text-gray-700'
+              }
                 `}
               >
-                {option.color && <span className={`inline-block w-2 h-2 rounded-full ${option.color} mr-2`}></span>}
+                {option.color && (
+                  <span className={`inline-block w-2 h-2 rounded-full ${option.color} mr-2`}></span>
+                )}
                 {option.label}
               </button>
             ))
@@ -208,4 +207,3 @@ function FilterDropdown({
     </div>
   );
 }
-

@@ -6,15 +6,15 @@
  * Gerenciamento de documentos com tipos e validação
  */
 
-import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { usePatientContext } from "@/contexts/PatientContext";
-import { useToast } from "@/components/ui/use-toast";
-import PageLayout from "@/components/ui/PageLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Helmet } from "react-helmet-async";
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { usePatientContext } from '@/contexts/PatientContext';
+import { useToast } from '@/components/ui/use-toast';
+import PageLayout from '@/components/ui/PageLayout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Helmet } from 'react-helmet-async';
 import {
   Plus,
   Upload,
@@ -25,32 +25,32 @@ import {
   AlertCircle,
   Clock,
   Filter,
-} from "lucide-react";
+} from 'lucide-react';
 
 const DOCUMENT_TYPES = [
-  { value: "rg", label: "RG", icon: FileText },
-  { value: "cpf", label: "CPF", icon: FileText },
-  { value: "medical_order", label: "Pedido Médico", icon: FileText },
-  { value: "exam", label: "Laudo/Exame", icon: FileText },
-  { value: "authorization", label: "Autorização Convênio", icon: FileText },
-  { value: "insurance_card", label: "Carteira Convênio", icon: FileText },
-  { value: "other", label: "Outros", icon: FileText },
+  { value: 'rg', label: 'RG', icon: FileText },
+  { value: 'cpf', label: 'CPF', icon: FileText },
+  { value: 'medical_order', label: 'Pedido Médico', icon: FileText },
+  { value: 'exam', label: 'Laudo/Exame', icon: FileText },
+  { value: 'authorization', label: 'Autorização Convênio', icon: FileText },
+  { value: 'insurance_card', label: 'Carteira Convênio', icon: FileText },
+  { value: 'other', label: 'Outros', icon: FileText },
 ];
 
 const DOCUMENT_STATUS = {
   pending: {
-    label: "Pendente",
-    color: "bg-yellow-100 text-yellow-800",
+    label: 'Pendente',
+    color: 'bg-yellow-100 text-yellow-800',
     icon: Clock,
   },
   validated: {
-    label: "Validado",
-    color: "bg-green-100 text-green-800",
+    label: 'Validado',
+    color: 'bg-green-100 text-green-800',
     icon: CheckCircle,
   },
   invalid: {
-    label: "Inválido",
-    color: "bg-red-100 text-red-800",
+    label: 'Inválido',
+    color: 'bg-red-100 text-red-800',
     icon: AlertCircle,
   },
 };
@@ -62,14 +62,14 @@ export default function PatientDocumentosPage() {
   const { patientData, loading } = usePatientContext();
 
   const [documents, setDocuments] = useState([]);
-  const [filterType, setFilterType] = useState("all");
-  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterType, setFilterType] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
 
   // ⚠️ GUARD: Validar patientId
   useEffect(() => {
-    if (!patientId || patientId.trim() === "") {
-      console.warn("❌ PatientDocumentosPage: patientId inválido ou vazio");
-      navigate("/clinica/pacientes");
+    if (!patientId || patientId.trim() === '') {
+      console.warn('❌ PatientDocumentosPage: patientId inválido ou vazio');
+      navigate('/clinica/pacientes');
     }
   }, [patientId, navigate]);
 
@@ -92,17 +92,15 @@ export default function PatientDocumentosPage() {
       <PageLayout
         title={patientData?.name}
         breadcrumbs={[
-          { label: "Pacientes", href: "/clinica/pacientes" },
-          { label: patientData?.name || "Paciente" },
-          { label: "Documentos" },
+          { label: 'Pacientes', href: '/clinica/pacientes' },
+          { label: patientData?.name || 'Paciente' },
+          { label: 'Documentos' },
         ]}
       >
         <div className="w-full mx-auto">
           {/* Header com Ações */}
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">
-              Arquivos e Documentos
-            </h2>
+            <h2 className="text-2xl font-bold text-gray-900">Arquivos e Documentos</h2>
             <Button className="gap-2">
               <Upload size={18} />
               Enviar Documento
@@ -174,21 +172,12 @@ export default function PatientDocumentosPage() {
                     <CardContent className="pt-6">
                       <div className="flex items-start justify-between">
                         <div className="flex items-start gap-4 flex-1">
-                          <FileText
-                            size={24}
-                            className="text-blue-600 mt-1"
-                          />
+                          <FileText size={24} className="text-blue-600 mt-1" />
                           <div className="flex-1">
-                            <h4 className="font-semibold text-gray-900">
-                              {doc.name}
-                            </h4>
-                            <p className="text-sm text-gray-600 mb-2">
-                              {doc.type}
-                            </p>
+                            <h4 className="font-semibold text-gray-900">{doc.name}</h4>
+                            <p className="text-sm text-gray-600 mb-2">{doc.type}</p>
                             <div className="flex gap-2">
-                              <Badge className={statusInfo.color}>
-                                {statusInfo.label}
-                              </Badge>
+                              <Badge className={statusInfo.color}>{statusInfo.label}</Badge>
                             </div>
                           </div>
                         </div>
@@ -197,11 +186,7 @@ export default function PatientDocumentosPage() {
                           <Button variant="outline" size="sm">
                             <Download size={16} />
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-red-600"
-                          >
+                          <Button variant="outline" size="sm" className="text-red-600">
                             <Trash2 size={16} />
                           </Button>
                         </div>
@@ -215,9 +200,7 @@ export default function PatientDocumentosPage() {
 
           {/* Info sobre Documentos Recomendados */}
           <div className="mt-8 bg-blue-50 border-l-4 border-blue-600 p-4 rounded">
-            <h4 className="font-semibold text-blue-900 mb-2">
-              📋 Documentos Recomendados
-            </h4>
+            <h4 className="font-semibold text-blue-900 mb-2">📋 Documentos Recomendados</h4>
             <ul className="text-sm text-blue-800 space-y-1">
               <li>• Cópia do RG e CPF</li>
               <li>• Carteiras dos convênios ativas</li>
@@ -231,4 +214,3 @@ export default function PatientDocumentosPage() {
     </>
   );
 }
-

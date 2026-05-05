@@ -1,12 +1,12 @@
 /**
  * useAgendaSuggestions.js
- * 
+ *
  * Hook customizado para gerenciar sugestões de encaixe
  * com integração automática com indicadores e agenda
  */
 
-import { useState, useEffect, useCallback } from "react";
-import { generateEncaixeSuggestions, logSuggestionAction } from "@/lib/agendaSuggestionsApi";
+import { useState, useEffect, useCallback } from 'react';
+import { generateEncaixeSuggestions, logSuggestionAction } from '@/lib/agendaSuggestionsApi';
 
 export function useAgendaSuggestions(clinicId, date, refreshTrigger) {
   const [suggestions, setSuggestions] = useState([]);
@@ -27,7 +27,7 @@ export function useAgendaSuggestions(clinicId, date, refreshTrigger) {
       const data = await generateEncaixeSuggestions(clinicId, date);
       setSuggestions(data);
     } catch (err) {
-      console.error("Erro ao carregar sugestões:", err);
+      console.error('Erro ao carregar sugestões:', err);
       setError(err.message);
       setSuggestions([]);
     } finally {
@@ -53,11 +53,11 @@ export function useAgendaSuggestions(clinicId, date, refreshTrigger) {
 
         return { success: true };
       } catch (err) {
-        console.error("Erro ao executar sugestão:", err);
+        console.error('Erro ao executar sugestão:', err);
         return { success: false, error: err.message };
       }
     },
-    [clinicId]
+    [clinicId],
   );
 
   // Refresh manual

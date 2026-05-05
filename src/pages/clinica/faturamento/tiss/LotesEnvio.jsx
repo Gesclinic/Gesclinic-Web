@@ -4,22 +4,41 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
-import { 
-  Package, 
-  Plus, 
-  Download, 
-  FileCode, 
+import {
+  Package,
+  Plus,
+  Download,
+  FileCode,
   Calendar,
   DollarSign,
   Lock,
   Unlock,
   RefreshCw,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 
@@ -40,7 +59,7 @@ export default function LotesEnvio() {
   const [formData, setFormData] = useState({
     convenio_id: '',
     competencia: new Date().toISOString().slice(0, 7), // YYYY-MM
-    observacoes: ''
+    observacoes: '',
   });
 
   // Mock data para demonstração
@@ -53,10 +72,10 @@ export default function LotesEnvio() {
       data_criacao: '2025-10-30',
       data_fechamento: null,
       total_guias: 15,
-      total_valor: 2250.00,
+      total_valor: 2250.0,
       status: 'Aberto',
       xml_path: null,
-      observacoes: 'Lote em construção'
+      observacoes: 'Lote em construção',
     },
     {
       id: 'LT002',
@@ -66,10 +85,10 @@ export default function LotesEnvio() {
       data_criacao: '2025-10-28',
       data_fechamento: '2025-10-30',
       total_guias: 8,
-      total_valor: 1200.00,
+      total_valor: 1200.0,
       status: 'Fechado',
       xml_path: '/xml/lote_002.xml',
-      observacoes: 'Lote enviado para o convênio'
+      observacoes: 'Lote enviado para o convênio',
     },
     {
       id: 'LT003',
@@ -79,11 +98,11 @@ export default function LotesEnvio() {
       data_criacao: '2025-09-25',
       data_fechamento: '2025-09-30',
       total_guias: 22,
-      total_valor: 3300.00,
+      total_valor: 3300.0,
       status: 'Enviado',
       xml_path: '/xml/lote_003.xml',
-      observacoes: 'Aguardando retorno'
-    }
+      observacoes: 'Aguardando retorno',
+    },
   ];
 
   // Mock convenios
@@ -92,7 +111,7 @@ export default function LotesEnvio() {
     { id: '2', nome: 'Bradesco Saúde' },
     { id: '3', nome: 'SulAmérica' },
     { id: '4', nome: 'Amil' },
-    { id: '5', nome: 'NotreDame Intermédica' }
+    { id: '5', nome: 'NotreDame Intermédica' },
   ];
 
   useEffect(() => {
@@ -108,14 +127,14 @@ export default function LotesEnvio() {
       //   .select('*')
       //   .eq('clinic_id', clinicId)
       //   .order('created_at', { ascending: false });
-      
+
       setLotes(mockLotes);
     } catch (error) {
       console.error('Erro ao buscar lotes:', error);
       toast({
-        title: "Erro",
-        description: "Não foi possível carregar os lotes.",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Não foi possível carregar os lotes.',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -128,8 +147,8 @@ export default function LotesEnvio() {
       console.log('Criando novo lote:', formData);
 
       toast({
-        title: "Lote criado",
-        description: "Novo lote criado com sucesso."
+        title: 'Lote criado',
+        description: 'Novo lote criado com sucesso.',
       });
 
       setIsDialogOpen(false);
@@ -137,9 +156,9 @@ export default function LotesEnvio() {
       fetchLotes();
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Não foi possível criar o lote.",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Não foi possível criar o lote.',
+        variant: 'destructive',
       });
     }
   };
@@ -148,26 +167,26 @@ export default function LotesEnvio() {
     setFormData({
       convenio_id: '',
       competencia: new Date().toISOString().slice(0, 7),
-      observacoes: ''
+      observacoes: '',
     });
   };
 
   const handleGerarXMLLote = async (lote) => {
     try {
       console.log('Gerando XML do lote:', lote.id);
-      
+
       toast({
-        title: "XML do Lote Gerado",
-        description: `XML do lote ${lote.numero_lote} gerado com sucesso.`
+        title: 'XML do Lote Gerado',
+        description: `XML do lote ${lote.numero_lote} gerado com sucesso.`,
       });
 
       // Atualizar status do lote
       fetchLotes();
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Não foi possível gerar o XML do lote.",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Não foi possível gerar o XML do lote.',
+        variant: 'destructive',
       });
     }
   };
@@ -175,18 +194,18 @@ export default function LotesEnvio() {
   const handleFecharLote = async (lote) => {
     try {
       console.log('Fechando lote:', lote.id);
-      
+
       toast({
-        title: "Lote fechado",
-        description: `Lote ${lote.numero_lote} fechado com sucesso.`
+        title: 'Lote fechado',
+        description: `Lote ${lote.numero_lote} fechado com sucesso.`,
       });
 
       fetchLotes();
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Não foi possível fechar o lote.",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Não foi possível fechar o lote.',
+        variant: 'destructive',
       });
     }
   };
@@ -194,18 +213,18 @@ export default function LotesEnvio() {
   const handleReabrirLote = async (lote) => {
     try {
       console.log('Reabrindo lote:', lote.id);
-      
+
       toast({
-        title: "Lote reaberto",
-        description: `Lote ${lote.numero_lote} reaberto com sucesso.`
+        title: 'Lote reaberto',
+        description: `Lote ${lote.numero_lote} reaberto com sucesso.`,
       });
 
       fetchLotes();
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Não foi possível reabrir o lote.",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Não foi possível reabrir o lote.',
+        variant: 'destructive',
       });
     }
   };
@@ -214,23 +233,27 @@ export default function LotesEnvio() {
     if (lote.xml_path) {
       console.log('Baixando XML:', lote.xml_path);
       toast({
-        title: "Download iniciado",
-        description: `Baixando XML do lote ${lote.numero_lote}.`
+        title: 'Download iniciado',
+        description: `Baixando XML do lote ${lote.numero_lote}.`,
       });
     }
   };
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      'Aberto': { variant: 'outline', color: 'text-blue-600', icon: Unlock },
-      'Fechado': { variant: 'secondary', color: 'text-gray-600', icon: Lock },
-      'Enviado': { variant: 'default', color: 'text-green-600', icon: CheckCircle },
-      'Erro': { variant: 'destructive', color: 'text-red-600', icon: AlertCircle }
+      Aberto: { variant: 'outline', color: 'text-blue-600', icon: Unlock },
+      Fechado: { variant: 'secondary', color: 'text-gray-600', icon: Lock },
+      Enviado: { variant: 'default', color: 'text-green-600', icon: CheckCircle },
+      Erro: { variant: 'destructive', color: 'text-red-600', icon: AlertCircle },
     };
 
-    const config = statusConfig[status] || { variant: 'outline', color: 'text-gray-600', icon: AlertCircle };
+    const config = statusConfig[status] || {
+      variant: 'outline',
+      color: 'text-gray-600',
+      icon: AlertCircle,
+    };
     const Icon = config.icon;
-    
+
     return (
       <Badge variant={config.variant} className={`${config.color} gap-1`}>
         <Icon className="w-3 h-3" />
@@ -239,12 +262,13 @@ export default function LotesEnvio() {
     );
   };
 
-  const filteredLotes = lotes.filter(lote => {
-    const matchesSearch = lote.numero_lote.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         lote.convenio.toLowerCase().includes(searchTerm.toLowerCase());
-    
+  const filteredLotes = lotes.filter((lote) => {
+    const matchesSearch =
+      lote.numero_lote.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lote.convenio.toLowerCase().includes(searchTerm.toLowerCase());
+
     const matchesStatus = statusFilter === 'all' || lote.status === statusFilter;
-    
+
     return matchesSearch && matchesStatus;
   });
 
@@ -277,9 +301,9 @@ export default function LotesEnvio() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <Label htmlFor="convenio">Convênio</Label>
-                <Select 
+                <Select
                   value={formData.convenio_id}
-                  onValueChange={(value) => setFormData({...formData, convenio_id: value})}
+                  onValueChange={(value) => setFormData({ ...formData, convenio_id: value })}
                   required
                 >
                   <SelectTrigger>
@@ -301,7 +325,7 @@ export default function LotesEnvio() {
                   id="competencia"
                   type="month"
                   value={formData.competencia}
-                  onChange={(e) => setFormData({...formData, competencia: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, competencia: e.target.value })}
                   required
                 />
               </div>
@@ -311,14 +335,14 @@ export default function LotesEnvio() {
                 <Input
                   id="observacoes"
                   value={formData.observacoes}
-                  onChange={(e) => setFormData({...formData, observacoes: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
                   placeholder="Observações sobre o lote..."
                 />
               </div>
 
               <div className="flex justify-end gap-2 pt-4">
-                <Button 
-                  type="button" 
+                <Button
+                  type="button"
                   variant="outline"
                   onClick={() => {
                     setIsDialogOpen(false);
@@ -327,9 +351,7 @@ export default function LotesEnvio() {
                 >
                   Cancelar
                 </Button>
-                <Button type="submit">
-                  Criar Lote
-                </Button>
+                <Button type="submit">Criar Lote</Button>
               </div>
             </form>
           </DialogContent>
@@ -386,7 +408,7 @@ export default function LotesEnvio() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-blue-600">
-              {lotes.filter(l => l.status === 'Aberto').length}
+              {lotes.filter((l) => l.status === 'Aberto').length}
             </div>
             <p className="text-sm text-muted-foreground">Lotes Abertos</p>
           </CardContent>
@@ -395,7 +417,7 @@ export default function LotesEnvio() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-green-600">
-              {lotes.filter(l => l.status === 'Enviado').length}
+              {lotes.filter((l) => l.status === 'Enviado').length}
             </div>
             <p className="text-sm text-muted-foreground">Lotes Enviados</p>
           </CardContent>
@@ -433,9 +455,7 @@ export default function LotesEnvio() {
             <TableBody>
               {filteredLotes.map((lote) => (
                 <TableRow key={lote.id}>
-                  <TableCell className="font-mono text-sm">
-                    {lote.numero_lote}
-                  </TableCell>
+                  <TableCell className="font-mono text-sm">{lote.numero_lote}</TableCell>
                   <TableCell>{lote.convenio}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
@@ -445,9 +465,7 @@ export default function LotesEnvio() {
                   </TableCell>
                   <TableCell>{lote.data_criacao}</TableCell>
                   <TableCell>
-                    <Badge variant="secondary">
-                      {lote.total_guias} guias
-                    </Badge>
+                    <Badge variant="secondary">{lote.total_guias} guias</Badge>
                   </TableCell>
                   <TableCell className="text-right font-semibold">
                     <div className="flex items-center justify-end gap-2">
@@ -455,9 +473,7 @@ export default function LotesEnvio() {
                       R$ {lote.total_valor.toFixed(2)}
                     </div>
                   </TableCell>
-                  <TableCell>
-                    {getStatusBadge(lote.status)}
-                  </TableCell>
+                  <TableCell>{getStatusBadge(lote.status)}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
                       {lote.status === 'Aberto' && (
@@ -470,10 +486,7 @@ export default function LotesEnvio() {
                             <FileCode className="w-3 h-3 mr-1" />
                             Gerar XML
                           </Button>
-                          <Button
-                            size="sm"
-                            onClick={() => handleFecharLote(lote)}
-                          >
+                          <Button size="sm" onClick={() => handleFecharLote(lote)}>
                             <Lock className="w-3 h-3 mr-1" />
                             Fechar
                           </Button>
@@ -502,11 +515,7 @@ export default function LotesEnvio() {
                       )}
 
                       {lote.status === 'Enviado' && (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => handleBaixarXML(lote)}
-                        >
+                        <Button size="sm" variant="secondary" onClick={() => handleBaixarXML(lote)}>
                           <Download className="w-3 h-3 mr-1" />
                           Baixar XML
                         </Button>
@@ -519,10 +528,9 @@ export default function LotesEnvio() {
               {filteredLotes.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    {searchTerm || statusFilter !== 'all' 
+                    {searchTerm || statusFilter !== 'all'
                       ? 'Nenhum lote encontrado com os filtros aplicados.'
-                      : 'Nenhum lote criado ainda.'
-                    }
+                      : 'Nenhum lote criado ainda.'}
                   </TableCell>
                 </TableRow>
               )}
@@ -533,4 +541,3 @@ export default function LotesEnvio() {
     </div>
   );
 }
-

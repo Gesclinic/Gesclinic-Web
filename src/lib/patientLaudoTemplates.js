@@ -86,11 +86,7 @@ const TEMPLATE_MAP = {
   },
   personalizado: {
     title: 'Laudo clínico',
-    sections: [
-      '1. Contexto',
-      '2. Descrição',
-      '3. Conclusão',
-    ],
+    sections: ['1. Contexto', '2. Descrição', '3. Conclusão'],
   },
 };
 
@@ -116,10 +112,7 @@ export function buildLaudoTemplate(type, patientName = '') {
 }
 
 export function summarizeLaudoContent(content = '') {
-  return content
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 180);
+  return content.replace(/\s+/g, ' ').trim().slice(0, 180);
 }
 
 export function getLaudoTypeLabel(type) {

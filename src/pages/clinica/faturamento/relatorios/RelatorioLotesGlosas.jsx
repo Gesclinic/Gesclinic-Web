@@ -4,13 +4,32 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
-import { 
-  AlertTriangle, 
-  Download, 
+import {
+  AlertTriangle,
+  Download,
   Calendar,
   DollarSign,
   FileText,
@@ -23,7 +42,7 @@ import {
   Eye,
   TrendingDown,
   TrendingUp,
-  Filter
+  Filter,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 
@@ -36,7 +55,9 @@ export default function RelatorioLotesGlosas() {
   const [lotes, setLotes] = useState([]);
   const [glosas, setGlosas] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [dataInicial, setDataInicial] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]);
+  const [dataInicial, setDataInicial] = useState(
+    new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+  );
   const [dataFinal, setDataFinal] = useState(new Date().toISOString().split('T')[0]);
   const [statusFilter, setStatusFilter] = useState('all');
   const [convenioFilter, setConvenioFilter] = useState('all');
@@ -53,15 +74,15 @@ export default function RelatorioLotesGlosas() {
       data_processamento: '2025-01-30',
       status: 'Processado',
       total_guias: 45,
-      valor_apresentado: 15750.00,
-      valor_processado: 14200.00,
-      valor_glosado: 1550.00,
+      valor_apresentado: 15750.0,
+      valor_processado: 14200.0,
+      valor_glosado: 1550.0,
       percentual_glosa: 9.84,
       guias_aceitas: 38,
       guias_glosadas: 7,
       protocolo_envio: 'PROT789456123',
       protocolo_retorno: 'RET987654321',
-      observacoes: 'Glosas por falta de autorização prévia'
+      observacoes: 'Glosas por falta de autorização prévia',
     },
     {
       lote_id: 'LOT002',
@@ -72,7 +93,7 @@ export default function RelatorioLotesGlosas() {
       data_processamento: null,
       status: 'Enviado',
       total_guias: 32,
-      valor_apresentado: 11840.00,
+      valor_apresentado: 11840.0,
       valor_processado: 0,
       valor_glosado: 0,
       percentual_glosa: 0,
@@ -80,7 +101,7 @@ export default function RelatorioLotesGlosas() {
       guias_glosadas: 0,
       protocolo_envio: 'PROT456789012',
       protocolo_retorno: null,
-      observacoes: 'Aguardando processamento'
+      observacoes: 'Aguardando processamento',
     },
     {
       lote_id: 'LOT003',
@@ -91,7 +112,7 @@ export default function RelatorioLotesGlosas() {
       data_processamento: null,
       status: 'Aberto',
       total_guias: 18,
-      valor_apresentado: 7200.00,
+      valor_apresentado: 7200.0,
       valor_processado: 0,
       valor_glosado: 0,
       percentual_glosa: 0,
@@ -99,8 +120,8 @@ export default function RelatorioLotesGlosas() {
       guias_glosadas: 0,
       protocolo_envio: null,
       protocolo_retorno: null,
-      observacoes: 'Lote em construção'
-    }
+      observacoes: 'Lote em construção',
+    },
   ];
 
   // Mock data para demonstração - Glosas
@@ -114,14 +135,14 @@ export default function RelatorioLotesGlosas() {
       data_atendimento: '2025-01-25',
       procedimento_codigo: '10101012',
       procedimento_nome: 'Consulta Médica',
-      valor_apresentado: 150.00,
-      valor_glosado: 150.00,
+      valor_apresentado: 150.0,
+      valor_glosado: 150.0,
       motivo_glosa: 'Falta de autorização prévia',
       codigo_glosa: 'G001',
       status_recurso: 'Pendente',
       data_recurso: null,
       profissional: 'Dr. Fernando Cooper',
-      observacoes: 'Autorização solicitada posteriormente'
+      observacoes: 'Autorização solicitada posteriormente',
     },
     {
       glosa_id: 'GL002',
@@ -132,14 +153,14 @@ export default function RelatorioLotesGlosas() {
       data_atendimento: '2025-01-26',
       procedimento_codigo: '30501170',
       procedimento_nome: 'Ecocardiograma',
-      valor_apresentado: 250.00,
-      valor_glosado: 50.00,
+      valor_apresentado: 250.0,
+      valor_glosado: 50.0,
       motivo_glosa: 'Valor acima da tabela',
       codigo_glosa: 'G012',
       status_recurso: 'Aceito Parcialmente',
       data_recurso: '2025-01-29',
       profissional: 'Dr. Fernando Cooper',
-      observacoes: 'Diferença de valor ajustada'
+      observacoes: 'Diferença de valor ajustada',
     },
     {
       glosa_id: 'GL003',
@@ -150,15 +171,15 @@ export default function RelatorioLotesGlosas() {
       data_atendimento: '2025-01-27',
       procedimento_codigo: '20101020',
       procedimento_nome: 'ECG',
-      valor_apresentado: 100.00,
-      valor_glosado: 100.00,
+      valor_apresentado: 100.0,
+      valor_glosado: 100.0,
       motivo_glosa: 'Procedimento não coberto',
       codigo_glosa: 'G025',
       status_recurso: 'Rejeitado',
       data_recurso: '2025-01-30',
       profissional: 'Dra. Ana Paula Santos',
-      observacoes: 'Procedimento fora da cobertura'
-    }
+      observacoes: 'Procedimento fora da cobertura',
+    },
   ];
 
   useEffect(() => {
@@ -171,17 +192,17 @@ export default function RelatorioLotesGlosas() {
       // Simular busca no banco com filtros
       let filteredLotes = mockLotes;
       let filteredGlosas = mockGlosas;
-      
+
       if (statusFilter !== 'all') {
-        filteredLotes = filteredLotes.filter(lote => lote.status === statusFilter);
+        filteredLotes = filteredLotes.filter((lote) => lote.status === statusFilter);
       }
 
       if (convenioFilter !== 'all') {
-        filteredLotes = filteredLotes.filter(lote => 
-          lote.convenio_nome.toLowerCase().includes(convenioFilter.toLowerCase())
+        filteredLotes = filteredLotes.filter((lote) =>
+          lote.convenio_nome.toLowerCase().includes(convenioFilter.toLowerCase()),
         );
-        filteredGlosas = filteredGlosas.filter(glosa => 
-          glosa.convenio_nome.toLowerCase().includes(convenioFilter.toLowerCase())
+        filteredGlosas = filteredGlosas.filter((glosa) =>
+          glosa.convenio_nome.toLowerCase().includes(convenioFilter.toLowerCase()),
         );
       }
 
@@ -190,9 +211,9 @@ export default function RelatorioLotesGlosas() {
     } catch (error) {
       console.error('Erro ao buscar relatório:', error);
       toast({
-        title: "Erro",
-        description: "Não foi possível carregar o relatório.",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Não foi possível carregar o relatório.',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -202,11 +223,22 @@ export default function RelatorioLotesGlosas() {
   const exportarCSV = () => {
     try {
       let csvContent;
-      
+
       if (activeTab === 'lotes') {
         csvContent = [
-          ['Número Lote', 'Convênio', 'Status', 'Data Criação', 'Data Envio', 'Total Guias', 'Valor Apresentado', 'Valor Processado', 'Valor Glosado', '% Glosa'],
-          ...lotes.map(lote => [
+          [
+            'Número Lote',
+            'Convênio',
+            'Status',
+            'Data Criação',
+            'Data Envio',
+            'Total Guias',
+            'Valor Apresentado',
+            'Valor Processado',
+            'Valor Glosado',
+            '% Glosa',
+          ],
+          ...lotes.map((lote) => [
             lote.numero_lote,
             lote.convenio_nome,
             lote.status,
@@ -216,13 +248,26 @@ export default function RelatorioLotesGlosas() {
             lote.valor_apresentado.toFixed(2),
             lote.valor_processado.toFixed(2),
             lote.valor_glosado.toFixed(2),
-            lote.percentual_glosa.toFixed(2) + '%'
-          ])
-        ].map(row => row.join(',')).join('\n');
+            lote.percentual_glosa.toFixed(2) + '%',
+          ]),
+        ]
+          .map((row) => row.join(','))
+          .join('\n');
       } else {
         csvContent = [
-          ['Lote', 'Convênio', 'Guia', 'Paciente', 'Data Atendimento', 'Procedimento', 'Valor Apresentado', 'Valor Glosado', 'Motivo', 'Status Recurso'],
-          ...glosas.map(glosa => [
+          [
+            'Lote',
+            'Convênio',
+            'Guia',
+            'Paciente',
+            'Data Atendimento',
+            'Procedimento',
+            'Valor Apresentado',
+            'Valor Glosado',
+            'Motivo',
+            'Status Recurso',
+          ],
+          ...glosas.map((glosa) => [
             glosa.lote_numero,
             glosa.convenio_nome,
             glosa.guia_numero,
@@ -232,9 +277,11 @@ export default function RelatorioLotesGlosas() {
             glosa.valor_apresentado.toFixed(2),
             glosa.valor_glosado.toFixed(2),
             glosa.motivo_glosa,
-            glosa.status_recurso
-          ])
-        ].map(row => row.join(',')).join('\n');
+            glosa.status_recurso,
+          ]),
+        ]
+          .map((row) => row.join(','))
+          .join('\n');
       }
 
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -244,14 +291,14 @@ export default function RelatorioLotesGlosas() {
       link.click();
 
       toast({
-        title: "Exportação concluída",
-        description: "Relatório exportado para CSV com sucesso."
+        title: 'Exportação concluída',
+        description: 'Relatório exportado para CSV com sucesso.',
       });
     } catch (error) {
       toast({
-        title: "Erro na exportação",
-        description: "Não foi possível exportar o relatório.",
-        variant: "destructive"
+        title: 'Erro na exportação',
+        description: 'Não foi possível exportar o relatório.',
+        variant: 'destructive',
       });
     }
   };
@@ -259,31 +306,35 @@ export default function RelatorioLotesGlosas() {
   const exportarExcel = async () => {
     try {
       console.log(`Exportando ${activeTab} para Excel:`, activeTab === 'lotes' ? lotes : glosas);
-      
+
       toast({
-        title: "Exportação iniciada",
-        description: "Relatório Excel será baixado em instantes."
+        title: 'Exportação iniciada',
+        description: 'Relatório Excel será baixado em instantes.',
       });
     } catch (error) {
       toast({
-        title: "Erro na exportação",
-        description: "Não foi possível exportar para Excel.",
-        variant: "destructive"
+        title: 'Erro na exportação',
+        description: 'Não foi possível exportar para Excel.',
+        variant: 'destructive',
       });
     }
   };
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      'Aberto': { variant: 'secondary', color: 'text-blue-600', icon: Package },
-      'Enviado': { variant: 'outline', color: 'text-yellow-600', icon: Clock },
-      'Processado': { variant: 'default', color: 'text-green-600', icon: CheckCircle },
-      'Rejeitado': { variant: 'destructive', color: 'text-red-600', icon: XCircle }
+      Aberto: { variant: 'secondary', color: 'text-blue-600', icon: Package },
+      Enviado: { variant: 'outline', color: 'text-yellow-600', icon: Clock },
+      Processado: { variant: 'default', color: 'text-green-600', icon: CheckCircle },
+      Rejeitado: { variant: 'destructive', color: 'text-red-600', icon: XCircle },
     };
 
-    const config = statusConfig[status] || { variant: 'outline', color: 'text-gray-600', icon: Clock };
+    const config = statusConfig[status] || {
+      variant: 'outline',
+      color: 'text-gray-600',
+      icon: Clock,
+    };
     const Icon = config.icon;
-    
+
     return (
       <Badge variant={config.variant} className={`${config.color} gap-1`}>
         <Icon className="w-3 h-3" />
@@ -294,15 +345,15 @@ export default function RelatorioLotesGlosas() {
 
   const getRecursoBadge = (status) => {
     const statusConfig = {
-      'Pendente': { variant: 'secondary', color: 'text-yellow-600' },
-      'Aceito': { variant: 'default', color: 'text-green-600' },
+      Pendente: { variant: 'secondary', color: 'text-yellow-600' },
+      Aceito: { variant: 'default', color: 'text-green-600' },
       'Aceito Parcialmente': { variant: 'outline', color: 'text-blue-600' },
-      'Rejeitado': { variant: 'destructive', color: 'text-red-600' },
-      'Sem Recurso': { variant: 'outline', color: 'text-gray-600' }
+      Rejeitado: { variant: 'destructive', color: 'text-red-600' },
+      'Sem Recurso': { variant: 'outline', color: 'text-gray-600' },
     };
 
     const config = statusConfig[status] || { variant: 'outline', color: 'text-gray-600' };
-    
+
     return (
       <Badge variant={config.variant} className={config.color}>
         {status}
@@ -312,45 +363,68 @@ export default function RelatorioLotesGlosas() {
 
   const getGlosaBadge = (percentual) => {
     if (percentual === 0) {
-      return <Badge variant="default" className="text-green-600">Sem Glosa</Badge>;
+      return (
+        <Badge variant="default" className="text-green-600">
+          Sem Glosa
+        </Badge>
+      );
     } else if (percentual <= 5) {
-      return <Badge variant="secondary" className="text-blue-600">Baixa</Badge>;
+      return (
+        <Badge variant="secondary" className="text-blue-600">
+          Baixa
+        </Badge>
+      );
     } else if (percentual <= 15) {
-      return <Badge variant="outline" className="text-yellow-600">Moderada</Badge>;
+      return (
+        <Badge variant="outline" className="text-yellow-600">
+          Moderada
+        </Badge>
+      );
     } else {
-      return <Badge variant="destructive" className="text-red-600">Alta</Badge>;
+      return (
+        <Badge variant="destructive" className="text-red-600">
+          Alta
+        </Badge>
+      );
     }
   };
 
   const getTotaisLotes = () => {
-    return lotes.reduce((acc, lote) => ({
-      total_guias: acc.total_guias + lote.total_guias,
-      valor_apresentado: acc.valor_apresentado + lote.valor_apresentado,
-      valor_processado: acc.valor_processado + lote.valor_processado,
-      valor_glosado: acc.valor_glosado + lote.valor_glosado
-    }), {
-      total_guias: 0,
-      valor_apresentado: 0,
-      valor_processado: 0,
-      valor_glosado: 0
-    });
+    return lotes.reduce(
+      (acc, lote) => ({
+        total_guias: acc.total_guias + lote.total_guias,
+        valor_apresentado: acc.valor_apresentado + lote.valor_apresentado,
+        valor_processado: acc.valor_processado + lote.valor_processado,
+        valor_glosado: acc.valor_glosado + lote.valor_glosado,
+      }),
+      {
+        total_guias: 0,
+        valor_apresentado: 0,
+        valor_processado: 0,
+        valor_glosado: 0,
+      },
+    );
   };
 
   const getTotaisGlosas = () => {
-    return glosas.reduce((acc, glosa) => ({
-      valor_apresentado: acc.valor_apresentado + glosa.valor_apresentado,
-      valor_glosado: acc.valor_glosado + glosa.valor_glosado
-    }), {
-      valor_apresentado: 0,
-      valor_glosado: 0
-    });
+    return glosas.reduce(
+      (acc, glosa) => ({
+        valor_apresentado: acc.valor_apresentado + glosa.valor_apresentado,
+        valor_glosado: acc.valor_glosado + glosa.valor_glosado,
+      }),
+      {
+        valor_apresentado: 0,
+        valor_glosado: 0,
+      },
+    );
   };
 
   const totaisLotes = getTotaisLotes();
   const totaisGlosas = getTotaisGlosas();
-  const percentualGlosaGeral = totaisLotes.valor_apresentado > 0 
-    ? (totaisLotes.valor_glosado / totaisLotes.valor_apresentado) * 100 
-    : 0;
+  const percentualGlosaGeral =
+    totaisLotes.valor_apresentado > 0
+      ? (totaisLotes.valor_glosado / totaisLotes.valor_apresentado) * 100
+      : 0;
 
   return (
     <div className="space-y-6">
@@ -549,14 +623,10 @@ export default function RelatorioLotesGlosas() {
                     <TableCell>
                       <div className="font-medium">{lote.convenio_nome}</div>
                       {lote.protocolo_envio && (
-                        <div className="text-xs text-muted-foreground">
-                          {lote.protocolo_envio}
-                        </div>
+                        <div className="text-xs text-muted-foreground">{lote.protocolo_envio}</div>
                       )}
                     </TableCell>
-                    <TableCell className="text-center">
-                      {getStatusBadge(lote.status)}
-                    </TableCell>
+                    <TableCell className="text-center">{getStatusBadge(lote.status)}</TableCell>
                     <TableCell className="text-center">
                       <div className="font-semibold">{lote.total_guias}</div>
                       {lote.status === 'Processado' && (
@@ -606,11 +676,17 @@ export default function RelatorioLotesGlosas() {
                               </div>
                               <div>
                                 <Label className="text-sm font-medium">Data Criação</Label>
-                                <p className="text-sm">{new Date(lote.data_criacao).toLocaleDateString('pt-BR')}</p>
+                                <p className="text-sm">
+                                  {new Date(lote.data_criacao).toLocaleDateString('pt-BR')}
+                                </p>
                               </div>
                               <div>
                                 <Label className="text-sm font-medium">Data Envio</Label>
-                                <p className="text-sm">{lote.data_envio ? new Date(lote.data_envio).toLocaleDateString('pt-BR') : '-'}</p>
+                                <p className="text-sm">
+                                  {lote.data_envio
+                                    ? new Date(lote.data_envio).toLocaleDateString('pt-BR')
+                                    : '-'}
+                                </p>
                               </div>
                               <div>
                                 <Label className="text-sm font-medium">Protocolo Envio</Label>
@@ -624,7 +700,9 @@ export default function RelatorioLotesGlosas() {
                             {lote.observacoes && (
                               <div>
                                 <Label className="text-sm font-medium">Observações</Label>
-                                <p className="text-sm mt-1 p-2 bg-muted rounded">{lote.observacoes}</p>
+                                <p className="text-sm mt-1 p-2 bg-muted rounded">
+                                  {lote.observacoes}
+                                </p>
                               </div>
                             )}
                           </div>
@@ -673,7 +751,9 @@ export default function RelatorioLotesGlosas() {
                     <TableCell>
                       <div className="space-y-1">
                         <div className="font-mono text-xs">{glosa.lote_numero}</div>
-                        <div className="font-mono text-xs text-muted-foreground">{glosa.guia_numero}</div>
+                        <div className="font-mono text-xs text-muted-foreground">
+                          {glosa.guia_numero}
+                        </div>
                         <div className="text-xs text-muted-foreground">
                           {new Date(glosa.data_atendimento).toLocaleDateString('pt-BR')}
                         </div>
@@ -686,7 +766,9 @@ export default function RelatorioLotesGlosas() {
                     <TableCell>
                       <div>
                         <div className="font-medium">{glosa.procedimento_nome}</div>
-                        <div className="text-xs text-muted-foreground font-mono">{glosa.procedimento_codigo}</div>
+                        <div className="text-xs text-muted-foreground font-mono">
+                          {glosa.procedimento_codigo}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell className="text-right font-semibold">
@@ -750,9 +832,9 @@ export default function RelatorioLotesGlosas() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Resumo dos principais motivos */}
               {[
-                { motivo: 'Falta de autorização prévia', quantidade: 1, valor: 150.00 },
-                { motivo: 'Valor acima da tabela', quantidade: 1, valor: 50.00 },
-                { motivo: 'Procedimento não coberto', quantidade: 1, valor: 100.00 }
+                { motivo: 'Falta de autorização prévia', quantidade: 1, valor: 150.0 },
+                { motivo: 'Valor acima da tabela', quantidade: 1, valor: 50.0 },
+                { motivo: 'Procedimento não coberto', quantidade: 1, valor: 100.0 },
               ].map((item, index) => (
                 <Card key={index}>
                   <CardContent className="pt-6">
@@ -775,4 +857,3 @@ export default function RelatorioLotesGlosas() {
     </div>
   );
 }
-

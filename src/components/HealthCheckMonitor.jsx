@@ -36,7 +36,9 @@ export function HealthCheckMonitor() {
 
   // Realizar health checks quando clinic carrega
   useEffect(() => {
-    if (loadingClinic || !clinic?.id) return;
+    if (loadingClinic || !clinic?.id) {
+      return;
+    }
 
     // Executa health checks em paralelo, não bloqueia a página
     runHealthChecks();
@@ -72,9 +74,7 @@ export function HealthCheckMonitor() {
   function withTimeout(promise, timeoutMs) {
     return Promise.race([
       promise,
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Timeout')), timeoutMs)
-      ),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeoutMs)),
     ]);
   }
 
@@ -84,13 +84,13 @@ export function HealthCheckMonitor() {
         .from('professionals')
         .select('id', { count: 'exact', head: true })
         .eq('clinic_id', clinic.id);
-      
+
       if (error) {
         console.warn('Health check profissionais - aviso:', error.message);
         return 'warning';
       }
       const finalCount = count || 0;
-      setChecks(prev => ({ ...prev, professionalsCount: finalCount }));
+      setChecks((prev) => ({ ...prev, professionalsCount: finalCount }));
       return finalCount > 0 ? 'success' : 'warning';
     } catch (error) {
       console.warn('Health check profissionais - erro:', error.message);
@@ -104,13 +104,13 @@ export function HealthCheckMonitor() {
         .from('services')
         .select('id', { count: 'exact', head: true })
         .eq('clinic_id', clinic.id);
-      
+
       if (error) {
         console.warn('Health check serviços - aviso:', error.message);
         return 'warning';
       }
       const finalCount = count || 0;
-      setChecks(prev => ({ ...prev, servicesCount: finalCount }));
+      setChecks((prev) => ({ ...prev, servicesCount: finalCount }));
       return finalCount > 0 ? 'success' : 'warning';
     } catch (error) {
       console.warn('Health check serviços - erro:', error.message);
@@ -124,13 +124,13 @@ export function HealthCheckMonitor() {
         .from('rooms')
         .select('id', { count: 'exact', head: true })
         .eq('clinic_id', clinic.id);
-      
+
       if (error) {
         console.warn('Health check salas - aviso:', error.message);
         return 'warning';
       }
       const finalCount = count || 0;
-      setChecks(prev => ({ ...prev, roomsCount: finalCount }));
+      setChecks((prev) => ({ ...prev, roomsCount: finalCount }));
       return finalCount > 0 ? 'success' : 'warning';
     } catch (error) {
       console.warn('Health check salas - erro:', error.message);
@@ -144,13 +144,13 @@ export function HealthCheckMonitor() {
         .from('health_insurances')
         .select('id', { count: 'exact', head: true })
         .eq('clinic_id', clinic.id);
-      
+
       if (error) {
         console.warn('Health check convênios - aviso:', error.message);
         return 'warning';
       }
       const finalCount = count || 0;
-      setChecks(prev => ({ ...prev, insurancesCount: finalCount }));
+      setChecks((prev) => ({ ...prev, insurancesCount: finalCount }));
       return finalCount > 0 ? 'success' : 'warning';
     } catch (error) {
       console.warn('Health check convênios - erro:', error.message);
@@ -164,13 +164,13 @@ export function HealthCheckMonitor() {
         .from('agenda_rules')
         .select('id', { count: 'exact', head: true })
         .eq('clinic_id', clinic.id);
-      
+
       if (error) {
         console.warn('Health check regras - aviso:', error.message);
         return 'info';
       }
       const finalCount = count || 0;
-      setChecks(prev => ({ ...prev, rulesCount: finalCount }));
+      setChecks((prev) => ({ ...prev, rulesCount: finalCount }));
       return finalCount > 0 ? 'success' : 'info';
     } catch (error) {
       console.warn('Health check regras - erro:', error.message);
@@ -181,12 +181,8 @@ export function HealthCheckMonitor() {
   async function checkDatabase() {
     try {
       // Tenta fazer uma query simples para verificar conexão
-      const { error } = await supabase
-        .from('clinics')
-        .select('id')
-        .eq('id', clinic.id)
-        .limit(1);
-      
+      const { error } = await supabase.from('clinics').select('id').eq('id', clinic.id).limit(1);
+
       return error ? 'warning' : 'success';
     } catch (error) {
       console.warn('Health check database - erro:', error.message);
@@ -196,44 +192,42 @@ export function HealthCheckMonitor() {
 
   function getStatusIcon(status) {
     switch (status) {
-      case 'success':
-        return <CheckCircle2 className="w-4 h-4 text-green-600" />;
-      case 'warning':
-        return <AlertTriangle className="w-4 h-4 text-yellow-600" />;
-      case 'error':
-        return <AlertCircle className="w-4 h-4 text-red-600" />;
-      case 'info':
-        return <Clock className="w-4 h-4 text-blue-600" />;
-      default:
-        return <Clock className="w-4 h-4 text-gray-600 animate-spin" />;
+    case 'success':
+      return <CheckCircle2 className="w-4 h-4 text-green-600" />;
+    case 'warning':
+      return <AlertTriangle className="w-4 h-4 text-yellow-600" />;
+    case 'error':
+      return <AlertCircle className="w-4 h-4 text-red-600" />;
+    case 'info':
+      return <Clock className="w-4 h-4 text-blue-600" />;
+    default:
+      return <Clock className="w-4 h-4 text-gray-600 animate-spin" />;
     }
   }
 
   function getStatusBadgeVariant(status) {
     switch (status) {
-      case 'success':
-        return 'default';
-      case 'warning':
-        return 'secondary';
-      case 'error':
-        return 'destructive';
-      case 'info':
-        return 'outline';
-      default:
-        return 'outline';
+    case 'success':
+      return 'default';
+    case 'warning':
+      return 'secondary';
+    case 'error':
+      return 'destructive';
+    case 'info':
+      return 'outline';
+    default:
+      return 'outline';
     }
   }
 
   const criticalIssues = Object.entries(healthStatus).filter(
-    ([key, status]) => status === 'error' && key !== 'rules' // Regras são opcionais
+    ([key, status]) => status === 'error' && key !== 'rules', // Regras são opcionais
   );
 
-  const warnings = Object.entries(healthStatus).filter(
-    ([key, status]) => status === 'warning'
-  );
+  const warnings = Object.entries(healthStatus).filter(([key, status]) => status === 'warning');
 
   // Não mostrar se tudo está OK e não há avisos
-  if (Object.values(healthStatus).every(s => s === 'success' || s === 'info')) {
+  if (Object.values(healthStatus).every((s) => s === 'success' || s === 'info')) {
     return null;
   }
 
@@ -253,9 +247,7 @@ export function HealthCheckMonitor() {
                 </div>
               ))}
             </div>
-            <div className="text-xs mt-2 opacity-90">
-              ⚠️ Acesse Base do Sistema para configurar
-            </div>
+            <div className="text-xs mt-2 opacity-90">⚠️ Acesse Base do Sistema para configurar</div>
           </AlertDescription>
         </Alert>
       )}

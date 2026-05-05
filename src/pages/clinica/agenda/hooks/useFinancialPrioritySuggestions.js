@@ -1,6 +1,6 @@
 /**
  * useFinancialPrioritySuggestions Hook
- * 
+ *
  * Hook customizado para gerenciar sugestões financeiras
  * - Carrega sugestões baseadas em data e clínica
  * - Executa ações (criar encaixe, ignorar)
@@ -16,7 +16,7 @@ import {
 
 /**
  * Hook para gerenciar sugestões de prioridade financeira
- * 
+ *
  * @param {string} clinicId - ID da clínica
  * @param {string} date - Data no formato YYYY-MM-DD
  * @param {Object} options - Opções de configuração
@@ -27,12 +27,7 @@ import {
  * @returns {Object} Estado e funções
  */
 export function useFinancialPrioritySuggestions(clinicId, date, options = {}) {
-  const {
-    limit = 5,
-    minPriority = 'BAIXA',
-    autoLoad = true,
-    refreshInterval = 0,
-  } = options;
+  const { limit = 5, minPriority = 'BAIXA', autoLoad = true, refreshInterval = 0 } = options;
 
   // Estado
   const [suggestions, setSuggestions] = useState([]);
@@ -139,7 +134,7 @@ export function useFinancialPrioritySuggestions(clinicId, date, options = {}) {
         };
       }
     },
-    [clinicId]
+    [clinicId],
   );
 
   // ========================================
@@ -173,7 +168,7 @@ export function useFinancialPrioritySuggestions(clinicId, date, options = {}) {
         };
       }
     },
-    [executeSuggestion]
+    [executeSuggestion],
   );
 
   // ========================================
@@ -181,9 +176,7 @@ export function useFinancialPrioritySuggestions(clinicId, date, options = {}) {
   // ========================================
 
   const ignoreSuggestion = useCallback((suggestionId) => {
-    setSuggestions(prev =>
-      prev.filter(s => s.id !== suggestionId)
-    );
+    setSuggestions((prev) => prev.filter((s) => s.id !== suggestionId));
     console.log('[useFinancialPrioritySuggestions] Sugestão ignorada:', suggestionId);
   }, []);
 
@@ -203,15 +196,18 @@ export function useFinancialPrioritySuggestions(clinicId, date, options = {}) {
   const stats = {
     total: suggestions.length,
     byPriority: {
-      ALTA: suggestions.filter(s => s.prioridade === 'ALTA').length,
-      MEDIA: suggestions.filter(s => s.prioridade === 'MEDIA').length,
-      BAIXA: suggestions.filter(s => s.prioridade === 'BAIXA').length,
+      ALTA: suggestions.filter((s) => s.prioridade === 'ALTA').length,
+      MEDIA: suggestions.filter((s) => s.prioridade === 'MEDIA').length,
+      BAIXA: suggestions.filter((s) => s.prioridade === 'BAIXA').length,
     },
     totalValue: suggestions.reduce((sum, s) => sum + (s.valor_estimado || 0), 0),
     totalMargin: suggestions.reduce((sum, s) => sum + (s.margem_estimada || 0), 0),
-    averageScore: suggestions.length > 0
-      ? Math.round(suggestions.reduce((sum, s) => sum + s.score_financeiro, 0) / suggestions.length)
-      : 0,
+    averageScore:
+      suggestions.length > 0
+        ? Math.round(
+          suggestions.reduce((sum, s) => sum + s.score_financeiro, 0) / suggestions.length,
+        )
+        : 0,
   };
 
   // ========================================

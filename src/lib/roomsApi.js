@@ -1,61 +1,61 @@
-// src/lib/roomsApi.js
-import { supabase } from "@/lib/customSupabaseClient";
+﻿// src/lib/roomsApi.js
+import { supabase } from '@/lib/customSupabaseClient';
 
 /**
  * API para gerenciar salas de atendimento
  */
 
 /**
- * Listar todas as salas de uma clínica
- * @param {string} clinicId - ID da clínica
+ * Listar todas as salas de uma clÃ­nica
+ * @param {string} clinicId - ID da clÃ­nica
  * @returns {Promise<Array>}
  */
 export async function listRooms(clinicId) {
-  if (!clinicId) return [];
+  if (!clinicId) {
+    return [];
+  }
 
   try {
     const { data, error } = await supabase
-      .from("rooms")
-      .select("*")
-      .eq("clinic_id", clinicId)
-      .order("name");
+      .from('rooms')
+      .select('*')
+      .eq('clinic_id', clinicId)
+      .order('name');
 
     if (error) {
-      console.error("❌ Erro ao buscar salas:", error.message);
+      console.error('âŒ Erro ao buscar salas:', error.message);
       return [];
     }
 
-    console.log("✅ Salas carregadas:", data);
+    console.log('âœ… Salas carregadas:', data);
     return data || [];
   } catch (err) {
-    console.error("❌ Erro ao buscar salas:", err);
+    console.error('âŒ Erro ao buscar salas:', err);
     return [];
   }
 }
 
 /**
- * Obter uma sala específica
+ * Obter uma sala especÃ­fica
  * @param {string} roomId - ID da sala
  * @returns {Promise<Object|null>}
  */
 export async function getRoomById(roomId) {
-  if (!roomId) return null;
+  if (!roomId) {
+    return null;
+  }
 
   try {
-    const { data, error } = await supabase
-      .from("rooms")
-      .select("*")
-      .eq("id", roomId)
-      .single();
+    const { data, error } = await supabase.from('rooms').select('*').eq('id', roomId).single();
 
     if (error) {
-      console.error("Erro ao buscar sala:", error);
+      console.error('Erro ao buscar sala:', error);
       return null;
     }
 
     return data;
   } catch (err) {
-    console.error("Erro inesperado ao buscar sala:", err);
+    console.error('Erro inesperado ao buscar sala:', err);
     return null;
   }
 }
@@ -67,17 +67,19 @@ export async function getRoomById(roomId) {
  */
 export async function createRoom(roomData) {
   if (!roomData.clinic_id || !roomData.name) {
-    throw new Error("clinic_id e name são obrigatórios");
+    throw new Error('clinic_id e name sÃ£o obrigatÃ³rios');
   }
 
   try {
     const { data, error } = await supabase
-      .from("rooms")
-      .insert([{
-        ...roomData,
-        is_active: true,
-        created_at: new Date().toISOString(),
-      }])
+      .from('rooms')
+      .insert([
+        {
+          ...roomData,
+          is_active: true,
+          created_at: new Date().toISOString(),
+        },
+      ])
       .select()
       .single();
 
@@ -87,7 +89,7 @@ export async function createRoom(roomData) {
 
     return data;
   } catch (err) {
-    console.error("Erro ao criar sala:", err);
+    console.error('Erro ao criar sala:', err);
     throw err;
   }
 }
@@ -99,24 +101,26 @@ export async function createRoom(roomData) {
  * @returns {Promise<Object|null>}
  */
 export async function updateRoom(roomId, updates) {
-  if (!roomId) return null;
+  if (!roomId) {
+    return null;
+  }
 
   try {
-    const { data, error } = await supabase
-      .from("rooms")
-      .update(updates)
-      .eq("id", roomId)
-      .select()
-      .single();
+    const { data, error } = await supabase.from('rooms').update(updates).eq('id', roomId).select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
 
     if (error) {
-      console.error("Erro ao atualizar sala:", error);
+      console.error('Erro ao atualizar sala:', error);
       return null;
     }
 
     return data;
   } catch (err) {
-    console.error("Erro inesperado ao atualizar sala:", err);
+    console.error('Erro inesperado ao atualizar sala:', err);
     return null;
   }
 }
@@ -127,22 +131,21 @@ export async function updateRoom(roomId, updates) {
  * @returns {Promise<boolean>}
  */
 export async function deactivateRoom(roomId) {
-  if (!roomId) return false;
+  if (!roomId) {
+    return false;
+  }
 
   try {
-    const { error } = await supabase
-      .from("rooms")
-      .update({ is_active: false })
-      .eq("id", roomId);
+    const { error } = await supabase.from('rooms').update({ is_active: false }).eq('id', roomId);
 
     if (error) {
-      console.error("Erro ao inativar sala:", error);
+      console.error('Erro ao inativar sala:', error);
       return false;
     }
 
     return true;
   } catch (err) {
-    console.error("Erro inesperado ao inativar sala:", err);
+    console.error('Erro inesperado ao inativar sala:', err);
     return false;
   }
 }

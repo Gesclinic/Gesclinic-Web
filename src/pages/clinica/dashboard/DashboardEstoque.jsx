@@ -1,5 +1,5 @@
-import React from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import React from 'react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 
 export default function DashboardEstoque() {
   return (
@@ -13,4 +13,3 @@ export default function DashboardEstoque() {
     </Card>
   );
 }
-

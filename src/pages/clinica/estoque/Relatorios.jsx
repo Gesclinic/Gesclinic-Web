@@ -1,18 +1,24 @@
 import React, { useState } from 'react';
-import PageLayout from "@/components/ui/PageLayout";
-import { useBreadcrumbs } from "@/hooks/useBreadcrumbs";
+import PageLayout from '@/components/ui/PageLayout';
+import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from "@/components/ui/button";
-import { BarChart3, TrendingUp, Package, AlertTriangle, Download, FileText, X } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { useClinicContext } from "@/contexts/useClinicContext";
-import { useToast } from "@/components/ui/use-toast";
-import { stockItemsApi, stockMovementsApi } from "@/lib/stockApi";
+import { Button } from '@/components/ui/button';
+import { BarChart3, TrendingUp, Package, AlertTriangle, Download, FileText, X } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { useClinicContext } from '@/contexts/useClinicContext';
+import { useToast } from '@/components/ui/use-toast';
+import { stockItemsApi, stockMovementsApi } from '@/lib/stockApi';
 
 export default function EstoqueRelatorios() {
   const breadcrumbs = useBreadcrumbs([
-    { label: "Estoque", path: "/clinica/estoque" },
-    { label: "Relatórios" }
+    { label: 'Estoque', path: '/clinica/estoque' },
+    { label: 'Relatórios' },
   ]);
 
   const { clinicId } = useClinicContext();
@@ -24,84 +30,86 @@ export default function EstoqueRelatorios() {
     posicao: { location_id: '', status: 'all' },
     movimentacao: { startDate: '', endDate: '', movement_type: 'all' },
     criticos: { min_stock_only: true },
-    abc: { start_date: '', end_date: '' }
+    abc: { start_date: '', end_date: '' },
   });
   const [loading, setLoading] = useState(false);
 
   const relatorios = [
     {
-      title: "Posição de Estoque",
-      description: "Saldos atuais por produto e localização",
+      title: 'Posição de Estoque',
+      description: 'Saldos atuais por produto e localização',
       icon: Package,
-      color: "bg-blue-500",
-      id: "posicao"
+      color: 'bg-blue-500',
+      id: 'posicao',
     },
     {
-      title: "Movimentação por Período",
-      description: "Entradas, saídas e transferências",
+      title: 'Movimentação por Período',
+      description: 'Entradas, saídas e transferências',
       icon: TrendingUp,
-      color: "bg-green-500",
-      id: "movimentacao"
+      color: 'bg-green-500',
+      id: 'movimentacao',
     },
     {
-      title: "Itens Críticos",
-      description: "Produtos abaixo do estoque mínimo",
+      title: 'Itens Críticos',
+      description: 'Produtos abaixo do estoque mínimo',
       icon: AlertTriangle,
-      color: "bg-red-500",
-      id: "criticos"
+      color: 'bg-red-500',
+      id: 'criticos',
     },
     {
-      title: "Curva ABC",
-      description: "Classificação por valor e giro",
+      title: 'Curva ABC',
+      description: 'Classificação por valor e giro',
       icon: BarChart3,
-      color: "bg-purple-500",
-      id: "abc"
-    }
+      color: 'bg-purple-500',
+      id: 'abc',
+    },
   ];
 
   const generateReportData = async (reportId) => {
-    if (!clinicId) return null;
+    if (!clinicId) {
+      return null;
+    }
 
     try {
       const reportFilters = filters[reportId];
-      
+
       if (reportId === 'posicao') {
         // Gera relatório de posição de estoque
         const items = await stockItemsApi.list(clinicId);
         return {
-          title: "Posição de Estoque",
+          title: 'Posição de Estoque',
           columns: ['Produto', 'SKU', 'Categoria', 'Saldo', 'Mín.', 'Máx.', 'Status'],
-          data: items.map(item => ({
+          data: items.map((item) => ({
             name: item.name,
             sku: item.sku,
             category: item.category_name || '-',
             balance: item.total_balance || 0,
             min: item.min_stock || 0,
             max: item.max_stock || 0,
-            status: item.is_active ? 'Ativo' : 'Inativo'
-          }))
+            status: item.is_active ? 'Ativo' : 'Inativo',
+          })),
         };
       } else if (reportId === 'criticos') {
         // Relatório de itens críticos
         const items = await stockItemsApi.list(clinicId);
-        const criticos = items.filter(item => item.total_balance < item.min_stock);
+        const criticos = items.filter((item) => item.total_balance < item.min_stock);
         return {
-          title: "Itens Críticos",
+          title: 'Itens Críticos',
           columns: ['Produto', 'SKU', 'Saldo Atual', 'Mínimo', 'Falta'],
-          data: criticos.map(item => ({
+          data: criticos.map((item) => ({
             name: item.name,
             sku: item.sku,
             balance: item.total_balance || 0,
             min: item.min_stock || 0,
-            falta: Math.max(0, (item.min_stock || 0) - (item.total_balance || 0))
-          }))
+            falta: Math.max(0, (item.min_stock || 0) - (item.total_balance || 0)),
+          })),
         };
       }
-      
+
       return {
-        title: relatorios.find(r => r.id === reportId)?.title || 'Relatório',
+        title: relatorios.find((r) => r.id === reportId)?.title || 'Relatório',
         columns: ['Coluna 1', 'Coluna 2'],
-        data: []
+        data: [],
       };
     } catch (error) {
       console.error('Erro ao gerar relatório:', error);
@@ -111,7 +119,7 @@ export default function EstoqueRelatorios() {
 
   const handleGenerateReport = async (reportId) => {
     if (!clinicId) {
-      toast({ variant: "destructive", title: "Erro", description: "Clínica não identificada" });
+      toast({ variant: 'destructive', title: 'Erro', description: 'Clínica não identificada' });
       return;
     }
 
@@ -122,26 +130,38 @@ export default function EstoqueRelatorios() {
       setShowReport(true);
       setActiveReport(null);
     } catch (error) {
-      toast({ variant: "destructive", title: "Erro ao gerar relatório", description: error.message });
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao gerar relatório',
+        description: error.message,
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const downloadAsCSV = () => {
-    if (!reportData) return;
-    
+    if (!reportData) {
+      return;
+    }
+
     const csv = [
       [`Relatório: ${reportData.title}`],
       [`Gerado em: ${reportData.timestamp.toLocaleString('pt-BR')}`],
       [],
       reportData.columns.join(','),
-      ...reportData.data.map(row => 
-        reportData.columns.map(col => {
-          const key = col.toLowerCase().replace(/ã|á/g, 'a').replace(/ç/g, 'c').replace(/\s+/g, '_');
-          return row[key] || '-';
-        }).join(',')
-      )
+      ...reportData.data.map((row) =>
+        reportData.columns
+          .map((col) => {
+            const key = col
+              .toLowerCase()
+              .replace(/ã|á/g, 'a')
+              .replace(/ç/g, 'c')
+              .replace(/\s+/g, '_');
+            return row[key] || '-';
+          })
+          .join(','),
+      ),
     ].join('\n');
 
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -153,12 +173,14 @@ export default function EstoqueRelatorios() {
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
-    
-    toast({ title: "Download iniciado", description: `${reportData.title} baixado com sucesso` });
+
+    toast({ title: 'Download iniciado', description: `${reportData.title} baixado com sucesso` });
   };
 
   const downloadAsHTML = () => {
-    if (!reportData) return;
+    if (!reportData) {
+      return;
+    }
 
     const html = `
       <!DOCTYPE html>
@@ -181,17 +203,27 @@ export default function EstoqueRelatorios() {
         <div class="info">Gerado em: ${reportData.timestamp.toLocaleString('pt-BR')}</div>
         <table>
           <thead>
-            <tr>${reportData.columns.map(col => `<th>${col}</th>`).join('')}</tr>
+            <tr>${reportData.columns.map((col) => `<th>${col}</th>`).join('')}</tr>
           </thead>
           <tbody>
-            ${reportData.data.map(row => `
+            ${reportData.data
+    .map(
+      (row) => `
               <tr>
-                ${reportData.columns.map(col => {
-                  const key = col.toLowerCase().replace(/ã|á/g, 'a').replace(/ç/g, 'c').replace(/\s+/g, '_');
-                  return `<td>${row[key] || '-'}</td>`;
-                }).join('')}
+                ${reportData.columns
+    .map((col) => {
+      const key = col
+        .toLowerCase()
+        .replace(/ã|á/g, 'a')
+        .replace(/ç/g, 'c')
+        .replace(/\s+/g, '_');
+      return `<td>${row[key] || '-'}</td>`;
+    })
+    .join('')}
               </tr>
-            `).join('')}
+            `,
+    )
+    .join('')}
           </tbody>
         </table>
       </body>
@@ -207,8 +239,8 @@ export default function EstoqueRelatorios() {
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
-    
-    toast({ title: "Download iniciado", description: `${reportData.title} baixado com sucesso` });
+
+    toast({ title: 'Download iniciado', description: `${reportData.title} baixado com sucesso` });
   };
 
   return (
@@ -230,8 +262,8 @@ export default function EstoqueRelatorios() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-gray-600 mb-4">{relatorio.description}</p>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="w-full"
                 onClick={() => setActiveReport(relatorio.id)}
               >
@@ -252,13 +284,15 @@ export default function EstoqueRelatorios() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-1">Status do Item</label>
-              <select 
+              <select
                 className="w-full border rounded px-2 py-1"
                 value={filters.posicao.status}
-                onChange={(e) => setFilters({
-                  ...filters,
-                  posicao: { ...filters.posicao, status: e.target.value }
-                })}
+                onChange={(e) =>
+                  setFilters({
+                    ...filters,
+                    posicao: { ...filters.posicao, status: e.target.value },
+                  })
+                }
               >
                 <option value="all">Todos</option>
                 <option value="active">Ativos</option>
@@ -267,11 +301,10 @@ export default function EstoqueRelatorios() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setActiveReport(null)}>Cancelar</Button>
-            <Button 
-              onClick={() => handleGenerateReport('posicao')}
-              disabled={loading}
-            >
+            <Button variant="outline" onClick={() => setActiveReport(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={() => handleGenerateReport('posicao')} disabled={loading}>
               {loading ? 'Gerando...' : 'Gerar Relatório'}
             </Button>
           </DialogFooter>
@@ -286,40 +319,50 @@ export default function EstoqueRelatorios() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label htmlFor="start-date" className="block text-sm font-medium mb-1">Data Inicial</label>
-              <input 
+              <label htmlFor="start-date" className="block text-sm font-medium mb-1">
+                Data Inicial
+              </label>
+              <input
                 id="start-date"
                 type="date"
                 className="w-full border rounded px-2 py-1"
                 value={filters.movimentacao.startDate}
-                onChange={(e) => setFilters({
-                  ...filters,
-                  movimentacao: { ...filters.movimentacao, startDate: e.target.value }
-                })}
+                onChange={(e) =>
+                  setFilters({
+                    ...filters,
+                    movimentacao: { ...filters.movimentacao, startDate: e.target.value },
+                  })
+                }
               />
             </div>
             <div>
-              <label htmlFor="end-date" className="block text-sm font-medium mb-1">Data Final</label>
-              <input 
+              <label htmlFor="end-date" className="block text-sm font-medium mb-1">
+                Data Final
+              </label>
+              <input
                 id="end-date"
                 type="date"
                 className="w-full border rounded px-2 py-1"
                 value={filters.movimentacao.endDate}
-                onChange={(e) => setFilters({
-                  ...filters,
-                  movimentacao: { ...filters.movimentacao, endDate: e.target.value }
-                })}
+                onChange={(e) =>
+                  setFilters({
+                    ...filters,
+                    movimentacao: { ...filters.movimentacao, endDate: e.target.value },
+                  })
+                }
               />
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Tipo de Movimento</label>
-              <select 
+              <select
                 className="w-full border rounded px-2 py-1"
                 value={filters.movimentacao.movement_type}
-                onChange={(e) => setFilters({
-                  ...filters,
-                  movimentacao: { ...filters.movimentacao, movement_type: e.target.value }
-                })}
+                onChange={(e) =>
+                  setFilters({
+                    ...filters,
+                    movimentacao: { ...filters.movimentacao, movement_type: e.target.value },
+                  })
+                }
               >
                 <option value="all">Todos</option>
                 <option value="entry">Entradas</option>
@@ -329,11 +372,10 @@ export default function EstoqueRelatorios() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setActiveReport(null)}>Cancelar</Button>
-            <Button 
-              onClick={() => handleGenerateReport('movimentacao')}
-              disabled={loading}
-            >
+            <Button variant="outline" onClick={() => setActiveReport(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={() => handleGenerateReport('movimentacao')} disabled={loading}>
               {loading ? 'Gerando...' : 'Gerar Relatório'}
             </Button>
           </DialogFooter>
@@ -348,25 +390,28 @@ export default function EstoqueRelatorios() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <input 
+              <input
                 type="checkbox"
                 id="min-stock"
                 className="rounded"
                 checked={filters.criticos.min_stock_only}
-                onChange={(e) => setFilters({
-                  ...filters,
-                  criticos: { min_stock_only: e.target.checked }
-                })}
+                onChange={(e) =>
+                  setFilters({
+                    ...filters,
+                    criticos: { min_stock_only: e.target.checked },
+                  })
+                }
               />
-              <label htmlFor="min-stock" className="text-sm font-medium">Mostrar apenas itens abaixo do mínimo</label>
+              <label htmlFor="min-stock" className="text-sm font-medium">
+                Mostrar apenas itens abaixo do mínimo
+              </label>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setActiveReport(null)}>Cancelar</Button>
-            <Button 
-              onClick={() => handleGenerateReport('criticos')}
-              disabled={loading}
-            >
+            <Button variant="outline" onClick={() => setActiveReport(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={() => handleGenerateReport('criticos')} disabled={loading}>
               {loading ? 'Gerando...' : 'Gerar Relatório'}
             </Button>
           </DialogFooter>
@@ -381,38 +426,45 @@ export default function EstoqueRelatorios() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label htmlFor="abc-start" className="block text-sm font-medium mb-1">Data Inicial (últimos 12 meses)</label>
-              <input 
+              <label htmlFor="abc-start" className="block text-sm font-medium mb-1">
+                Data Inicial (últimos 12 meses)
+              </label>
+              <input
                 id="abc-start"
                 type="date"
                 className="w-full border rounded px-2 py-1"
                 value={filters.abc.start_date}
-                onChange={(e) => setFilters({
-                  ...filters,
-                  abc: { ...filters.abc, start_date: e.target.value }
-                })}
+                onChange={(e) =>
+                  setFilters({
+                    ...filters,
+                    abc: { ...filters.abc, start_date: e.target.value },
+                  })
+                }
               />
             </div>
             <div>
-              <label htmlFor="abc-end" className="block text-sm font-medium mb-1">Data Final</label>
-              <input 
+              <label htmlFor="abc-end" className="block text-sm font-medium mb-1">
+                Data Final
+              </label>
+              <input
                 id="abc-end"
                 type="date"
                 className="w-full border rounded px-2 py-1"
                 value={filters.abc.end_date}
-                onChange={(e) => setFilters({
-                  ...filters,
-                  abc: { ...filters.abc, end_date: e.target.value }
-                })}
+                onChange={(e) =>
+                  setFilters({
+                    ...filters,
+                    abc: { ...filters.abc, end_date: e.target.value },
+                  })
+                }
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setActiveReport(null)}>Cancelar</Button>
-            <Button 
-              onClick={() => handleGenerateReport('abc')}
-              disabled={loading}
-            >
+            <Button variant="outline" onClick={() => setActiveReport(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={() => handleGenerateReport('abc')} disabled={loading}>
               {loading ? 'Gerando...' : 'Gerar Relatório'}
             </Button>
           </DialogFooter>
@@ -428,7 +480,7 @@ export default function EstoqueRelatorios() {
                 <FileText className="w-5 h-5" />
                 <h2 className="text-xl font-bold">{reportData.title}</h2>
               </div>
-              <button 
+              <button
                 onClick={() => setShowReport(false)}
                 className="p-1 hover:bg-gray-100 rounded"
               >
@@ -451,7 +503,10 @@ export default function EstoqueRelatorios() {
                     <thead>
                       <tr className="bg-gray-100">
                         {reportData.columns.map((col, idx) => (
-                          <th key={idx} className="border px-3 py-2 text-left text-sm font-semibold">
+                          <th
+                            key={idx}
+                            className="border px-3 py-2 text-left text-sm font-semibold"
+                          >
                             {col}
                           </th>
                         ))}
@@ -461,11 +516,15 @@ export default function EstoqueRelatorios() {
                       {reportData.data.map((row, idx) => (
                         <tr key={idx} className="hover:bg-gray-50 border-t">
                           {reportData.columns.map((col, colIdx) => {
-                            const key = col.toLowerCase().replace(/ã|á/g, 'a').replace(/ç/g, 'c').replace(/\s+/g, '_');
+                            const key = col
+                              .toLowerCase()
+                              .replace(/ã|á/g, 'a')
+                              .replace(/ç/g, 'c')
+                              .replace(/\s+/g, '_');
                             const value = row[key];
                             return (
                               <td key={colIdx} className="border px-3 py-2 text-sm">
-                                {typeof value === 'number' ? value.toFixed(2) : (value || '-')}
+                                {typeof value === 'number' ? value.toFixed(2) : value || '-'}
                               </td>
                             );
                           })}
@@ -478,23 +537,14 @@ export default function EstoqueRelatorios() {
             </div>
 
             <div className="sticky bottom-0 bg-gray-50 border-t p-4 flex gap-2 justify-end">
-              <Button 
-                variant="outline" 
-                onClick={() => setShowReport(false)}
-              >
+              <Button variant="outline" onClick={() => setShowReport(false)}>
                 Fechar
               </Button>
-              <Button 
-                onClick={downloadAsCSV}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
+              <Button onClick={downloadAsCSV} className="bg-blue-600 hover:bg-blue-700">
                 <Download className="w-4 h-4 mr-2" />
                 Baixar CSV
               </Button>
-              <Button 
-                onClick={downloadAsHTML}
-                className="bg-green-600 hover:bg-green-700"
-              >
+              <Button onClick={downloadAsHTML} className="bg-green-600 hover:bg-green-700">
                 <Download className="w-4 h-4 mr-2" />
                 Baixar HTML
               </Button>
@@ -505,4 +555,3 @@ export default function EstoqueRelatorios() {
     </PageLayout>
   );
 }
-

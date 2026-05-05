@@ -5,15 +5,34 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
-import { 
-  UserCheck, 
-  Plus, 
-  Edit, 
+import {
+  UserCheck,
+  Plus,
+  Edit,
   Save,
   Settings,
   FileCode,
@@ -22,7 +41,7 @@ import {
   AlertCircle,
   CheckCircle,
   Copy,
-  Upload
+  Upload,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 
@@ -56,7 +75,7 @@ export default function ConfiguracoesFaturamento() {
     exige_autorizacao: true,
     dias_vencimento: 30,
     percentual_iss: 0,
-    observacoes: ''
+    observacoes: '',
   });
 
   // Mock data para configurações TISS
@@ -76,7 +95,7 @@ export default function ConfiguracoesFaturamento() {
     caminho_certificado: 'C:\\Certificados\\clinica.p12',
     senha_certificado: '******',
     backup_automatico: true,
-    dias_backup: 30
+    dias_backup: 30,
   };
 
   // Mock data para convênios
@@ -97,7 +116,7 @@ export default function ConfiguracoesFaturamento() {
       dias_vencimento: 30,
       percentual_iss: 5.0,
       data_criacao: '2024-01-15',
-      ultimo_envio: '2025-01-30'
+      ultimo_envio: '2025-01-30',
     },
     {
       id: 'conv_002',
@@ -115,7 +134,7 @@ export default function ConfiguracoesFaturamento() {
       dias_vencimento: 30,
       percentual_iss: 5.0,
       data_criacao: '2024-02-10',
-      ultimo_envio: '2025-01-29'
+      ultimo_envio: '2025-01-29',
     },
     {
       id: 'conv_003',
@@ -133,8 +152,8 @@ export default function ConfiguracoesFaturamento() {
       dias_vencimento: 45,
       percentual_iss: 5.0,
       data_criacao: '2024-03-05',
-      ultimo_envio: null
-    }
+      ultimo_envio: null,
+    },
   ];
 
   // Mock data para configurações gerais
@@ -150,7 +169,7 @@ export default function ConfiguracoesFaturamento() {
     integrar_agenda: true,
     calcular_iss_automatico: true,
     margem_seguranca_glosa: 10.0,
-    prazo_envio_lotes: 5
+    prazo_envio_lotes: 5,
   };
 
   useEffect(() => {
@@ -166,9 +185,9 @@ export default function ConfiguracoesFaturamento() {
     } catch (error) {
       console.error('Erro ao buscar configurações:', error);
       toast({
-        title: "Erro",
-        description: "Não foi possível carregar as configurações.",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Não foi possível carregar as configurações.',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -179,16 +198,16 @@ export default function ConfiguracoesFaturamento() {
     e.preventDefault();
     try {
       console.log('Salvando configurações TISS:', configTiss);
-      
+
       toast({
-        title: "Configurações salvas",
-        description: "Configurações TISS atualizadas com sucesso."
+        title: 'Configurações salvas',
+        description: 'Configurações TISS atualizadas com sucesso.',
       });
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Não foi possível salvar as configurações.",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Não foi possível salvar as configurações.',
+        variant: 'destructive',
       });
     }
   };
@@ -197,16 +216,16 @@ export default function ConfiguracoesFaturamento() {
     e.preventDefault();
     try {
       console.log('Salvando configurações gerais:', configGerais);
-      
+
       toast({
-        title: "Configurações salvas",
-        description: "Configurações gerais atualizadas com sucesso."
+        title: 'Configurações salvas',
+        description: 'Configurações gerais atualizadas com sucesso.',
       });
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Não foi possível salvar as configurações.",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Não foi possível salvar as configurações.',
+        variant: 'destructive',
       });
     }
   };
@@ -217,14 +236,16 @@ export default function ConfiguracoesFaturamento() {
       const convenioData = {
         ...formConvenio,
         id: editingConvenio ? editingConvenio.id : `conv_${Date.now()}`,
-        data_criacao: editingConvenio ? editingConvenio.data_criacao : new Date().toISOString().split('T')[0]
+        data_criacao: editingConvenio
+          ? editingConvenio.data_criacao
+          : new Date().toISOString().split('T')[0],
       };
 
       console.log('Salvando convênio:', convenioData);
 
       toast({
-        title: editingConvenio ? "Convênio atualizado" : "Convênio criado",
-        description: `Convênio ${editingConvenio ? 'atualizado' : 'criado'} com sucesso.`
+        title: editingConvenio ? 'Convênio atualizado' : 'Convênio criado',
+        description: `Convênio ${editingConvenio ? 'atualizado' : 'criado'} com sucesso.`,
       });
 
       setIsDialogOpen(false);
@@ -233,9 +254,9 @@ export default function ConfiguracoesFaturamento() {
       fetchConfiguracoes();
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Não foi possível salvar o convênio.",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Não foi possível salvar o convênio.',
+        variant: 'destructive',
       });
     }
   };
@@ -255,7 +276,7 @@ export default function ConfiguracoesFaturamento() {
       exige_autorizacao: true,
       dias_vencimento: 30,
       percentual_iss: 0,
-      observacoes: ''
+      observacoes: '',
     });
   };
 
@@ -275,7 +296,7 @@ export default function ConfiguracoesFaturamento() {
       exige_autorizacao: convenio.exige_autorizacao,
       dias_vencimento: convenio.dias_vencimento,
       percentual_iss: convenio.percentual_iss,
-      observacoes: convenio.observacoes || ''
+      observacoes: convenio.observacoes || '',
     });
     setIsDialogOpen(true);
   };
@@ -283,19 +304,19 @@ export default function ConfiguracoesFaturamento() {
   const handleTestarConexao = async (convenio) => {
     try {
       console.log('Testando conexão:', convenio.nome);
-      
+
       // Simular teste de conexão
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
       toast({
-        title: "Conexão testada",
-        description: `Conexão com ${convenio.nome} realizada com sucesso.`
+        title: 'Conexão testada',
+        description: `Conexão com ${convenio.nome} realizada com sucesso.`,
       });
     } catch (error) {
       toast({
-        title: "Erro de conexão",
+        title: 'Erro de conexão',
         description: `Não foi possível conectar com ${convenio.nome}.`,
-        variant: "destructive"
+        variant: 'destructive',
       });
     }
   };
@@ -373,9 +394,11 @@ export default function ConfiguracoesFaturamento() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="versao_padrao">Versão TISS Padrão</Label>
-                  <Select 
+                  <Select
                     value={configTiss.versao_padrao || ''}
-                    onValueChange={(value) => setConfigTiss({...configTiss, versao_padrao: value})}
+                    onValueChange={(value) =>
+                      setConfigTiss({ ...configTiss, versao_padrao: value })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -392,7 +415,9 @@ export default function ConfiguracoesFaturamento() {
                   <Input
                     id="codigo_prestador"
                     value={configTiss.codigo_prestador || ''}
-                    onChange={(e) => setConfigTiss({...configTiss, codigo_prestador: e.target.value})}
+                    onChange={(e) =>
+                      setConfigTiss({ ...configTiss, codigo_prestador: e.target.value })
+                    }
                     placeholder="Código junto à ANS"
                     required
                   />
@@ -403,7 +428,9 @@ export default function ConfiguracoesFaturamento() {
                   <Input
                     id="nome_prestador"
                     value={configTiss.nome_prestador || ''}
-                    onChange={(e) => setConfigTiss({...configTiss, nome_prestador: e.target.value})}
+                    onChange={(e) =>
+                      setConfigTiss({ ...configTiss, nome_prestador: e.target.value })
+                    }
                     required
                   />
                 </div>
@@ -413,7 +440,9 @@ export default function ConfiguracoesFaturamento() {
                   <Input
                     id="cnpj_prestador"
                     value={configTiss.cnpj_prestador || ''}
-                    onChange={(e) => setConfigTiss({...configTiss, cnpj_prestador: e.target.value})}
+                    onChange={(e) =>
+                      setConfigTiss({ ...configTiss, cnpj_prestador: e.target.value })
+                    }
                     placeholder="00.000.000/0000-00"
                     required
                   />
@@ -424,7 +453,9 @@ export default function ConfiguracoesFaturamento() {
                   <Input
                     id="cnes_prestador"
                     value={configTiss.cnes_prestador || ''}
-                    onChange={(e) => setConfigTiss({...configTiss, cnes_prestador: e.target.value})}
+                    onChange={(e) =>
+                      setConfigTiss({ ...configTiss, cnes_prestador: e.target.value })
+                    }
                     placeholder="Código CNES"
                     required
                   />
@@ -435,7 +466,9 @@ export default function ConfiguracoesFaturamento() {
                   <Input
                     id="municipio_prestador"
                     value={configTiss.municipio_prestador || ''}
-                    onChange={(e) => setConfigTiss({...configTiss, municipio_prestador: e.target.value})}
+                    onChange={(e) =>
+                      setConfigTiss({ ...configTiss, municipio_prestador: e.target.value })
+                    }
                     required
                   />
                 </div>
@@ -455,7 +488,9 @@ export default function ConfiguracoesFaturamento() {
                     <Input
                       id="caminho_certificado"
                       value={configTiss.caminho_certificado || ''}
-                      onChange={(e) => setConfigTiss({...configTiss, caminho_certificado: e.target.value})}
+                      onChange={(e) =>
+                        setConfigTiss({ ...configTiss, caminho_certificado: e.target.value })
+                      }
                       placeholder="C:\Certificados\certificado.p12"
                     />
                     <Button type="button" variant="outline">
@@ -470,7 +505,9 @@ export default function ConfiguracoesFaturamento() {
                     id="senha_certificado"
                     type="password"
                     value={configTiss.senha_certificado || ''}
-                    onChange={(e) => setConfigTiss({...configTiss, senha_certificado: e.target.value})}
+                    onChange={(e) =>
+                      setConfigTiss({ ...configTiss, senha_certificado: e.target.value })
+                    }
                     placeholder="Senha do certificado"
                   />
                 </div>
@@ -481,7 +518,9 @@ export default function ConfiguracoesFaturamento() {
                   <Switch
                     id="validar_xml"
                     checked={configTiss.validar_xml || false}
-                    onCheckedChange={(checked) => setConfigTiss({...configTiss, validar_xml: checked})}
+                    onCheckedChange={(checked) =>
+                      setConfigTiss({ ...configTiss, validar_xml: checked })
+                    }
                   />
                   <Label htmlFor="validar_xml">Validar XML</Label>
                 </div>
@@ -490,7 +529,9 @@ export default function ConfiguracoesFaturamento() {
                   <Switch
                     id="gerar_hash"
                     checked={configTiss.gerar_hash || false}
-                    onCheckedChange={(checked) => setConfigTiss({...configTiss, gerar_hash: checked})}
+                    onCheckedChange={(checked) =>
+                      setConfigTiss({ ...configTiss, gerar_hash: checked })
+                    }
                   />
                   <Label htmlFor="gerar_hash">Gerar Hash</Label>
                 </div>
@@ -499,7 +540,9 @@ export default function ConfiguracoesFaturamento() {
                   <Switch
                     id="assinar_digitalmente"
                     checked={configTiss.assinar_digitalmente || false}
-                    onCheckedChange={(checked) => setConfigTiss({...configTiss, assinar_digitalmente: checked})}
+                    onCheckedChange={(checked) =>
+                      setConfigTiss({ ...configTiss, assinar_digitalmente: checked })
+                    }
                   />
                   <Label htmlFor="assinar_digitalmente">Assinar Digitalmente</Label>
                 </div>
@@ -508,7 +551,9 @@ export default function ConfiguracoesFaturamento() {
                   <Switch
                     id="backup_automatico"
                     checked={configTiss.backup_automatico || false}
-                    onCheckedChange={(checked) => setConfigTiss({...configTiss, backup_automatico: checked})}
+                    onCheckedChange={(checked) =>
+                      setConfigTiss({ ...configTiss, backup_automatico: checked })
+                    }
                   />
                   <Label htmlFor="backup_automatico">Backup Automático</Label>
                 </div>
@@ -530,7 +575,7 @@ export default function ConfiguracoesFaturamento() {
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold">Convênios Cadastrados</h2>
-            
+
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
                 <Button className="gap-2">
@@ -540,9 +585,7 @@ export default function ConfiguracoesFaturamento() {
               </DialogTrigger>
               <DialogContent className="app-dialog-shell app-dialog-shell--content app-dialog-shell--wide overflow-y-auto modal-content-scroll">
                 <DialogHeader>
-                  <DialogTitle>
-                    {editingConvenio ? 'Editar Convênio' : 'Novo Convênio'}
-                  </DialogTitle>
+                  <DialogTitle>{editingConvenio ? 'Editar Convênio' : 'Novo Convênio'}</DialogTitle>
                 </DialogHeader>
 
                 <form onSubmit={handleSubmitConvenio} className="space-y-6">
@@ -552,7 +595,7 @@ export default function ConfiguracoesFaturamento() {
                       <Input
                         id="nome"
                         value={formConvenio.nome}
-                        onChange={(e) => setFormConvenio({...formConvenio, nome: e.target.value})}
+                        onChange={(e) => setFormConvenio({ ...formConvenio, nome: e.target.value })}
                         required
                       />
                     </div>
@@ -562,7 +605,9 @@ export default function ConfiguracoesFaturamento() {
                       <Input
                         id="codigo_ans"
                         value={formConvenio.codigo_ans}
-                        onChange={(e) => setFormConvenio({...formConvenio, codigo_ans: e.target.value})}
+                        onChange={(e) =>
+                          setFormConvenio({ ...formConvenio, codigo_ans: e.target.value })
+                        }
                         placeholder="Código de registro na ANS"
                         required
                       />
@@ -570,9 +615,9 @@ export default function ConfiguracoesFaturamento() {
 
                     <div>
                       <Label htmlFor="tipo">Tipo de Convênio</Label>
-                      <Select 
+                      <Select
                         value={formConvenio.tipo}
-                        onValueChange={(value) => setFormConvenio({...formConvenio, tipo: value})}
+                        onValueChange={(value) => setFormConvenio({ ...formConvenio, tipo: value })}
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -587,9 +632,11 @@ export default function ConfiguracoesFaturamento() {
 
                     <div>
                       <Label htmlFor="versao_tiss">Versão TISS</Label>
-                      <Select 
+                      <Select
                         value={formConvenio.versao_tiss}
-                        onValueChange={(value) => setFormConvenio({...formConvenio, versao_tiss: value})}
+                        onValueChange={(value) =>
+                          setFormConvenio({ ...formConvenio, versao_tiss: value })
+                        }
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -607,7 +654,9 @@ export default function ConfiguracoesFaturamento() {
                         id="url_webservice"
                         type="url"
                         value={formConvenio.url_webservice}
-                        onChange={(e) => setFormConvenio({...formConvenio, url_webservice: e.target.value})}
+                        onChange={(e) =>
+                          setFormConvenio({ ...formConvenio, url_webservice: e.target.value })
+                        }
                         placeholder="https://webservice.convenio.com.br/tiss"
                       />
                     </div>
@@ -617,7 +666,9 @@ export default function ConfiguracoesFaturamento() {
                       <Input
                         id="usuario_ws"
                         value={formConvenio.usuario_ws}
-                        onChange={(e) => setFormConvenio({...formConvenio, usuario_ws: e.target.value})}
+                        onChange={(e) =>
+                          setFormConvenio({ ...formConvenio, usuario_ws: e.target.value })
+                        }
                         placeholder="Usuário para autenticação"
                       />
                     </div>
@@ -628,7 +679,9 @@ export default function ConfiguracoesFaturamento() {
                         id="senha_ws"
                         type="password"
                         value={formConvenio.senha_ws}
-                        onChange={(e) => setFormConvenio({...formConvenio, senha_ws: e.target.value})}
+                        onChange={(e) =>
+                          setFormConvenio({ ...formConvenio, senha_ws: e.target.value })
+                        }
                         placeholder="Senha para autenticação"
                       />
                     </div>
@@ -641,7 +694,12 @@ export default function ConfiguracoesFaturamento() {
                         min="1"
                         max="365"
                         value={formConvenio.dias_vencimento}
-                        onChange={(e) => setFormConvenio({...formConvenio, dias_vencimento: parseInt(e.target.value)})}
+                        onChange={(e) =>
+                          setFormConvenio({
+                            ...formConvenio,
+                            dias_vencimento: parseInt(e.target.value),
+                          })
+                        }
                       />
                     </div>
 
@@ -654,7 +712,12 @@ export default function ConfiguracoesFaturamento() {
                         min="0"
                         max="100"
                         value={formConvenio.percentual_iss}
-                        onChange={(e) => setFormConvenio({...formConvenio, percentual_iss: parseFloat(e.target.value)})}
+                        onChange={(e) =>
+                          setFormConvenio({
+                            ...formConvenio,
+                            percentual_iss: parseFloat(e.target.value),
+                          })
+                        }
                       />
                     </div>
                   </div>
@@ -664,7 +727,9 @@ export default function ConfiguracoesFaturamento() {
                       <Switch
                         id="ativo"
                         checked={formConvenio.ativo}
-                        onCheckedChange={(checked) => setFormConvenio({...formConvenio, ativo: checked})}
+                        onCheckedChange={(checked) =>
+                          setFormConvenio({ ...formConvenio, ativo: checked })
+                        }
                       />
                       <Label htmlFor="ativo">Ativo</Label>
                     </div>
@@ -673,7 +738,9 @@ export default function ConfiguracoesFaturamento() {
                       <Switch
                         id="validar_procedimentos"
                         checked={formConvenio.validar_procedimentos}
-                        onCheckedChange={(checked) => setFormConvenio({...formConvenio, validar_procedimentos: checked})}
+                        onCheckedChange={(checked) =>
+                          setFormConvenio({ ...formConvenio, validar_procedimentos: checked })
+                        }
                       />
                       <Label htmlFor="validar_procedimentos">Validar Procedimentos</Label>
                     </div>
@@ -682,7 +749,9 @@ export default function ConfiguracoesFaturamento() {
                       <Switch
                         id="exige_autorizacao"
                         checked={formConvenio.exige_autorizacao}
-                        onCheckedChange={(checked) => setFormConvenio({...formConvenio, exige_autorizacao: checked})}
+                        onCheckedChange={(checked) =>
+                          setFormConvenio({ ...formConvenio, exige_autorizacao: checked })
+                        }
                       />
                       <Label htmlFor="exige_autorizacao">Exige Autorização</Label>
                     </div>
@@ -693,15 +762,17 @@ export default function ConfiguracoesFaturamento() {
                     <Textarea
                       id="observacoes"
                       value={formConvenio.observacoes}
-                      onChange={(e) => setFormConvenio({...formConvenio, observacoes: e.target.value})}
+                      onChange={(e) =>
+                        setFormConvenio({ ...formConvenio, observacoes: e.target.value })
+                      }
                       placeholder="Informações adicionais sobre o convênio..."
                       rows={3}
                     />
                   </div>
 
                   <div className="flex justify-end gap-2">
-                    <Button 
-                      type="button" 
+                    <Button
+                      type="button"
                       variant="outline"
                       onClick={() => {
                         setIsDialogOpen(false);
@@ -750,15 +821,11 @@ export default function ConfiguracoesFaturamento() {
                       <TableCell className="text-center">
                         {getStatusBadge(convenio.ativo)}
                       </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {convenio.codigo_ans}
-                      </TableCell>
+                      <TableCell className="font-mono text-sm">{convenio.codigo_ans}</TableCell>
                       <TableCell>
                         <Badge variant="outline">{convenio.tipo}</Badge>
                       </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {convenio.versao_tiss}
-                      </TableCell>
+                      <TableCell className="font-mono text-sm">{convenio.versao_tiss}</TableCell>
                       <TableCell>
                         {convenio.ultimo_envio ? (
                           <div className="text-sm">
@@ -777,7 +844,7 @@ export default function ConfiguracoesFaturamento() {
                           >
                             <Edit className="w-3 h-3" />
                           </Button>
-                          
+
                           {convenio.url_webservice && (
                             <Button
                               size="sm"
@@ -794,8 +861,8 @@ export default function ConfiguracoesFaturamento() {
                             onClick={() => {
                               navigator.clipboard.writeText(convenio.codigo_ans);
                               toast({
-                                title: "Código copiado",
-                                description: "Código ANS copiado para a área de transferência."
+                                title: 'Código copiado',
+                                description: 'Código ANS copiado para a área de transferência.',
                               });
                             }}
                           >
@@ -834,7 +901,9 @@ export default function ConfiguracoesFaturamento() {
                   <Input
                     id="formato_numero_guia"
                     value={configGerais.formato_numero_guia || ''}
-                    onChange={(e) => setConfigGerais({...configGerais, formato_numero_guia: e.target.value})}
+                    onChange={(e) =>
+                      setConfigGerais({ ...configGerais, formato_numero_guia: e.target.value })
+                    }
                     placeholder="GUI{000000}-{YYYY}-{MM}"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
@@ -850,7 +919,12 @@ export default function ConfiguracoesFaturamento() {
                     min="1"
                     max="30"
                     value={configGerais.prazo_envio_lotes || ''}
-                    onChange={(e) => setConfigGerais({...configGerais, prazo_envio_lotes: parseInt(e.target.value)})}
+                    onChange={(e) =>
+                      setConfigGerais({
+                        ...configGerais,
+                        prazo_envio_lotes: parseInt(e.target.value),
+                      })
+                    }
                   />
                 </div>
 
@@ -863,7 +937,12 @@ export default function ConfiguracoesFaturamento() {
                     min="0"
                     max="50"
                     value={configGerais.margem_seguranca_glosa || ''}
-                    onChange={(e) => setConfigGerais({...configGerais, margem_seguranca_glosa: parseFloat(e.target.value)})}
+                    onChange={(e) =>
+                      setConfigGerais({
+                        ...configGerais,
+                        margem_seguranca_glosa: parseFloat(e.target.value),
+                      })
+                    }
                   />
                 </div>
 
@@ -873,7 +952,9 @@ export default function ConfiguracoesFaturamento() {
                     id="email_notificacoes"
                     type="email"
                     value={configGerais.email_notificacoes || ''}
-                    onChange={(e) => setConfigGerais({...configGerais, email_notificacoes: e.target.value})}
+                    onChange={(e) =>
+                      setConfigGerais({ ...configGerais, email_notificacoes: e.target.value })
+                    }
                     placeholder="admin@clinica.com.br"
                   />
                 </div>
@@ -884,7 +965,9 @@ export default function ConfiguracoesFaturamento() {
                   <Switch
                     id="numeracao_automatica"
                     checked={configGerais.numeracao_automatica || false}
-                    onCheckedChange={(checked) => setConfigGerais({...configGerais, numeracao_automatica: checked})}
+                    onCheckedChange={(checked) =>
+                      setConfigGerais({ ...configGerais, numeracao_automatica: checked })
+                    }
                   />
                   <Label htmlFor="numeracao_automatica">Numeração Automática</Label>
                 </div>
@@ -893,7 +976,9 @@ export default function ConfiguracoesFaturamento() {
                   <Switch
                     id="validar_cpf_paciente"
                     checked={configGerais.validar_cpf_paciente || false}
-                    onCheckedChange={(checked) => setConfigGerais({...configGerais, validar_cpf_paciente: checked})}
+                    onCheckedChange={(checked) =>
+                      setConfigGerais({ ...configGerais, validar_cpf_paciente: checked })
+                    }
                   />
                   <Label htmlFor="validar_cpf_paciente">Validar CPF</Label>
                 </div>
@@ -902,7 +987,9 @@ export default function ConfiguracoesFaturamento() {
                   <Switch
                     id="exigir_carteirinha"
                     checked={configGerais.exigir_carteirinha || false}
-                    onCheckedChange={(checked) => setConfigGerais({...configGerais, exigir_carteirinha: checked})}
+                    onCheckedChange={(checked) =>
+                      setConfigGerais({ ...configGerais, exigir_carteirinha: checked })
+                    }
                   />
                   <Label htmlFor="exigir_carteirinha">Exigir Carteirinha</Label>
                 </div>
@@ -911,7 +998,9 @@ export default function ConfiguracoesFaturamento() {
                   <Switch
                     id="integrar_agenda"
                     checked={configGerais.integrar_agenda || false}
-                    onCheckedChange={(checked) => setConfigGerais({...configGerais, integrar_agenda: checked})}
+                    onCheckedChange={(checked) =>
+                      setConfigGerais({ ...configGerais, integrar_agenda: checked })
+                    }
                   />
                   <Label htmlFor="integrar_agenda">Integrar com Agenda</Label>
                 </div>
@@ -920,7 +1009,9 @@ export default function ConfiguracoesFaturamento() {
                   <Switch
                     id="calcular_iss_automatico"
                     checked={configGerais.calcular_iss_automatico || false}
-                    onCheckedChange={(checked) => setConfigGerais({...configGerais, calcular_iss_automatico: checked})}
+                    onCheckedChange={(checked) =>
+                      setConfigGerais({ ...configGerais, calcular_iss_automatico: checked })
+                    }
                   />
                   <Label htmlFor="calcular_iss_automatico">Calcular ISS</Label>
                 </div>
@@ -929,7 +1020,9 @@ export default function ConfiguracoesFaturamento() {
                   <Switch
                     id="notificar_glosas"
                     checked={configGerais.notificar_glosas || false}
-                    onCheckedChange={(checked) => setConfigGerais({...configGerais, notificar_glosas: checked})}
+                    onCheckedChange={(checked) =>
+                      setConfigGerais({ ...configGerais, notificar_glosas: checked })
+                    }
                   />
                   <Label htmlFor="notificar_glosas">Notificar Glosas</Label>
                 </div>
@@ -938,7 +1031,9 @@ export default function ConfiguracoesFaturamento() {
                   <Switch
                     id="backup_automatico_geral"
                     checked={configGerais.backup_automatico || false}
-                    onCheckedChange={(checked) => setConfigGerais({...configGerais, backup_automatico: checked})}
+                    onCheckedChange={(checked) =>
+                      setConfigGerais({ ...configGerais, backup_automatico: checked })
+                    }
                   />
                   <Label htmlFor="backup_automatico_geral">Backup Automático</Label>
                 </div>
@@ -957,4 +1052,3 @@ export default function ConfiguracoesFaturamento() {
     </div>
   );
 }
-

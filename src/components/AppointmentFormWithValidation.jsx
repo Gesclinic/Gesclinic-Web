@@ -1,6 +1,12 @@
 import React, { useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { ValidatedFormField, ValidatedFormFieldGroup } from '@/components/forms/ValidatedFormField';
 import { useFormValidation, validators, composeValidators } from '@/hooks/useFormValidation';
 import { useDependentSelect } from '@/hooks/useDynamicSelect';
@@ -46,42 +52,42 @@ export function AppointmentFormWithValidation({
     async (fieldName, value, allValues) => {
       // Validações específicas por campo
       switch (fieldName) {
-        case 'date':
-          return validators.required('Data')(value);
+      case 'date':
+        return validators.required('Data')(value);
 
-        case 'startTime':
-          return validators.required('Hora inicial')(value);
+      case 'startTime':
+        return validators.required('Hora inicial')(value);
 
-        case 'endTime':
-          return validators.required('Hora final')(value);
+      case 'endTime':
+        return validators.required('Hora final')(value);
 
-        case 'patientId':
-          return validators.required('Paciente')(value);
+      case 'patientId':
+        return validators.required('Paciente')(value);
 
-        case 'professionalId':
-          return validators.required('Profissional')(value);
+      case 'professionalId':
+        return validators.required('Profissional')(value);
 
-        case 'serviceId':
-          return validators.required('Serviço')(value);
+      case 'serviceId':
+        return validators.required('Serviço')(value);
 
-        case 'roomId':
-          // Room é opcional se profissional trabalhar sem sala
-          return { error: null };
+      case 'roomId':
+        // Room é opcional se profissional trabalhar sem sala
+        return { error: null };
 
-        case 'insuranceId':
-          return validators.required('Convênio')(value);
+      case 'insuranceId':
+        return validators.required('Convênio')(value);
 
-        default:
-          return { error: null };
+      default:
+        return { error: null };
       }
-    }
+    },
   );
 
   // Carregar serviços quando profissional muda
   useEffect(() => {
     if (formik.values.professionalId) {
       loadCascade('services', 'professionalId', () =>
-        fetchServicesByProfessional(formik.values.professionalId)
+        fetchServicesByProfessional(formik.values.professionalId),
       );
       // Limpar serviço selecionado
       formik.setFieldValue('serviceId', '');
@@ -91,40 +97,38 @@ export function AppointmentFormWithValidation({
   // Carregar planos quando convênio muda
   useEffect(() => {
     if (formik.values.insuranceId) {
-      loadCascade('plans', 'insuranceId', () =>
-        fetchPlansByInsurance(formik.values.insuranceId)
-      );
+      loadCascade('plans', 'insuranceId', () => fetchPlansByInsurance(formik.values.insuranceId));
       formik.setFieldValue('planId', '');
     }
   }, [formik.values.insuranceId]);
 
   // Opções de formato para selects
-  const professionalOptions = professionals.map(p => ({
+  const professionalOptions = professionals.map((p) => ({
     value: p.id,
     label: p.name,
   }));
 
-  const patientOptions = patients.map(p => ({
+  const patientOptions = patients.map((p) => ({
     value: p.id,
     label: `${p.name} (${p.cpf || 'S/CPF'})`,
   }));
 
-  const roomOptions = rooms.map(r => ({
+  const roomOptions = rooms.map((r) => ({
     value: r.id,
     label: r.name,
   }));
 
-  const insuranceOptions = insurances.map(i => ({
+  const insuranceOptions = insurances.map((i) => ({
     value: i.id,
     label: i.name,
   }));
 
-  const serviceOptions = getCascadeOptions('services').map(s => ({
+  const serviceOptions = getCascadeOptions('services').map((s) => ({
     value: s.id,
     label: s.name,
   }));
 
-  const planOptions = getCascadeOptions('plans').map(p => ({
+  const planOptions = getCascadeOptions('plans').map((p) => ({
     value: p.id,
     label: p.name,
   }));
@@ -172,7 +176,9 @@ export function AppointmentFormWithValidation({
       type: 'select',
       options: serviceOptions,
       required: true,
-      placeholder: formik.validating.professionalId ? 'Carregando...' : 'Selecione um profissional primeiro',
+      placeholder: formik.validating.professionalId
+        ? 'Carregando...'
+        : 'Selecione um profissional primeiro',
       disabled: !formik.values.professionalId || formik.validating.serviceId,
     },
     {
@@ -240,9 +246,7 @@ export function AppointmentFormWithValidation({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="app-dialog-shell app-dialog-shell--content app-dialog-shell--wide overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
-            {initialValues.id ? 'Editar Agendamento' : 'Novo Agendamento'}
-          </DialogTitle>
+          <DialogTitle>{initialValues.id ? 'Editar Agendamento' : 'Novo Agendamento'}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6 py-4">
@@ -352,8 +356,8 @@ export function AppointmentFormWithValidation({
                 !formik.values.professionalId
                   ? 'Selecione um profissional primeiro'
                   : formik.validating.serviceId
-                  ? 'Carregando serviços...'
-                  : 'Selecione o serviço'
+                    ? 'Carregando serviços...'
+                    : 'Selecione o serviço'
               }
               disabled={!formik.values.professionalId}
               required
@@ -462,8 +466,8 @@ export function AppointmentFormWithValidation({
             {submitSuccess
               ? '✅ Agendamento Criado'
               : formik.isValidating
-              ? 'Validando...'
-              : 'Criar Agendamento'}
+                ? 'Validando...'
+                : 'Criar Agendamento'}
           </Button>
         </DialogFooter>
       </DialogContent>

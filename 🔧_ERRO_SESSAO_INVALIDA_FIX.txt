@@ -1,0 +1,57 @@
+🔥 NOVO ERRO DIAGNOSTICADO
+
+═══════════════════════════════════════════════════════════════════════════════
+
+ERRO ENCONTRADO:
+"Sem usuário autenticado. Sessão inválida."
+
+SIGNIFICADO:
+auth.uid() retornou NULL no trigger!
+
+CAUSA PROVÁVEL:
+SECURITY DEFINER na função pode estar bloqueando auth.uid()
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+2 SOLUÇÕES:
+
+✅ OPÇÃO 1: Tentar Logout + Login (Rápido)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Clique OK para fechar a modal
+2. Canto superior direito: Logout
+3. Feche o browser completamente (Alt+F4 ou Cmd+Q)
+4. Abra novamente: http://localhost:3000/clinica/agenda
+5. Faça Login novamente
+6. Teste criar agendamento
+
+Se funcionar: ✅ Problema era sessão expirada
+Se não funcionar: Vá para OPÇÃO 2
+
+
+✅ OPÇÃO 2: Executar Trigger v3 (Definitivo)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Arquivo: ⚡_TRIGGER_v3_SEM_SECURITY_DEFINER.sql
+
+Este trigger REMOVE o SECURITY DEFINER que estava bloqueando auth.uid()
+
+1. Supabase Dashboard → SQL Editor → New Query
+2. Copiar TODO o arquivo: ⚡_TRIGGER_v3_SEM_SECURITY_DEFINER.sql
+3. Colar tudo
+4. Clique RUN
+5. Recarregue página (Ctrl+R)
+6. Logout + Login
+7. Teste criar agendamento
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+RECOMENDAÇÃO:
+
+Tente OPÇÃO 1 primeiro (mais rápido).
+Se não funcionar, execute OPÇÃO 2.
+
+
+═══════════════════════════════════════════════════════════════════════════════

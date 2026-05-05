@@ -43,23 +43,25 @@ src/AppRoutes.jsx                     # ✅ Rota atualizada
 ## 🚀 Como Usar
 
 ### 1. Acessar a Agenda
+
 ```
 Navegue até: http://localhost:3000/clinica/agenda
 ```
 
 ### 2. Importar useAgendaStore em Outros Componentes
+
 ```javascript
 import { useAgendaStore } from '@/pages/clinica/agenda/hooks/useAgendaStore';
 
 const MyComponent = () => {
   const agenda = useAgendaStore();
-  
+
   // Mudar modo de visualização
   agenda.setViewMode('profissional');
-  
+
   // Aplicar filtro
   agenda.updateFilter('professional', '123');
-  
+
   // Navegar datas
   agenda.nextDay();
   agenda.goToday();
@@ -67,55 +69,56 @@ const MyComponent = () => {
 ```
 
 ### 3. Estados Disponíveis
+
 ```javascript
 const agenda = useAgendaStore();
 
 // 📅 Data
-agenda.date                          // String ISO (YYYY-MM-DD)
-agenda.setDate(date)                 // Definir data
-agenda.previousDay()                 // Dia anterior
-agenda.nextDay()                     // Próximo dia
-agenda.goToday()                     // Voltar ao hoje
+agenda.date; // String ISO (YYYY-MM-DD)
+agenda.setDate(date); // Definir data
+agenda.previousDay(); // Dia anterior
+agenda.nextDay(); // Próximo dia
+agenda.goToday(); // Voltar ao hoje
 
 // 👁️ Modo de Visualização
-agenda.viewMode                      // 'geral' | 'profissional' | 'sala'
-agenda.setViewMode(mode)             // Mudar modo
+agenda.viewMode; // 'geral' | 'profissional' | 'sala'
+agenda.setViewMode(mode); // Mudar modo
 
 // 🔍 Filtros
-agenda.filters                       // { professional, room, status, payer, service, searchText }
-agenda.updateFilter(key, value)      // Atualizar um filtro
-agenda.clearFilters()                // Limpar todos
-agenda.setMultipleFilters(obj)       // Definir vários de uma vez
+agenda.filters; // { professional, room, status, payer, service, searchText }
+agenda.updateFilter(key, value); // Atualizar um filtro
+agenda.clearFilters(); // Limpar todos
+agenda.setMultipleFilters(obj); // Definir vários de uma vez
 
 // 📊 Agendamentos
-agenda.appointments                  // Array de todos os agendamentos
-agenda.filteredAppointments          // Array filtrado
-agenda.setAppointments(arr)          // Definir lista
+agenda.appointments; // Array de todos os agendamentos
+agenda.filteredAppointments; // Array filtrado
+agenda.setAppointments(arr); // Definir lista
 
 // 🎯 Slot Selecionado
-agenda.selectedSlot                  // Agendamento selecionado
-agenda.selectSlot(slot)              // Selecionar
-agenda.deselectSlot()                // Deselecionar
+agenda.selectedSlot; // Agendamento selecionado
+agenda.selectSlot(slot); // Selecionar
+agenda.deselectSlot(); // Deselecionar
 
 // 📈 KPIs
-agenda.indicators                    // { total, confirmed, noShow, fitting, occupationRate }
+agenda.indicators; // { total, confirmed, noShow, fitting, occupationRate }
 
 // 🧮 Metadata
-agenda.metadata                      // { professionals, rooms, services, payers, patients }
-agenda.setMetadata(obj)              // Definir
+agenda.metadata; // { professionals, rooms, services, payers, patients }
+agenda.setMetadata(obj); // Definir
 ```
 
 ## 🔐 Permissões por Role
 
-| Ação | recepcao | profissional | gestor | admin |
-|------|----------|--------------|--------|-------|
-| Ver agendamentos | ✅ | ✅ (seus) | ✅ | ✅ |
-| Criar novo | ✅ | ❌ | ✅ | ✅ |
-| Editar | ✅ | ❌ | ✅ | ✅ |
-| Editar valor | ❌ | ❌ | ✅ | ✅ |
-| Cancelar | ❌ | ❌ | ✅ | ✅ |
-| Confirmar | ✅ | ✅ | ✅ | ✅ |
-| Ver indicadores | ❌ | ❌ | ✅ | ✅ |
+| Ação             | recepcao | profissional | gestor | admin |
+| ---------------- | -------- | ------------ | ------ | ----- |
+| Ver agendamentos | ✅       | ✅ (seus)    | ✅     | ✅    |
+| Criar novo       | ✅       | ❌           | ✅     | ✅    |
+| Editar           | ✅       | ❌           | ✅     | ✅    |
+| Editar valor     | ❌       | ❌           | ✅     | ✅    |
+| Cancelar         | ❌       | ❌           | ✅     | ✅    |
+| Confirmar        | ✅       | ✅           | ✅     | ✅    |
+| Ver indicadores  | ❌       | ❌           | ✅     | ✅    |
 
 ## 🎨 Cores por Status
 
@@ -130,6 +133,7 @@ Encaixe:        bg-blue-100    ⚡
 ## 📊 Fluxo de Agendamento
 
 ### Criar Novo
+
 1. Clicar em slot vazio
 2. Modal abre com abas: Agendamento, Paciente, Financeiro
 3. Preencher dados
@@ -137,6 +141,7 @@ Encaixe:        bg-blue-100    ⚡
 5. Ou clicar "Encaixe" → Cria com status 'encaixe'
 
 ### Editar Existente
+
 1. Clicar em agendamento existente
 2. Modal abre com todas as abas, incluindo Histórico
 3. Permissões por role são aplicadas
@@ -184,12 +189,14 @@ Veja `GUIA_INTEGRACAO_API.js` para instruções detalhadas.
 ## 📚 Documentação Técnica
 
 Para mais detalhes, consulte:
+
 - `AGENDA_ARQUITETURA.js` - Arquitetura completa
 - `GUIA_INTEGRACAO_API.js` - Guia de implementação API
 
 ## 🤝 Suporte
 
 Em caso de dúvidas, verifique:
+
 1. Console do navegador (F12) para erros
 2. Comentários no código
 3. Estrutura de dados em `AGENDA_ARQUITETURA.js`

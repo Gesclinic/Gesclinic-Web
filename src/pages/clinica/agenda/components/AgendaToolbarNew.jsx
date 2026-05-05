@@ -3,7 +3,7 @@ import { ChevronDown } from 'lucide-react';
 
 /**
  * AgendaToolbarNew - Segmented control para mudar visão da agenda
- * 
+ *
  * Props:
  * - viewMode: 'geral' | 'profissional' | 'sala'
  * - onViewModeChange: (mode) => void
@@ -26,14 +26,14 @@ export default function AgendaToolbarNew({
 
   const getProfileLabel = () => {
     switch (agendaMode) {
-      case 'recepcao':
-        return '📞 Recepção';
-      case 'profissional':
-        return '👨‍⚕️ Profissional';
-      case 'gestor':
-        return '📊 Gestor';
-      default:
-        return 'Perfil';
+    case 'recepcao':
+      return '📞 Recepção';
+    case 'profissional':
+      return '👨‍⚕️ Profissional';
+    case 'gestor':
+      return '📊 Gestor';
+    default:
+      return 'Perfil';
     }
   };
 
@@ -112,4 +112,3 @@ export default function AgendaToolbarNew({
     </div>
   );
 }
-

@@ -8,7 +8,7 @@ import { useClinicContext } from '@/contexts/ClinicContext';
 /**
  * 🔍 PatientSearchOrCreate - Busca paciente existente ou cria novo
  * Com autocomplete em tempo real
- * 
+ *
  * Props:
  * - onSelect: (pacientData) => {} - quando seleciona paciente
  * - onCreateNew: () => {} - quando ativa modo "novo paciente"
@@ -24,7 +24,7 @@ export default function PatientSearchOrCreate({
 }) {
   const { clinic } = useClinicContext();
   const cId = clinicId || clinic?.id;
-  
+
   const [mode, setMode] = useState('search'); // 'search' | 'new' | 'selected'
   const [searchTerm, setSearchTerm] = useState(initialPhone || '');
   const [searchResults, setSearchResults] = useState([]);
@@ -36,9 +36,11 @@ export default function PatientSearchOrCreate({
   // 🔍 Buscar pacientes (com debounce)
   const handleSearchChange = async (value) => {
     setSearchTerm(value);
-    
+
     // Limpar timeout anterior
-    if (debounceTimer) clearTimeout(debounceTimer);
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
 
     // Se vazio, não buscar
     if (!value.trim()) {
@@ -102,14 +104,22 @@ export default function PatientSearchOrCreate({
 
   const handleSelectPatient = (patient) => {
     console.log('✅ Paciente selecionado:', patient.name);
+
+    // ✅ VALIDAÇÃO: Garantir que patient.id está preenchido
+    if (!patient.id) {
+      console.error('❌ ERRO: Paciente selecionado mas ID está vazio!', patient);
+      alert('Erro: Paciente sem ID válido. Por favor, selecione outro paciente.');
+      return;
+    }
+
     // ✅ Mapeamento CORRETO dos campos da API para o estado cadastralData
     onSelect({
       // Dados de agendamento
-      patientId: patient.id,
+      patientId: patient.id, // ✅ GARANTIDO: vem preenchido
       patientName: patient.name,
       phone: patient.phone || '',
       recordNumber: patient.prontuario_numero || '',
-      
+
       // Dados cadastrais (mapeamento correto!)
       name: patient.name || '', // ✅ Nome completo
       document_id: patient.document_id || '', // ✅ CPF/RG
@@ -142,7 +152,9 @@ export default function PatientSearchOrCreate({
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs text-green-600 font-semibold mb-1">✅ PACIENTE SELECIONADO</p>
-                <p className="font-semibold text-lg text-green-900">{selectedPatient.patientName}</p>
+                <p className="font-semibold text-lg text-green-900">
+                  {selectedPatient.patientName}
+                </p>
                 <p className="text-sm text-green-800 mt-1">📞 {selectedPatient.phone}</p>
                 {selectedPatient.document_id && (
                   <p className="text-sm text-green-800">📋 {selectedPatient.document_id}</p>
@@ -203,7 +215,9 @@ export default function PatientSearchOrCreate({
               placeholder="Nome, telefone ou CPF..."
               value={searchTerm}
               onChange={(e) => handleSearchChange(e.target.value)}
-              onFocus={() => searchTerm.length >= 2 && searchResults.length > 0 && setShowResults(true)}
+              onFocus={() =>
+                searchTerm.length >= 2 && searchResults.length > 0 && setShowResults(true)
+              }
               className="w-full"
             />
 
@@ -222,12 +236,7 @@ export default function PatientSearchOrCreate({
             </div>
           )}
 
-          <Button
-            onClick={handleCreateNewPatient}
-            variant="outline"
-            size="sm"
-            className="w-full"
-          >
+          <Button onClick={handleCreateNewPatient} variant="outline" size="sm" className="w-full">
             ➕ Criar Novo Paciente (Cadastro Simples)
           </Button>
         </div>

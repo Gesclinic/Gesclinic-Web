@@ -1,0 +1,41 @@
+﻿
+> Gesclinic-Web@0.0.0 build
+> vite build
+
+[36mvite v5.4.21 [32mbuilding for production...[36m[39m
+transforming...
+[32mÔ£ô[39m 489 modules transformed.
+node.exe : [31mx[39m Build failed in 4.82s
+No linha:1 caractere:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([31mx[39m Build failed in 4.82s 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[31merror during build:
+[31msrc/lib/stockApi.js (52:49): Expected ',', got ';'[31m
+file: [36mC:/Users/ferna/Desktop/Projeto Gesclinic 
+Web/src/lib/stockApi.js:52:49[31m
+[33m
+50:     return handleResponse(await supabase
+51:       .from('stock_categories')
+52:       .update(cleanPayload).eq('id', id).select();
+                                                     ^
+53: 
+54:     if (!data || data.length === 0) {
+[31m
+    at getRollupError (file:///C:/Users/ferna/Desktop/Projeto%20Gesclinic%20Web
+/node_modules/rollup/dist/es/shared/parseAst.js:401:41)
+    at ParseError.initialise (file:///C:/Users/ferna/Desktop/Projeto%20Gesclini
+c%20Web/node_modules/rollup/dist/es/shared/node-entry.js:14469:28)
+    at convertNode (file:///C:/Users/ferna/Desktop/Projeto%20Gesclinic%20Web/no
+de_modules/rollup/dist/es/shared/node-entry.js:16352:10)
+    at convertProgram (file:///C:/Users/ferna/Desktop/Projeto%20Gesclinic%20Web
+/node_modules/rollup/dist/es/shared/node-entry.js:15592:12)
+    at Module.setSource (file:///C:/Users/ferna/Desktop/Projeto%20Gesclinic%20W
+eb/node_modules/rollup/dist/es/shared/node-entry.js:17352:24)
+    at async ModuleLoader.addModuleSource (file:///C:/Users/ferna/Desktop/Proje
+to%20Gesclinic%20Web/node_modules/rollup/dist/es/shared/node-entry.js:21377:13)
+[39m
+

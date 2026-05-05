@@ -32,7 +32,15 @@ export function useToastManager() {
   }, []);
 
   const notify = useCallback(
-    (title: string, options?: { description?: string; type?: ToastType; duration?: number; action?: Toast['action'] }) => {
+    (
+      title: string,
+      options?: {
+        description?: string;
+        type?: ToastType;
+        duration?: number;
+        action?: Toast['action'];
+      },
+    ) => {
       const id = String(++toastId);
       const toast: Toast = {
         id,
@@ -40,7 +48,7 @@ export function useToastManager() {
         description: options?.description,
         type: options?.type || 'info',
         duration: options?.duration || 4000,
-        action: options?.action
+        action: options?.action,
       };
 
       toastStore.push(toast);
@@ -54,7 +62,7 @@ export function useToastManager() {
 
       return id;
     },
-    []
+    [],
   );
 
   const removeToast = useCallback((id: string) => {
@@ -68,25 +76,25 @@ export function useToastManager() {
   const success = useCallback(
     (title: string, description?: string) =>
       notify(title, { description, type: 'success', duration: 3000 }),
-    [notify]
+    [notify],
   );
 
   const error = useCallback(
     (title: string, description?: string) =>
       notify(title, { description, type: 'error', duration: 5000 }),
-    [notify]
+    [notify],
   );
 
   const warning = useCallback(
     (title: string, description?: string) =>
       notify(title, { description, type: 'warning', duration: 4000 }),
-    [notify]
+    [notify],
   );
 
   const info = useCallback(
     (title: string, description?: string) =>
       notify(title, { description, type: 'info', duration: 3000 }),
-    [notify]
+    [notify],
   );
 
   // Subscribe on mount
@@ -101,20 +109,23 @@ export function useToastManager() {
     success,
     error,
     warning,
-    info
+    info,
   };
 }
 
 // Export for use in non-React contexts
 export const toastService = {
-  notify: (title: string, options?: { description?: string; type?: ToastType; duration?: number }) => {
+  notify: (
+    title: string,
+    options?: { description?: string; type?: ToastType; duration?: number },
+  ) => {
     const id = String(++toastId);
     const toast: Toast = {
       id,
       title,
       description: options?.description,
       type: options?.type || 'info',
-      duration: options?.duration || 4000
+      duration: options?.duration || 4000,
     };
 
     toastStore.push(toast);
@@ -139,5 +150,5 @@ export const toastService = {
   warning: (title: string, description?: string) =>
     toastService.notify(title, { description, type: 'warning', duration: 4000 }),
   info: (title: string, description?: string) =>
-    toastService.notify(title, { description, type: 'info', duration: 3000 })
+    toastService.notify(title, { description, type: 'info', duration: 3000 }),
 };

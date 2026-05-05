@@ -23,13 +23,19 @@ export default function EstoqueLocais() {
   const [itemToDelete, setItemToDelete] = useState(null);
 
   const fetchItems = useCallback(async () => {
-    if (!clinicId) return;
+    if (!clinicId) {
+      return;
+    }
     setLoading(true);
     try {
       const data = await stockLocationsApi.list(clinicId);
       setItems(data);
     } catch (error) {
-      toast({ variant: 'destructive', title: `Erro ao buscar ${PLURAL_ENTITY_NAME.toLowerCase()}`, description: error.message });
+      toast({
+        variant: 'destructive',
+        title: `Erro ao buscar ${PLURAL_ENTITY_NAME.toLowerCase()}`,
+        description: error.message,
+      });
     } finally {
       setLoading(false);
     }
@@ -56,7 +62,11 @@ export default function EstoqueLocais() {
       fetchItems();
       setDialogOpen(false);
     } catch (error) {
-      toast({ variant: 'destructive', title: `Erro ao salvar ${ENTITY_NAME.toLowerCase()}`, description: error.message });
+      toast({
+        variant: 'destructive',
+        title: `Erro ao salvar ${ENTITY_NAME.toLowerCase()}`,
+        description: error.message,
+      });
     }
   };
 
@@ -66,13 +76,19 @@ export default function EstoqueLocais() {
   };
 
   const handleDelete = async () => {
-    if (!itemToDelete) return;
+    if (!itemToDelete) {
+      return;
+    }
     try {
       await stockLocationsApi.remove(itemToDelete.id);
       toast({ title: `${ENTITY_NAME} excluído com sucesso!` });
       fetchItems();
     } catch (error) {
-      toast({ variant: 'destructive', title: `Erro ao excluir ${ENTITY_NAME.toLowerCase()}`, description: error.message });
+      toast({
+        variant: 'destructive',
+        title: `Erro ao excluir ${ENTITY_NAME.toLowerCase()}`,
+        description: error.message,
+      });
     } finally {
       setDeleteAlertOpen(false);
       setItemToDelete(null);
@@ -90,7 +106,9 @@ export default function EstoqueLocais() {
       </div>
 
       <Card>
-        <CardHeader><CardTitle>Lista de {PLURAL_ENTITY_NAME}</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>Lista de {PLURAL_ENTITY_NAME}</CardTitle>
+        </CardHeader>
         <CardContent>
           <div className="border rounded-md">
             <table className="w-full text-sm">
@@ -103,25 +121,39 @@ export default function EstoqueLocais() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan="3" className="p-4 text-center">Carregando...</td></tr>
-                ) : items.map(item => (
-                  <tr key={item.id} className="border-b">
-                    <td className="p-3 font-medium">{item.name}</td>
-                    <td className="p-3">
-                      {item.is_default && (
-                        <Badge variant="default">Padrão</Badge>
-                      )}
-                    </td>
-                    <td className="p-3 flex justify-end gap-2">
-                      <Button variant="outline" size="sm" onClick={() => handleOpenDialog(item)}><Edit className="h-4 w-4" /></Button>
-                      <Button variant="destructive" size="sm" onClick={() => openDeleteAlert(item)}><Trash2 className="h-4 w-4" /></Button>
+                  <tr>
+                    <td colSpan="3" className="p-4 text-center">
+                      Carregando...
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  items.map((item) => (
+                    <tr key={item.id} className="border-b">
+                      <td className="p-3 font-medium">{item.name}</td>
+                      <td className="p-3">
+                        {item.is_default && <Badge variant="default">Padrão</Badge>}
+                      </td>
+                      <td className="p-3 flex justify-end gap-2">
+                        <Button variant="outline" size="sm" onClick={() => handleOpenDialog(item)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => openDeleteAlert(item)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
-             {!loading && items.length === 0 && (
-              <p className="text-muted-foreground text-center py-4">Nenhum {ENTITY_NAME.toLowerCase()} encontrado.</p>
+            {!loading && items.length === 0 && (
+              <p className="text-muted-foreground text-center py-4">
+                Nenhum {ENTITY_NAME.toLowerCase()} encontrado.
+              </p>
             )}
           </div>
         </CardContent>
@@ -140,10 +172,9 @@ export default function EstoqueLocais() {
         open={deleteAlertOpen}
         onOpenChange={setDeleteAlertOpen}
         onConfirm={handleDelete}
-        title={`Confirmar Exclusão`}
+        title={'Confirmar Exclusão'}
         description={`Tem certeza que deseja excluir o ${ENTITY_NAME.toLowerCase()} "${itemToDelete?.name}"?`}
       />
     </div>
   );
 }
-

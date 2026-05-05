@@ -6,24 +6,24 @@
  * - TISS Endpoint
  * - Credenciais
  * - Método de submissão
- * 
+ *
  * Data: Abril 11, 2026
  */
 
-import React, { useState, useEffect } from "react";
-import { supabase } from "@/lib/customSupabaseClient";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/lib/customSupabaseClient';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   Select,
   SelectTrigger,
   SelectValue,
   SelectContent,
   SelectItem,
-} from "@/components/ui/select";
-import { AlertCircle, CheckCircle, Eye, EyeOff } from "lucide-react";
+} from '@/components/ui/select';
+import { AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
 
 export function TISSConfigurationTab({ insurance, insuranceId, onUpdate, clinicId }) {
   const [loading, setLoading] = useState(false);
@@ -32,18 +32,18 @@ export function TISSConfigurationTab({ insurance, insuranceId, onUpdate, clinicI
   const [showPassword, setShowPassword] = useState(false);
 
   const [formData, setFormData] = useState({
-    registration_ans: insurance?.registration_ans || "",
+    registration_ans: insurance?.registration_ans || '',
     tiss_enabled: insurance?.tiss_enabled || false,
-    submission_method: insurance?.submission_method || "HTTP",
-    tiss_endpoint: insurance?.tiss_endpoint || "",
-    tiss_username: insurance?.tiss_username || "",
-    tiss_password: insurance?.tiss_password || "",
-    tiss_response_email: insurance?.tiss_response_email || "",
+    submission_method: insurance?.submission_method || 'HTTP',
+    tiss_endpoint: insurance?.tiss_endpoint || '',
+    tiss_username: insurance?.tiss_username || '',
+    tiss_password: insurance?.tiss_password || '',
+    tiss_response_email: insurance?.tiss_response_email || '',
   });
 
   useEffect(() => {
     if (insurance) {
-      console.log("🔄 [TISS] Atualizando formData com dados do insurance:", {
+      console.log('🔄 [TISS] Atualizando formData com dados do insurance:', {
         id: insurance.id,
         registration_ans: insurance.registration_ans,
         tiss_enabled: insurance.tiss_enabled,
@@ -51,15 +51,15 @@ export function TISSConfigurationTab({ insurance, insuranceId, onUpdate, clinicI
         tiss_endpoint: insurance.tiss_endpoint,
         tiss_username: insurance.tiss_username,
       });
-      
+
       setFormData({
-        registration_ans: insurance.registration_ans || "",
+        registration_ans: insurance.registration_ans || '',
         tiss_enabled: insurance.tiss_enabled || false,
-        submission_method: insurance.submission_method || "HTTP",
-        tiss_endpoint: insurance.tiss_endpoint || "",
-        tiss_username: insurance.tiss_username || "",
-        tiss_password: insurance.tiss_password || "",
-        tiss_response_email: insurance.tiss_response_email || "",
+        submission_method: insurance.submission_method || 'HTTP',
+        tiss_endpoint: insurance.tiss_endpoint || '',
+        tiss_username: insurance.tiss_username || '',
+        tiss_password: insurance.tiss_password || '',
+        tiss_response_email: insurance.tiss_response_email || '',
       });
     }
   }, [insurance?.id]);
@@ -68,7 +68,7 @@ export function TISSConfigurationTab({ insurance, insuranceId, onUpdate, clinicI
     console.log(`📝 [TISS] Campo alterado - ${field}:`, value);
     setFormData((prev) => {
       const updated = { ...prev, [field]: value };
-      console.log(`📊 [TISS] FormData após alteração:`, updated);
+      console.log('📊 [TISS] FormData após alteração:', updated);
       return updated;
     });
     setSuccess(false);
@@ -80,32 +80,32 @@ export function TISSConfigurationTab({ insurance, insuranceId, onUpdate, clinicI
       setError(null);
       setSuccess(false);
 
-      console.log("📝 [TISS] Salvando configurações:", { insuranceId, clinicId });
-      console.log("📋 [TISS] FormData atual:", formData);
+      console.log('📝 [TISS] Salvando configurações:', { insuranceId, clinicId });
+      console.log('📋 [TISS] FormData atual:', formData);
 
       // Validações
       if (formData.tiss_enabled) {
-        console.log("🔍 [TISS] TISS habilitado - validando campos obrigatórios...");
-        
+        console.log('🔍 [TISS] TISS habilitado - validando campos obrigatórios...');
+
         if (!formData.registration_ans?.trim()) {
-          throw new Error("Código ANS é obrigatório quando TISS está habilitado");
+          throw new Error('Código ANS é obrigatório quando TISS está habilitado');
         }
-        console.log("✅ [TISS] Código ANS OK:", formData.registration_ans);
-        
+        console.log('✅ [TISS] Código ANS OK:', formData.registration_ans);
+
         if (!formData.submission_method) {
-          throw new Error("Método de submissão é obrigatório");
+          throw new Error('Método de submissão é obrigatório');
         }
-        console.log("✅ [TISS] Método de submissão OK:", formData.submission_method);
-        
-        if (formData.submission_method === "HTTP" && !formData.tiss_endpoint?.trim()) {
-          throw new Error("Endpoint TISS é obrigatório para submissão HTTP");
+        console.log('✅ [TISS] Método de submissão OK:', formData.submission_method);
+
+        if (formData.submission_method === 'HTTP' && !formData.tiss_endpoint?.trim()) {
+          throw new Error('Endpoint TISS é obrigatório para submissão HTTP');
         }
-        console.log("✅ [TISS] Endpoint OK:", formData.tiss_endpoint);
-        
+        console.log('✅ [TISS] Endpoint OK:', formData.tiss_endpoint);
+
         if (!formData.tiss_username?.trim() || !formData.tiss_password?.trim()) {
-          throw new Error("Credenciais (usuário e senha) são obrigatórias");
+          throw new Error('Credenciais (usuário e senha) são obrigatórias');
         }
-        console.log("✅ [TISS] Credenciais OK");
+        console.log('✅ [TISS] Credenciais OK');
       }
 
       const updateData = {
@@ -118,38 +118,38 @@ export function TISSConfigurationTab({ insurance, insuranceId, onUpdate, clinicI
         tiss_response_email: formData.tiss_response_email || null,
       };
 
-      console.log("📤 [TISS] Dados para UPDATE:", updateData);
+      console.log('📤 [TISS] Dados para UPDATE:', updateData);
 
       const { error: updateError, data } = await supabase
-        .from("health_insurances")
+        .from('health_insurances')
         .update(updateData)
-        .eq("id", insuranceId)
-        .eq("clinic_id", clinicId)
-        .select("*");
+        .eq('id', insuranceId)
+        .eq('clinic_id', clinicId)
+        .select('*');
 
-      console.log("📥 [TISS] Resposta Supabase:", { 
-        error: updateError, 
+      console.log('📥 [TISS] Resposta Supabase:', {
+        error: updateError,
         data,
         updateError_code: updateError?.code,
-        updateError_message: updateError?.message
+        updateError_message: updateError?.message,
       });
 
       if (updateError) {
-        console.error("❌ [TISS] Erro RLS ou Supabase:", updateError);
+        console.error('❌ [TISS] Erro RLS ou Supabase:', updateError);
         throw new Error(`Supabase Error: ${updateError.code} - ${updateError.message}`);
       }
 
       if (!data || data.length === 0) {
-        console.warn("⚠️ [TISS] UPDATE retornou vazio - verificar RLS ou permissões");
-        throw new Error("UPDATE retornou sem dados - verificar permissões RLS");
+        console.warn('⚠️ [TISS] UPDATE retornou vazio - verificar RLS ou permissões');
+        throw new Error('UPDATE retornou sem dados - verificar permissões RLS');
       }
 
       setSuccess(true);
       onUpdate?.();
-      console.log("✅ Configurações TISS salvas com sucesso!");
+      console.log('✅ Configurações TISS salvas com sucesso!');
     } catch (err) {
-      console.error("❌ Erro ao salvar configurações TISS:", err.message || err);
-      setError(err.message || "Erro ao salvar configurações");
+      console.error('❌ Erro ao salvar configurações TISS:', err.message || err);
+      setError(err.message || 'Erro ao salvar configurações');
     } finally {
       setLoading(false);
     }
@@ -193,10 +193,13 @@ export function TISSConfigurationTab({ insurance, insuranceId, onUpdate, clinicI
             type="checkbox"
             id="tiss_enabled"
             checked={formData.tiss_enabled}
-            onChange={(e) => handleChange("tiss_enabled", e.target.checked)}
+            onChange={(e) => handleChange('tiss_enabled', e.target.checked)}
             className="w-5 h-5 rounded border-gray-300 cursor-pointer"
           />
-          <label htmlFor="tiss_enabled" className="text-sm font-medium text-gray-700 cursor-pointer">
+          <label
+            htmlFor="tiss_enabled"
+            className="text-sm font-medium text-gray-700 cursor-pointer"
+          >
             ✅ Habilitar TISS para esta operadora
           </label>
         </div>
@@ -210,7 +213,7 @@ export function TISSConfigurationTab({ insurance, insuranceId, onUpdate, clinicI
               <Input
                 placeholder="Ex: 342856"
                 value={formData.registration_ans}
-                onChange={(e) => handleChange("registration_ans", e.target.value)}
+                onChange={(e) => handleChange('registration_ans', e.target.value)}
                 maxLength="20"
                 className="mt-1"
               />
@@ -224,7 +227,7 @@ export function TISSConfigurationTab({ insurance, insuranceId, onUpdate, clinicI
               <Label className="text-sm font-medium">📤 Método de Submissão *</Label>
               <Select
                 value={formData.submission_method}
-                onValueChange={(value) => handleChange("submission_method", value)}
+                onValueChange={(value) => handleChange('submission_method', value)}
               >
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Selecione o método" />
@@ -238,13 +241,13 @@ export function TISSConfigurationTab({ insurance, insuranceId, onUpdate, clinicI
             </div>
 
             {/* Endpoint TISS (se HTTP) */}
-            {formData.submission_method === "HTTP" && (
+            {formData.submission_method === 'HTTP' && (
               <div>
                 <Label className="text-sm font-medium">🔗 Endpoint TISS *</Label>
                 <Input
                   placeholder="Ex: https://api.unimed.com.br/tiss"
                   value={formData.tiss_endpoint}
-                  onChange={(e) => handleChange("tiss_endpoint", e.target.value)}
+                  onChange={(e) => handleChange('tiss_endpoint', e.target.value)}
                   className="mt-1"
                 />
                 <p className="text-xs text-gray-500 mt-1">URL do servidor TISS da operadora</p>
@@ -257,7 +260,7 @@ export function TISSConfigurationTab({ insurance, insuranceId, onUpdate, clinicI
               <Input
                 placeholder="Usuário para autenticação"
                 value={formData.tiss_username}
-                onChange={(e) => handleChange("tiss_username", e.target.value)}
+                onChange={(e) => handleChange('tiss_username', e.target.value)}
                 className="mt-1"
               />
             </div>
@@ -267,10 +270,10 @@ export function TISSConfigurationTab({ insurance, insuranceId, onUpdate, clinicI
               <Label className="text-sm font-medium">🔐 Senha TISS *</Label>
               <div className="relative mt-1">
                 <Input
-                  type={showPassword ? "text" : "password"}
+                  type={showPassword ? 'text' : 'password'}
                   placeholder="Senha para autenticação"
                   value={formData.tiss_password}
-                  onChange={(e) => handleChange("tiss_password", e.target.value)}
+                  onChange={(e) => handleChange('tiss_password', e.target.value)}
                 />
                 <button
                   type="button"
@@ -290,7 +293,7 @@ export function TISSConfigurationTab({ insurance, insuranceId, onUpdate, clinicI
                 type="email"
                 placeholder="contato@clinica.com.br"
                 value={formData.tiss_response_email}
-                onChange={(e) => handleChange("tiss_response_email", e.target.value)}
+                onChange={(e) => handleChange('tiss_response_email', e.target.value)}
                 className="mt-1"
               />
               <p className="text-xs text-gray-500 mt-1">Opcional: para receber notificações TISS</p>
@@ -306,13 +309,16 @@ export function TISSConfigurationTab({ insurance, insuranceId, onUpdate, clinicI
           disabled={loading}
           className="bg-purple-600 hover:bg-purple-700 text-white font-semibold"
         >
-          {loading ? "💾 Salvando..." : "💾 Salvar Configurações TISS"}
+          {loading ? '💾 Salvando...' : '💾 Salvar Configurações TISS'}
         </Button>
       </div>
 
       {/* DEBUG INFO */}
       <div className="bg-gray-100 p-2 rounded text-xs text-gray-600">
-        <p>🔍 Debug: insuranceId={insuranceId?.substring(0, 8)}... clinicId={clinicId?.substring(0, 8)}...</p>
+        <p>
+          🔍 Debug: insuranceId={insuranceId?.substring(0, 8)}... clinicId=
+          {clinicId?.substring(0, 8)}...
+        </p>
       </div>
 
       {/* INFO DE TISS HABILITADO */}

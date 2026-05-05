@@ -1,13 +1,13 @@
-import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator
-} from "@/components/ui/dropdown-menu";
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
 import {
   Dialog,
   DialogContent,
@@ -15,11 +15,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/components/ui/use-toast";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/components/ui/use-toast';
 import {
   APPOINTMENT_STATUS,
   STATUS_LABELS,
@@ -28,8 +28,8 @@ import {
   getAvailableActions,
   getStatusColor,
   getStatusLabel,
-  isValidStatusTransition
-} from "@/constants/appointmentStatus";
+  isValidStatusTransition,
+} from '@/constants/appointmentStatus';
 import {
   CheckCircle,
   Clock,
@@ -40,42 +40,44 @@ import {
   ArrowRight,
   Phone,
   Edit,
-  X
-} from "lucide-react";
+  X,
+} from 'lucide-react';
 
 const ACTION_ICONS = {
-  'editar': Edit,
-  'cancelar': X,
-  'checkin': UserCheck,
-  'registrar_chegada': Clock,
-  'atualizar_cadastro': Edit,
-  'validar_convenio': CreditCard,
-  'receber_pagamento': CreditCard,
-  'chamar_paciente': Phone,
-  'cancelar_presenca': X,
-  'abrir_prontuario': FileText,
-  'evoluir': Stethoscope,
-  'emitir_receita': FileText,
-  'faturar': CreditCard,
-  'repassar': ArrowRight,
-  'visualizar_historico': FileText
+  editar: Edit,
+  cancelar: X,
+  checkin: UserCheck,
+  registrar_chegada: Clock,
+  atualizar_cadastro: Edit,
+  validar_convenio: CreditCard,
+  receber_pagamento: CreditCard,
+  chamar_paciente: Phone,
+  cancelar_presenca: X,
+  abrir_prontuario: FileText,
+  evoluir: Stethoscope,
+  emitir_receita: FileText,
+  faturar: CreditCard,
+  repassar: ArrowRight,
+  visualizar_historico: FileText,
 };
 
 /**
  * Componente para gerenciar transições de status de agendamentos
  */
-export default function AppointmentStatusManager({ 
-  appointment, 
-  onStatusChange, 
+export default function AppointmentStatusManager({
+  appointment,
+  onStatusChange,
   onActionExecute,
-  disabled = false 
+  disabled = false,
 }) {
   const { toast } = useToast();
   const [showActionDialog, setShowActionDialog] = useState(false);
   const [selectedAction, setSelectedAction] = useState(null);
   const [actionData, setActionData] = useState({});
 
-  if (!appointment) return null;
+  if (!appointment) {
+    return null;
+  }
 
   const currentStatus = appointment.status || APPOINTMENT_STATUS.AGENDADO;
   const nextPossibleStatus = getNextPossibleStatus(currentStatus);
@@ -84,16 +86,16 @@ export default function AppointmentStatusManager({
   const handleStatusTransition = async (newStatus) => {
     if (!isValidStatusTransition(currentStatus, newStatus)) {
       toast({
-        title: "Transição inválida",
-        description: "Esta mudança de status não é permitida no fluxo atual.",
-        variant: "destructive"
+        title: 'Transição inválida',
+        description: 'Esta mudança de status não é permitida no fluxo atual.',
+        variant: 'destructive',
       });
       return;
     }
 
     try {
       await onStatusChange(appointment.id, newStatus);
-      
+
       // Executar gatilhos automáticos
       const workflow = WORKFLOW_STEPS[newStatus];
       if (workflow?.autoTrigger) {
@@ -101,14 +103,14 @@ export default function AppointmentStatusManager({
       }
 
       toast({
-        title: "Status atualizado",
-        description: `Agendamento agora está como: ${getStatusLabel(newStatus)}`
+        title: 'Status atualizado',
+        description: `Agendamento agora está como: ${getStatusLabel(newStatus)}`,
       });
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Não foi possível atualizar o status do agendamento.",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Não foi possível atualizar o status do agendamento.',
+        variant: 'destructive',
       });
     }
   };
@@ -124,34 +126,34 @@ export default function AppointmentStatusManager({
       await onActionExecute(selectedAction, appointment, actionData);
       setShowActionDialog(false);
       toast({
-        title: "Ação executada",
-        description: `${selectedAction.replace('_', ' ').toUpperCase()} realizado com sucesso.`
+        title: 'Ação executada',
+        description: `${selectedAction.replace('_', ' ').toUpperCase()} realizado com sucesso.`,
       });
     } catch (error) {
       toast({
-        title: "Erro",
-        description: "Não foi possível executar a ação.",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Não foi possível executar a ação.',
+        variant: 'destructive',
       });
     }
   };
 
   const executeAutoTrigger = async (trigger, appointment) => {
     console.log(`🤖 Executando gatilho automático: ${trigger}`, appointment);
-    
+
     switch (trigger) {
-      case 'cria_fila_espera':
-        // Registrar na fila de espera
-        break;
-      case 'criar_guia_tiss_ou_pagamento':
-        // Criar guia TISS se convênio ou pagamento se particular
-        break;
-      case 'abrir_tela_atendimento':
-        // Navegar para tela de atendimento
-        break;
-      case 'enviar_guia_lote_gerar_repasse':
-        // Enviar guia ao lote e gerar repasse médico
-        break;
+    case 'cria_fila_espera':
+      // Registrar na fila de espera
+      break;
+    case 'criar_guia_tiss_ou_pagamento':
+      // Criar guia TISS se convênio ou pagamento se particular
+      break;
+    case 'abrir_tela_atendimento':
+      // Navegar para tela de atendimento
+      break;
+    case 'enviar_guia_lote_gerar_repasse':
+      // Enviar guia ao lote e gerar repasse médico
+      break;
     }
   };
 
@@ -218,9 +220,7 @@ export default function AppointmentStatusManager({
       <Dialog open={showActionDialog} onOpenChange={setShowActionDialog}>
         <DialogContent className="app-dialog-shell app-dialog-shell--compact">
           <DialogHeader>
-            <DialogTitle>
-              {selectedAction?.replace('_', ' ').toUpperCase()}
-            </DialogTitle>
+            <DialogTitle>{selectedAction?.replace('_', ' ').toUpperCase()}</DialogTitle>
             <DialogDescription>
               Preencha as informações necessárias para executar esta ação.
             </DialogDescription>
@@ -236,7 +236,7 @@ export default function AppointmentStatusManager({
                     type="number"
                     step="0.01"
                     value={actionData.valor || ''}
-                    onChange={(e) => setActionData({...actionData, valor: e.target.value})}
+                    onChange={(e) => setActionData({ ...actionData, valor: e.target.value })}
                   />
                 </div>
                 <div>
@@ -245,7 +245,7 @@ export default function AppointmentStatusManager({
                     id="metodo"
                     className="w-full border rounded px-3 py-2"
                     value={actionData.metodo || ''}
-                    onChange={(e) => setActionData({...actionData, metodo: e.target.value})}
+                    onChange={(e) => setActionData({ ...actionData, metodo: e.target.value })}
                   >
                     <option value="">Selecione...</option>
                     <option value="dinheiro">Dinheiro</option>
@@ -264,7 +264,7 @@ export default function AppointmentStatusManager({
                   id="evolucao"
                   rows={4}
                   value={actionData.evolucao || ''}
-                  onChange={(e) => setActionData({...actionData, evolucao: e.target.value})}
+                  onChange={(e) => setActionData({ ...actionData, evolucao: e.target.value })}
                   placeholder="Descreva o atendimento realizado..."
                 />
               </div>
@@ -277,7 +277,7 @@ export default function AppointmentStatusManager({
                   id="motivo"
                   rows={3}
                   value={actionData.motivo || ''}
-                  onChange={(e) => setActionData({...actionData, motivo: e.target.value})}
+                  onChange={(e) => setActionData({ ...actionData, motivo: e.target.value })}
                   placeholder="Informe o motivo..."
                 />
               </div>
@@ -288,9 +288,7 @@ export default function AppointmentStatusManager({
             <Button variant="outline" onClick={() => setShowActionDialog(false)}>
               Cancelar
             </Button>
-            <Button onClick={executeAction}>
-              Executar
-            </Button>
+            <Button onClick={executeAction}>Executar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

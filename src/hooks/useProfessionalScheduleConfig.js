@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useClinicContext } from "@/contexts/useClinicContext";
+import { useEffect, useState } from 'react';
+import { useClinicContext } from '@/contexts/useClinicContext';
 
 // Hook para buscar horários configurados por profissional
 export default function useProfessionalScheduleConfig(professionalId) {
@@ -9,7 +9,9 @@ export default function useProfessionalScheduleConfig(professionalId) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!clinic?.id || !professionalId) return;
+    if (!clinic?.id || !professionalId) {
+      return;
+    }
     setLoading(true);
     // TODO: Buscar configuração real do backend
     setTimeout(() => {

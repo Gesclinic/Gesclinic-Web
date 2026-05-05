@@ -1,7 +1,7 @@
 // src/lib/medicalRepasseApi.js
 /**
  * API para Módulo Completo de Repasse Automático
- * 
+ *
  * Funções:
  * - Configuração de repasse por profissional
  * - Registro de produção médica
@@ -24,8 +24,10 @@ export async function listarConfigRepasse(clinicId) {
     .select('*')
     .eq('clinic_id', clinicId)
     .order('created_at', { ascending: false });
-  
-  if (error) throw error;
+
+  if (error) {
+    throw error;
+  }
   return data || [];
 }
 
@@ -39,8 +41,10 @@ export async function obterConfigRepasse(clinicId, professionalId) {
     .eq('clinic_id', clinicId)
     .eq('professional_id', professionalId)
     .single();
-  
-  if (error && error.code !== 'PGRST116') throw error; // PGRST116 = not found
+
+  if (error && error.code !== 'PGRST116') {
+    throw error;
+  } // PGRST116 = not found
   return data || null;
 }
 
@@ -49,7 +53,7 @@ export async function obterConfigRepasse(clinicId, professionalId) {
  */
 export async function salvarConfigRepasse(clinicId, professionalId, config) {
   const existing = await obterConfigRepasse(clinicId, professionalId);
-  
+
   const dados = {
     clinic_id: clinicId,
     professional_id: professionalId,
@@ -67,20 +71,29 @@ export async function salvarConfigRepasse(clinicId, professionalId, config) {
       .from('medical_repasse_config')
       .update(dados)
       .eq('id', existing.id)
-      .select()
-      .single();
-    
-    if (error) throw error;
+      .select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
+
+    if (error) {
+      throw error;
+    }
     return data;
   } else {
     // Insert
-    const { data, error } = await supabase
-      .from('medical_repasse_config')
-      .insert([dados])
-      .select()
-      .single();
-    
-    if (error) throw error;
+    const { data, error } = await supabase.from('medical_repasse_config').insert([dados]).select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
+
+    if (error) {
+      throw error;
+    }
     return data;
   }
 }
@@ -95,19 +108,27 @@ export async function salvarConfigRepasse(clinicId, professionalId, config) {
 export async function registrarProducao(clinicId, professionalId, producao) {
   const { data, error } = await supabase
     .from('medical_production')
-    .insert([{
-      clinic_id: clinicId,
-      professional_id: professionalId,
-      atendimento_id: producao.atendimento_id || null,
-      tipo: producao.tipo || 'consulta',
-      valor_bruto: producao.valor_bruto,
-      valor_liquido: producao.valor_liquido || producao.valor_bruto,
-      data_atendimento: producao.data_atendimento || new Date().toISOString().split('T')[0],
-    }])
-    .select()
-    .single();
-  
-  if (error) throw error;
+    .insert([
+      {
+        clinic_id: clinicId,
+        professional_id: professionalId,
+        atendimento_id: producao.atendimento_id || null,
+        tipo: producao.tipo || 'consulta',
+        valor_bruto: producao.valor_bruto,
+        valor_liquido: producao.valor_liquido || producao.valor_bruto,
+        data_atendimento: producao.data_atendimento || new Date().toISOString().split('T')[0],
+      },
+    ])
+    .select();
+
+  if (!data || data.length === 0) {
+    throw new Error('Record not found');
+  }
+  return data[0];
+
+  if (error) {
+    throw error;
+  }
   return data;
 }
 
@@ -123,8 +144,10 @@ export async function listarProducaoPeriodo(clinicId, professionalId, dataInicio
     .gte('data_atendimento', dataInicio)
     .lte('data_atendimento', dataFim)
     .order('data_atendimento', { ascending: true });
-  
-  if (error) throw error;
+
+  if (error) {
+    throw error;
+  }
   return data || [];
 }
 
@@ -134,7 +157,7 @@ export async function listarProducaoPeriodo(clinicId, professionalId, dataInicio
 
 /**
  * Calcular repasse para um profissional em um período
- * 
+ *
  * Chama a função RPC no Supabase que:
  * - Busca a configuração do profissional
  * - Suma toda produção do período
@@ -144,7 +167,7 @@ export async function listarProducaoPeriodo(clinicId, professionalId, dataInicio
 export async function calcularRepasse(clinicId, professionalId, dataInicio, dataFim) {
   // Primeiro, verificar se tem produção
   const producao = await listarProducaoPeriodo(clinicId, professionalId, dataInicio, dataFim);
-  
+
   if (producao.length === 0) {
     console.warn('Nenhuma produção encontrada para este período');
     return null;
@@ -156,9 +179,11 @@ export async function calcularRepasse(clinicId, professionalId, dataInicio, data
     p_data_inicio: dataInicio,
     p_data_fim: dataFim,
   });
-  
-  if (error) throw error;
-  
+
+  if (error) {
+    throw error;
+  }
+
   // Retornar o repasse criado
   return await obterRepassePeriodo(clinicId, professionalId, dataInicio, dataFim);
 }
@@ -177,10 +202,16 @@ export async function obterRepassePeriodo(clinicId, professionalId, dataInicio, 
     .eq('clinic_id', clinicId)
     .eq('professional_id', professionalId)
     .eq('periodo_inicio', dataInicio)
-    .eq('periodo_fim', dataFim)
-    .single();
-  
-  if (error && error.code !== 'PGRST116') throw error;
+    .eq('periodo_fim', dataFim);
+
+  if (!data || data.length === 0) {
+    throw new Error('Record not found');
+  }
+  return data[0];
+
+  if (error && error.code !== 'PGRST116') {
+    throw error;
+  }
   return data || null;
 }
 
@@ -194,14 +225,16 @@ export async function listarRepassesPeriodo(clinicId, dataInicio, dataFim, statu
     .eq('clinic_id', clinicId)
     .gte('periodo_inicio', dataInicio)
     .lte('periodo_fim', dataFim);
-  
+
   if (status) {
     query = query.eq('status', status);
   }
-  
+
   const { data, error } = await query.order('periodo_inicio', { ascending: false });
-  
-  if (error) throw error;
+
+  if (error) {
+    throw error;
+  }
   return data || [];
 }
 
@@ -216,8 +249,10 @@ export async function historicoProfissional(clinicId, professionalId, limite = 1
     .eq('professional_id', professionalId)
     .order('periodo_fim', { ascending: false })
     .limit(limite);
-  
-  if (error) throw error;
+
+  if (error) {
+    throw error;
+  }
   return data || [];
 }
 
@@ -264,7 +299,7 @@ export async function dashboardRepasseMedico(clinicId, dataInicio, dataFim) {
 
     const professionalMap = {};
     if (professionalsData) {
-      professionalsData.forEach(p => {
+      professionalsData.forEach((p) => {
         professionalMap[p.id] = p.name;
       });
     }
@@ -272,7 +307,7 @@ export async function dashboardRepasseMedico(clinicId, dataInicio, dataFim) {
     console.log('📍 [DASHBOARD] Mapa de profissionais:', professionalMap);
 
     // Extrair IDs únicos das comissões
-    const commissionsProfsIds = [...new Set(commissionsData.map(c => c.professional_id))];
+    const commissionsProfsIds = [...new Set(commissionsData.map((c) => c.professional_id))];
     console.log('🏥 [DASHBOARD] IDs de profissionais nas comissões:', commissionsProfsIds);
 
     // Calcular totais a partir das comissões
@@ -280,22 +315,22 @@ export async function dashboardRepasseMedico(clinicId, dataInicio, dataFim) {
       totalBruto: commissionsData.reduce((sum, c) => sum + (c.gross_amount || 0), 0),
       totalLiquido: commissionsData.reduce((sum, c) => sum + (c.net_amount || 0), 0),
       totalProfissional: commissionsData.reduce((sum, c) => sum + (c.net_amount || 0), 0), // Repasse é 70%
-      totalClinica: commissionsData.reduce((sum, c) => sum + ((c.gross_amount || 0) * 0.30), 0), // Clínica fica com 30%
+      totalClinica: commissionsData.reduce((sum, c) => sum + (c.gross_amount || 0) * 0.3, 0), // Clínica fica com 30%
     };
 
     // Agrupar por profissional com enriquecimento
-    const porProfissional = commissionsData.map(c => {
+    const porProfissional = commissionsData.map((c) => {
       const profName = professionalMap[c.professional_id];
       console.log(`📌 [DASHBOARD] Enriquecendo commission de prof ${c.professional_id}: "
         encontrado="${profName || 'NÃO ENCONTRADO'}"`);
-      
+
       return {
         professional_id: c.professional_id,
         profissional: profName || 'Profissional Desconhecido',
         totalBruto: c.gross_amount || 0,
         totalLiquido: c.net_amount || 0,
         totalRepasse: c.net_amount || 0, // 70% do bruto
-        totalClinica: (c.gross_amount || 0) * 0.30, // 30% do bruto
+        totalClinica: (c.gross_amount || 0) * 0.3, // 30% do bruto
         percentualProfissional: 70,
       };
     });
@@ -362,7 +397,7 @@ export async function dashboardRepasseMedico(clinicId, dataInicio, dataFim) {
 export async function relatorioDetalhoProfissional(clinicId, professionalId, dataInicio, dataFim) {
   // Produção
   const producao = await listarProducaoPeriodo(clinicId, professionalId, dataInicio, dataFim);
-  
+
   // Repasses
   const repasses = await supabase
     .from('medical_repasse')
@@ -371,12 +406,14 @@ export async function relatorioDetalhoProfissional(clinicId, professionalId, dat
     .eq('professional_id', professionalId)
     .gte('periodo_inicio', dataInicio)
     .lte('periodo_fim', dataFim);
-  
-  if (repasses.error) throw repasses.error;
-  
+
+  if (repasses.error) {
+    throw repasses.error;
+  }
+
   // Configuração
   const config = await obterConfigRepasse(clinicId, professionalId);
-  
+
   return {
     profissional: professionalId,
     periodo: { inicio: dataInicio, fim: dataFim },
@@ -386,7 +423,8 @@ export async function relatorioDetalhoProfissional(clinicId, professionalId, dat
     totais: {
       produtosBruto: producao.reduce((sum, p) => sum + (p.valor_bruto || 0), 0),
       produtosLiquido: producao.reduce((sum, p) => sum + (p.valor_liquido || 0), 0),
-      repasseProfissional: repasses.data?.reduce((sum, r) => sum + (r.valor_profissional || 0), 0) || 0,
+      repasseProfissional:
+        repasses.data?.reduce((sum, r) => sum + (r.valor_profissional || 0), 0) || 0,
       repasseClinica: repasses.data?.reduce((sum, r) => sum + (r.valor_clinica || 0), 0) || 0,
     },
   };
@@ -408,12 +446,14 @@ export async function calcularRepasseEmLote(clinicId, dataInicio, dataFim) {
     .eq('clinic_id', clinicId)
     .gte('data_atendimento', dataInicio)
     .lte('data_atendimento', dataFim);
-  
-  if (prodError) throw prodError;
-  
+
+  if (prodError) {
+    throw prodError;
+  }
+
   // Remover duplicatas
-  const profissionaisUnicos = [...new Set(producaoPorProf.map(r => r.professional_id))];
-  
+  const profissionaisUnicos = [...new Set(producaoPorProf.map((r) => r.professional_id))];
+
   const resultados = [];
   for (const profId of profissionaisUnicos) {
     try {
@@ -433,6 +473,6 @@ export async function calcularRepasseEmLote(clinicId, dataInicio, dataFim) {
       });
     }
   }
-  
+
   return resultados;
 }

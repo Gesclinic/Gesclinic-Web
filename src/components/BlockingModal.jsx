@@ -3,36 +3,36 @@
 // BLOCKING MODAL - Modal que bloqueia acesso a features
 // ============================================================
 
-import React from "react";
-import { useNavigate } from "react-router-dom";
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Lock, AlertCircle, ArrowRight } from "lucide-react";
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Lock, AlertCircle, ArrowRight } from 'lucide-react';
 
 export function BlockingModal({ isOpen, feature, reason, issues = [] }) {
   const navigate = useNavigate();
 
   const featureLabels = {
-    agenda: "Agenda",
-    scheduling: "Agendamentos",
-    financeiro: "Financeiro",
-    checkin: "Check-in",
-    invoices: "Faturas",
+    agenda: 'Agenda',
+    scheduling: 'Agendamentos',
+    financeiro: 'Financeiro',
+    checkin: 'Check-in',
+    invoices: 'Faturas',
   };
 
   const featureDescriptions = {
-    agenda: "Módulo de agendamentos",
-    scheduling: "Sistema de agendamentos",
-    financeiro: "Módulo financeiro",
-    checkin: "Sistema de check-in",
-    invoices: "Gestão de faturas",
+    agenda: 'Módulo de agendamentos',
+    scheduling: 'Sistema de agendamentos',
+    financeiro: 'Módulo financeiro',
+    checkin: 'Sistema de check-in',
+    invoices: 'Gestão de faturas',
   };
 
   return (
@@ -44,9 +44,7 @@ export function BlockingModal({ isOpen, feature, reason, issues = [] }) {
               <Lock className="w-6 h-6 text-red-600" />
             </div>
             <div>
-              <DialogTitle className="text-lg">
-                Configuração Incompleta
-              </DialogTitle>
+              <DialogTitle className="text-lg">Configuração Incompleta</DialogTitle>
               <DialogDescription className="text-sm mt-1">
                 {featureLabels[feature]} está bloqueado
               </DialogDescription>
@@ -58,7 +56,8 @@ export function BlockingModal({ isOpen, feature, reason, issues = [] }) {
           {/* Main Message */}
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <p className="text-sm text-red-900 font-medium">
-              {reason || `Você precisa completar a configuração antes de acessar ${featureLabels[feature]}.`}
+              {reason ||
+                `Você precisa completar a configuração antes de acessar ${featureLabels[feature]}.`}
             </p>
           </div>
 
@@ -84,25 +83,21 @@ export function BlockingModal({ isOpen, feature, reason, issues = [] }) {
           {/* Help Text */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p className="text-xs text-blue-900">
-              <strong>Dica:</strong> Use o assistente de setup para configurar
-              tudo passo a passo. Leva apenas alguns minutos!
+              <strong>Dica:</strong> Use o assistente de setup para configurar tudo passo a passo.
+              Leva apenas alguns minutos!
             </p>
           </div>
 
           {/* Actions */}
           <div className="flex gap-2 pt-4 border-t">
             <Button
-              onClick={() => navigate("/clinica/base-sistema")}
+              onClick={() => navigate('/clinica/base-sistema')}
               className="flex-1 bg-blue-600 hover:bg-blue-700"
             >
               <span>Ir para Setup</span>
               <ArrowRight className="ml-2 w-4 h-4" />
             </Button>
-            <Button
-              onClick={() => navigate(-1)}
-              variant="outline"
-              className="flex-1"
-            >
+            <Button onClick={() => navigate(-1)} variant="outline" className="flex-1">
               Voltar
             </Button>
           </div>

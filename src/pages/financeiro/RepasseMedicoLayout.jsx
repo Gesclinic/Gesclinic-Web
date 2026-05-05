@@ -29,25 +29,25 @@ export default function RepasseMedicoLayout() {
         <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
           <div className="bg-white border-b border-gray-200 px-6">
             <TabsList className="w-full justify-start bg-transparent border-b-0">
-              <TabsTrigger 
+              <TabsTrigger
                 value="visao-geral"
                 className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 rounded-none border-b-2 border-transparent"
               >
                 📊 Visão Geral
               </TabsTrigger>
-              <TabsTrigger 
+              <TabsTrigger
                 value="regras-avancadas"
                 className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 rounded-none border-b-2 border-transparent"
               >
                 🔥 Regras Avançadas
               </TabsTrigger>
-              <TabsTrigger 
+              <TabsTrigger
                 value="analytics"
                 className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 rounded-none border-b-2 border-transparent"
               >
                 📈 Analytics
               </TabsTrigger>
-              <TabsTrigger 
+              <TabsTrigger
                 value="automacao"
                 className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 rounded-none border-b-2 border-transparent"
               >

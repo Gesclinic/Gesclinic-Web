@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { X, Save, Loader } from 'lucide-react';
 import { updateProfile } from '@/lib/profilesApi';
 
@@ -15,9 +15,9 @@ export default function EditProfileModal({ profile, config, clinicId, onClose, o
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -92,9 +92,7 @@ export default function EditProfileModal({ profile, config, clinicId, onClose, o
 
           {/* Campo: Descrição */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Descrição
-            </label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Descrição</label>
             <textarea
               name="description"
               value={formData.description}
@@ -104,7 +102,9 @@ export default function EditProfileModal({ profile, config, clinicId, onClose, o
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
               disabled={loading}
             />
-            <p className="text-xs text-gray-500 mt-1">Descrição das responsabilidades deste perfil</p>
+            <p className="text-xs text-gray-500 mt-1">
+              Descrição das responsabilidades deste perfil
+            </p>
           </div>
 
           {/* Informações de Permissões */}
@@ -130,7 +130,10 @@ export default function EditProfileModal({ profile, config, clinicId, onClose, o
             <h3 className="font-semibold text-green-900 text-sm mb-3">Módulos Acessíveis</h3>
             <div className="flex flex-wrap gap-2">
               {config.modules.map((module) => (
-                <span key={module} className="inline-block bg-green-200 text-green-800 text-xs px-3 py-1 rounded-full">
+                <span
+                  key={module}
+                  className="inline-block bg-green-200 text-green-800 text-xs px-3 py-1 rounded-full"
+                >
                   {module}
                 </span>
               ))}
@@ -140,7 +143,12 @@ export default function EditProfileModal({ profile, config, clinicId, onClose, o
           {/* Nota sobre Permissões */}
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
             <p className="text-xs text-yellow-800">
-              <strong>ℹ️ Nota:</strong> As permissões deste perfil estão centralizadas em <code className="bg-yellow-100 px-2 py-1 rounded text-xs">src/lib/profilesApi.js</code>. Para modificar as permissões, edite a configuração na seção <code className="bg-yellow-100 px-2 py-1 rounded text-xs">PROFILES_CONFIG</code>.
+              <strong>ℹ️ Nota:</strong> As permissões deste perfil estão centralizadas em{' '}
+              <code className="bg-yellow-100 px-2 py-1 rounded text-xs">
+                src/lib/profilesApi.js
+              </code>
+              . Para modificar as permissões, edite a configuração na seção{' '}
+              <code className="bg-yellow-100 px-2 py-1 rounded text-xs">PROFILES_CONFIG</code>.
             </p>
           </div>
 

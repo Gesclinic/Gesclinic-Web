@@ -1,17 +1,23 @@
-import React, { useState, useEffect } from "react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, PlusCircle } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Trash2, PlusCircle } from 'lucide-react';
 
 // 👇 Em um projeto real, isso vem do Supabase
 // Mas aqui deixei estático para funcionar imediatamente
 const MOCK_SERVICES = [
-  { id: "srv1", name: "Consulta" },
-  { id: "srv2", name: "Retorno" },
-  { id: "srv3", name: "Avaliação" },
-  { id: "srv4", name: "Terapia" },
+  { id: 'srv1', name: 'Consulta' },
+  { id: 'srv2', name: 'Retorno' },
+  { id: 'srv3', name: 'Avaliação' },
+  { id: 'srv4', name: 'Terapia' },
 ];
 
 export default function ServiceManager({ value = [], onChange }) {
@@ -25,14 +31,16 @@ export default function ServiceManager({ value = [], onChange }) {
   // Atualiza o form pai
   const updateParent = (updated) => {
     setServiceList(updated);
-    if (onChange) onChange(updated);
+    if (onChange) {
+      onChange(updated);
+    }
   };
 
   const addService = () => {
     const newItem = {
-      serviceId: "",
-      price: "",
-      duration: "",
+      serviceId: '',
+      price: '',
+      duration: '',
       active: true,
     };
     updateParent([...serviceList, newItem]);
@@ -51,7 +59,6 @@ export default function ServiceManager({ value = [], onChange }) {
 
   return (
     <div className="space-y-4">
-
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Serviços do Profissional</h3>
 
@@ -68,15 +75,13 @@ export default function ServiceManager({ value = [], onChange }) {
 
       {serviceList.map((item, index) => (
         <Card key={index} className="p-4 space-y-3 border rounded-lg shadow-sm">
-
           {/* Seleção do serviço */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-
             <div>
               <label className="text-sm font-medium">Serviço</label>
               <Select
                 value={item.serviceId}
-                onValueChange={(v) => updateItem(index, "serviceId", v)}
+                onValueChange={(v) => updateItem(index, 'serviceId', v)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione um serviço" />
@@ -97,7 +102,7 @@ export default function ServiceManager({ value = [], onChange }) {
               <Input
                 type="number"
                 value={item.price}
-                onChange={(e) => updateItem(index, "price", e.target.value)}
+                onChange={(e) => updateItem(index, 'price', e.target.value)}
                 placeholder="0,00"
               />
             </div>
@@ -108,7 +113,7 @@ export default function ServiceManager({ value = [], onChange }) {
               <Input
                 type="number"
                 value={item.duration}
-                onChange={(e) => updateItem(index, "duration", e.target.value)}
+                onChange={(e) => updateItem(index, 'duration', e.target.value)}
                 placeholder="30"
               />
             </div>
@@ -116,13 +121,12 @@ export default function ServiceManager({ value = [], onChange }) {
 
           {/* Linha inferior */}
           <div className="flex justify-between items-center">
-
             {/* Status */}
             <div>
               <label className="text-sm font-medium">Status</label>
               <Select
-                value={item.active ? "1" : "0"}
-                onValueChange={(v) => updateItem(index, "active", v === "1")}
+                value={item.active ? '1' : '0'}
+                onValueChange={(v) => updateItem(index, 'active', v === '1')}
               >
                 <SelectTrigger className="w-32">
                   <SelectValue />
@@ -140,7 +144,6 @@ export default function ServiceManager({ value = [], onChange }) {
               Remover
             </Button>
           </div>
-
         </Card>
       ))}
     </div>

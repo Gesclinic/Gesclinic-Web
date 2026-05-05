@@ -1,11 +1,8 @@
 export function mapearPorSala(agenda = []) {
   const grupos = {};
 
-  agenda.forEach(item => {
-    const sala =
-      item.room_name && item.room_name.trim()
-        ? item.room_name
-        : "Sem sala";
+  agenda.forEach((item) => {
+    const sala = item.room_name && item.room_name.trim() ? item.room_name : 'Sem sala';
 
     if (!grupos[sala]) {
       grupos[sala] = [];

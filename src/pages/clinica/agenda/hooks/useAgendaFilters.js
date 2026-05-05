@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 
 /**
  * useAgendaFilters - Hook para gerenciar estado dos filtros colapsáveis
- * 
+ *
  * Responsável por:
  * - Estado aberto/fechado do accordion de filtros
  * - Quantidade de filtros ativos

@@ -6,10 +6,10 @@
  * Suporta câmera frontal/traseira em mobile
  */
 
-import React, { useRef, useState } from "react";
-import { Camera, Check, RotateCcw, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import React, { useRef, useState } from 'react';
+import { Camera, Check, RotateCcw, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 
 export default function PhotoCapture({ onPhotoCapture, currentPhoto = null }) {
   const videoRef = useRef(null);
@@ -19,7 +19,7 @@ export default function PhotoCapture({ onPhotoCapture, currentPhoto = null }) {
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [capturedPhoto, setCapturedPhoto] = useState(currentPhoto);
   const [error, setError] = useState(null);
-  const [facingMode, setFacingMode] = useState("user"); // user = frontal, environment = traseira
+  const [facingMode, setFacingMode] = useState('user'); // user = frontal, environment = traseira
 
   // Iniciar câmera
   async function startCamera() {
@@ -42,11 +42,9 @@ export default function PhotoCapture({ onPhotoCapture, currentPhoto = null }) {
         videoRef.current.srcObject = stream;
       }
     } catch (err) {
-      console.error("Erro ao acessar câmera:", err);
+      console.error('Erro ao acessar câmera:', err);
       setIsCameraActive(false); // Desativar se houver erro
-      setError(
-        "Não foi possível acessar a câmera. Verifique as permissões do navegador."
-      );
+      setError('Não foi possível acessar a câmera. Verifique as permissões do navegador.');
     }
   }
 
@@ -62,7 +60,7 @@ export default function PhotoCapture({ onPhotoCapture, currentPhoto = null }) {
   // Capturar foto
   function capturePhoto() {
     if (videoRef.current && canvasRef.current) {
-      const context = canvasRef.current.getContext("2d");
+      const context = canvasRef.current.getContext('2d');
       const video = videoRef.current;
 
       canvasRef.current.width = video.videoWidth;
@@ -70,7 +68,7 @@ export default function PhotoCapture({ onPhotoCapture, currentPhoto = null }) {
 
       context.drawImage(video, 0, 0);
 
-      const photoDataUrl = canvasRef.current.toDataURL("image/jpeg", 0.95);
+      const photoDataUrl = canvasRef.current.toDataURL('image/jpeg', 0.95);
       setCapturedPhoto(photoDataUrl);
 
       // Chamar callback com a foto
@@ -84,7 +82,7 @@ export default function PhotoCapture({ onPhotoCapture, currentPhoto = null }) {
   function toggleCamera() {
     stopCamera();
     setFacingMode((prev) => {
-      const newMode = prev === "user" ? "environment" : "user";
+      const newMode = prev === 'user' ? 'environment' : 'user';
       // Reiniciar câmera com novo modo
       setTimeout(() => {
         startCameraWithMode(newMode);
@@ -114,29 +112,29 @@ export default function PhotoCapture({ onPhotoCapture, currentPhoto = null }) {
         setIsCameraActive(true);
       }
     } catch (err) {
-      console.error("Erro ao acessar câmera:", err);
-      setError(
-        "Não foi possível acessar a câmera. Verifique as permissões do navegador."
-      );
+      console.error('Erro ao acessar câmera:', err);
+      setError('Não foi possível acessar a câmera. Verifique as permissões do navegador.');
     }
   }
 
   // Upload de arquivo
   function handleFileSelect(e) {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = (event) => {
       const photoDataUrl = event.target?.result;
-      if (typeof photoDataUrl === "string") {
+      if (typeof photoDataUrl === 'string') {
         setCapturedPhoto(photoDataUrl);
         onPhotoCapture(photoDataUrl);
         setError(null);
       }
     };
     reader.onerror = () => {
-      setError("Erro ao ler arquivo");
+      setError('Erro ao ler arquivo');
     };
     reader.readAsDataURL(file);
   }
@@ -161,9 +159,7 @@ export default function PhotoCapture({ onPhotoCapture, currentPhoto = null }) {
                   className="w-full max-h-64 object-cover"
                 />
               </div>
-              <p className="text-sm text-green-700 font-medium">
-                ✓ Foto capturada com sucesso!
-              </p>
+              <p className="text-sm text-green-700 font-medium">✓ Foto capturada com sucesso!</p>
             </div>
           ) : isCameraActive ? (
             <div className="space-y-3">

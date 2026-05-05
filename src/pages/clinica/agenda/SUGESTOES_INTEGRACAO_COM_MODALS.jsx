@@ -1,32 +1,32 @@
 /**
  * SUGESTOES_INTEGRACAO_COM_MODALS.jsx
- * 
+ *
  * 📋 EXEMPLOS DE INTEGRAÇÃO COM MODALS/DRAWERS
- * 
+ *
  * Como conectar sugestões com:
  * - Modal de Lista de Espera
  * - Modal de Criar Encaixe
  * - Modal de Contatar Paciente
  */
 
-import React, { useState } from "react";
-import SuggestionsDrawer, { useSuggestionsDrawer } from "./components/SuggestionsDrawer";
+import React, { useState } from 'react';
+import SuggestionsDrawer, { useSuggestionsDrawer } from './components/SuggestionsDrawer';
 
 /**
  * EXEMPLO COMPLETO DE PÁGINA COM TODAS AS INTEGRAÇÕES
  */
 export default function AgendaComSugestoesCompleta() {
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  
+
   // Modals
   const [waitlistModalOpen, setWaitlistModalOpen] = useState(false);
   const [createAppointmentModalOpen, setCreateAppointmentModalOpen] = useState(false);
   const [contactModalOpen, setContactModalOpen] = useState(false);
-  
+
   // Contexto das ações
   const [currentSuggestion, setCurrentSuggestion] = useState(null);
-  
+
   // Drawer de sugestões
   const suggestionsDrawer = useSuggestionsDrawer();
 
@@ -38,27 +38,27 @@ export default function AgendaComSugestoesCompleta() {
     setCurrentSuggestion(suggestion);
 
     switch (action) {
-      case "VER_LISTA_ESPERA":
-        setWaitlistModalOpen(true);
-        suggestionsDrawer.close();
-        break;
+    case 'VER_LISTA_ESPERA':
+      setWaitlistModalOpen(true);
+      suggestionsDrawer.close();
+      break;
 
-      case "CRIAR_ENCAIXE":
-        setCreateAppointmentModalOpen(true);
-        suggestionsDrawer.close();
-        break;
+    case 'CRIAR_ENCAIXE':
+      setCreateAppointmentModalOpen(true);
+      suggestionsDrawer.close();
+      break;
 
-      case "CONTATAR_PACIENTE":
-        setContactModalOpen(true);
-        suggestionsDrawer.close();
-        break;
+    case 'CONTATAR_PACIENTE':
+      setContactModalOpen(true);
+      suggestionsDrawer.close();
+      break;
 
-      case "OTIMIZAR_AGENDA":
-        alert("Abrir view de otimização (não implementado)");
-        break;
+    case 'OTIMIZAR_AGENDA':
+      alert('Abrir view de otimização (não implementado)');
+      break;
 
-      default:
-        break;
+    default:
+      break;
     }
   };
 
@@ -66,27 +66,27 @@ export default function AgendaComSugestoesCompleta() {
    * Callback quando encaixe é criado
    */
   const handleEncaixeCriado = async () => {
-    console.log("✅ Encaixe criado com sucesso");
+    console.log('✅ Encaixe criado com sucesso');
     setCreateAppointmentModalOpen(false);
     setCurrentSuggestion(null);
-    
+
     // Recarregar sugestões
-    setRefreshTrigger(prev => prev + 1);
+    setRefreshTrigger((prev) => prev + 1);
   };
 
   /**
    * Callback quando paciente é selecionado da lista de espera
    */
   const handlePacienteSelecionado = async (patient) => {
-    console.log("📌 Paciente selecionado:", patient);
-    
+    console.log('📌 Paciente selecionado:', patient);
+
     // Abrir modal de criar encaixe com paciente pré-selecionado
-    setCurrentSuggestion(prev => ({
+    setCurrentSuggestion((prev) => ({
       ...prev,
       paciente_id: patient.id,
       paciente_nome: patient.name,
     }));
-    
+
     setWaitlistModalOpen(false);
     setCreateAppointmentModalOpen(true);
   };
@@ -98,7 +98,7 @@ export default function AgendaComSugestoesCompleta() {
         {/* Header com botão de sugestões */}
         <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold">Agenda</h1>
-          
+
           <button
             onClick={suggestionsDrawer.toggle}
             className="px-4 py-2 bg-amber-100 text-amber-800 rounded-lg font-medium"
@@ -178,42 +178,44 @@ function WaitlistModal({ isOpen, onClose, onSelectPatient, suggestion }) {
       // Buscar lista de espera da clínica
       // const { data } = await getWaitlist(clinicId);
       // setWaitlist(data);
-      
+
       // Mock para demonstração
       setWaitlist([
         {
-          id: "1",
-          name: "Maria Silva",
-          phone: "(11) 98765-4321",
-          service: "Consulta Geral",
-          waitingSince: "2026-01-10",
-          preferredTime: "Manhã",
+          id: '1',
+          name: 'Maria Silva',
+          phone: '(11) 98765-4321',
+          service: 'Consulta Geral',
+          waitingSince: '2026-01-10',
+          preferredTime: 'Manhã',
         },
         {
-          id: "2",
-          name: "João Santos",
-          phone: "(11) 99876-5432",
-          service: "Limpeza",
-          waitingSince: "2026-01-11",
-          preferredTime: "Tarde",
+          id: '2',
+          name: 'João Santos',
+          phone: '(11) 99876-5432',
+          service: 'Limpeza',
+          waitingSince: '2026-01-11',
+          preferredTime: 'Tarde',
         },
         {
-          id: "3",
-          name: "Ana Costa",
-          phone: "(11) 99999-8888",
-          service: "Consulta Retorno",
-          waitingSince: "2026-01-12",
-          preferredTime: "Qualquer",
+          id: '3',
+          name: 'Ana Costa',
+          phone: '(11) 99999-8888',
+          service: 'Consulta Retorno',
+          waitingSince: '2026-01-12',
+          preferredTime: 'Qualquer',
         },
       ]);
     } catch (err) {
-      console.error("Erro ao carregar lista de espera:", err);
+      console.error('Erro ao carregar lista de espera:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    return null;
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -223,12 +225,10 @@ function WaitlistModal({ isOpen, onClose, onSelectPatient, suggestion }) {
         {loading ? (
           <div className="text-center py-8">Carregando...</div>
         ) : waitlist.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            Nenhum paciente na lista de espera
-          </div>
+          <div className="text-center py-8 text-gray-500">Nenhum paciente na lista de espera</div>
         ) : (
           <div className="space-y-3">
-            {waitlist.map(patient => (
+            {waitlist.map((patient) => (
               <div
                 key={patient.id}
                 className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition"
@@ -251,10 +251,7 @@ function WaitlistModal({ isOpen, onClose, onSelectPatient, suggestion }) {
         )}
 
         <div className="mt-4 flex gap-3 justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 border rounded-lg hover:bg-gray-50"
-          >
+          <button onClick={onClose} className="px-4 py-2 border rounded-lg hover:bg-gray-50">
             Fechar
           </button>
         </div>
@@ -277,11 +274,11 @@ function CreateAppointmentModal({
 }) {
   const [formData, setFormData] = React.useState({
     date: prefilledDate,
-    time: suggestion?.horario || "",
-    professional_id: prefilledProfessional || "",
-    patient_id: suggestion?.paciente_id || "",
-    service_id: "",
-    notes: `Encaixe sugerido - ${suggestion?.type || ""}`,
+    time: suggestion?.horario || '',
+    professional_id: prefilledProfessional || '',
+    patient_id: suggestion?.paciente_id || '',
+    service_id: '',
+    notes: `Encaixe sugerido - ${suggestion?.type || ''}`,
   });
 
   const [saving, setSaving] = React.useState(false);
@@ -297,16 +294,18 @@ function CreateAppointmentModal({
       //   clinic_id: clinicId,
       // });
 
-      console.log("✅ Agendamento criado:", formData);
+      console.log('✅ Agendamento criado:', formData);
       onSuccess();
     } catch (err) {
-      console.error("Erro ao criar agendamento:", err);
+      console.error('Erro ao criar agendamento:', err);
     } finally {
       setSaving(false);
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    return null;
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -322,30 +321,22 @@ function CreateAppointmentModal({
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Data */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Data
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Data</label>
             <input
               type="date"
               value={formData.date}
-              onChange={(e) =>
-                setFormData({ ...formData, date: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
               className="w-full px-3 py-2 border rounded-lg"
             />
           </div>
 
           {/* Horário */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Horário
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Horário</label>
             <input
               type="time"
               value={formData.time}
-              onChange={(e) =>
-                setFormData({ ...formData, time: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, time: e.target.value })}
               className="w-full px-3 py-2 border rounded-lg"
               required
             />
@@ -353,9 +344,7 @@ function CreateAppointmentModal({
 
           {/* Profissional */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Profissional
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Profissional</label>
             <select
               value={formData.professional_id}
               onChange={(e) =>
@@ -373,9 +362,7 @@ function CreateAppointmentModal({
 
           {/* Serviço */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Serviço
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Serviço</label>
             <select
               value={formData.service_id}
               onChange={(e) =>
@@ -393,14 +380,10 @@ function CreateAppointmentModal({
 
           {/* Notas */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Notas
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
             <textarea
               value={formData.notes}
-              onChange={(e) =>
-                setFormData({ ...formData, notes: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               className="w-full px-3 py-2 border rounded-lg"
               rows="3"
             />
@@ -420,7 +403,7 @@ function CreateAppointmentModal({
               disabled={saving}
               className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50"
             >
-              {saving ? "Salvando..." : "✅ Confirmar Encaixe"}
+              {saving ? 'Salvando...' : '✅ Confirmar Encaixe'}
             </button>
           </div>
         </form>
@@ -434,7 +417,9 @@ function CreateAppointmentModal({
  * Interface para contatar paciente da lista de espera
  */
 function ContactPatientModal({ isOpen, onClose, suggestion }) {
-  if (!isOpen) return null;
+  if (!isOpen) {
+    return null;
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -463,10 +448,7 @@ function ContactPatientModal({ isOpen, onClose, suggestion }) {
             </button>
           </div>
 
-          <button
-            onClick={onClose}
-            className="w-full px-4 py-2 border rounded-lg hover:bg-gray-50"
-          >
+          <button onClick={onClose} className="w-full px-4 py-2 border rounded-lg hover:bg-gray-50">
             Fechar
           </button>
         </div>
@@ -479,4 +461,3 @@ function ContactPatientModal({ isOpen, onClose, suggestion }) {
  * EXPORTS para usar em outros componentes
  */
 export { WaitlistModal, CreateAppointmentModal, ContactPatientModal };
-

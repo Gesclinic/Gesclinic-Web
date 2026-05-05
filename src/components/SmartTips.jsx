@@ -47,11 +47,7 @@ export function SmartTips({ formValues, errors, touched, hints = [] }) {
     }
 
     // Dica: Profissional sem serviços
-    if (
-      touched.professionalId &&
-      formValues.professionalId &&
-      !formValues.serviceId
-    ) {
+    if (touched.professionalId && formValues.professionalId && !formValues.serviceId) {
       tips.push({
         id: 'service_empty',
         type: 'info',
@@ -97,7 +93,7 @@ export function SmartTips({ formValues, errors, touched, hints = [] }) {
     tips.push(...hints);
 
     // Filtrar dicas dispensadas
-    const filtered = tips.filter(tip => !dismissed.has(tip.id));
+    const filtered = tips.filter((tip) => !dismissed.has(tip.id));
     setVisibleTips(filtered);
   }, [formValues, errors, touched, dismissed, hints]);
 
@@ -113,41 +109,32 @@ export function SmartTips({ formValues, errors, touched, hints = [] }) {
           tip.type === 'error'
             ? 'bg-red-50 border-red-200'
             : tip.type === 'warning'
-            ? 'bg-yellow-50 border-yellow-200'
-            : 'bg-blue-50 border-blue-200';
+              ? 'bg-yellow-50 border-yellow-200'
+              : 'bg-blue-50 border-blue-200';
 
         const textColor =
           tip.type === 'error'
             ? 'text-red-900'
             : tip.type === 'warning'
-            ? 'text-yellow-900'
-            : 'text-blue-900';
+              ? 'text-yellow-900'
+              : 'text-blue-900';
 
         const iconColor =
           tip.type === 'error'
             ? 'text-red-600'
             : tip.type === 'warning'
-            ? 'text-yellow-600'
-            : 'text-blue-600';
+              ? 'text-yellow-600'
+              : 'text-blue-600';
 
         return (
-          <div
-            key={tip.id}
-            className={`border rounded-lg p-3 flex gap-3 items-start ${bgColor}`}
-          >
+          <div key={tip.id} className={`border rounded-lg p-3 flex gap-3 items-start ${bgColor}`}>
             <Icon className={`w-5 h-5 flex-shrink-0 mt-0.5 ${iconColor}`} />
             <div className="flex-1 min-w-0">
-              <p className={`font-semibold text-sm ${textColor}`}>
-                {tip.title}
-              </p>
-              <p className={`text-xs ${textColor} opacity-75`}>
-                {tip.message}
-              </p>
+              <p className={`font-semibold text-sm ${textColor}`}>{tip.title}</p>
+              <p className={`text-xs ${textColor} opacity-75`}>{tip.message}</p>
             </div>
             <button
-              onClick={() =>
-                setDismissed(prev => new Set([...prev, tip.id]))
-              }
+              onClick={() => setDismissed((prev) => new Set([...prev, tip.id]))}
               className="flex-shrink-0 hover:opacity-60 transition-opacity"
             >
               <X className={`w-4 h-4 ${iconColor}`} />
@@ -172,26 +159,22 @@ export function SmartTipsDrawer({ isOpen, onClose, tips = [], section = 'agendam
         {
           id: 'tip_1',
           title: 'Horário de atendimento',
-          description:
-            'Respeite os horários comerciais configurados para cada profissional.',
+          description: 'Respeite os horários comerciais configurados para cada profissional.',
         },
         {
           id: 'tip_2',
           title: 'Conflitos de agenda',
-          description:
-            'O sistema avisa automaticamente se houver sobreposição de horários.',
+          description: 'O sistema avisa automaticamente se houver sobreposição de horários.',
         },
         {
           id: 'tip_3',
           title: 'Sala de atendimento',
-          description:
-            'Salas não são obrigatórias, mas ajudam a organizar o espaço físico.',
+          description: 'Salas não são obrigatórias, mas ajudam a organizar o espaço físico.',
         },
         {
           id: 'tip_4',
           title: 'Convênios',
-          description:
-            'Selecionar o convênio correto garante faturamento adequado.',
+          description: 'Selecionar o convênio correto garante faturamento adequado.',
         },
       ],
     },
@@ -201,20 +184,17 @@ export function SmartTipsDrawer({ isOpen, onClose, tips = [], section = 'agendam
         {
           id: 'tip_1',
           title: 'Dados completos',
-          description:
-            'Verifique se o paciente tem telefone e email preenchidos.',
+          description: 'Verifique se o paciente tem telefone e email preenchidos.',
         },
         {
           id: 'tip_2',
           title: 'Autorizações',
-          description:
-            'Confirme autorizações de convênio antes de liberar para atendimento.',
+          description: 'Confirme autorizações de convênio antes de liberar para atendimento.',
         },
         {
           id: 'tip_3',
           title: 'Histórico',
-          description:
-            'Verifique o histórico de atendimentos anteriores do paciente.',
+          description: 'Verifique o histórico de atendimentos anteriores do paciente.',
         },
       ],
     },
@@ -222,38 +202,28 @@ export function SmartTipsDrawer({ isOpen, onClose, tips = [], section = 'agendam
 
   const currentSection = sections[section] || sections.agendamento;
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    return null;
+  }
 
   return (
     <div className="fixed right-0 top-0 bottom-0 w-72 bg-white border-l border-gray-200 shadow-lg z-40 overflow-y-auto">
       <div className="p-4 sticky top-0 bg-white border-b border-gray-200 flex justify-between items-center">
         <h2 className="font-semibold text-gray-900">{currentSection.title}</h2>
-        <button
-          onClick={onClose}
-          className="text-gray-500 hover:text-gray-700"
-        >
+        <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
           <X className="w-5 h-5" />
         </button>
       </div>
 
       <div className="p-4 space-y-2">
         {currentSection.tips.map((tip) => (
-          <div
-            key={tip.id}
-            className="border border-gray-200 rounded-lg overflow-hidden"
-          >
+          <div key={tip.id} className="border border-gray-200 rounded-lg overflow-hidden">
             <button
-              onClick={() =>
-                setExpanded(expanded === tip.id ? null : tip.id)
-              }
+              onClick={() => setExpanded(expanded === tip.id ? null : tip.id)}
               className="w-full p-3 flex items-center justify-between hover:bg-gray-50 transition-colors"
             >
-              <span className="font-medium text-sm text-gray-900">
-                {tip.title}
-              </span>
-              <span className="text-gray-400">
-                {expanded === tip.id ? '▼' : '▶'}
-              </span>
+              <span className="font-medium text-sm text-gray-900">{tip.title}</span>
+              <span className="text-gray-400">{expanded === tip.id ? '▼' : '▶'}</span>
             </button>
             {expanded === tip.id && (
               <div className="px-3 py-2 bg-gray-50 border-t border-gray-200 text-xs text-gray-600">
@@ -280,29 +250,21 @@ export function PreAppointmentChecklist({ patient, professional, service }) {
 
   React.useEffect(() => {
     // Validar dados do paciente
-    const patientOk =
-      patient &&
-      patient.name &&
-      patient.cpf &&
-      patient.email &&
-      patient.phone;
-    setChecks(prev => ({
+    const patientOk = patient && patient.name && patient.cpf && patient.email && patient.phone;
+    setChecks((prev) => ({
       ...prev,
       patientDataComplete: !!patientOk,
     }));
   }, [patient]);
 
-  const allOk = Object.values(checks).every(v => v);
-  const completionPercentage = (
-    Object.values(checks).filter(v => v).length / Object.keys(checks).length
-  ) * 100;
+  const allOk = Object.values(checks).every((v) => v);
+  const completionPercentage =
+    (Object.values(checks).filter((v) => v).length / Object.keys(checks).length) * 100;
 
   return (
     <div className="space-y-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
       <div className="flex items-center justify-between">
-        <span className="font-semibold text-sm text-blue-900">
-          ✅ Checklist Pré-Agendamento
-        </span>
+        <span className="font-semibold text-sm text-blue-900">✅ Checklist Pré-Agendamento</span>
         <span className="text-xs font-semibold text-blue-700">
           {completionPercentage.toFixed(0)}%
         </span>
@@ -333,10 +295,7 @@ export function PreAppointmentChecklist({ patient, professional, service }) {
             label: '💼 Serviço disponível',
           },
         ].map((item) => (
-          <div
-            key={item.key}
-            className="flex items-center gap-2 text-xs text-blue-900"
-          >
+          <div key={item.key} className="flex items-center gap-2 text-xs text-blue-900">
             {checks[item.key] ? (
               <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
             ) : (

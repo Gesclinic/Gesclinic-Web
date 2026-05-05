@@ -2,35 +2,35 @@
  * ================================================
  * PatientRouteGuard - Proteção de Rotas Aninhadas
  * ================================================
- * 
+ *
  * RESPONSABILIDADES:
  * ✅ Bloqueia renderização sem patientId válido
  * ✅ Redireciona automaticamente para /clinica/pacientes
  * ✅ Previne acesso a rotas que precisam de paciente
  * ✅ Valida patientId contra PatientContext
- * 
+ *
  * PADRÃO DE USO:
  * <Route path=":patientId/*" element={<PatientRouteGuard><YourPage /></PatientRouteGuard>} />
  */
 
-import React from "react";
-import { useParams, Navigate } from "react-router-dom";
-import { usePatientContext } from "@/contexts/PatientContext";
+import React from 'react';
+import { useParams, Navigate } from 'react-router-dom';
+import { usePatientContext } from '@/contexts/PatientContext';
 
 export default function PatientRouteGuard({ children }) {
   const { patientId } = useParams();
   const { activePatientId, isPatientSelected, loading } = usePatientContext();
 
   // ⚠️ GUARD 1: patientId não pode ser null, undefined ou vazio
-  if (!patientId || patientId.trim() === "") {
-    console.warn("❌ PatientRouteGuard: patientId inválido ou ausente");
+  if (!patientId || patientId.trim() === '') {
+    console.warn('❌ PatientRouteGuard: patientId inválido ou ausente');
     return <Navigate to="/clinica/pacientes" replace />;
   }
 
   // ⚠️ GUARD 2: patientId da URL deve corresponder ao PatientContext
   if (activePatientId && activePatientId !== patientId) {
     console.warn(
-      `❌ PatientRouteGuard: patientId mismatch (URL: ${patientId}, Context: ${activePatientId})`
+      `❌ PatientRouteGuard: patientId mismatch (URL: ${patientId}, Context: ${activePatientId})`,
     );
     // Não redireciona imediatamente - deixa a página carregar se patientId é válido
     // Apenas avisa no console

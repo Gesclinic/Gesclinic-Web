@@ -5,21 +5,24 @@
 A **Tela de Check-in da Recepção** é a peça-chave que garante que o profissional só atenda pacientes prontos.
 
 ### Responsabilidade:
+
 ✅ Marcar chegada  
 ✅ Conferir dados  
 ✅ Resolver pendências financeiras/convênios  
-✅ Liberar para atendimento  
+✅ Liberar para atendimento
 
 ### O que NÃO faz:
+
 ❌ Agenda novos pacientes  
 ❌ Atende paciente  
-❌ Faz DRE completa  
+❌ Faz DRE completa
 
 ---
 
 ## 🎨 UX DETALHADA
 
 ### 📍 Rota Sugerida
+
 ```
 /clinica/agenda/checkin
 ```
@@ -54,21 +57,23 @@ A **Tela de Check-in da Recepção** é a peça-chave que garante que o profissi
 
 ### 🎨 Cores de Status
 
-| Status | Cor | Significado |
-|--------|-----|-------------|
-| 🟡 Aguardando | Amarelo | Espera dados ou liberação |
-| 🔴 Pendente | Laranja | Falta resolver algo |
+| Status           | Cor      | Significado                |
+| ---------------- | -------- | -------------------------- |
+| 🟡 Aguardando    | Amarelo  | Espera dados ou liberação  |
+| 🔴 Pendente      | Laranja  | Falta resolver algo        |
 | 🔵 Fin. Pendente | Vermelho | Falta gerar guia/pagamento |
-| 🟢 Liberado | Verde | Pronto para atender |
+| 🟢 Liberado      | Verde    | Pronto para atender        |
 
 ---
 
 ## ✅ CHECKLIST INTELIGENTE
 
 ### Regra de Ouro:
+
 **Sem checklist completo → NÃO libera**
 
 ### Itens Base (SEMPRE)
+
 - ☐ Dados cadastrais conferidos
 - ☐ Serviço correto
 - ☐ Profissional correto
@@ -76,18 +81,21 @@ A **Tela de Check-in da Recepção** é a peça-chave que garante que o profissi
 ### Itens Extras (Conforme Tipo)
 
 #### Se Convênio:
+
 - ☐ Convênio válido
 - ☐ Carteirinha conferida
 - ☐ Autorização válida
 - ☐ Guia gerada
 
 #### Se Particular:
+
 - ☐ Forma de pagamento definida
 - ☐ Pagamento registrado OU Autorizado após atendimento
 
 ### UX do Checklist
 
 Cada item tem:
+
 - ✅ Checkbox
 - 📝 Descrição clara
 - ⚠️ Badge "OBRIGATÓRIO" se pendente
@@ -100,6 +108,7 @@ Cada item tem:
 A recepção não faz DRE, apenas resolve bloqueios.
 
 ### Fluxo Convênio
+
 1. Plano validado?
 2. Carteirinha OK?
 3. Autorização confirmada?
@@ -109,11 +118,13 @@ A recepção não faz DRE, apenas resolve bloqueios.
 **Se dúvida:** Encaminhar para financeiro
 
 ### Fluxo Particular
+
 1. Valor informado?
 2. Forma de pagamento definida?
 3. Pagamento recebido OU autorizado para depois?
 
 **Opções:**
+
 - ✅ Já pagou (libera)
 - ⏳ Pagar depois do atendimento (libera)
 
@@ -129,6 +140,7 @@ A recepção não faz DRE, apenas resolve bloqueios.
 ✅ Status permite (não é final)
 
 **Ao clicar:**
+
 1. Sistema pede confirmação
 2. Muda status para `LIBERADO_PARA_ATENDIMENTO`
 3. Registra data/hora/usuário
@@ -136,6 +148,7 @@ A recepção não faz DRE, apenas resolve bloqueios.
 5. Profissional vê o paciente
 
 ### Outras Ações
+
 - ❌ Marcar Falta → status `FALTA`
 - 🔁 Remarcar → abre modal de reagendamento
 - 🛑 Marcar Pendência → status `PENDENTE`
@@ -145,6 +158,7 @@ A recepção não faz DRE, apenas resolve bloqueios.
 ## 🔓 LIBERAÇÃO PARA ATENDIMENTO (REGRA DE OURO)
 
 ### Fluxo Automático:
+
 ```javascript
 {
   status: "LIBERADO_PARA_ATENDIMENTO",
@@ -154,21 +168,24 @@ A recepção não faz DRE, apenas resolve bloqueios.
 ```
 
 ### Impacto:
+
 👉 Paciente aparece para profissional  
 👉 Some da fila de pendências  
 👉 NÃO pode mais ser alterado pela recepção  
-👉 Profissional começa atendimento  
+👉 Profissional começa atendimento
 
 ---
 
 ## 🛠️ INTEGRAÇÃO TÉCNICA
 
 ### Importação
+
 ```javascript
-import CheckinRecepacao from "@/pages/clinica/agenda/views/CheckinRecepacao";
+import CheckinRecepacao from '@/pages/clinica/agenda/views/CheckinRecepacao';
 ```
 
 ### Em AppRoutes.jsx
+
 ```javascript
 {
   path: "/clinica/agenda/checkin",
@@ -177,6 +194,7 @@ import CheckinRecepacao from "@/pages/clinica/agenda/views/CheckinRecepacao";
 ```
 
 ### Permissões Requeridas
+
 - `canMarkArrival` (recepcionista)
 - ❌ Profissional não acessa
 - ✅ Gestor pode visualizar/controlar
@@ -211,12 +229,12 @@ PACIENTE CHEGA
 
 ## ✨ BENEFÍCIOS
 
-| Problema | Solução | Resultado |
-|----------|---------|-----------|
-| Glosa por falta de guia | Validação antes | Sem glosa |
-| Conflito dados/convênio | Checklist obrigatório | Dados corretos |
-| Profissional vê paciente não pronto | Só libera completo | Fluxo limpo |
-| Falta rastreamento | Registra data/hora/usuário | Auditoria |
+| Problema                            | Solução                    | Resultado      |
+| ----------------------------------- | -------------------------- | -------------- |
+| Glosa por falta de guia             | Validação antes            | Sem glosa      |
+| Conflito dados/convênio             | Checklist obrigatório      | Dados corretos |
+| Profissional vê paciente não pronto | Só libera completo         | Fluxo limpo    |
+| Falta rastreamento                  | Registra data/hora/usuário | Auditoria      |
 
 ---
 

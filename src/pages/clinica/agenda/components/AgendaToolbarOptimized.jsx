@@ -3,10 +3,10 @@ import { ChevronDown } from 'lucide-react';
 
 /**
  * AgendaToolbarOptimized - Toolbar ultra-compacta com segmented control
- * 
+ *
  * Layout: [📋 Geral | 👨‍⚕️ Prof | 🚪 Sala]    [👤 Recepção ▾]
  * Altura: 40px (mínima)
- * 
+ *
  * Props:
  * - agendaMode: 'geral' | 'profissional' | 'sala'
  * - onAgendaModeChange: (mode) => void
@@ -26,21 +26,21 @@ export default function AgendaToolbarOptimized({
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
 
   const profileLabels = {
-    'recepcao': '👤 Recepção',
-    'profissional': '👨‍⚕️ Profissional',
-    'gestor': '⚙️ Gestor',
+    recepcao: '👤 Recepção',
+    profissional: '👨‍⚕️ Profissional',
+    gestor: '⚙️ Gestor',
   };
 
   const modeIcons = {
-    'geral': '📋',
-    'profissional': '👨‍⚕️',
-    'sala': '🚪',
+    geral: '📋',
+    profissional: '👨‍⚕️',
+    sala: '🚪',
   };
 
   const modeLabels = {
-    'geral': 'Geral',
-    'profissional': 'Prof.',
-    'sala': 'Sala',
+    geral: 'Geral',
+    profissional: 'Prof.',
+    sala: 'Sala',
   };
 
   return (
@@ -93,7 +93,9 @@ export default function AgendaToolbarOptimized({
           className="inline-flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-100 transition whitespace-nowrap"
         >
           {profileLabels[userProfile]}
-          <ChevronDown className={`w-3.5 h-3.5 transition ${profileDropdownOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown
+            className={`w-3.5 h-3.5 transition ${profileDropdownOpen ? 'rotate-180' : ''}`}
+          />
         </button>
 
         {profileDropdownOpen && (
@@ -120,4 +122,3 @@ export default function AgendaToolbarOptimized({
     </div>
   );
 }
-

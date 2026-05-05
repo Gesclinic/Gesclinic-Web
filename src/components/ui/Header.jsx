@@ -1,6 +1,6 @@
-import { Bell, UserCircle } from "lucide-react";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
-import { useClinicContext } from "@/contexts/useClinicContext";
+import { Bell, UserCircle } from 'lucide-react';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useClinicContext } from '@/contexts/useClinicContext';
 
 export default function Header() {
   const { user, logout } = useAuth();
@@ -9,9 +9,7 @@ export default function Header() {
 
   return (
     <header className="w-full bg-white h-16 border-b flex items-center justify-between px-6 shadow-sm">
-      <div className="font-semibold text-lg text-primary">
-        {clinic?.brand_name || "Clínica"}
-      </div>
+      <div className="font-semibold text-lg text-primary">{clinic?.brand_name || 'Clínica'}</div>
 
       <div className="flex items-center gap-4">
         <Bell className="text-gray-600 cursor-pointer" size={20} />

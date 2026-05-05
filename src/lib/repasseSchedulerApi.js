@@ -1,7 +1,7 @@
 // src/lib/repasseSchedulerApi.js
 /**
  * Agendamento Automático de Repasses
- * 
+ *
  * Calcula automaticamente repassos:
  * - Sempre no último dia útil do mês
  * - Ou sob demanda
@@ -16,16 +16,16 @@ import { calcularRepasseEmLote } from './medicalRepasseApi';
  */
 export function agendarCalculoMensal() {
   // Este é um exemplo para frontend - idealmente rodar no backend
-  
+
   // Verificar se precisa calcular (último dia do mês)
   const hoje = new Date();
   const ultimoDia = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
-  
+
   if (hoje.getDate() === ultimoDia.getDate()) {
     console.log('📅 É o último dia do mês - calculando repassos...');
     return true;
   }
-  
+
   return false;
 }
 
@@ -38,19 +38,19 @@ export async function executarCalculoAutomatico() {
     const hoje = new Date();
     const anoPassado = new Date(hoje);
     anoPassado.setMonth(anoPassado.getMonth() - 1);
-    
+
     const dataInicio = `${anoPassado.getFullYear()}-${String(anoPassado.getMonth() + 1).padStart(2, '0')}-01`;
     const dataFim = `${hoje.getFullYear()}-${String(hoje.getMonth()).padStart(2, '0')}-${new Date(hoje.getFullYear(), hoje.getMonth(), 0).getDate()}`;
 
     // Buscar todas as clínicas
-    const { data: clinics, error: clinicsError } = await supabase
-      .from('clinics')
-      .select('id');
+    const { data: clinics, error: clinicsError } = await supabase.from('clinics').select('id');
 
-    if (clinicsError) throw clinicsError;
+    if (clinicsError) {
+      throw clinicsError;
+    }
 
     const resultados = [];
-    
+
     for (const clinic of clinics || []) {
       try {
         console.log(`💼 Processando clínica: ${clinic.id}`);
@@ -79,9 +79,9 @@ export async function executarCalculoAutomatico() {
         resultado_json: resultados,
         status: 'completado',
         total_clinicas: clinics?.length || 0,
-        total_sucesso: resultados.filter(r => r.status === 'sucesso').length,
-        total_erro: resultados.filter(r => r.status === 'erro').length,
-      }
+        total_sucesso: resultados.filter((r) => r.status === 'sucesso').length,
+        total_erro: resultados.filter((r) => r.status === 'erro').length,
+      },
     ]);
 
     console.log('✅ Cálculo automático concluído:', resultados);
@@ -115,7 +115,7 @@ export async function agendarCalculoManual(clinicId, mes, ano) {
         clinic_id: clinicId,
         resultado_json: resultado,
         status: 'completado',
-      }
+      },
     ]);
 
     return resultado;
@@ -137,7 +137,9 @@ export async function obterHistoricoScheduler(clinicId, limite = 12) {
       .order('data_execucao', { ascending: false })
       .limit(limite);
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data || [];
   } catch (err) {
     console.error('❌ Erro ao buscar histórico:', err);

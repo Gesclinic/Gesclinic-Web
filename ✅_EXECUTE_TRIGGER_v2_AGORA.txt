@@ -1,0 +1,39 @@
+✅ FIX: Erro de dependências resolvido!
+
+═══════════════════════════════════════════════════════════════════════════════
+
+EXECUTE ESTE SQL (versão corrigida):
+
+📄 Arquivo: ⚡_TRIGGER_v2_FIX_DEPENDENCIES.sql
+
+Este arquivo:
+✅ Remove TRIGGERS primeiro
+✅ Remove função com CASCADE se necessário
+✅ Recria função com logging
+✅ Recria triggers
+✅ Sem erros de dependência!
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+COMO EXECUTAR:
+
+1. Supabase Dashboard → SQL Editor → New Query
+2. Copie TUDO do arquivo: ⚡_TRIGGER_v2_FIX_DEPENDENCIES.sql
+3. Cole no SQL Editor
+4. Clique RUN (botão azul)
+
+Resultado esperado: ✅ Success
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+DEPOIS:
+
+1. Recarregue página (Ctrl+R)
+2. Logout + Login
+3. Tente criar novo agendamento
+4. Se erro: Copie a mensagem completa aqui!
+
+
+═══════════════════════════════════════════════════════════════════════════════

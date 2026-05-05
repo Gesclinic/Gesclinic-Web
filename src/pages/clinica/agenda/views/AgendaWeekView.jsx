@@ -10,14 +10,14 @@ import { useClinicContext } from '@/contexts/ClinicContext';
 
 /**
  * AgendaWeekView - Visualização semanal da agenda
- * 
+ *
  * Layout horizontal com:
  * - Colunas: Dias da semana (Seg-Dom)
  * - Linhas: Horários (08:00-18:00, 30min intervalo)
  * - Células com status visual (cores) e contadores
  * - NOVO: Bloqueio de feriados com override manual
  * - NOVO: Bloqueio de dias indisponíveis do profissional filtrado
- * 
+ *
  * Props:
  * - date: string (YYYY-MM-DD) - data base para semana
  * - appointments: array - agendamentos
@@ -37,33 +37,48 @@ export default function AgendaWeekView({
   onViewDetails = () => {},
   onContextMenu = () => {},
   showWeekends = false,
-  clinicId = null,  // Pode vir do pai ou usar clinic?.id
-  filteredProfessionalId = null,  // NOVO: ID do profissional filtrado
-  userRole = null,  // Role do usuário logado
-  userProfessionalId = null,  // ID do profissional logado (se for profissional)
+  clinicId = null, // Pode vir do pai ou usar clinic?.id
+  filteredProfessionalId = null, // NOVO: ID do profissional filtrado
+  userRole = null, // Role do usuário logado
+  userProfessionalId = null, // ID do profissional logado (se for profissional)
 }) {
   // ✅ FUNÇÃO HELPER PARA EXTRAIR PRIMEIRO E ÚLTIMO NOME
   const getFirstAndLastName = (fullName) => {
-    if (!fullName) return 'Paciente';
-    const names = fullName.trim().split(' ').filter(n => n.length > 0);
-    if (names.length === 1) return names[0];
+    if (!fullName) {
+      return 'Paciente';
+    }
+    const names = fullName
+      .trim()
+      .split(' ')
+      .filter((n) => n.length > 0);
+    if (names.length === 1) {
+      return names[0];
+    }
     return `${names[0]} ${names[names.length - 1]}`;
   };
 
   // Debug: Log de props ao montar
-  console.log('🔍 AgendaWeekView props:', { date, clinicId, hasAppointments: appointments.length, filteredProfessionalId });
+  console.log('🔍 AgendaWeekView props:', {
+    date,
+    clinicId,
+    hasAppointments: appointments.length,
+    filteredProfessionalId,
+  });
   const [hoveredTime, setHoveredTime] = useState(null);
   const [holidaysMap, setHolidaysMap] = useState({});
   const [loadingHolidays, setLoadingHolidays] = useState(false);
   const [openingHoliday, setOpeningHoliday] = useState(null);
   const [professionalAvailabilityByDay, setProfessionalAvailabilityByDay] = useState({}); // NOVO: Disponibilidade por dia
-  
+
   const { user } = useAuth();
   const clinic = useClinicContext();
 
   // Log de disponibilidade
   useEffect(() => {
-    console.log('📊 [AgendaWeekView] professionalAvailabilityByDay:', professionalAvailabilityByDay);
+    console.log(
+      '📊 [AgendaWeekView] professionalAvailabilityByDay:',
+      professionalAvailabilityByDay,
+    );
   }, [professionalAvailabilityByDay]);
 
   // Gerar horários de acordo com as configurações da clínica
@@ -79,7 +94,10 @@ export default function AgendaWeekView({
       : Array.from({ length: 5 }, (_, i) => addDays(weekStart, i));
   }, [date, showWeekends, weekStart]);
 
-  console.log('📅 [AgendaWeekView] Semana:', daysOfWeek.map(d => format(d, 'yyyy-MM-dd')));
+  console.log(
+    '📅 [AgendaWeekView] Semana:',
+    daysOfWeek.map((d) => format(d, 'yyyy-MM-dd')),
+  );
 
   // Agrupar agendamentos por dia e horário
   const appointmentsByDayTime = useMemo(() => {
@@ -110,7 +128,7 @@ export default function AgendaWeekView({
     appointments.forEach((apt) => {
       // Extrair a data corretamente - tentar múltiplas possibilidades
       let aptDate = null;
-      
+
       // Tentar campos possíveis
       if (apt.scheduled_date) {
         aptDate = apt.scheduled_date;
@@ -124,18 +142,23 @@ export default function AgendaWeekView({
           console.warn('❌ Erro ao parsear start_time:', apt.start_time);
         }
       }
-      
+
       // Extrair tempo - remover segundos se tiver
       let aptTime = apt.scheduled_time || apt.horário || apt.time || '08:00';
       if (aptTime && aptTime.length > 5) {
         aptTime = aptTime.substring(0, 5); // '08:00:00' -> '08:00'
       }
-      
+
       if (aptDate && grouped[aptDate]?.[aptTime]) {
         grouped[aptDate][aptTime].push(apt);
         console.log('✅ Agendamento adicionado:', { aptDate, aptTime, patient: apt.patient_name });
       } else {
-        console.warn('❌ Agendamento NÃO adicionado:',  { aptDate, aptTime, patient: apt.patient_name, grouped: grouped[aptDate] ? Object.keys(grouped[aptDate]).slice(0,3) : 'sem data' });
+        console.warn('❌ Agendamento NÃO adicionado:', {
+          aptDate,
+          aptTime,
+          patient: apt.patient_name,
+          grouped: grouped[aptDate] ? Object.keys(grouped[aptDate]).slice(0, 3) : 'sem data',
+        });
       }
     });
 
@@ -147,27 +170,31 @@ export default function AgendaWeekView({
     const loadHolidays = async () => {
       // Usar clinicId da prop ou do clinic context
       const activeClinicId = clinicId || clinic?.id;
-      
+
       // ✅ IMPORTANTE: Carregar feriados NACIONAIS mesmo sem clinicId!
       // A função checkMultipleDates() busca: clinic_id IS NULL OR clinic_id = activeClinicId
       // Quando activeClinicId é null, busca apenas feriados nacionais (clinic_id = NULL)
-      
+
       setLoadingHolidays(true);
       try {
-        const dates = daysOfWeek.map(d => format(d, 'yyyy-MM-dd'));
+        const dates = daysOfWeek.map((d) => format(d, 'yyyy-MM-dd'));
         const datesKey = dates.join(','); // String única para cada semana
-        
-        console.log('📅 [AgendaWeekView] Carregando feriados:', { 
-          datesCount: dates.length, 
+
+        console.log('📅 [AgendaWeekView] Carregando feriados:', {
+          datesCount: dates.length,
           firstDate: dates[0],
           lastDate: dates[dates.length - 1],
           clinic: activeClinicId || '(nacionais)',
-          datesArray: dates
+          datesArray: dates,
         });
-        
+
         // ✅ Passa activeClinicId (pode ser null para apenas feriados nacionais)
         const result = await checkMultipleDates(dates, activeClinicId);
-        console.log('✅ [AgendaWeekView] Feriados carregados:', Object.keys(result).length, 'encontrados');
+        console.log(
+          '✅ [AgendaWeekView] Feriados carregados:',
+          Object.keys(result).length,
+          'encontrados',
+        );
         console.log('📊 [AgendaWeekView] Resultado completo:', result);
         setHolidaysMap(result);
       } catch (error) {
@@ -180,7 +207,7 @@ export default function AgendaWeekView({
     };
 
     loadHolidays();
-    
+
     // Depende de: date (muda semana) e showWeekends (muda dias incluídos)
   }, [date, showWeekends]);
 
@@ -188,23 +215,30 @@ export default function AgendaWeekView({
   useEffect(() => {
     const loadProfessionalAvailability = async () => {
       const isProfesionalLogged = userRole === 'profissional';
-      const profIdToLoad = filteredProfessionalId || (isProfesionalLogged ? userProfessionalId : null);
+      const profIdToLoad =
+        filteredProfessionalId || (isProfesionalLogged ? userProfessionalId : null);
 
       if (!profIdToLoad) {
-        console.log('🔍 [AgendaWeekView] Nenhum profissional para carregar, limpando disponibilidade');
+        console.log(
+          '🔍 [AgendaWeekView] Nenhum profissional para carregar, limpando disponibilidade',
+        );
         setProfessionalAvailabilityByDay({});
         return;
       }
 
       try {
         const startTime = Date.now();
-        console.log('🔍 [AgendaWeekView] Carregando disponibilidade para profissional:', profIdToLoad, `(${daysOfWeek.length} dias)`);
-        
+        console.log(
+          '🔍 [AgendaWeekView] Carregando disponibilidade para profissional:',
+          profIdToLoad,
+          `(${daysOfWeek.length} dias)`,
+        );
+
         // ⚡ Carregar TODAS as disponibilidades em paralelo ao invés de sequencial
-        const promises = daysOfWeek.map(day => {
+        const promises = daysOfWeek.map((day) => {
           const dayStr = format(day, 'yyyy-MM-dd');
           return getProfessionalAvailableSlots(profIdToLoad, dayStr)
-            .then(slots => {
+            .then((slots) => {
               console.log(`🔍 [AgendaWeekView] ${dayStr}: slots retornados:`, slots);
               return {
                 dayStr,
@@ -212,7 +246,7 @@ export default function AgendaWeekView({
                 slots: slots || [],
               };
             })
-            .catch(err => {
+            .catch((err) => {
               console.error(`❌ [AgendaWeekView] Erro ao carregar ${dayStr}:`, err);
               return {
                 dayStr,
@@ -226,7 +260,9 @@ export default function AgendaWeekView({
         const availability = {};
         results.forEach(({ dayStr, hasAvailability, slots }) => {
           availability[dayStr] = { hasAvailability, slots };
-          console.log(`✅ [AgendaWeekView] ${dayStr}: hasAvailability=${hasAvailability}, slots=${slots?.length || 0}`);
+          console.log(
+            `✅ [AgendaWeekView] ${dayStr}: hasAvailability=${hasAvailability}, slots=${slots?.length || 0}`,
+          );
         });
 
         console.log('📊 [AgendaWeekView] Disponibilidade final:', availability);
@@ -234,14 +270,18 @@ export default function AgendaWeekView({
         const elapsed = Date.now() - startTime;
         console.log(`✅ [AgendaWeekView] Disponibilidades carregadas em ${elapsed}ms`);
       } catch (error) {
-        console.error('❌ [AgendaWeekView] Erro ao carregar disponibilidade do profissional:', error);
+        console.error(
+          '❌ [AgendaWeekView] Erro ao carregar disponibilidade do profissional:',
+          error,
+        );
         setProfessionalAvailabilityByDay({});
       }
     };
 
     const isProfesionalLogged = userRole === 'profissional';
-    const profIdToLoad = filteredProfessionalId || (isProfesionalLogged ? userProfessionalId : null);
-    
+    const profIdToLoad =
+      filteredProfessionalId || (isProfesionalLogged ? userProfessionalId : null);
+
     if (profIdToLoad) {
       loadProfessionalAvailability();
     }
@@ -249,22 +289,24 @@ export default function AgendaWeekView({
 
   // Handler para abrir agenda de feriado manualmente
   const handleOpenHoliday = async (dateStr, reason = '') => {
-    if (!user?.id || !clinicId && !clinic?.id) return;
-    
+    if (!user?.id || (!clinicId && !clinic?.id)) {
+      return;
+    }
+
     setOpeningHoliday(dateStr);
     try {
       const success = await openHolidayManual(
         dateStr,
         clinicId || clinic.id,
         user.id,
-        reason || 'Abertura manual da agenda'
+        reason || 'Abertura manual da agenda',
       );
-      
+
       if (success) {
         // Recarregar feriados após override
         const updatedHolidays = await checkMultipleDates(
-          daysOfWeek.map(d => format(d, 'yyyy-MM-dd')),
-          clinicId || clinic.id
+          daysOfWeek.map((d) => format(d, 'yyyy-MM-dd')),
+          clinicId || clinic.id,
         );
         setHolidaysMap(updatedHolidays);
       }
@@ -277,13 +319,21 @@ export default function AgendaWeekView({
 
   // Determinar status de uma célula
   const getCellStatus = (appts) => {
-    if (appts.length === 0) return 'livre';
-    
-    const statuses = appts.map(a => a.status || 'confirmado');
-    
-    if (statuses.includes('falta') || statuses.includes('ausente')) return 'critico';
-    if (appts.length >= 3) return 'lotado';
-    if (statuses.includes('aguardando')) return 'parcial';
+    if (appts.length === 0) {
+      return 'livre';
+    }
+
+    const statuses = appts.map((a) => a.status || 'confirmado');
+
+    if (statuses.includes('falta') || statuses.includes('ausente')) {
+      return 'critico';
+    }
+    if (appts.length >= 3) {
+      return 'lotado';
+    }
+    if (statuses.includes('aguardando')) {
+      return 'parcial';
+    }
     return 'normal';
   };
 
@@ -298,8 +348,10 @@ export default function AgendaWeekView({
 
   // Tooltip ao hover
   const getTooltipText = (appts, day, time) => {
-    if (appts.length === 0) return 'Disponível';
-    
+    if (appts.length === 0) {
+      return 'Disponível';
+    }
+
     const dayName = format(day, 'EEEE', { locale: ptBR });
     const count = appts.length;
     const status = getCellStatus(appts);
@@ -310,29 +362,60 @@ export default function AgendaWeekView({
       lotado: `${count} agendamentos - Lotado`,
       critico: `${count} - Com atrasos/faltas`,
     };
-    
+
     return `${dayName.toUpperCase()} ${time}\n${statusLabel[status]}`;
   };
 
   return (
-    <div style={{ border: '1px solid #ddd', borderRadius: 8, background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div
+      style={{
+        border: '1px solid #ddd',
+        borderRadius: 8,
+        background: '#fff',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+      }}
+    >
       {/* Header - Dias da Semana */}
-      <div style={{ display: 'grid', gridTemplateColumns: '80px repeat(7, 1fr)', borderBottom: '2px solid #dee2e6', background: '#f8f9fa' }}>
-        <div style={{ padding: 12, borderRight: '1px solid #dee2e6', textAlign: 'center', fontWeight: 700, fontSize: 13 }}>Horário</div>
-        {daysOfWeek.map(day => {
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '80px repeat(7, 1fr)',
+          borderBottom: '2px solid #dee2e6',
+          background: '#f8f9fa',
+        }}
+      >
+        <div
+          style={{
+            padding: 12,
+            borderRight: '1px solid #dee2e6',
+            textAlign: 'center',
+            fontWeight: 700,
+            fontSize: 13,
+          }}
+        >
+          Horário
+        </div>
+        {daysOfWeek.map((day) => {
           const dayStr = format(day, 'yyyy-MM-dd');
           const isToday = dayStr === new Date().toISOString().split('T')[0];
           return (
-            <div key={dayStr} style={{ 
-              padding: 12, 
-              borderRight: '1px solid #dee2e6', 
-              textAlign: 'center', 
-              background: isToday ? '#e7f3ff' : '#e7f3ff', 
-              fontWeight: 700, 
-              fontSize: 13, 
-              color: '#0052cc',
-              borderBottom: isToday ? '2px solid #0052cc' : 'none'
-            }}>
+            <div
+              key={dayStr}
+              style={{
+                padding: 12,
+                borderRight: '1px solid #dee2e6',
+                textAlign: 'center',
+                background: isToday ? '#e7f3ff' : '#e7f3ff',
+                fontWeight: 700,
+                fontSize: 13,
+                color: '#0052cc',
+                borderBottom: isToday ? '2px solid #0052cc' : 'none',
+              }}
+            >
               <div>{format(day, 'EEE', { locale: ptBR })}</div>
               <div style={{ fontSize: 11, marginTop: 4 }}>{format(day, 'dd/MM')}</div>
             </div>
@@ -342,26 +425,44 @@ export default function AgendaWeekView({
 
       {/* Grid - Horários e Cells */}
       <div style={{ overflowY: 'auto', flex: 1 }}>
-        {timeSlots.map(horario => (
-          <div key={horario} style={{ display: 'grid', gridTemplateColumns: '80px repeat(7, 1fr)', borderBottom: '1px solid #dee2e6' }}>
-            <div style={{ padding: 12, borderRight: '1px solid #dee2e6', textAlign: 'center', fontWeight: 600, background: '#f8f9fa', color: '#0052cc', fontSize: 12 }}>
+        {timeSlots.map((horario) => (
+          <div
+            key={horario}
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '80px repeat(7, 1fr)',
+              borderBottom: '1px solid #dee2e6',
+            }}
+          >
+            <div
+              style={{
+                padding: 12,
+                borderRight: '1px solid #dee2e6',
+                textAlign: 'center',
+                fontWeight: 600,
+                background: '#f8f9fa',
+                color: '#0052cc',
+                fontSize: 12,
+              }}
+            >
               {horario}
             </div>
-            {daysOfWeek.map(day => {
+            {daysOfWeek.map((day) => {
               const dayStr = format(day, 'yyyy-MM-dd');
               const appts = appointmentsByDayTime[dayStr]?.[horario] || [];
               const apt = appts[0] || null;
-              
+
               // Verificar disponibilidade
               const profAvailability = professionalAvailabilityByDay[dayStr];
-              const isProfessionalUnavailable = filteredProfessionalId && profAvailability && !profAvailability.hasAvailability;
-              
+              const isProfessionalUnavailable =
+                filteredProfessionalId && profAvailability && !profAvailability.hasAvailability;
+
               let cellBg = '#ffffff'; // Disponível
               let displayText = 'Clique para agendar';
               let clickable = true;
               let textColor = '#10b981'; // Verde
               let fontWeight = 900;
-              
+
               if (isProfessionalUnavailable) {
                 cellBg = '#f3f3f3'; // Cinza
                 displayText = '🔒 Indisponível';
@@ -376,7 +477,7 @@ export default function AgendaWeekView({
                 clickable = true;
                 textColor = color;
               }
-              
+
               return (
                 <div
                   key={`${dayStr}-${horario}`}
@@ -394,7 +495,7 @@ export default function AgendaWeekView({
                     borderRight: clickable ? '1px solid #dee2e6' : '1px solid #e8e8e8',
                     background: cellBg,
                     minHeight: 70,
-                    cursor: (clickable && apt) ? 'pointer' : 'default',
+                    cursor: clickable && apt ? 'pointer' : 'default',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -402,7 +503,7 @@ export default function AgendaWeekView({
                     textAlign: 'center',
                     color: textColor,
                     fontWeight: fontWeight,
-                    transition: 'all 0.2s ease'
+                    transition: 'all 0.2s ease',
                   }}
                   title={apt ? apt.patient_name : displayText}
                 >
@@ -416,4 +517,3 @@ export default function AgendaWeekView({
     </div>
   );
 }
-

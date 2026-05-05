@@ -4,14 +4,22 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import React from "react";
+} from '@/components/ui/select';
+import React from 'react';
 
 export default function AgendaFilters({
-  professionalId, setProfessionalId, professionals = [],
-  roomId, setRoomId, rooms = [],
-  status, setStatus, showStatus = true,
-  patientId, setPatientId, patients = [],
+  professionalId,
+  setProfessionalId,
+  professionals = [],
+  roomId,
+  setRoomId,
+  rooms = [],
+  status,
+  setStatus,
+  showStatus = true,
+  patientId,
+  setPatientId,
+  patients = [],
   showProfessional = true,
   showRoom = true,
   showPatient = true,
@@ -28,7 +36,9 @@ export default function AgendaFilters({
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
               {professionals.map((p) => (
-                <SelectItem key={p.id} value={p.id}>{p.full_name || p.name}</SelectItem>
+                <SelectItem key={p.id} value={p.id}>
+                  {p.full_name || p.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -44,7 +54,9 @@ export default function AgendaFilters({
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
               {rooms.map((r) => (
-                <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                <SelectItem key={r.id} value={r.id}>
+                  {r.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -78,7 +90,9 @@ export default function AgendaFilters({
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
               {patients.map((p) => (
-                <SelectItem key={p.id} value={p.id}>{p.full_name || p.name}</SelectItem>
+                <SelectItem key={p.id} value={p.id}>
+                  {p.full_name || p.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>

@@ -10,7 +10,7 @@ const getToastColors = (type: Toast['type']) => {
         border: 'border-green-200',
         icon: 'text-green-600',
         title: 'text-green-900',
-        description: 'text-green-700'
+        description: 'text-green-700',
       };
     case 'error':
       return {
@@ -18,7 +18,7 @@ const getToastColors = (type: Toast['type']) => {
         border: 'border-red-200',
         icon: 'text-red-600',
         title: 'text-red-900',
-        description: 'text-red-700'
+        description: 'text-red-700',
       };
     case 'warning':
       return {
@@ -26,7 +26,7 @@ const getToastColors = (type: Toast['type']) => {
         border: 'border-amber-200',
         icon: 'text-amber-600',
         title: 'text-amber-900',
-        description: 'text-amber-700'
+        description: 'text-amber-700',
       };
     case 'info':
     default:
@@ -35,7 +35,7 @@ const getToastColors = (type: Toast['type']) => {
         border: 'border-blue-200',
         icon: 'text-blue-600',
         title: 'text-blue-900',
-        description: 'text-blue-700'
+        description: 'text-blue-700',
       };
   }
 };
@@ -54,7 +54,10 @@ const getIcon = (type: Toast['type']) => {
   }
 };
 
-const ToastItem: React.FC<{ toast: Toast; onRemove: (id: string) => void }> = ({ toast, onRemove }) => {
+const ToastItem: React.FC<{ toast: Toast; onRemove: (id: string) => void }> = ({
+  toast,
+  onRemove,
+}) => {
   const colors = getToastColors(toast.type);
   const Icon = getIcon(toast.type);
 

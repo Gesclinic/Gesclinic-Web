@@ -10,10 +10,16 @@ function escapeHtml(value = '') {
 }
 
 function renderLineBlock(lines) {
-  return (lines || []).filter(Boolean).map((line, index) => {
-    const cls = index === 0 ? 'font-weight:700;color:#0f172a;font-size:18px;' : 'color:#475569;font-size:13px;';
-    return `<div style="${cls}">${escapeHtml(line)}</div>`;
-  }).join('');
+  return (lines || [])
+    .filter(Boolean)
+    .map((line, index) => {
+      const cls =
+        index === 0
+          ? 'font-weight:700;color:#0f172a;font-size:18px;'
+          : 'color:#475569;font-size:13px;';
+      return `<div style="${cls}">${escapeHtml(line)}</div>`;
+    })
+    .join('');
 }
 
 export function buildLaudoPrintHtml({ laudo, patientName = '' }) {
@@ -31,8 +37,12 @@ export function buildLaudoPrintHtml({ laudo, patientName = '' }) {
     letterhead?.professional_contact_line,
   ].filter(Boolean);
   const signature = laudo?.metadata?.signature || {};
-  const examDate = laudo?.exam_date ? new Date(laudo.exam_date).toLocaleDateString('pt-BR') : 'Não informada';
-  const createdAt = laudo?.created_at ? new Date(laudo.created_at).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR');
+  const examDate = laudo?.exam_date
+    ? new Date(laudo.exam_date).toLocaleDateString('pt-BR')
+    : 'Não informada';
+  const createdAt = laudo?.created_at
+    ? new Date(laudo.created_at).toLocaleDateString('pt-BR')
+    : new Date().toLocaleDateString('pt-BR');
 
   return `
     <!DOCTYPE html>
@@ -95,19 +105,27 @@ export function buildLaudoPrintHtml({ laudo, patientName = '' }) {
           <div class="content">${escapeHtml(laudo?.content || '')}</div>
         </div>
 
-        ${professionalLines.length ? `
+        ${
+  professionalLines.length
+    ? `
           <div class="signature-block">
             <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:10px;">Responsável pelo laudo</div>
             ${renderLineBlock(professionalLines)}
-            ${signature?.visual_signature_data_url ? `
+            ${
+  signature?.visual_signature_data_url
+    ? `
               <div class="signature-image">
                 <img src="${escapeHtml(signature.visual_signature_data_url)}" alt="Assinatura do profissional" />
               </div>
-            ` : ''}
+            `
+    : ''
+}
             ${signature?.certificate_id ? `<div style="margin-top:12px;color:#475569;font-size:12px;">Certificado: ${escapeHtml(signature.certificate_id)}</div>` : ''}
             ${signature?.signature_hash ? `<div style="margin-top:6px;color:#64748b;font-size:11px;word-break:break-all;">Hash SHA-256: ${escapeHtml(signature.signature_hash)}</div>` : ''}
           </div>
-        ` : ''}
+        `
+    : ''
+}
 
         <div class="footer">
           Documento gerado por Gesclinic em ${escapeHtml(new Date().toLocaleDateString('pt-BR'))}.

@@ -1,14 +1,14 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { 
-  BarChart3, 
-  TrendingUp, 
-  ArrowRight, 
-  CheckCircle2, 
+import {
+  BarChart3,
+  TrendingUp,
+  ArrowRight,
+  CheckCircle2,
   Wallet,
   Plus,
   ArrowLeftRight,
   MoreVertical,
-  X
+  X,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useClinicContext } from '@/contexts/ClinicContext';
@@ -29,13 +29,15 @@ const CaixaGerencialView = () => {
   const [transferData, setTransferData] = useState({ fromId: '', toId: '', amount: '' });
 
   const loadData = async () => {
-    if (!clinicId) return;
+    if (!clinicId) {
+      return;
+    }
     setLoading(true);
     try {
       const [drawersRes, accountsRes, transfersRes] = await Promise.all([
         cashDrawerApi.listByClinic(clinicId),
         financeAccountsApi.listByClinic(clinicId),
-        cashTransfersApi.listByClinic(clinicId)
+        cashTransfersApi.listByClinic(clinicId),
       ]);
       setDrawers(drawersRes || []);
       setAccounts(accountsRes || []);
@@ -58,7 +60,9 @@ const CaixaGerencialView = () => {
 
   const handleConfirmTransfer = async (e) => {
     e.preventDefault();
-    if (!clinicId) return;
+    if (!clinicId) {
+      return;
+    }
     try {
       await cashTransfersApi.create({
         clinic_id: clinicId,
@@ -66,7 +70,7 @@ const CaixaGerencialView = () => {
         to_account_id: transferData.toId,
         amount: parseFloat(transferData.amount),
         transfer_date: new Date().toISOString(),
-        status: 'pending'
+        status: 'pending',
       });
       setShowTransferForm(false);
       setTransferData({ fromId: '', toId: '', amount: '' });
@@ -77,7 +81,10 @@ const CaixaGerencialView = () => {
     }
   };
 
-  const totalDrawersBalance = drawers.reduce((acc, d) => acc + (d.closing_balance || d.opening_balance || 0), 0);
+  const totalDrawersBalance = drawers.reduce(
+    (acc, d) => acc + (d.closing_balance || d.opening_balance || 0),
+    0,
+  );
   const totalAccountsBalance = accounts.reduce((acc, a) => acc + (a.balance || 0), 0);
   const totalBalance = totalDrawersBalance + totalAccountsBalance;
 
@@ -86,26 +93,26 @@ const CaixaGerencialView = () => {
       title: 'Caixas Abertos',
       value: drawers.filter((d) => d.status === 'open').length,
       icon: CheckCircle2,
-      color: 'from-blue-500 to-blue-600'
+      color: 'from-blue-500 to-blue-600',
     },
     {
       title: 'Transferências',
       value: transfers.length,
       icon: ArrowRight,
-      color: 'from-purple-500 to-purple-600'
+      color: 'from-purple-500 to-purple-600',
     },
     {
       title: 'Contas Ativas',
       value: accounts.length,
       icon: Wallet,
-      color: 'from-green-500 to-green-600'
+      color: 'from-green-500 to-green-600',
     },
     {
       title: 'Saldo Total',
       value: `R$ ${totalBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
       icon: TrendingUp,
-      color: 'from-orange-500 to-orange-600'
-    }
+      color: 'from-orange-500 to-orange-600',
+    },
   ];
 
   const tabs = [
@@ -122,7 +129,10 @@ const CaixaGerencialView = () => {
           <p className="text-slate-500">Gestão financeira consolidada e controle de fluxo</p>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={handleCreateTransfer} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-medium shadow-sm shadow-blue-200">
+          <button
+            onClick={handleCreateTransfer}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-medium shadow-sm shadow-blue-200"
+          >
             <Plus size={18} />
             Nova Transferência
           </button>
@@ -131,7 +141,10 @@ const CaixaGerencialView = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {summaryCards.map((card, index) => (
-          <div key={index} className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow">
+          <div
+            key={index}
+            className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow"
+          >
             <div className={`h-1 bg-gradient-to-r ${card.color}`} />
             <div className="p-5">
               <div className="p-2 w-fit rounded-lg bg-slate-50 text-slate-600 mb-4">
@@ -151,7 +164,9 @@ const CaixaGerencialView = () => {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-semibold transition-all ${
-                activeTab === tab.id ? 'bg-blue-50 text-blue-600 shadow-sm' : 'text-slate-500 hover:bg-slate-50'
+                activeTab === tab.id
+                  ? 'bg-blue-50 text-blue-600 shadow-sm'
+                  : 'text-slate-500 hover:bg-slate-50'
               }`}
             >
               {tab.label}
@@ -194,16 +209,19 @@ const CaixaGerencialView = () => {
                               {d.status === 'open'
                                 ? 'Aberto'
                                 : d.status === 'closed_full'
-                                ? 'Fechado OK'
-                                : 'Fechado Divergência'}
+                                  ? 'Fechado OK'
+                                  : 'Fechado Divergência'}
                             </span>
                           </td>
                           <td className="px-4 py-4 text-slate-500 text-sm">
-                            R$ {(d.opening_balance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            R${' '}
+                            {(d.opening_balance || 0).toLocaleString('pt-BR', {
+                              minimumFractionDigits: 2,
+                            })}
                           </td>
                           <td className="px-4 py-4 text-right text-slate-900 font-bold">
                             {d.closing_balance
-                              ? `R$ ${(d.closing_balance).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                              ? `R$ ${d.closing_balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
                               : '—'}
                           </td>
                           <td className="px-4 py-4 text-right">
@@ -246,15 +264,20 @@ const CaixaGerencialView = () => {
                                 t.status === 'completed'
                                   ? 'bg-green-100 text-green-700'
                                   : t.status === 'pending'
-                                  ? 'bg-amber-100 text-amber-700'
-                                  : 'bg-red-100 text-red-700'
+                                    ? 'bg-amber-100 text-amber-700'
+                                    : 'bg-red-100 text-red-700'
                               }`}
                             >
-                              {t.status === 'completed' ? 'Concluído' : t.status === 'pending' ? 'Pendente' : 'Cancelado'}
+                              {t.status === 'completed'
+                                ? 'Concluído'
+                                : t.status === 'pending'
+                                  ? 'Pendente'
+                                  : 'Cancelado'}
                             </span>
                           </td>
                           <td className="px-4 py-4 text-right text-slate-900 font-bold">
-                            R$ {(t.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            R${' '}
+                            {(t.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </td>
                           <td className="px-4 py-4 text-right">
                             <button className="text-slate-400 hover:text-slate-600">
@@ -287,9 +310,12 @@ const CaixaGerencialView = () => {
                       accounts.map((a) => (
                         <tr key={a.id} className="hover:bg-slate-50/50 transition-colors">
                           <td className="px-4 py-4 text-slate-700 font-semibold">{a.name}</td>
-                          <td className="px-4 py-4 text-slate-500 text-sm">{a.account_type || 'Conta'}</td>
+                          <td className="px-4 py-4 text-slate-500 text-sm">
+                            {a.account_type || 'Conta'}
+                          </td>
                           <td className="px-4 py-4 text-right text-slate-900 font-bold">
-                            R$ {(a.balance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            R${' '}
+                            {(a.balance || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </td>
                         </tr>
                       ))
@@ -353,7 +379,9 @@ const CaixaGerencialView = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1">Valor (R$)</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">
+                  Valor (R$)
+                </label>
                 <input
                   type="number"
                   step="0.01"

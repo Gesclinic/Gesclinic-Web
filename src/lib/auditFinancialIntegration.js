@@ -1,42 +1,41 @@
 /**
  * 🔗 INTEGRAÇÃO DE AUDITORIA FINANCEIRA
- * 
+ *
  * Funções wrapper que adicionam logging automático aos fluxos existentes:
  * - financeApi.createAR() → logAppointmentFinancialAudit(RECEIVABLE_CREATED)
  * - financeApi.updateAR() → logAppointmentFinancialAudit(PAYMENT_RECEIVED)
  * - repasseMedicoApi.gerarRepasse() → logAppointmentFinancialAudit(REPASSE_CALCULATED)
  * - repasseMedicoApi.liberarRepasseParaPagamento() → logAppointmentFinancialAudit(REPASSE_PAID)
- * 
+ *
  * Como usar:
  * - Importar este arquivo antes de usar as APIs: import "@/lib/auditFinancialIntegration"
  * - Ou adicionar import em main.jsx/App.jsx para inicializar globalmente
  */
 
-import { logAppointmentFinancialAudit, FINANCIAL_EVENT_TYPES, RELATED_ENTITY_TYPES } from "@/lib/auditFinancialApi";
+import {
+  logAppointmentFinancialAudit,
+  FINANCIAL_EVENT_TYPES,
+  RELATED_ENTITY_TYPES,
+} from '@/lib/auditFinancialApi';
 
 /**
  * Log de Conta a Receber Criada
- * 
+ *
  * @param {string} appointmentId - ID do atendimento
  * @param {string} receivableId - ID da conta a receber criada
  * @param {number} amount - Valor da conta
  * @param {Object} context - Contexto adicional
  */
-export async function logReceivableCreated(
-  appointmentId,
-  receivableId,
-  amount,
-  context = {}
-) {
+export async function logReceivableCreated(appointmentId, receivableId, amount, context = {}) {
   return logAppointmentFinancialAudit({
     appointmentId,
     financialEventType: FINANCIAL_EVENT_TYPES.RECEIVABLE_CREATED,
     relatedEntity: RELATED_ENTITY_TYPES.ACCOUNTS_RECEIVABLE,
     relatedEntityId: receivableId,
     amount,
-    status: "open",
+    status: 'open',
     context: {
-      description: "Conta a receber foi criada para este atendimento",
+      description: 'Conta a receber foi criada para este atendimento',
       ...context,
     },
   });
@@ -44,7 +43,7 @@ export async function logReceivableCreated(
 
 /**
  * Log de Pagamento Recebido
- * 
+ *
  * @param {string} appointmentId - ID do atendimento
  * @param {string} receivableId - ID da conta a receber
  * @param {number} amount - Valor pago
@@ -57,8 +56,8 @@ export async function logPaymentReceived(
   receivableId,
   amount,
   previousAmount,
-  status = "received",
-  context = {}
+  status = 'received',
+  context = {},
 ) {
   return logAppointmentFinancialAudit({
     appointmentId,
@@ -77,7 +76,7 @@ export async function logPaymentReceived(
 
 /**
  * Log de Guia de Convênio Criada
- * 
+ *
  * @param {string} appointmentId - ID do atendimento
  * @param {string} billingGuideId - ID da guia de convênio
  * @param {number} amount - Valor da guia
@@ -89,7 +88,7 @@ export async function logBillingGuideCreated(
   billingGuideId,
   amount,
   payerId,
-  context = {}
+  context = {},
 ) {
   return logAppointmentFinancialAudit({
     appointmentId,
@@ -97,9 +96,9 @@ export async function logBillingGuideCreated(
     relatedEntity: RELATED_ENTITY_TYPES.BILLING_GUIDE,
     relatedEntityId: billingGuideId,
     amount,
-    status: "created",
+    status: 'created',
     context: {
-      description: "Guia de convênio foi gerada para este atendimento",
+      description: 'Guia de convênio foi gerada para este atendimento',
       payer_id: payerId,
       ...context,
     },
@@ -108,27 +107,22 @@ export async function logBillingGuideCreated(
 
 /**
  * Log de Guia Enviada para Operadora
- * 
+ *
  * @param {string} appointmentId - ID do atendimento
  * @param {string} billingGuideId - ID da guia
  * @param {number} amount - Valor da guia
  * @param {Object} context - Contexto adicional
  */
-export async function logBillingSent(
-  appointmentId,
-  billingGuideId,
-  amount,
-  context = {}
-) {
+export async function logBillingSent(appointmentId, billingGuideId, amount, context = {}) {
   return logAppointmentFinancialAudit({
     appointmentId,
     financialEventType: FINANCIAL_EVENT_TYPES.BILLING_SENT,
     relatedEntity: RELATED_ENTITY_TYPES.BILLING_GUIDE,
     relatedEntityId: billingGuideId,
     amount,
-    status: "sent",
+    status: 'sent',
     context: {
-      description: "Guia foi enviada para a operadora de saúde",
+      description: 'Guia foi enviada para a operadora de saúde',
       ...context,
     },
   });
@@ -136,27 +130,21 @@ export async function logBillingSent(
 
 /**
  * Log de Glosa Registrada
- * 
+ *
  * @param {string} appointmentId - ID do atendimento
  * @param {string} glosaId - ID da glosa
  * @param {number} amount - Valor glosado
  * @param {string} reason - Motivo da glosa
  * @param {Object} context - Contexto adicional
  */
-export async function logGlosaRegistered(
-  appointmentId,
-  glosaId,
-  amount,
-  reason,
-  context = {}
-) {
+export async function logGlosaRegistered(appointmentId, glosaId, amount, reason, context = {}) {
   return logAppointmentFinancialAudit({
     appointmentId,
     financialEventType: FINANCIAL_EVENT_TYPES.GLOSA_REGISTERED,
     relatedEntity: RELATED_ENTITY_TYPES.GLOSA,
     relatedEntityId: glosaId,
     amount,
-    status: "glossed",
+    status: 'glossed',
     context: {
       description: `Glosa registrada: ${reason}`,
       reason,
@@ -167,27 +155,21 @@ export async function logGlosaRegistered(
 
 /**
  * Log de Glosa Revertida
- * 
+ *
  * @param {string} appointmentId - ID do atendimento
  * @param {string} glosaId - ID da glosa
  * @param {number} amount - Valor revertido
  * @param {string} reason - Motivo da reversão
  * @param {Object} context - Contexto adicional
  */
-export async function logGlosaReversed(
-  appointmentId,
-  glosaId,
-  amount,
-  reason,
-  context = {}
-) {
+export async function logGlosaReversed(appointmentId, glosaId, amount, reason, context = {}) {
   return logAppointmentFinancialAudit({
     appointmentId,
     financialEventType: FINANCIAL_EVENT_TYPES.GLOSA_REVERSED,
     relatedEntity: RELATED_ENTITY_TYPES.GLOSA,
     relatedEntityId: glosaId,
     amount,
-    status: "reversed",
+    status: 'reversed',
     context: {
       description: `Glosa revertida: ${reason}`,
       reason,
@@ -198,7 +180,7 @@ export async function logGlosaReversed(
 
 /**
  * Log de Repasse Médico Calculado
- * 
+ *
  * @param {string} appointmentId - ID do atendimento
  * @param {string} professionalId - ID do profissional
  * @param {string} repasseId - ID do repasse médico
@@ -212,7 +194,7 @@ export async function logRepasseCalculated(
   repasseId,
   amount,
   commission,
-  context = {}
+  context = {},
 ) {
   return logAppointmentFinancialAudit({
     appointmentId,
@@ -220,7 +202,7 @@ export async function logRepasseCalculated(
     relatedEntity: RELATED_ENTITY_TYPES.REPASSE_MEDICO,
     relatedEntityId: repasseId,
     amount,
-    status: "calculated",
+    status: 'calculated',
     context: {
       description: `Repasse médico calculado: R$ ${amount}`,
       professional_id: professionalId,
@@ -232,7 +214,7 @@ export async function logRepasseCalculated(
 
 /**
  * Log de Repasse Médico Pago
- * 
+ *
  * @param {string} appointmentId - ID do atendimento
  * @param {string} professionalId - ID do profissional
  * @param {string} repasseId - ID do repasse médico
@@ -244,7 +226,7 @@ export async function logRepassePaid(
   professionalId,
   repasseId,
   amount,
-  context = {}
+  context = {},
 ) {
   return logAppointmentFinancialAudit({
     appointmentId,
@@ -252,7 +234,7 @@ export async function logRepassePaid(
     relatedEntity: RELATED_ENTITY_TYPES.REPASSE_MEDICO,
     relatedEntityId: repasseId,
     amount,
-    status: "paid",
+    status: 'paid',
     context: {
       description: `Repasse médico pago: R$ ${amount}`,
       professional_id: professionalId,

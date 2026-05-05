@@ -1,13 +1,13 @@
 /**
  * appointmentStatusEnums.js
- * 
+ *
  * 📋 FLUXO COMPLETO DE ATENDIMENTO (END-TO-END)
- * 
+ *
  * Status enum que governa todo o fluxo de agendamento,
  * recepção (check-in) e atendimento (profissional).
- * 
+ *
  * FLUXO:
- *   AGENDADO 
+ *   AGENDADO
  *   → CONFIRMADO (opcional)
  *   → AGUARDANDO (no dia do agendamento)
  *     → PENDENTE (falta conferência)
@@ -23,17 +23,17 @@
 // ============================================
 
 export const APPOINTMENT_STATUS = {
-  AGENDADO: "agendado",
-  CONFIRMADO: "confirmado",
-  AGUARDANDO: "aguardando",
-  PENDENTE: "pendente",
-  FINANCEIRO_PENDENTE: "financeiro_pendente",
-  LIBERADO_PARA_ATENDIMENTO: "liberado_para_atendimento",
-  EM_ATENDIMENTO: "em_atendimento",
-  FINALIZADO: "finalizado",
-  FALTA: "falta",
-  CANCELADO: "cancelado",
-  REMARCADO: "remarcado",
+  AGENDADO: 'agendado',
+  CONFIRMADO: 'confirmado',
+  AGUARDANDO: 'aguardando',
+  PENDENTE: 'pendente',
+  FINANCEIRO_PENDENTE: 'financeiro_pendente',
+  LIBERADO_PARA_ATENDIMENTO: 'liberado_para_atendimento',
+  EM_ATENDIMENTO: 'em_atendimento',
+  FINALIZADO: 'finalizado',
+  FALTA: 'falta',
+  CANCELADO: 'cancelado',
+  REMARCADO: 'remarcado',
 };
 
 // ============================================
@@ -41,31 +41,31 @@ export const APPOINTMENT_STATUS = {
 // ============================================
 
 export const appointmentStatusLabels = {
-  agendado: "Agendado",
-  confirmado: "Confirmado",
-  aguardando: "Aguardando",
-  pendente: "Pendência",
-  financeiro_pendente: "Financeiro Pendente",
-  liberado_para_atendimento: "Liberado para Atendimento",
-  em_atendimento: "Em Atendimento",
-  finalizado: "Finalizado",
-  falta: "Falta",
-  cancelado: "Cancelado",
-  remarcado: "Remarcado",
+  agendado: 'Agendado',
+  confirmado: 'Confirmado',
+  aguardando: 'Aguardando',
+  pendente: 'Pendência',
+  financeiro_pendente: 'Financeiro Pendente',
+  liberado_para_atendimento: 'Liberado para Atendimento',
+  em_atendimento: 'Em Atendimento',
+  finalizado: 'Finalizado',
+  falta: 'Falta',
+  cancelado: 'Cancelado',
+  remarcado: 'Remarcado',
 };
 
 export const appointmentStatusColors = {
-  agendado: "bg-blue-100 text-blue-800 border-blue-300",
-  confirmado: "bg-cyan-100 text-cyan-800 border-cyan-300",
-  aguardando: "bg-yellow-100 text-yellow-800 border-yellow-300",
-  pendente: "bg-orange-100 text-orange-800 border-orange-300",
-  financeiro_pendente: "bg-rose-100 text-rose-800 border-rose-300",
-  liberado_para_atendimento: "bg-green-100 text-green-800 border-green-300",
-  em_atendimento: "bg-purple-100 text-purple-800 border-purple-300",
-  finalizado: "bg-indigo-100 text-indigo-800 border-indigo-300",
-  falta: "bg-red-100 text-red-800 border-red-300",
-  cancelado: "bg-gray-100 text-gray-800 border-gray-300",
-  remarcado: "bg-slate-100 text-slate-800 border-slate-300",
+  agendado: 'bg-blue-100 text-blue-800 border-blue-300',
+  confirmado: 'bg-cyan-100 text-cyan-800 border-cyan-300',
+  aguardando: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+  pendente: 'bg-orange-100 text-orange-800 border-orange-300',
+  financeiro_pendente: 'bg-rose-100 text-rose-800 border-rose-300',
+  liberado_para_atendimento: 'bg-green-100 text-green-800 border-green-300',
+  em_atendimento: 'bg-purple-100 text-purple-800 border-purple-300',
+  finalizado: 'bg-indigo-100 text-indigo-800 border-indigo-300',
+  falta: 'bg-red-100 text-red-800 border-red-300',
+  cancelado: 'bg-gray-100 text-gray-800 border-gray-300',
+  remarcado: 'bg-slate-100 text-slate-800 border-slate-300',
 };
 
 // ============================================
@@ -83,7 +83,7 @@ export function getStatusLabel(status) {
  * Retorna as cores Tailwind do status
  */
 export function getStatusColor(status) {
-  return appointmentStatusColors[status] || "bg-gray-100 text-gray-800 border-gray-300";
+  return appointmentStatusColors[status] || 'bg-gray-100 text-gray-800 border-gray-300';
 }
 
 /**
@@ -135,24 +135,15 @@ export function isPendingAction(status) {
  */
 export function getValidStatusTransitions(currentStatus) {
   const transitions = {
-    [APPOINTMENT_STATUS.AGENDADO]: [
-      APPOINTMENT_STATUS.CONFIRMADO,
-      APPOINTMENT_STATUS.CANCELADO,
-    ],
-    [APPOINTMENT_STATUS.CONFIRMADO]: [
-      APPOINTMENT_STATUS.AGUARDANDO,
-      APPOINTMENT_STATUS.CANCELADO,
-    ],
+    [APPOINTMENT_STATUS.AGENDADO]: [APPOINTMENT_STATUS.CONFIRMADO, APPOINTMENT_STATUS.CANCELADO],
+    [APPOINTMENT_STATUS.CONFIRMADO]: [APPOINTMENT_STATUS.AGUARDANDO, APPOINTMENT_STATUS.CANCELADO],
     [APPOINTMENT_STATUS.AGUARDANDO]: [
       APPOINTMENT_STATUS.PENDENTE,
       APPOINTMENT_STATUS.FINANCEIRO_PENDENTE,
       APPOINTMENT_STATUS.LIBERADO_PARA_ATENDIMENTO,
       APPOINTMENT_STATUS.FALTA,
     ],
-    [APPOINTMENT_STATUS.PENDENTE]: [
-      APPOINTMENT_STATUS.AGUARDANDO,
-      APPOINTMENT_STATUS.FALTA,
-    ],
+    [APPOINTMENT_STATUS.PENDENTE]: [APPOINTMENT_STATUS.AGUARDANDO, APPOINTMENT_STATUS.FALTA],
     [APPOINTMENT_STATUS.FINANCEIRO_PENDENTE]: [
       APPOINTMENT_STATUS.AGUARDANDO,
       APPOINTMENT_STATUS.FALTA,
@@ -161,9 +152,7 @@ export function getValidStatusTransitions(currentStatus) {
       APPOINTMENT_STATUS.EM_ATENDIMENTO,
       APPOINTMENT_STATUS.FALTA,
     ],
-    [APPOINTMENT_STATUS.EM_ATENDIMENTO]: [
-      APPOINTMENT_STATUS.FINALIZADO,
-    ],
+    [APPOINTMENT_STATUS.EM_ATENDIMENTO]: [APPOINTMENT_STATUS.FINALIZADO],
     [APPOINTMENT_STATUS.FINALIZADO]: [],
     [APPOINTMENT_STATUS.FALTA]: [],
     [APPOINTMENT_STATUS.CANCELADO]: [],
@@ -178,37 +167,37 @@ export function getValidStatusTransitions(currentStatus) {
 // ============================================
 
 export const APPOINTMENT_PHASE = {
-  SCHEDULING: "scheduling", // Agendamento
-  RECEPTION: "reception", // Recepção (check-in)
-  CARE: "care", // Atendimento (profissional)
-  COMPLETED: "completed", // Finalizado
+  SCHEDULING: 'scheduling', // Agendamento
+  RECEPTION: 'reception', // Recepção (check-in)
+  CARE: 'care', // Atendimento (profissional)
+  COMPLETED: 'completed', // Finalizado
 };
 
 export function getPhaseForStatus(status) {
   switch (status) {
-    case APPOINTMENT_STATUS.AGENDADO:
-    case APPOINTMENT_STATUS.CONFIRMADO:
-      return APPOINTMENT_PHASE.SCHEDULING;
+  case APPOINTMENT_STATUS.AGENDADO:
+  case APPOINTMENT_STATUS.CONFIRMADO:
+    return APPOINTMENT_PHASE.SCHEDULING;
 
-    case APPOINTMENT_STATUS.AGUARDANDO:
-    case APPOINTMENT_STATUS.PENDENTE:
-    case APPOINTMENT_STATUS.FINANCEIRO_PENDENTE:
-      return APPOINTMENT_PHASE.RECEPTION;
+  case APPOINTMENT_STATUS.AGUARDANDO:
+  case APPOINTMENT_STATUS.PENDENTE:
+  case APPOINTMENT_STATUS.FINANCEIRO_PENDENTE:
+    return APPOINTMENT_PHASE.RECEPTION;
 
-    case APPOINTMENT_STATUS.LIBERADO_PARA_ATENDIMENTO:
-    case APPOINTMENT_STATUS.EM_ATENDIMENTO:
-      return APPOINTMENT_PHASE.CARE;
+  case APPOINTMENT_STATUS.LIBERADO_PARA_ATENDIMENTO:
+  case APPOINTMENT_STATUS.EM_ATENDIMENTO:
+    return APPOINTMENT_PHASE.CARE;
 
-    case APPOINTMENT_STATUS.FINALIZADO:
-      return APPOINTMENT_PHASE.COMPLETED;
+  case APPOINTMENT_STATUS.FINALIZADO:
+    return APPOINTMENT_PHASE.COMPLETED;
 
-    case APPOINTMENT_STATUS.FALTA:
-    case APPOINTMENT_STATUS.CANCELADO:
-    case APPOINTMENT_STATUS.REMARCADO:
-      return APPOINTMENT_PHASE.COMPLETED;
+  case APPOINTMENT_STATUS.FALTA:
+  case APPOINTMENT_STATUS.CANCELADO:
+  case APPOINTMENT_STATUS.REMARCADO:
+    return APPOINTMENT_PHASE.COMPLETED;
 
-    default:
-      return APPOINTMENT_PHASE.SCHEDULING;
+  default:
+    return APPOINTMENT_PHASE.SCHEDULING;
   }
 }
 
@@ -256,7 +245,7 @@ export const ROLE_PERMISSIONS = {
 };
 
 export function canPerformAction(userRole, action) {
-  const role = userRole?.toLowerCase() || "reception";
+  const role = userRole?.toLowerCase() || 'reception';
   const permissions = ROLE_PERMISSIONS[role] || ROLE_PERMISSIONS.reception;
   return permissions[action] || false;
 }
@@ -269,14 +258,14 @@ export function canPerformAction(userRole, action) {
  * Retorna os status visíveis para cada perfil
  */
 export function getVisibleStatusByRole(role) {
-  const r = role?.toLowerCase() || "reception";
+  const r = role?.toLowerCase() || 'reception';
 
-  if (r === "professional") {
+  if (r === 'professional') {
     // Profissional só vê agendamentos liberados para atendimento
     return [APPOINTMENT_STATUS.LIBERADO_PARA_ATENDIMENTO];
   }
 
-  if (r === "manager" || r === "admin") {
+  if (r === 'manager' || r === 'admin') {
     // Gestor vê tudo
     return Object.values(APPOINTMENT_STATUS);
   }
@@ -298,16 +287,20 @@ export function getVisibleStatusByRole(role) {
 // ============================================
 
 export const AGENDA_MODE = {
-  RECEPTION: "reception", // Recepção (check-in)
-  PROFESSIONAL: "professional", // Profissional (atendimento)
-  MANAGER: "manager", // Gestor (visão completa)
+  RECEPTION: 'reception', // Recepção (check-in)
+  PROFESSIONAL: 'professional', // Profissional (atendimento)
+  MANAGER: 'manager', // Gestor (visão completa)
 };
 
 export function getAgendaModeForRole(role) {
-  const r = role?.toLowerCase() || "reception";
+  const r = role?.toLowerCase() || 'reception';
 
-  if (r === "professional") return AGENDA_MODE.PROFESSIONAL;
-  if (r === "manager" || r === "admin") return AGENDA_MODE.MANAGER;
+  if (r === 'professional') {
+    return AGENDA_MODE.PROFESSIONAL;
+  }
+  if (r === 'manager' || r === 'admin') {
+    return AGENDA_MODE.MANAGER;
+  }
 
   return AGENDA_MODE.RECEPTION;
 }

@@ -4,13 +4,26 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/components/ui/use-toast';
-import { 
-  User, 
-  Download, 
+import {
+  User,
+  Download,
   Calendar,
   DollarSign,
   TrendingUp,
@@ -20,7 +33,7 @@ import {
   Search,
   Award,
   Users,
-  Target
+  Target,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 
@@ -32,7 +45,9 @@ export default function RelatorioProducaoProfissional() {
   const { clinicId } = useAuth();
   const [relatorioData, setRelatorioData] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [dataInicial, setDataInicial] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]);
+  const [dataInicial, setDataInicial] = useState(
+    new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+  );
   const [dataFinal, setDataFinal] = useState(new Date().toISOString().split('T')[0]);
   const [especialidadeFilter, setEspecialidadeFilter] = useState('all');
   const [profissionalFilter, setProfissionalFilter] = useState('all');
@@ -46,26 +61,26 @@ export default function RelatorioProducaoProfissional() {
       especialidade: 'Cardiologia',
       total_atendimentos: 145,
       total_procedimentos: 280,
-      valor_bruto: 42750.00,
-      valor_desconto: 2137.50,
-      valor_liquido: 40612.50,
+      valor_bruto: 42750.0,
+      valor_desconto: 2137.5,
+      valor_liquido: 40612.5,
       participacao_percentual: 28.5,
       valor_medio_atendimento: 294.83,
       horas_trabalhadas: 120,
       produtividade_hora: 356.25,
       ranking_mensal: 1,
-      meta_mensal: 35000.00,
+      meta_mensal: 35000.0,
       atingimento_meta: 116.0,
       procedimentos_principais: [
-        { codigo: '10101012', nome: 'Consulta Cardiológica', quantidade: 85, valor_total: 12750.00 },
-        { codigo: '30501170', nome: 'Ecocardiograma', quantidade: 45, valor_total: 11250.00 },
-        { codigo: '20101020', nome: 'ECG', quantidade: 65, valor_total: 6500.00 }
+        { codigo: '10101012', nome: 'Consulta Cardiológica', quantidade: 85, valor_total: 12750.0 },
+        { codigo: '30501170', nome: 'Ecocardiograma', quantidade: 45, valor_total: 11250.0 },
+        { codigo: '20101020', nome: 'ECG', quantidade: 65, valor_total: 6500.0 },
       ],
       distribuicao_convenios: [
-        { convenio: 'Unimed', atendimentos: 65, valor: 19500.00 },
-        { convenio: 'Bradesco', atendimentos: 45, valor: 13500.00 },
-        { convenio: 'Particular', atendimentos: 35, valor: 10500.00 }
-      ]
+        { convenio: 'Unimed', atendimentos: 65, valor: 19500.0 },
+        { convenio: 'Bradesco', atendimentos: 45, valor: 13500.0 },
+        { convenio: 'Particular', atendimentos: 35, valor: 10500.0 },
+      ],
     },
     {
       profissional_id: 'prof_002',
@@ -74,26 +89,31 @@ export default function RelatorioProducaoProfissional() {
       especialidade: 'Dermatologia',
       total_atendimentos: 128,
       total_procedimentos: 195,
-      valor_bruto: 38400.00,
-      valor_desconto: 1920.00,
-      valor_liquido: 36480.00,
+      valor_bruto: 38400.0,
+      valor_desconto: 1920.0,
+      valor_liquido: 36480.0,
       participacao_percentual: 25.6,
-      valor_medio_atendimento: 300.00,
+      valor_medio_atendimento: 300.0,
       horas_trabalhadas: 100,
-      produtividade_hora: 384.00,
+      produtividade_hora: 384.0,
       ranking_mensal: 2,
-      meta_mensal: 32000.00,
+      meta_mensal: 32000.0,
       atingimento_meta: 114.0,
       procedimentos_principais: [
-        { codigo: '10101015', nome: 'Consulta Dermatológica', quantidade: 80, valor_total: 12000.00 },
-        { codigo: '90813200', nome: 'Aplicação de Botox', quantidade: 35, valor_total: 17500.00 },
-        { codigo: '40301110', nome: 'Biópsia de Pele', quantidade: 25, valor_total: 6250.00 }
+        {
+          codigo: '10101015',
+          nome: 'Consulta Dermatológica',
+          quantidade: 80,
+          valor_total: 12000.0,
+        },
+        { codigo: '90813200', nome: 'Aplicação de Botox', quantidade: 35, valor_total: 17500.0 },
+        { codigo: '40301110', nome: 'Biópsia de Pele', quantidade: 25, valor_total: 6250.0 },
       ],
       distribuicao_convenios: [
-        { convenio: 'Particular', atendimentos: 55, valor: 16500.00 },
-        { convenio: 'SulAmérica', atendimentos: 40, valor: 12000.00 },
-        { convenio: 'Unimed', atendimentos: 33, valor: 9900.00 }
-      ]
+        { convenio: 'Particular', atendimentos: 55, valor: 16500.0 },
+        { convenio: 'SulAmérica', atendimentos: 40, valor: 12000.0 },
+        { convenio: 'Unimed', atendimentos: 33, valor: 9900.0 },
+      ],
     },
     {
       profissional_id: 'prof_003',
@@ -102,26 +122,26 @@ export default function RelatorioProducaoProfissional() {
       especialidade: 'Ortopedia',
       total_atendimentos: 95,
       total_procedimentos: 145,
-      valor_bruto: 28500.00,
-      valor_desconto: 1425.00,
-      valor_liquido: 27075.00,
+      valor_bruto: 28500.0,
+      valor_desconto: 1425.0,
+      valor_liquido: 27075.0,
       participacao_percentual: 19.0,
-      valor_medio_atendimento: 300.00,
+      valor_medio_atendimento: 300.0,
       horas_trabalhadas: 80,
       produtividade_hora: 356.25,
       ranking_mensal: 3,
-      meta_mensal: 25000.00,
+      meta_mensal: 25000.0,
       atingimento_meta: 108.3,
       procedimentos_principais: [
-        { codigo: '10101018', nome: 'Consulta Ortopédica', quantidade: 60, valor_total: 9000.00 },
-        { codigo: '82010060', nome: 'Infiltração Articular', quantidade: 25, valor_total: 12500.00 },
-        { codigo: '40201040', nome: 'Raio-X Articulações', quantidade: 30, valor_total: 3000.00 }
+        { codigo: '10101018', nome: 'Consulta Ortopédica', quantidade: 60, valor_total: 9000.0 },
+        { codigo: '82010060', nome: 'Infiltração Articular', quantidade: 25, valor_total: 12500.0 },
+        { codigo: '40201040', nome: 'Raio-X Articulações', quantidade: 30, valor_total: 3000.0 },
       ],
       distribuicao_convenios: [
-        { convenio: 'Bradesco', atendimentos: 42, valor: 12600.00 },
-        { convenio: 'Unimed', atendimentos: 35, valor: 10500.00 },
-        { convenio: 'Amil', atendimentos: 18, valor: 5400.00 }
-      ]
+        { convenio: 'Bradesco', atendimentos: 42, valor: 12600.0 },
+        { convenio: 'Unimed', atendimentos: 35, valor: 10500.0 },
+        { convenio: 'Amil', atendimentos: 18, valor: 5400.0 },
+      ],
     },
     {
       profissional_id: 'prof_004',
@@ -130,26 +150,26 @@ export default function RelatorioProducaoProfissional() {
       especialidade: 'Ginecologia',
       total_atendimentos: 89,
       total_procedimentos: 125,
-      valor_bruto: 22250.00,
-      valor_desconto: 1112.50,
-      valor_liquido: 21137.50,
+      valor_bruto: 22250.0,
+      valor_desconto: 1112.5,
+      valor_liquido: 21137.5,
       participacao_percentual: 14.8,
-      valor_medio_atendimento: 250.00,
+      valor_medio_atendimento: 250.0,
       horas_trabalhadas: 70,
       produtividade_hora: 317.86,
       ranking_mensal: 4,
-      meta_mensal: 20000.00,
+      meta_mensal: 20000.0,
       atingimento_meta: 105.7,
       procedimentos_principais: [
-        { codigo: '10101019', nome: 'Consulta Ginecológica', quantidade: 55, valor_total: 8250.00 },
-        { codigo: '30301160', nome: 'Ultrassom Pélvico', quantidade: 30, valor_total: 7500.00 },
-        { codigo: '11101017', nome: 'Colpocitologia', quantidade: 25, valor_total: 3750.00 }
+        { codigo: '10101019', nome: 'Consulta Ginecológica', quantidade: 55, valor_total: 8250.0 },
+        { codigo: '30301160', nome: 'Ultrassom Pélvico', quantidade: 30, valor_total: 7500.0 },
+        { codigo: '11101017', nome: 'Colpocitologia', quantidade: 25, valor_total: 3750.0 },
       ],
       distribuicao_convenios: [
-        { convenio: 'Unimed', atendimentos: 38, valor: 9500.00 },
-        { convenio: 'SulAmérica', atendimentos: 28, valor: 7000.00 },
-        { convenio: 'Particular', atendimentos: 23, valor: 5750.00 }
-      ]
+        { convenio: 'Unimed', atendimentos: 38, valor: 9500.0 },
+        { convenio: 'SulAmérica', atendimentos: 28, valor: 7000.0 },
+        { convenio: 'Particular', atendimentos: 23, valor: 5750.0 },
+      ],
     },
     {
       profissional_id: 'prof_005',
@@ -158,27 +178,27 @@ export default function RelatorioProducaoProfissional() {
       especialidade: 'Clínica Geral',
       total_atendimentos: 165,
       total_procedimentos: 210,
-      valor_bruto: 16500.00,
-      valor_desconto: 825.00,
-      valor_liquido: 15675.00,
+      valor_bruto: 16500.0,
+      valor_desconto: 825.0,
+      valor_liquido: 15675.0,
       participacao_percentual: 11.0,
-      valor_medio_atendimento: 100.00,
+      valor_medio_atendimento: 100.0,
       horas_trabalhadas: 110,
-      produtividade_hora: 150.00,
+      produtividade_hora: 150.0,
       ranking_mensal: 5,
-      meta_mensal: 15000.00,
+      meta_mensal: 15000.0,
       atingimento_meta: 104.5,
       procedimentos_principais: [
-        { codigo: '10101012', nome: 'Consulta Médica', quantidade: 120, valor_total: 12000.00 },
-        { codigo: '20101020', nome: 'ECG', quantidade: 35, valor_total: 3500.00 },
-        { codigo: '30302110', nome: 'Teste Ergométrico', quantidade: 10, valor_total: 2500.00 }
+        { codigo: '10101012', nome: 'Consulta Médica', quantidade: 120, valor_total: 12000.0 },
+        { codigo: '20101020', nome: 'ECG', quantidade: 35, valor_total: 3500.0 },
+        { codigo: '30302110', nome: 'Teste Ergométrico', quantidade: 10, valor_total: 2500.0 },
       ],
       distribuicao_convenios: [
-        { convenio: 'Unimed', atendimentos: 85, valor: 8500.00 },
-        { convenio: 'Bradesco', atendimentos: 50, valor: 5000.00 },
-        { convenio: 'Amil', atendimentos: 30, valor: 3000.00 }
-      ]
-    }
+        { convenio: 'Unimed', atendimentos: 85, valor: 8500.0 },
+        { convenio: 'Bradesco', atendimentos: 50, valor: 5000.0 },
+        { convenio: 'Amil', atendimentos: 30, valor: 3000.0 },
+      ],
+    },
   ];
 
   useEffect(() => {
@@ -190,17 +210,15 @@ export default function RelatorioProducaoProfissional() {
     try {
       // Simular busca no banco com filtros
       let filteredData = mockRelatorioData;
-      
+
       if (especialidadeFilter !== 'all') {
-        filteredData = filteredData.filter(item => 
-          item.especialidade.toLowerCase().includes(especialidadeFilter.toLowerCase())
+        filteredData = filteredData.filter((item) =>
+          item.especialidade.toLowerCase().includes(especialidadeFilter.toLowerCase()),
         );
       }
 
       if (profissionalFilter !== 'all') {
-        filteredData = filteredData.filter(item => 
-          item.profissional_id === profissionalFilter
-        );
+        filteredData = filteredData.filter((item) => item.profissional_id === profissionalFilter);
       }
 
       // Ordenar por valor líquido (ranking)
@@ -210,9 +228,9 @@ export default function RelatorioProducaoProfissional() {
     } catch (error) {
       console.error('Erro ao buscar relatório:', error);
       toast({
-        title: "Erro",
-        description: "Não foi possível carregar o relatório.",
-        variant: "destructive"
+        title: 'Erro',
+        description: 'Não foi possível carregar o relatório.',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -222,7 +240,20 @@ export default function RelatorioProducaoProfissional() {
   const exportarCSV = () => {
     try {
       const csvContent = [
-        ['Ranking', 'Profissional', 'CRM', 'Especialidade', 'Atendimentos', 'Procedimentos', 'Valor Bruto', 'Desconto', 'Valor Líquido', 'Meta', 'Atingimento', 'Produtividade/Hora'],
+        [
+          'Ranking',
+          'Profissional',
+          'CRM',
+          'Especialidade',
+          'Atendimentos',
+          'Procedimentos',
+          'Valor Bruto',
+          'Desconto',
+          'Valor Líquido',
+          'Meta',
+          'Atingimento',
+          'Produtividade/Hora',
+        ],
         ...relatorioData.map((item, index) => [
           index + 1,
           item.nome,
@@ -235,9 +266,11 @@ export default function RelatorioProducaoProfissional() {
           item.valor_liquido.toFixed(2),
           item.meta_mensal.toFixed(2),
           item.atingimento_meta.toFixed(1) + '%',
-          'R$ ' + item.produtividade_hora.toFixed(2)
-        ])
-      ].map(row => row.join(',')).join('\n');
+          'R$ ' + item.produtividade_hora.toFixed(2),
+        ]),
+      ]
+        .map((row) => row.join(','))
+        .join('\n');
 
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
@@ -246,14 +279,14 @@ export default function RelatorioProducaoProfissional() {
       link.click();
 
       toast({
-        title: "Exportação concluída",
-        description: "Relatório exportado para CSV com sucesso."
+        title: 'Exportação concluída',
+        description: 'Relatório exportado para CSV com sucesso.',
       });
     } catch (error) {
       toast({
-        title: "Erro na exportação",
-        description: "Não foi possível exportar o relatório.",
-        variant: "destructive"
+        title: 'Erro na exportação',
+        description: 'Não foi possível exportar o relatório.',
+        variant: 'destructive',
       });
     }
   };
@@ -261,49 +294,56 @@ export default function RelatorioProducaoProfissional() {
   const exportarExcel = async () => {
     try {
       console.log('Exportando para Excel:', relatorioData);
-      
+
       toast({
-        title: "Exportação iniciada",
-        description: "Relatório Excel será baixado em instantes."
+        title: 'Exportação iniciada',
+        description: 'Relatório Excel será baixado em instantes.',
       });
     } catch (error) {
       toast({
-        title: "Erro na exportação",
-        description: "Não foi possível exportar para Excel.",
-        variant: "destructive"
+        title: 'Erro na exportação',
+        description: 'Não foi possível exportar para Excel.',
+        variant: 'destructive',
       });
     }
   };
 
   const getTotalGeral = () => {
-    return relatorioData.reduce((acc, item) => ({
-      total_atendimentos: acc.total_atendimentos + item.total_atendimentos,
-      total_procedimentos: acc.total_procedimentos + item.total_procedimentos,
-      valor_bruto: acc.valor_bruto + item.valor_bruto,
-      valor_desconto: acc.valor_desconto + item.valor_desconto,
-      valor_liquido: acc.valor_liquido + item.valor_liquido,
-      horas_trabalhadas: acc.horas_trabalhadas + item.horas_trabalhadas
-    }), {
-      total_atendimentos: 0,
-      total_procedimentos: 0,
-      valor_bruto: 0,
-      valor_desconto: 0,
-      valor_liquido: 0,
-      horas_trabalhadas: 0
-    });
+    return relatorioData.reduce(
+      (acc, item) => ({
+        total_atendimentos: acc.total_atendimentos + item.total_atendimentos,
+        total_procedimentos: acc.total_procedimentos + item.total_procedimentos,
+        valor_bruto: acc.valor_bruto + item.valor_bruto,
+        valor_desconto: acc.valor_desconto + item.valor_desconto,
+        valor_liquido: acc.valor_liquido + item.valor_liquido,
+        horas_trabalhadas: acc.horas_trabalhadas + item.horas_trabalhadas,
+      }),
+      {
+        total_atendimentos: 0,
+        total_procedimentos: 0,
+        valor_bruto: 0,
+        valor_desconto: 0,
+        valor_liquido: 0,
+        horas_trabalhadas: 0,
+      },
+    );
   };
 
   const getRankingBadge = (ranking) => {
     if (ranking === 1) {
-      return <Badge variant="default" className="bg-yellow-500 text-white gap-1">
-        <Award className="w-3 h-3" />
-        1º Lugar
-      </Badge>;
+      return (
+        <Badge variant="default" className="bg-yellow-500 text-white gap-1">
+          <Award className="w-3 h-3" />
+          1º Lugar
+        </Badge>
+      );
     } else if (ranking <= 3) {
-      return <Badge variant="secondary" className="text-blue-600 gap-1">
-        <Award className="w-3 h-3" />
-        Top 3
-      </Badge>;
+      return (
+        <Badge variant="secondary" className="text-blue-600 gap-1">
+          <Award className="w-3 h-3" />
+          Top 3
+        </Badge>
+      );
     } else {
       return <Badge variant="outline">{ranking}º</Badge>;
     }
@@ -311,11 +351,23 @@ export default function RelatorioProducaoProfissional() {
 
   const getMetaBadge = (atingimento) => {
     if (atingimento >= 110) {
-      return <Badge variant="default" className="text-green-600">Superou Meta</Badge>;
+      return (
+        <Badge variant="default" className="text-green-600">
+          Superou Meta
+        </Badge>
+      );
     } else if (atingimento >= 100) {
-      return <Badge variant="secondary" className="text-blue-600">Atingiu Meta</Badge>;
+      return (
+        <Badge variant="secondary" className="text-blue-600">
+          Atingiu Meta
+        </Badge>
+      );
     } else if (atingimento >= 80) {
-      return <Badge variant="outline" className="text-orange-600">Próximo da Meta</Badge>;
+      return (
+        <Badge variant="outline" className="text-orange-600">
+          Próximo da Meta
+        </Badge>
+      );
     } else {
       return <Badge variant="destructive">Abaixo da Meta</Badge>;
     }
@@ -398,7 +450,7 @@ export default function RelatorioProducaoProfissional() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
-                  {mockRelatorioData.map(prof => (
+                  {mockRelatorioData.map((prof) => (
                     <SelectItem key={prof.profissional_id} value={prof.profissional_id}>
                       {prof.nome}
                     </SelectItem>
@@ -486,15 +538,17 @@ export default function RelatorioProducaoProfissional() {
             <TableBody>
               {relatorioData.map((item, index) => (
                 <TableRow key={item.profissional_id}>
-                  <TableCell>
-                    {getRankingBadge(index + 1)}
-                  </TableCell>
+                  <TableCell>{getRankingBadge(index + 1)}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar>
                         <AvatarImage src="" />
                         <AvatarFallback>
-                          {item.nome.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                          {item.nome
+                            .split(' ')
+                            .map((n) => n[0])
+                            .join('')
+                            .substring(0, 2)}
                         </AvatarFallback>
                       </Avatar>
                       <div>
@@ -643,4 +697,3 @@ export default function RelatorioProducaoProfissional() {
     </div>
   );
 }
-

@@ -1,0 +1,119 @@
+✅ RESUMO DAS CORREÇÕES - 27 ABRIL 2026
+
+## 🎯 O QUE FOI CORRIGIDO HOJE
+
+### 1️⃣ PROBLEMA: HTTP 400 Errors (Colunas Não Existem)
+**Causa:** Query tentava buscar colunas que não existem na tabela appointments
+- ❌ Colunas inexistentes: price, start_time, plan_id, discount, payment_method, convenio_id, plano_contas_id, etc.
+- ✅ Corrigido em: appointmentsColumns.js, ExportUtils.js, agendaService.js
+
+**Colunas Reais da Tabela:**
+```
+id, clinic_id, patient_id, professional_id, service_id, room_id, 
+payer_id, scheduled_date, scheduled_time, end_time, status, notes, value
+```
+
+### 2️⃣ PROBLEMA: Erro de Autenticação no Trigger
+**Causa:** SECURITY DEFINER bloqueava auth.uid()
+- ❌ Função com SECURITY DEFINER fazia auth.uid() retornar NULL
+- ✅ Criada versão v4 SEM SECURITY DEFINER
+
+**Arquivo:** EXECUTE_TRIGGER_v4_AGORA.sql
+
+### 3️⃣ PROBLEMA: SyntaxError "Unexpected token 'if'"
+**Causa:** Cache antigo no navegador
+- ✅ Hard refresh (Ctrl+Shift+R) resolve
+
+---
+
+## 📁 ARQUIVOS NOVOS CRIADOS
+
+1. **EXECUTE_TRIGGER_v4_AGORA.sql** 
+   - SQL pronto para copiar/colar no Supabase
+   - Contém: DROP old, CREATE new function, CREATE triggers, CREATE indexes
+
+2. **📋_INSTRUCOES_TRIGGER_SUPABASE.txt**
+   - Passo-a-passo visual para executar no Supabase
+   - Instruções de teste após execução
+
+---
+
+## 🔧 ARQUIVOS MODIFICADOS
+
+1. **src/lib/appointmentsColumns.js**
+   - Removidas: price → value, start_time → scheduled_time/scheduled_date
+   - Adicionadas referências corretas aos joins
+
+2. **src/lib/appointmentsApi.js**
+   - Removidas colunas extras de mapToDatabase()
+   - Mantém apenas: clinic_id, patient_id, professional_id, service_id, room_id, payer_id, scheduled_date, scheduled_time, end_time, status, notes, value
+
+3. **src/utils/ExportUtils.js**
+   - Corrigido exportToExcel() para usar scheduled_date/scheduled_time/value
+
+4. **src/utils/helpers/ExportUtils.js**
+   - Idem acima
+
+5. **src/services/agendaService.js**
+   - Corrigido criarAgendamento() para usar scheduled_date/scheduled_time
+   - Corrigido atualizarAgendamento() para usar scheduled_date/scheduled_time
+   - Corrigido listarAgendamentos() para usar scheduled_date
+
+---
+
+## 🎬 PRÓXIMOS PASSOS
+
+### IMEDIATO:
+1. ✅ Copiar SQL de: EXECUTE_TRIGGER_v4_AGORA.sql
+2. ✅ Executar em: https://app.supabase.com SQL Editor
+3. ✅ Hard refresh: Ctrl+Shift+R
+4. ✅ Testar: Criar novo agendamento em http://localhost:3000/clinica/agenda
+
+### APÓS CONFIRMAR FUNCIONANDO:
+1. Fazer ETAPA 7: E2E Testing
+   - Criar novo agendamento
+   - Verificar payer_id/room_id/plano_contas_id salvos
+   - Editar agendamento
+   - Verificar dados persistem
+
+2. Fazer ETAPA 8: Cleanup
+   - Remover console.log debug
+   - Keep apenas error-level logging
+
+3. Fazer ETAPA 9: Final Merge
+   - git checkout master
+   - git merge refactor/agendamento-form
+
+---
+
+## 📊 GIT COMMITS REALIZADOS
+
+```
+757288b fix: corrigir todas as referências start_time/price para scheduled_date/scheduled_time/value
+a969287 fix: corrigir colunas appointments - value em vez de price, scheduled_time em vez de start_time
+8fae43f fix: remover colunas extras do mapToDatabase + trigger v4 sem SECURITY DEFINER
+```
+
+---
+
+## 🏗️ ESTADO ATUAL
+
+**Build:** ✅ Sucesso (4948 modules, 0 errors)
+**API Query:** ✅ Corrigida
+**Trigger:** ✅ Pronto para executar
+**Frontend:** ✅ Sincronizado com schema real
+
+**Status:** 🟢 PRONTO PARA TESTAR
+
+---
+
+## 📝 NOTAS IMPORTANTES
+
+1. **Trigger não está ativo ainda** - Precisa executar SQL no Supabase
+2. **Trigger v3 e v2 podem ser desconsiderados** - Usar v4 que está em EXECUTE_TRIGGER_v4_AGORA.sql
+3. **Se continuar erro "Sem usuário autenticado"** - Logout/Login para limpar sessão
+4. **Cache é importante** - Sempre Ctrl+Shift+R após deployment
+
+---
+
+Tudo pronto! 🚀 Execute o SQL e teste!

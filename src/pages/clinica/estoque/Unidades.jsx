@@ -1,16 +1,29 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { Helmet } from "react-helmet";
-import { supabase } from "@/lib/customSupabaseClient";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, PlusCircle, Edit, Trash2 } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch"; // Corrected import
+import React, { useEffect, useState, useCallback } from 'react';
+import { Helmet } from 'react-helmet';
+import { supabase } from '@/lib/customSupabaseClient';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Loader2, PlusCircle, Edit, Trash2 } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch'; // Corrected import
 
 export default function Unidades() {
   const { clinicId } = useAuth();
@@ -19,27 +32,29 @@ export default function Unidades() {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentUnit, setCurrentUnit] = useState(null);
-  const [unitName, setUnitName] = useState("");
-  const [unitSymbol, setUnitSymbol] = useState("");
+  const [unitName, setUnitName] = useState('');
+  const [unitSymbol, setUnitSymbol] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
 
   const fetchUnits = useCallback(async () => {
-    if (!clinicId) return;
+    if (!clinicId) {
+      return;
+    }
     setLoading(true);
     const { data, error } = await supabase
-      .from("stock_units")
-      .select("*")
-      .eq("clinic_id", clinicId)
-      .order("name", { ascending: true });
+      .from('stock_units')
+      .select('*')
+      .eq('clinic_id', clinicId)
+      .order('name', { ascending: true });
 
     if (error) {
       toast({
-        title: "Erro",
-        description: "Falha ao carregar unidades.",
-        variant: "destructive",
+        title: 'Erro',
+        description: 'Falha ao carregar unidades.',
+        variant: 'destructive',
       });
-      console.error("Erro ao carregar unidades:", error);
+      console.error('Erro ao carregar unidades:', error);
     } else {
       setUnits(data);
     }
@@ -53,7 +68,7 @@ export default function Unidades() {
   const handleCreateUnit = async () => {
     setFormLoading(true);
     const { data, error } = await supabase
-      .from("stock_units")
+      .from('stock_units')
       .insert({
         clinic_id: clinicId,
         name: unitName,
@@ -64,15 +79,15 @@ export default function Unidades() {
 
     if (error) {
       toast({
-        title: "Erro",
+        title: 'Erro',
         description: `Falha ao criar unidade: ${error.message}`,
-        variant: "destructive",
+        variant: 'destructive',
       });
-      console.error("Erro ao criar unidade:", error);
+      console.error('Erro ao criar unidade:', error);
     } else {
       toast({
-        title: "Sucesso",
-        description: "Unidade criada com sucesso!",
+        title: 'Sucesso',
+        description: 'Unidade criada com sucesso!',
       });
       setIsDialogOpen(false);
       fetchUnits();
@@ -83,26 +98,26 @@ export default function Unidades() {
   const handleUpdateUnit = async () => {
     setFormLoading(true);
     const { data, error } = await supabase
-      .from("stock_units")
+      .from('stock_units')
       .update({
         name: unitName,
         symbol: unitSymbol,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", currentUnit.id)
+      .eq('id', currentUnit.id)
       .select();
 
     if (error) {
       toast({
-        title: "Erro",
+        title: 'Erro',
         description: `Falha ao atualizar unidade: ${error.message}`,
-        variant: "destructive",
+        variant: 'destructive',
       });
-      console.error("Erro ao atualizar unidade:", error);
+      console.error('Erro ao atualizar unidade:', error);
     } else {
       toast({
-        title: "Sucesso",
-        description: "Unidade atualizada com sucesso!",
+        title: 'Sucesso',
+        description: 'Unidade atualizada com sucesso!',
       });
       setIsDialogOpen(false);
       fetchUnits();
@@ -111,25 +126,22 @@ export default function Unidades() {
   };
 
   const handleDeleteUnit = async (id) => {
-    if (!window.confirm("Tem certeza que deseja excluir esta unidade?")) {
+    if (!window.confirm('Tem certeza que deseja excluir esta unidade?')) {
       return;
     }
-    const { error } = await supabase
-      .from("stock_units")
-      .delete()
-      .eq("id", id);
+    const { error } = await supabase.from('stock_units').delete().eq('id', id);
 
     if (error) {
       toast({
-        title: "Erro",
+        title: 'Erro',
         description: `Falha ao excluir unidade: ${error.message}`,
-        variant: "destructive",
+        variant: 'destructive',
       });
-      console.error("Erro ao excluir unidade:", error);
+      console.error('Erro ao excluir unidade:', error);
     } else {
       toast({
-        title: "Sucesso",
-        description: "Unidade excluída com sucesso!",
+        title: 'Sucesso',
+        description: 'Unidade excluída com sucesso!',
       });
       fetchUnits();
     }
@@ -145,8 +157,8 @@ export default function Unidades() {
 
   const handleNewUnitClick = () => {
     setCurrentUnit(null);
-    setUnitName("");
-    setUnitSymbol("");
+    setUnitName('');
+    setUnitSymbol('');
     setIsEditing(false);
     setIsDialogOpen(true);
   };
@@ -173,7 +185,10 @@ export default function Unidades() {
       <div className="p-6 space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold text-[#0B63F6] flex items-center gap-2">
-            <img alt="Icone de unidades de medida" src="https://images.unsplash.com/photo-1627898791127-fe32965ac37c" />
+            <img
+              alt="Icone de unidades de medida"
+              src="https://images.unsplash.com/photo-1627898791127-fe32965ac37c"
+            />
             Unidades de Medida
           </h1>
           <Button onClick={handleNewUnitClick}>
@@ -205,19 +220,11 @@ export default function Unidades() {
                       <TableCell className="font-medium">{unit.name}</TableCell>
                       <TableCell>{unit.symbol}</TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditClick(unit)}
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => handleEditClick(unit)}>
                           <Edit className="h-4 w-4 text-blue-500" />
                           <span className="sr-only">Editar</span>
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteUnit(unit.id)}
-                        >
+                        <Button variant="ghost" size="sm" onClick={() => handleDeleteUnit(unit.id)}>
                           <Trash2 className="h-4 w-4 text-red-500" />
                           <span className="sr-only">Excluir</span>
                         </Button>
@@ -234,7 +241,7 @@ export default function Unidades() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="app-dialog-shell app-dialog-shell--compact">
           <DialogHeader>
-            <DialogTitle>{isEditing ? "Editar Unidade" : "Nova Unidade"}</DialogTitle>
+            <DialogTitle>{isEditing ? 'Editar Unidade' : 'Nova Unidade'}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleFormSubmit} className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
@@ -264,7 +271,7 @@ export default function Unidades() {
             <DialogFooter>
               <Button type="submit" disabled={formLoading}>
                 {formLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isEditing ? "Salvar alterações" : "Criar Unidade"}
+                {isEditing ? 'Salvar alterações' : 'Criar Unidade'}
               </Button>
             </DialogFooter>
           </form>
@@ -273,4 +280,3 @@ export default function Unidades() {
     </>
   );
 }
-

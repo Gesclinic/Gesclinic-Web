@@ -7,17 +7,17 @@
  * 3. Processamento de respostas e confirmações
  * 4. Agendamento de retries automáticos
  * 5. Webhook handlers para notificações de status
- * 
+ *
  * Data: Abril 10, 2026
  */
 
-import { customSupabaseClient as supabase } from "@/lib/customSupabaseClient";
+import { customSupabaseClient as supabase } from '@/lib/customSupabaseClient';
 import {
   submitTISSGuide,
   generateTISSXML,
   getTISSSubmissionStatus,
   retryTISSSubmission,
-} from "@/lib/tissApi";
+} from '@/lib/tissApi';
 
 /**
  * ============================================================
@@ -27,24 +27,24 @@ import {
 
 /**
  * Submete guia TISS com roteamento automático por operadora
- * @param {string} guideId 
- * @param {string} clinicId 
+ * @param {string} guideId
+ * @param {string} clinicId
  * @returns {Promise<{success: boolean, message: string, details: object}>}
  */
 export async function submitGuideWithOperatorRouting(guideId, clinicId) {
   try {
     // 1. Fetch dados completos da guia
     const { data: guide, error } = await supabase
-      .from("billing_guides")
+      .from('billing_guides')
       .select(
         `
         id, guide_number,
         health_insurances(id, name, registration_ans, tiss_endpoint, tiss_username, tiss_password, submission_method),
         appointments(id, scheduled_date, total_value)
-      `
+      `,
       )
-      .eq("id", guideId)
-      .eq("clinic_id", clinicId)
+      .eq('id', guideId)
+      .eq('clinic_id', clinicId)
       .single();
 
     if (error || !guide) {
@@ -53,44 +53,46 @@ export async function submitGuideWithOperatorRouting(guideId, clinicId) {
 
     const payer = guide.health_insurances;
     if (!payer) {
-      throw new Error("Operadora não configurada para esta guia");
+      throw new Error('Operadora não configurada para esta guia');
     }
 
     // 2. Validar credenciais da operadora
     if (!payer.tiss_endpoint) {
-      throw new Error(`Operadora "${payer.name}" não tem endpoint TISS configurado. Contate suporte.`);
+      throw new Error(
+        `Operadora "${payer.name}" não tem endpoint TISS configurado. Contate suporte.`,
+      );
     }
 
     // 3. Chamar função de envio da operadora específica
     let submissionResult;
     switch (payer.submission_method?.toLowerCase()) {
-      case "sftp":
-        submissionResult = await submitViaHTTPSFTP(guideId, clinicId, payer);
-        break;
-      case "api":
-      case "http":
-        submissionResult = await submitViaHTTPAPI(guideId, clinicId, payer);
-        break;
-      case "portal":
-      case "web":
-        submissionResult = await generateForPortalSubmission(guideId, clinicId, payer);
-        break;
-      default:
-        submissionResult = await submitViaHTTPAPI(guideId, clinicId, payer); // Default a HTTP
+    case 'sftp':
+      submissionResult = await submitViaHTTPSFTP(guideId, clinicId, payer);
+      break;
+    case 'api':
+    case 'http':
+      submissionResult = await submitViaHTTPAPI(guideId, clinicId, payer);
+      break;
+    case 'portal':
+    case 'web':
+      submissionResult = await generateForPortalSubmission(guideId, clinicId, payer);
+      break;
+    default:
+      submissionResult = await submitViaHTTPAPI(guideId, clinicId, payer); // Default a HTTP
     }
 
     if (!submissionResult.success) {
-      throw new Error(submissionResult.message || "Erro ao submeter guia");
+      throw new Error(submissionResult.message || 'Erro ao submeter guia');
     }
 
     // 4. Atualizar status em Supabase
     await supabase
-      .from("billing_guides")
+      .from('billing_guides')
       .update({
-        status: "submitted",
+        status: 'submitted',
         last_submission_at: new Date().toISOString(),
       })
-      .eq("id", guideId);
+      .eq('id', guideId);
 
     return {
       success: true,
@@ -98,7 +100,7 @@ export async function submitGuideWithOperatorRouting(guideId, clinicId) {
       details: submissionResult,
     };
   } catch (error) {
-    console.error("[submitGuideWithOperatorRouting]", error);
+    console.error('[submitGuideWithOperatorRouting]', error);
     return {
       success: false,
       message: error.message,
@@ -115,8 +117,8 @@ export async function submitGuideWithOperatorRouting(guideId, clinicId) {
 
 /**
  * Envia via HTTP API (POST para endpoint da operadora)
- * @param {string} guideId 
- * @param {string} clinicId 
+ * @param {string} guideId
+ * @param {string} clinicId
  * @param {Object} payer - Dados da operadora
  * @returns {Promise<Object>}
  */
@@ -124,13 +126,17 @@ async function submitViaHTTPAPI(guideId, clinicId, payer) {
   try {
     // 1. Preparar XML
     const { data: xmlData, error: xmlError } = await supabase
-      .from("tiss_submissions")
-      .select("xml_content")
-      .eq("guide_id", guideId)
-      .eq("clinic_id", clinicId)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
+      .from('tiss_submissions')
+      .select('xml_content')
+      .eq('guide_id', guideId)
+      .eq('clinic_id', clinicId)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
 
     if (xmlError || !xmlData) {
       // Gerar XML se ainda não existir
@@ -138,30 +144,30 @@ async function submitViaHTTPAPI(guideId, clinicId, payer) {
       const xmlContent = generateTISSXML(guideData);
 
       // Salvar na DB
-      await supabase.from("tiss_submissions").insert({
+      await supabase.from('tiss_submissions').insert({
         id: `TISS-${guideId}-${Date.now()}`,
         clinic_id: clinicId,
         guide_id: guideId,
         xml_content: xmlContent,
-        status: "pending",
+        status: 'pending',
         attempt_count: 1,
         last_attempt_at: new Date().toISOString(),
       });
 
       return {
         success: true,
-        method: "http",
-        message: "XML preparado para envio. Aguardando transmissão...",
+        method: 'http',
+        message: 'XML preparado para envio. Aguardando transmissão...',
         xmlGenerated: true,
       };
     }
 
     // 2. Preparar request HTTP (simulado - em produção integrar com SDK de cada operadora)
     const response = await fetch(payer.tiss_endpoint, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/xml",
-        "Authorization": `Bearer ${btoa(`${payer.tiss_username}:${payer.tiss_password}`)}`,
+        'Content-Type': 'application/xml',
+        Authorization: `Bearer ${btoa(`${payer.tiss_username}:${payer.tiss_password}`)}`,
       },
       body: xmlData.xml_content,
     });
@@ -175,22 +181,22 @@ async function submitViaHTTPAPI(guideId, clinicId, payer) {
 
     // 3. Registrar resposta
     await supabase
-      .from("tiss_submissions")
+      .from('tiss_submissions')
       .update({
-        status: "sent",
+        status: 'sent',
         response_data: responseData,
       })
-      .eq("guide_id", guideId)
-      .eq("clinic_id", clinicId);
+      .eq('guide_id', guideId)
+      .eq('clinic_id', clinicId);
 
     return {
       success: true,
-      method: "http",
-      message: "Guia enviada via HTTP API",
-      submissionId: responseData.submissionId || "http-sent",
+      method: 'http',
+      message: 'Guia enviada via HTTP API',
+      submissionId: responseData.submissionId || 'http-sent',
     };
   } catch (error) {
-    console.error("[submitViaHTTPAPI]", error);
+    console.error('[submitViaHTTPAPI]', error);
     return {
       success: false,
       message: error.message,
@@ -200,9 +206,9 @@ async function submitViaHTTPAPI(guideId, clinicId, payer) {
 
 /**
  * Envia via SFTP (para operadoras que usam SFTP)
- * @param {string} guideId 
- * @param {string} clinicId 
- * @param {Object} payer 
+ * @param {string} guideId
+ * @param {string} clinicId
+ * @param {Object} payer
  * @returns {Promise<Object>}
  */
 async function submitViaHTTPSFTP(guideId, clinicId, payer) {
@@ -212,16 +218,20 @@ async function submitViaHTTPSFTP(guideId, clinicId, payer) {
   // Por agora, retornar instrução manual
 
   const xmlData = await supabase
-    .from("tiss_submissions")
-    .select("xml_content")
-    .eq("guide_id", guideId)
-    .eq("clinic_id", clinicId)
-    .limit(1)
-    .single();
+    .from('tiss_submissions')
+    .select('xml_content')
+    .eq('guide_id', guideId)
+    .eq('clinic_id', clinicId)
+    .limit(1);
+
+  if (!data || data.length === 0) {
+    throw new Error('Record not found');
+  }
+  return data[0];
 
   return {
     success: true,
-    method: "sftp",
+    method: 'sftp',
     message: `Guia preparada para envio SFTP. Arquivo: TISS-${guideId}.xml`,
     manualStep: true,
     instructions: `
@@ -235,24 +245,28 @@ async function submitViaHTTPSFTP(guideId, clinicId, payer) {
 
 /**
  * Gera para envio manual via portal web
- * @param {string} guideId 
- * @param {string} clinicId 
- * @param {Object} payer 
+ * @param {string} guideId
+ * @param {string} clinicId
+ * @param {Object} payer
  * @returns {Promise<Object>}
  */
 async function generateForPortalSubmission(guideId, clinicId, payer) {
   try {
     const xmlData = await supabase
-      .from("tiss_submissions")
-      .select("xml_content")
-      .eq("guide_id", guideId)
-      .eq("clinic_id", clinicId)
-      .limit(1)
-      .single();
+      .from('tiss_submissions')
+      .select('xml_content')
+      .eq('guide_id', guideId)
+      .eq('clinic_id', clinicId)
+      .limit(1);
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
 
     return {
       success: true,
-      method: "portal",
+      method: 'portal',
       message: `Guia preparada para envio manual via portal ${payer.name}`,
       manualStep: true,
       portalUrl: payer.tiss_endpoint,
@@ -267,7 +281,7 @@ async function generateForPortalSubmission(guideId, clinicId, payer) {
       `,
     };
   } catch (error) {
-    console.error("[generateForPortalSubmission]", error);
+    console.error('[generateForPortalSubmission]', error);
     return {
       success: false,
       message: error.message,
@@ -297,26 +311,26 @@ export async function handleOperatorWebhook(webhookData) {
     } = webhookData;
 
     if (!submissionId) {
-      throw new Error("submissionId obrigatório no webhook");
+      throw new Error('submissionId obrigatório no webhook');
     }
 
     // 1. Fetch submissão
     const { data: submission, error: fetchError } = await supabase
-      .from("tiss_submissions")
-      .select("id, clinic_id, guide_id")
-      .eq("id", submissionId)
+      .from('tiss_submissions')
+      .select('id, clinic_id, guide_id')
+      .eq('id', submissionId)
       .single();
 
     if (fetchError || !submission) {
       return {
         success: false,
-        message: "Submissão não encontrada",
+        message: 'Submissão não encontrada',
       };
     }
 
     // 2. Atualizar status
     await supabase
-      .from("tiss_submissions")
+      .from('tiss_submissions')
       .update({
         status: status,
         response_data: {
@@ -326,39 +340,38 @@ export async function handleOperatorWebhook(webhookData) {
           guideData,
         },
       })
-      .eq("id", submissionId);
+      .eq('id', submissionId);
 
     // 3. Atualizar guia também
     await supabase
-      .from("billing_guides")
+      .from('billing_guides')
       .update({
-        status: status === "accepted" ? "accepted" : status === "rejected" ? "rejected" : "processing",
+        status:
+          status === 'accepted' ? 'accepted' : status === 'rejected' ? 'rejected' : 'processing',
       })
-      .eq("id", submission.guide_id);
+      .eq('id', submission.guide_id);
 
     // 4. Se rejeitado, notificar usuário
-    if (status === "rejected") {
+    if (status === 'rejected') {
       await createNotification({
         clinic_id: submission.clinic_id,
-        type: "tiss_rejected",
-        title: `Guia rejeitada pela operadora`,
-        message: errors ? errors.join("; ") : message,
+        type: 'tiss_rejected',
+        title: 'Guia rejeitada pela operadora',
+        message: errors ? errors.join('; ') : message,
         guide_id: submission.guide_id,
-        severity: "error",
+        severity: 'error',
       });
     }
 
     // 5. Se aceito, registrar em auditoria
-    if (status === "accepted") {
-      await supabase
-        .from("tiss_audit_logs")
-        .insert({
-          clinic_id: submission.clinic_id,
-          guide_id: submission.guide_id,
-          event: "ACCEPTED",
-          message: "Guia aceita pela operadora",
-          created_at: new Date().toISOString(),
-        });
+    if (status === 'accepted') {
+      await supabase.from('tiss_audit_logs').insert({
+        clinic_id: submission.clinic_id,
+        guide_id: submission.guide_id,
+        event: 'ACCEPTED',
+        message: 'Guia aceita pela operadora',
+        created_at: new Date().toISOString(),
+      });
     }
 
     return {
@@ -366,7 +379,7 @@ export async function handleOperatorWebhook(webhookData) {
       message: `Webhook processado: status = ${status}`,
     };
   } catch (error) {
-    console.error("[handleOperatorWebhook]", error);
+    console.error('[handleOperatorWebhook]', error);
     return {
       success: false,
       message: error.message,
@@ -383,7 +396,7 @@ export async function handleOperatorWebhook(webhookData) {
 /**
  * Processa retries automáticos para submissões falhadas
  * Deve ser executado via background job/cron
- * @param {string} clinicId 
+ * @param {string} clinicId
  * @returns {Promise<{processed: number, successful: number, failed: number}>}
  */
 export async function processPendingTISSRetries(clinicId) {
@@ -392,14 +405,16 @@ export async function processPendingTISSRetries(clinicId) {
 
     // 1. Buscar submissões que precisam de retry
     const { data: submissions, error } = await supabase
-      .from("tiss_submissions")
-      .select("id, guide_id, attempt_count, status")
-      .eq("clinic_id", clinicId)
-      .eq("status", "pending")
-      .lt("next_retry_at", now.toISOString())
-      .lt("attempt_count", 3);
+      .from('tiss_submissions')
+      .select('id, guide_id, attempt_count, status')
+      .eq('clinic_id', clinicId)
+      .eq('status', 'pending')
+      .lt('next_retry_at', now.toISOString())
+      .lt('attempt_count', 3);
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
 
     let successful = 0;
     let failed = 0;
@@ -420,7 +435,7 @@ export async function processPendingTISSRetries(clinicId) {
       failed,
     };
   } catch (error) {
-    console.error("[processPendingTISSRetries]", error);
+    console.error('[processPendingTISSRetries]', error);
     return {
       processed: 0,
       successful: 0,
@@ -438,13 +453,13 @@ export async function processPendingTISSRetries(clinicId) {
 
 /**
  * Fetch dados completos da guia para XML
- * @param {string} guideId 
- * @param {string} clinicId 
+ * @param {string} guideId
+ * @param {string} clinicId
  * @returns {Promise<Object>}
  */
 async function fetchCompleteGuideData(guideId, clinicId) {
   const { data: guide, error } = await supabase
-    .from("billing_guides")
+    .from('billing_guides')
     .select(
       `
       id, guide_number,
@@ -456,13 +471,19 @@ async function fetchCompleteGuideData(guideId, clinicId) {
         services(id, name, tuss_code, guide_type, unit_measure, cost_value)
       ),
       health_insurances(id, name, registration_ans)
-    `
+    `,
     )
-    .eq("id", guideId)
-    .eq("clinic_id", clinicId)
-    .single();
+    .eq('id', guideId)
+    .eq('clinic_id', clinicId);
 
-  if (error) throw error;
+  if (!data || data.length === 0) {
+    throw new Error('Record not found');
+  }
+  return data[0];
+
+  if (error) {
+    throw error;
+  }
 
   const appoData = guide.appointments[0];
   return {
@@ -476,74 +497,78 @@ async function fetchCompleteGuideData(guideId, clinicId) {
 
 /**
  * Cria notificação para usuário
- * @param {Object} notificationData 
+ * @param {Object} notificationData
  */
 async function createNotification(notificationData) {
   try {
-    await supabase.from("user_notifications").insert({
+    await supabase.from('user_notifications').insert({
       ...notificationData,
       created_at: new Date().toISOString(),
       is_read: false,
     });
   } catch (error) {
-    console.warn("[createNotification]", error);
+    console.warn('[createNotification]', error);
   }
 }
 
 /**
  * Busca submissões rejeitadas para análise
- * @param {string} clinicId 
+ * @param {string} clinicId
  * @returns {Promise<Array>}
  */
 export async function getRejectedTISSSubmissions(clinicId) {
   try {
     const { data, error } = await supabase
-      .from("tiss_submissions")
+      .from('tiss_submissions')
       .select(
         `
         id, guide_id, status, response_data, error_message, created_at,
         billing_guides(guide_number, appointments(patients(name)))
-      `
+      `,
       )
-      .eq("clinic_id", clinicId)
-      .eq("status", "rejected")
-      .order("created_at", { ascending: false });
+      .eq('clinic_id', clinicId)
+      .eq('status', 'rejected')
+      .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
     return data || [];
   } catch (error) {
-    console.error("[getRejectedTISSSubmissions]", error);
+    console.error('[getRejectedTISSSubmissions]', error);
     return [];
   }
 }
 
 /**
  * Busca resumo de submissões por status
- * @param {string} clinicId 
+ * @param {string} clinicId
  * @returns {Promise<Object>}
  */
 export async function getTISSSubmissionSummary(clinicId) {
   try {
     const { data, error } = await supabase
-      .from("tiss_submissions")
-      .select("status")
-      .eq("clinic_id", clinicId);
+      .from('tiss_submissions')
+      .select('status')
+      .eq('clinic_id', clinicId);
 
-    if (error) throw error;
+    if (error) {
+      throw error;
+    }
 
     const summary = {
       total: data.length,
-      pending: data.filter((d) => d.status === "pending").length,
-      sent: data.filter((d) => d.status === "sent").length,
-      processing: data.filter((d) => d.status === "processing").length,
-      accepted: data.filter((d) => d.status === "accepted").length,
-      rejected: data.filter((d) => d.status === "rejected").length,
-      error: data.filter((d) => d.status === "error").length,
+      pending: data.filter((d) => d.status === 'pending').length,
+      sent: data.filter((d) => d.status === 'sent').length,
+      processing: data.filter((d) => d.status === 'processing').length,
+      accepted: data.filter((d) => d.status === 'accepted').length,
+      rejected: data.filter((d) => d.status === 'rejected').length,
+      error: data.filter((d) => d.status === 'error').length,
     };
 
     return summary;
   } catch (error) {
-    console.error("[getTISSSubmissionSummary]", error);
+    console.error('[getTISSSubmissionSummary]', error);
     return { error: error.message };
   }
 }

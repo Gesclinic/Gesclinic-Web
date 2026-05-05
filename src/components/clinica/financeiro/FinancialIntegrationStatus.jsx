@@ -1,16 +1,16 @@
 /**
  * FinancialIntegrationStatus.jsx
- * 
+ *
  * PHASE 3B: Dashboard widget showing appointment → financial integration status
- * 
+ *
  * Displays:
  * - Today's appointments with financial status
  * - AR creation status
  * - TISS guide creation status (convênio only)
  * - Integration completion percentage
- * 
+ *
  * Location: Insert into ContasReceber.jsx
- * 
+ *
  * Date: April 11, 2026
  */
 
@@ -19,7 +19,10 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, AlertCircle, Clock, FileText, DollarSign, TrendingUp } from 'lucide-react';
 import { useClinicContext } from '@/contexts/ClinicContext';
-import { listAppointmentsWithFinancialStatus, bulkValidateFinancialIntegration } from '@/lib/appointmentFinancialIntegrationApi';
+import {
+  listAppointmentsWithFinancialStatus,
+  bulkValidateFinancialIntegration,
+} from '@/lib/appointmentFinancialIntegrationApi';
 
 export default function FinancialIntegrationStatus() {
   const { clinicId } = useClinicContext();
@@ -36,7 +39,9 @@ export default function FinancialIntegrationStatus() {
 
   // Load today's appointments with financial status
   useEffect(() => {
-    if (!clinicId) return;
+    if (!clinicId) {
+      return;
+    }
 
     const loadAppointments = async () => {
       setLoading(true);
@@ -48,19 +53,23 @@ export default function FinancialIntegrationStatus() {
 
         // Filter only attended or canceled
         const filtered = (data || []).filter(
-          apt => apt.status === 'attended' || apt.status === 'cancelado'
+          (apt) => apt.status === 'attended' || apt.status === 'cancelado',
         );
 
         setAppointments(filtered);
 
         // Calculate summary
-        const withAR = filtered.filter(apt => apt.ar_receivables?.length > 0).length;
-        const withGuide = filtered.filter(apt => apt.billing_guides?.length > 0).length;
+        const withAR = filtered.filter((apt) => apt.ar_receivables?.length > 0).length;
+        const withGuide = filtered.filter((apt) => apt.billing_guides?.length > 0).length;
         const completed = filtered.filter(
-          apt => apt.financial_status === 'complete_with_guide' || apt.financial_status === 'complete_particular'
+          (apt) =>
+            apt.financial_status === 'complete_with_guide' ||
+            apt.financial_status === 'complete_particular',
         ).length;
-        const pending = filtered.filter(apt => apt.financial_status === 'pending').length;
-        const errors = filtered.filter(apt => apt.financial_status === 'attended_no_financial').length;
+        const pending = filtered.filter((apt) => apt.financial_status === 'pending').length;
+        const errors = filtered.filter(
+          (apt) => apt.financial_status === 'attended_no_financial',
+        ).length;
 
         setSummary({
           total: filtered.length,
@@ -82,7 +91,9 @@ export default function FinancialIntegrationStatus() {
 
   // Calculate completion percentage
   const completionPercentage = useMemo(() => {
-    if (summary.total === 0) return 0;
+    if (summary.total === 0) {
+      return 0;
+    }
     return Math.round((summary.completed / summary.total) * 100);
   }, [summary]);
 
@@ -222,20 +233,27 @@ export default function FinancialIntegrationStatus() {
                     </div>
                     <div className="text-xs text-gray-600">
                       {apt.professional_id && `Prof: ${apt.professional_id.slice(0, 8)}...`}
-                      {apt.appointment_time && ` • ${new Date(apt.appointment_time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}
+                      {apt.appointment_time &&
+                        ` • ${new Date(apt.appointment_time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}
                     </div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2">
                   {apt.ar_receivables?.length > 0 && (
-                    <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                    <Badge
+                      variant="outline"
+                      className="text-xs bg-green-50 text-green-700 border-green-200"
+                    >
                       <DollarSign className="w-3 h-3 mr-1" />
                       AR
                     </Badge>
                   )}
                   {apt.billing_guides?.length > 0 && (
-                    <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                    <Badge
+                      variant="outline"
+                      className="text-xs bg-blue-50 text-blue-700 border-blue-200"
+                    >
                       <FileText className="w-3 h-3 mr-1" />
                       Guia
                     </Badge>
@@ -254,7 +272,8 @@ export default function FinancialIntegrationStatus() {
       {summary.errors > 0 && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-3">
           <p className="text-sm text-red-800">
-            <strong>⚠️ Aviso:</strong> {summary.errors} atendimento(s) finalizado(s) sem AR criada. Verifique os triggers do banco de dados.
+            <strong>⚠️ Aviso:</strong> {summary.errors} atendimento(s) finalizado(s) sem AR criada.
+            Verifique os triggers do banco de dados.
           </p>
         </div>
       )}
@@ -262,7 +281,8 @@ export default function FinancialIntegrationStatus() {
       {completionPercentage === 100 && summary.total > 0 && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-3">
           <p className="text-sm text-green-800">
-            <strong>✅ Perfeito!</strong> Todos os {summary.total} atendimento(s) de hoje foram processados com sucesso!
+            <strong>✅ Perfeito!</strong> Todos os {summary.total} atendimento(s) de hoje foram
+            processados com sucesso!
           </p>
         </div>
       )}

@@ -8,7 +8,7 @@ import { formatCurrency, formatDate } from '@/lib/formatters';
 import {
   CONCILIATION_STATUS_VISUAL,
   CONCILIATION_STATUS,
-  TRANSACTION_TYPE
+  TRANSACTION_TYPE,
 } from '@/lib/conciliationStatus';
 
 export function ConciliacaoLista({
@@ -17,26 +17,30 @@ export function ConciliacaoLista({
   onSelectStatement,
   onBulkConciliate,
   selectedStatements = [],
-  onToggleSelect
+  onToggleSelect,
 }) {
   const [statusFilter, setStatusFilter] = useState(null);
   const [typeFilter, setTypeFilter] = useState(null);
 
-  const filtered = statements.filter(stmt => {
-    if (statusFilter && stmt.status !== statusFilter) return false;
-    if (typeFilter && stmt.transaction_type !== typeFilter) return false;
+  const filtered = statements.filter((stmt) => {
+    if (statusFilter && stmt.status !== statusFilter) {
+      return false;
+    }
+    if (typeFilter && stmt.transaction_type !== typeFilter) {
+      return false;
+    }
     return true;
   });
 
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      filtered.forEach(stmt => {
+      filtered.forEach((stmt) => {
         if (!selectedStatements.includes(stmt.id)) {
           onToggleSelect(stmt.id);
         }
       });
     } else {
-      filtered.forEach(stmt => {
+      filtered.forEach((stmt) => {
         if (selectedStatements.includes(stmt.id)) {
           onToggleSelect(stmt.id);
         }
@@ -112,7 +116,9 @@ export function ConciliacaoLista({
               <th className="px-4 py-3 text-left">
                 <input
                   type="checkbox"
-                  checked={filtered.length > 0 && filtered.every(s => selectedStatements.includes(s.id))}
+                  checked={
+                    filtered.length > 0 && filtered.every((s) => selectedStatements.includes(s.id))
+                  }
                   onChange={handleSelectAll}
                   className="rounded"
                 />
@@ -154,11 +160,15 @@ export function ConciliacaoLista({
                       {stmt.description.substring(0, 40)}
                       {stmt.description.length > 40 ? '...' : ''}
                     </td>
-                    <td className={`px-4 py-3 text-right font-medium ${isCredit ? 'text-green-600' : 'text-red-600'}`}>
+                    <td
+                      className={`px-4 py-3 text-right font-medium ${isCredit ? 'text-green-600' : 'text-red-600'}`}
+                    >
                       {isCredit ? '+' : '-'} {formatCurrency(stmt.amount)}
                     </td>
                     <td className="px-4 py-3 text-center text-xs">
-                      <span className={`px-2 py-1 rounded ${isCredit ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                      <span
+                        className={`px-2 py-1 rounded ${isCredit ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}
+                      >
                         {isCredit ? 'Crédito' : 'Débito'}
                       </span>
                     </td>

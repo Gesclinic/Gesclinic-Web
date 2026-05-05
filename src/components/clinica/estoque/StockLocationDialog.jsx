@@ -11,30 +11,25 @@ const generateLocationCode = () => {
   return `LOC-${timestamp}${random}`;
 };
 
-export default function StockLocationDialog({ 
-  open, 
-  onOpenChange, 
-  onSubmit, 
-  initialData = null
-}) {
-  const [formData, setFormData] = useState({ 
-    name: '', 
-    is_default: false
+export default function StockLocationDialog({ open, onOpenChange, onSubmit, initialData = null }) {
+  const [formData, setFormData] = useState({
+    name: '',
+    is_default: false,
   });
   const [displayCode, setDisplayCode] = useState('');
 
   useEffect(() => {
     if (initialData) {
-      setFormData({ 
-        name: initialData.name || '', 
+      setFormData({
+        name: initialData.name || '',
         is_default: initialData.is_default || false,
-        id: initialData.id 
+        id: initialData.id,
       });
       setDisplayCode(generateLocationCode());
     } else {
-      setFormData({ 
-        name: '', 
-        is_default: false
+      setFormData({
+        name: '',
+        is_default: false,
       });
       setDisplayCode(generateLocationCode());
     }
@@ -53,7 +48,7 @@ export default function StockLocationDialog({
     onSubmit({
       name: formData.name,
       is_default: formData.is_default,
-      id: formData.id
+      id: formData.id,
     });
   };
 
@@ -69,7 +64,9 @@ export default function StockLocationDialog({
                 <h2 className="text-lg font-bold">
                   {initialData ? 'Editar Local de Estoque' : 'Novo Local de Estoque'}
                 </h2>
-                <p className="text-amber-100 text-sm">Registre contagem e verificação de materiais</p>
+                <p className="text-amber-100 text-sm">
+                  Registre contagem e verificação de materiais
+                </p>
               </div>
             </div>
             <Button
@@ -86,7 +83,6 @@ export default function StockLocationDialog({
 
         {/* CONTENT */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 pt-6 pb-2 space-y-5">
-          
           {/* SEÇÃO 1: INFORMAÇÕES DO LOCAL */}
           <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-5">
             <div className="flex items-center gap-3 border-b pb-4">
@@ -111,13 +107,11 @@ export default function StockLocationDialog({
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Código (referência visual)</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Código (referência visual)
+                </label>
                 <div className="flex gap-2">
-                  <Input
-                    value={displayCode}
-                    readOnly
-                    className="bg-gray-50 cursor-not-allowed"
-                  />
+                  <Input value={displayCode} readOnly className="bg-gray-50 cursor-not-allowed" />
                   <Button
                     type="button"
                     variant="outline"
@@ -129,7 +123,9 @@ export default function StockLocationDialog({
                     <RefreshCw className="h-4 w-4" />
                   </Button>
                 </div>
-                <p className="text-xs text-gray-500">Código gerado automaticamente (referência visual)</p>
+                <p className="text-xs text-gray-500">
+                  Código gerado automaticamente (referência visual)
+                </p>
               </div>
             </div>
           </div>
@@ -155,7 +151,9 @@ export default function StockLocationDialog({
                 />
                 <label htmlFor="is_default" className="flex-1 cursor-pointer">
                   <div className="font-medium text-gray-900">Marcar como local padrão</div>
-                  <p className="text-xs text-gray-600">Este será o local selecionado por padrão em novos registros</p>
+                  <p className="text-xs text-gray-600">
+                    Este será o local selecionado por padrão em novos registros
+                  </p>
                 </label>
               </div>
             </div>
@@ -164,15 +162,15 @@ export default function StockLocationDialog({
 
         {/* FOOTER */}
         <div className="flex gap-3 justify-end px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-lg -mx-6 -mb-6">
-          <Button 
-            type="button" 
-            variant="outline" 
+          <Button
+            type="button"
+            variant="outline"
             onClick={() => onOpenChange(false)}
             className="border-gray-300 hover:bg-gray-100"
           >
             Cancelar
           </Button>
-          <Button 
+          <Button
             type="submit"
             onClick={handleSubmit}
             className="bg-amber-600 text-white hover:bg-amber-700"

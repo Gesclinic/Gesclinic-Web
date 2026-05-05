@@ -1,13 +1,13 @@
 /**
  * CheckinRecepacao.jsx
- * 
+ *
  * 🧠 TELA DE CHECK-IN DA RECEPÇÃO
- * 
+ *
  * Responsabilidade: Validar dados, resolver pendências e liberar pacientes
- * 
+ *
  * Fluxo:
  * Paciente chega → Conferir dados → Financeiro OK? → Liberar para profissional
- * 
+ *
  * Regras críticas:
  * ✅ Sem checklist completo → não libera
  * ✅ Financeiro pendente → não libera
@@ -15,20 +15,20 @@
  * ✅ Status governa tudo
  */
 
-import React, { useState, useMemo, useCallback } from "react";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
-import { useClinicContext } from "@/contexts/ClinicContext";
+import React, { useState, useMemo, useCallback } from 'react';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useClinicContext } from '@/contexts/ClinicContext';
 import {
   APPOINTMENT_STATUS,
   getStatusLabel,
   getStatusColor,
   canPerformAction,
-} from "@/lib/appointmentStatusEnums";
-import { updateAppointment, listAppointments } from "@/lib/appointmentsApi";
-import { AlertCircle, CheckCircle2, Clock, User, Phone, AlertTriangle } from "lucide-react";
-import CheckinChecklist from "./components/CheckinChecklist";
-import CheckinFinanceiro from "./components/CheckinFinanceiro";
-import CheckinAcoes from "./components/CheckinAcoes";
+} from '@/lib/appointmentStatusEnums';
+import { updateAppointment, listAppointments } from '@/lib/appointmentsApi';
+import { AlertCircle, CheckCircle2, Clock, User, Phone, AlertTriangle } from 'lucide-react';
+import CheckinChecklist from './components/CheckinChecklist';
+import CheckinFinanceiro from './components/CheckinFinanceiro';
+import CheckinAcoes from './components/CheckinAcoes';
 
 export default function CheckinRecepacao() {
   const { user, currentRole, loading: authLoading } = useAuth();
@@ -38,11 +38,11 @@ export default function CheckinRecepacao() {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedAptId, setSelectedAptId] = useState(null);
-  const [activeTab, setActiveTab] = useState("checklist"); // checklist, financeiro, acoes
+  const [activeTab, setActiveTab] = useState('checklist'); // checklist, financeiro, acoes
   const [loadingAction, setLoadingAction] = useState(null);
 
   // Validação de permissão
-  const canAccessCheckin = canPerformAction(currentRole, "canMarkArrival");
+  const canAccessCheckin = canPerformAction(currentRole, 'canMarkArrival');
 
   // ============================================
   // CARREGAMENTO DE DADOS
@@ -58,10 +58,8 @@ export default function CheckinRecepacao() {
       }
 
       // Carrega agendamentos de hoje que precisam de check-in
-      const today = new Date().toISOString().split("T")[0];
-      const tomorrow = new Date(new Date().getTime() + 86400000)
-        .toISOString()
-        .split("T")[0];
+      const today = new Date().toISOString().split('T')[0];
+      const tomorrow = new Date(new Date().getTime() + 86400000).toISOString().split('T')[0];
 
       // 🔒 RBAC: Se for profissional, buscar seu professional_id
       let userProfessionalId = null;
@@ -96,7 +94,7 @@ export default function CheckinRecepacao() {
           APPOINTMENT_STATUS.PENDENTE,
           APPOINTMENT_STATUS.FINANCEIRO_PENDENTE,
           APPOINTMENT_STATUS.LIBERADO_PARA_ATENDIMENTO,
-        ].includes(apt.status)
+        ].includes(apt.status),
       );
 
       setAppointments(checkInAppointments);
@@ -106,7 +104,7 @@ export default function CheckinRecepacao() {
         setSelectedAptId(checkInAppointments[0].id);
       }
     } catch (error) {
-      console.error("Erro ao carregar agendamentos:", error);
+      console.error('Erro ao carregar agendamentos:', error);
     } finally {
       setLoading(false);
     }
@@ -131,7 +129,7 @@ export default function CheckinRecepacao() {
 
   const selectedAppointment = useMemo(
     () => appointments.find((apt) => apt.id === selectedAptId),
-    [appointments, selectedAptId]
+    [appointments, selectedAptId],
   );
 
   // ============================================
@@ -164,13 +162,13 @@ export default function CheckinRecepacao() {
         });
         loadAppointments();
       } catch (error) {
-        console.error("Erro ao atualizar:", error);
-        alert("Erro ao atualizar agendamento");
+        console.error('Erro ao atualizar:', error);
+        alert('Erro ao atualizar agendamento');
       } finally {
         setLoadingAction(null);
       }
     },
-    [loadAppointments]
+    [loadAppointments],
   );
 
   // ============================================
@@ -213,9 +211,7 @@ export default function CheckinRecepacao() {
         {/* Lista */}
         <div className="flex-1 overflow-y-auto">
           {appointments.length === 0 ? (
-            <div className="p-4 text-center text-gray-500">
-              Nenhum agendamento para hoje
-            </div>
+            <div className="p-4 text-center text-gray-500">Nenhum agendamento para hoje</div>
           ) : (
             <div className="space-y-1 p-2">
               {appointments.map((apt) => (
@@ -223,34 +219,32 @@ export default function CheckinRecepacao() {
                   key={apt.id}
                   onClick={() => {
                     setSelectedAptId(apt.id);
-                    setActiveTab("checklist");
+                    setActiveTab('checklist');
                   }}
                   className={`
                     w-full text-left p-3 rounded-lg border-l-4 transition
                     ${
-                      selectedAptId === apt.id
-                        ? "bg-blue-50 border-blue-500"
-                        : "bg-white border-gray-200 hover:bg-gray-50"
-                    }
+                selectedAptId === apt.id
+                  ? 'bg-blue-50 border-blue-500'
+                  : 'bg-white border-gray-200 hover:bg-gray-50'
+                }
                   `}
                   style={{
                     borderLeftColor:
                       apt.status === APPOINTMENT_STATUS.LIBERADO_PARA_ATENDIMENTO
-                        ? "#10b981"
+                        ? '#10b981'
                         : apt.status === APPOINTMENT_STATUS.PENDENTE
-                        ? "#f97316"
-                        : apt.status === APPOINTMENT_STATUS.FINANCEIRO_PENDENTE
-                        ? "#e11d48"
-                        : "#eab308",
+                          ? '#f97316'
+                          : apt.status === APPOINTMENT_STATUS.FINANCEIRO_PENDENTE
+                            ? '#e11d48'
+                            : '#eab308',
                   }}
                 >
                   <div className="flex items-start justify-between mb-1">
-                    <div className="font-semibold text-gray-900">
-                      {apt.patient_name}
-                    </div>
+                    <div className="font-semibold text-gray-900">{apt.patient_name}</div>
                     <span
                       className={`text-xs px-2 py-1 rounded font-medium ${getStatusColor(
-                        apt.status
+                        apt.status,
                       )}`}
                     >
                       {getStatusLabel(apt.status).substring(0, 10)}
@@ -259,8 +253,7 @@ export default function CheckinRecepacao() {
                   <div className="text-xs text-gray-600 space-y-0.5">
                     <p>🕐 {apt.start_time?.substring(0, 5)}</p>
                     <p>
-                      💼 {apt.service_name || "Serviço"} | 👨‍⚕️{" "}
-                      {apt.professional_name || "Prof"}
+                      💼 {apt.service_name || 'Serviço'} | 👨‍⚕️ {apt.professional_name || 'Prof'}
                     </p>
                   </div>
                 </button>
@@ -283,27 +276,23 @@ export default function CheckinRecepacao() {
                   </h2>
                   <div className="mt-3 space-y-2 text-sm text-gray-600">
                     <p>
-                      🕐 Horário:{" "}
+                      🕐 Horário:{' '}
                       <span className="font-semibold">
                         {selectedAppointment.start_time?.substring(0, 5)}
                       </span>
                     </p>
                     <p>
-                      💼 Serviço:{" "}
-                      <span className="font-semibold">
-                        {selectedAppointment.service_name}
-                      </span>
+                      💼 Serviço:{' '}
+                      <span className="font-semibold">{selectedAppointment.service_name}</span>
                     </p>
                     <p>
-                      👨‍⚕️ Profissional:{" "}
-                      <span className="font-semibold">
-                        {selectedAppointment.professional_name}
-                      </span>
+                      👨‍⚕️ Profissional:{' '}
+                      <span className="font-semibold">{selectedAppointment.professional_name}</span>
                     </p>
                     <p>
-                      💳 Convênio:{" "}
+                      💳 Convênio:{' '}
                       <span className="font-semibold">
-                        {selectedAppointment.payer_name || "Particular"}
+                        {selectedAppointment.payer_name || 'Particular'}
                       </span>
                     </p>
                   </div>
@@ -312,7 +301,7 @@ export default function CheckinRecepacao() {
                 <div className="text-right">
                   <span
                     className={`inline-block px-4 py-2 rounded-lg font-bold text-lg ${getStatusColor(
-                      selectedAppointment.status
+                      selectedAppointment.status,
                     )}`}
                   >
                     {getStatusLabel(selectedAppointment.status)}
@@ -338,9 +327,7 @@ export default function CheckinRecepacao() {
                   <AlertTriangle className="text-rose-600 flex-shrink-0 mt-0.5" size={20} />
                   <div>
                     <p className="font-semibold text-rose-900">Financeiro Pendente!</p>
-                    <p className="text-sm text-rose-800">
-                      Gerar guia ou registrar pagamento
-                    </p>
+                    <p className="text-sm text-rose-800">Gerar guia ou registrar pagamento</p>
                   </div>
                 </div>
               )}
@@ -350,9 +337,7 @@ export default function CheckinRecepacao() {
                   <CheckCircle2 className="text-green-600 flex-shrink-0 mt-0.5" size={20} />
                   <div>
                     <p className="font-semibold text-green-900">Pronto para Atendimento! ✅</p>
-                    <p className="text-sm text-green-800">
-                      Paciente está validado e liberado
-                    </p>
+                    <p className="text-sm text-green-800">Paciente está validado e liberado</p>
                   </div>
                 </div>
               )}
@@ -362,31 +347,31 @@ export default function CheckinRecepacao() {
             <div className="bg-white border-b border-gray-200 px-6">
               <div className="flex gap-8">
                 <button
-                  onClick={() => setActiveTab("checklist")}
+                  onClick={() => setActiveTab('checklist')}
                   className={`py-4 font-semibold border-b-2 transition ${
-                    activeTab === "checklist"
-                      ? "border-blue-600 text-blue-600"
-                      : "border-transparent text-gray-600 hover:text-gray-900"
+                    activeTab === 'checklist'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-600 hover:text-gray-900'
                   }`}
                 >
                   ✅ Checklist
                 </button>
                 <button
-                  onClick={() => setActiveTab("financeiro")}
+                  onClick={() => setActiveTab('financeiro')}
                   className={`py-4 font-semibold border-b-2 transition ${
-                    activeTab === "financeiro"
-                      ? "border-blue-600 text-blue-600"
-                      : "border-transparent text-gray-600 hover:text-gray-900"
+                    activeTab === 'financeiro'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-600 hover:text-gray-900'
                   }`}
                 >
                   💰 Financeiro
                 </button>
                 <button
-                  onClick={() => setActiveTab("acoes")}
+                  onClick={() => setActiveTab('acoes')}
                   className={`py-4 font-semibold border-b-2 transition ${
-                    activeTab === "acoes"
-                      ? "border-blue-600 text-blue-600"
-                      : "border-transparent text-gray-600 hover:text-gray-900"
+                    activeTab === 'acoes'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-600 hover:text-gray-900'
                   }`}
                 >
                   ⚙️ Ações
@@ -396,15 +381,13 @@ export default function CheckinRecepacao() {
 
             {/* Conteúdo das Abas */}
             <div className="flex-1 overflow-y-auto p-6">
-              {activeTab === "checklist" && (
-                <CheckinChecklist appointment={selectedAppointment} />
-              )}
+              {activeTab === 'checklist' && <CheckinChecklist appointment={selectedAppointment} />}
 
-              {activeTab === "financeiro" && (
+              {activeTab === 'financeiro' && (
                 <CheckinFinanceiro appointment={selectedAppointment} />
               )}
 
-              {activeTab === "acoes" && (
+              {activeTab === 'acoes' && (
                 <CheckinAcoes
                   appointment={selectedAppointment}
                   onUpdateStatus={updateStatus}
@@ -423,4 +406,3 @@ export default function CheckinRecepacao() {
     </div>
   );
 }
-

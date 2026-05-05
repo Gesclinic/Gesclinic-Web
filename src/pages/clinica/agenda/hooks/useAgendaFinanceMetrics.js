@@ -1,20 +1,15 @@
 /**
  * useAgendaFinanceMetrics.js
  * Hook para calcular métricas de Agenda × Financeiro
- * 
+ *
  * Objetivo: Gerar indicadores gerenciais simples e acionáveis
  * baseados na ocupação da agenda e receita.
- * 
+ *
  * NÃO é DRE, NÃO é análise contábil, NÃO duplica Financeiro.
  * É uma visão simplificada para DECISÃO RÁPIDA do gestor.
  */
 
-export function useAgendaFinanceMetrics(
-  appointments,
-  professionals,
-  services,
-  selectedDate
-) {
+export function useAgendaFinanceMetrics(appointments, professionals, services, selectedDate) {
   /**
    * Calcula total de receita dos agendamentos
    */
@@ -42,11 +37,9 @@ export function useAgendaFinanceMetrics(
    */
   const slotsDisponiveis = Math.max(
     1,
-    (professionals?.length || 1) * 10 // 10 slots = 5h úteis
+    (professionals?.length || 1) * 10, // 10 slots = 5h úteis
   );
-  const ocupacaoPercentual = Math.round(
-    (appointments.length / slotsDisponiveis) * 100
-  );
+  const ocupacaoPercentual = Math.round((appointments.length / slotsDisponiveis) * 100);
 
   /**
    * Calcula quantidade de serviços
@@ -57,9 +50,9 @@ export function useAgendaFinanceMetrics(
       id: srv.id,
       nome: srv.name || 'Sem nome',
       valor: parseFloat(srv.price || 0) || 0,
-      quantidade: appointments.filter(a => a.service_id === srv.id).length,
+      quantidade: appointments.filter((a) => a.service_id === srv.id).length,
     }))
-    .filter(s => s.quantidade > 0)
+    .filter((s) => s.quantidade > 0)
     .sort((a, b) => b.quantidade - a.quantidade)
     .slice(0, 3); // Top 3
 
@@ -69,24 +62,17 @@ export function useAgendaFinanceMetrics(
    */
   const receitaPorProfissional = (professionals || [])
     .map((prof) => {
-      const appointmentsProf = appointments.filter(
-        a => a.professional_id === prof.id
-      );
-      const receitaProf = appointmentsProf.reduce(
-        (sum, a) => sum + (parseFloat(a.value) || 0),
-        0
-      );
+      const appointmentsProf = appointments.filter((a) => a.professional_id === prof.id);
+      const receitaProf = appointmentsProf.reduce((sum, a) => sum + (parseFloat(a.value) || 0), 0);
       return {
         id: prof.id,
         nome: prof.name || 'Sem nome',
         agendamentos: appointmentsProf.length,
         receita: receitaProf,
-        receitaMedia: appointmentsProf.length > 0 
-          ? receitaProf / appointmentsProf.length 
-          : 0,
+        receitaMedia: appointmentsProf.length > 0 ? receitaProf / appointmentsProf.length : 0,
       };
     })
-    .filter(p => p.agendamentos > 0)
+    .filter((p) => p.agendamentos > 0)
     .sort((a, b) => b.receita - a.receita);
 
   /**
@@ -166,9 +152,7 @@ function calcularIndicadorSaude({ ocupacao, receita, agendamentos }) {
 
   // Calcular weighted score
   const score = Math.round(
-    (pesoOcupacao * 0.5 +
-      pesoReceita * 0.3 +
-      pesoAgendamentos * 0.2) * 0.75 // Escala 75% para ser conservador
+    (pesoOcupacao * 0.5 + pesoReceita * 0.3 + pesoAgendamentos * 0.2) * 0.75, // Escala 75% para ser conservador
   );
 
   return Math.max(0, Math.min(100, score));
@@ -226,9 +210,7 @@ export function compararMetricas(metricsAnterior, metricsAtual) {
       metricsAtual.ocupacaoPercentual - metricsAnterior.ocupacaoPercentual
     ).toFixed(1),
 
-    agendamentosVariacao: (
-      metricsAtual.agendamentos - metricsAnterior.agendamentos
-    ),
+    agendamentosVariacao: metricsAtual.agendamentos - metricsAnterior.agendamentos,
 
     receitaHoraVariacao: (
       ((metricsAtual.receitaPorHora - metricsAnterior.receitaPorHora) /

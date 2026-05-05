@@ -1,6 +1,6 @@
-import { useState, useRef } from "react";
-import { supabase } from "@/lib/customSupabaseClient";
-import { addMinutes, differenceInMinutes } from "date-fns";
+import { useState, useRef } from 'react';
+import { supabase } from '@/lib/customSupabaseClient';
+import { addMinutes, differenceInMinutes } from 'date-fns';
 
 export function useAgendaResize() {
   const [resizingEvent, setResizingEvent] = useState(null);
@@ -20,7 +20,9 @@ export function useAgendaResize() {
 
   // Enquanto arrasta a borda inferior
   function onResizeMove(e) {
-    if (!resizingEvent) return;
+    if (!resizingEvent) {
+      return;
+    }
 
     const deltaPixels = e.clientY - startY.current;
     const snappedSlots = Math.round(deltaPixels / SLOT_HEIGHT);
@@ -30,19 +32,23 @@ export function useAgendaResize() {
   }
 
   async function onResizeEnd(e, updateDuration) {
-    if (!resizingEvent) return;
+    if (!resizingEvent) {
+      return;
+    }
 
     const ev = resizingEvent;
     const newEnd = addMinutes(new Date(ev.start_time), updateDuration);
 
     const { error } = await supabase
-      .from("appointments")
+      .from('appointments')
       .update({
         end_time: newEnd.toISOString(),
       })
-      .eq("id", ev.id);
+      .eq('id', ev.id);
 
-    if (error) console.error("Erro ao redimensionar evento:", error);
+    if (error) {
+      console.error('Erro ao redimensionar evento:', error);
+    }
 
     setResizingEvent(null);
   }

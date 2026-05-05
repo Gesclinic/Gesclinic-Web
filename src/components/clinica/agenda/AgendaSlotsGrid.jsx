@@ -1,19 +1,12 @@
-import React, { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { useAgendaConfig } from "@/hooks/useAgendaConfig";
-import { Badge } from "@/components/ui/badge";
-import { format, isSameDay } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import {
-  Edit,
-  Trash2,
-  User,
-  AlertTriangle,
-  Loader2,
-  PlusCircle,
-} from "lucide-react";
-import StatusSelector from "./StatusSelector";
+import React, { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { useAgendaConfig } from '@/hooks/useAgendaConfig';
+import { Badge } from '@/components/ui/badge';
+import { format, isSameDay } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { Edit, Trash2, User, AlertTriangle, Loader2, PlusCircle } from 'lucide-react';
+import StatusSelector from './StatusSelector';
 
 export default function AgendaSlotsGrid({
   slots = [],
@@ -32,14 +25,13 @@ export default function AgendaSlotsGrid({
 
   const timeSlots = useMemo(() => {
     const slotsArr = [];
-    const [startHour, startMinute] =
-      (agendaConfig.horario_abertura || "08:00").split(":").map(Number);
-    const [endHour, endMinute] =
-      (agendaConfig.horario_fechamento || "18:00").split(":").map(Number);
-    const slotSize =
-      agendaConfig.slot_agenda ||
-      agendaConfig.tempo_medio_atendimento ||
-      15;
+    const [startHour, startMinute] = (agendaConfig.horario_abertura || '08:00')
+      .split(':')
+      .map(Number);
+    const [endHour, endMinute] = (agendaConfig.horario_fechamento || '18:00')
+      .split(':')
+      .map(Number);
+    const slotSize = agendaConfig.slot_agenda || agendaConfig.tempo_medio_atendimento || 15;
 
     const almocoInicio = agendaConfig.horario_almoco_inicio || null;
     const almocoFim = agendaConfig.horario_almoco_fim || null;
@@ -47,25 +39,22 @@ export default function AgendaSlotsGrid({
       almocoEnd = null;
 
     if (almocoInicio && almocoFim) {
-      const [h1, m1] = almocoInicio.split(":").map(Number);
-      const [h2, m2] = almocoFim.split(":").map(Number);
+      const [h1, m1] = almocoInicio.split(':').map(Number);
+      const [h2, m2] = almocoFim.split(':').map(Number);
       almocoStart = h1 * 60 + m1;
       almocoEnd = h2 * 60 + m2;
     }
 
-    let current = new Date(selectedDate || new Date());
+    const current = new Date(selectedDate || new Date());
     current.setHours(startHour, startMinute, 0, 0);
     const end = new Date(selectedDate || new Date());
     end.setHours(endHour, endMinute, 0, 0);
 
     while (current <= end) {
-      const time = `${current
-        .getHours()
-        .toString()
-        .padStart(2, "0")}:${current
+      const time = `${current.getHours().toString().padStart(2, '0')}:${current
         .getMinutes()
         .toString()
-        .padStart(2, "0")}`;
+        .padStart(2, '0')}`;
 
       let isAlmoco = false;
       if (almocoStart !== null && almocoEnd !== null) {
@@ -77,22 +66,24 @@ export default function AgendaSlotsGrid({
 
       slotsArr.push({ time, isAlmoco });
       current.setMinutes(current.getMinutes() + slotSize);
-      if (current > end) break;
+      if (current > end) {
+        break;
+      }
     }
 
     const extraSlots = [];
 
     slots.forEach((slot) => {
       try {
-        const { utcToZonedTime } = require("date-fns-tz");
-        const zoned = utcToZonedTime(slot.start_time, "America/Sao_Paulo");
+        const { utcToZonedTime } = require('date-fns-tz');
+        const zoned = utcToZonedTime(slot.start_time, 'America/Sao_Paulo');
 
         if (isSameDay(zoned, selectedDate)) {
           const hour = zoned.getHours();
           const minute = zoned.getMinutes();
           const timeString = `${hour
             .toString()
-            .padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
+            .padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
 
           if (
             !slotsArr.some((s) => s.time === timeString) &&
@@ -105,8 +96,8 @@ export default function AgendaSlotsGrid({
     });
 
     return [...slotsArr, ...extraSlots].sort((a, b) => {
-      const [ha, ma] = a.time.split(":").map(Number);
-      const [hb, mb] = b.time.split(":").map(Number);
+      const [ha, ma] = a.time.split(':').map(Number);
+      const [hb, mb] = b.time.split(':').map(Number);
       return ha * 60 + ma - (hb * 60 + mb);
     });
   }, [slots, selectedDate, agendaConfig]);
@@ -131,25 +122,13 @@ export default function AgendaSlotsGrid({
           <div className="col-span-1 p-4 border-r border-gray-300 text-center bg-gray-100">
             Horário
           </div>
-          <div className="col-span-1 p-4 border-r border-gray-300 text-center">
-            Prontuário
-          </div>
-          <div className="col-span-2 p-4 border-r border-gray-300 text-center">
-            Paciente
-          </div>
-          <div className="col-span-2 p-4 border-r border-gray-300 text-center">
-            Serviço
-          </div>
-          <div className="col-span-1 p-4 border-r border-gray-300 text-center">
-            Convênio
-          </div>
-          <div className="col-span-2 p-4 border-r border-gray-300 text-center">
-            Status
-          </div>
+          <div className="col-span-1 p-4 border-r border-gray-300 text-center">Prontuário</div>
+          <div className="col-span-2 p-4 border-r border-gray-300 text-center">Paciente</div>
+          <div className="col-span-2 p-4 border-r border-gray-300 text-center">Serviço</div>
+          <div className="col-span-1 p-4 border-r border-gray-300 text-center">Convênio</div>
+          <div className="col-span-2 p-4 border-r border-gray-300 text-center">Status</div>
           {!isProfessional && (
-            <div className="col-span-2 p-4 text-center">
-              Profissional responsável
-            </div>
+            <div className="col-span-2 p-4 text-center">Profissional responsável</div>
           )}
         </div>
       </div>
@@ -159,22 +138,18 @@ export default function AgendaSlotsGrid({
           {Array.isArray(timeSlots) &&
             timeSlots.length > 0 &&
             timeSlots.map((timeSlot) => {
-              const [hour, minute] = timeSlot.time.split(":").map(Number);
+              const [hour, minute] = timeSlot.time.split(':').map(Number);
               const slotDateTime = new Date(currentDate);
               slotDateTime.setHours(hour, minute, 0, 0);
 
               const appointment = slots.find((apt) => {
                 try {
-                  const { utcToZonedTime } = require("date-fns-tz");
-                  const zoned = utcToZonedTime(
-                    apt.start_time,
-                    "America/Sao_Paulo"
-                  );
-                  if (!isSameDay(zoned, currentDate)) return false;
-                  return (
-                    zoned.getHours() === hour &&
-                    zoned.getMinutes() === minute
-                  );
+                  const { utcToZonedTime } = require('date-fns-tz');
+                  const zoned = utcToZonedTime(apt.start_time, 'America/Sao_Paulo');
+                  if (!isSameDay(zoned, currentDate)) {
+                    return false;
+                  }
+                  return zoned.getHours() === hour && zoned.getMinutes() === minute;
                 } catch {
                   return false;
                 }
@@ -182,61 +157,45 @@ export default function AgendaSlotsGrid({
 
               const isBlocked = appointment?.is_blocked;
               const isFree =
-                !appointment ||
-                appointment?.status === "livre" ||
-                appointment?.is_free;
+                !appointment || appointment?.status === 'livre' || appointment?.is_free;
 
               return (
                 <div
                   key={timeSlot.time}
                   className={`grid grid-cols-12 border-b border-gray-200 min-h-[64px] items-center
+                    ${timeSlot.isAlmoco ? 'bg-yellow-100 border-yellow-300' : ''}
+                    ${isBlocked ? 'bg-red-50 border-red-200 hover:bg-red-100' : ''}
                     ${
-                      timeSlot.isAlmoco
-                        ? "bg-yellow-100 border-yellow-300"
-                        : ""
-                    }
-                    ${
-                      isBlocked
-                        ? "bg-red-50 border-red-200 hover:bg-red-100"
-                        : ""
-                    }
-                    ${
-                      isFree && !timeSlot.isAlmoco
-                        ? "bg-green-50/30 hover:bg-green-100/50 cursor-pointer"
-                        : ""
-                    }
-                    ${
-                      !isBlocked && !isFree && !timeSlot.isAlmoco
-                        ? "hover:bg-blue-50"
-                        : ""
-                    }
+                isFree && !timeSlot.isAlmoco
+                  ? 'bg-green-50/30 hover:bg-green-100/50 cursor-pointer'
+                  : ''
+                }
+                    ${!isBlocked && !isFree && !timeSlot.isAlmoco ? 'hover:bg-blue-50' : ''}
                   `}
                   onClick={
                     isFree && !isBlocked
                       ? () =>
-                          onRowClick?.({
-                            start_time: slotDateTime.toISOString(),
-                            is_free: true,
-                          })
+                        onRowClick?.({
+                          start_time: slotDateTime.toISOString(),
+                          is_free: true,
+                        })
                       : undefined
                   }
                 >
                   {/* Data */}
                   <div className="col-span-1 p-3 border-r border-gray-200 text-center text-sm bg-gray-50">
                     <span className="text-xs text-gray-600 font-medium">
-                      {format(currentDate, "dd/MM/yyyy")}
+                      {format(currentDate, 'dd/MM/yyyy')}
                     </span>
                   </div>
 
                   {/* Horário */}
                   <div
                     className={`col-span-1 p-3 border-r border-gray-200 text-center font-mono text-sm bg-gray-50 ${
-                      timeSlot.isAlmoco ? "bg-yellow-100" : ""
+                      timeSlot.isAlmoco ? 'bg-yellow-100' : ''
                     }`}
                   >
-                    <span className="font-bold text-gray-800 text-base">
-                      {timeSlot.time}
-                    </span>
+                    <span className="font-bold text-gray-800 text-base">{timeSlot.time}</span>
                   </div>
 
                   {/* Conteúdo */}
@@ -245,9 +204,7 @@ export default function AgendaSlotsGrid({
                       return (
                         <>
                           <div className="col-span-1 p-2 border-r text-center text-sm">
-                            <span className="text-red-600 font-medium">
-                              -
-                            </span>
+                            <span className="text-red-600 font-medium">-</span>
                           </div>
 
                           <div className="col-span-2 p-2 border-r flex items-center text-red-700 font-semibold">
@@ -258,20 +215,15 @@ export default function AgendaSlotsGrid({
                           <div className="col-span-2 p-2 border-r text-sm text-red-600">
                             {appointment.notes ||
                               appointment.block_reason ||
-                              "Motivo não informado"}
+                              'Motivo não informado'}
                           </div>
 
                           <div className="col-span-1 p-2 border-r text-center text-sm">
-                            <span className="text-red-600 font-medium">
-                              -
-                            </span>
+                            <span className="text-red-600 font-medium">-</span>
                           </div>
 
                           <div className="col-span-2 p-2 border-r flex items-center justify-center">
-                            <Badge
-                              variant="destructive"
-                              className="bg-red-500 text-white"
-                            >
+                            <Badge variant="destructive" className="bg-red-500 text-white">
                               Bloqueado
                             </Badge>
 
@@ -301,9 +253,7 @@ export default function AgendaSlotsGrid({
                           </div>
 
                           <div className="col-span-2 p-2 text-center text-sm">
-                            <span className="text-red-600 italic">
-                              Sistema
-                            </span>
+                            <span className="text-red-600 italic">Sistema</span>
                           </div>
                         </>
                       );
@@ -314,7 +264,7 @@ export default function AgendaSlotsGrid({
                         <>
                           <div className="col-span-1 p-2 border-r text-center text-sm">
                             <span className="font-mono text-xs">
-                              {appointment.record_number || "-"}
+                              {appointment.record_number || '-'}
                             </span>
                           </div>
 
@@ -324,28 +274,24 @@ export default function AgendaSlotsGrid({
                               className="font-medium text-gray-800 underline cursor-pointer"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                navigate(
-                                  `/clinica/atendimento/${appointment.id}`
-                                );
+                                navigate(`/clinica/atendimento/${appointment.id}`);
                               }}
                             >
-                              {appointment.patient_name || "Paciente"}
+                              {appointment.patient_name || 'Paciente'}
                             </span>
                           </div>
 
                           <div className="col-span-2 p-2 border-r text-sm">
                             <span className="font-medium">
-                              {appointment.service_name || "Consulta"}
+                              {appointment.service_name || 'Consulta'}
                             </span>
                             {appointment.notes && (
-                              <div className="text-xs text-gray-500">
-                                {appointment.notes}
-                              </div>
+                              <div className="text-xs text-gray-500">{appointment.notes}</div>
                             )}
                           </div>
 
                           <div className="col-span-1 p-2 border-r text-center text-sm">
-                            {appointment.payer_name || "Particular"}
+                            {appointment.payer_name || 'Particular'}
                           </div>
 
                           <div className="col-span-2 p-2 border-r flex items-center justify-center">
@@ -381,7 +327,7 @@ export default function AgendaSlotsGrid({
 
                           {!isProfessional && (
                             <div className="col-span-2 p-2 text-center text-sm">
-                              {appointment.professional_name || "-"}
+                              {appointment.professional_name || '-'}
                             </div>
                           )}
                         </>
@@ -408,9 +354,7 @@ export default function AgendaSlotsGrid({
                         </div>
 
                         <div className="col-span-2 p-2 border-r-2 border-green-200 text-center text-sm bg-gradient-to-br from-green-50 to-green-100 rounded-sm">
-                          <span className="text-green-600 font-medium text-xs">
-                            Disponível
-                          </span>
+                          <span className="text-green-600 font-medium text-xs">Disponível</span>
                         </div>
 
                         <div className="col-span-2 p-2 text-center text-sm bg-gradient-to-br from-green-50 to-green-100 rounded-sm">

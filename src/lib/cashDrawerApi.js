@@ -5,7 +5,7 @@ const client = customSupabaseClient;
 
 export const cashDrawerApi = {
   // ==================== CASH DRAWERS ====================
-  
+
   // Abrir/Obter caixa do dia
   async getOrCreateDrawer(clinicId, operatorId, date = new Date().toISOString().split('T')[0]) {
     try {
@@ -18,7 +18,9 @@ export const cashDrawerApi = {
         .eq('date_opened', date)
         .single();
 
-      if (!error && data) return data;
+      if (!error && data) {
+        return data;
+      }
 
       // Criar novo caixa
       return await this.openDrawer(clinicId, operatorId, date);
@@ -27,7 +29,12 @@ export const cashDrawerApi = {
     }
   },
 
-  async openDrawer(clinicId, operatorId, date = new Date().toISOString().split('T')[0], openingBalance = 0) {
+  async openDrawer(
+    clinicId,
+    operatorId,
+    date = new Date().toISOString().split('T')[0],
+    openingBalance = 0,
+  ) {
     try {
       const { data, error } = await client
         .from('cash_drawers')
@@ -37,13 +44,15 @@ export const cashDrawerApi = {
             operator_id: operatorId,
             date_opened: date,
             opening_balance: parseFloat(openingBalance),
-            status: 'open'
-          }
+            status: 'open',
+          },
         ])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       return data;
     } catch (err) {
       throw new Error(`Erro ao abrir caixa: ${err.message}`);
@@ -59,13 +68,19 @@ export const cashDrawerApi = {
           expected_balance: expectedBalance ? parseFloat(expectedBalance) : null,
           status: expectedBalance === parseFloat(closingBalance) ? 'closed_full' : 'closed_partial',
           closed_at: new Date().toISOString(),
-          notes
+          notes,
         })
         .eq('id', drawerId)
-        .select()
-        .single();
+        .select();
 
-      if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error('Record not found');
+      }
+      return data[0];
+
+      if (error) {
+        throw error;
+      }
       return data;
     } catch (err) {
       throw new Error(`Erro ao fechar caixa: ${err.message}`);
@@ -74,13 +89,16 @@ export const cashDrawerApi = {
 
   async getDrawerById(drawerId) {
     try {
-      const { data, error } = await client
-        .from('cash_drawers')
-        .select('*')
-        .eq('id', drawerId)
-        .single();
+      const { data, error } = await client.from('cash_drawers').select('*').eq('id', drawerId);
 
-      if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error('Record not found');
+      }
+      return data[0];
+
+      if (error) {
+        throw error;
+      }
       return data;
     } catch (err) {
       throw new Error(`Erro ao buscar caixa: ${err.message}`);
@@ -89,18 +107,23 @@ export const cashDrawerApi = {
 
   async listDrawers(clinicId, filters = {}) {
     try {
-      let query = client
-        .from('cash_drawers')
-        .select('*')
-        .eq('clinic_id', clinicId);
+      let query = client.from('cash_drawers').select('*').eq('clinic_id', clinicId);
 
-      if (filters.operator_id) query = query.eq('operator_id', filters.operator_id);
-      if (filters.date) query = query.eq('date_opened', filters.date);
-      if (filters.status) query = query.eq('status', filters.status);
+      if (filters.operator_id) {
+        query = query.eq('operator_id', filters.operator_id);
+      }
+      if (filters.date) {
+        query = query.eq('date_opened', filters.date);
+      }
+      if (filters.status) {
+        query = query.eq('status', filters.status);
+      }
 
       const { data, error } = await query.order('date_opened', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       return data || [];
     } catch (err) {
       throw new Error(`Erro ao listar caixas: ${err.message}`);
@@ -109,7 +132,15 @@ export const cashDrawerApi = {
 
   // ==================== DRAWER MOVEMENTS ====================
 
-  async addMovement(drawerId, clinicId, paymentMethod, paymentType, amount, description = '', appointmentId = null) {
+  async addMovement(
+    drawerId,
+    clinicId,
+    paymentMethod,
+    paymentType,
+    amount,
+    description = '',
+    appointmentId = null,
+  ) {
     try {
       const { data, error } = await client
         .from('drawer_movements')
@@ -121,13 +152,19 @@ export const cashDrawerApi = {
             payment_method: paymentMethod,
             payment_type: paymentType,
             amount: parseFloat(amount),
-            description
-          }
+            description,
+          },
         ])
-        .select()
-        .single();
+        .select();
 
-      if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error('Record not found');
+      }
+      return data[0];
+
+      if (error) {
+        throw error;
+      }
       return data;
     } catch (err) {
       throw new Error(`Erro ao registrar movimento: ${err.message}`);
@@ -142,7 +179,9 @@ export const cashDrawerApi = {
         .eq('drawer_id', drawerId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       return data || [];
     } catch (err) {
       throw new Error(`Erro ao listar movimentos: ${err.message}`);
@@ -152,14 +191,14 @@ export const cashDrawerApi = {
   async getMovementSummary(drawerId) {
     try {
       const movements = await this.getMovements(drawerId);
-      
+
       const summary = {
         totalEntrada: 0,
         totalSaida: 0,
-        byMethod: {}
+        byMethod: {},
       };
 
-      movements.forEach(mov => {
+      movements.forEach((mov) => {
         if (mov.payment_type === 'entrada') {
           summary.totalEntrada += parseFloat(mov.amount);
         } else {
@@ -186,12 +225,11 @@ export const cashDrawerApi = {
 
   async deleteMovement(movementId) {
     try {
-      const { error } = await client
-        .from('drawer_movements')
-        .delete()
-        .eq('id', movementId);
+      const { error } = await client.from('drawer_movements').delete().eq('id', movementId);
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       return true;
     } catch (err) {
       throw new Error(`Erro ao deletar movimento: ${err.message}`);
@@ -213,13 +251,15 @@ export const cashDrawerApi = {
             bank_name: details.bankName || null,
             agency_code: details.agencyCode || null,
             account_holder: details.accountHolder || null,
-            is_active: true
-          }
+            is_active: true,
+          },
         ])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       return data;
     } catch (err) {
       throw new Error(`Erro ao criar conta: ${err.message}`);
@@ -228,16 +268,17 @@ export const cashDrawerApi = {
 
   async listAccounts(clinicId, onlyActive = true) {
     try {
-      let query = client
-        .from('finance_accounts')
-        .select('*')
-        .eq('clinic_id', clinicId);
+      let query = client.from('finance_accounts').select('*').eq('clinic_id', clinicId);
 
-      if (onlyActive) query = query.eq('is_active', true);
+      if (onlyActive) {
+        query = query.eq('is_active', true);
+      }
 
       const { data, error } = await query.order('account_type').order('account_name');
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       return data || [];
     } catch (err) {
       throw new Error(`Erro ao listar contas: ${err.message}`);
@@ -246,7 +287,16 @@ export const cashDrawerApi = {
 
   // ==================== CASH TRANSFERS ====================
 
-  async createTransfer(clinicId, fromAccountId, toAccountId, paymentMethod, amount, transferDate, notes = '', userId) {
+  async createTransfer(
+    clinicId,
+    fromAccountId,
+    toAccountId,
+    paymentMethod,
+    amount,
+    transferDate,
+    notes = '',
+    userId,
+  ) {
     try {
       const { data, error } = await client
         .from('cash_transfers')
@@ -260,13 +310,15 @@ export const cashDrawerApi = {
             transfer_date: transferDate,
             status: 'pending',
             notes,
-            created_by: userId
-          }
+            created_by: userId,
+          },
         ])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       return data;
     } catch (err) {
       throw new Error(`Erro ao criar transferência: ${err.message}`);
@@ -279,10 +331,16 @@ export const cashDrawerApi = {
         .from('cash_transfers')
         .update({ status: 'confirmed' })
         .eq('id', transferId)
-        .select()
-        .single();
+        .select();
 
-      if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error('Record not found');
+      }
+      return data[0];
+
+      if (error) {
+        throw error;
+      }
       return data;
     } catch (err) {
       throw new Error(`Erro ao confirmar transferência: ${err.message}`);
@@ -291,23 +349,28 @@ export const cashDrawerApi = {
 
   async listTransfers(clinicId, filters = {}) {
     try {
-      let query = client
-        .from('cash_transfers')
-        .select('*')
-        .eq('clinic_id', clinicId);
+      let query = client.from('cash_transfers').select('*').eq('clinic_id', clinicId);
 
-      if (filters.status) query = query.eq('status', filters.status);
-      if (filters.from_date) query = query.gte('transfer_date', filters.from_date);
-      if (filters.to_date) query = query.lte('transfer_date', filters.to_date);
+      if (filters.status) {
+        query = query.eq('status', filters.status);
+      }
+      if (filters.from_date) {
+        query = query.gte('transfer_date', filters.from_date);
+      }
+      if (filters.to_date) {
+        query = query.lte('transfer_date', filters.to_date);
+      }
 
       const { data, error } = await query.order('transfer_date', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
       return data || [];
     } catch (err) {
       throw new Error(`Erro ao listar transferências: ${err.message}`);
     }
-  }
+  },
 };
 
 export default cashDrawerApi;

@@ -1,12 +1,12 @@
-import React, { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAgendaConfig } from "@/hooks/useAgendaConfig";
-import { format, isSameDay } from "date-fns";
-import { utcToZonedTime, format as formatTz } from "date-fns-tz";
+import React, { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAgendaConfig } from '@/hooks/useAgendaConfig';
+import { format, isSameDay } from 'date-fns';
+import { utcToZonedTime, format as formatTz } from 'date-fns-tz';
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 
 import {
   Table,
@@ -15,16 +15,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table';
 
-import {
-  User,
-  Edit,
-  UserCheck,
-  Trash2,
-  PlusCircle,
-  AlertTriangle,
-} from "lucide-react";
+import { User, Edit, UserCheck, Trash2, PlusCircle, AlertTriangle } from 'lucide-react';
 
 /* ================================
    AGENDA TABLE VIEW
@@ -47,36 +40,42 @@ export default function AgendaTableView({
   ============================================ */
   const timeSlots = useMemo(() => {
     const slots = [];
-    const [startHour, startMinute] = (agendaConfig.horario_abertura || "08:00").split(":").map(Number);
-    const [endHour, endMinute] = (agendaConfig.horario_fechamento || "18:00").split(":").map(Number);
+    const [startHour, startMinute] = (agendaConfig.horario_abertura || '08:00')
+      .split(':')
+      .map(Number);
+    const [endHour, endMinute] = (agendaConfig.horario_fechamento || '18:00')
+      .split(':')
+      .map(Number);
     const slotSize = agendaConfig.slot_agenda || agendaConfig.tempo_medio_atendimento || 15;
 
     // Almoço
     const almocoInicio = agendaConfig.horario_almoco_inicio;
     const almocoFim = agendaConfig.horario_almoco_fim;
-    let almocoStart = null, almocoEnd = null;
+    let almocoStart = null,
+      almocoEnd = null;
 
     if (almocoInicio && almocoFim) {
-      const [h1, m1] = almocoInicio.split(":").map(Number);
-      const [h2, m2] = almocoFim.split(":").map(Number);
+      const [h1, m1] = almocoInicio.split(':').map(Number);
+      const [h2, m2] = almocoFim.split(':').map(Number);
       almocoStart = h1 * 60 + m1;
       almocoEnd = h2 * 60 + m2;
     }
 
-    let current = new Date(selectedDate);
+    const current = new Date(selectedDate);
     current.setHours(startHour, startMinute, 0, 0);
 
     const end = new Date(selectedDate);
     end.setHours(endHour, endMinute, 0, 0);
 
     while (current <= end) {
-      const hours = current.getHours().toString().padStart(2, "0");
-      const minutes = current.getMinutes().toString().padStart(2, "0");
+      const hours = current.getHours().toString().padStart(2, '0');
+      const minutes = current.getMinutes().toString().padStart(2, '0');
       const time = `${hours}:${minutes}`;
 
       const totalMinutes = current.getHours() * 60 + current.getMinutes();
 
-      const isAlmoco = almocoStart !== null && totalMinutes >= almocoStart && totalMinutes < almocoEnd;
+      const isAlmoco =
+        almocoStart !== null && totalMinutes >= almocoStart && totalMinutes < almocoEnd;
 
       slots.push({ time, isAlmoco });
 
@@ -94,13 +93,17 @@ export default function AgendaTableView({
     const map = {};
 
     appointments.forEach((apt) => {
-      if (!isSameDay(new Date(apt.start_time), selectedDate)) return;
+      if (!isSameDay(new Date(apt.start_time), selectedDate)) {
+        return;
+      }
 
-      const zoned = utcToZonedTime(apt.start_time, "America/Sao_Paulo");
-      const key = formatTz(zoned, "HH:mm", { timeZone: "America/Sao_Paulo" });
+      const zoned = utcToZonedTime(apt.start_time, 'America/Sao_Paulo');
+      const key = formatTz(zoned, 'HH:mm', { timeZone: 'America/Sao_Paulo' });
 
-      if (!map[key]) map[key] = {};
-      map[key][apt.professional_id || "unassigned"] = apt;
+      if (!map[key]) {
+        map[key] = {};
+      }
+      map[key][apt.professional_id || 'unassigned'] = apt;
     });
 
     return map;
@@ -111,7 +114,7 @@ export default function AgendaTableView({
   ============================================ */
   const handleCellClick = (time, professionalId) => {
     const start = new Date(selectedDate);
-    const [h, m] = time.split(":").map(Number);
+    const [h, m] = time.split(':').map(Number);
     start.setHours(h, m, 0, 0);
 
     const existing = appointmentsByTime[time]?.[professionalId];
@@ -135,26 +138,34 @@ export default function AgendaTableView({
     professionals.length > 0
       ? professionals
       : [
-          { id: "p1", name: "Profissional 1" },
-          { id: "p2", name: "Profissional 2" },
-          { id: "p3", name: "Profissional 3" },
-        ];
+        { id: 'p1', name: 'Profissional 1' },
+        { id: 'p2', name: 'Profissional 2' },
+        { id: 'p3', name: 'Profissional 3' },
+      ];
 
   /* ============================================
      5) CORES POR STATUS
   ============================================ */
   const statusColors = (status, isFit) => {
-    if (isFit) return "bg-yellow-100 text-yellow-800 border-yellow-200";
+    if (isFit) {
+      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    }
 
-    if (!status || status === "livre") {
-      return "bg-green-100 text-green-800 border-green-200";
+    if (!status || status === 'livre') {
+      return 'bg-green-100 text-green-800 border-green-200';
     }
     const s = status.toLowerCase();
 
-    if (s.includes("confirm")) return "bg-blue-100 text-blue-800 border-blue-200";
-    if (s.includes("cancel")) return "bg-red-100 text-red-800 border-red-200";
-    if (s.includes("atend")) return "bg-emerald-100 text-emerald-800 border-emerald-200";
-    return "bg-purple-100 text-purple-800 border-purple-200";
+    if (s.includes('confirm')) {
+      return 'bg-blue-100 text-blue-800 border-blue-200';
+    }
+    if (s.includes('cancel')) {
+      return 'bg-red-100 text-red-800 border-red-200';
+    }
+    if (s.includes('atend')) {
+      return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+    }
+    return 'bg-purple-100 text-purple-800 border-purple-200';
   };
 
   /* ============================================
@@ -168,10 +179,7 @@ export default function AgendaTableView({
             <TableHead className="w-20 text-center font-semibold border-r">Horário</TableHead>
 
             {displayProfessionals.map((p) => (
-              <TableHead
-                key={p.id}
-                className="text-center font-semibold border-r last:border-r-0"
-              >
+              <TableHead key={p.id} className="text-center font-semibold border-r last:border-r-0">
                 <div>
                   <div className="text-sm">{p.name}</div>
                   <div className="text-xs text-gray-500">{p.specialty}</div>
@@ -183,13 +191,11 @@ export default function AgendaTableView({
 
         <TableBody>
           {timeSlots.map(({ time, isAlmoco }) => (
-            <TableRow key={time} className={isAlmoco ? "bg-yellow-50" : ""}>
+            <TableRow key={time} className={isAlmoco ? 'bg-yellow-50' : ''}>
               {/* HORÁRIO */}
               <TableCell className="text-sm font-medium bg-gray-50 border-r text-center">
                 {time}
-                {isAlmoco && (
-                  <span className="ml-1 text-yellow-700 font-semibold">Almoço</span>
-                )}
+                {isAlmoco && <span className="ml-1 text-yellow-700 font-semibold">Almoço</span>}
               </TableCell>
 
               {/* PROFISSIONAIS */}
@@ -204,14 +210,12 @@ export default function AgendaTableView({
                     key={prof.id}
                     onClick={() => handleCellClick(time, prof.id)}
                     className={`min-h-[80px] border-r cursor-pointer ${
-                      isAlmoco ? "bg-yellow-50" : "hover:bg-blue-50"
+                      isAlmoco ? 'bg-yellow-50' : 'hover:bg-blue-50'
                     }`}
                   >
                     {/* 1) Horário de almoço */}
                     {isAlmoco && (
-                      <span className="text-yellow-700 font-semibold">
-                        Horário de Almoço
-                      </span>
+                      <span className="text-yellow-700 font-semibold">Horário de Almoço</span>
                     )}
 
                     {/* 2) Livre */}
@@ -230,7 +234,7 @@ export default function AgendaTableView({
                           Horário Bloqueado
                         </div>
                         <div className="text-xs text-red-600">
-                          {apt.block_reason || apt.notes || "Motivo não informado"}
+                          {apt.block_reason || apt.notes || 'Motivo não informado'}
                         </div>
                         <Badge className="mt-2 bg-red-100 text-red-800">Bloqueado</Badge>
                       </Card>
@@ -244,22 +248,20 @@ export default function AgendaTableView({
                           <User className="w-3 h-3" />
                           <span className="truncate text-blue-700">
                             {(() => {
-                              const raw = apt.patient_name || "";
-                              return raw.replace(/\s*\(?\d{2,3}\)?\s*\d{4,5}[-.\s]?\d{4}$/, "").trim();
+                              const raw = apt.patient_name || '';
+                              return raw
+                                .replace(/\s*\(?\d{2,3}\)?\s*\d{4,5}[-.\s]?\d{4}$/, '')
+                                .trim();
                             })()}
                           </span>
                         </div>
 
                         {/* Serviço */}
-                        <div className="text-xs text-gray-700 truncate">
-                          {apt.service_name}
-                        </div>
+                        <div className="text-xs text-gray-700 truncate">{apt.service_name}</div>
 
                         {/* Convênio */}
                         {apt.payer_name && (
-                          <div className="text-xs text-gray-500 truncate">
-                            {apt.payer_name}
-                          </div>
+                          <div className="text-xs text-gray-500 truncate">{apt.payer_name}</div>
                         )}
 
                         {/* Status */}

@@ -4,11 +4,11 @@
 // ============================================================
 // Verifica dados, autorizações e disponibilidade de recursos
 
-import { supabase } from "@/lib/customSupabaseClient";
-import * as appointmentsApi from "@/lib/appointmentsApi";
-import * as healthInsurancesApi from "@/lib/healthInsurancesApi";
-import * as servicepricesApi from "@/lib/servicepricesApi";
-import * as professionalServicesApi from "@/lib/professionalServicesApi";
+import { supabase } from '@/lib/customSupabaseClient';
+import * as appointmentsApi from '@/lib/appointmentsApi';
+import * as healthInsurancesApi from '@/lib/healthInsurancesApi';
+import * as servicepricesApi from '@/lib/servicepricesApi';
+import * as professionalServicesApi from '@/lib/professionalServicesApi';
 
 /**
  * Valida dados de check-in antes de confirmação
@@ -16,12 +16,7 @@ import * as professionalServicesApi from "@/lib/professionalServicesApi";
  * @returns {Promise<{valid: boolean, errors: Array, warnings: Array, data: Object}>}
  */
 export async function validateCheckinData(params) {
-  const {
-    appointmentId,
-    clinicId,
-    patientData,
-    insuranceAuthorizationRequired,
-  } = params;
+  const { appointmentId, clinicId, patientData, insuranceAuthorizationRequired } = params;
 
   const errors = [];
   const warnings = [];
@@ -32,21 +27,19 @@ export async function validateCheckinData(params) {
     const appointment = await appointmentsApi.getAppointment(appointmentId);
 
     if (!appointment) {
-      errors.push("Agendamento não encontrado");
+      errors.push('Agendamento não encontrado');
       return { valid: false, errors, warnings, data: null };
     }
 
-    if (!["scheduled", "confirmed"].includes(appointment.appointment_status)) {
-      errors.push(
-        `Agendamento não está em estado válido (${appointment.appointment_status})`
-      );
+    if (!['scheduled', 'confirmed'].includes(appointment.appointment_status)) {
+      errors.push(`Agendamento não está em estado válido (${appointment.appointment_status})`);
     }
 
     validationData.appointment = appointment;
 
     // 2. Validar dados do paciente
     if (!patientData?.id) {
-      errors.push("Dados do paciente incompletos");
+      errors.push('Dados do paciente incompletos');
     }
 
     validationData.patient = patientData;
@@ -55,19 +48,19 @@ export async function validateCheckinData(params) {
     const psData = await professionalServicesApi.getProfessionalServiceData(
       appointment.professional_id,
       appointment.service_id,
-      clinicId
+      clinicId,
     );
 
     if (!psData) {
-      errors.push("Profissional não está vinculado a este serviço");
+      errors.push('Profissional não está vinculado a este serviço');
     } else {
       validationData.professionalService = psData;
 
       // Buscar dados completos do profissional
       const { data: professional } = await supabase
-        .from("professionals")
-        .select("id, name, competence_level, credentials, specialties")
-        .eq("id", appointment.professional_id)
+        .from('professionals')
+        .select('id, name, competence_level, credentials, specialties')
+        .eq('id', appointment.professional_id)
         .single();
 
       validationData.professional = professional;
@@ -75,44 +68,38 @@ export async function validateCheckinData(params) {
 
     // 4. Validar serviço
     const { data: service } = await supabase
-      .from("services")
-      .select("id, name, duration, description, requires_preparation")
-      .eq("id", appointment.service_id)
+      .from('services')
+      .select('id, name, duration, description, requires_preparation')
+      .eq('id', appointment.service_id)
       .single();
 
     validationData.service = service;
 
     if (service?.requires_preparation) {
-      warnings.push("Este serviço requer preparação prévia do paciente");
+      warnings.push('Este serviço requer preparação prévia do paciente');
     }
 
     // 5. Validar convênio e autorização
     if (appointment.health_insurance_id) {
       const insurance = await healthInsurancesApi.getHealthInsurance(
         appointment.health_insurance_id,
-        clinicId
+        clinicId,
       );
 
       validationData.insurance = insurance;
 
       if (insurance?.requires_authorization) {
         if (!insuranceAuthorizationRequired) {
-          warnings.push(
-            `Este convênio (${insurance.name}) requer autorização prévia`
-          );
+          warnings.push(`Este convênio (${insurance.name}) requer autorização prévia`);
         }
 
         // Verificar se há autorização registrada
-        const authStatus = await checkInsuranceAuthorization(
-          appointmentId,
-          insurance.id,
-          clinicId
-        );
+        const authStatus = await checkInsuranceAuthorization(appointmentId, insurance.id, clinicId);
 
         validationData.authorization = authStatus;
 
         if (!authStatus.authorized) {
-          warnings.push(`Autorização do convênio não confirmada`);
+          warnings.push('Autorização do convênio não confirmada');
         }
       }
     }
@@ -123,11 +110,11 @@ export async function validateCheckinData(params) {
         appointment.room_id,
         appointment.date,
         appointment.start_time,
-        appointment.end_time
+        appointment.end_time,
       );
 
       if (!roomAvailable) {
-        warnings.push("Sala não está mais disponível para este horário");
+        warnings.push('Sala não está mais disponível para este horário');
       }
 
       validationData.roomAvailable = roomAvailable;
@@ -139,11 +126,11 @@ export async function validateCheckinData(params) {
       appointment.date,
       appointment.start_time,
       appointment.end_time,
-      appointmentId
+      appointmentId,
     );
 
     if (!professionalAvailable) {
-      errors.push("Profissional não está disponível neste horário");
+      errors.push('Profissional não está disponível neste horário');
     }
 
     validationData.professionalAvailable = professionalAvailable;
@@ -152,21 +139,16 @@ export async function validateCheckinData(params) {
     const price = await servicepricesApi.getServicePrice(
       appointment.service_id,
       clinicId,
-      appointment.health_insurance_id
+      appointment.health_insurance_id,
     );
 
     validationData.price = price?.price || appointment.price || 0;
 
     // 9. Verificar se há materiais/recursos necessários
-    const resourcesCheck = await checkRequiredResources(
-      appointment.service_id,
-      clinicId
-    );
+    const resourcesCheck = await checkRequiredResources(appointment.service_id, clinicId);
 
     if (!resourcesCheck.allAvailable && resourcesCheck.missing.length > 0) {
-      warnings.push(
-        `Alguns recursos não estão disponíveis: ${resourcesCheck.missing.join(", ")}`
-      );
+      warnings.push(`Alguns recursos não estão disponíveis: ${resourcesCheck.missing.join(', ')}`);
     }
 
     validationData.resources = resourcesCheck;
@@ -179,10 +161,10 @@ export async function validateCheckinData(params) {
       data: validationData,
     };
   } catch (error) {
-    console.error("Erro ao validar check-in:", error);
+    console.error('Erro ao validar check-in:', error);
     return {
       valid: false,
-      errors: [...errors, "Erro ao validar dados do check-in"],
+      errors: [...errors, 'Erro ao validar dados do check-in'],
       warnings,
       data: null,
       error: error.message,
@@ -197,19 +179,15 @@ export async function validateCheckinData(params) {
  * @param {string} clinicId
  * @returns {Promise<{authorized: boolean, authNumber: string, expiryDate: string}>}
  */
-export async function checkInsuranceAuthorization(
-  appointmentId,
-  insuranceId,
-  clinicId
-) {
+export async function checkInsuranceAuthorization(appointmentId, insuranceId, clinicId) {
   try {
     // Buscar autorização registrada
     const { data: authorization } = await supabase
-      .from("insurance_authorizations")
-      .select("id, authorization_number, expiry_date, status")
-      .eq("appointment_id", appointmentId)
-      .eq("health_insurance_id", insuranceId)
-      .eq("clinic_id", clinicId)
+      .from('insurance_authorizations')
+      .select('id, authorization_number, expiry_date, status')
+      .eq('appointment_id', appointmentId)
+      .eq('health_insurance_id', insuranceId)
+      .eq('clinic_id', clinicId)
       .single();
 
     if (!authorization) {
@@ -217,13 +195,12 @@ export async function checkInsuranceAuthorization(
         authorized: false,
         authNumber: null,
         expiryDate: null,
-        message: "Nenhuma autorização registrada",
+        message: 'Nenhuma autorização registrada',
       };
     }
 
     const authorized =
-      authorization.status === "approved" &&
-      new Date(authorization.expiry_date) > new Date();
+      authorization.status === 'approved' && new Date(authorization.expiry_date) > new Date();
 
     return {
       authorized,
@@ -232,7 +209,7 @@ export async function checkInsuranceAuthorization(
       status: authorization.status,
     };
   } catch (error) {
-    console.error("Erro ao verificar autorização:", error);
+    console.error('Erro ao verificar autorização:', error);
     return {
       authorized: false,
       error: error.message,
@@ -252,19 +229,19 @@ export async function isRoomAvailable(roomId, date, startTime, endTime) {
   try {
     // Buscar conflitos de agendamento
     const { data: conflicts } = await supabase
-      .from("appointments")
-      .select("id")
-      .eq("room_id", roomId)
-      .eq("date", date)
-      .eq("active", true)
-      .neq("appointment_status", "canceled")
+      .from('appointments')
+      .select('id')
+      .eq('room_id', roomId)
+      .eq('date', date)
+      .eq('active', true)
+      .neq('appointment_status', 'canceled')
       .or(
-        `and(start_time.lte.${startTime},end_time.gt.${startTime}),and(start_time.lt.${endTime},end_time.gte.${endTime})`
+        `and(start_time.lte.${startTime},end_time.gt.${startTime}),and(start_time.lt.${endTime},end_time.gte.${endTime})`,
       );
 
     return !conflicts || conflicts.length === 0;
   } catch (error) {
-    console.error("Erro ao verificar disponibilidade de sala:", error);
+    console.error('Erro ao verificar disponibilidade de sala:', error);
     return true; // Falha aberta
   }
 }
@@ -283,19 +260,19 @@ export async function isProfessionalAvailable(
   date,
   startTime,
   endTime,
-  excludeAppointmentId
+  excludeAppointmentId,
 ) {
   try {
     let query = supabase
-      .from("appointments")
-      .select("id")
-      .eq("professional_id", professionalId)
-      .eq("date", date)
-      .eq("active", true)
-      .neq("appointment_status", "canceled");
+      .from('appointments')
+      .select('id')
+      .eq('professional_id', professionalId)
+      .eq('date', date)
+      .eq('active', true)
+      .neq('appointment_status', 'canceled');
 
     if (excludeAppointmentId) {
-      query = query.neq("id", excludeAppointmentId);
+      query = query.neq('id', excludeAppointmentId);
     }
 
     const { data: conflicts } = await query;
@@ -310,7 +287,7 @@ export async function isProfessionalAvailable(
 
     return !hasConflict;
   } catch (error) {
-    console.error("Erro ao verificar disponibilidade de profissional:", error);
+    console.error('Erro ao verificar disponibilidade de profissional:', error);
     return true; // Falha aberta
   }
 }
@@ -325,9 +302,9 @@ export async function checkRequiredResources(serviceId, clinicId) {
   try {
     // Buscar recursos necessários
     const { data: serviceResources } = await supabase
-      .from("service_resources")
-      .select("resource_id, quantity_required, resources(id, name)")
-      .eq("service_id", serviceId);
+      .from('service_resources')
+      .select('resource_id, quantity_required, resources(id, name)')
+      .eq('service_id', serviceId);
 
     if (!serviceResources || serviceResources.length === 0) {
       return {
@@ -343,10 +320,10 @@ export async function checkRequiredResources(serviceId, clinicId) {
 
     for (const sr of serviceResources) {
       const { data: stock } = await supabase
-        .from("stock_balance")
-        .select("available_quantity")
-        .eq("resource_id", sr.resource_id)
-        .eq("clinic_id", clinicId)
+        .from('stock_balance')
+        .select('available_quantity')
+        .eq('resource_id', sr.resource_id)
+        .eq('clinic_id', clinicId)
         .single();
 
       if (stock?.available_quantity >= sr.quantity_required) {
@@ -362,7 +339,7 @@ export async function checkRequiredResources(serviceId, clinicId) {
       missing,
     };
   } catch (error) {
-    console.error("Erro ao verificar recursos:", error);
+    console.error('Erro ao verificar recursos:', error);
     return {
       allAvailable: true,
       available: [],
@@ -422,12 +399,12 @@ export async function getCheckinSummary(appointmentId, clinicId) {
         },
         insurance: data.insurance
           ? {
-              name: data.insurance.name,
-              authorizationRequired: data.insurance.requires_authorization,
-              authorized: data.authorization?.authorized,
-            }
+            name: data.insurance.name,
+            authorizationRequired: data.insurance.requires_authorization,
+            authorized: data.authorization?.authorized,
+          }
           : null,
-        room: data.roomAvailable ? "Disponível" : "Indisponível",
+        room: data.roomAvailable ? 'Disponível' : 'Indisponível',
         price: data.price,
         resources: {
           allAvailable: data.resources?.allAvailable,
@@ -436,11 +413,11 @@ export async function getCheckinSummary(appointmentId, clinicId) {
       },
     };
   } catch (error) {
-    console.error("Erro ao gerar resumo de check-in:", error);
+    console.error('Erro ao gerar resumo de check-in:', error);
     return {
       valid: false,
       summary: null,
-      errors: ["Erro ao gerar resumo"],
+      errors: ['Erro ao gerar resumo'],
       error: error.message,
     };
   }
@@ -473,33 +450,34 @@ export async function confirmCheckin(appointmentId, clinicId, checkinData = {}) 
 
     // Atualizar status do agendamento
     const { data: updated } = await supabase
-      .from("appointments")
+      .from('appointments')
       .update({
-        appointment_status: "confirmed",
+        appointment_status: 'confirmed',
         checked_in_at: new Date().toISOString(),
       })
-      .eq("id", appointmentId)
-      .select()
-      .single();
+      .eq('id', appointmentId)
+      .select();
+
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
 
     // Próximos passos
     const nextSteps = [];
     const appointmentData = validation.data;
 
     if (appointmentData.service?.requires_preparation) {
-      nextSteps.push("Preparar paciente conforme procedimento");
+      nextSteps.push('Preparar paciente conforme procedimento');
     }
 
-    if (appointmentData.professional?.competence_level === "specialist") {
-      nextSteps.push("Revisar especialidades do profissional");
+    if (appointmentData.professional?.competence_level === 'specialist') {
+      nextSteps.push('Revisar especialidades do profissional');
     }
 
-    if (
-      appointmentData.resources &&
-      !appointmentData.resources.allAvailable
-    ) {
+    if (appointmentData.resources && !appointmentData.resources.allAvailable) {
       nextSteps.push(
-        `Providenciar recursos faltantes: ${appointmentData.resources.missing.join(", ")}`
+        `Providenciar recursos faltantes: ${appointmentData.resources.missing.join(', ')}`,
       );
     }
 
@@ -510,11 +488,11 @@ export async function confirmCheckin(appointmentId, clinicId, checkinData = {}) 
       warnings: validation.warnings,
     };
   } catch (error) {
-    console.error("Erro ao confirmar check-in:", error);
+    console.error('Erro ao confirmar check-in:', error);
     return {
       confirmed: false,
       appointmentData: null,
-      errors: ["Erro ao confirmar check-in"],
+      errors: ['Erro ao confirmar check-in'],
       error: error.message,
     };
   }

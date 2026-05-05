@@ -1,15 +1,19 @@
-import { supabase } from "@/lib/customSupabaseClient.js";
+import { supabase } from '@/lib/customSupabaseClient.js';
 
-const BUCKET = "professional-photos";
+const BUCKET = 'professional-photos';
 const MAX_BYTES = 5 * 1024 * 1024; // 5MB
 
 function isAbsoluteUrl(s) {
-  return typeof s === "string" && /^https?:\/\//i.test(s);
+  return typeof s === 'string' && /^https?:\/\//i.test(s);
 }
 
 export function getPathFromPublicUrl(urlOrPath) {
-  if (!urlOrPath) return null;
-  if (!isAbsoluteUrl(urlOrPath)) return urlOrPath;
+  if (!urlOrPath) {
+    return null;
+  }
+  if (!isAbsoluteUrl(urlOrPath)) {
+    return urlOrPath;
+  }
 
   try {
     const u = new URL(urlOrPath);
@@ -23,36 +27,48 @@ export function getPathFromPublicUrl(urlOrPath) {
 }
 
 export function getPublicURL(pathOrUrl) {
-  if (!pathOrUrl) return null;
-  if (isAbsoluteUrl(pathOrUrl)) return pathOrUrl;
+  if (!pathOrUrl) {
+    return null;
+  }
+  if (isAbsoluteUrl(pathOrUrl)) {
+    return pathOrUrl;
+  }
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(pathOrUrl);
   return data?.publicUrl ?? null;
 }
 
 function assertValidImageFile(file, filename) {
-  const isFileLike = (typeof File !== "undefined" && file instanceof File) || file instanceof Blob;
-  if (!isFileLike || !file.size) throw new Error("Arquivo inválido.");
-  if (file.size > MAX_BYTES) throw new Error("Arquivo muito grande. Máx: 5MB.");
+  const isFileLike = (typeof File !== 'undefined' && file instanceof File) || file instanceof Blob;
+  if (!isFileLike || !file.size) {
+    throw new Error('Arquivo inválido.');
+  }
+  if (file.size > MAX_BYTES) {
+    throw new Error('Arquivo muito grande. Máx: 5MB.');
+  }
 
-  const mime = (file.type || "").toLowerCase();
-  const name = filename || (typeof File !== "undefined" && file instanceof File ? file.name : "");
-  const ext = (name.split(".").pop() || "").toLowerCase();
-  const allowedExt = ["png", "jpg", "jpeg", "webp", "svg"];
-  const isMimeOk = mime.startsWith("image/");
+  const mime = (file.type || '').toLowerCase();
+  const name = filename || (typeof File !== 'undefined' && file instanceof File ? file.name : '');
+  const ext = (name.split('.').pop() || '').toLowerCase();
+  const allowedExt = ['png', 'jpg', 'jpeg', 'webp', 'svg'];
+  const isMimeOk = mime.startsWith('image/');
   const isExtOk = !name || allowedExt.includes(ext);
 
   if (!isMimeOk && !isExtOk) {
-    throw new Error("Envie uma imagem (png, jpg, jpeg, webp ou svg).");
+    throw new Error('Envie uma imagem (png, jpg, jpeg, webp ou svg).');
   }
 }
 
 function normalizeExtAndMime(file, explicitName) {
-  const allowed = ["png", "jpg", "jpeg", "webp", "svg"];
-  const rawExt = (explicitName?.split(".").pop() || (typeof File !== "undefined" && file instanceof File ? file.name.split(".").pop() : "") || "png").toLowerCase();
-  const ext = allowed.includes(rawExt) ? rawExt : "png";
+  const allowed = ['png', 'jpg', 'jpeg', 'webp', 'svg'];
+  const rawExt = (
+    explicitName?.split('.').pop() ||
+    (typeof File !== 'undefined' && file instanceof File ? file.name.split('.').pop() : '') ||
+    'png'
+  ).toLowerCase();
+  const ext = allowed.includes(rawExt) ? rawExt : 'png';
   let contentType = file.type || `image/${ext}`;
-  if (ext === "svg" && !/svg/i.test(contentType)) {
-    contentType = "image/svg+xml";
+  if (ext === 'svg' && !/svg/i.test(contentType)) {
+    contentType = 'image/svg+xml';
   }
   return { ext, contentType };
 }
@@ -62,8 +78,12 @@ function buildKey(clinicId, professionalId, ext) {
 }
 
 export async function uploadPhoto({ clinicId, professionalId, file, filename, cacheControl }) {
-  if (!clinicId || !professionalId) throw new Error("clinicId e professionalId são obrigatórios");
-  if (!file) throw new Error("Arquivo obrigatório");
+  if (!clinicId || !professionalId) {
+    throw new Error('clinicId e professionalId são obrigatórios');
+  }
+  if (!file) {
+    throw new Error('Arquivo obrigatório');
+  }
 
   assertValidImageFile(file, filename);
   const { ext, contentType } = normalizeExtAndMime(file, filename);
@@ -74,7 +94,9 @@ export async function uploadPhoto({ clinicId, professionalId, file, filename, ca
     cacheControl: String(cacheControl ?? 3600),
     contentType,
   });
-  if (error) throw new Error(error.message || "Falha no upload da foto.");
+  if (error) {
+    throw new Error(error.message || 'Falha no upload da foto.');
+  }
 
   const publicUrl = getPublicURL(key);
   return { path: key, publicUrl };
@@ -82,16 +104,31 @@ export async function uploadPhoto({ clinicId, professionalId, file, filename, ca
 
 export async function deletePhoto(pathOrUrl) {
   const path = getPathFromPublicUrl(pathOrUrl);
-  if (!path) return { error: null };
+  if (!path) {
+    return { error: null };
+  }
 
   const { error } = await supabase.storage.from(BUCKET).remove([path]);
-  if (error) throw new Error(error.message || "Falha ao remover foto anterior.");
+  if (error) {
+    throw new Error(error.message || 'Falha ao remover foto anterior.');
+  }
   return { error: null };
 }
 
-export async function replacePhoto({ clinicId, professionalId, newFile, previousPathOrUrl, filename, cacheControl }) {
-  if (!clinicId || !professionalId) throw new Error("clinicId e professionalId são obrigatórios");
-  if (!newFile) throw new Error("Arquivo obrigatório");
+export async function replacePhoto({
+  clinicId,
+  professionalId,
+  newFile,
+  previousPathOrUrl,
+  filename,
+  cacheControl,
+}) {
+  if (!clinicId || !professionalId) {
+    throw new Error('clinicId e professionalId são obrigatórios');
+  }
+  if (!newFile) {
+    throw new Error('Arquivo obrigatório');
+  }
 
   if (previousPathOrUrl) {
     try {

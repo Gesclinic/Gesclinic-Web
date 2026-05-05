@@ -6,20 +6,20 @@
  * Etapa 1: Dados Essenciais com design moderno
  */
 
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
-import { createPatientWithPhoto } from "@/lib/patientsApi";
-import { useToast } from "@/components/ui/use-toast";
-import PageLayout from "@/components/ui/PageLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Helmet } from "react-helmet-async";
-import { motion } from "framer-motion";
-import { ArrowRight, Check, User, Phone, MapPin, FileText } from "lucide-react";
-import PhotoCapture from "@/components/PhotoCapture";
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { createPatientWithPhoto } from '@/lib/patientsApi';
+import { useToast } from '@/components/ui/use-toast';
+import PageLayout from '@/components/ui/PageLayout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Helmet } from 'react-helmet-async';
+import { motion } from 'framer-motion';
+import { ArrowRight, Check, User, Phone, MapPin, FileText } from 'lucide-react';
+import PhotoCapture from '@/components/PhotoCapture';
 
 export default function PatientCadastroPage() {
   const navigate = useNavigate();
@@ -29,74 +29,94 @@ export default function PatientCadastroPage() {
 
   const [formData, setFormData] = useState({
     // Obrigatórios
-    name: "",
-    document_id: "",
-    birthdate: "",
-    gender: "",
-    cell_phone: "",
-    phone: "",
+    name: '',
+    document_id: '',
+    birthdate: '',
+    gender: '',
+    cell_phone: '',
+    phone: '',
     photo: null,
     // TISS - Acessórios
-    mother_name: "",
-    rg_number: "",
-    nationality: "BR",
-    state_birth: "",
-    marital_status: "",
-    profession: "",
-    ethnicity: "",
-    email: "",
+    mother_name: '',
+    rg_number: '',
+    nationality: 'BR',
+    state_birth: '',
+    marital_status: '',
+    profession: '',
+    ethnicity: '',
+    email: '',
     // Endereço - Acessórios
-    street: "",
-    street_number: "",
-    complement: "",
-    neighborhood: "",
-    city: "",
-    state: "",
-    postal_code: "",
+    street: '',
+    street_number: '',
+    complement: '',
+    neighborhood: '',
+    city: '',
+    state: '',
+    postal_code: '',
   });
 
   const [errors, setErrors] = useState({});
 
   // Formatador de CPF: xxx.xxx.xxx-xx
   function formatCPF(value) {
-    const cleaned = value.replace(/\D/g, "");
-    if (cleaned.length <= 3) return cleaned;
-    if (cleaned.length <= 6) return `${cleaned.slice(0, 3)}.${cleaned.slice(3)}`;
-    if (cleaned.length <= 9) return `${cleaned.slice(0, 3)}.${cleaned.slice(3, 6)}.${cleaned.slice(6)}`;
+    const cleaned = value.replace(/\D/g, '');
+    if (cleaned.length <= 3) {
+      return cleaned;
+    }
+    if (cleaned.length <= 6) {
+      return `${cleaned.slice(0, 3)}.${cleaned.slice(3)}`;
+    }
+    if (cleaned.length <= 9) {
+      return `${cleaned.slice(0, 3)}.${cleaned.slice(3, 6)}.${cleaned.slice(6)}`;
+    }
     return `${cleaned.slice(0, 3)}.${cleaned.slice(3, 6)}.${cleaned.slice(6, 9)}-${cleaned.slice(9, 11)}`;
   }
 
   // Formatador de Telefone/Celular: (xx) xxxxx-xxxx ou (xx) xxxx-xxxx
   function formatPhone(value) {
-    const cleaned = value.replace(/\D/g, "");
-    if (cleaned.length <= 2) return cleaned.length > 0 ? `(${cleaned}` : "";
-    if (cleaned.length <= 6) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
-    if (cleaned.length <= 10) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`;
+    const cleaned = value.replace(/\D/g, '');
+    if (cleaned.length <= 2) {
+      return cleaned.length > 0 ? `(${cleaned}` : '';
+    }
+    if (cleaned.length <= 6) {
+      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
+    }
+    if (cleaned.length <= 10) {
+      return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`;
+    }
     return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`;
   }
 
   // Formatador de CEP: xxxxx-xxx
   function formatCEP(value) {
-    const cleaned = value.replace(/\D/g, "");
-    if (cleaned.length <= 5) return cleaned;
+    const cleaned = value.replace(/\D/g, '');
+    if (cleaned.length <= 5) {
+      return cleaned;
+    }
     return `${cleaned.slice(0, 5)}-${cleaned.slice(5, 8)}`;
   }
 
   function validateForm() {
     const newErrors = {};
 
-    if (!formData.name?.trim())
-      newErrors.name = "Nome é obrigatório";
-    if (!formData.document_id?.trim())
-      newErrors.document_id = "CPF é obrigatório";
-    if (!formData.birthdate)
-      newErrors.birthdate = "Data de nascimento é obrigatória";
-    if (!formData.gender)
-      newErrors.gender = "Sexo é obrigatório";
-    if (!formData.cell_phone?.trim())
-      newErrors.cell_phone = "Celular é obrigatório";
-    if (!formData.phone?.trim())
-      newErrors.phone = "Telefone é obrigatório";
+    if (!formData.name?.trim()) {
+      newErrors.name = 'Nome é obrigatório';
+    }
+    if (!formData.document_id?.trim()) {
+      newErrors.document_id = 'CPF é obrigatório';
+    }
+    if (!formData.birthdate) {
+      newErrors.birthdate = 'Data de nascimento é obrigatória';
+    }
+    if (!formData.gender) {
+      newErrors.gender = 'Sexo é obrigatório';
+    }
+    if (!formData.cell_phone?.trim()) {
+      newErrors.cell_phone = 'Celular é obrigatório';
+    }
+    if (!formData.phone?.trim()) {
+      newErrors.phone = 'Telefone é obrigatório';
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -105,9 +125,9 @@ export default function PatientCadastroPage() {
   async function handleSave(goToComplete = false) {
     if (!validateForm()) {
       toast({
-        title: "Erro",
-        description: "Preencha todos os campos obrigatórios",
-        variant: "destructive",
+        title: 'Erro',
+        description: 'Preencha todos os campos obrigatórios',
+        variant: 'destructive',
       });
       return;
     }
@@ -127,7 +147,7 @@ export default function PatientCadastroPage() {
           // TISS Fields
           mother_name: formData.mother_name || null,
           rg_number: formData.rg_number || null,
-          nationality: formData.nationality || "BR",
+          nationality: formData.nationality || 'BR',
           state_birth: formData.state_birth || null,
           marital_status: formData.marital_status || null,
           professional_occupation: formData.profession || null,
@@ -142,22 +162,22 @@ export default function PatientCadastroPage() {
           state: formData.state || null,
           postal_code: formData.postal_code || null,
         },
-        formData.photo
+        formData.photo,
       );
 
       toast({
-        title: "Sucesso",
-        description: "Paciente criado com sucesso!",
+        title: 'Sucesso',
+        description: 'Paciente criado com sucesso!',
       });
 
-      navigate(`/clinica/agenda/checkin`);
+      navigate('/clinica/agenda/checkin');
       return;
     } catch (error) {
-      console.error("Erro ao criar paciente:", error);
+      console.error('Erro ao criar paciente:', error);
       toast({
-        title: "Erro",
-        description: "Não foi possível criar o paciente",
-        variant: "destructive",
+        title: 'Erro',
+        description: 'Não foi possível criar o paciente',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -180,7 +200,7 @@ export default function PatientCadastroPage() {
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.3, ease: "easeOut" },
+      transition: { duration: 0.3, ease: 'easeOut' },
     },
   };
 
@@ -192,31 +212,25 @@ export default function PatientCadastroPage() {
 
       <PageLayout
         title="Novo Paciente"
-        breadcrumbs={[
-          { label: "Pacientes", href: "/clinica/pacientes" },
-          { label: "Novo" },
-        ]}
+        breadcrumbs={[{ label: 'Pacientes', href: '/clinica/pacientes' }, { label: 'Novo' }]}
       >
-        <motion.div 
+        <motion.div
           className="w-full mx-auto"
           variants={containerVariants}
           initial="hidden"
           animate="visible"
         >
           {/* Indicador de Etapa - Melhorado */}
-          <motion.div 
-            className="mb-8"
-            variants={itemVariants}
-          >
+          <motion.div className="mb-8" variants={itemVariants}>
             <div className="flex items-center justify-center gap-4 mb-6">
-              <motion.div 
+              <motion.div
                 className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-blue-600 to-blue-700 text-white font-bold shadow-lg"
                 animate={{ scale: [1, 1.05, 1] }}
                 transition={{ duration: 2, repeat: Infinity }}
               >
                 1
               </motion.div>
-              <motion.div 
+              <motion.div
                 className="flex-1 h-1 bg-gradient-to-r from-blue-300 to-gray-300"
                 initial={{ scaleX: 0 }}
                 animate={{ scaleX: 1 }}
@@ -250,7 +264,9 @@ export default function PatientCadastroPage() {
                     <CardTitle className="text-lg font-semibold text-gray-900">
                       Dados Pessoais
                     </CardTitle>
-                    <p className="text-sm text-gray-500 mt-0.5">Informações essenciais do paciente</p>
+                    <p className="text-sm text-gray-500 mt-0.5">
+                      Informações essenciais do paciente
+                    </p>
                   </div>
                 </div>
               </CardHeader>
@@ -264,10 +280,8 @@ export default function PatientCadastroPage() {
                     id="name"
                     placeholder="Ex: João da Silva"
                     value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    className={`border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white mt-1.5 ${errors.name ? "border-red-500" : ""}`}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className={`border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white mt-1.5 ${errors.name ? 'border-red-500' : ''}`}
                   />
                   {errors.name && (
                     <p className="text-red-600 text-sm mt-2 flex items-center gap-1">
@@ -292,7 +306,7 @@ export default function PatientCadastroPage() {
                         document_id: formatCPF(e.target.value),
                       })
                     }
-                    className={`border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white mt-1.5 ${errors.document_id ? "border-red-500" : ""}`}
+                    className={`border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white mt-1.5 ${errors.document_id ? 'border-red-500' : ''}`}
                   />
                   {errors.document_id && (
                     <p className="text-red-600 text-sm mt-2 flex items-center gap-1">
@@ -311,10 +325,8 @@ export default function PatientCadastroPage() {
                       id="birthdate"
                       type="date"
                       value={formData.birthdate}
-                      onChange={(e) =>
-                        setFormData({ ...formData, birthdate: e.target.value })
-                      }
-                      className={`border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white mt-1.5 ${errors.birthdate ? "border-red-500" : ""}`}
+                      onChange={(e) => setFormData({ ...formData, birthdate: e.target.value })}
+                      className={`border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white mt-1.5 ${errors.birthdate ? 'border-red-500' : ''}`}
                     />
                     {errors.birthdate && (
                       <p className="text-red-600 text-sm mt-2 flex items-center gap-1">
@@ -330,11 +342,9 @@ export default function PatientCadastroPage() {
                     <select
                       id="gender"
                       value={formData.gender}
-                      onChange={(e) =>
-                        setFormData({ ...formData, gender: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
                       className={`w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white text-gray-700 mt-1.5 ${
-                        errors.gender ? "border-red-500" : ""
+                        errors.gender ? 'border-red-500' : ''
                       }`}
                     >
                       <option value="">Selecione...</option>
@@ -362,9 +372,7 @@ export default function PatientCadastroPage() {
                     <Phone className="w-5 h-5 text-emerald-600" />
                   </div>
                   <div>
-                    <CardTitle className="text-lg font-semibold text-gray-900">
-                      Contato
-                    </CardTitle>
+                    <CardTitle className="text-lg font-semibold text-gray-900">Contato</CardTitle>
                     <p className="text-sm text-gray-500 mt-0.5">Telefones para contato</p>
                   </div>
                 </div>
@@ -387,7 +395,7 @@ export default function PatientCadastroPage() {
                           cell_phone: formatPhone(e.target.value),
                         })
                       }
-                      className={`border-gray-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-white mt-1.5 ${errors.cell_phone ? "border-red-500" : ""}`}
+                      className={`border-gray-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-white mt-1.5 ${errors.cell_phone ? 'border-red-500' : ''}`}
                     />
                     {errors.cell_phone && (
                       <p className="text-red-600 text-sm mt-2 flex items-center gap-1">
@@ -411,7 +419,7 @@ export default function PatientCadastroPage() {
                           phone: formatPhone(e.target.value),
                         })
                       }
-                      className={`border-gray-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-white mt-1.5 ${errors.phone ? "border-red-500" : ""}`}
+                      className={`border-gray-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-white mt-1.5 ${errors.phone ? 'border-red-500' : ''}`}
                     />
                     {errors.phone && (
                       <p className="text-red-600 text-sm mt-2 flex items-center gap-1">
@@ -431,9 +439,7 @@ export default function PatientCadastroPage() {
                     type="email"
                     placeholder="Ex: paciente@email.com"
                     value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className="border-gray-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-white mt-1.5"
                   />
                 </div>
@@ -453,7 +459,9 @@ export default function PatientCadastroPage() {
                     <CardTitle className="text-lg font-semibold text-gray-900">
                       Dados Complementares (TISS)
                     </CardTitle>
-                    <p className="text-sm text-gray-500 mt-0.5">Informações adicionais - todos os campos são opcionais</p>
+                    <p className="text-sm text-gray-500 mt-0.5">
+                      Informações adicionais - todos os campos são opcionais
+                    </p>
                   </div>
                 </div>
               </CardHeader>
@@ -468,24 +476,21 @@ export default function PatientCadastroPage() {
                       id="mother_name"
                       placeholder="Ex: Maria da Silva"
                       value={formData.mother_name}
-                      onChange={(e) =>
-                        setFormData({ ...formData, mother_name: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, mother_name: e.target.value })}
                       className="border-gray-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 bg-white mt-1.5"
                     />
                   </div>
 
                   <div>
                     <Label htmlFor="rg_number" className="text-sm font-medium text-gray-700">
-                      RG / Registro de Identidade <span className="text-gray-400 text-xs">(opcional)</span>
+                      RG / Registro de Identidade{' '}
+                      <span className="text-gray-400 text-xs">(opcional)</span>
                     </Label>
                     <Input
                       id="rg_number"
                       placeholder="Ex: 12345678-9"
                       value={formData.rg_number}
-                      onChange={(e) =>
-                        setFormData({ ...formData, rg_number: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, rg_number: e.target.value })}
                       className="border-gray-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 bg-white mt-1.5"
                     />
                   </div>
@@ -516,9 +521,7 @@ export default function PatientCadastroPage() {
                     <select
                       id="marital_status"
                       value={formData.marital_status}
-                      onChange={(e) =>
-                        setFormData({ ...formData, marital_status: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, marital_status: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200 bg-white text-gray-700 mt-1.5"
                     >
                       <option value="">Selecione...</option>
@@ -537,9 +540,7 @@ export default function PatientCadastroPage() {
                     <select
                       id="ethnicity"
                       value={formData.ethnicity}
-                      onChange={(e) =>
-                        setFormData({ ...formData, ethnicity: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, ethnicity: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200 bg-white text-gray-700 mt-1.5"
                     >
                       <option value="">Selecione...</option>
@@ -562,9 +563,7 @@ export default function PatientCadastroPage() {
                       id="profession"
                       placeholder="Ex: Engenheiro, Professor..."
                       value={formData.profession}
-                      onChange={(e) =>
-                        setFormData({ ...formData, profession: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, profession: e.target.value })}
                       className="border-gray-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 bg-white mt-1.5"
                     />
                   </div>
@@ -576,9 +575,7 @@ export default function PatientCadastroPage() {
                     <select
                       id="nationality"
                       value={formData.nationality}
-                      onChange={(e) =>
-                        setFormData({ ...formData, nationality: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200 bg-white text-gray-700 mt-1.5"
                     >
                       <option value="BR">Brasileiro(a)</option>
@@ -599,10 +596,10 @@ export default function PatientCadastroPage() {
                     <MapPin className="w-5 h-5 text-blue-600" />
                   </div>
                   <div>
-                    <CardTitle className="text-lg font-semibold text-gray-900">
-                      Endereço
-                    </CardTitle>
-                    <p className="text-sm text-gray-500 mt-0.5">Informações de localização - todos os campos são opcionais</p>
+                    <CardTitle className="text-lg font-semibold text-gray-900">Endereço</CardTitle>
+                    <p className="text-sm text-gray-500 mt-0.5">
+                      Informações de localização - todos os campos são opcionais
+                    </p>
                   </div>
                 </div>
               </CardHeader>
@@ -617,9 +614,7 @@ export default function PatientCadastroPage() {
                       id="street"
                       placeholder="Ex: Rua das Flores"
                       value={formData.street}
-                      onChange={(e) =>
-                        setFormData({ ...formData, street: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, street: e.target.value })}
                       className="border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white mt-1.5"
                     />
                   </div>
@@ -632,9 +627,7 @@ export default function PatientCadastroPage() {
                       id="street_number"
                       placeholder="Ex: 123"
                       value={formData.street_number}
-                      onChange={(e) =>
-                        setFormData({ ...formData, street_number: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, street_number: e.target.value })}
                       className="border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white mt-1.5"
                     />
                   </div>
@@ -650,9 +643,7 @@ export default function PatientCadastroPage() {
                       id="complement"
                       placeholder="Ex: Apto 42"
                       value={formData.complement}
-                      onChange={(e) =>
-                        setFormData({ ...formData, complement: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, complement: e.target.value })}
                       className="border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white mt-1.5"
                     />
                   </div>
@@ -665,9 +656,7 @@ export default function PatientCadastroPage() {
                       id="neighborhood"
                       placeholder="Ex: Centro"
                       value={formData.neighborhood}
-                      onChange={(e) =>
-                        setFormData({ ...formData, neighborhood: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })}
                       className="border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white mt-1.5"
                     />
                   </div>
@@ -683,9 +672,7 @@ export default function PatientCadastroPage() {
                       id="city"
                       placeholder="Ex: São Paulo"
                       value={formData.city}
-                      onChange={(e) =>
-                        setFormData({ ...formData, city: e.target.value })
-                      }
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                       className="border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white mt-1.5"
                     />
                   </div>
@@ -747,9 +734,7 @@ export default function PatientCadastroPage() {
               </CardHeader>
               <CardContent className="pt-6">
                 <PhotoCapture
-                  onPhotoCapture={(photo) =>
-                    setFormData({ ...formData, photo })
-                  }
+                  onPhotoCapture={(photo) => setFormData({ ...formData, photo })}
                   currentPhoto={formData.photo}
                 />
               </CardContent>
@@ -757,13 +742,10 @@ export default function PatientCadastroPage() {
           </motion.div>
 
           {/* Botões de Ação */}
-          <motion.div
-            variants={itemVariants}
-            className="flex gap-3 pt-6 border-t border-gray-100"
-          >
+          <motion.div variants={itemVariants} className="flex gap-3 pt-6 border-t border-gray-100">
             <Button
               variant="outline"
-              onClick={() => navigate("/clinica/pacientes")}
+              onClick={() => navigate('/clinica/pacientes')}
               disabled={loading}
               className="px-6 border-gray-200 hover:bg-gray-50 text-gray-700 font-medium transition-all duration-200"
             >
@@ -775,7 +757,7 @@ export default function PatientCadastroPage() {
               className="px-6 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed gap-2"
             >
               <Check size={16} />
-              {loading ? "Salvando..." : "Salvar Apenas"}
+              {loading ? 'Salvando...' : 'Salvar Apenas'}
             </Button>
             <Button
               onClick={() => handleSave(true)}
@@ -783,7 +765,7 @@ export default function PatientCadastroPage() {
               className="px-6 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed gap-2"
             >
               <ArrowRight size={16} />
-              {loading ? "Salvando..." : "Continuar Cadastro"}
+              {loading ? 'Salvando...' : 'Continuar Cadastro'}
             </Button>
           </motion.div>
         </motion.div>
@@ -791,4 +773,3 @@ export default function PatientCadastroPage() {
     </>
   );
 }
-

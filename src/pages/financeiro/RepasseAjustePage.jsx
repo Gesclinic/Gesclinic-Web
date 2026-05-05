@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
@@ -13,13 +12,13 @@ const RepasseAjustePage = () => {
   const [ajustes, setAjustes] = useState([]);
   const [repasses, setRepasses] = useState([]);
   const [profissionais, setProfissionais] = useState([]);
-  
+
   const [formData, setFormData] = useState({
     repasse_id: '',
     valor_ajuste: '',
     motivo: '',
   });
-  
+
   const [erro, setErro] = useState(null);
   const [sucesso, setSucesso] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -29,7 +28,9 @@ const RepasseAjustePage = () => {
   }, [clinicId]);
 
   const carregarDados = async () => {
-    if (!clinicId) return;
+    if (!clinicId) {
+      return;
+    }
 
     setLoading(true);
     setErro(null);
@@ -76,22 +77,22 @@ const RepasseAjustePage = () => {
         throw new Error('Preencha todos os campos obrigatórios');
       }
 
-      const { error: insertError } = await supabase
-        .from('repasse_ajuste')
-        .insert([
-          {
-            repasse_id: formData.repasse_id,
-            valor_ajuste: parseFloat(formData.valor_ajuste),
-            motivo: formData.motivo,
-            usuario_id: user?.id,
-          },
-        ]);
+      const { error: insertError } = await supabase.from('repasse_ajuste').insert([
+        {
+          repasse_id: formData.repasse_id,
+          valor_ajuste: parseFloat(formData.valor_ajuste),
+          motivo: formData.motivo,
+          usuario_id: user?.id,
+        },
+      ]);
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        throw insertError;
+      }
 
       setSucesso('Ajuste registrado com sucesso!');
       setFormData({ repasse_id: '', valor_ajuste: '', motivo: '' });
-      
+
       // Recarregar dados
       await carregarDados();
     } catch (err) {
@@ -145,14 +146,10 @@ const RepasseAjustePage = () => {
               <form onSubmit={handleAjuste} className="space-y-4">
                 {/* Seleção de Repasse */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Repasse *
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Repasse *</label>
                   <select
                     value={formData.repasse_id}
-                    onChange={(e) =>
-                      setFormData({ ...formData, repasse_id: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, repasse_id: e.target.value })}
                     className="w-full border border-gray-300 rounded px-3 py-2"
                     required
                   >
@@ -175,9 +172,7 @@ const RepasseAjustePage = () => {
                     type="number"
                     step="0.01"
                     value={formData.valor_ajuste}
-                    onChange={(e) =>
-                      setFormData({ ...formData, valor_ajuste: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, valor_ajuste: e.target.value })}
                     className="w-full border border-gray-300 rounded px-3 py-2"
                     placeholder="0.00"
                     required
@@ -191,9 +186,7 @@ const RepasseAjustePage = () => {
                   </label>
                   <textarea
                     value={formData.motivo}
-                    onChange={(e) =>
-                      setFormData({ ...formData, motivo: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, motivo: e.target.value })}
                     className="w-full border border-gray-300 rounded px-3 py-2"
                     rows="4"
                     placeholder="Descreva o motivo do ajuste..."
@@ -256,16 +249,12 @@ const RepasseAjustePage = () => {
                               {new Date(ajuste.created_at).toLocaleDateString('pt-BR')}
                             </td>
                             <td className="px-6 py-4 text-sm text-gray-900">
-                              {repasse
-                                ? getProfissionalNome(repasse.professional_id)
-                                : 'N/A'}
+                              {repasse ? getProfissionalNome(repasse.professional_id) : 'N/A'}
                             </td>
                             <td className="px-6 py-4 text-right text-sm font-semibold text-blue-600">
                               {formatarMoeda(ajuste.valor_ajuste)}
                             </td>
-                            <td className="px-6 py-4 text-sm text-gray-600">
-                              {ajuste.motivo}
-                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-600">{ajuste.motivo}</td>
                           </tr>
                         );
                       })

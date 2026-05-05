@@ -1,19 +1,17 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState } from 'react';
 
 const AgendaFiltersContext = createContext();
 
 export function AgendaFiltersProvider({ children }) {
   const [filters, setFilters] = useState({
-    professionalId: "",
-    query: "",
+    professionalId: '',
+    query: '',
   });
 
   const [professionals, setProfessionals] = useState([]);
 
   return (
-    <AgendaFiltersContext.Provider
-      value={{ filters, setFilters, professionals, setProfessionals }}
-    >
+    <AgendaFiltersContext.Provider value={{ filters, setFilters, professionals, setProfessionals }}>
       {children}
     </AgendaFiltersContext.Provider>
   );
@@ -22,8 +20,7 @@ export function AgendaFiltersProvider({ children }) {
 export function useAgendaFilters() {
   const context = useContext(AgendaFiltersContext);
   if (!context) {
-    throw new Error("useAgendaFilters deve ser usado dentro de AgendaFiltersProvider");
+    throw new Error('useAgendaFilters deve ser usado dentro de AgendaFiltersProvider');
   }
   return context;
 }
-

@@ -2,46 +2,56 @@
  * ============================================
  * ReceitasDigitaisTab - Aba de Receita
  * ============================================
- * 
+ *
  * Gerencia receitas assinadas
  */
 
-import React, { useEffect, useState } from "react";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
-import { useClinicContext } from "@/contexts/useClinicContext";
-import { useToast } from "@/components/ui/use-toast";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { motion } from "framer-motion";
-import { Plus, Trash2, Edit, Copy, RefreshCw, FileText, CheckCircle, Clock, AlertCircle } from "lucide-react";
-import { Download } from "lucide-react";
-import ReceitaDigitalModal from "@/components/pacientes/modals/ReceitaDigitalModal";
-import * as professionalsApi from "@/lib/professionalsApi";
+import React, { useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useClinicContext } from '@/contexts/useClinicContext';
+import { useToast } from '@/components/ui/use-toast';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { motion } from 'framer-motion';
+import {
+  Plus,
+  Trash2,
+  Edit,
+  Copy,
+  RefreshCw,
+  FileText,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+} from 'lucide-react';
+import { Download } from 'lucide-react';
+import ReceitaDigitalModal from '@/components/pacientes/modals/ReceitaDigitalModal';
+import * as professionalsApi from '@/lib/professionalsApi';
 import {
   buildPrescriptionObservations,
   parsePrescriptionObservations,
-} from "@/lib/digitalPrescriptionMetadata";
+} from '@/lib/digitalPrescriptionMetadata';
 import {
   createDigitalPrescription,
   deleteDigitalPrescription,
   listPatientDigitalPrescriptions,
   syncLocalDigitalPrescriptions,
   updateDigitalPrescription,
-} from "@/lib/digitalPrescriptionsApi";
+} from '@/lib/digitalPrescriptionsApi';
 
 const STATUS_CONFIG = {
-  assinada: { label: "Assinada (Digital)", color: "green", icon: CheckCircle },
-  pendente: { label: "Aguardando Assinatura", color: "yellow", icon: Clock },
-  rascunho: { label: "Rascunho", color: "yellow", icon: Clock },
-  expirada: { label: "Expirada", color: "red", icon: AlertCircle },
+  assinada: { label: 'Assinada (Digital)', color: 'green', icon: CheckCircle },
+  pendente: { label: 'Aguardando Assinatura', color: 'yellow', icon: Clock },
+  rascunho: { label: 'Rascunho', color: 'yellow', icon: Clock },
+  expirada: { label: 'Expirada', color: 'red', icon: AlertCircle },
 };
 
 const PRESCRIPTION_TYPE_LABELS = {
-  simples: "Receita simples",
-  antibiotico: "Receita branca de antibiótico",
-  controle_especial_azul: "Controle especial azul",
-  controle_especial_amarela: "Notificação amarela",
+  simples: 'Receita simples',
+  antibiotico: 'Receita branca de antibiótico',
+  controle_especial_azul: 'Controle especial azul',
+  controle_especial_amarela: 'Notificação amarela',
 };
 
 export default function ReceitasDigitaisTab({ patientId, patientData, updatePatientData }) {
@@ -55,24 +65,27 @@ export default function ReceitasDigitaisTab({ patientId, patientData, updatePati
   const [loadingProfessional, setLoadingProfessional] = useState(false);
   const [editingReceita, setEditingReceita] = useState(null);
   const [syncingLocal, setSyncingLocal] = useState(false);
-  const localReceitasCount = receitas.filter((receita) => receita._storage_mode === "local").length;
+  const localReceitasCount = receitas.filter((receita) => receita._storage_mode === 'local').length;
   // Removido: QR code modal state
 
   // Obter nome do profissional autenticado
   const getProfessionalName = () => {
     try {
-      const savedSession = localStorage.getItem("gesclinic_session");
+      const savedSession = localStorage.getItem('gesclinic_session');
       if (savedSession) {
         const sessionData = JSON.parse(savedSession);
         if (sessionData.username) {
-          console.log("âœ… [ReceitasDigitalisTab] Profissional do localStorage:", sessionData.username);
+          console.log(
+            'âœ… [ReceitasDigitalisTab] Profissional do localStorage:',
+            sessionData.username,
+          );
           return sessionData.username;
         }
       }
     } catch (e) {
-      console.warn("âš ï¸ Erro ao ler localStorage:", e);
+      console.warn('âš ï¸ Erro ao ler localStorage:', e);
     }
-    return user?.user_metadata?.full_name || user?.username || "Profissional";
+    return user?.user_metadata?.full_name || user?.username || 'Profissional';
   };
 
   useEffect(() => {
@@ -85,11 +98,11 @@ export default function ReceitasDigitaisTab({ patientId, patientData, updatePati
       const data = await listPatientDigitalPrescriptions(patientId, clinic?.id || null);
       setReceitas(data || []);
     } catch (error) {
-      console.error("Erro ao carregar receitas:", error);
+      console.error('Erro ao carregar receitas:', error);
       toast({
-        title: "Erro",
-        description: "Falha ao carregar receitas",
-        variant: "destructive",
+        title: 'Erro',
+        description: 'Falha ao carregar receitas',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -97,13 +110,15 @@ export default function ReceitasDigitaisTab({ patientId, patientData, updatePati
   }
 
   const getPrescriptionViewData = (receita) => {
-    const parsed = parsePrescriptionObservations(receita?.observacoes || "");
+    const parsed = parsePrescriptionObservations(receita?.observacoes || '');
 
     return {
       notes: parsed.notes,
-      prescriptionType: parsed.metadata?.prescriptionType || "simples",
-      prescriptionTypeLabel: PRESCRIPTION_TYPE_LABELS[parsed.metadata?.prescriptionType] || PRESCRIPTION_TYPE_LABELS.simples,
-      protocolName: parsed.metadata?.protocolName || "",
+      prescriptionType: parsed.metadata?.prescriptionType || 'simples',
+      prescriptionTypeLabel:
+        PRESCRIPTION_TYPE_LABELS[parsed.metadata?.prescriptionType] ||
+        PRESCRIPTION_TYPE_LABELS.simples,
+      protocolName: parsed.metadata?.protocolName || '',
     };
   };
 
@@ -127,7 +142,7 @@ export default function ReceitasDigitaisTab({ patientId, patientData, updatePati
     clinic_phone: receitaData.clinic_phone || clinic?.phone || null,
     clinic_logo: receitaData.clinic_logo || clinic?.logo_url || clinic?.logo || null,
     medicamentos: receitaData.medicamentos || [],
-    observacoes: buildPrescriptionObservations(receitaData.observacoes || "", {
+    observacoes: buildPrescriptionObservations(receitaData.observacoes || '', {
       prescriptionType: receitaData.prescription_type,
       protocolName: receitaData.protocol_name,
     }),
@@ -138,56 +153,57 @@ export default function ReceitasDigitaisTab({ patientId, patientData, updatePati
     data_emissao: receitaData.data_emissao || null,
     hora_emissao: receitaData.hora_emissao || null,
     emitted_at: new Date().toISOString(),
-    signed_at: status === "assinada" ? new Date().toISOString() : null,
+    signed_at: status === 'assinada' ? new Date().toISOString() : null,
   });
 
   // Buscar dados do profissional autenticado
   const loadProfessionalData = async () => {
     if (!user?.id && !user?.email) {
-      console.warn("âš ï¸ User ID ou Email nÃ£o disponÃ­vel");
-      
+      console.warn('âš ï¸ User ID ou Email nÃ£o disponÃ­vel');
+
       // FALLBACK: Tentar do localStorage
       try {
-        const sessionData = JSON.parse(localStorage.getItem("gesclinic_session") || "{}");
+        const sessionData = JSON.parse(localStorage.getItem('gesclinic_session') || '{}');
         if (sessionData.email) {
-          console.log("ðŸ” Using session email from localStorage:", sessionData.email);
+          console.log('ðŸ” Using session email from localStorage:', sessionData.email);
           // Continuar com busca
         }
       } catch (e) {
-        console.warn("âš ï¸ Erro ao ler localStorage:", e);
+        console.warn('âš ï¸ Erro ao ler localStorage:', e);
       }
       return;
     }
-    
+
     setLoadingProfessional(true);
-    console.log("ðŸ” Buscando dados do profissional:", { userId: user?.id, email: user?.email });
-    
+    console.log('ðŸ” Buscando dados do profissional:', { userId: user?.id, email: user?.email });
+
     try {
       // Tentar por email (mais direto)
-      const emailToSearch = user?.email || (JSON.parse(localStorage.getItem("gesclinic_session") || "{}")).email;
+      const emailToSearch =
+        user?.email || JSON.parse(localStorage.getItem('gesclinic_session') || '{}').email;
       const prof = await professionalsApi.getProfessionalByUserId(user?.id, emailToSearch);
-      
+
       if (prof) {
-        console.log("âœ… Profissional carregado:", prof);
+        console.log('âœ… Profissional carregado:', prof);
         setProfessionalData(prof);
       } else {
         // FALLBACK: Se nÃ£o encontrar no banco, usar dados locais
-        console.warn("âš ï¸ Profissional nÃ£o encontrado no banco, usando fallback");
+        console.warn('âš ï¸ Profissional nÃ£o encontrado no banco, usando fallback');
         setProfessionalData({
-          cremepe_crm: "123456", // CRM padrÃ£o para demo
-          state: "SP", // Estado padrÃ£o
-          specialization: "",
-          rqe: "",
+          cremepe_crm: '123456', // CRM padrÃ£o para demo
+          state: 'SP', // Estado padrÃ£o
+          specialization: '',
+          rqe: '',
         });
       }
     } catch (error) {
-      console.error("âŒ Erro ao buscar profissional:", error);
+      console.error('âŒ Erro ao buscar profissional:', error);
       // Usar fallback mesmo em caso de erro
       setProfessionalData({
-        cremepe_crm: "123456",
-        state: "SP",
-        specialization: "",
-        rqe: "",
+        cremepe_crm: '123456',
+        state: 'SP',
+        specialization: '',
+        rqe: '',
       });
     } finally {
       setLoadingProfessional(false);
@@ -211,31 +227,32 @@ export default function ReceitasDigitaisTab({ patientId, patientData, updatePati
 
       if (result.blockedByPolicy) {
         toast({
-          title: "Sincronização bloqueada",
-          description: "O Supabase ainda está rejeitando gravações. Aplique a migration/policy e tente novamente.",
-          variant: "destructive",
+          title: 'Sincronização bloqueada',
+          description:
+            'O Supabase ainda está rejeitando gravações. Aplique a migration/policy e tente novamente.',
+          variant: 'destructive',
         });
         return;
       }
 
       if (result.syncedRows.length > 0) {
         toast({
-          title: "Receitas sincronizadas",
+          title: 'Receitas sincronizadas',
           description: `${result.syncedRows.length} receita(s) foram enviadas ao Supabase.`,
         });
         return;
       }
 
       toast({
-        title: "Nada para sincronizar",
-        description: "Não há receitas locais pendentes neste paciente.",
+        title: 'Nada para sincronizar',
+        description: 'Não há receitas locais pendentes neste paciente.',
       });
     } catch (error) {
-      console.error("Erro ao sincronizar receitas locais:", error);
+      console.error('Erro ao sincronizar receitas locais:', error);
       toast({
-        title: "Erro",
-        description: "Falha ao sincronizar receitas locais com o Supabase.",
-        variant: "destructive",
+        title: 'Erro',
+        description: 'Falha ao sincronizar receitas locais com o Supabase.',
+        variant: 'destructive',
       });
     } finally {
       setSyncingLocal(false);
@@ -243,53 +260,55 @@ export default function ReceitasDigitaisTab({ patientId, patientData, updatePati
   };
 
   const handleNovaReceita = async (receitaData) => {
-    console.log("📝 Nova receita criada:", receitaData);
-    console.log("🔍 modo_assinatura:", receitaData.modo_assinatura);
-    
+    console.log('📝 Nova receita criada:', receitaData);
+    console.log('🔍 modo_assinatura:', receitaData.modo_assinatura);
+
     // Determinar status baseado no tipo de assinatura
-    let status = "rascunho";
-    let toastTitle = "";
-    let toastDescription = "";
-    
-    if (receitaData.modo_assinatura === "digital") {
+    let status = 'rascunho';
+    let toastTitle = '';
+    let toastDescription = '';
+
+    if (receitaData.modo_assinatura === 'digital') {
       // Assinatura digital com certificado
-      status = "assinada";
-      toastTitle = "✅ Receita assinada digitalmente!";
+      status = 'assinada';
+      toastTitle = '✅ Receita assinada digitalmente!';
       toastDescription = `MeMed ID: ${receitaData.memed_id}`;
-    } else if (receitaData.modo_assinatura === "manual") {
+    } else if (receitaData.modo_assinatura === 'manual') {
       // Impressão para assinatura manual
-      status = "pendente";
-      toastTitle = "📄 Documento pronto para impressão";
-      toastDescription = "Imprima e assine manualmente em seguida";
+      status = 'pendente';
+      toastTitle = '📄 Documento pronto para impressão';
+      toastDescription = 'Imprima e assine manualmente em seguida';
     }
-    
+
     try {
       if (editingReceita?.id) {
         const receitaAtualizada = await updateDigitalPrescription(
           editingReceita.id,
-          buildPrescriptionPayload(receitaData, status)
+          buildPrescriptionPayload(receitaData, status),
         );
 
-        setReceitas((prev) => prev.map((receita) => (
-          receita.id === editingReceita.id ? receitaAtualizada : receita
-        )));
+        setReceitas((prev) =>
+          prev.map((receita) => (receita.id === editingReceita.id ? receitaAtualizada : receita)),
+        );
 
-        toastTitle = "✏️ " + toastTitle;
-        toastDescription = "Receita atualizada com sucesso. " + toastDescription;
-        if (receitaAtualizada?._storage_mode === "local") {
-          toastDescription += " Salva localmente neste navegador até a migration do Supabase ser aplicada.";
+        toastTitle = '✏️ ' + toastTitle;
+        toastDescription = 'Receita atualizada com sucesso. ' + toastDescription;
+        if (receitaAtualizada?._storage_mode === 'local') {
+          toastDescription +=
+            ' Salva localmente neste navegador até a migration do Supabase ser aplicada.';
         }
-        console.log("✅ Receita atualizada:", receitaAtualizada.status);
+        console.log('✅ Receita atualizada:', receitaAtualizada.status);
       } else {
         const novaReceita = await createDigitalPrescription(
-          buildPrescriptionPayload(receitaData, status)
+          buildPrescriptionPayload(receitaData, status),
         );
 
         setReceitas((prev) => [novaReceita, ...prev]);
-        if (novaReceita?._storage_mode === "local") {
-          toastDescription += " Salva localmente neste navegador até a migration do Supabase ser aplicada.";
+        if (novaReceita?._storage_mode === 'local') {
+          toastDescription +=
+            ' Salva localmente neste navegador até a migration do Supabase ser aplicada.';
         }
-        console.log("✅ Receita criada com status:", novaReceita.status);
+        console.log('✅ Receita criada com status:', novaReceita.status);
       }
 
       setShowNovaReceita(false);
@@ -300,11 +319,11 @@ export default function ReceitasDigitaisTab({ patientId, patientData, updatePati
         description: toastDescription,
       });
     } catch (error) {
-      console.error("Erro ao salvar receita:", error);
+      console.error('Erro ao salvar receita:', error);
       toast({
-        title: "Erro",
-        description: "Falha ao salvar receita",
-        variant: "destructive",
+        title: 'Erro',
+        description: 'Falha ao salvar receita',
+        variant: 'destructive',
       });
       throw error;
     }
@@ -312,12 +331,14 @@ export default function ReceitasDigitaisTab({ patientId, patientData, updatePati
 
   const handleDownloadReceita = (receitaId) => {
     try {
-      const receita = receitas.find(r => r.id === receitaId);
-      if (!receita) return;
+      const receita = receitas.find((r) => r.id === receitaId);
+      if (!receita) {
+        return;
+      }
       const receitaView = getPrescriptionViewData(receita);
 
-      console.log("Baixando receita:", receitaId);
-      console.log("modo_assinatura:", receita.modo_assinatura);
+      console.log('Baixando receita:', receitaId);
+      console.log('modo_assinatura:', receita.modo_assinatura);
 
       // Sempre usar o novo modelo/layout padronizado
       const htmlContent = `
@@ -368,7 +389,7 @@ export default function ReceitasDigitaisTab({ patientId, patientData, updatePati
             ${receitaView.protocolName ? `<div class="info-row"><span class="info-label">Diagnóstico:</span> ${receitaView.protocolName}</div>` : ''}
             <div class="section-label">PRESCRIÇÃO</div>
             <div class="prescricao">
-              ${receita.medicamentos?.map(med => `<div><strong>${med.nome}</strong><br>${med.dose} ${med.forma_farmaceutica ? '- ' + med.forma_farmaceutica : ''} ${med.via_administracao ? '- ' + med.via_administracao : ''}<br>${med.frequencia ? 'Frequência: ' + med.frequencia + '<br>' : ''}${med.duracao_dias ? 'Duração: ' + med.duracao_dias + ' dias<br>' : ''}${med.quantidade_total ? 'Quantidade: ' + med.quantidade_total + ' ' + (med.unidade_quantidade || '') + '<br>' : ''}${med.repeticoes ? 'Repetições: ' + med.repeticoes + '<br>' : ''}${med.instrucoes ? 'Instruções: ' + med.instrucoes : ''}</div>`).join('<hr style="margin:10px 0;">')}
+              ${receita.medicamentos?.map((med) => `<div><strong>${med.nome}</strong><br>${med.dose} ${med.forma_farmaceutica ? '- ' + med.forma_farmaceutica : ''} ${med.via_administracao ? '- ' + med.via_administracao : ''}<br>${med.frequencia ? 'Frequência: ' + med.frequencia + '<br>' : ''}${med.duracao_dias ? 'Duração: ' + med.duracao_dias + ' dias<br>' : ''}${med.quantidade_total ? 'Quantidade: ' + med.quantidade_total + ' ' + (med.unidade_quantidade || '') + '<br>' : ''}${med.repeticoes ? 'Repetições: ' + med.repeticoes + '<br>' : ''}${med.instrucoes ? 'Instruções: ' + med.instrucoes : ''}</div>`).join('<hr style="margin:10px 0;">')}
             </div>
             <div class="assinatura">
               <div class="assinatura-label">Assinatura Digital ICP Brasil</div>
@@ -399,15 +420,15 @@ export default function ReceitasDigitaisTab({ patientId, patientData, updatePati
       document.body.removeChild(a);
 
       toast({
-        title: "Download realizado",
-        description: "Receita baixada com sucesso",
+        title: 'Download realizado',
+        description: 'Receita baixada com sucesso',
       });
     } catch (error) {
-      console.error("Erro ao baixar receita:", error);
+      console.error('Erro ao baixar receita:', error);
       toast({
-        title: "Erro",
-        description: "Falha ao baixar receita",
-        variant: "destructive",
+        title: 'Erro',
+        description: 'Falha ao baixar receita',
+        variant: 'destructive',
       });
     }
   };
@@ -415,35 +436,35 @@ export default function ReceitasDigitaisTab({ patientId, patientData, updatePati
   // Função de QR Code removida
 
   const handleEditarReceita = (receita) => {
-    console.log("âœï¸ Editando receita:", receita);
+    console.log('âœï¸ Editando receita:', receita);
     setEditingReceita(receita);
     setShowNovaReceita(true);
     toast({
-      title: "Modo EdiÃ§Ã£o",
-      description: "Atualize os dados da receita",
+      title: 'Modo EdiÃ§Ã£o',
+      description: 'Atualize os dados da receita',
     });
   };
 
   const handleReplicarReceita = (receita) => {
-    console.log("📋 Replicando receita:", receita);
+    console.log('📋 Replicando receita:', receita);
     // Criar cópia com novos IDs mas mantendo dados
     const receitaCopia = {
       ...receita,
       id: crypto.randomUUID?.() || `copy-${Date.now()}`,
-      status: "rascunho",
+      status: 'rascunho',
       created_at: new Date().toISOString(),
       memed_id: undefined,
       qr_code: undefined,
       signed_at: null,
     };
-    
+
     // Abrir modal com dados pré-preenchidos
     setEditingReceita(receitaCopia);
     setShowNovaReceita(true);
-    
+
     toast({
-      title: "✏️ Modo Edição",
-      description: "Atualize os dados da receita replicada",
+      title: '✏️ Modo Edição',
+      description: 'Atualize os dados da receita replicada',
     });
   };
 
@@ -452,15 +473,15 @@ export default function ReceitasDigitaisTab({ patientId, patientData, updatePati
       await deleteDigitalPrescription(receitaId);
       setReceitas((prev) => prev.filter((receita) => receita.id !== receitaId));
       toast({
-        title: "Sucesso",
-        description: "Receita deletada",
+        title: 'Sucesso',
+        description: 'Receita deletada',
       });
     } catch (error) {
-      console.error("Erro ao deletar receita:", error);
+      console.error('Erro ao deletar receita:', error);
       toast({
-        title: "Erro",
-        description: "Falha ao deletar receita",
-        variant: "destructive",
+        title: 'Erro',
+        description: 'Falha ao deletar receita',
+        variant: 'destructive',
       });
     }
   };
@@ -473,7 +494,7 @@ export default function ReceitasDigitaisTab({ patientId, patientData, updatePati
           <h2 className="text-2xl font-bold text-gray-900">Receita</h2>
           <p className="text-sm text-gray-600 mt-1">Gerencie receitas</p>
         </div>
-        <Button 
+        <Button
           onClick={() => setShowNovaReceita(true)}
           className="gap-2 bg-emerald-600 hover:bg-emerald-700"
         >
@@ -483,17 +504,15 @@ export default function ReceitasDigitaisTab({ patientId, patientData, updatePati
       </div>
 
       {localReceitasCount > 0 ? (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
           <Card className="border-amber-200 bg-amber-50">
             <CardContent className="pt-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="font-semibold text-amber-950">Salvamento local ativo</p>
                   <p className="mt-1 text-sm text-amber-900">
-                    {localReceitasCount} receita(s) foram salvas apenas neste navegador porque o Supabase ainda está bloqueando a escrita por policy/RLS.
+                    {localReceitasCount} receita(s) foram salvas apenas neste navegador porque o
+                    Supabase ainda está bloqueando a escrita por policy/RLS.
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -508,7 +527,7 @@ export default function ReceitasDigitaisTab({ patientId, patientData, updatePati
                     onClick={handleSyncLocalReceitas}
                     disabled={syncingLocal}
                   >
-                    <RefreshCw className={`mr-2 h-4 w-4 ${syncingLocal ? "animate-spin" : ""}`} />
+                    <RefreshCw className={`mr-2 h-4 w-4 ${syncingLocal ? 'animate-spin' : ''}`} />
                     Sincronizar agora
                   </Button>
                 </div>
@@ -527,7 +546,9 @@ export default function ReceitasDigitaisTab({ patientId, patientData, updatePati
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">
-              <p className="text-3xl font-bold text-emerald-600">{receitas.filter(r => r.status === "assinada").length}</p>
+              <p className="text-3xl font-bold text-emerald-600">
+                {receitas.filter((r) => r.status === 'assinada').length}
+              </p>
               <p className="text-xs text-gray-600 mt-1">Receitas Assinadas</p>
             </div>
           </CardContent>
@@ -535,7 +556,9 @@ export default function ReceitasDigitaisTab({ patientId, patientData, updatePati
         <Card>
           <CardContent className="pt-6">
             <div className="text-center">
-              <p className="text-3xl font-bold text-yellow-600">{receitas.filter(r => r.status === "rascunho").length}</p>
+              <p className="text-3xl font-bold text-yellow-600">
+                {receitas.filter((r) => r.status === 'rascunho').length}
+              </p>
               <p className="text-xs text-gray-600 mt-1">Rascunhos</p>
             </div>
           </CardContent>
@@ -559,21 +582,13 @@ export default function ReceitasDigitaisTab({ patientId, patientData, updatePati
         >
           <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <p className="text-gray-600 mb-4">Nenhuma receita criada ainda</p>
-          <Button 
-            onClick={() => setShowNovaReceita(true)}
-            variant="outline"
-            className="gap-2"
-          >
+          <Button onClick={() => setShowNovaReceita(true)} variant="outline" className="gap-2">
             <Plus className="w-4 h-4" />
             Criar Receita
           </Button>
         </motion.div>
       ) : (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="space-y-3"
-        >
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
           {receitas.map((receita, idx) => {
             const statusConfig = STATUS_CONFIG[receita.status] || STATUS_CONFIG.rascunho;
             const StatusIcon = statusConfig.icon;
@@ -593,20 +608,27 @@ export default function ReceitasDigitaisTab({ patientId, patientData, updatePati
                         <div className="flex items-center gap-3 mb-2">
                           <FileText className="w-5 h-5 text-blue-600" />
                           <h3 className="font-semibold text-gray-900">
-                            {receita.medicamentos?.map(m => m.nome).join(", ") || "Receita PadrÃ£o"}
+                            {receita.medicamentos?.map((m) => m.nome).join(', ') ||
+                              'Receita PadrÃ£o'}
                           </h3>
                           <Badge
                             variant="outline"
-                            className={receita._storage_mode === "local" ? "border-amber-300 text-amber-800 bg-amber-50" : "border-emerald-300 text-emerald-800 bg-emerald-50"}
+                            className={
+                              receita._storage_mode === 'local'
+                                ? 'border-amber-300 text-amber-800 bg-amber-50'
+                                : 'border-emerald-300 text-emerald-800 bg-emerald-50'
+                            }
                           >
-                            {receita._storage_mode === "local" ? "Salva localmente" : "Salva no Supabase"}
+                            {receita._storage_mode === 'local'
+                              ? 'Salva localmente'
+                              : 'Salva no Supabase'}
                           </Badge>
                           <Badge variant="outline" className="border-slate-300 text-slate-700">
                             {receitaView.prescriptionTypeLabel}
                           </Badge>
                           {/* Badge de status digital removido */}
                         </div>
-                        
+
                         <div className="grid grid-cols-3 gap-4 mt-3 text-sm text-gray-600">
                           <div>
                             <p className="font-medium text-gray-700">Profissional</p>
@@ -614,11 +636,13 @@ export default function ReceitasDigitaisTab({ patientId, patientData, updatePati
                           </div>
                           <div>
                             <p className="font-medium text-gray-700">Data</p>
-                            <p>{new Date(receita.created_at).toLocaleDateString("pt-BR")}</p>
+                            <p>{new Date(receita.created_at).toLocaleDateString('pt-BR')}</p>
                           </div>
                         </div>
                         {receitaView.protocolName ? (
-                          <p className="mt-3 text-xs text-slate-600">Protocolo: {receitaView.protocolName}</p>
+                          <p className="mt-3 text-xs text-slate-600">
+                            Protocolo: {receitaView.protocolName}
+                          </p>
                         ) : null}
                       </div>
 
@@ -679,10 +703,12 @@ export default function ReceitasDigitaisTab({ patientId, patientData, updatePati
           patientName={patientData?.name}
           patientCpf={patientData?.document_id}
           professionalName={getProfessionalName()}
-          professionalCrm={professionalData?.cremepe_crm || ""}
-          professionalUf={professionalData?.state || ""}
-          professionalSpecialty={professionalData?.specialization || professionalData?.specialty || ""}
-          professionalRqe={professionalData?.rqe || ""}
+          professionalCrm={professionalData?.cremepe_crm || ''}
+          professionalUf={professionalData?.state || ''}
+          professionalSpecialty={
+            professionalData?.specialization || professionalData?.specialty || ''
+          }
+          professionalRqe={professionalData?.rqe || ''}
           clinicName={clinic?.name}
           clinicCnpj={clinic?.cnpj}
           clinicCity={clinic?.city}
@@ -702,6 +728,3 @@ export default function ReceitasDigitaisTab({ patientId, patientData, updatePati
     </div>
   );
 }
-
-
-

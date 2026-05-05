@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 
 export default function AgendaTableSkeleton() {
   return (
@@ -7,13 +7,9 @@ export default function AgendaTableSkeleton() {
 
       <div className="space-y-3">
         {Array.from({ length: 8 }).map((_, i) => (
-          <div
-            key={i}
-            className="h-14 bg-gray-100 rounded border"
-          />
+          <div key={i} className="h-14 bg-gray-100 rounded border" />
         ))}
       </div>
     </div>
   );
 }
-

@@ -4,18 +4,18 @@
 // Relacionamento muitos-para-muitos
 // ============================================================
 
-import React, { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
-import { useClinicContext } from "@/contexts/ClinicContext";
-import BaseSystemHeader from "@/components/layout/BaseSystemHeader";
-import { Alert } from "@/components/layout/BaseSystemAlert";
-import EmptyState from "@/components/layout/EmptyState";
-import * as professionalsApi from "@/lib/professionalsApi";
-import * as servicesApi from "@/lib/servicesApi";
-import * as professionalServicesApi from "@/lib/professionalServicesApi";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Plus, Edit2, Trash2, X } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useClinicContext } from '@/contexts/ClinicContext';
+import BaseSystemHeader from '@/components/layout/BaseSystemHeader';
+import { Alert } from '@/components/layout/BaseSystemAlert';
+import EmptyState from '@/components/layout/EmptyState';
+import * as professionalsApi from '@/lib/professionalsApi';
+import * as servicesApi from '@/lib/servicesApi';
+import * as professionalServicesApi from '@/lib/professionalServicesApi';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Plus, Edit2, Trash2, X } from 'lucide-react';
 
 export function ProfessionalServicesPage() {
   const { user, isAuthenticated } = useAuth();
@@ -29,8 +29,8 @@ export function ProfessionalServicesPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
-    professional_id: "",
-    service_id: "",
+    professional_id: '',
+    service_id: '',
     active: true,
   });
   const [submitting, setSubmitting] = useState(false);
@@ -56,8 +56,8 @@ export function ProfessionalServicesPage() {
       setProfessionals(Array.isArray(professionalsData) ? professionalsData : []);
       setServices(Array.isArray(servicesData) ? servicesData : []);
     } catch (err) {
-      setError(err.message || "Erro ao carregar dados");
-      console.error("Erro:", err);
+      setError(err.message || 'Erro ao carregar dados');
+      console.error('Erro:', err);
     } finally {
       setLoading(false);
     }
@@ -65,7 +65,7 @@ export function ProfessionalServicesPage() {
 
   const handleNew = () => {
     setEditingId(null);
-    setFormData({ professional_id: "", service_id: "", active: true });
+    setFormData({ professional_id: '', service_id: '', active: true });
     setShowForm(true);
     setError(null);
   };
@@ -73,8 +73,8 @@ export function ProfessionalServicesPage() {
   const handleEdit = (assignment) => {
     setEditingId(assignment.id);
     setFormData({
-      professional_id: assignment.professional_id || "",
-      service_id: assignment.service_id || "",
+      professional_id: assignment.professional_id || '',
+      service_id: assignment.service_id || '',
       active: assignment.active !== false,
     });
     setShowForm(true);
@@ -84,21 +84,29 @@ export function ProfessionalServicesPage() {
   const closeForm = () => {
     setShowForm(false);
     setEditingId(null);
-    setFormData({ professional_id: "", service_id: "", active: true });
+    setFormData({ professional_id: '', service_id: '', active: true });
     setSubmitting(false);
   };
 
   const handleCloseWithCheck = () => {
     const hasData = Object.entries(formData).some(([key, value]) => {
-      if (typeof value === "string") return value.trim() !== "";
-      if (typeof value === "number") return value !== 0;
-      if (typeof value === "boolean") return value !== true;
-      if (Array.isArray(value)) return value.length > 0;
+      if (typeof value === 'string') {
+        return value.trim() !== '';
+      }
+      if (typeof value === 'number') {
+        return value !== 0;
+      }
+      if (typeof value === 'boolean') {
+        return value !== true;
+      }
+      if (Array.isArray(value)) {
+        return value.length > 0;
+      }
       return false;
     });
 
     if (hasData) {
-      if (window.confirm("Tem certeza que deseja sair? As alterações não salvas serão perdidas.")) {
+      if (window.confirm('Tem certeza que deseja sair? As alterações não salvas serão perdidas.')) {
         closeForm();
       }
     } else {
@@ -108,11 +116,11 @@ export function ProfessionalServicesPage() {
 
   const validateForm = () => {
     if (!formData.professional_id.trim()) {
-      setError("Profissional é obrigatório");
+      setError('Profissional é obrigatório');
       return false;
     }
     if (!formData.service_id.trim()) {
-      setError("Serviço é obrigatório");
+      setError('Serviço é obrigatório');
       return false;
     }
 
@@ -120,11 +128,11 @@ export function ProfessionalServicesPage() {
       (a) =>
         a.id !== editingId &&
         a.professional_id === formData.professional_id &&
-        a.service_id === formData.service_id
+        a.service_id === formData.service_id,
     );
 
     if (isDuplicate) {
-      setError("Esse profissional já possui esse serviço registrado");
+      setError('Esse profissional já possui esse serviço registrado');
       return false;
     }
 
@@ -150,23 +158,19 @@ export function ProfessionalServicesPage() {
 
       if (editingId) {
         await professionalServicesApi.updateProfessionalServiceById(editingId, dataToSave);
-        setAssignments(
-          assignments.map((a) =>
-            a.id === editingId ? { ...a, ...dataToSave } : a
-          )
-        );
+        setAssignments(assignments.map((a) => (a.id === editingId ? { ...a, ...dataToSave } : a)));
       } else {
         const newAssignment = await professionalServicesApi.createProfessionalService(
           clinicId,
-          dataToSave
+          dataToSave,
         );
         setAssignments([...assignments, newAssignment]);
       }
 
       closeForm();
     } catch (err) {
-      setError(err.message || "Erro ao salvar atribuição");
-      console.error("Erro:", err);
+      setError(err.message || 'Erro ao salvar atribuição');
+      console.error('Erro:', err);
     } finally {
       setSubmitting(false);
     }
@@ -174,16 +178,14 @@ export function ProfessionalServicesPage() {
 
   const handleDelete = async (id) => {
     const assignment = assignments.find((a) => a.id === id);
-    if (!assignment) return;
+    if (!assignment) {
+      return;
+    }
 
     const prof = professionals.find((p) => p.id === assignment.professional_id);
     const svc = services.find((s) => s.id === assignment.service_id);
 
-    if (
-      !window.confirm(
-        `Deseja remover "${prof?.name}" de "${svc?.name}"?`
-      )
-    ) {
+    if (!window.confirm(`Deseja remover "${prof?.name}" de "${svc?.name}"?`)) {
       return;
     }
 
@@ -192,17 +194,17 @@ export function ProfessionalServicesPage() {
       await professionalServicesApi.deleteProfessionalService(id);
       setAssignments(assignments.filter((a) => a.id !== id));
     } catch (err) {
-      setError(err.message || "Erro ao deletar atribuição");
-      console.error("Erro:", err);
+      setError(err.message || 'Erro ao deletar atribuição');
+      console.error('Erro:', err);
     }
   };
 
   const getProfessionalName = (id) => {
-    return professionals.find((p) => p.id === id)?.name || "Desconhecido";
+    return professionals.find((p) => p.id === id)?.name || 'Desconhecido';
   };
 
   const getServiceName = (id) => {
-    return services.find((s) => s.id === id)?.name || "Desconhecido";
+    return services.find((s) => s.id === id)?.name || 'Desconhecido';
   };
 
   if (loading) {
@@ -224,14 +226,7 @@ export function ProfessionalServicesPage() {
       />
 
       {/* ALERTA */}
-      {error && (
-        <Alert
-          type="error"
-          title="Aviso"
-          message={error}
-          onClose={() => setError(null)}
-        />
-      )}
+      {error && <Alert type="error" title="Aviso" message={error} onClose={() => setError(null)} />}
 
       {professionals.length === 0 || services.length === 0 ? (
         <EmptyState
@@ -267,23 +262,14 @@ export function ProfessionalServicesPage() {
                       <th className="text-left py-3 px-4 font-semibold text-gray-700">
                         Profissional
                       </th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                        Serviço
-                      </th>
-                      <th className="text-center py-3 px-4 font-semibold text-gray-700">
-                        Status
-                      </th>
-                      <th className="text-center py-3 px-4 font-semibold text-gray-700">
-                        Ações
-                      </th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Serviço</th>
+                      <th className="text-center py-3 px-4 font-semibold text-gray-700">Status</th>
+                      <th className="text-center py-3 px-4 font-semibold text-gray-700">Ações</th>
                     </tr>
                   </thead>
                   <tbody>
                     {assignments.map((assignment) => (
-                      <tr
-                        key={assignment.id}
-                        className="border-b hover:bg-gray-50 transition"
-                      >
+                      <tr key={assignment.id} className="border-b hover:bg-gray-50 transition">
                         <td className="py-3 px-4 font-medium text-gray-900">
                           {getProfessionalName(assignment.professional_id)}
                         </td>
@@ -294,11 +280,11 @@ export function ProfessionalServicesPage() {
                           <span
                             className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
                               assignment.active
-                                ? "bg-green-100 text-green-800"
-                                : "bg-gray-100 text-gray-800"
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-800'
                             }`}
                           >
-                            {assignment.active ? "Ativo" : "Inativo"}
+                            {assignment.active ? 'Ativo' : 'Inativo'}
                           </span>
                         </td>
                         <td className="py-3 px-4 flex justify-center gap-2">
@@ -339,79 +325,80 @@ export function ProfessionalServicesPage() {
               >
                 <X size={20} />
               </button>
-              <CardHeader className="border-b shrink-0" style={{flexShrink: 0}}>
-                <CardTitle>
-                  {editingId ? "Editar Atribuição" : "Nova Atribuição"}
-                </CardTitle>
+              <CardHeader className="border-b shrink-0" style={{ flexShrink: 0 }}>
+                <CardTitle>{editingId ? 'Editar Atribuição' : 'Nova Atribuição'}</CardTitle>
               </CardHeader>
               <CardContent className="app-modal-body p-6 modal-content-scroll">
-                <form id="professional-services-form" onSubmit={handleSubmit} className="space-y-4" style={{flex: 1, overflow: "visible"}}>
-                  <div style={{flex: 1, overflowY: "auto", paddingRight: "8px"}}>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Profissional <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={formData.professional_id}
-                    onChange={(e) =>
-                      setFormData({ ...formData, professional_id: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                    disabled={submitting}
-                    autoFocus
-                  >
-                    <option value="">Selecione um profissional</option>
-                    {professionals.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <form
+                  id="professional-services-form"
+                  onSubmit={handleSubmit}
+                  className="space-y-4"
+                  style={{ flex: 1, overflow: 'visible' }}
+                >
+                  <div style={{ flex: 1, overflowY: 'auto', paddingRight: '8px' }}>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Profissional <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={formData.professional_id}
+                        onChange={(e) =>
+                          setFormData({ ...formData, professional_id: e.target.value })
+                        }
+                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                        disabled={submitting}
+                        autoFocus
+                      >
+                        <option value="">Selecione um profissional</option>
+                        {professionals.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Serviço <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={formData.service_id}
-                    onChange={(e) =>
-                      setFormData({ ...formData, service_id: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                    disabled={submitting}
-                  >
-                    <option value="">Selecione um serviço</option>
-                    {services.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Serviço <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={formData.service_id}
+                        onChange={(e) => setFormData({ ...formData, service_id: e.target.value })}
+                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                        disabled={submitting}
+                      >
+                        <option value="">Selecione um serviço</option>
+                        {services.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="active"
-                    checked={formData.active}
-                    onChange={(e) =>
-                      setFormData({ ...formData, active: e.target.checked })
-                    }
-                    className="rounded border-gray-300"
-                    disabled={submitting}
-                  />
-                  <label htmlFor="active" className="text-sm font-medium text-gray-700">
-                    Ativo
-                  </label>
-                </div>
-
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="active"
+                        checked={formData.active}
+                        onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
+                        className="rounded border-gray-300"
+                        disabled={submitting}
+                      />
+                      <label htmlFor="active" className="text-sm font-medium text-gray-700">
+                        Ativo
+                      </label>
+                    </div>
                   </div>
                 </form>
               </CardContent>
-              <div style={{flexShrink: 0}} className="border-t bg-white px-6 py-4 flex gap-3 justify-end">
+              <div
+                style={{ flexShrink: 0 }}
+                className="border-t bg-white px-6 py-4 flex gap-3 justify-end"
+              >
                 <Button
                   type="button"
                   onClick={handleCloseWithCheck}
@@ -426,7 +413,7 @@ export function ProfessionalServicesPage() {
                   className="bg-blue-600 hover:bg-blue-700"
                   disabled={submitting}
                 >
-                  {submitting ? "Salvando..." : editingId ? "Atualizar" : "Criar/Adicionar"}
+                  {submitting ? 'Salvando...' : editingId ? 'Atualizar' : 'Criar/Adicionar'}
                 </Button>
               </div>
             </Card>
@@ -436,4 +423,3 @@ export function ProfessionalServicesPage() {
     </div>
   );
 }
-

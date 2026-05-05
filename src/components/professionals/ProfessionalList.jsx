@@ -1,14 +1,14 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { supabase } from "@/lib/customSupabaseClient";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Loader2, Edit3, Search, PlusCircle } from "lucide-react";
-import ProfessionalForm from "./ProfessionalForm";
-import { useToast } from "@/components/ui/use-toast";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { useAuth } from "@/contexts/SupabaseAuthContext";
+import React, { useEffect, useState, useCallback } from 'react';
+import { supabase } from '@/lib/customSupabaseClient';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, Edit3, Search, PlusCircle } from 'lucide-react';
+import ProfessionalForm from './ProfessionalForm';
+import { useToast } from '@/components/ui/use-toast';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
 
 /* --------------------------------------------
  * LISTAGEM DE PROFISSIONAIS (compatível com RPC)
@@ -17,7 +17,7 @@ export default function ProfessionalList() {
   const { clinicId } = useAuth();
   const [professionals, setProfessionals] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
   const [selectedProfessional, setSelectedProfessional] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const { toast } = useToast();
@@ -26,21 +26,23 @@ export default function ProfessionalList() {
    * BUSCA PROFISSIONAIS (apenas campos reais)
    * -------------------------------------------- */
   const fetchProfessionals = useCallback(async () => {
-    if (!clinicId) return;
+    if (!clinicId) {
+      return;
+    }
     setLoading(true);
 
     const { data, error } = await supabase
-      .from("professionals")
-      .select("id, name, specialty, crm, city, active, clinic_id")
-      .eq("clinic_id", clinicId)
-      .order("name", { ascending: true });
+      .from('professionals')
+      .select('id, name, specialty, crm, city, active, clinic_id')
+      .eq('clinic_id', clinicId)
+      .order('name', { ascending: true });
 
     if (error) {
-      console.error("Erro ao listar profissionais:", error);
+      console.error('Erro ao listar profissionais:', error);
       toast({
-        title: "Erro ao carregar profissionais",
+        title: 'Erro ao carregar profissionais',
         description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
     } else {
       setProfessionals(data || []);
@@ -132,16 +134,11 @@ export default function ProfessionalList() {
               </thead>
               <tbody>
                 {filtered.map((p) => (
-                  <tr
-                    key={p.id}
-                    className="border-b hover:bg-gray-50 transition-colors"
-                  >
-                    <td className="py-2 px-2 font-medium text-gray-900">
-                      {p.name || "—"}
-                    </td>
-                    <td className="py-2 px-2">{p.specialty || "—"}</td>
-                    <td className="py-2 px-2">{p.crm || "—"}</td>
-                    <td className="py-2 px-2">{p.city || "—"}</td>
+                  <tr key={p.id} className="border-b hover:bg-gray-50 transition-colors">
+                    <td className="py-2 px-2 font-medium text-gray-900">{p.name || '—'}</td>
+                    <td className="py-2 px-2">{p.specialty || '—'}</td>
+                    <td className="py-2 px-2">{p.crm || '—'}</td>
+                    <td className="py-2 px-2">{p.city || '—'}</td>
                     <td className="py-2 px-2">
                       {p.active ? (
                         <Badge className="bg-green-100 text-green-800 border border-green-300">
@@ -178,7 +175,7 @@ export default function ProfessionalList() {
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="app-dialog-shell app-dialog-shell--content app-dialog-shell--compact">
           <DialogTitle className="sr-only">
-            {selectedProfessional ? "Editar Profissional" : "Novo Profissional"}
+            {selectedProfessional ? 'Editar Profissional' : 'Novo Profissional'}
           </DialogTitle>
           <ProfessionalForm
             professionalId={selectedProfessional}
