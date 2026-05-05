@@ -53,9 +53,13 @@ const GRID_TOTAL = Object.values(GRID_COLUMNS).reduce((a, b) => a + b, 0);
 
 // ✅ FUNÇÃO HELPER PARA EXTRAIR PRIMEIRO E ÚLTIMO NOME
 const getFirstAndLastName = (fullName) => {
-  if (!fullName) return 'Paciente';
+  if (!fullName) {
+    return 'Paciente';
+  }
   const names = fullName.trim().split(' ').filter(n => n.length > 0);
-  if (names.length === 1) return names[0];
+  if (names.length === 1) {
+    return names[0];
+  }
   return `${names[0]} ${names[names.length - 1]}`;
 };
 
@@ -63,7 +67,9 @@ const getFirstAndLastName = (fullName) => {
 const getColSpanClass = (colName) => `col-span-${GRID_COLUMNS[colName] || 1}`;
 
 const getAppointmentActionConfig = (apt, currentRole) => {
-  if (!apt?.id) return null;
+  if (!apt?.id) {
+    return null;
+  }
 
   const normalizedStatus = migrateStatus(apt?.status);
   const isClinicalFlow = [
@@ -133,41 +139,22 @@ const renderGridHeader = () => (
 );
 
 // ✅ RENDERIZADOR DE SLOT VAZIO (disponível)
-const renderEmptySlot = (time, isCurrentTime, isHolidayBlocked, isOptionalHoliday, onBookSlot, apt) => (
-  <div className="grid grid-cols-12 gap-0 h-14 items-center w-full border-b border-gray-100" style={{ background: '#f8f9fa' }}>
-    <div className="col-span-1 px-3 text-sm font-semibold border-r border-gray-200 flex items-center justify-center" style={{ color: '#0052cc', fontSize: '12px', fontWeight: 600, background: '#f8f9fa' }}>
+const renderEmptySlot = (time, isCurrentTime, isHolidayBlocked, isOptionalHoliday, onBookSlot, apt, currentDate, profNamesDisplay) => (
+  <div className="grid grid-cols-12 gap-0 h-14 items-center w-full border-b border-gray-100" style={{ background: '#fafaf9' }}>
+    <div className="col-span-1 px-3 py-3 text-sm font-bold border-r border-gray-200 flex items-center justify-center" style={{ color: '#0052cc', fontSize: '12px', fontWeight: 600, background: '#f8f9fa' }}>
       {time}
       {isCurrentTime && <span className="inline-block w-2 h-2 rounded-full bg-blue-600 animate-pulse ml-1" />}
     </div>
-    <div className="col-span-2 px-3 border-r border-gray-200 flex flex-col items-center justify-center w-full gap-1">
-      <span className={`h-3 w-3 rounded-full shadow-sm ${isHolidayBlocked ? 'bg-gray-400' : isOptionalHoliday ? 'bg-blue-500' : 'bg-green-500'}`} />
-      <button
-        onClick={(e) => {
-          if (!isHolidayBlocked) {
-            e.stopPropagation();
-            onBookSlot(apt);
-          }
-        }}
-        className={`opacity-0 group-hover:opacity-100 transition-opacity text-lg ${
-          isHolidayBlocked
-            ? 'text-gray-400 cursor-not-allowed'
-            : isOptionalHoliday
-            ? 'text-blue-600 hover:text-blue-700 hover:scale-110'
-            : 'text-green-600 hover:text-green-700 hover:scale-110'
-        }`}
-        title={isHolidayBlocked ? 'Agenda bloqueada - Feriado' : isOptionalHoliday ? 'Agendar em feriado facultativo' : 'Novo agendamento'}
-        disabled={isHolidayBlocked}
-      >
-        {isHolidayBlocked ? '🔒' : '➕'}
-      </button>
+    <div className="col-span-2 px-3 py-3 flex items-center justify-center text-sm font-black border-r border-gray-200 text-center" style={{ color: '#10b981', fontSize: '12px', cursor: isHolidayBlocked ? 'not-allowed' : 'pointer' }} onClick={() => { if (!isHolidayBlocked) onBookSlot({ time, date: currentDate || apt?.date }); }}>
+      ➕ Clique para agendar
     </div>
-    <div className="col-span-2 px-3 border-r border-gray-200 flex items-center justify-center w-full" />
-    <div className="col-span-1 px-3 border-r border-gray-200 flex items-center justify-center w-full" />
-    <div className="col-span-2 px-3 border-r border-gray-200 flex items-center justify-center w-full" />
-    <div className="col-span-2 px-3 border-r border-gray-200 flex items-center justify-center w-full" />
-    <div className="col-span-2 px-3 border-r border-gray-200 flex items-center justify-center w-full">
-      <span className="w-3 h-3 rounded-full" style={{ background: '#10b981' }} />
+    <div className="col-span-2 px-3 py-3 border-r border-gray-200" />
+    <div className="col-span-1 px-3 py-3 border-r border-gray-200" />
+    <div className="col-span-2 px-3 py-3 border-r border-gray-200" />
+    <div className="col-span-2 px-3 py-3 flex items-center justify-center text-sm font-medium border-r border-gray-200 truncate" style={{ color: '#10b981', fontSize: '12px' }}>
+      {profNamesDisplay || ''}
     </div>
+    <div className="col-span-2 px-3 py-3 border-r border-gray-200" />
   </div>
 );
 
@@ -198,57 +185,57 @@ const renderOccupiedSlot = (apt, time, isCurrentTime, late, statusLabel, getStat
   }
   
   return (
-  <div className="grid grid-cols-12 gap-0 h-14 items-center w-full border-b border-gray-100" style={{ background: statusBgColor }}>
-    <div className="col-span-1 px-3 text-sm font-semibold border-r border-gray-200 flex items-center justify-center" style={{ color: '#0052cc', fontSize: '12px', fontWeight: 600, background: statusBgColor }}>
-      {time}
-      {isCurrentTime && <span className="inline-block w-2 h-2 rounded-full bg-blue-600 animate-pulse ml-1" />}
-    </div>
-    <div className="col-span-2 px-3 border-r border-gray-200 flex items-center justify-center min-w-0 w-full">
-      <div 
-        className="text-sm font-bold group-hover:font-black transition-all truncate text-center cursor-pointer hover:underline"
-        style={{ color: statusStyle.color }}
-        title={apt.patient_name || apt.paciente || apt.patient || '—'}
-      >
-        {getFirstAndLastName(apt.patient_name || apt.paciente || apt.patient || '—')}
+    <div className="grid grid-cols-12 gap-0 h-14 items-center w-full border-b border-gray-100" style={{ background: statusBgColor }}>
+      <div className="col-span-1 px-3 text-sm font-semibold border-r border-gray-200 flex items-center justify-center" style={{ color: '#0052cc', fontSize: '12px', fontWeight: 600, background: statusBgColor }}>
+        {time}
+        {isCurrentTime && <span className="inline-block w-2 h-2 rounded-full bg-blue-600 animate-pulse ml-1" />}
       </div>
-    </div>
-    <div className="col-span-2 px-3 border-r border-gray-200 flex items-center justify-center min-w-0 w-full">
-      <div className="text-xs text-gray-600 group-hover:text-gray-700 transition-colors truncate" style={{ fontSize: '11px' }}>
-        {apt.patient_phone || apt.telefone || apt.phone || apt.patient_mobile || apt.celular || apt.mobile || '—'}
-      </div>
-    </div>
-    <div className="col-span-1 px-3 border-r border-gray-200 flex items-center justify-center min-w-0 w-full">
-      <div className="text-xs text-gray-600 group-hover:text-gray-700 transition-colors truncate" style={{ fontSize: '11px' }}>
-        {apt.service_name || apt.serviço || apt.service || '—'}
-      </div>
-    </div>
-    <div className="col-span-2 px-3 border-r border-gray-200 flex items-center justify-center min-w-0 w-full">
-      <div className="text-xs text-gray-600 group-hover:text-gray-700 transition-colors truncate" style={{ fontSize: '11px' }}>
-        {apt.payer_name || apt.convênio || apt.healthplan || apt.plano || 'Particular'}
-      </div>
-    </div>
-    <div className="col-span-2 px-3 border-r border-gray-200 flex items-center justify-center min-w-0 w-full">
-      <div className="text-xs text-gray-600 group-hover:text-gray-700 transition-colors truncate text-center" style={{ fontSize: '11px' }}>
-        {apt.professional_name || apt.profissional || apt.professional || '—'}
-      </div>
-    </div>
-    <div className="col-span-2 px-3 border-r border-gray-200 flex items-center justify-center gap-2 w-full">
-      <StatusBadge status={statusLabel} size="md" />
-      {actionConfig && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleOpenAtendimento(apt);
-          }}
-          className="inline-flex items-center rounded-full bg-blue-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
-          title={actionConfig.title}
+      <div className="col-span-2 px-3 border-r border-gray-200 flex items-center justify-center min-w-0 w-full">
+        <div 
+          className="text-sm font-bold group-hover:font-black transition-all truncate text-center cursor-pointer hover:underline"
+          style={{ color: statusStyle.color }}
+          title={apt.patient_name || apt.paciente || apt.patient || '—'}
         >
-          {actionConfig.label}
-        </button>
-      )}
+          {getFirstAndLastName(apt.patient_name || apt.paciente || apt.patient || '—')}
+        </div>
+      </div>
+      <div className="col-span-2 px-3 border-r border-gray-200 flex items-center justify-center min-w-0 w-full">
+        <div className="text-xs text-gray-600 group-hover:text-gray-700 transition-colors truncate" style={{ fontSize: '11px' }}>
+          {apt.patient_phone || apt.telefone || apt.phone || apt.patient_mobile || apt.celular || apt.mobile || '—'}
+        </div>
+      </div>
+      <div className="col-span-1 px-3 border-r border-gray-200 flex items-center justify-center min-w-0 w-full">
+        <div className="text-xs text-gray-600 group-hover:text-gray-700 transition-colors truncate" style={{ fontSize: '11px' }}>
+          {apt.service_name || apt.serviço || apt.service || '—'}
+        </div>
+      </div>
+      <div className="col-span-2 px-3 border-r border-gray-200 flex items-center justify-center min-w-0 w-full">
+        <div className="text-xs text-gray-600 group-hover:text-gray-700 transition-colors truncate" style={{ fontSize: '11px' }}>
+          {apt.payer_name || apt.convênio || apt.healthplan || apt.plano || 'Particular'}
+        </div>
+      </div>
+      <div className="col-span-2 px-3 border-r border-gray-200 flex items-center justify-center min-w-0 w-full">
+        <div className="text-xs text-gray-600 group-hover:text-gray-700 transition-colors truncate text-center" style={{ fontSize: '11px' }}>
+          {apt.professional_name || apt.profissional || apt.professional || '—'}
+        </div>
+      </div>
+      <div className="col-span-2 px-3 border-r border-gray-200 flex items-center justify-center gap-2 w-full">
+        <StatusBadge status={statusLabel} size="md" />
+        {actionConfig && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpenAtendimento(apt);
+            }}
+            className="inline-flex items-center rounded-full bg-blue-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm transition-colors hover:bg-blue-700"
+            title={actionConfig.title}
+          >
+            {actionConfig.label}
+          </button>
+        )}
+      </div>
     </div>
-  </div>
   );
 };
 
@@ -266,6 +253,29 @@ export default function AgendaDayView({
   payers = [], // 🆕 Lista de convênios
 }) {
   console.log('🎬 [AgendaDayView] RENDERIZANDO com appointments:', { count: appointments.length, data: appointments });
+  
+  // ✅ WRAPPER PARA CONFIRMAR NOVO AGENDAMENTO
+  const handleBookSlotWithConfirm = (slotData) => {
+    const dateParts = (slotData.date || date).split('-');
+    const [year, month, day] = dateParts;
+    const formattedDate = `${day}/${month}/${year}`;
+    const displayTime = slotData.time || '09:00';
+    const professionalName = 'Profissional a definir';
+
+    console.log('📅 [AgendaDayView] handleBookSlotWithConfirm:', { formattedDate, displayTime, slotData });
+
+    const confirmed = window.confirm(
+      `Deseja criar novo agendamento?\n\n` +
+      `📅 Data: ${formattedDate}\n` +
+      `🕐 Horário: ${displayTime}\n` +
+      `👨‍⚕️ Profissional: ${professionalName}\n\n` +
+      `Clique em OK para continuar...`
+    );
+
+    if (confirmed) {
+      onBookSlot(slotData);
+    }
+  };
   
   // 🔍 DEBUG: Mostrar específico agendamento das 8h
   if (appointments.length > 0) {
@@ -349,7 +359,9 @@ export default function AgendaDayView({
   // ✅ Carregar informações de feriado para o dia
   useEffect(() => {
     const loadHolidayInfo = async () => {
-      if (!date) return;
+      if (!date) {
+        return;
+      }
       
       try {
         const clinicId = clinic?.id || null;
@@ -393,7 +405,7 @@ export default function AgendaDayView({
       }
 
       try {
-        let availability = {};
+        const availability = {};
 
         if (filteredProfessionalId) {
           // Se há profissional filtrado, carregar apenas aquele
@@ -432,7 +444,9 @@ export default function AgendaDayView({
       try {
         // Obter todos os IDs de profissionais que tem disponibilidade neste dia
         const profIds = Object.keys(professionalAvailability);
-        if (profIds.length === 0) return;
+        if (profIds.length === 0) {
+          return;
+        }
 
         // Buscar dados dos profissionais do banco
         const { data: profs, error } = await supabase
@@ -475,7 +489,9 @@ export default function AgendaDayView({
       // Normalizar para HH:MM (remover :SS se houver)
       const normalizedTime = typeof time === 'string' ? time.substring(0, 5) : '08:00';
       
-      if (!groups[normalizedTime]) groups[normalizedTime] = [];
+      if (!groups[normalizedTime]) {
+        groups[normalizedTime] = [];
+      }
       groups[normalizedTime].push(apt);
     });
     return groups;
@@ -497,7 +513,7 @@ export default function AgendaDayView({
         key: time,
         time,
         professionalId: filteredProfessionalId,
-        type: 'single-prof'
+        type: 'single-prof',
       }));
     } else {
       // SEM filtro: uma linha por (hora + profissional disponível)
@@ -520,7 +536,7 @@ export default function AgendaDayView({
               time,
               professionalId: prof.id,
               professionalName: prof.name,
-              type: 'multi-prof'
+              type: 'multi-prof',
             });
           });
         } else {
@@ -529,7 +545,7 @@ export default function AgendaDayView({
             key: `${time}__none`,
             time,
             professionalId: null,
-            type: 'multi-prof'
+            type: 'multi-prof',
           });
         }
       });
@@ -561,7 +577,9 @@ export default function AgendaDayView({
    * Normaliza dados do appointment para garantir que todos os campos estão preenchidos
    */
   const normalizeAppointment = (apt) => {
-    if (!apt) return null;
+    if (!apt) {
+      return null;
+    }
     // Extrair horário, removendo :SS se necessário
     let horarioExtraido = apt.horário || apt.time || apt.start_time || apt.scheduled_time || '—';
     if (typeof horarioExtraido === 'string' && horarioExtraido.length > 5) {
@@ -665,7 +683,7 @@ export default function AgendaDayView({
 
         if (!currentApt) {
           console.warn('⚠️ Appointment não encontrado:', aptId);
-          throw new Error("Agendamento não encontrado ou sem permissão de acesso");
+          throw new Error('Agendamento não encontrado ou sem permissão de acesso');
         }
 
         const isEditing = currentApt?.status === 'at_reception';
@@ -799,8 +817,8 @@ export default function AgendaDayView({
           isHolidayBlocked
             ? 'border-red-200 bg-red-50 text-red-700'
             : isOptionalHoliday
-            ? 'border-blue-200 bg-blue-50 text-blue-700'
-            : 'border-yellow-200 bg-yellow-50 text-yellow-700'
+              ? 'border-blue-200 bg-blue-50 text-blue-700'
+              : 'border-yellow-200 bg-yellow-50 text-yellow-700'
         }`}>
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
@@ -865,7 +883,7 @@ export default function AgendaDayView({
             // Sem filtro: apenas agendamentos do profissional específico neste horário
             const allApptsForTime = groupedByTime[time] || [];
             appointmentsForLine = allApptsForTime.filter(apt => 
-              (apt.professional_id === professionalId || apt.professionalId === professionalId)
+              (apt.professional_id === professionalId || apt.professionalId === professionalId),
             );
           }
           const appointmentsForTime = appointmentsForLine;
@@ -948,7 +966,7 @@ export default function AgendaDayView({
                   } else if (type === 'multi-prof' && professionalId) {
                     slotData.professionalId = professionalId;
                   }
-                  onBookSlot(slotData);
+                  handleBookSlotWithConfirm(slotData);
                 }}
                 style={{ background: '#fafaf9' }}
               >
@@ -973,7 +991,7 @@ export default function AgendaDayView({
                 
                 {/* Profissional - Nomes dos disponíveis */}
                 <div className="col-span-2 px-3 py-3 flex items-center justify-center text-sm font-medium border-r border-gray-200 truncate" style={{ color: '#10b981', fontSize: '12px' }}>
-                  {profNamesDisplay || "Disponível"}
+                  {profNamesDisplay || ''}
                 </div>
                 
                 {/* Status - vazio */}
@@ -994,14 +1012,14 @@ export default function AgendaDayView({
             const isHovered = hoveredRow === rowId;
             
             // 🔍 DEBUG: Verificar que apt tem um ID válido
-            console.log(`🔍 [AgendaDayView] apt objeto no loop:`, {
+            console.log('🔍 [AgendaDayView] apt objeto no loop:', {
               temId: !!apt.id,
               aptId: apt.id,
               appointmentId: apt.appointment_id,
               aptStatus: apt.status,
               statusLabel: statusLabel,
               temPaciente: !!isOccupied,
-              pacienteName: apt.paciente || apt.patient_name || 'SEM NOME'
+              pacienteName: apt.paciente || apt.patient_name || 'SEM NOME',
             });
             
             // 🆕 Verificar disponibilidade do profissional para este horário
@@ -1017,6 +1035,11 @@ export default function AgendaDayView({
 
             if (!isOccupied) {
               // SLOT LIVRE
+              const availableProfs = getAvailableProfessionalsForTime(time);
+              const profNamesDisplay = type === 'multi-prof' && filteredProfessionalId
+                ? professionalsMap[filteredProfessionalId]?.name || filteredProfessionalId
+                : availableProfs.map(p => p.name).join(', ');
+              
               return (
                 <div
                   key={rowId}
@@ -1026,8 +1049,8 @@ export default function AgendaDayView({
                     isHolidayBlocked || !isProfessionalAvailable
                       ? 'bg-gray-100 cursor-not-allowed'
                       : `hover:bg-green-50/60 cursor-pointer ${
-                          isCurrentTime ? 'bg-blue-100/40' : isOptionalHoliday ? 'bg-blue-50/40' : 'bg-white'
-                        }`
+                        isCurrentTime ? 'bg-blue-100/40' : isOptionalHoliday ? 'bg-blue-50/40' : 'bg-white'
+                      }`
                   }`}
                   onClick={() => {
                     const slotData = { 
@@ -1036,12 +1059,12 @@ export default function AgendaDayView({
                       professional_id: filteredProfessionalId || apt.professional_id || apt.professionalId,
                       room_id: apt.room_id || apt.roomId,
                     };
-                    onBookSlot(slotData);
+                    handleBookSlotWithConfirm(slotData);
                   }}
                   onContextMenu={(e) => !isHolidayBlocked && isProfessionalAvailable && handleContextMenu(e, apt)}
                   title={!isProfessionalAvailable ? 'Profissional indisponível neste horário' : ''}
                 >
-                  {renderEmptySlot(time, isCurrentTime, isHolidayBlocked || !isProfessionalAvailable, isOptionalHoliday, onBookSlot, apt)}
+                  {renderEmptySlot(time, isCurrentTime, isHolidayBlocked || !isProfessionalAvailable, isOptionalHoliday, handleBookSlotWithConfirm, apt, date, profNamesDisplay)}
                 </div>
               );
             } else {
@@ -1091,7 +1114,7 @@ export default function AgendaDayView({
             x: contextMenu.x,
             y: contextMenu.y,
             appointmentId: contextMenu.appointment?.id,
-            hasAppointment: !!contextMenu.appointment
+            hasAppointment: !!contextMenu.appointment,
           })}
           <div
             className="fixed bg-white border border-gray-200 rounded-md shadow-lg z-50 min-w-max"
@@ -1101,101 +1124,101 @@ export default function AgendaDayView({
             }}
           >
             <button
-            onClick={(e) => {
-              console.log('🖱️ [AgendaDayView] Botão Editar do MENU CLICADO!');
-              console.log('   contextMenu.appointment COMPLETO:', contextMenu.appointment);
-              console.log('   contextMenu.appointment.id:', contextMenu.appointment?.id);
-              console.log('   contextMenu.appointment[\'id\']:', contextMenu.appointment?.['id']);
-              console.log('   Todos os campos do appointment:', Object.keys(contextMenu.appointment || {}));
+              onClick={(e) => {
+                console.log('🖱️ [AgendaDayView] Botão Editar do MENU CLICADO!');
+                console.log('   contextMenu.appointment COMPLETO:', contextMenu.appointment);
+                console.log('   contextMenu.appointment.id:', contextMenu.appointment?.id);
+                console.log('   contextMenu.appointment[\'id\']:', contextMenu.appointment?.['id']);
+                console.log('   Todos os campos do appointment:', Object.keys(contextMenu.appointment || {}));
               
-              const appointmentId = contextMenu.appointment?.id;
-              console.log('   appointmentId extraído:', appointmentId);
-              console.log('   typeof appointmentId:', typeof appointmentId);
-              console.log('   onEditAppointment type:', typeof onEditAppointment);
+                const appointmentId = contextMenu.appointment?.id;
+                console.log('   appointmentId extraído:', appointmentId);
+                console.log('   typeof appointmentId:', typeof appointmentId);
+                console.log('   onEditAppointment type:', typeof onEditAppointment);
               
-              if (appointmentId && typeof onEditAppointment === 'function') {
-                console.log('✅ [AgendaDayView] CHAMANDO onEditAppointment COM ID:', appointmentId);
-                onEditAppointment(appointmentId);
-              } else {
-                console.error('❌ [AgendaDayView] NÃO PODE CHAMAR onEditAppointment!', {
-                  hasId: !!appointmentId,
-                  appointmentId: appointmentId,
-                  isFunction: typeof onEditAppointment === 'function',
-                  onEditAppointmentType: typeof onEditAppointment
-                });
-              }
-              setContextMenu(null);
-            }}
-            className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2"
-          >
-            <Edit className="w-4 h-4" />
+                if (appointmentId && typeof onEditAppointment === 'function') {
+                  console.log('✅ [AgendaDayView] CHAMANDO onEditAppointment COM ID:', appointmentId);
+                  onEditAppointment(appointmentId);
+                } else {
+                  console.error('❌ [AgendaDayView] NÃO PODE CHAMAR onEditAppointment!', {
+                    hasId: !!appointmentId,
+                    appointmentId: appointmentId,
+                    isFunction: typeof onEditAppointment === 'function',
+                    onEditAppointmentType: typeof onEditAppointment,
+                  });
+                }
+                setContextMenu(null);
+              }}
+              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2"
+            >
+              <Edit className="w-4 h-4" />
             Editar (ou duplo clique)
-          </button>
+            </button>
 
-          {/* Opção para RECEPÇÃO - Atendimento com dados financeiros */}
-          {currentRole === 'recepcao' && (
-            <button
-              onClick={() => {
-                handleOpenAtendimento(contextMenu.appointment);
-                setContextMenu(null);
-              }}
-              className="w-full text-left px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 transition-colors flex items-center gap-2 border-t border-gray-100"
-            >
+            {/* Opção para RECEPÇÃO - Atendimento com dados financeiros */}
+            {currentRole === 'recepcao' && (
+              <button
+                onClick={() => {
+                  handleOpenAtendimento(contextMenu.appointment);
+                  setContextMenu(null);
+                }}
+                className="w-full text-left px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 transition-colors flex items-center gap-2 border-t border-gray-100"
+              >
               📋 Atendimento (TISS)
-            </button>
-          )}
+              </button>
+            )}
 
-          {/* Opção para PROFISSIONAL - Abrir prontuário do paciente */}
-          {currentRole === 'profissional' && (
-            <button
-              onClick={() => {
-                navigate(`/clinica/pacientes/${contextMenu.appointment.patient_id}`, {
-                  state: { 
-                    appointmentId: contextMenu.appointment.id,
-                    appointmentTime: contextMenu.appointment.scheduled_time,
-                    appointmentDate: contextMenu.appointment.scheduled_date || null,
-                    openTab: 'historico',
-                    fromAgendaClinicalFlow: true,
-                    canStartAppointment: migrateStatus(contextMenu.appointment.status) === SERVICE_STATUSES.AWAITING_PROFESSIONAL,
-                  }
-                });
-                setContextMenu(null);
-              }}
-              className="w-full text-left px-3 py-2 text-sm text-green-600 hover:bg-green-50 transition-colors flex items-center gap-2 border-t border-gray-100"
-            >
+            {/* Opção para PROFISSIONAL - Abrir prontuário do paciente */}
+            {currentRole === 'profissional' && (
+              <button
+                onClick={() => {
+                  navigate(`/clinica/pacientes/${contextMenu.appointment.patient_id}`, {
+                    state: { 
+                      appointmentId: contextMenu.appointment.id,
+                      appointmentTime: contextMenu.appointment.scheduled_time,
+                      appointmentDate: contextMenu.appointment.scheduled_date || null,
+                      openTab: 'historico',
+                      fromAgendaClinicalFlow: true,
+                      canStartAppointment: migrateStatus(contextMenu.appointment.status) === SERVICE_STATUSES.AWAITING_PROFESSIONAL,
+                    },
+                  });
+                  setContextMenu(null);
+                }}
+                className="w-full text-left px-3 py-2 text-sm text-green-600 hover:bg-green-50 transition-colors flex items-center gap-2 border-t border-gray-100"
+              >
               📝 Abrir Prontuário
-            </button>
-          )}
+              </button>
+            )}
 
-          <button
-            onClick={() => {
-              onViewDetails(contextMenu.appointment.id);
-              setContextMenu(null);
-            }}
-            className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2 border-t border-gray-100"
-          >
-            <Eye className="w-4 h-4" />
-            Detalhes
-          </button>
-
-          {contextMenu.appointment.paciente && (
             <button
               onClick={() => {
-                console.log('Marcar como falta:', contextMenu.appointment.id);
+                onViewDetails(contextMenu.appointment.id);
                 setContextMenu(null);
               }}
-              className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors border-t border-gray-100"
+              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2 border-t border-gray-100"
             >
-              ❌ Marcar como Falta
+              <Eye className="w-4 h-4" />
+            Detalhes
             </button>
-          )}
-            </div>
-          </>
-        )}
+
+            {contextMenu.appointment.paciente && (
+              <button
+                onClick={() => {
+                  console.log('Marcar como falta:', contextMenu.appointment.id);
+                  setContextMenu(null);
+                }}
+                className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors border-t border-gray-100"
+              >
+              ❌ Marcar como Falta
+              </button>
+            )}
+          </div>
+        </>
+      )}
 
 
 
-        {/* 📋 AtendimentoModal - TISS Compliant Check-in (from AgendaDayView) */}
+      {/* 📋 AtendimentoModal - TISS Compliant Check-in (from AgendaDayView) */}
       <AtendimentoModal
         isOpen={atendimentoModalOpen}
         onClose={handleCloseAtendimento}
