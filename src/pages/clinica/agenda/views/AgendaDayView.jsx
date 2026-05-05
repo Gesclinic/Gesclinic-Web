@@ -1238,12 +1238,12 @@ export default function AgendaDayView({
                       isHolidayBlocked || !isProfessionalAvailable
                         ? 'bg-gray-100 cursor-not-allowed'
                         : `hover:bg-green-50/60 cursor-pointer ${
-                          isCurrentTime
-                            ? 'bg-blue-100/40'
-                            : isOptionalHoliday
-                              ? 'bg-blue-50/40'
-                              : 'bg-white'
-                        }`
+                            isCurrentTime
+                              ? 'bg-blue-100/40'
+                              : isOptionalHoliday
+                                ? 'bg-blue-50/40'
+                                : 'bg-white'
+                          }`
                     }`}
                     onClick={() => {
                       const slotData = {

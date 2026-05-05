@@ -209,16 +209,16 @@ export function formatRuleDescription(rule) {
   const type = rule.rule_type || rule.type;
 
   switch (type) {
-  case 'percentage':
-    return `${rule.rule_value || rule.value}% de repasse`;
-  case 'fixed_value':
-    return `R$ ${(rule.rule_value || rule.value).toFixed(2)} fixo`;
-  case 'commission':
-    return `Comissão de ${rule.rule_value || rule.value}%`;
-  case 'none':
-    return 'Sem repasse';
-  default:
-    return 'Repasse personalizado';
+    case 'percentage':
+      return `${rule.rule_value || rule.value}% de repasse`;
+    case 'fixed_value':
+      return `R$ ${(rule.rule_value || rule.value).toFixed(2)} fixo`;
+    case 'commission':
+      return `Comissão de ${rule.rule_value || rule.value}%`;
+    case 'none':
+      return 'Sem repasse';
+    default:
+      return 'Repasse personalizado';
   }
 }
 

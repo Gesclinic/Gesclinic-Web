@@ -111,20 +111,20 @@ export async function enviarNotificacaoRepasse(repasse, profissional, clinic) {
     // Enviar através do provedor configurado
     let resultado;
     switch (config.provedor) {
-    case 'sendgrid':
-      resultado = await enviarSendGrid(config, emailData);
-      break;
-    case 'aws_ses':
-      resultado = await enviarAWSSES(config, emailData);
-      break;
-    case 'mailgun':
-      resultado = await enviarMailgun(config, emailData);
-      break;
-    case 'smtp':
-      resultado = await enviarSMTP(config, emailData);
-      break;
-    default:
-      throw new Error(`Provedor desconhecido: ${config.provedor}`);
+      case 'sendgrid':
+        resultado = await enviarSendGrid(config, emailData);
+        break;
+      case 'aws_ses':
+        resultado = await enviarAWSSES(config, emailData);
+        break;
+      case 'mailgun':
+        resultado = await enviarMailgun(config, emailData);
+        break;
+      case 'smtp':
+        resultado = await enviarSMTP(config, emailData);
+        break;
+      default:
+        throw new Error(`Provedor desconhecido: ${config.provedor}`);
     }
 
     // Registrar envio no banco

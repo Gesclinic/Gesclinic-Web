@@ -304,8 +304,8 @@ export default function AgendaConfirmacoes() {
                       <td className="px-6 py-4 text-sm text-gray-600">
                         {conf.message_sent_at
                           ? format(parseISO(conf.message_sent_at), 'dd/MM/yyyy HH:mm', {
-                            locale: ptBR,
-                          })
+                              locale: ptBR,
+                            })
                           : 'N/A'}
                       </td>
                       <td className="px-6 py-4 text-sm">{getStatusBadge(conf.confirmed)}</td>

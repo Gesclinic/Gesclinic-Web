@@ -622,14 +622,14 @@ export default function CheckinDrawer({ isOpen, appointment, onClose, onStatusCh
                 </div>
                 {currentAppointment?.status !== 'presente' &&
                   currentAppointment?.status !== 'pronto_atendimento' && (
-                  <button
-                    onClick={handleRegistrarPresenca}
-                    disabled={loading}
-                    className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors text-sm"
-                  >
+                    <button
+                      onClick={handleRegistrarPresenca}
+                      disabled={loading}
+                      className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors text-sm"
+                    >
                       📍 Registrar Presença
-                  </button>
-                )}
+                    </button>
+                  )}
                 {(currentAppointment?.status === 'presente' ||
                   currentAppointment?.status === 'pronto_atendimento') && (
                   <p className="text-xs text-green-700 font-semibold">✅ Presença registrada</p>
@@ -747,45 +747,45 @@ export default function CheckinDrawer({ isOpen, appointment, onClose, onStatusCh
               const updateData = {};
 
               switch (itemId) {
-              case 'dados_cadastrais':
-                Object.assign(updateData, {
-                  patient_name: formData.patient_name,
-                  patient_cpf: formData.patient_cpf,
-                  patient_phone: formData.patient_phone,
-                  patient_verified: true,
-                });
-                break;
-              case 'convenio':
-                Object.assign(updateData, {
-                  payer_name: formData.payer_name,
-                  payer_type: formData.payer_type,
-                  authorization_number: formData.authorization_number,
-                });
-                break;
-              case 'carteirinha':
-                Object.assign(updateData, {
-                  card_number: formData.card_number,
-                  insurance_card_verified: formData.insurance_card_verified,
-                });
-                break;
-              case 'autorizacao':
-                Object.assign(updateData, {
-                  authorization_date: formData.authorization_date,
-                  authorization_verified: formData.authorization_verified,
-                });
-                break;
-              case 'guia':
-                Object.assign(updateData, {
-                  guide_number: formData.guide_number,
-                  guide_generated: formData.guide_generated,
-                });
-                break;
-              case 'pagamento':
-                Object.assign(updateData, {
-                  payment_method: formData.payment_method,
-                  payment_status: formData.payment_status,
-                });
-                break;
+                case 'dados_cadastrais':
+                  Object.assign(updateData, {
+                    patient_name: formData.patient_name,
+                    patient_cpf: formData.patient_cpf,
+                    patient_phone: formData.patient_phone,
+                    patient_verified: true,
+                  });
+                  break;
+                case 'convenio':
+                  Object.assign(updateData, {
+                    payer_name: formData.payer_name,
+                    payer_type: formData.payer_type,
+                    authorization_number: formData.authorization_number,
+                  });
+                  break;
+                case 'carteirinha':
+                  Object.assign(updateData, {
+                    card_number: formData.card_number,
+                    insurance_card_verified: formData.insurance_card_verified,
+                  });
+                  break;
+                case 'autorizacao':
+                  Object.assign(updateData, {
+                    authorization_date: formData.authorization_date,
+                    authorization_verified: formData.authorization_verified,
+                  });
+                  break;
+                case 'guia':
+                  Object.assign(updateData, {
+                    guide_number: formData.guide_number,
+                    guide_generated: formData.guide_generated,
+                  });
+                  break;
+                case 'pagamento':
+                  Object.assign(updateData, {
+                    payment_method: formData.payment_method,
+                    payment_status: formData.payment_status,
+                  });
+                  break;
               }
 
               // Salvar no banco de dados

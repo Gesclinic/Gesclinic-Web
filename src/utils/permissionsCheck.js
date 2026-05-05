@@ -5,13 +5,13 @@ export function can(permissionList, module, action) {
   }
 
   switch (action) {
-  case 'view':
-    return item.can_view;
-  case 'edit':
-    return item.can_edit;
-  case 'delete':
-    return item.can_delete;
-  default:
-    return false;
+    case 'view':
+      return item.can_view;
+    case 'edit':
+      return item.can_edit;
+    case 'delete':
+      return item.can_delete;
+    default:
+      return false;
   }
 }

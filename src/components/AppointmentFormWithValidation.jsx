@@ -52,33 +52,33 @@ export function AppointmentFormWithValidation({
     async (fieldName, value, allValues) => {
       // Validações específicas por campo
       switch (fieldName) {
-      case 'date':
-        return validators.required('Data')(value);
+        case 'date':
+          return validators.required('Data')(value);
 
-      case 'startTime':
-        return validators.required('Hora inicial')(value);
+        case 'startTime':
+          return validators.required('Hora inicial')(value);
 
-      case 'endTime':
-        return validators.required('Hora final')(value);
+        case 'endTime':
+          return validators.required('Hora final')(value);
 
-      case 'patientId':
-        return validators.required('Paciente')(value);
+        case 'patientId':
+          return validators.required('Paciente')(value);
 
-      case 'professionalId':
-        return validators.required('Profissional')(value);
+        case 'professionalId':
+          return validators.required('Profissional')(value);
 
-      case 'serviceId':
-        return validators.required('Serviço')(value);
+        case 'serviceId':
+          return validators.required('Serviço')(value);
 
-      case 'roomId':
-        // Room é opcional se profissional trabalhar sem sala
-        return { error: null };
+        case 'roomId':
+          // Room é opcional se profissional trabalhar sem sala
+          return { error: null };
 
-      case 'insuranceId':
-        return validators.required('Convênio')(value);
+        case 'insuranceId':
+          return validators.required('Convênio')(value);
 
-      default:
-        return { error: null };
+        default:
+          return { error: null };
       }
     },
   );

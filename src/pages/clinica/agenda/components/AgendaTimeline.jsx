@@ -625,81 +625,81 @@ function TimelineGeral({
  */
 function getStatusBgColor(status) {
   switch (status) {
-  case 'confirmado':
-    return 'bg-green-50';
-  case 'a_confirmar':
-    return 'bg-yellow-50';
-  case 'presente':
-    return 'bg-blue-50';
-  case 'pronto_atendimento':
-    return 'bg-lime-50';
-  case 'em_atendimento':
-    return 'bg-indigo-50';
-  case 'finalizado':
-    return 'bg-emerald-50';
-  case 'faltou':
-    return 'bg-red-50';
-  case 'cancelado':
-    return 'bg-orange-50';
-  case 'encaixe':
-    return 'bg-cyan-50';
-  case 'bloqueado':
-    return 'bg-slate-50';
-  default:
-    return 'bg-gray-50';
+    case 'confirmado':
+      return 'bg-green-50';
+    case 'a_confirmar':
+      return 'bg-yellow-50';
+    case 'presente':
+      return 'bg-blue-50';
+    case 'pronto_atendimento':
+      return 'bg-lime-50';
+    case 'em_atendimento':
+      return 'bg-indigo-50';
+    case 'finalizado':
+      return 'bg-emerald-50';
+    case 'faltou':
+      return 'bg-red-50';
+    case 'cancelado':
+      return 'bg-orange-50';
+    case 'encaixe':
+      return 'bg-cyan-50';
+    case 'bloqueado':
+      return 'bg-slate-50';
+    default:
+      return 'bg-gray-50';
   }
 }
 
 function getStatusBadgeColor(status) {
   switch (status) {
-  case 'confirmado':
-    return 'bg-green-100 text-green-800';
-  case 'a_confirmar':
-    return 'bg-yellow-100 text-yellow-800';
-  case 'presente':
-    return 'bg-blue-100 text-blue-800';
-  case 'pronto_atendimento':
-    return 'bg-lime-100 text-lime-800';
-  case 'em_atendimento':
-    return 'bg-indigo-100 text-indigo-800';
-  case 'finalizado':
-    return 'bg-emerald-100 text-emerald-800';
-  case 'faltou':
-    return 'bg-red-100 text-red-800';
-  case 'cancelado':
-    return 'bg-orange-100 text-orange-800';
-  case 'encaixe':
-    return 'bg-cyan-100 text-cyan-800';
-  case 'bloqueado':
-    return 'bg-slate-100 text-slate-800';
-  default:
-    return 'bg-gray-100 text-gray-800';
+    case 'confirmado':
+      return 'bg-green-100 text-green-800';
+    case 'a_confirmar':
+      return 'bg-yellow-100 text-yellow-800';
+    case 'presente':
+      return 'bg-blue-100 text-blue-800';
+    case 'pronto_atendimento':
+      return 'bg-lime-100 text-lime-800';
+    case 'em_atendimento':
+      return 'bg-indigo-100 text-indigo-800';
+    case 'finalizado':
+      return 'bg-emerald-100 text-emerald-800';
+    case 'faltou':
+      return 'bg-red-100 text-red-800';
+    case 'cancelado':
+      return 'bg-orange-100 text-orange-800';
+    case 'encaixe':
+      return 'bg-cyan-100 text-cyan-800';
+    case 'bloqueado':
+      return 'bg-slate-100 text-slate-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
   }
 }
 
 function getStatusLabel(status) {
   switch (status) {
-  case 'confirmado':
-    return '✓ Confirmado';
-  case 'a_confirmar':
-    return '⚠ A Confirmar';
-  case 'presente':
-    return '📍 Presente';
-  case 'pronto_atendimento':
-    return '🟢 Pronto para Atendimento';
-  case 'em_atendimento':
-    return '👨‍⚕️ Em Atendimento';
-  case 'finalizado':
-    return '✓ Finalizado';
-  case 'faltou':
-    return '✕ Faltou';
-  case 'cancelado':
-    return '✕ Cancelado';
-  case 'encaixe':
-    return '⚡ Encaixe';
-  case 'bloqueado':
-    return '🔒 Bloqueado';
-  default:
-    return status;
+    case 'confirmado':
+      return '✓ Confirmado';
+    case 'a_confirmar':
+      return '⚠ A Confirmar';
+    case 'presente':
+      return '📍 Presente';
+    case 'pronto_atendimento':
+      return '🟢 Pronto para Atendimento';
+    case 'em_atendimento':
+      return '👨‍⚕️ Em Atendimento';
+    case 'finalizado':
+      return '✓ Finalizado';
+    case 'faltou':
+      return '✕ Faltou';
+    case 'cancelado':
+      return '✕ Cancelado';
+    case 'encaixe':
+      return '⚡ Encaixe';
+    case 'bloqueado':
+      return '🔒 Bloqueado';
+    default:
+      return status;
   }
 }

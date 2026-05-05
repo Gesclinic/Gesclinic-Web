@@ -148,9 +148,9 @@ export function useInvoiceForm(appointment, clinic) {
         amount:
           updates.quantity !== undefined || updates.unitPrice !== undefined
             ? roundMoney(
-              (updates.quantity || updated[index].quantity) *
+                (updates.quantity || updated[index].quantity) *
                   (updates.unitPrice || updated[index].unitPrice),
-            )
+              )
             : updated[index].amount,
       };
       return updated;

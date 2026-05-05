@@ -138,10 +138,10 @@ export default function AgendaTableView({
     professionals.length > 0
       ? professionals
       : [
-        { id: 'p1', name: 'Profissional 1' },
-        { id: 'p2', name: 'Profissional 2' },
-        { id: 'p3', name: 'Profissional 3' },
-      ];
+          { id: 'p1', name: 'Profissional 1' },
+          { id: 'p2', name: 'Profissional 2' },
+          { id: 'p3', name: 'Profissional 3' },
+        ];
 
   /* ============================================
      5) CORES POR STATUS

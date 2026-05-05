@@ -218,8 +218,8 @@ export default function LaudoSignaturePad({ signature, onChange, disabled = fals
                       .join(' ');
                     const serial = certBag.serialNumber.valueBlock.valueHex
                       ? Array.from(new Uint8Array(certBag.serialNumber.valueBlock.valueHex))
-                        .map((b) => b.toString(16).padStart(2, '0'))
-                        .join('')
+                          .map((b) => b.toString(16).padStart(2, '0'))
+                          .join('')
                       : '';
                     const notAfter = certBag.notAfter.value;
                     updateSignatureValue({

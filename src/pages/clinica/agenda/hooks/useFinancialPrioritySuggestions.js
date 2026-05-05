@@ -205,8 +205,8 @@ export function useFinancialPrioritySuggestions(clinicId, date, options = {}) {
     averageScore:
       suggestions.length > 0
         ? Math.round(
-          suggestions.reduce((sum, s) => sum + s.score_financeiro, 0) / suggestions.length,
-        )
+            suggestions.reduce((sum, s) => sum + s.score_financeiro, 0) / suggestions.length,
+          )
         : 0,
   };
 

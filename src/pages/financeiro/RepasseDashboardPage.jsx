@@ -239,8 +239,8 @@ const RepasseDashboardPage = () => {
                     <span className="font-semibold">
                       {dashboard.porProfissional.length > 0
                         ? formatarMoeda(
-                          dashboard.totais.totalLiquido / dashboard.porProfissional.length,
-                        )
+                            dashboard.totais.totalLiquido / dashboard.porProfissional.length,
+                          )
                         : 'N/A'}
                     </span>
                   </div>
@@ -249,10 +249,10 @@ const RepasseDashboardPage = () => {
                     <span className="font-semibold">
                       {dashboard.porProfissional.length > 0
                         ? formatarPercentual(
-                          dashboard.porProfissional.reduce((sum, p) => {
-                            return sum + calcularMargemLucro(p.totalLiquido, p.totalRepasse);
-                          }, 0) / dashboard.porProfissional.length,
-                        )
+                            dashboard.porProfissional.reduce((sum, p) => {
+                              return sum + calcularMargemLucro(p.totalLiquido, p.totalRepasse);
+                            }, 0) / dashboard.porProfissional.length,
+                          )
                         : 'N/A'}
                     </span>
                   </div>

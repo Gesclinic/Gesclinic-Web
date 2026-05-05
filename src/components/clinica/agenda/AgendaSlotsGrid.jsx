@@ -166,19 +166,19 @@ export default function AgendaSlotsGrid({
                     ${timeSlot.isAlmoco ? 'bg-yellow-100 border-yellow-300' : ''}
                     ${isBlocked ? 'bg-red-50 border-red-200 hover:bg-red-100' : ''}
                     ${
-                isFree && !timeSlot.isAlmoco
-                  ? 'bg-green-50/30 hover:bg-green-100/50 cursor-pointer'
-                  : ''
-                }
+                      isFree && !timeSlot.isAlmoco
+                        ? 'bg-green-50/30 hover:bg-green-100/50 cursor-pointer'
+                        : ''
+                    }
                     ${!isBlocked && !isFree && !timeSlot.isAlmoco ? 'hover:bg-blue-50' : ''}
                   `}
                   onClick={
                     isFree && !isBlocked
                       ? () =>
-                        onRowClick?.({
-                          start_time: slotDateTime.toISOString(),
-                          is_free: true,
-                        })
+                          onRowClick?.({
+                            start_time: slotDateTime.toISOString(),
+                            is_free: true,
+                          })
                       : undefined
                   }
                 >

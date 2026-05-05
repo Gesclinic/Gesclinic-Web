@@ -106,26 +106,26 @@ export function buildLaudoPrintHtml({ laudo, patientName = '' }) {
         </div>
 
         ${
-  professionalLines.length
-    ? `
+          professionalLines.length
+            ? `
           <div class="signature-block">
             <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:10px;">Responsável pelo laudo</div>
             ${renderLineBlock(professionalLines)}
             ${
-  signature?.visual_signature_data_url
-    ? `
+              signature?.visual_signature_data_url
+                ? `
               <div class="signature-image">
                 <img src="${escapeHtml(signature.visual_signature_data_url)}" alt="Assinatura do profissional" />
               </div>
             `
-    : ''
-}
+                : ''
+            }
             ${signature?.certificate_id ? `<div style="margin-top:12px;color:#475569;font-size:12px;">Certificado: ${escapeHtml(signature.certificate_id)}</div>` : ''}
             ${signature?.signature_hash ? `<div style="margin-top:6px;color:#64748b;font-size:11px;word-break:break-all;">Hash SHA-256: ${escapeHtml(signature.signature_hash)}</div>` : ''}
           </div>
         `
-    : ''
-}
+            : ''
+        }
 
         <div class="footer">
           Documento gerado por Gesclinic em ${escapeHtml(new Date().toLocaleDateString('pt-BR'))}.

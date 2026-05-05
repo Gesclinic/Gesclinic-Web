@@ -523,71 +523,71 @@ export default function PatientDetailPage() {
   // Renderizar aba ativa
   function renderTabContent() {
     switch (activeTab) {
-    case 'dados':
-      return (
-        <DadosCadastraisTab
-          patientId={patientId}
-          patientData={patientData}
-          updatePatientData={updatePatientData}
-        />
-      );
-    case 'convenios':
-      return (
-        <ConveniosTab
-          patientId={patientId}
-          patientData={patientData}
-          updatePatientData={updatePatientData}
-        />
-      );
-    case 'familiares':
-      return (
-        <FamiliaresTab
-          patientId={patientId}
-          patientData={patientData}
-          updatePatientData={updatePatientData}
-        />
-      );
-    case 'documentos':
-      return (
-        <DocumentosTab
-          patientId={patientId}
-          patientData={patientData}
-          updatePatientData={updatePatientData}
-        />
-      );
-    case 'historico':
-      return (
-        <HistoricoClinicoTab
-          patientId={patientId}
-          patientData={patientData}
-          updatePatientData={updatePatientData}
-          defaultProfessional={defaultProfessional}
-        />
-      );
-    case 'receitas':
-      return (
-        <ReceitasDigitaisTab
-          patientId={patientId}
-          patientData={patientData}
-          updatePatientData={updatePatientData}
-        />
-      );
-    case 'laudos':
-      return (
-        <LaudosTab
-          patientId={patientId}
-          patientData={patientData}
-          updatePatientData={updatePatientData}
-        />
-      );
-    default:
-      return (
-        <DadosCadastraisTab
-          patientId={patientId}
-          patientData={patientData}
-          updatePatientData={updatePatientData}
-        />
-      );
+      case 'dados':
+        return (
+          <DadosCadastraisTab
+            patientId={patientId}
+            patientData={patientData}
+            updatePatientData={updatePatientData}
+          />
+        );
+      case 'convenios':
+        return (
+          <ConveniosTab
+            patientId={patientId}
+            patientData={patientData}
+            updatePatientData={updatePatientData}
+          />
+        );
+      case 'familiares':
+        return (
+          <FamiliaresTab
+            patientId={patientId}
+            patientData={patientData}
+            updatePatientData={updatePatientData}
+          />
+        );
+      case 'documentos':
+        return (
+          <DocumentosTab
+            patientId={patientId}
+            patientData={patientData}
+            updatePatientData={updatePatientData}
+          />
+        );
+      case 'historico':
+        return (
+          <HistoricoClinicoTab
+            patientId={patientId}
+            patientData={patientData}
+            updatePatientData={updatePatientData}
+            defaultProfessional={defaultProfessional}
+          />
+        );
+      case 'receitas':
+        return (
+          <ReceitasDigitaisTab
+            patientId={patientId}
+            patientData={patientData}
+            updatePatientData={updatePatientData}
+          />
+        );
+      case 'laudos':
+        return (
+          <LaudosTab
+            patientId={patientId}
+            patientData={patientData}
+            updatePatientData={updatePatientData}
+          />
+        );
+      default:
+        return (
+          <DadosCadastraisTab
+            patientId={patientId}
+            patientData={patientData}
+            updatePatientData={updatePatientData}
+          />
+        );
     }
   }
 
@@ -689,8 +689,8 @@ export default function PatientDetailPage() {
                     <p className="font-semibold text-gray-900">
                       {patientData.birthdate || patientData.birth_date
                         ? new Date(
-                          patientData.birthdate || patientData.birth_date,
-                        ).toLocaleDateString('pt-BR')
+                            patientData.birthdate || patientData.birth_date,
+                          ).toLocaleDateString('pt-BR')
                         : 'N/A'}
                       {age && ` (${age} anos)`}
                     </p>

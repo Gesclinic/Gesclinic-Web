@@ -96,16 +96,16 @@ export function useFeatureBlocker(clinicId) {
   const validateFeatureAccess = useCallback(
     async (feature) => {
       switch (feature.toLowerCase()) {
-      case 'agenda':
-        return canAccessAgenda();
-      case 'checkin':
-      case 'check-in':
-        return canAccessCheckIn();
-      case 'finance':
-      case 'faturamento':
-        return canAccessFinance();
-      default:
-        return { blocked: false };
+        case 'agenda':
+          return canAccessAgenda();
+        case 'checkin':
+        case 'check-in':
+          return canAccessCheckIn();
+        case 'finance':
+        case 'faturamento':
+          return canAccessFinance();
+        default:
+          return { blocked: false };
       }
     },
     [canAccessAgenda, canAccessCheckIn, canAccessFinance],

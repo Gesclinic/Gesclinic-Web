@@ -1485,12 +1485,12 @@ export function ConveniosPage() {
         plansData.map((p) =>
           p.id === editingPlanId
             ? {
-              ...p,
-              name: editingPlanName,
-              code: editingPlanCode,
-              description: editingPlanDescription,
-              active: editingPlanActive,
-            }
+                ...p,
+                name: editingPlanName,
+                code: editingPlanCode,
+                description: editingPlanDescription,
+                active: editingPlanActive,
+              }
             : p,
         ),
       );
@@ -3307,202 +3307,202 @@ export function ConveniosPage() {
                                 pricingTableData &&
                                 Array.isArray(pricingTableData) &&
                                 pricingTableData.length > 0 && (
-                                <div className="space-y-4">
-                                  <div className="flex flex-wrap gap-4 mb-6 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                    <div className="text-center">
-                                      <p className="text-xs text-gray-600">Servi�os</p>
+                                  <div className="space-y-4">
+                                    <div className="flex flex-wrap gap-4 mb-6 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                      <div className="text-center">
+                                        <p className="text-xs text-gray-600">Servi�os</p>
 
-                                      <p className="text-lg font-bold text-gray-900">
-                                        {pricingTableData.length}
-                                      </p>
-                                    </div>
+                                        <p className="text-lg font-bold text-gray-900">
+                                          {pricingTableData.length}
+                                        </p>
+                                      </div>
 
-                                    <div className="text-center border-l border-r border-gray-300 px-4">
-                                      <p className="text-xs text-gray-600">Configurados</p>
+                                      <div className="text-center border-l border-r border-gray-300 px-4">
+                                        <p className="text-xs text-gray-600">Configurados</p>
 
-                                      <p className="text-lg font-bold text-green-600">
-                                        {
-                                          pricingTableData.filter((p) => {
-                                            const config =
+                                        <p className="text-lg font-bold text-green-600">
+                                          {
+                                            pricingTableData.filter((p) => {
+                                              const config =
                                                 typeof p.scheduling_config === 'string'
                                                   ? JSON.parse(p.scheduling_config)
                                                   : p.scheduling_config;
 
-                                            const periods = config
-                                              ? Object.values(config).reduce(
-                                                (s, d) => s + (d?.periods?.length || 0),
-                                                0,
-                                              )
-                                              : 0;
+                                              const periods = config
+                                                ? Object.values(config).reduce(
+                                                    (s, d) => s + (d?.periods?.length || 0),
+                                                    0,
+                                                  )
+                                                : 0;
 
-                                            return periods > 0;
-                                          }).length
-                                        }
-                                      </p>
+                                              return periods > 0;
+                                            }).length
+                                          }
+                                        </p>
+                                      </div>
+
+                                      <div className="text-center">
+                                        <p className="text-xs text-gray-600">Faturamento</p>
+
+                                        <p className="text-lg font-bold text-blue-600">
+                                          {new Intl.NumberFormat('pt-BR', {
+                                            style: 'currency',
+
+                                            currency: 'BRL',
+                                          }).format(
+                                            pricingTableData.reduce(
+                                              (sum, p) => sum + (p.price || 0),
+                                              0,
+                                            ),
+                                          )}
+                                        </p>
+                                      </div>
                                     </div>
 
-                                    <div className="text-center">
-                                      <p className="text-xs text-gray-600">Faturamento</p>
-
-                                      <p className="text-lg font-bold text-blue-600">
-                                        {new Intl.NumberFormat('pt-BR', {
-                                          style: 'currency',
-
-                                          currency: 'BRL',
-                                        }).format(
-                                          pricingTableData.reduce(
-                                            (sum, p) => sum + (p.price || 0),
-                                            0,
-                                          ),
-                                        )}
-                                      </p>
-                                    </div>
-                                  </div>
-
-                                  <div className="overflow-x-auto">
-                                    <table className="w-full text-sm border-collapse">
-                                      <thead className="bg-gray-100 border-b border-gray-300 sticky top-0">
-                                        <tr>
-                                          <th className="text-center py-2 px-3 font-semibold text-gray-800 text-xs">
+                                    <div className="overflow-x-auto">
+                                      <table className="w-full text-sm border-collapse">
+                                        <thead className="bg-gray-100 border-b border-gray-300 sticky top-0">
+                                          <tr>
+                                            <th className="text-center py-2 px-3 font-semibold text-gray-800 text-xs">
                                               C�digo
-                                          </th>
+                                            </th>
 
-                                          <th className="text-left py-2 px-3 font-semibold text-gray-800">
+                                            <th className="text-left py-2 px-3 font-semibold text-gray-800">
                                               Servi�o
-                                          </th>
+                                            </th>
 
-                                          <th className="text-left py-2 px-3 font-semibold text-gray-800">
+                                            <th className="text-left py-2 px-3 font-semibold text-gray-800">
                                               Plano
-                                          </th>
+                                            </th>
 
-                                          <th className="text-left py-2 px-3 font-semibold text-gray-800">
+                                            <th className="text-left py-2 px-3 font-semibold text-gray-800">
                                               Categoria
-                                          </th>
+                                            </th>
 
-                                          <th className="text-right py-2 px-3 font-semibold text-gray-800">
+                                            <th className="text-right py-2 px-3 font-semibold text-gray-800">
                                               Valor
-                                          </th>
+                                            </th>
 
-                                          <th className="text-center py-2 px-3 font-semibold text-gray-800">
+                                            <th className="text-center py-2 px-3 font-semibold text-gray-800">
                                               Status
-                                          </th>
+                                            </th>
 
-                                          <th className="text-center py-2 px-3 font-semibold text-gray-800">
+                                            <th className="text-center py-2 px-3 font-semibold text-gray-800">
                                               A��es
-                                          </th>
-                                        </tr>
-                                      </thead>
+                                            </th>
+                                          </tr>
+                                        </thead>
 
-                                      <tbody>
-                                        {pricingTableData.map((priceEntry) => {
-                                          const schedulingConfig = priceEntry.scheduling_config
-                                            ? typeof priceEntry.scheduling_config === 'string'
-                                              ? JSON.parse(priceEntry.scheduling_config)
-                                              : priceEntry.scheduling_config
-                                            : null;
+                                        <tbody>
+                                          {pricingTableData.map((priceEntry) => {
+                                            const schedulingConfig = priceEntry.scheduling_config
+                                              ? typeof priceEntry.scheduling_config === 'string'
+                                                ? JSON.parse(priceEntry.scheduling_config)
+                                                : priceEntry.scheduling_config
+                                              : null;
 
-                                          const serviceCode =
+                                            const serviceCode =
                                               priceEntry.services?.code ||
                                               priceEntry.services?.tuss_code ||
                                               priceEntry.service_id?.substring(0, 8) ||
                                               '-';
 
-                                          const totalPeriods = schedulingConfig
-                                            ? Object.values(schedulingConfig).reduce(
-                                              (sum, dayData) => {
-                                                return sum + (dayData?.periods?.length || 0);
-                                              },
-                                              0,
-                                            )
-                                            : 0;
+                                            const totalPeriods = schedulingConfig
+                                              ? Object.values(schedulingConfig).reduce(
+                                                  (sum, dayData) => {
+                                                    return sum + (dayData?.periods?.length || 0);
+                                                  },
+                                                  0,
+                                                )
+                                              : 0;
 
-                                          // Verificar se pre�o est� ATIVO (active = true)
+                                            // Verificar se pre�o est� ATIVO (active = true)
 
-                                          const isConfigured = priceEntry.active === true;
+                                            const isConfigured = priceEntry.active === true;
 
-                                          return (
-                                            <tr
-                                              key={priceEntry.id}
-                                              className="border-b hover:bg-gray-50 transition"
-                                            >
-                                              <td className="py-2 px-3 text-center text-xs text-gray-700 font-mono bg-gray-50">
-                                                {serviceCode}
-                                              </td>
+                                            return (
+                                              <tr
+                                                key={priceEntry.id}
+                                                className="border-b hover:bg-gray-50 transition"
+                                              >
+                                                <td className="py-2 px-3 text-center text-xs text-gray-700 font-mono bg-gray-50">
+                                                  {serviceCode}
+                                                </td>
 
-                                              <td className="py-2 px-3 text-gray-900 text-sm font-medium">
-                                                {priceEntry.services?.name || 'N/A'}
-                                              </td>
+                                                <td className="py-2 px-3 text-gray-900 text-sm font-medium">
+                                                  {priceEntry.services?.name || 'N/A'}
+                                                </td>
 
-                                              <td className="py-2 px-3 text-gray-900 text-sm">
-                                                {priceEntry.plano || '-'}
-                                              </td>
+                                                <td className="py-2 px-3 text-gray-900 text-sm">
+                                                  {priceEntry.plano || '-'}
+                                                </td>
 
-                                              <td className="py-2 px-3 text-gray-900 text-sm">
-                                                {getCategoryLabel(
-                                                  priceEntry.services?.service_category ||
+                                                <td className="py-2 px-3 text-gray-900 text-sm">
+                                                  {getCategoryLabel(
+                                                    priceEntry.services?.service_category ||
                                                       priceEntry.grupo,
-                                                )}
-                                              </td>
+                                                  )}
+                                                </td>
 
-                                              <td className="py-2 px-3 text-right text-gray-900 font-semibold">
-                                                {new Intl.NumberFormat('pt-BR', {
-                                                  style: 'currency',
+                                                <td className="py-2 px-3 text-right text-gray-900 font-semibold">
+                                                  {new Intl.NumberFormat('pt-BR', {
+                                                    style: 'currency',
 
-                                                  currency: 'BRL',
-                                                }).format(priceEntry.price || 0)}
-                                              </td>
+                                                    currency: 'BRL',
+                                                  }).format(priceEntry.price || 0)}
+                                                </td>
 
-                                              <td className="py-2 px-3 text-center">
-                                                <div className="flex items-center justify-center gap-2">
-                                                  <input
-                                                    type="checkbox"
-                                                    checked={isConfigured}
-                                                    onChange={() =>
-                                                      togglePricingStatus(priceEntry)
-                                                    }
-                                                    className="w-4 h-4 cursor-pointer"
-                                                    title={
-                                                      isConfigured
-                                                        ? 'Clique para desativar'
-                                                        : 'Clique para ver detalhes'
-                                                    }
-                                                  />
+                                                <td className="py-2 px-3 text-center">
+                                                  <div className="flex items-center justify-center gap-2">
+                                                    <input
+                                                      type="checkbox"
+                                                      checked={isConfigured}
+                                                      onChange={() =>
+                                                        togglePricingStatus(priceEntry)
+                                                      }
+                                                      className="w-4 h-4 cursor-pointer"
+                                                      title={
+                                                        isConfigured
+                                                          ? 'Clique para desativar'
+                                                          : 'Clique para ver detalhes'
+                                                      }
+                                                    />
 
-                                                  <span
-                                                    className={`text-xs font-semibold ${isConfigured ? 'text-green-600' : 'text-yellow-600'}`}
+                                                    <span
+                                                      className={`text-xs font-semibold ${isConfigured ? 'text-green-600' : 'text-yellow-600'}`}
+                                                    >
+                                                      {isConfigured ? '?' : '??'}
+                                                    </span>
+                                                  </div>
+                                                </td>
+
+                                                <td className="py-2 px-3 text-center space-x-1 flex gap-1 justify-center">
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => handleEditPricingRow(priceEntry)}
+                                                    className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs font-semibold"
                                                   >
-                                                    {isConfigured ? '?' : '??'}
-                                                  </span>
-                                                </div>
-                                              </td>
-
-                                              <td className="py-2 px-3 text-center space-x-1 flex gap-1 justify-center">
-                                                <button
-                                                  type="button"
-                                                  onClick={() => handleEditPricingRow(priceEntry)}
-                                                  className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs font-semibold"
-                                                >
                                                     ??
-                                                </button>
+                                                  </button>
 
-                                                <button
-                                                  type="button"
-                                                  onClick={() =>
-                                                    handleRemovePricingRow(priceEntry)
-                                                  }
-                                                  className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs font-semibold"
-                                                >
+                                                  <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                      handleRemovePricingRow(priceEntry)
+                                                    }
+                                                    className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs font-semibold"
+                                                  >
                                                     ???
-                                                </button>
-                                              </td>
-                                            </tr>
-                                          );
-                                        })}
-                                      </tbody>
-                                    </table>
+                                                  </button>
+                                                </td>
+                                              </tr>
+                                            );
+                                          })}
+                                        </tbody>
+                                      </table>
+                                    </div>
                                   </div>
-                                </div>
-                              )}
+                                )}
 
                               {!editingId && pricingTableData && pricingTableData.length > 0 && (
                                 <>
@@ -3564,9 +3564,9 @@ export function ConveniosPage() {
 
                                             const periods = config
                                               ? Object.values(config).reduce(
-                                                (s, d) => s + (d?.periods?.length || 0),
-                                                0,
-                                              )
+                                                  (s, d) => s + (d?.periods?.length || 0),
+                                                  0,
+                                                )
                                               : 0;
 
                                             return periods === 0;
@@ -3639,11 +3639,11 @@ export function ConveniosPage() {
 
                                           const totalPeriods = schedulingConfig
                                             ? Object.values(schedulingConfig).reduce(
-                                              (sum, dayData) => {
-                                                return sum + (dayData?.periods?.length || 0);
-                                              },
-                                              0,
-                                            )
+                                                (sum, dayData) => {
+                                                  return sum + (dayData?.periods?.length || 0);
+                                                },
+                                                0,
+                                              )
                                             : 0;
 
                                           const serviceCode =
@@ -3725,20 +3725,20 @@ export function ConveniosPage() {
 
                               {!editingId &&
                                 (!pricingTableData || pricingTableData.length === 0) && (
-                                <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                                  <p className="text-sm text-gray-700">
-                                    <strong>Nenhum pre�o configurado</strong> para este conv�nio
+                                  <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                                    <p className="text-sm text-gray-700">
+                                      <strong>Nenhum pre�o configurado</strong> para este conv�nio
                                       ainda.
-                                  </p>
+                                    </p>
 
-                                  <p className="text-sm text-gray-600 mt-2">
+                                    <p className="text-sm text-gray-600 mt-2">
                                       A tabela mostra apenas os <strong>pre�os base</strong>{' '}
                                       efetivamente negociados com o conv�nio. Pre�os espec�ficos de
                                       profissionais (negocia��es pontuais) aparecem como{' '}
-                                    <strong>"?? Negocia��o"</strong> na edi��o do profissional.
-                                  </p>
-                                </div>
-                              )}
+                                      <strong>"?? Negocia��o"</strong> na edi��o do profissional.
+                                    </p>
+                                  </div>
+                                )}
                             </>
 
                             {/* Instru��es de Upload - Ocultas */}
@@ -4911,12 +4911,12 @@ export function ConveniosPage() {
 
                                           accepted_payment_methods: e.target.checked
                                             ? [
-                                              ...(formData.accepted_payment_methods || []),
-                                              method.id,
-                                            ]
+                                                ...(formData.accepted_payment_methods || []),
+                                                method.id,
+                                              ]
                                             : (formData.accepted_payment_methods || []).filter(
-                                              (m) => m !== method.id,
-                                            ),
+                                                (m) => m !== method.id,
+                                              ),
                                         })
                                       }
                                       disabled={submitting}

@@ -2110,10 +2110,10 @@ export default function AtendimentoModal({
   const tabClass = (tab) => `
     px-4 py-2 font-medium text-sm border-b-2 transition-colors cursor-pointer
     ${
-  tabAtivo === tab
-    ? 'border-blue-600 text-blue-600'
-    : 'border-transparent text-gray-600 hover:text-gray-900'
-}
+      tabAtivo === tab
+        ? 'border-blue-600 text-blue-600'
+        : 'border-transparent text-gray-600 hover:text-gray-900'
+    }
   `;
 
   // ✅ Guard clause - retornar null se modal não estiver aberto ou appointment for null
@@ -2122,21 +2122,21 @@ export default function AtendimentoModal({
   const availableWeekdayLabels =
     professionalSchedules.length > 0
       ? [
-        ...new Set(
-          professionalSchedules.map((s) => {
-            const dayMap = {
-              1: 'Segunda',
-              2: 'Terça',
-              3: 'Quarta',
-              4: 'Quinta',
-              5: 'Sexta',
-              6: 'Sábado',
-              0: 'Domingo',
-            };
-            return dayMap[s.day_of_week] || '';
-          }),
-        ),
-      ].filter(Boolean)
+          ...new Set(
+            professionalSchedules.map((s) => {
+              const dayMap = {
+                1: 'Segunda',
+                2: 'Terça',
+                3: 'Quarta',
+                4: 'Quinta',
+                5: 'Sexta',
+                6: 'Sábado',
+                0: 'Domingo',
+              };
+              return dayMap[s.day_of_week] || '';
+            }),
+          ),
+        ].filter(Boolean)
       : [];
 
   const calendarYearOptions = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() + i - 2);
@@ -2564,11 +2564,11 @@ export default function AtendimentoModal({
                       {agendamentoData.professionalId &&
                         agendamentoData.date &&
                         !selectedDateHasAvailability && (
-                        <p className="mt-2 text-xs text-amber-700">
+                          <p className="mt-2 text-xs text-amber-700">
                             O profissional selecionado nao atende nesta data. Use o calendario
                             abaixo para escolher um dia disponivel.
-                        </p>
-                      )}
+                          </p>
+                        )}
                     </div>
                     <div>
                       <Label>🕐 Hora *</Label>
@@ -2651,15 +2651,15 @@ export default function AtendimentoModal({
                       <SelectTrigger>
                         {agendamentoData.professionalId &&
                         professionals.find((p) => p.id === agendamentoData.professionalId) ? (
-                            <span>
-                              {
-                                professionals.find((p) => p.id === agendamentoData.professionalId)
-                                  ?.name
-                              }
-                            </span>
-                          ) : (
-                            <SelectValue placeholder="Selecione profissional" />
-                          )}
+                          <span>
+                            {
+                              professionals.find((p) => p.id === agendamentoData.professionalId)
+                                ?.name
+                            }
+                          </span>
+                        ) : (
+                          <SelectValue placeholder="Selecione profissional" />
+                        )}
                       </SelectTrigger>
                       <SelectContent>
                         {professionals.map((prof) => (
@@ -2688,10 +2688,10 @@ export default function AtendimentoModal({
                       {selectedProfessional &&
                         !loadingProfessionalSchedules &&
                         professionalSchedules.length > 0 && (
-                        <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">
-                          {availableWeekdayLabels.length} dia(s) ativo(s)
-                        </span>
-                      )}
+                          <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">
+                            {availableWeekdayLabels.length} dia(s) ativo(s)
+                          </span>
+                        )}
                     </div>
 
                     {!selectedProfessional && (
@@ -2710,241 +2710,241 @@ export default function AtendimentoModal({
                     {selectedProfessional &&
                       !loadingProfessionalSchedules &&
                       professionalSchedules.length === 0 && (
-                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
                           Este profissional ainda nao possui dias de atendimento cadastrados em
                           Disponibilidades.
-                      </div>
-                    )}
+                        </div>
+                      )}
 
                     {selectedProfessional &&
                       !loadingProfessionalSchedules &&
                       professionalSchedules.length > 0 && (
-                      <div className="grid gap-4 xl:grid-cols-[minmax(300px,340px)_1fr]">
-                        <div className="rounded-lg border border-slate-200 bg-white p-3">
-                          <div className="mb-3 flex items-center justify-between gap-2 border-b border-slate-200 pb-3">
-                            <button
-                              type="button"
-                              onClick={handleCalendarPrevMonth}
-                              className="rounded-md border border-slate-200 p-2 text-slate-600 transition hover:border-blue-300 hover:text-blue-700"
-                              aria-label="Mes anterior"
-                            >
-                              <ChevronLeft className="h-4 w-4" />
-                            </button>
-
-                            <div className="flex items-center gap-2">
-                              <select
-                                value={calendarActiveStartDate.getMonth()}
-                                onChange={handleCalendarMonthChange}
-                                className="rounded-md border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700 outline-none transition focus:border-blue-400"
-                                aria-label="Selecionar mes"
+                        <div className="grid gap-4 xl:grid-cols-[minmax(300px,340px)_1fr]">
+                          <div className="rounded-lg border border-slate-200 bg-white p-3">
+                            <div className="mb-3 flex items-center justify-between gap-2 border-b border-slate-200 pb-3">
+                              <button
+                                type="button"
+                                onClick={handleCalendarPrevMonth}
+                                className="rounded-md border border-slate-200 p-2 text-slate-600 transition hover:border-blue-300 hover:text-blue-700"
+                                aria-label="Mes anterior"
                               >
-                                {MONTH_LABELS.map((monthLabel, monthIndex) => (
-                                  <option key={monthLabel} value={monthIndex}>
-                                    {monthLabel}
-                                  </option>
-                                ))}
-                              </select>
+                                <ChevronLeft className="h-4 w-4" />
+                              </button>
 
-                              <select
-                                value={calendarActiveStartDate.getFullYear()}
-                                onChange={handleCalendarYearChange}
-                                className="rounded-md border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700 outline-none transition focus:border-blue-400"
-                                aria-label="Selecionar ano"
+                              <div className="flex items-center gap-2">
+                                <select
+                                  value={calendarActiveStartDate.getMonth()}
+                                  onChange={handleCalendarMonthChange}
+                                  className="rounded-md border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700 outline-none transition focus:border-blue-400"
+                                  aria-label="Selecionar mes"
+                                >
+                                  {MONTH_LABELS.map((monthLabel, monthIndex) => (
+                                    <option key={monthLabel} value={monthIndex}>
+                                      {monthLabel}
+                                    </option>
+                                  ))}
+                                </select>
+
+                                <select
+                                  value={calendarActiveStartDate.getFullYear()}
+                                  onChange={handleCalendarYearChange}
+                                  className="rounded-md border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700 outline-none transition focus:border-blue-400"
+                                  aria-label="Selecionar ano"
+                                >
+                                  {calendarYearOptions.map((yearOption) => (
+                                    <option key={yearOption} value={yearOption}>
+                                      {yearOption}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={handleCalendarNextMonth}
+                                className="rounded-md border border-slate-200 p-2 text-slate-600 transition hover:border-blue-300 hover:text-blue-700"
+                                aria-label="Proximo mes"
                               >
-                                {calendarYearOptions.map((yearOption) => (
-                                  <option key={yearOption} value={yearOption}>
-                                    {yearOption}
-                                  </option>
-                                ))}
-                              </select>
+                                <ChevronRight className="h-4 w-4" />
+                              </button>
                             </div>
 
-                            <button
-                              type="button"
-                              onClick={handleCalendarNextMonth}
-                              className="rounded-md border border-slate-200 p-2 text-slate-600 transition hover:border-blue-300 hover:text-blue-700"
-                              aria-label="Proximo mes"
-                            >
-                              <ChevronRight className="h-4 w-4" />
-                            </button>
+                            <Calendar
+                              className="appointment-availability-calendar"
+                              locale="pt-BR"
+                              value={calendarSelectedDate}
+                              onChange={(nextValue) => {
+                                const selectedDate = Array.isArray(nextValue)
+                                  ? nextValue[0]
+                                  : nextValue;
+                                updateAgendamentoField('date', formatDateToIso(selectedDate));
+                              }}
+                              activeStartDate={calendarActiveStartDate}
+                              onActiveStartDateChange={({ activeStartDate }) => {
+                                if (activeStartDate) {
+                                  setCalendarActiveStartDate(activeStartDate);
+                                }
+                              }}
+                              minDetail="month"
+                              prevLabel={null}
+                              nextLabel={null}
+                              prev2Label={null}
+                              next2Label={null}
+                              showNavigation={false}
+                              showNeighboringMonth={false}
+                              tileDisabled={({ date, view }) =>
+                                view === 'month' &&
+                                (!hasAvailabilityForDate(date) || isBlockedHolidayDate(date))
+                              }
+                              tileClassName={({ date, view }) => {
+                                if (view !== 'month') {
+                                  return '';
+                                }
+
+                                const dateString = formatDateToIso(date);
+                                const blockedHoliday = isBlockedHolidayDate(date);
+
+                                if (agendamentoData.date && dateString === agendamentoData.date) {
+                                  return blockedHoliday
+                                    ? 'appointment-calendar-tile appointment-calendar-tile--holiday-selected'
+                                    : 'appointment-calendar-tile appointment-calendar-tile--selected';
+                                }
+
+                                if (blockedHoliday) {
+                                  return 'appointment-calendar-tile appointment-calendar-tile--holiday-blocked';
+                                }
+
+                                if (hasAvailabilityForDate(date)) {
+                                  return 'appointment-calendar-tile appointment-calendar-tile--available';
+                                }
+
+                                return 'appointment-calendar-tile appointment-calendar-tile--unavailable';
+                              }}
+                            />
                           </div>
 
-                          <Calendar
-                            className="appointment-availability-calendar"
-                            locale="pt-BR"
-                            value={calendarSelectedDate}
-                            onChange={(nextValue) => {
-                              const selectedDate = Array.isArray(nextValue)
-                                ? nextValue[0]
-                                : nextValue;
-                              updateAgendamentoField('date', formatDateToIso(selectedDate));
-                            }}
-                            activeStartDate={calendarActiveStartDate}
-                            onActiveStartDateChange={({ activeStartDate }) => {
-                              if (activeStartDate) {
-                                setCalendarActiveStartDate(activeStartDate);
-                              }
-                            }}
-                            minDetail="month"
-                            prevLabel={null}
-                            nextLabel={null}
-                            prev2Label={null}
-                            next2Label={null}
-                            showNavigation={false}
-                            showNeighboringMonth={false}
-                            tileDisabled={({ date, view }) =>
-                              view === 'month' &&
-                                (!hasAvailabilityForDate(date) || isBlockedHolidayDate(date))
-                            }
-                            tileClassName={({ date, view }) => {
-                              if (view !== 'month') {
-                                return '';
-                              }
-
-                              const dateString = formatDateToIso(date);
-                              const blockedHoliday = isBlockedHolidayDate(date);
-
-                              if (agendamentoData.date && dateString === agendamentoData.date) {
-                                return blockedHoliday
-                                  ? 'appointment-calendar-tile appointment-calendar-tile--holiday-selected'
-                                  : 'appointment-calendar-tile appointment-calendar-tile--selected';
-                              }
-
-                              if (blockedHoliday) {
-                                return 'appointment-calendar-tile appointment-calendar-tile--holiday-blocked';
-                              }
-
-                              if (hasAvailabilityForDate(date)) {
-                                return 'appointment-calendar-tile appointment-calendar-tile--available';
-                              }
-
-                              return 'appointment-calendar-tile appointment-calendar-tile--unavailable';
-                            }}
-                          />
-                        </div>
-
-                        <div className="space-y-3">
-                          <div className="rounded-lg border border-slate-200 bg-white p-4">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          <div className="space-y-3">
+                            <div className="rounded-lg border border-slate-200 bg-white p-4">
+                              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                                 Dia selecionado
-                            </p>
-                            <p className="mt-1 text-sm font-medium text-slate-900">
-                              {agendamentoData.date
-                                ? parseLocalDate(agendamentoData.date)?.toLocaleDateString(
-                                  'pt-BR',
-                                  {
-                                    weekday: 'long',
-                                    day: '2-digit',
-                                    month: '2-digit',
-                                    year: 'numeric',
-                                  },
-                                )
-                                : 'Selecione uma data no calendario'}
-                            </p>
+                              </p>
+                              <p className="mt-1 text-sm font-medium text-slate-900">
+                                {agendamentoData.date
+                                  ? parseLocalDate(agendamentoData.date)?.toLocaleDateString(
+                                      'pt-BR',
+                                      {
+                                        weekday: 'long',
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        year: 'numeric',
+                                      },
+                                    )
+                                  : 'Selecione uma data no calendario'}
+                              </p>
 
-                            {selectedDateHoliday && (
-                              <div
-                                className={`mt-3 rounded-lg border px-3 py-2 text-sm ${selectedDateBlockedByHoliday ? 'border-red-200 bg-red-50 text-red-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}
-                              >
-                                {selectedDateBlockedByHoliday ? 'Feriado bloqueado' : 'Feriado'}:{' '}
-                                {selectedDateHoliday.name}
-                              </div>
-                            )}
-
-                            {agendamentoData.date && selectedDateHasAvailability && (
-                              <div className="mt-3 space-y-2">
-                                <p className="text-xs font-medium text-slate-600">
-                                    Janelas de atendimento
-                                </p>
-                                <div className="flex flex-wrap gap-2">
-                                  {schedulesForSelectedDate.map((schedule) => (
-                                    <span
-                                      key={
-                                        schedule.id ||
-                                          `${schedule.day_of_week}-${schedule.start_time}-${schedule.end_time}`
-                                      }
-                                      className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700"
-                                    >
-                                      {formatScheduleWindow(schedule)}
-                                    </span>
-                                  ))}
+                              {selectedDateHoliday && (
+                                <div
+                                  className={`mt-3 rounded-lg border px-3 py-2 text-sm ${selectedDateBlockedByHoliday ? 'border-red-200 bg-red-50 text-red-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}
+                                >
+                                  {selectedDateBlockedByHoliday ? 'Feriado bloqueado' : 'Feriado'}:{' '}
+                                  {selectedDateHoliday.name}
                                 </div>
-                              </div>
-                            )}
+                              )}
 
-                            {agendamentoData.date &&
+                              {agendamentoData.date && selectedDateHasAvailability && (
+                                <div className="mt-3 space-y-2">
+                                  <p className="text-xs font-medium text-slate-600">
+                                    Janelas de atendimento
+                                  </p>
+                                  <div className="flex flex-wrap gap-2">
+                                    {schedulesForSelectedDate.map((schedule) => (
+                                      <span
+                                        key={
+                                          schedule.id ||
+                                          `${schedule.day_of_week}-${schedule.start_time}-${schedule.end_time}`
+                                        }
+                                        className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700"
+                                      >
+                                        {formatScheduleWindow(schedule)}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {agendamentoData.date &&
                                 !selectedDateHasAvailability &&
                                 !selectedDateBlockedByHoliday && (
-                              <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                                <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
-                                <span>
+                                  <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                                    <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                                    <span>
                                       Sem expediente cadastrado para este profissional neste dia.
-                                </span>
-                              </div>
-                            )}
+                                    </span>
+                                  </div>
+                                )}
 
-                            {agendamentoData.date && selectedDateBlockedByHoliday && (
-                              <div className="mt-3 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-                                <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
-                                <span>Agendamento bloqueado por feriado.</span>
-                              </div>
-                            )}
-                          </div>
+                              {agendamentoData.date && selectedDateBlockedByHoliday && (
+                                <div className="mt-3 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                                  <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                                  <span>Agendamento bloqueado por feriado.</span>
+                                </div>
+                              )}
+                            </div>
 
-                          <div className="rounded-lg border border-slate-200 bg-white p-4">
-                            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                              <Clock3 className="h-4 w-4" />
+                            <div className="rounded-lg border border-slate-200 bg-white p-4">
+                              <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                <Clock3 className="h-4 w-4" />
                                 Horarios sugeridos
-                            </p>
-
-                            {agendamentoData.date && availableTimeSlots.length > 0 ? (
-                              <div className="mt-3 flex flex-wrap gap-2">
-                                {availableTimeSlots.map((slot) => (
-                                  <button
-                                    key={slot}
-                                    type="button"
-                                    onClick={() => {
-                                      updateAgendamentoField('time', slot);
-                                      updateAgendamentoField(
-                                        'endTime',
-                                        minutesToTime(
-                                          timeToMinutes(slot) +
-                                              (Number(agendamentoData.duration) || 30),
-                                        ),
-                                      );
-                                    }}
-                                    className={`rounded-full border px-3 py-1 text-xs font-medium transition ${agendamentoData.time === slot ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-blue-300 hover:text-blue-700'}`}
-                                  >
-                                    {slot}
-                                  </button>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="mt-3 text-sm text-slate-500">
-                                {agendamentoData.date
-                                  ? 'Nao ha horarios disponiveis para o dia selecionado.'
-                                  : 'Selecione um dia disponivel no calendario para ver os horarios.'}
                               </p>
-                            )}
-                          </div>
 
-                          <div className="flex flex-wrap gap-2 text-xs text-slate-600">
-                            <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-emerald-700">
+                              {agendamentoData.date && availableTimeSlots.length > 0 ? (
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  {availableTimeSlots.map((slot) => (
+                                    <button
+                                      key={slot}
+                                      type="button"
+                                      onClick={() => {
+                                        updateAgendamentoField('time', slot);
+                                        updateAgendamentoField(
+                                          'endTime',
+                                          minutesToTime(
+                                            timeToMinutes(slot) +
+                                              (Number(agendamentoData.duration) || 30),
+                                          ),
+                                        );
+                                      }}
+                                      className={`rounded-full border px-3 py-1 text-xs font-medium transition ${agendamentoData.time === slot ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-blue-300 hover:text-blue-700'}`}
+                                    >
+                                      {slot}
+                                    </button>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="mt-3 text-sm text-slate-500">
+                                  {agendamentoData.date
+                                    ? 'Nao ha horarios disponiveis para o dia selecionado.'
+                                    : 'Selecione um dia disponivel no calendario para ver os horarios.'}
+                                </p>
+                              )}
+                            </div>
+
+                            <div className="flex flex-wrap gap-2 text-xs text-slate-600">
+                              <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-emerald-700">
                                 Dia com atendimento
-                            </span>
-                            <span className="rounded-full bg-blue-100 px-2.5 py-1 text-blue-700">
+                              </span>
+                              <span className="rounded-full bg-blue-100 px-2.5 py-1 text-blue-700">
                                 Dia selecionado
-                            </span>
-                            <span className="rounded-full bg-red-100 px-2.5 py-1 text-red-700">
+                              </span>
+                              <span className="rounded-full bg-red-100 px-2.5 py-1 text-red-700">
                                 Feriado bloqueado
-                            </span>
-                            <span className="rounded-full bg-slate-200 px-2.5 py-1 text-slate-600">
+                              </span>
+                              <span className="rounded-full bg-slate-200 px-2.5 py-1 text-slate-600">
                                 Dia bloqueado
-                            </span>
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -2975,12 +2975,12 @@ export default function AtendimentoModal({
                         <SelectTrigger>
                           {agendamentoData.serviceId &&
                           services.find((s) => s.id === agendamentoData.serviceId) ? (
-                              <span>
-                                {services.find((s) => s.id === agendamentoData.serviceId)?.name}
-                              </span>
-                            ) : (
-                              <SelectValue placeholder="Selecione serviço" />
-                            )}
+                            <span>
+                              {services.find((s) => s.id === agendamentoData.serviceId)?.name}
+                            </span>
+                          ) : (
+                            <SelectValue placeholder="Selecione serviço" />
+                          )}
                         </SelectTrigger>
                         <SelectContent>
                           {services.map((service) => (
@@ -3023,12 +3023,12 @@ export default function AtendimentoModal({
                         <SelectTrigger>
                           {agendamentoData.payerId &&
                           payers.find((p) => p.id === agendamentoData.payerId) ? (
-                              <span>
-                                {payers.find((p) => p.id === agendamentoData.payerId)?.name}
-                              </span>
-                            ) : (
-                              <SelectValue placeholder="Selecione um convênio" />
-                            )}
+                            <span>
+                              {payers.find((p) => p.id === agendamentoData.payerId)?.name}
+                            </span>
+                          ) : (
+                            <SelectValue placeholder="Selecione um convênio" />
+                          )}
                         </SelectTrigger>
                         <SelectContent>
                           {payers.map((payer) => (
@@ -3908,30 +3908,30 @@ export default function AtendimentoModal({
                   {faturamentoData.discount > 0 &&
                     !faturamentoData.discount_authorized_by &&
                     !isDiscountSectionOpen && (
-                    <div className="bg-yellow-50 border-l-4 border-yellow-500 rounded-lg p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-semibold text-yellow-800">
+                      <div className="bg-yellow-50 border-l-4 border-yellow-500 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-semibold text-yellow-800">
                               ⏳ Solicitação de desconto enviada
-                          </p>
-                          <p className="text-xs text-yellow-700 mt-1">
+                            </p>
+                            <p className="text-xs text-yellow-700 mt-1">
                               Desconto: R$ {parseFloat(faturamentoData.discount).toFixed(2)} •
                               Motivo: {faturamentoData.discount_reason}
-                          </p>
-                          <p className="text-xs text-yellow-600 mt-1">
+                            </p>
+                            <p className="text-xs text-yellow-600 mt-1">
                               Aguardando aprovação na página de Autorizações
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setIsDiscountSectionOpen(true)}
-                          className="px-3 py-1 bg-yellow-500 text-white text-xs font-semibold rounded hover:bg-yellow-600 transition whitespace-nowrap ml-2"
-                        >
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setIsDiscountSectionOpen(true)}
+                            className="px-3 py-1 bg-yellow-500 text-white text-xs font-semibold rounded hover:bg-yellow-600 transition whitespace-nowrap ml-2"
+                          >
                             ✏️ Editar
-                        </button>
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
 
                   {/* VERSÃO COMPLETA: Quando expandida ou sem solicitação */}
                   {(!faturamentoData.discount > 0 ||
@@ -3945,27 +3945,27 @@ export default function AtendimentoModal({
                         </h3>
                         {faturamentoData.discount > 0 &&
                           !faturamentoData.discount_authorized_by && (
-                          <button
-                            type="button"
-                            onClick={() => setIsDiscountSectionOpen(false)}
-                            className="text-sm text-gray-600 hover:text-gray-900"
-                          >
+                            <button
+                              type="button"
+                              onClick={() => setIsDiscountSectionOpen(false)}
+                              className="text-sm text-gray-600 hover:text-gray-900"
+                            >
                               ✕
-                          </button>
-                        )}
+                            </button>
+                          )}
                       </div>
 
                       {/* Verificação de Permissão */}
                       {currentRole !== 'admin' &&
                         currentRole !== 'gerente_financeiro' &&
                         currentRole !== 'gestor' && (
-                        <div className="bg-red-100 border-l-4 border-red-600 p-3 mb-4 rounded">
-                          <p className="text-sm font-semibold text-red-800">
+                          <div className="bg-red-100 border-l-4 border-red-600 p-3 mb-4 rounded">
+                            <p className="text-sm font-semibold text-red-800">
                               ⚠️ Apenas Administrador ou Gerente Financeiro podem autorizar
                               descontos.
-                          </p>
-                        </div>
-                      )}
+                            </p>
+                          </div>
+                        )}
 
                       <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -5269,53 +5269,53 @@ export default function AtendimentoModal({
                         )}
                         {pagamentoData.payment_method === 'CARTAO' &&
                           parseInt(pagamentoData.card_installments || 1) > 1 && (
-                          <div>
-                            <p className="text-xs text-gray-600 font-medium">Parcelamento</p>
-                            <p className="font-semibold text-blue-600">
-                              {pagamentoData.card_installments}x
-                            </p>
-                          </div>
-                        )}
+                            <div>
+                              <p className="text-xs text-gray-600 font-medium">Parcelamento</p>
+                              <p className="font-semibold text-blue-600">
+                                {pagamentoData.card_installments}x
+                              </p>
+                            </div>
+                          )}
                       </div>
 
                       {/* Exibição de parcelas quando parcelado */}
                       {pagamentoData.payment_method === 'CARTAO' &&
                         parseInt(pagamentoData.card_installments || 1) > 1 && (
-                        <div className="mt-4 pt-4 border-t border-orange-300">
-                          <p className="text-xs font-bold text-orange-900 mb-2">
+                          <div className="mt-4 pt-4 border-t border-orange-300">
+                            <p className="text-xs font-bold text-orange-900 mb-2">
                               📊 Cronograma de Parcelas (Contas a Receber)
-                          </p>
-                          <div className="grid gap-2 text-xs">
-                            {Array.from({
-                              length: parseInt(pagamentoData.card_installments || 1),
-                            }).map((_, i) => {
-                              const dueDate = new Date();
-                              dueDate.setDate(dueDate.getDate() + 30 + i * 30);
-                              // 💰 Aplicar DESCONTO ao cálculo das parcelas
-                              const valueWithDiscount =
+                            </p>
+                            <div className="grid gap-2 text-xs">
+                              {Array.from({
+                                length: parseInt(pagamentoData.card_installments || 1),
+                              }).map((_, i) => {
+                                const dueDate = new Date();
+                                dueDate.setDate(dueDate.getDate() + 30 + i * 30);
+                                // 💰 Aplicar DESCONTO ao cálculo das parcelas
+                                const valueWithDiscount =
                                   parseFloat(faturamentoData.estimated_value || '0') -
                                   parseFloat(faturamentoData.discount || '0');
-                              const installmentValue = (
-                                valueWithDiscount / parseInt(pagamentoData.card_installments || 1)
-                              ).toFixed(2);
-                              return (
-                                <div
-                                  key={i}
-                                  className="flex justify-between bg-white px-3 py-2 rounded border border-orange-100"
-                                >
-                                  <span className="font-medium text-gray-700">
+                                const installmentValue = (
+                                  valueWithDiscount / parseInt(pagamentoData.card_installments || 1)
+                                ).toFixed(2);
+                                return (
+                                  <div
+                                    key={i}
+                                    className="flex justify-between bg-white px-3 py-2 rounded border border-orange-100"
+                                  >
+                                    <span className="font-medium text-gray-700">
                                       Parcela {i + 1}:
-                                  </span>
-                                  <span className="text-gray-900">
+                                    </span>
+                                    <span className="text-gray-900">
                                       R$ {parseFloat(installmentValue).toFixed(2)} - Vence em{' '}
-                                    {dueDate.toLocaleDateString('pt-BR')}
-                                  </span>
-                                </div>
-                              );
-                            })}
+                                      {dueDate.toLocaleDateString('pt-BR')}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
 
                       {/* ✅ RESUMO DE MÚLTIPLOS PAGAMENTOS - Mostrar saldo em aberto */}
                       {pagamentoSplits && pagamentoSplits.length > 0 && (

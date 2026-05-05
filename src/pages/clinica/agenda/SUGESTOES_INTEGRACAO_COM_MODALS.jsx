@@ -38,27 +38,27 @@ export default function AgendaComSugestoesCompleta() {
     setCurrentSuggestion(suggestion);
 
     switch (action) {
-    case 'VER_LISTA_ESPERA':
-      setWaitlistModalOpen(true);
-      suggestionsDrawer.close();
-      break;
+      case 'VER_LISTA_ESPERA':
+        setWaitlistModalOpen(true);
+        suggestionsDrawer.close();
+        break;
 
-    case 'CRIAR_ENCAIXE':
-      setCreateAppointmentModalOpen(true);
-      suggestionsDrawer.close();
-      break;
+      case 'CRIAR_ENCAIXE':
+        setCreateAppointmentModalOpen(true);
+        suggestionsDrawer.close();
+        break;
 
-    case 'CONTATAR_PACIENTE':
-      setContactModalOpen(true);
-      suggestionsDrawer.close();
-      break;
+      case 'CONTATAR_PACIENTE':
+        setContactModalOpen(true);
+        suggestionsDrawer.close();
+        break;
 
-    case 'OTIMIZAR_AGENDA':
-      alert('Abrir view de otimização (não implementado)');
-      break;
+      case 'OTIMIZAR_AGENDA':
+        alert('Abrir view de otimização (não implementado)');
+        break;
 
-    default:
-      break;
+      default:
+        break;
     }
   };
 

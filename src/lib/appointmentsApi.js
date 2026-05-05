@@ -534,31 +534,31 @@ export async function listAppointments({
     const [patientsData, profsData, servicesData, payersData] = await Promise.all([
       patientIds.length > 0
         ? supabase
-          .from('patients')
-          .select('id, name, phone')
-          .in('id', patientIds)
-          .then((r) => r.data || [])
+            .from('patients')
+            .select('id, name, phone')
+            .in('id', patientIds)
+            .then((r) => r.data || [])
         : Promise.resolve([]),
       profIds.length > 0
         ? supabase
-          .from('professionals')
-          .select('id, name')
-          .in('id', profIds)
-          .then((r) => r.data || [])
+            .from('professionals')
+            .select('id, name')
+            .in('id', profIds)
+            .then((r) => r.data || [])
         : Promise.resolve([]),
       serviceIds.length > 0
         ? supabase
-          .from('services')
-          .select('id, name')
-          .in('id', serviceIds)
-          .then((r) => r.data || [])
+            .from('services')
+            .select('id, name')
+            .in('id', serviceIds)
+            .then((r) => r.data || [])
         : Promise.resolve([]),
       payerIds.length > 0
         ? supabase
-          .from('payers')
-          .select('id, name')
-          .in('id', payerIds)
-          .then((r) => r.data || [])
+            .from('payers')
+            .select('id, name')
+            .in('id', payerIds)
+            .then((r) => r.data || [])
         : Promise.resolve([]),
     ]);
 

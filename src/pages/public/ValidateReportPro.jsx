@@ -87,107 +87,107 @@ export default function ValidateReportPro() {
 
   const renderContent = () => {
     switch (status) {
-    case 'loading':
-      return (
-        <div className="flex flex-col items-center justify-center gap-3 text-muted-foreground p-8">
-          <Loader2 className="animate-spin w-8 h-8" />
-          <span className="text-lg">Verificando autenticidade...</span>
-        </div>
-      );
-    case 'valid':
-      return (
-        <div className="space-y-4 p-4">
-          <CheckCircle className="mx-auto w-16 h-16 text-green-500" />
-          <p className="text-2xl font-bold text-green-700">Documento Autêntico</p>
-          <p className="text-muted-foreground">
+      case 'loading':
+        return (
+          <div className="flex flex-col items-center justify-center gap-3 text-muted-foreground p-8">
+            <Loader2 className="animate-spin w-8 h-8" />
+            <span className="text-lg">Verificando autenticidade...</span>
+          </div>
+        );
+      case 'valid':
+        return (
+          <div className="space-y-4 p-4">
+            <CheckCircle className="mx-auto w-16 h-16 text-green-500" />
+            <p className="text-2xl font-bold text-green-700">Documento Autêntico</p>
+            <p className="text-muted-foreground">
               Este documento foi verificado e sua integridade foi confirmada.
-          </p>
-          <div className="text-left bg-green-50/50 border border-green-200 rounded-lg p-4 space-y-2 text-sm text-gray-700">
-            <p>
-              <strong>Documento:</strong> {info.document_name || info.report_name}
             </p>
-            {info.cert_code && (
+            <div className="text-left bg-green-50/50 border border-green-200 rounded-lg p-4 space-y-2 text-sm text-gray-700">
+              <p>
+                <strong>Documento:</strong> {info.document_name || info.report_name}
+              </p>
+              {info.cert_code && (
+                <p>
+                  <strong>Certificado:</strong> {info.cert_code}
+                </p>
+              )}
+              <p>
+                <strong>Clínica:</strong> {info.clinic_name || 'N/A'}
+              </p>
+              <p>
+                <strong>Emitido em:</strong> {formattedDate(info.issued_at || info.created_at)}
+              </p>
+              <p className="break-all">
+                <strong>Assinatura SHA-256:</strong>{' '}
+                <span className="font-mono text-xs">{info.file_hash}</span>
+              </p>
+            </div>
+            <div className="text-xs text-gray-500 pt-2">
+              Esta assinatura digital garante que o documento não foi alterado desde sua emissão.
+            </div>
+            {validationType === 'report' && <CertificateGenerator validationData={info} />}
+          </div>
+        );
+      case 'tampered':
+        return (
+          <div className="space-y-4 p-4">
+            <AlertTriangle className="mx-auto w-16 h-16 text-yellow-500" />
+            <p className="text-2xl font-bold text-yellow-700">Documento Possivelmente Alterado</p>
+            <p className="text-muted-foreground">
+              O conteúdo deste documento não corresponde à sua assinatura digital original.
+            </p>
+            <div className="text-left bg-yellow-50/50 border border-yellow-200 rounded-lg p-4 space-y-2 text-sm text-gray-700">
+              <p>
+                <strong>Relatório:</strong> {info?.report_name || file}
+              </p>
+              <p className="break-all">
+                <strong>Assinatura Digital (Original):</strong>{' '}
+                <span className="font-mono text-xs">{info?.file_hash || 'Não encontrada'}</span>
+              </p>
+              <p className="break-all">
+                <strong>Assinatura Apresentada (QR Code):</strong>{' '}
+                <span className="font-mono text-xs">{hashFromQR}</span>
+              </p>
+            </div>
+          </div>
+        );
+      case 'revoked':
+        return (
+          <div className="space-y-4 p-4">
+            <FileWarning className="mx-auto w-16 h-16 text-orange-500" />
+            <p className="text-2xl font-bold text-orange-700">Certificado Revogado</p>
+            <p className="text-muted-foreground">Este certificado não é mais válido.</p>
+            <div className="text-left bg-orange-50/50 border border-orange-200 rounded-lg p-4 space-y-2 text-sm text-gray-700">
+              <p>
+                <strong>Documento:</strong> {info.document_name}
+              </p>
               <p>
                 <strong>Certificado:</strong> {info.cert_code}
               </p>
-            )}
-            <p>
-              <strong>Clínica:</strong> {info.clinic_name || 'N/A'}
-            </p>
-            <p>
-              <strong>Emitido em:</strong> {formattedDate(info.issued_at || info.created_at)}
-            </p>
-            <p className="break-all">
-              <strong>Assinatura SHA-256:</strong>{' '}
-              <span className="font-mono text-xs">{info.file_hash}</span>
-            </p>
+            </div>
           </div>
-          <div className="text-xs text-gray-500 pt-2">
-              Esta assinatura digital garante que o documento não foi alterado desde sua emissão.
-          </div>
-          {validationType === 'report' && <CertificateGenerator validationData={info} />}
-        </div>
-      );
-    case 'tampered':
-      return (
-        <div className="space-y-4 p-4">
-          <AlertTriangle className="mx-auto w-16 h-16 text-yellow-500" />
-          <p className="text-2xl font-bold text-yellow-700">Documento Possivelmente Alterado</p>
-          <p className="text-muted-foreground">
-              O conteúdo deste documento não corresponde à sua assinatura digital original.
-          </p>
-          <div className="text-left bg-yellow-50/50 border border-yellow-200 rounded-lg p-4 space-y-2 text-sm text-gray-700">
-            <p>
-              <strong>Relatório:</strong> {info?.report_name || file}
-            </p>
-            <p className="break-all">
-              <strong>Assinatura Digital (Original):</strong>{' '}
-              <span className="font-mono text-xs">{info?.file_hash || 'Não encontrada'}</span>
-            </p>
-            <p className="break-all">
-              <strong>Assinatura Apresentada (QR Code):</strong>{' '}
-              <span className="font-mono text-xs">{hashFromQR}</span>
-            </p>
-          </div>
-        </div>
-      );
-    case 'revoked':
-      return (
-        <div className="space-y-4 p-4">
-          <FileWarning className="mx-auto w-16 h-16 text-orange-500" />
-          <p className="text-2xl font-bold text-orange-700">Certificado Revogado</p>
-          <p className="text-muted-foreground">Este certificado não é mais válido.</p>
-          <div className="text-left bg-orange-50/50 border border-orange-200 rounded-lg p-4 space-y-2 text-sm text-gray-700">
-            <p>
-              <strong>Documento:</strong> {info.document_name}
-            </p>
-            <p>
-              <strong>Certificado:</strong> {info.cert_code}
-            </p>
-          </div>
-        </div>
-      );
-    case 'invalid_params':
-      return (
-        <div className="space-y-4 p-4">
-          <XCircle className="mx-auto w-16 h-16 text-red-500" />
-          <p className="text-2xl font-bold text-red-700">Link de Validação Inválido</p>
-          <p className="text-muted-foreground">
+        );
+      case 'invalid_params':
+        return (
+          <div className="space-y-4 p-4">
+            <XCircle className="mx-auto w-16 h-16 text-red-500" />
+            <p className="text-2xl font-bold text-red-700">Link de Validação Inválido</p>
+            <p className="text-muted-foreground">
               Os parâmetros necessários para a validação não foram encontrados na URL.
-          </p>
-        </div>
-      );
-    default:
-      return (
-        <div className="space-y-4 p-4">
-          <XCircle className="mx-auto w-16 h-16 text-red-500" />
-          <p className="text-2xl font-bold text-red-700">Documento Inválido ou Não Encontrado</p>
-          <p className="text-muted-foreground">
+            </p>
+          </div>
+        );
+      default:
+        return (
+          <div className="space-y-4 p-4">
+            <XCircle className="mx-auto w-16 h-16 text-red-500" />
+            <p className="text-2xl font-bold text-red-700">Documento Inválido ou Não Encontrado</p>
+            <p className="text-muted-foreground">
               Nenhum registro de assinatura digital foi localizado para o item{' '}
-            <strong>{file || certCode}</strong>.
-          </p>
-        </div>
-      );
+              <strong>{file || certCode}</strong>.
+            </p>
+          </div>
+        );
     }
   };
 

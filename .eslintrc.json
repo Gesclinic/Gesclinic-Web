@@ -4,6 +4,13 @@
     "plugin:react/recommended",
     "plugin:react-hooks/recommended"
   ],
+  "ignorePatterns": [
+    "**/*.ts",
+    "**/*.tsx",
+    "dist/",
+    "node_modules/",
+    "build/"
+  ],
   "env": {
     "browser": true,
     "es2021": true,
@@ -119,6 +126,15 @@
     {
       "files": [
         "**/*.d.ts"
+      ],
+      "rules": {
+        "no-unused-vars": "off"
+      }
+    },
+    {
+      "files": [
+        "**/*.ts",
+        "**/*.tsx"
       ],
       "rules": {
         "no-unused-vars": "off"

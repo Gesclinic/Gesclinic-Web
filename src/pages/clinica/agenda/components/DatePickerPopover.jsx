@@ -243,14 +243,14 @@ export default function DatePickerPopover({ selectedDate, onChange, agendaSummar
           title={displayMeta?.label || ''}
           className={`relative h-9 rounded font-medium transition-all
             ${
-        !isCurrentMonth
-          ? 'text-gray-300 cursor-default'
-          : isSelected
-            ? 'bg-blue-500 text-white'
-            : isToday
-              ? 'border border-dashed border-gray-400'
-              : 'text-gray-700 hover:bg-gray-100'
-        }
+              !isCurrentMonth
+                ? 'text-gray-300 cursor-default'
+                : isSelected
+                  ? 'bg-blue-500 text-white'
+                  : isToday
+                    ? 'border border-dashed border-gray-400'
+                    : 'text-gray-700 hover:bg-gray-100'
+            }
           `}
         >
           {date.getDate()}

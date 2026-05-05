@@ -142,18 +142,18 @@ export default function AppointmentStatusManager({
     console.log(`🤖 Executando gatilho automático: ${trigger}`, appointment);
 
     switch (trigger) {
-    case 'cria_fila_espera':
-      // Registrar na fila de espera
-      break;
-    case 'criar_guia_tiss_ou_pagamento':
-      // Criar guia TISS se convênio ou pagamento se particular
-      break;
-    case 'abrir_tela_atendimento':
-      // Navegar para tela de atendimento
-      break;
-    case 'enviar_guia_lote_gerar_repasse':
-      // Enviar guia ao lote e gerar repasse médico
-      break;
+      case 'cria_fila_espera':
+        // Registrar na fila de espera
+        break;
+      case 'criar_guia_tiss_ou_pagamento':
+        // Criar guia TISS se convênio ou pagamento se particular
+        break;
+      case 'abrir_tela_atendimento':
+        // Navegar para tela de atendimento
+        break;
+      case 'enviar_guia_lote_gerar_repasse':
+        // Enviar guia ao lote e gerar repasse médico
+        break;
     }
   };
 

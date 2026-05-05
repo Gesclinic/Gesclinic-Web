@@ -470,24 +470,24 @@ export function validatePaymentData(paymentMethod, paymentData) {
  */
 export function getPaymentMethodKey(paymentMethod) {
   switch (paymentMethod) {
-  case PAYMENT_METHODS.DINHEIRO:
-    return 'dinheiro';
-  case PAYMENT_METHODS.CARTAO:
-    return 'cartao';
-  case PAYMENT_METHODS.PIX:
-    return 'pix';
-  case PAYMENT_METHODS.CHEQUE:
-    return 'cheque';
-  case PAYMENT_METHODS.BOLETO:
-    return 'boleto';
-  case PAYMENT_METHODS.DOC:
-    return 'doc';
-  case PAYMENT_METHODS.TED:
-    return 'ted';
-  case PAYMENT_METHODS.DEPOSITO:
-    return 'deposito';
-  default:
-    return 'dinheiro';
+    case PAYMENT_METHODS.DINHEIRO:
+      return 'dinheiro';
+    case PAYMENT_METHODS.CARTAO:
+      return 'cartao';
+    case PAYMENT_METHODS.PIX:
+      return 'pix';
+    case PAYMENT_METHODS.CHEQUE:
+      return 'cheque';
+    case PAYMENT_METHODS.BOLETO:
+      return 'boleto';
+    case PAYMENT_METHODS.DOC:
+      return 'doc';
+    case PAYMENT_METHODS.TED:
+      return 'ted';
+    case PAYMENT_METHODS.DEPOSITO:
+      return 'deposito';
+    default:
+      return 'dinheiro';
   }
 }
 

@@ -100,32 +100,32 @@ const AppointmentAuditTimeline = ({
   // Mapear tipo de ação para ícone
   const getActionIcon = (actionType) => {
     switch (actionType) {
-    case 'APPOINTMENT_CREATED':
-      return <Plus className="w-4 h-4" />;
-    case 'STATUS_CHANGED':
-      return <RefreshCw className="w-4 h-4" />;
-    case 'CHECKIN_STARTED':
-      return <LogIn className="w-4 h-4" />;
-    case 'CHECKLIST_UPDATED':
-      return <CheckSquare className="w-4 h-4" />;
-    case 'FINANCIAL_VALIDATED':
-      return <CreditCard className="w-4 h-4" />;
-    case 'MERGE_PRE_PATIENT':
-      return <GitMerge className="w-4 h-4" />;
-    case 'PATIENT_LINKED':
-      return <User className="w-4 h-4" />;
-    case 'ATTENDANCE_STARTED':
-      return <Play className="w-4 h-4" />;
-    case 'ATTENDANCE_FINISHED':
-      return <CheckCircle2 className="w-4 h-4" />;
-    case 'MARKED_NO_SHOW':
-      return <XCircle className="w-4 h-4" />;
-    case 'RESCHEDULED':
-      return <Calendar className="w-4 h-4" />;
-    case 'CANCELLED':
-      return <XCircle className="w-4 h-4" />;
-    default:
-      return <Clock className="w-4 h-4" />;
+      case 'APPOINTMENT_CREATED':
+        return <Plus className="w-4 h-4" />;
+      case 'STATUS_CHANGED':
+        return <RefreshCw className="w-4 h-4" />;
+      case 'CHECKIN_STARTED':
+        return <LogIn className="w-4 h-4" />;
+      case 'CHECKLIST_UPDATED':
+        return <CheckSquare className="w-4 h-4" />;
+      case 'FINANCIAL_VALIDATED':
+        return <CreditCard className="w-4 h-4" />;
+      case 'MERGE_PRE_PATIENT':
+        return <GitMerge className="w-4 h-4" />;
+      case 'PATIENT_LINKED':
+        return <User className="w-4 h-4" />;
+      case 'ATTENDANCE_STARTED':
+        return <Play className="w-4 h-4" />;
+      case 'ATTENDANCE_FINISHED':
+        return <CheckCircle2 className="w-4 h-4" />;
+      case 'MARKED_NO_SHOW':
+        return <XCircle className="w-4 h-4" />;
+      case 'RESCHEDULED':
+        return <Calendar className="w-4 h-4" />;
+      case 'CANCELLED':
+        return <XCircle className="w-4 h-4" />;
+      default:
+        return <Clock className="w-4 h-4" />;
     }
   };
 

@@ -110,12 +110,12 @@ export default function AgendaPorProfissional({
     appointmentsLength: appointments?.length || 0,
     firstAppointment: appointments?.[0]
       ? {
-        id: appointments[0].id,
-        patient_name: appointments[0].patient_name,
-        scheduled_date: appointments[0].scheduled_date,
-        scheduled_time: appointments[0].scheduled_time,
-        professional_id: appointments[0].professional_id,
-      }
+          id: appointments[0].id,
+          patient_name: appointments[0].patient_name,
+          scheduled_date: appointments[0].scheduled_date,
+          scheduled_time: appointments[0].scheduled_time,
+          professional_id: appointments[0].professional_id,
+        }
       : 'NONE',
     initialDate,
     clinicId,

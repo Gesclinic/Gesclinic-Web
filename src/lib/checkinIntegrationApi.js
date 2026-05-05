@@ -399,10 +399,10 @@ export async function getCheckinSummary(appointmentId, clinicId) {
         },
         insurance: data.insurance
           ? {
-            name: data.insurance.name,
-            authorizationRequired: data.insurance.requires_authorization,
-            authorized: data.authorization?.authorized,
-          }
+              name: data.insurance.name,
+              authorizationRequired: data.insurance.requires_authorization,
+              authorized: data.authorization?.authorized,
+            }
           : null,
         room: data.roomAvailable ? 'Disponível' : 'Indisponível',
         price: data.price,

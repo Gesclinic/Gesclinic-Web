@@ -340,8 +340,8 @@ export default function AgendamentoDetalhesModal({
                               p.payer === form.payer,
                           )
                           .some((p) => (p.value || p.id || p) === '') ? null : (
-                            <option value="">Selecione</option>
-                          )}
+                          <option value="">Selecione</option>
+                        )}
                         {Array.isArray(planos) &&
                           planos.length > 0 &&
                           form?.payer &&

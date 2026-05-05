@@ -260,14 +260,14 @@ export default function AtendimentoProfissionalView() {
 
   const getStatusColor = () => {
     switch (appointment.status) {
-    case SERVICE_STATUSES.AWAITING_PROFESSIONAL:
-      return 'bg-amber-100 text-amber-800';
-    case SERVICE_STATUSES.IN_SERVICE:
-      return 'bg-blue-100 text-blue-800';
-    case SERVICE_STATUSES.FINISHED:
-      return 'bg-green-100 text-green-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
+      case SERVICE_STATUSES.AWAITING_PROFESSIONAL:
+        return 'bg-amber-100 text-amber-800';
+      case SERVICE_STATUSES.IN_SERVICE:
+        return 'bg-blue-100 text-blue-800';
+      case SERVICE_STATUSES.FINISHED:
+        return 'bg-green-100 text-green-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
 

@@ -81,11 +81,11 @@ export const listAppointmentsRange = async (clinicId, from, to, freeText, profes
             if (patient) {
               const nomeLimpo = patient.full_name
                 ? String(patient.full_name)
-                  .replace(
-                    /\s*[-–—()\[\]{}]*\s*(\+?\d{2,3}\s*)?(\(?\d{2,3}\)?\s*)?\d{4,5}[-.\s]?\d{4}\s*$/g,
-                    '',
-                  )
-                  .trim()
+                    .replace(
+                      /\s*[-–—()\[\]{}]*\s*(\+?\d{2,3}\s*)?(\(?\d{2,3}\)?\s*)?\d{4,5}[-.\s]?\d{4}\s*$/g,
+                      '',
+                    )
+                    .trim()
                 : '';
 
               enriched.patient_name = nomeLimpo;

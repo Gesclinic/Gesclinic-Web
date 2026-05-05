@@ -178,8 +178,8 @@ export function generateTISSXML(guideData) {
 
   <!-- ======== DADOS DO DEPENDENTE (se aplicável) ======== -->
   ${
-  appointment?.dependent_number
-    ? `
+    appointment?.dependent_number
+      ? `
   <Dependent>
     <DependentNumber>${appointment.dependent_number}</DependentNumber>
     <Name>${escapeXML(appointment.dependent_name || patient.name)}</Name>
@@ -187,8 +187,8 @@ export function generateTISSXML(guideData) {
     <Gender>${appointment.dependent_gender || (patient.gender?.toUpperCase() === 'M' ? 'M' : 'F')}</Gender>
   </Dependent>
   `
-    : ''
-}
+      : ''
+  }
 
   <!-- ======== DADOS DA GUIA ======== -->
   <Guide>

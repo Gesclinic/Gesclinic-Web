@@ -182,40 +182,40 @@ export function ConciliacaoPainel({
           {loading2 && <p className="text-center text-gray-500">Buscando sugestões...</p>}
           {!loading2 && suggestions[statement.id]?.length > 0
             ? suggestions[statement.id].map((sugg, idx) => (
-              <div key={idx} className="p-3 border rounded-lg hover:bg-gray-50">
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">{sugg.description}</p>
-                    <p className="text-xs text-gray-500">
-                      {sugg.type === FINANCIAL_LINK_TYPE.PAYABLE
-                        ? 'Contas a Pagar'
-                        : 'Contas a Receber'}
-                    </p>
+                <div key={idx} className="p-3 border rounded-lg hover:bg-gray-50">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900">{sugg.description}</p>
+                      <p className="text-xs text-gray-500">
+                        {sugg.type === FINANCIAL_LINK_TYPE.PAYABLE
+                          ? 'Contas a Pagar'
+                          : 'Contas a Receber'}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-gray-900">{formatCurrency(sugg.amount)}</p>
+                      <p className="text-xs text-gray-500">{formatDate(sugg.date)}</p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold text-gray-900">{formatCurrency(sugg.amount)}</p>
-                    <p className="text-xs text-gray-500">{formatDate(sugg.date)}</p>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <div className="flex gap-2 text-xs">
-                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                  <div className="flex justify-between items-center">
+                    <div className="flex gap-2 text-xs">
+                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
                         Score: {(sugg.matchScore * 100).toFixed(0)}%
-                    </span>
-                    <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded">
+                      </span>
+                      <span className="bg-gray-100 text-gray-800 px-2 py-1 rounded">
                         Status: {sugg.status}
-                    </span>
-                  </div>
-                  <Button
-                    onClick={() => handleConciliate(sugg)}
-                    size="sm"
-                    className="bg-green-600 hover:bg-green-700"
-                  >
+                      </span>
+                    </div>
+                    <Button
+                      onClick={() => handleConciliate(sugg)}
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700"
+                    >
                       ✓ Conciliar
-                  </Button>
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            ))
+              ))
             : !loading2 && <p className="text-center text-gray-500">Nenhuma sugestão encontrada</p>}
         </div>
       )}

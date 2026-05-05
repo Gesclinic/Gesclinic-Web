@@ -178,17 +178,17 @@ export default function CategorySelect({ clinicId, value, onChange, hideLabel = 
             <>
               {!!search?.trim() &&
                 !items.some((i) => i.name?.toLowerCase() === search.trim().toLowerCase()) && (
-                <div className="p-2 border-b">
-                  <Button
-                    type="button"
-                    className="w-full flex items-center gap-2"
-                    onClick={handleCreate}
-                    disabled={creating}
-                  >
-                    <Plus className="h-4 w-4" /> Criar "{search.trim()}"
-                  </Button>
-                </div>
-              )}
+                  <div className="p-2 border-b">
+                    <Button
+                      type="button"
+                      className="w-full flex items-center gap-2"
+                      onClick={handleCreate}
+                      disabled={creating}
+                    >
+                      <Plus className="h-4 w-4" /> Criar "{search.trim()}"
+                    </Button>
+                  </div>
+                )}
               {filtered.map((c) => (
                 <button
                   key={c.id}

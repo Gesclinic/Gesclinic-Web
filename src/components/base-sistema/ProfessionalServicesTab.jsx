@@ -132,13 +132,13 @@ export function ProfessionalServicesTab({ profesionalId, clinicId, submitting })
         assignments.map((a) =>
           a.id === editingAssignment.id
             ? {
-              ...a,
-              active: editForm.active,
-              duration_minutes_override: editForm.duration_minutes_override
-                ? parseInt(editForm.duration_minutes_override)
-                : null,
-              competence_level: editForm.competence_level,
-            }
+                ...a,
+                active: editForm.active,
+                duration_minutes_override: editForm.duration_minutes_override
+                  ? parseInt(editForm.duration_minutes_override)
+                  : null,
+                competence_level: editForm.competence_level,
+              }
             : a,
         ),
       );
@@ -540,9 +540,9 @@ export function ProfessionalServicesTab({ profesionalId, clinicId, submitting })
                           <p className="text-sm font-bold text-gray-900">
                             {service?.cost_value
                               ? service.cost_value.toLocaleString('pt-BR', {
-                                style: 'currency',
-                                currency: 'BRL',
-                              })
+                                  style: 'currency',
+                                  currency: 'BRL',
+                                })
                               : '—'}
                           </p>
                         </div>

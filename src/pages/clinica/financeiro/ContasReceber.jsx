@@ -393,10 +393,10 @@ export default function ContasReceber() {
         prev.map((r) =>
           r.id === row.id
             ? {
-              ...r,
-              status: 'received',
-              data_recebimento: updated.data_recebimento || r.data_recebimento,
-            }
+                ...r,
+                status: 'received',
+                data_recebimento: updated.data_recebimento || r.data_recebimento,
+              }
             : r,
         ),
       );

@@ -204,10 +204,10 @@ export default function CheckinAcoes({ appointment, onUpdateStatus, loading, onR
             className={`
               mt-4 w-full py-3 rounded-lg font-bold text-lg transition
               ${
-        loading
-          ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
-          : 'bg-green-600 text-white hover:bg-green-700 active:scale-95'
-        }
+                loading
+                  ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                  : 'bg-green-600 text-white hover:bg-green-700 active:scale-95'
+              }
             `}
           >
             {loading ? '⏳ Processando...' : '🟢 LIBERAR PARA ATENDIMENTO'}

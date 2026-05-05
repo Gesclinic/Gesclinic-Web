@@ -313,14 +313,14 @@ export default function AgendaRecepcaoView({ appointments = [], onRefresh }) {
                         {apt.status !== SERVICE_STATUSES.NO_SHOW &&
                           apt.status !== SERVICE_STATUSES.ATTENDED &&
                           apt.status !== SERVICE_STATUSES.CANCELED && (
-                          <button
-                            onClick={() => handleMarkNoShow(apt)}
-                            disabled={loadingId === apt.id}
-                            className="w-full px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded text-sm font-medium disabled:opacity-50 transition"
-                          >
-                            {loadingId === apt.id ? '...' : '❌ Marcar Falta'}
-                          </button>
-                        )}
+                            <button
+                              onClick={() => handleMarkNoShow(apt)}
+                              disabled={loadingId === apt.id}
+                              className="w-full px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded text-sm font-medium disabled:opacity-50 transition"
+                            >
+                              {loadingId === apt.id ? '...' : '❌ Marcar Falta'}
+                            </button>
+                          )}
                       </div>
                     </div>
 

@@ -155,10 +155,10 @@ export default function AgendaMonthView({
                             appointment-card text-xs p-2 rounded relative group
                             text-white
                             ${
-                        isBlocked
-                          ? 'bg-red-500 hover:bg-red-600'
-                          : 'bg-blue-600 hover:bg-blue-700'
-                        }
+                              isBlocked
+                                ? 'bg-red-500 hover:bg-red-600'
+                                : 'bg-blue-600 hover:bg-blue-700'
+                            }
                           `}
                           onClick={(e) => {
                             e.stopPropagation();

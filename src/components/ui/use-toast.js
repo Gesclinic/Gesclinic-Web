@@ -25,40 +25,40 @@ function dispatch(action) {
   const { state } = store;
 
   switch (action.type) {
-  case TOAST_ADD: {
-    const next = [action.toast, ...state.toasts];
-    store.state = { toasts: next.slice(0, TOAST_LIMIT) };
-    break;
-  }
-  case TOAST_UPDATE: {
-    const { id, patch } = action;
-    store.state = {
-      toasts: state.toasts.map((t) => (t.id === id ? { ...t, ...patch } : t)),
-    };
-    break;
-  }
-  case TOAST_DISMISS: {
-    const ids = action.id ? [action.id] : state.toasts.map((t) => t.id);
-    ids.forEach((id) => {
-      _update(id, { open: false });
-      if (!timeouts.has(id)) {
-        const timeout = setTimeout(() => _remove(id), TOAST_REMOVE_DELAY);
-        timeouts.set(id, timeout);
-      }
-    });
-    break;
-  }
-  case TOAST_REMOVE: {
-    const id = action.id;
-    if (timeouts.has(id)) {
-      clearTimeout(timeouts.get(id));
-      timeouts.delete(id);
+    case TOAST_ADD: {
+      const next = [action.toast, ...state.toasts];
+      store.state = { toasts: next.slice(0, TOAST_LIMIT) };
+      break;
     }
-    store.state = { toasts: state.toasts.filter((t) => t.id !== id) };
-    break;
-  }
-  default:
-    break;
+    case TOAST_UPDATE: {
+      const { id, patch } = action;
+      store.state = {
+        toasts: state.toasts.map((t) => (t.id === id ? { ...t, ...patch } : t)),
+      };
+      break;
+    }
+    case TOAST_DISMISS: {
+      const ids = action.id ? [action.id] : state.toasts.map((t) => t.id);
+      ids.forEach((id) => {
+        _update(id, { open: false });
+        if (!timeouts.has(id)) {
+          const timeout = setTimeout(() => _remove(id), TOAST_REMOVE_DELAY);
+          timeouts.set(id, timeout);
+        }
+      });
+      break;
+    }
+    case TOAST_REMOVE: {
+      const id = action.id;
+      if (timeouts.has(id)) {
+        clearTimeout(timeouts.get(id));
+        timeouts.delete(id);
+      }
+      store.state = { toasts: state.toasts.filter((t) => t.id !== id) };
+      break;
+    }
+    default:
+      break;
   }
 
   store.listeners.forEach((l) => l(store.state));

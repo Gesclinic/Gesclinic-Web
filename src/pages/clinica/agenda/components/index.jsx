@@ -1434,8 +1434,8 @@ export default function AgendaIndex() {
                   <p className="text-base font-semibold text-gray-900 mt-1">
                     {selectedAppointmentDetails.scheduled_date
                       ? new Date(selectedAppointmentDetails.scheduled_date).toLocaleDateString(
-                        'pt-BR',
-                      )
+                          'pt-BR',
+                        )
                       : '—'}
                   </p>
                 </div>

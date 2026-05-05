@@ -744,50 +744,50 @@ function ProfessionalConveniosTab({ profesionalId, clinicId, submitting }) {
                                       {basePrices[servicePrice.service_id] !== undefined &&
                                         basePrices[servicePrice.service_id] !==
                                           servicePrice.price && (
-                                        <div className="ml-2 inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs font-medium">
-                                          <span
-                                            title={`Preço base: R$ ${parseFloat(basePrices[servicePrice.service_id] || 0).toFixed(2)}`}
-                                          >
+                                          <div className="ml-2 inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs font-medium">
+                                            <span
+                                              title={`Preço base: R$ ${parseFloat(basePrices[servicePrice.service_id] || 0).toFixed(2)}`}
+                                            >
                                               ✏️ Negociação
-                                          </span>
-                                        </div>
-                                      )}
+                                            </span>
+                                          </div>
+                                        )}
                                       {basePrices[servicePrice.service_id] === servicePrice.price &&
                                         basePrices[servicePrice.service_id] !== undefined && (
-                                        <div className="ml-2 inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
-                                          <span title="Preço padrão do convênio">✅ Padrão</span>
-                                        </div>
-                                      )}
+                                          <div className="ml-2 inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
+                                            <span title="Preço padrão do convênio">✅ Padrão</span>
+                                          </div>
+                                        )}
                                     </div>
                                     {/* 🆕 Mostrar comparação de preço quando há override */}
                                     {basePrices[servicePrice.service_id] !== undefined &&
                                       basePrices[servicePrice.service_id] !==
                                         servicePrice.price && (
-                                      <p className="text-xs text-orange-600 mt-1">
+                                        <p className="text-xs text-orange-600 mt-1">
                                           Preço base:{' '}
-                                        <strong>
-                                            R${' '}
-                                          {parseFloat(
-                                            basePrices[servicePrice.service_id] || 0,
-                                          ).toFixed(2)}
-                                        </strong>
-                                        <span className="ml-2 text-gray-600">
-                                            Diferença:{' '}
                                           <strong>
-                                            {servicePrice.price -
-                                                basePrices[servicePrice.service_id] >
-                                              0
-                                              ? '+'
-                                              : ''}
-                                              R${' '}
-                                            {(
-                                              servicePrice.price -
-                                                basePrices[servicePrice.service_id]
+                                            R${' '}
+                                            {parseFloat(
+                                              basePrices[servicePrice.service_id] || 0,
                                             ).toFixed(2)}
                                           </strong>
-                                        </span>
-                                      </p>
-                                    )}
+                                          <span className="ml-2 text-gray-600">
+                                            Diferença:{' '}
+                                            <strong>
+                                              {servicePrice.price -
+                                                basePrices[servicePrice.service_id] >
+                                              0
+                                                ? '+'
+                                                : ''}
+                                              R${' '}
+                                              {(
+                                                servicePrice.price -
+                                                basePrices[servicePrice.service_id]
+                                              ).toFixed(2)}
+                                            </strong>
+                                          </span>
+                                        </p>
+                                      )}
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <button

@@ -147,11 +147,11 @@ export async function createRevenueRule(clinicId, data) {
   // Normalizar resposta
   return rule
     ? {
-      ...rule,
-      rule_type: rule.repasse_type,
-      fixed_value: rule.fixed_amount,
-      minimum_value: rule.min_value,
-    }
+        ...rule,
+        rule_type: rule.repasse_type,
+        fixed_value: rule.fixed_amount,
+        minimum_value: rule.min_value,
+      }
     : null;
 }
 
@@ -243,11 +243,11 @@ export async function deactivateRevenueRule(ruleId) {
   // Normalizar resposta
   return rule
     ? {
-      ...rule,
-      rule_type: rule.repasse_type,
-      fixed_value: rule.fixed_amount,
-      minimum_value: rule.min_value,
-    }
+        ...rule,
+        rule_type: rule.repasse_type,
+        fixed_value: rule.fixed_amount,
+        minimum_value: rule.min_value,
+      }
     : null;
 }
 

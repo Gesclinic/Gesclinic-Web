@@ -409,28 +409,28 @@ export default function NovaConta() {
       const itemsNote =
         formItems && formItems.length > 0
           ? (() => {
-            const lines = formItems.map((it, idx) => {
-              const q = Number(it.qty || 0);
-              const u = Number(it.unit || 0);
-              const tot = q * u;
-              return `${idx + 1}) ${it?.name || 'Produto'} — qte ${q}, unit ${u.toFixed(2)}, total ${tot.toFixed(2)}`;
-            });
-            lines.push(`Subtotal: ${itemsSubtotal.toFixed(2)}`);
-            const amounts = {
-              ir: nfTaxAmounts.ir,
-              csll: nfTaxAmounts.csll,
-              pisCofins: nfTaxAmounts.pisCofins,
-              iss: nfTaxAmounts.iss,
-              icms: nfTaxAmounts.icms,
-            };
-            lines.push(
-              `Impostos (NF): IR ${nfTaxes.irPct}%=${amounts.ir.toFixed(2)} | CSLL ${nfTaxes.csllPct}%=${amounts.csll.toFixed(2)} | PIS/COFINS ${nfTaxes.pisCofinsPct}%=${amounts.pisCofins.toFixed(2)} | ISS ${nfTaxes.issPct}%=${amounts.iss.toFixed(2)} | ICMS ${nfTaxes.icmsPct}%=${amounts.icms.toFixed(2)} | Total=${itemsTaxTotal.toFixed(2)}`,
-            );
-            lines.push(
-              `Total (após impostos ${nfTaxes.retained ? 'retidos' : 'adicionados'}): ${itemsGrandTotal.toFixed(2)}`,
-            );
-            return `Itens: ${lines.join(' | ')}`;
-          })()
+              const lines = formItems.map((it, idx) => {
+                const q = Number(it.qty || 0);
+                const u = Number(it.unit || 0);
+                const tot = q * u;
+                return `${idx + 1}) ${it?.name || 'Produto'} — qte ${q}, unit ${u.toFixed(2)}, total ${tot.toFixed(2)}`;
+              });
+              lines.push(`Subtotal: ${itemsSubtotal.toFixed(2)}`);
+              const amounts = {
+                ir: nfTaxAmounts.ir,
+                csll: nfTaxAmounts.csll,
+                pisCofins: nfTaxAmounts.pisCofins,
+                iss: nfTaxAmounts.iss,
+                icms: nfTaxAmounts.icms,
+              };
+              lines.push(
+                `Impostos (NF): IR ${nfTaxes.irPct}%=${amounts.ir.toFixed(2)} | CSLL ${nfTaxes.csllPct}%=${amounts.csll.toFixed(2)} | PIS/COFINS ${nfTaxes.pisCofinsPct}%=${amounts.pisCofins.toFixed(2)} | ISS ${nfTaxes.issPct}%=${amounts.iss.toFixed(2)} | ICMS ${nfTaxes.icmsPct}%=${amounts.icms.toFixed(2)} | Total=${itemsTaxTotal.toFixed(2)}`,
+              );
+              lines.push(
+                `Total (após impostos ${nfTaxes.retained ? 'retidos' : 'adicionados'}): ${itemsGrandTotal.toFixed(2)}`,
+              );
+              return `Itens: ${lines.join(' | ')}`;
+            })()
           : null;
       const sharedNotes = [form.notes, itemsNote, docUrl ? `Anexo: ${docUrl}` : null]
         .filter(Boolean)

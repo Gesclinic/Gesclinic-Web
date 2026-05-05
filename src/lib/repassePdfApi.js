@@ -179,8 +179,8 @@ export async function gerarRelatorioPDF(repasses, clinic) {
           <th style="padding: 10px; border: 1px solid #ddd;">Status</th>
         </tr>
         ${repasses
-    .map(
-      (r) => `
+          .map(
+            (r) => `
           <tr>
             <td style="padding: 10px; border: 1px solid #ddd;">${r.profissional?.name || 'N/A'}</td>
             <td style="padding: 10px; border: 1px solid #ddd;">${r.periodo_inicio} a ${r.periodo_fim}</td>
@@ -189,8 +189,8 @@ export async function gerarRelatorioPDF(repasses, clinic) {
             <td style="padding: 10px; border: 1px solid #ddd;">${r.status}</td>
           </tr>
         `,
-    )
-    .join('')}
+          )
+          .join('')}
       </table>
     </div>
   `;

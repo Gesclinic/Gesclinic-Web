@@ -176,13 +176,38 @@ function ServiceListItem({
     const type = service.billing_type;
 
     switch (type) {
-    case 'per_hour':
-    case 'per_session':
-    case 'per_package':
-    case 'per_unit':
-      return (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
-          <div>
+      case 'per_hour':
+      case 'per_session':
+      case 'per_package':
+      case 'per_unit':
+        return (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
+            <div>
+              <label style={labelStyle}>Valor (R$)</label>
+              <input
+                type="number"
+                step="0.01"
+                value={service.value}
+                onChange={(e) => handleUpdateService(index, 'value', e.target.value)}
+                style={inputStyle}
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Quantidade</label>
+              <input
+                type="number"
+                min="1"
+                value={service.quantity}
+                onChange={(e) => handleUpdateService(index, 'quantity', e.target.value)}
+                style={inputStyle}
+              />
+            </div>
+          </div>
+        );
+
+      default: // per_consultation
+        return (
+          <div style={{ marginTop: 12 }}>
             <label style={labelStyle}>Valor (R$)</label>
             <input
               type="number"
@@ -192,32 +217,7 @@ function ServiceListItem({
               style={inputStyle}
             />
           </div>
-          <div>
-            <label style={labelStyle}>Quantidade</label>
-            <input
-              type="number"
-              min="1"
-              value={service.quantity}
-              onChange={(e) => handleUpdateService(index, 'quantity', e.target.value)}
-              style={inputStyle}
-            />
-          </div>
-        </div>
-      );
-
-    default: // per_consultation
-      return (
-        <div style={{ marginTop: 12 }}>
-          <label style={labelStyle}>Valor (R$)</label>
-          <input
-            type="number"
-            step="0.01"
-            value={service.value}
-            onChange={(e) => handleUpdateService(index, 'value', e.target.value)}
-            style={inputStyle}
-          />
-        </div>
-      );
+        );
     }
   };
 

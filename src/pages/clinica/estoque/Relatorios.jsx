@@ -207,23 +207,23 @@ export default function EstoqueRelatorios() {
           </thead>
           <tbody>
             ${reportData.data
-    .map(
-      (row) => `
+              .map(
+                (row) => `
               <tr>
                 ${reportData.columns
-    .map((col) => {
-      const key = col
-        .toLowerCase()
-        .replace(/ã|á/g, 'a')
-        .replace(/ç/g, 'c')
-        .replace(/\s+/g, '_');
-      return `<td>${row[key] || '-'}</td>`;
-    })
-    .join('')}
+                  .map((col) => {
+                    const key = col
+                      .toLowerCase()
+                      .replace(/ã|á/g, 'a')
+                      .replace(/ç/g, 'c')
+                      .replace(/\s+/g, '_');
+                    return `<td>${row[key] || '-'}</td>`;
+                  })
+                  .join('')}
               </tr>
             `,
-    )
-    .join('')}
+              )
+              .join('')}
           </tbody>
         </table>
       </body>

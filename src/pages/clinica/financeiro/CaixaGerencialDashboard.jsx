@@ -73,14 +73,14 @@ export default function CaixaGerencialDashboard() {
 
   const getDaysRange = () => {
     switch (dateRange) {
-    case 'semana':
-      return 7;
-    case 'mes':
-      return 30;
-    case 'trimestre':
-      return 90;
-    default:
-      return 30;
+      case 'semana':
+        return 7;
+      case 'mes':
+        return 30;
+      case 'trimestre':
+        return 90;
+      default:
+        return 30;
     }
   };
 
@@ -238,9 +238,9 @@ export default function CaixaGerencialDashboard() {
       ...movements.map((m) => [
         m.created_at
           ? new Date(m.created_at).toLocaleTimeString('pt-BR', {
-            hour: '2-digit',
-            minute: '2-digit',
-          })
+              hour: '2-digit',
+              minute: '2-digit',
+            })
           : 'N/A',
         m.payer_id || 'N/A',
         m.description || 'N/A',
@@ -283,9 +283,9 @@ export default function CaixaGerencialDashboard() {
       const tableData = movements.map((m) => [
         m.created_at
           ? new Date(m.created_at).toLocaleTimeString('pt-BR', {
-            hour: '2-digit',
-            minute: '2-digit',
-          })
+              hour: '2-digit',
+              minute: '2-digit',
+            })
           : 'N/A',
         m.payer_id || 'N/A',
         m.description || 'N/A',

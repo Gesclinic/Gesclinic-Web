@@ -1007,10 +1007,10 @@ export default function HistoricoClinicoTab({
       <section style="margin-bottom: 24px;">
         <h2 style="font-size: 16px; margin-bottom: 12px; border-bottom: 1px solid #ddd; padding-bottom: 6px;">${period}</h2>
         ${items
-    .map((evento) => {
-      const typeLabel = RECORD_TYPES[evento.type]?.label || evento.type;
-      const summary = buildRecordSummary(evento).slice(0, 4);
-      return `
+          .map((evento) => {
+            const typeLabel = RECORD_TYPES[evento.type]?.label || evento.type;
+            const summary = buildRecordSummary(evento).slice(0, 4);
+            return `
             <article style="border: 1px solid #ddd; border-radius: 10px; padding: 14px; margin-bottom: 12px; background: #fff;">
               <div style="display:flex; justify-content:space-between; gap:12px; margin-bottom:8px;">
                 <div>
@@ -1024,8 +1024,8 @@ export default function HistoricoClinicoTab({
               ${summary.length ? `<div><strong>Resumo estruturado:</strong> ${summary.join(' | ')}</div>` : ''}
             </article>
           `;
-    })
-    .join('')}
+          })
+          .join('')}
       </section>
     `,
       )
@@ -1546,13 +1546,13 @@ export default function HistoricoClinicoTab({
                                           </Badge>
                                           {sectionType === 'exame' &&
                                           sectionDraft.structuredData?.attachmentName ? (
-                                              <Badge
-                                                variant="outline"
-                                                className="border-cyan-200 bg-cyan-50 text-cyan-800"
-                                              >
+                                            <Badge
+                                              variant="outline"
+                                              className="border-cyan-200 bg-cyan-50 text-cyan-800"
+                                            >
                                               Com anexo
-                                              </Badge>
-                                            ) : null}
+                                            </Badge>
+                                          ) : null}
                                         </div>
                                         <p className="line-clamp-2 text-sm text-gray-800">
                                           {compactText}
@@ -1728,10 +1728,10 @@ export default function HistoricoClinicoTab({
                           className={`
                           p-3 rounded-lg border-2 transition-all duration-200 flex flex-col items-center gap-2
                           ${
-                        isSelected
-                          ? `border-${typeInfo.color}-500 bg-${typeInfo.color}-50 ring-2 ring-${typeInfo.color}-300`
-                          : 'border-gray-200 bg-white hover:border-gray-300'
-                        }
+                            isSelected
+                              ? `border-${typeInfo.color}-500 bg-${typeInfo.color}-50 ring-2 ring-${typeInfo.color}-300`
+                              : 'border-gray-200 bg-white hover:border-gray-300'
+                          }
                         `}
                         >
                           <Icon
@@ -2059,12 +2059,12 @@ export default function HistoricoClinicoTab({
               className={`
                 font-semibold flex items-center gap-2 transition-all duration-200
                 ${
-    consultaData.data &&
+                  consultaData.data &&
                   consultaData.profissional &&
                   (editingRecordId ? currentDraft.diagnostico : filledDraftEntries.length)
-      ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl'
-      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-    }
+                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }
               `}
               onClick={() => {
                 setConsultaData((prev) => ({ ...prev, status: 'finalizado' }));
@@ -2095,144 +2095,144 @@ export default function HistoricoClinicoTab({
 
           {selectedRecord
             ? (() => {
-              const sectionEntries = getOrderedSectionEntries(selectedRecord);
-              const sectionTitle = sectionEntries
-                .map(([sectionType]) => RECORD_TYPES[sectionType]?.label || sectionType)
-                .join(' + ');
+                const sectionEntries = getOrderedSectionEntries(selectedRecord);
+                const sectionTitle = sectionEntries
+                  .map(([sectionType]) => RECORD_TYPES[sectionType]?.label || sectionType)
+                  .join(' + ');
 
-              return (
-                <>
-                  <div className="border-b border-slate-200 bg-white px-6 py-4">
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">
-                          {sectionTitle ||
+                return (
+                  <>
+                    <div className="border-b border-slate-200 bg-white px-6 py-4">
+                      <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">
+                            {sectionTitle ||
                               RECORD_TYPES[selectedRecord.type]?.label ||
                               selectedRecord.type}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {sectionEntries.length} seção(ões) no registro clínico
-                        </p>
+                          </p>
+                          <p className="text-xs text-slate-500">
+                            {sectionEntries.length} seção(ões) no registro clínico
+                          </p>
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className={
+                            selectedRecord.status === 'finalizado'
+                              ? 'border-emerald-300 text-emerald-800 bg-emerald-50'
+                              : 'border-amber-300 text-amber-800 bg-amber-50'
+                          }
+                        >
+                          {selectedRecord.status === 'finalizado' ? 'Definitivo' : 'Rascunho'}
+                        </Badge>
                       </div>
-                      <Badge
-                        variant="outline"
-                        className={
-                          selectedRecord.status === 'finalizado'
-                            ? 'border-emerald-300 text-emerald-800 bg-emerald-50'
-                            : 'border-amber-300 text-amber-800 bg-amber-50'
-                        }
-                      >
-                        {selectedRecord.status === 'finalizado' ? 'Definitivo' : 'Rascunho'}
-                      </Badge>
+
+                      <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <p className="font-semibold text-gray-700">Paciente</p>
+                          <p className="text-gray-900">{patientData?.name || 'Paciente'}</p>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-700">Profissional</p>
+                          <p className="text-gray-900">{selectedRecord.professional}</p>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-700">Data</p>
+                          <p className="text-gray-900">
+                            {new Date(selectedRecord.date).toLocaleDateString('pt-BR')} às{' '}
+                            {selectedRecord.time}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-700">Origem</p>
+                          <p className="text-gray-900">
+                            {selectedRecord.storageMode === 'local'
+                              ? 'Salvo localmente'
+                              : 'Salvo no Supabase'}
+                          </p>
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
-                      <div>
-                        <p className="font-semibold text-gray-700">Paciente</p>
-                        <p className="text-gray-900">{patientData?.name || 'Paciente'}</p>
-                      </div>
-                      <div>
-                        <p className="font-semibold text-gray-700">Profissional</p>
-                        <p className="text-gray-900">{selectedRecord.professional}</p>
-                      </div>
-                      <div>
-                        <p className="font-semibold text-gray-700">Data</p>
-                        <p className="text-gray-900">
-                          {new Date(selectedRecord.date).toLocaleDateString('pt-BR')} às{' '}
-                          {selectedRecord.time}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="font-semibold text-gray-700">Origem</p>
-                        <p className="text-gray-900">
-                          {selectedRecord.storageMode === 'local'
-                            ? 'Salvo localmente'
-                            : 'Salvo no Supabase'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="border-b border-slate-200 bg-white px-6 py-4">
-                    <div className="rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
-                      <div className="mb-2 flex items-center justify-between gap-3 px-1">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <div className="border-b border-slate-200 bg-white px-6 py-4">
+                      <div className="rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
+                        <div className="mb-2 flex items-center justify-between gap-3 px-1">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                             Navegação do registro
-                        </p>
-                        {activeDetailSection ? (
-                          <Badge className="bg-blue-100 text-blue-800 border border-blue-200">
+                          </p>
+                          {activeDetailSection ? (
+                            <Badge className="bg-blue-100 text-blue-800 border border-blue-200">
                               Em foco:{' '}
-                            {RECORD_TYPES[activeDetailSection]?.label || activeDetailSection}
-                          </Badge>
-                        ) : null}
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {sectionEntries.map(([sectionType]) => (
-                          <Button
-                            key={`detail-nav-${selectedRecord.id}-${sectionType}`}
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className={
-                              activeDetailSection === sectionType
-                                ? 'border-blue-500 bg-blue-600 text-white shadow-sm hover:bg-blue-700 hover:text-white'
-                                : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'
-                            }
-                            onClick={() =>
-                              handleScrollToDetailSection(selectedRecord.id, sectionType)
-                            }
-                          >
-                            {RECORD_TYPES[sectionType]?.label || sectionType}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div
-                    className="max-h-[calc(90vh-380px)] overflow-y-auto bg-white px-6 pb-6 pt-4"
-                    onScroll={(event) => handleDetailsContentScroll(event, selectedRecord)}
-                  >
-                    <div>
-                      {sectionEntries.length > 1 ? (
-                        <div className="space-y-4">
-                          {sectionEntries.map(([sectionType, sectionDraft]) => (
-                            <div
-                              key={sectionType}
-                              id={`patient-record-section-${selectedRecord.id}-${sectionType}`}
+                              {RECORD_TYPES[activeDetailSection]?.label || activeDetailSection}
+                            </Badge>
+                          ) : null}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {sectionEntries.map(([sectionType]) => (
+                            <Button
+                              key={`detail-nav-${selectedRecord.id}-${sectionType}`}
+                              type="button"
+                              variant="outline"
+                              size="sm"
                               className={
                                 activeDetailSection === sectionType
-                                  ? 'rounded-xl border-2 border-blue-300 bg-blue-50/60 p-4 shadow-sm ring-1 ring-blue-100 scroll-mt-6 transition-all duration-200'
-                                  : 'rounded-xl border border-gray-200 bg-gray-50 p-4 scroll-mt-6 transition-all duration-200'
+                                  ? 'border-blue-500 bg-blue-600 text-white shadow-sm hover:bg-blue-700 hover:text-white'
+                                  : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'
+                              }
+                              onClick={() =>
+                                handleScrollToDetailSection(selectedRecord.id, sectionType)
                               }
                             >
-                              <div className="mb-3 flex flex-wrap items-center gap-2">
-                                <Badge
-                                  className={
-                                    activeDetailSection === sectionType
-                                      ? 'bg-blue-100 text-blue-800'
-                                      : 'bg-slate-100 text-slate-800'
-                                  }
-                                >
-                                  {RECORD_TYPES[sectionType]?.label || sectionType}
-                                </Badge>
-                                {activeDetailSection === sectionType ? (
+                              {RECORD_TYPES[sectionType]?.label || sectionType}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div
+                      className="max-h-[calc(90vh-380px)] overflow-y-auto bg-white px-6 pb-6 pt-4"
+                      onScroll={(event) => handleDetailsContentScroll(event, selectedRecord)}
+                    >
+                      <div>
+                        {sectionEntries.length > 1 ? (
+                          <div className="space-y-4">
+                            {sectionEntries.map(([sectionType, sectionDraft]) => (
+                              <div
+                                key={sectionType}
+                                id={`patient-record-section-${selectedRecord.id}-${sectionType}`}
+                                className={
+                                  activeDetailSection === sectionType
+                                    ? 'rounded-xl border-2 border-blue-300 bg-blue-50/60 p-4 shadow-sm ring-1 ring-blue-100 scroll-mt-6 transition-all duration-200'
+                                    : 'rounded-xl border border-gray-200 bg-gray-50 p-4 scroll-mt-6 transition-all duration-200'
+                                }
+                              >
+                                <div className="mb-3 flex flex-wrap items-center gap-2">
                                   <Badge
-                                    variant="outline"
-                                    className="border-blue-300 bg-white text-blue-800"
+                                    className={
+                                      activeDetailSection === sectionType
+                                        ? 'bg-blue-100 text-blue-800'
+                                        : 'bg-slate-100 text-slate-800'
+                                    }
                                   >
+                                    {RECORD_TYPES[sectionType]?.label || sectionType}
+                                  </Badge>
+                                  {activeDetailSection === sectionType ? (
+                                    <Badge
+                                      variant="outline"
+                                      className="border-blue-300 bg-white text-blue-800"
+                                    >
                                       Em evidência
-                                  </Badge>
-                                ) : null}
-                                {sectionType === selectedRecord.activeType ? (
-                                  <Badge
-                                    variant="outline"
-                                    className="border-blue-200 bg-blue-50 text-blue-800"
-                                  >
+                                    </Badge>
+                                  ) : null}
+                                  {sectionType === selectedRecord.activeType ? (
+                                    <Badge
+                                      variant="outline"
+                                      className="border-blue-200 bg-blue-50 text-blue-800"
+                                    >
                                       Aba principal
-                                  </Badge>
-                                ) : null}
-                                {sectionType === 'exame' &&
+                                    </Badge>
+                                  ) : null}
+                                  {sectionType === 'exame' &&
                                   sectionDraft.structuredData?.attachmentName ? (
                                     <Badge
                                       variant="outline"
@@ -2241,66 +2241,66 @@ export default function HistoricoClinicoTab({
                                       Com anexo
                                     </Badge>
                                   ) : null}
-                              </div>
-                              {sectionDraft.diagnostico ? (
-                                <div className="mb-3">
-                                  <p className="font-semibold text-gray-700 mb-2">Descrição</p>
-                                  <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-800 whitespace-pre-wrap">
-                                    {sectionDraft.diagnostico}
-                                  </div>
                                 </div>
-                              ) : null}
+                                {sectionDraft.diagnostico ? (
+                                  <div className="mb-3">
+                                    <p className="font-semibold text-gray-700 mb-2">Descrição</p>
+                                    <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-800 whitespace-pre-wrap">
+                                      {sectionDraft.diagnostico}
+                                    </div>
+                                  </div>
+                                ) : null}
 
-                              {(RECORD_TYPE_FORM_CONFIG[sectionType]?.extraFields || []).length >
+                                {(RECORD_TYPE_FORM_CONFIG[sectionType]?.extraFields || []).length >
                                 0 ? (
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
                                     {RECORD_TYPE_FORM_CONFIG[sectionType].extraFields.map(
                                       (field) =>
                                         field.inputType !== 'file' &&
                                         sectionDraft.structuredData?.[field.key] ? (
-                                            <div key={`${sectionType}-${field.key}`}>
-                                              <p className="font-semibold text-gray-700 mb-2">
-                                                {field.label}
-                                              </p>
-                                              <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-800 whitespace-pre-wrap">
-                                                {String(sectionDraft.structuredData[field.key])}
-                                              </div>
+                                          <div key={`${sectionType}-${field.key}`}>
+                                            <p className="font-semibold text-gray-700 mb-2">
+                                              {field.label}
+                                            </p>
+                                            <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-800 whitespace-pre-wrap">
+                                              {String(sectionDraft.structuredData[field.key])}
                                             </div>
-                                          ) : null,
+                                          </div>
+                                        ) : null,
                                     )}
                                   </div>
                                 ) : null}
 
-                              {sectionDraft.structuredData?.attachmentUrl ? (
-                                <div className="mb-3">
-                                  <p className="font-semibold text-gray-700 mb-2">
+                                {sectionDraft.structuredData?.attachmentUrl ? (
+                                  <div className="mb-3">
+                                    <p className="font-semibold text-gray-700 mb-2">
                                       Anexo do exame
-                                  </p>
-                                  <a
-                                    href={sectionDraft.structuredData.attachmentUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="inline-flex items-center rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700 hover:bg-blue-100"
-                                  >
+                                    </p>
+                                    <a
+                                      href={sectionDraft.structuredData.attachmentUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="inline-flex items-center rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700 hover:bg-blue-100"
+                                    >
                                       Abrir {sectionDraft.structuredData.attachmentName || 'anexo'}
-                                  </a>
-                                </div>
-                              ) : null}
-
-                              {sectionDraft.prescricao ? (
-                                <div>
-                                  <p className="font-semibold text-gray-700 mb-2">Orientações</p>
-                                  <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-800 whitespace-pre-wrap">
-                                    {sectionDraft.prescricao}
+                                    </a>
                                   </div>
-                                </div>
-                              ) : null}
-                            </div>
-                          ))}
-                        </div>
-                      ) : null}
+                                ) : null}
 
-                      {(RECORD_TYPE_FORM_CONFIG[selectedRecord.type]?.extraFields || []).length >
+                                {sectionDraft.prescricao ? (
+                                  <div>
+                                    <p className="font-semibold text-gray-700 mb-2">Orientações</p>
+                                    <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-800 whitespace-pre-wrap">
+                                      {sectionDraft.prescricao}
+                                    </div>
+                                  </div>
+                                ) : null}
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
+
+                        {(RECORD_TYPE_FORM_CONFIG[selectedRecord.type]?.extraFields || []).length >
                           0 && sectionEntries.length <= 1 ? (
                           <div
                             id={`patient-record-section-${selectedRecord.id}-${selectedRecord.type}`}
@@ -2314,20 +2314,20 @@ export default function HistoricoClinicoTab({
                               (field) =>
                                 field.inputType !== 'file' &&
                                 selectedRecord.structuredData?.[field.key] ? (
-                                    <div key={field.key}>
-                                      <p className="font-semibold text-gray-700 mb-2">
-                                        {field.label}
-                                      </p>
-                                      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-800 whitespace-pre-wrap">
-                                        {String(selectedRecord.structuredData[field.key])}
-                                      </div>
+                                  <div key={field.key}>
+                                    <p className="font-semibold text-gray-700 mb-2">
+                                      {field.label}
+                                    </p>
+                                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-800 whitespace-pre-wrap">
+                                      {String(selectedRecord.structuredData[field.key])}
                                     </div>
-                                  ) : null,
+                                  </div>
+                                ) : null,
                             )}
                           </div>
                         ) : null}
 
-                      {selectedRecord.structuredData?.attachmentUrl &&
+                        {selectedRecord.structuredData?.attachmentUrl &&
                         sectionEntries.length <= 1 ? (
                           <div>
                             <p className="font-semibold text-gray-700 mb-2">Anexo do exame</p>
@@ -2342,36 +2342,36 @@ export default function HistoricoClinicoTab({
                           </div>
                         ) : selectedRecord.structuredData?.attachmentName &&
                           sectionEntries.length <= 1 ? (
-                            <div>
-                              <p className="font-semibold text-gray-700 mb-2">Anexo do exame</p>
-                              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-800">
-                                {selectedRecord.structuredData.attachmentName}
-                              </div>
+                          <div>
+                            <p className="font-semibold text-gray-700 mb-2">Anexo do exame</p>
+                            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-800">
+                              {selectedRecord.structuredData.attachmentName}
                             </div>
-                          ) : null}
-
-                      {sectionEntries.length <= 1 ? (
-                        <div>
-                          <p className="font-semibold text-gray-700 mb-2">Descrição</p>
-                          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-800 whitespace-pre-wrap">
-                            {selectedRecord.diagnosis}
                           </div>
-                        </div>
-                      ) : null}
+                        ) : null}
 
-                      {selectedRecord.prescription && sectionEntries.length <= 1 ? (
-                        <div>
-                          <p className="font-semibold text-gray-700 mb-2">Orientações</p>
-                          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-800 whitespace-pre-wrap">
-                            {selectedRecord.prescription}
+                        {sectionEntries.length <= 1 ? (
+                          <div>
+                            <p className="font-semibold text-gray-700 mb-2">Descrição</p>
+                            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-800 whitespace-pre-wrap">
+                              {selectedRecord.diagnosis}
+                            </div>
                           </div>
-                        </div>
-                      ) : null}
+                        ) : null}
+
+                        {selectedRecord.prescription && sectionEntries.length <= 1 ? (
+                          <div>
+                            <p className="font-semibold text-gray-700 mb-2">Orientações</p>
+                            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-800 whitespace-pre-wrap">
+                              {selectedRecord.prescription}
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
                     </div>
-                  </div>
-                </>
-              );
-            })()
+                  </>
+                );
+              })()
             : null}
 
           <DialogFooter className="border-t border-gray-200 px-6 pb-6 pt-6 bg-white sticky bottom-0 z-10">

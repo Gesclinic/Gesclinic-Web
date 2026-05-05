@@ -56,10 +56,10 @@ export function SelectComBusca({
   // Filtrar opções por busca
   const filtered = showSearch
     ? options.filter(
-      (opt) =>
-        opt.name.toLowerCase().includes(search.toLowerCase()) ||
+        (opt) =>
+          opt.name.toLowerCase().includes(search.toLowerCase()) ||
           (opt.description && opt.description.toLowerCase().includes(search.toLowerCase())),
-    )
+      )
     : options;
 
   // Fechar dropdown ao clicar fora

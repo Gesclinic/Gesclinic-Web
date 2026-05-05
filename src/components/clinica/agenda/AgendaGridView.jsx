@@ -69,14 +69,14 @@ export default function AgendaGridView({ slots, onSlotClick }) {
                       <p className={`text-xs font-mono mt-2 ${textColor} opacity-70`}>
                         {slot.start_time
                           ? formatTz(toZonedTime(slot.start_time, 'America/Sao_Paulo'), 'HH:mm', {
-                            timeZone: 'America/Sao_Paulo',
-                          })
+                              timeZone: 'America/Sao_Paulo',
+                            })
                           : ''}{' '}
                         -{' '}
                         {slot.end_time
                           ? formatTz(toZonedTime(slot.end_time, 'America/Sao_Paulo'), 'HH:mm', {
-                            timeZone: 'America/Sao_Paulo',
-                          })
+                              timeZone: 'America/Sao_Paulo',
+                            })
                           : ''}
                       </p>
                       <div className="grid grid-cols-2 gap-2 text-xs mt-2">

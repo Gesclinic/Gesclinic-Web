@@ -56,46 +56,46 @@ export default function CheckinItemModal({ isOpen, itemId, appointment, onClose,
 
   const initializeFormData = (id) => {
     switch (id) {
-    case 'dados_cadastrais':
-      setFormData({
-        patient_name: appointment?.patient_name || '',
-        patient_cpf: appointment?.patient_cpf || '',
-        patient_phone: appointment?.patient_phone || '',
-      });
-      break;
-    case 'convenio':
-      setFormData({
-        payer_name: appointment?.payer_name || '',
-        payer_type: appointment?.payer_type || 'CONVENIO',
-        authorization_number: appointment?.authorization_number || '',
-      });
-      break;
-    case 'carteirinha':
-      setFormData({
-        insurance_card_verified: appointment?.insurance_card_verified || false,
-        card_number: appointment?.card_number || '',
-      });
-      break;
-    case 'autorizacao':
-      setFormData({
-        authorization_verified: appointment?.authorization_verified || false,
-        authorization_date: appointment?.authorization_date || '',
-      });
-      break;
-    case 'guia':
-      setFormData({
-        guide_number: appointment?.guide_number || '',
-        guide_generated: appointment?.guide_generated || false,
-      });
-      break;
-    case 'pagamento':
-      setFormData({
-        payment_method: appointment?.payment_method || '',
-        payment_status: appointment?.payment_status || '',
-      });
-      break;
-    default:
-      setFormData({});
+      case 'dados_cadastrais':
+        setFormData({
+          patient_name: appointment?.patient_name || '',
+          patient_cpf: appointment?.patient_cpf || '',
+          patient_phone: appointment?.patient_phone || '',
+        });
+        break;
+      case 'convenio':
+        setFormData({
+          payer_name: appointment?.payer_name || '',
+          payer_type: appointment?.payer_type || 'CONVENIO',
+          authorization_number: appointment?.authorization_number || '',
+        });
+        break;
+      case 'carteirinha':
+        setFormData({
+          insurance_card_verified: appointment?.insurance_card_verified || false,
+          card_number: appointment?.card_number || '',
+        });
+        break;
+      case 'autorizacao':
+        setFormData({
+          authorization_verified: appointment?.authorization_verified || false,
+          authorization_date: appointment?.authorization_date || '',
+        });
+        break;
+      case 'guia':
+        setFormData({
+          guide_number: appointment?.guide_number || '',
+          guide_generated: appointment?.guide_generated || false,
+        });
+        break;
+      case 'pagamento':
+        setFormData({
+          payment_method: appointment?.payment_method || '',
+          payment_status: appointment?.payment_status || '',
+        });
+        break;
+      default:
+        setFormData({});
     }
     setError(null);
   };
@@ -306,212 +306,212 @@ function getModalTitle(itemId) {
 
 function renderFormContent(itemId, formData, handleChange) {
   switch (itemId) {
-  case 'dados_cadastrais':
-    return (
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1">
+    case 'dados_cadastrais':
+      return (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
               Nome do Paciente
-          </label>
-          <input
-            type="text"
-            value={formData.patient_name || ''}
-            onChange={(e) => handleChange('patient_name', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-            placeholder="Nome completo"
-          />
+            </label>
+            <input
+              type="text"
+              value={formData.patient_name || ''}
+              onChange={(e) => handleChange('patient_name', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+              placeholder="Nome completo"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">CPF</label>
+            <input
+              type="text"
+              value={formData.patient_cpf || ''}
+              onChange={(e) => handleChange('patient_cpf', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+              placeholder="000.000.000-00"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Telefone</label>
+            <input
+              type="tel"
+              value={formData.patient_phone || ''}
+              onChange={(e) => handleChange('patient_phone', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+              placeholder="(00) 00000-0000"
+            />
+          </div>
         </div>
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1">CPF</label>
-          <input
-            type="text"
-            value={formData.patient_cpf || ''}
-            onChange={(e) => handleChange('patient_cpf', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-            placeholder="000.000.000-00"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1">Telefone</label>
-          <input
-            type="tel"
-            value={formData.patient_phone || ''}
-            onChange={(e) => handleChange('patient_phone', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-            placeholder="(00) 00000-0000"
-          />
-        </div>
-      </div>
-    );
+      );
 
-  case 'convenio':
-    return (
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1">
+    case 'convenio':
+      return (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
               Nome do Convênio
-          </label>
-          <input
-            type="text"
-            value={formData.payer_name || ''}
-            onChange={(e) => handleChange('payer_name', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-            placeholder="Ex: Unimed, Bradesco Saúde..."
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1">
+            </label>
+            <input
+              type="text"
+              value={formData.payer_name || ''}
+              onChange={(e) => handleChange('payer_name', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+              placeholder="Ex: Unimed, Bradesco Saúde..."
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
               Tipo de Pagador
-          </label>
-          <select
-            value={formData.payer_type || 'CONVENIO'}
-            onChange={(e) => handleChange('payer_type', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-          >
-            <option value="CONVENIO">Convênio</option>
-            <option value="PARTICULAR">Particular</option>
-            <option value="GRATUITO">Gratuito</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1">
+            </label>
+            <select
+              value={formData.payer_type || 'CONVENIO'}
+              onChange={(e) => handleChange('payer_type', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+            >
+              <option value="CONVENIO">Convênio</option>
+              <option value="PARTICULAR">Particular</option>
+              <option value="GRATUITO">Gratuito</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
               Número de Autorização
-          </label>
-          <input
-            type="text"
-            value={formData.authorization_number || ''}
-            onChange={(e) => handleChange('authorization_number', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-            placeholder="Número da autorização (se aplicável)"
-          />
+            </label>
+            <input
+              type="text"
+              value={formData.authorization_number || ''}
+              onChange={(e) => handleChange('authorization_number', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+              placeholder="Número da autorização (se aplicável)"
+            />
+          </div>
         </div>
-      </div>
-    );
+      );
 
-  case 'carteirinha':
-    return (
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1">
+    case 'carteirinha':
+      return (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
               Número da Carteirinha
+            </label>
+            <input
+              type="text"
+              value={formData.card_number || ''}
+              onChange={(e) => handleChange('card_number', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+              placeholder="Número impresso na carteirinha"
+            />
+          </div>
+          <label className="flex items-center gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+            <input
+              type="checkbox"
+              checked={formData.insurance_card_verified || false}
+              onChange={(e) => handleChange('insurance_card_verified', e.target.checked)}
+              className="w-5 h-5 rounded border-gray-300 text-orange-500"
+            />
+            <span className="font-semibold text-gray-700">Carteirinha conferida e válida</span>
           </label>
-          <input
-            type="text"
-            value={formData.card_number || ''}
-            onChange={(e) => handleChange('card_number', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-            placeholder="Número impresso na carteirinha"
-          />
         </div>
-        <label className="flex items-center gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-          <input
-            type="checkbox"
-            checked={formData.insurance_card_verified || false}
-            onChange={(e) => handleChange('insurance_card_verified', e.target.checked)}
-            className="w-5 h-5 rounded border-gray-300 text-orange-500"
-          />
-          <span className="font-semibold text-gray-700">Carteirinha conferida e válida</span>
-        </label>
-      </div>
-    );
+      );
 
-  case 'autorizacao':
-    return (
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1">
+    case 'autorizacao':
+      return (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
               Data da Autorização
+            </label>
+            <input
+              type="date"
+              value={formData.authorization_date || ''}
+              onChange={(e) => handleChange('authorization_date', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+            />
+          </div>
+          <label className="flex items-center gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+            <input
+              type="checkbox"
+              checked={formData.authorization_verified || false}
+              onChange={(e) => handleChange('authorization_verified', e.target.checked)}
+              className="w-5 h-5 rounded border-gray-300 text-orange-500"
+            />
+            <span className="font-semibold text-gray-700">Autorização verificada e válida</span>
           </label>
-          <input
-            type="date"
-            value={formData.authorization_date || ''}
-            onChange={(e) => handleChange('authorization_date', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-          />
         </div>
-        <label className="flex items-center gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-          <input
-            type="checkbox"
-            checked={formData.authorization_verified || false}
-            onChange={(e) => handleChange('authorization_verified', e.target.checked)}
-            className="w-5 h-5 rounded border-gray-300 text-orange-500"
-          />
-          <span className="font-semibold text-gray-700">Autorização verificada e válida</span>
-        </label>
-      </div>
-    );
+      );
 
-  case 'guia':
-    return (
-      <div className="space-y-4">
-        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-sm text-blue-900">
+    case 'guia':
+      return (
+        <div className="space-y-4">
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-900">
               Se a guia não foi gerada, o sistema gerará automaticamente após salvar.
-          </p>
+            </p>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Número da Guia</label>
+            <input
+              type="text"
+              value={formData.guide_number || ''}
+              onChange={(e) => handleChange('guide_number', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+              placeholder="Será preenchido automaticamente"
+              disabled={!formData.guide_generated}
+            />
+          </div>
+          <label className="flex items-center gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+            <input
+              type="checkbox"
+              checked={formData.guide_generated || false}
+              onChange={(e) => handleChange('guide_generated', e.target.checked)}
+              className="w-5 h-5 rounded border-gray-300 text-orange-500"
+            />
+            <span className="font-semibold text-gray-700">Guia gerada com sucesso</span>
+          </label>
         </div>
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1">Número da Guia</label>
-          <input
-            type="text"
-            value={formData.guide_number || ''}
-            onChange={(e) => handleChange('guide_number', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-            placeholder="Será preenchido automaticamente"
-            disabled={!formData.guide_generated}
-          />
-        </div>
-        <label className="flex items-center gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-          <input
-            type="checkbox"
-            checked={formData.guide_generated || false}
-            onChange={(e) => handleChange('guide_generated', e.target.checked)}
-            className="w-5 h-5 rounded border-gray-300 text-orange-500"
-          />
-          <span className="font-semibold text-gray-700">Guia gerada com sucesso</span>
-        </label>
-      </div>
-    );
+      );
 
-  case 'pagamento':
-    return (
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1">
+    case 'pagamento':
+      return (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
               Método de Pagamento
-          </label>
-          <select
-            value={formData.payment_method || ''}
-            onChange={(e) => handleChange('payment_method', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-          >
-            <option value="">Selecione...</option>
-            <option value="DINHEIRO">Dinheiro</option>
-            <option value="CARTAO_CREDITO">Cartão de Crédito</option>
-            <option value="CARTAO_DEBITO">Cartão de Débito</option>
-            <option value="PIX">PIX</option>
-            <option value="BOLETO">Boleto</option>
-            <option value="CONVENIO">Convênio</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-1">
+            </label>
+            <select
+              value={formData.payment_method || ''}
+              onChange={(e) => handleChange('payment_method', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+            >
+              <option value="">Selecione...</option>
+              <option value="DINHEIRO">Dinheiro</option>
+              <option value="CARTAO_CREDITO">Cartão de Crédito</option>
+              <option value="CARTAO_DEBITO">Cartão de Débito</option>
+              <option value="PIX">PIX</option>
+              <option value="BOLETO">Boleto</option>
+              <option value="CONVENIO">Convênio</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
               Status do Pagamento
-          </label>
-          <select
-            value={formData.payment_status || ''}
-            onChange={(e) => handleChange('payment_status', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-          >
-            <option value="">Selecione...</option>
-            <option value="pendente">Pendente</option>
-            <option value="confirmado">Confirmado</option>
-            <option value="pago">Pago</option>
-          </select>
+            </label>
+            <select
+              value={formData.payment_status || ''}
+              onChange={(e) => handleChange('payment_status', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+            >
+              <option value="">Selecione...</option>
+              <option value="pendente">Pendente</option>
+              <option value="confirmado">Confirmado</option>
+              <option value="pago">Pago</option>
+            </select>
+          </div>
         </div>
-      </div>
-    );
+      );
 
-  default:
-    return <p className="text-gray-600">Nenhum formulário disponível</p>;
+    default:
+      return <p className="text-gray-600">Nenhum formulário disponível</p>;
   }
 }

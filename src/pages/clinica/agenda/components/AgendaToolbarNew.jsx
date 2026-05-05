@@ -26,14 +26,14 @@ export default function AgendaToolbarNew({
 
   const getProfileLabel = () => {
     switch (agendaMode) {
-    case 'recepcao':
-      return '📞 Recepção';
-    case 'profissional':
-      return '👨‍⚕️ Profissional';
-    case 'gestor':
-      return '📊 Gestor';
-    default:
-      return 'Perfil';
+      case 'recepcao':
+        return '📞 Recepção';
+      case 'profissional':
+        return '👨‍⚕️ Profissional';
+      case 'gestor':
+        return '📊 Gestor';
+      default:
+        return 'Perfil';
     }
   };
 

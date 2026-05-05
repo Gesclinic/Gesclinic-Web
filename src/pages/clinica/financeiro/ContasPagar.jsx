@@ -1723,9 +1723,9 @@ export default function ContasPagar() {
                         <div className="font-medium">
                           {nf.subtotal !== null
                             ? nf.subtotal.toLocaleString('pt-BR', {
-                              style: 'currency',
-                              currency: 'BRL',
-                            })
+                                style: 'currency',
+                                currency: 'BRL',
+                              })
                             : '—'}
                         </div>
                       </div>
@@ -1734,9 +1734,9 @@ export default function ContasPagar() {
                         <div className="font-medium">
                           {nf.taxesTotal !== null
                             ? nf.taxesTotal.toLocaleString('pt-BR', {
-                              style: 'currency',
-                              currency: 'BRL',
-                            })
+                                style: 'currency',
+                                currency: 'BRL',
+                              })
                             : '—'}
                         </div>
                       </div>
@@ -1748,9 +1748,9 @@ export default function ContasPagar() {
                           <div className="font-medium">
                             {typeof nf.taxes[k] === 'number'
                               ? nf.taxes[k].toLocaleString('pt-BR', {
-                                style: 'currency',
-                                currency: 'BRL',
-                              })
+                                  style: 'currency',
+                                  currency: 'BRL',
+                                })
                               : '—'}
                           </div>
                         </div>

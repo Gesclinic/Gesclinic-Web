@@ -340,53 +340,53 @@ export function formatIndicators(indicators) {
  */
 export function getStatusColor(metric, value) {
   switch (metric) {
-  case 'taxa_ocupacao_percent':
-    if (value >= 80) {
-      return 'green';
-    }
-    if (value >= 40) {
-      return 'yellow';
-    }
-    return 'red';
+    case 'taxa_ocupacao_percent':
+      if (value >= 80) {
+        return 'green';
+      }
+      if (value >= 40) {
+        return 'yellow';
+      }
+      return 'red';
 
-  case 'faltas':
-    if (value === 0) {
-      return 'green';
-    }
-    if (value <= 2) {
-      return 'yellow';
-    }
-    return 'red';
+    case 'faltas':
+      if (value === 0) {
+        return 'green';
+      }
+      if (value <= 2) {
+        return 'yellow';
+      }
+      return 'red';
 
-  case 'percentual_meta_atingida':
-    if (value >= 100) {
-      return 'green';
-    }
-    if (value >= 70) {
-      return 'yellow';
-    }
-    return 'red';
+    case 'percentual_meta_atingida':
+      if (value >= 100) {
+        return 'green';
+      }
+      if (value >= 70) {
+        return 'yellow';
+      }
+      return 'red';
 
-  case 'tempo_medio_checkin_minutos':
-    if (value <= 10) {
-      return 'green';
-    }
-    if (value <= 15) {
-      return 'yellow';
-    }
-    return 'red';
+    case 'tempo_medio_checkin_minutos':
+      if (value <= 10) {
+        return 'green';
+      }
+      if (value <= 15) {
+        return 'yellow';
+      }
+      return 'red';
 
-  case 'receita_estimada':
-    if (value >= 5000) {
-      return 'green';
-    }
-    if (value >= 3000) {
-      return 'yellow';
-    }
-    return 'red';
+    case 'receita_estimada':
+      if (value >= 5000) {
+        return 'green';
+      }
+      if (value >= 3000) {
+        return 'yellow';
+      }
+      return 'red';
 
-  default:
-    return 'yellow';
+    default:
+      return 'yellow';
   }
 }
 

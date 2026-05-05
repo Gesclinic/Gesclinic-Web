@@ -77,11 +77,11 @@ function updateLocalRow(id, updates) {
   const nextRows = rows.map((row) =>
     row.id === id
       ? {
-        ...row,
-        ...sanitizePayload(updates),
-        updated_at: timestamp,
-        _storage_mode: 'local',
-      }
+          ...row,
+          ...sanitizePayload(updates),
+          updated_at: timestamp,
+          _storage_mode: 'local',
+        }
       : row,
   );
 

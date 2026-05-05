@@ -271,9 +271,9 @@ const CaixaIndividualOperador = () => {
       ...filteredMovements.map((m) => [
         m.created_at
           ? new Date(m.created_at).toLocaleTimeString('pt-BR', {
-            hour: '2-digit',
-            minute: '2-digit',
-          })
+              hour: '2-digit',
+              minute: '2-digit',
+            })
           : 'N/A',
         m.patient?.name || 'Particular',
         m.service?.name || 'N/A',
@@ -315,9 +315,9 @@ const CaixaIndividualOperador = () => {
       const tableData = filteredMovements.map((m) => [
         m.created_at
           ? new Date(m.created_at).toLocaleTimeString('pt-BR', {
-            hour: '2-digit',
-            minute: '2-digit',
-          })
+              hour: '2-digit',
+              minute: '2-digit',
+            })
           : 'N/A',
         m.patient?.name || 'Particular',
         m.service?.name || 'N/A',

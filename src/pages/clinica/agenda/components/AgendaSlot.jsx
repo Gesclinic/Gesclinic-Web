@@ -305,18 +305,18 @@ export default function AgendaSlot({
  */
 function getStatusIcon(status) {
   switch (status) {
-  case 'confirmado':
-    return '✓';
-  case 'a_confirmar':
-    return '⚠';
-  case 'faltou':
-    return '✕';
-  case 'encaixe':
-    return '⚡';
-  case 'bloqueado':
-    return '🔒';
-  default:
-    return '•';
+    case 'confirmado':
+      return '✓';
+    case 'a_confirmar':
+      return '⚠';
+    case 'faltou':
+      return '✕';
+    case 'encaixe':
+      return '⚡';
+    case 'bloqueado':
+      return '🔒';
+    default:
+      return '•';
   }
 }
 
@@ -325,19 +325,19 @@ function getStatusIcon(status) {
  */
 function getStatusLabel(status) {
   switch (status) {
-  case 'confirmado':
-    return 'Confirmado';
-  case 'a_confirmar':
-    return 'A Confirmar';
-  case 'faltou':
-    return 'Faltou';
-  case 'encaixe':
-    return 'Encaixe';
-  case 'bloqueado':
-    return 'Bloqueado';
-  case 'available':
-    return 'Disponível';
-  default:
-    return status;
+    case 'confirmado':
+      return 'Confirmado';
+    case 'a_confirmar':
+      return 'A Confirmar';
+    case 'faltou':
+      return 'Faltou';
+    case 'encaixe':
+      return 'Encaixe';
+    case 'bloqueado':
+      return 'Bloqueado';
+    case 'available':
+      return 'Disponível';
+    default:
+      return status;
   }
 }

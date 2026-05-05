@@ -47,11 +47,11 @@ export default function DashboardFinanceiro() {
       const row = Array.isArray(data) ? data[0] : data;
       return row
         ? {
-          entradas: Number(row.entradas || 0),
-          saidas: Number(row.saidas || 0),
-          resultado_liquido: Number(row.resultado_liquido || 0),
-          saldo_final: Number(row.saldo_final || 0),
-        }
+            entradas: Number(row.entradas || 0),
+            saidas: Number(row.saidas || 0),
+            resultado_liquido: Number(row.resultado_liquido || 0),
+            saldo_final: Number(row.saldo_final || 0),
+          }
         : { entradas: 0, saidas: 0, resultado_liquido: 0, saldo_final: 0 };
     },
     ttl: 5 * 60 * 1000, // 5 minutos (dados financeiros mudam frequentemente)

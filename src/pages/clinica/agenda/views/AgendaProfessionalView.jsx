@@ -188,55 +188,55 @@ export default function AgendaProfessionalView({
             {/* Paciente em Atendimento (se houver) */}
             {readyAppointments.length > 0 &&
               readyAppointments[0].status === SERVICE_STATUSES.IN_SERVICE && (
-              <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-lg p-8 text-white">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
-                  <h3 className="text-xl font-bold">ATENDIMENTO EM ANDAMENTO</h3>
-                </div>
+                <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-lg p-8 text-white">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
+                    <h3 className="text-xl font-bold">ATENDIMENTO EM ANDAMENTO</h3>
+                  </div>
 
-                {readyAppointments.map((apt) =>
-                  apt.status === SERVICE_STATUSES.IN_SERVICE ? (
-                    <div key={apt.id} className="bg-white/20 rounded-lg p-6 space-y-4">
-                      <div>
-                        <p className="text-sm opacity-90">PACIENTE</p>
-                        <h2 className="text-4xl font-bold">{apt.patient_name}</h2>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
+                  {readyAppointments.map((apt) =>
+                    apt.status === SERVICE_STATUSES.IN_SERVICE ? (
+                      <div key={apt.id} className="bg-white/20 rounded-lg p-6 space-y-4">
                         <div>
-                          <p className="text-sm opacity-90">SERVIÇO</p>
-                          <p className="text-xl font-semibold">
-                            {apt.service_name || apt.service_id || 'N/A'}
-                          </p>
+                          <p className="text-sm opacity-90">PACIENTE</p>
+                          <h2 className="text-4xl font-bold">{apt.patient_name}</h2>
                         </div>
-                        <div>
-                          <p className="text-sm opacity-90">HORÁRIO INÍCIO</p>
-                          <p className="text-xl font-semibold">
-                            {apt.care_start_time
-                              ? new Date(apt.care_start_time).toLocaleTimeString()
-                              : '--:--'}
-                          </p>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-sm opacity-90">SERVIÇO</p>
+                            <p className="text-xl font-semibold">
+                              {apt.service_name || apt.service_id || 'N/A'}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm opacity-90">HORÁRIO INÍCIO</p>
+                            <p className="text-xl font-semibold">
+                              {apt.care_start_time
+                                ? new Date(apt.care_start_time).toLocaleTimeString()
+                                : '--:--'}
+                            </p>
+                          </div>
                         </div>
+                        <button
+                          onClick={() => handleFinishCare(apt)}
+                          disabled={loadingId === apt.id}
+                          className="w-full mt-6 py-4 bg-white text-emerald-600 rounded-xl font-bold text-lg shadow-sm hover:bg-emerald-50 transition-colors flex items-center justify-center gap-3"
+                        >
+                          {loadingId === apt.id ? (
+                            <>
+                              <span className="animate-spin">⏳</span> Finalizando...
+                            </>
+                          ) : (
+                            <>
+                              <Check size={24} /> FINALIZAR ATENDIMENTO
+                            </>
+                          )}
+                        </button>
                       </div>
-                      <button
-                        onClick={() => handleFinishCare(apt)}
-                        disabled={loadingId === apt.id}
-                        className="w-full mt-6 py-4 bg-white text-emerald-600 rounded-xl font-bold text-lg shadow-sm hover:bg-emerald-50 transition-colors flex items-center justify-center gap-3"
-                      >
-                        {loadingId === apt.id ? (
-                          <>
-                            <span className="animate-spin">⏳</span> Finalizando...
-                          </>
-                        ) : (
-                          <>
-                            <Check size={24} /> FINALIZAR ATENDIMENTO
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  ) : null,
-                )}
-              </div>
-            )}
+                    ) : null,
+                  )}
+                </div>
+              )}
 
             {/* PrÃ³ximos Pacientes - Grid Layout */}
             <div>

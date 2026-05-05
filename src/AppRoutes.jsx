@@ -336,18 +336,18 @@ export default function AppRoutes() {
           {/* 📱 CONFIRMAÇÃO VIA WhatsApp */}
           <Route path="agendamento/confirmar/:token" element={<AppointmentConfirmationPage />} />
 
-          {/* 
+          {/*
             ❌ DESCONTINUADO - Fluxo consolidado na Página de Paciente
             Antes: Agenda → AtendimentoProfissionalView → PatientDetailPage
             Agora:  Agenda → PatientDetailPage (tudo em uma página)
-            
-            <Route 
-              path="agenda/atendimento/:appointmentId" 
+
+            <Route
+              path="agenda/atendimento/:appointmentId"
               element={
                 <ProtectedWizardRoute feature="agenda">
                   <AtendimentoProfissionalView />
                 </ProtectedWizardRoute>
-              } 
+              }
             />
           */}
 

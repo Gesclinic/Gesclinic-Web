@@ -66,19 +66,19 @@ export async function submitGuideWithOperatorRouting(guideId, clinicId) {
     // 3. Chamar função de envio da operadora específica
     let submissionResult;
     switch (payer.submission_method?.toLowerCase()) {
-    case 'sftp':
-      submissionResult = await submitViaHTTPSFTP(guideId, clinicId, payer);
-      break;
-    case 'api':
-    case 'http':
-      submissionResult = await submitViaHTTPAPI(guideId, clinicId, payer);
-      break;
-    case 'portal':
-    case 'web':
-      submissionResult = await generateForPortalSubmission(guideId, clinicId, payer);
-      break;
-    default:
-      submissionResult = await submitViaHTTPAPI(guideId, clinicId, payer); // Default a HTTP
+      case 'sftp':
+        submissionResult = await submitViaHTTPSFTP(guideId, clinicId, payer);
+        break;
+      case 'api':
+      case 'http':
+        submissionResult = await submitViaHTTPAPI(guideId, clinicId, payer);
+        break;
+      case 'portal':
+      case 'web':
+        submissionResult = await generateForPortalSubmission(guideId, clinicId, payer);
+        break;
+      default:
+        submissionResult = await submitViaHTTPAPI(guideId, clinicId, payer); // Default a HTTP
     }
 
     if (!submissionResult.success) {

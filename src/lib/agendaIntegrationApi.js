@@ -83,8 +83,8 @@ export async function validateAppointmentScheduling(params) {
       rule,
       endTime: rule
         ? new Date(
-          new Date(`${date}T${startTime}`).getTime() + rule.default_duration_minutes * 60000,
-        )
+            new Date(`${date}T${startTime}`).getTime() + rule.default_duration_minutes * 60000,
+          )
         : null,
     };
   } catch (error) {

@@ -224,10 +224,10 @@ export default function CheckinRecepacao() {
                   className={`
                     w-full text-left p-3 rounded-lg border-l-4 transition
                     ${
-                selectedAptId === apt.id
-                  ? 'bg-blue-50 border-blue-500'
-                  : 'bg-white border-gray-200 hover:bg-gray-50'
-                }
+                      selectedAptId === apt.id
+                        ? 'bg-blue-50 border-blue-500'
+                        : 'bg-white border-gray-200 hover:bg-gray-50'
+                    }
                   `}
                   style={{
                     borderLeftColor:

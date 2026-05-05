@@ -505,14 +505,14 @@ export default function AppointmentDrawer({
               <p className="text-xs font-semibold text-gray-900">
                 {appointmentDate && appointmentDate !== '—'
                   ? (() => {
-                    const [year, month, day] = appointmentDate.split('-').map(Number);
-                    const safeDate = new Date(year, month - 1, day);
-                    return safeDate.toLocaleDateString('pt-BR', {
-                      weekday: 'short',
-                      day: '2-digit',
-                      month: '2-digit',
-                    });
-                  })()
+                      const [year, month, day] = appointmentDate.split('-').map(Number);
+                      const safeDate = new Date(year, month - 1, day);
+                      return safeDate.toLocaleDateString('pt-BR', {
+                        weekday: 'short',
+                        day: '2-digit',
+                        month: '2-digit',
+                      });
+                    })()
                   : '—'}
               </p>
             </div>

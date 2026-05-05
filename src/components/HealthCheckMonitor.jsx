@@ -192,31 +192,31 @@ export function HealthCheckMonitor() {
 
   function getStatusIcon(status) {
     switch (status) {
-    case 'success':
-      return <CheckCircle2 className="w-4 h-4 text-green-600" />;
-    case 'warning':
-      return <AlertTriangle className="w-4 h-4 text-yellow-600" />;
-    case 'error':
-      return <AlertCircle className="w-4 h-4 text-red-600" />;
-    case 'info':
-      return <Clock className="w-4 h-4 text-blue-600" />;
-    default:
-      return <Clock className="w-4 h-4 text-gray-600 animate-spin" />;
+      case 'success':
+        return <CheckCircle2 className="w-4 h-4 text-green-600" />;
+      case 'warning':
+        return <AlertTriangle className="w-4 h-4 text-yellow-600" />;
+      case 'error':
+        return <AlertCircle className="w-4 h-4 text-red-600" />;
+      case 'info':
+        return <Clock className="w-4 h-4 text-blue-600" />;
+      default:
+        return <Clock className="w-4 h-4 text-gray-600 animate-spin" />;
     }
   }
 
   function getStatusBadgeVariant(status) {
     switch (status) {
-    case 'success':
-      return 'default';
-    case 'warning':
-      return 'secondary';
-    case 'error':
-      return 'destructive';
-    case 'info':
-      return 'outline';
-    default:
-      return 'outline';
+      case 'success':
+        return 'default';
+      case 'warning':
+        return 'secondary';
+      case 'error':
+        return 'destructive';
+      case 'info':
+        return 'outline';
+      default:
+        return 'outline';
     }
   }
 

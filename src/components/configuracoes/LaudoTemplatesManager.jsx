@@ -123,7 +123,7 @@ export default function LaudoTemplatesManager() {
         letterhead: prev.letterhead?.clinic_display_name
           ? prev.letterhead
           : buildDefaultForm({ clinicInfo: resolvedClinic, professionalInfo: resolvedProfessional })
-            .letterhead,
+              .letterhead,
       }));
     }
   }, [resolvedClinic, resolvedProfessional]);

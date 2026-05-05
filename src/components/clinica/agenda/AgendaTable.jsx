@@ -98,14 +98,14 @@ export default function AgendaTable({
               <td className="p-3 font-medium">
                 {apt.start_time
                   ? (() => {
-                    try {
-                      const { utcToZonedTime, format: formatTz } = require('date-fns-tz');
-                      const zoned = utcToZonedTime(apt.start_time, 'America/Sao_Paulo');
-                      return formatTz(zoned, 'HH:mm', { timeZone: 'America/Sao_Paulo' });
-                    } catch (e) {
-                      return '-';
-                    }
-                  })()
+                      try {
+                        const { utcToZonedTime, format: formatTz } = require('date-fns-tz');
+                        const zoned = utcToZonedTime(apt.start_time, 'America/Sao_Paulo');
+                        return formatTz(zoned, 'HH:mm', { timeZone: 'America/Sao_Paulo' });
+                      } catch (e) {
+                        return '-';
+                      }
+                    })()
                   : '-'}
                 h
               </td>

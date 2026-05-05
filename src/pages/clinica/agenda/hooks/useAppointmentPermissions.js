@@ -27,16 +27,16 @@ export function useAppointmentPermissions() {
 
   const permissions = ROLE_PERMISSIONS[currentRole?.toLowerCase()] ||
     ROLE_PERMISSIONS.reception || {
-    canConfirmAppointment: false,
-    canMarkArrival: false,
-    canMarkPending: false,
-    canProcessPayment: false,
-    canReleaseForCare: false,
-    canStartCare: false,
-    canFinishCare: false,
-    canViewFinance: false,
-    canEditAppointment: false,
-  };
+      canConfirmAppointment: false,
+      canMarkArrival: false,
+      canMarkPending: false,
+      canProcessPayment: false,
+      canReleaseForCare: false,
+      canStartCare: false,
+      canFinishCare: false,
+      canViewFinance: false,
+      canEditAppointment: false,
+    };
 
   // ============================================
   // 2️⃣ FUNÇÕES DE VALIDAÇÃO

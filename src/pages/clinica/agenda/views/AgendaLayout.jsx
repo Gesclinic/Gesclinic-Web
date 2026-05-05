@@ -265,37 +265,37 @@ export default function AgendaLayout({ mode, professionalId, roomId }) {
   // 🔥 Renderizar visualização correta
   const renderView = useMemo(() => {
     switch (viewMode) {
-    case VIEW_MODE.LISTA:
-      return (
-        <AgendaTable
-          appointments={appointments}
-          loading={loading}
-          professionals={professionals}
-          onSelectEvent={openPanel}
-        />
-      );
+      case VIEW_MODE.LISTA:
+        return (
+          <AgendaTable
+            appointments={appointments}
+            loading={loading}
+            professionals={professionals}
+            onSelectEvent={openPanel}
+          />
+        );
 
-    case VIEW_MODE.KANBAN:
-      return (
-        <div className="p-8 text-center text-gray-400">Visualização Kanban não disponível.</div>
-      );
+      case VIEW_MODE.KANBAN:
+        return (
+          <div className="p-8 text-center text-gray-400">Visualização Kanban não disponível.</div>
+        );
 
-    default:
-      return (
-        <AgendaCalendar
-          mode={mode}
-          calendarView={calendarView}
-          appointments={appointments}
-          professionals={professionals}
-          filters={filters}
-          loading={loading}
-          onSelectEvent={openPanel}
-          onCreateAtSlot={(info) => {
-            setNovoAgendamentoInfo(info);
-            setModalNovoOpen(true);
-          }}
-        />
-      );
+      default:
+        return (
+          <AgendaCalendar
+            mode={mode}
+            calendarView={calendarView}
+            appointments={appointments}
+            professionals={professionals}
+            filters={filters}
+            loading={loading}
+            onSelectEvent={openPanel}
+            onCreateAtSlot={(info) => {
+              setNovoAgendamentoInfo(info);
+              setModalNovoOpen(true);
+            }}
+          />
+        );
     }
   }, [viewMode, calendarView, appointments, professionals, loading, filters]);
 
