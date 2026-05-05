@@ -1,0 +1,135 @@
+# 🚀 GUIA DO MERGE - Passo a Passo Detalhado
+
+## ✅ Antes de Fazer Merge
+
+Verificar que:
+- [ ] Dev server rodando em http://localhost:3000
+- [ ] Nenhuma erro no console (F12)
+- [ ] Login funciona
+- [ ] Dados carregam
+
+---
+
+## 🔄 MERGE NA PRÁTICA
+
+### Passo 1: Ir para GitHub PR
+
+```
+URL: https://github.com/Gesclinic/Gesclinic-Web/pulls
+
+OU (se souber o número):
+URL: https://github.com/Gesclinic/Gesclinic-Web/pull/XXX
+```
+
+### Passo 2: Revisar PR
+
+**Na aba "Files changed"**:
+```
+1. Clicar em "Files changed"
+2. Rolar e revisar mudanças
+3. Procurar por console.log/debug
+4. Procurar por secrets ou keys
+5. Confirmar documentação está OK
+```
+
+**No campo de review**:
+```
+1. Click "Review changes"
+2. Selecionar: "Approve"
+3. Clicar: "Submit review"
+```
+
+### Passo 3: Fazer Merge
+
+**Opção A - Squash & Merge (RECOMENDADO)**:
+```
+1. Na página da PR, click: "Merge pull request" ▼
+2. Selecionar: "Squash and merge"
+3. Confirmar: "Confirm squash and merge"
+```
+
+**Opção B - Regular Merge**:
+```
+1. Na página da PR, click: "Merge pull request"
+2. Click: "Confirm merge"
+```
+
+---
+
+## ✨ O Que Acontece Depois de Fazer Merge
+
+### Automaticamente (5-10 minutos):
+
+```
+1. GitHub Actions dispara
+   ↓
+2. ESLint & Prettier check
+   ↓
+3. Build production
+   ↓
+4. Security scanning
+   ↓
+5. Vercel deployment (if configured)
+   ↓
+6. Production live! 🎉
+```
+
+### Você Verifica:
+
+```
+1. GitHub → Actions tab
+   - Aguardar todos jobs ficarem green ✅
+
+2. Vercel Dashboard
+   - Aguardar deployment complete
+
+3. Production URL
+   https://gesclinic.vercel.app
+   - Testar login
+   - Testar dados
+```
+
+---
+
+## 🔔 Status Durante Merge
+
+### Se der ERRO em um job:
+```
+1. Click no job que falhou
+2. Verificar log/erro
+3. Corrigir código localmente
+4. Push novamente
+5. PR vai fazer merge automático ou manual
+```
+
+### Se der SUCESSO:
+```
+✅ Todos jobs verdes
+✅ Vercel deployment completo
+✅ URL ativa e acessível
+✅ Pronto para usuarios! 🎉
+```
+
+---
+
+## 📋 Checklist Final
+
+Antes de fazer merge:
+- [ ] Visitei http://localhost:3000
+- [ ] App carrega sem erros
+- [ ] Login testado
+- [ ] Dados carregam
+- [ ] Console limpo (F12)
+- [ ] Documentação lida
+- [ ] GitHub Secrets configurados (opcional, mas recomendado)
+
+Depois de fazer merge:
+- [ ] GitHub Actions passou (todos verdes)
+- [ ] Vercel deployment começou
+- [ ] Production URL acessível
+- [ ] Testei produção
+- [ ] Tudo funcionando! 🎉
+
+---
+
+**Tempo esperado: 15 minutos + 10 minutos de espera pelo GitHub Actions**
