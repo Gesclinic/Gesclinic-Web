@@ -8,7 +8,7 @@ import { ConciliaoIndicadores } from '@/components/financeiro/conciliacao/Concil
 import { ConciliacaoImportacao } from '@/components/financeiro/conciliacao/ConciliacaoImportacao';
 import { ConciliacaoLista } from '@/components/financeiro/conciliacao/ConciliacaoLista';
 import { ConciliacaoPainel } from '@/components/financeiro/conciliacao/ConciliacaoPainel';
-import { Card } from '@/components/ui/Card';
+import { Card } from '@/components/ui/card';
 
 export default function ConciliacaoBancaria() {
   const { clinicId } = useClinicContext();
