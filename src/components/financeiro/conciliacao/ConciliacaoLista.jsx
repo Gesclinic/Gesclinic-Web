@@ -2,8 +2,8 @@
 // Lista de movimentações do extrato
 
 import React, { useState } from 'react';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import {
   CONCILIATION_STATUS_VISUAL,

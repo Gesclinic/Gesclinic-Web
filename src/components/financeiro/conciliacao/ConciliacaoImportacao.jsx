@@ -2,7 +2,7 @@
 // Bloco de importação de extrato
 
 import React, { useState, useRef } from 'react';
-import { Card } from '@/components/ui/Card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/Button';
 import { useBankStatementParser } from '@/hooks/useConciliation';
 import { IMPORT_FORMATS, TRANSACTION_TYPE } from '@/lib/conciliationStatus';

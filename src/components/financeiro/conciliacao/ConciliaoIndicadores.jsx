@@ -2,7 +2,7 @@
 // Indicadores de conciliação bancária
 
 import React from 'react';
-import { Card } from '@/components/ui/Card';
+import { Card } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/formatters';
 import { CONCILIATION_STATUS_VISUAL, CONCILIATION_STATUS } from '@/lib/conciliationStatus';
 
