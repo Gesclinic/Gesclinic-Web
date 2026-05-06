@@ -11,10 +11,10 @@ function generateToken() {
 
 // Configuração da Evolution API
 const EVOLUTION_API_URL =
-  process.env.VITE_EVOLUTION_API_URL || 'http://localhost:8080/message/sendText';
-const EVOLUTION_API_KEY = process.env.VITE_EVOLUTION_API_KEY || '';
-const EVOLUTION_INSTANCE = process.env.VITE_EVOLUTION_INSTANCE || '';
-const APP_URL = process.env.VITE_APP_URL || 'http://localhost:3000';
+  import.meta.env.VITE_EVOLUTION_API_URL || 'http://localhost:8080/message/sendText';
+const EVOLUTION_API_KEY = import.meta.env.VITE_EVOLUTION_API_KEY || '';
+const EVOLUTION_INSTANCE = import.meta.env.VITE_EVOLUTION_INSTANCE || '';
+const APP_URL = import.meta.env.VITE_APP_URL || 'http://localhost:3000';
 
 /**
  * Enviar mensagem de confirmação via WhatsApp
