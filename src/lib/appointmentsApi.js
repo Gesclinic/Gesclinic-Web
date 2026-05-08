@@ -6,9 +6,6 @@ import { migrateStatus } from '@/lib/appointmentStatusConstants';
 // Import financial integration for auto-triggers
 import { finalizeAppointmentWithFinancials } from '@/lib/appointmentFinancialIntegrationApi';
 
-// ✅ PHASE 2: Import timezone utilities
-import { formatTime, isBusinessHours, convertUTCToLocal } from '@/modules/agenda/utils/timezone';
-
 // ============================================================
 // HELPERS: Normaliza��o e Transforma��o
 // ============================================================
@@ -44,8 +41,6 @@ const extractDate = (dateStr) => {
  * Extrai hora em formato HH:MM:SS
  * @param {string|Date} timeStr - Hora como string ou Date
  * @returns {string|null} Hora formatada ou null
- * 
- * ✅ PHASE 2: Timezone utilities (formatTime, isBusinessHours) available in @/modules/agenda/utils/timezone
  */
 const extractTime = (timeStr) => {
   if (!timeStr) {
