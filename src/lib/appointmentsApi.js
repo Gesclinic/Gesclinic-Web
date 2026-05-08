@@ -6,6 +6,9 @@ import { migrateStatus } from '@/lib/appointmentStatusConstants';
 // Import financial integration for auto-triggers
 import { finalizeAppointmentWithFinancials } from '@/lib/appointmentFinancialIntegrationApi';
 
+// ✅ PHASE 2: Import timezone utilities
+import { formatTime, isBusinessHours, convertUTCToLocal } from '@/modules/agenda/utils/timezone';
+
 // ============================================================
 // HELPERS: Normaliza��o e Transforma��o
 // ============================================================
@@ -41,6 +44,8 @@ const extractDate = (dateStr) => {
  * Extrai hora em formato HH:MM:SS
  * @param {string|Date} timeStr - Hora como string ou Date
  * @returns {string|null} Hora formatada ou null
+ * 
+ * ✅ PHASE 2: Timezone utilities (formatTime, isBusinessHours) available in @/modules/agenda/utils/timezone
  */
 const extractTime = (timeStr) => {
   if (!timeStr) {
@@ -144,6 +149,17 @@ function mapToDatabase(payload) {
     throw new Error('Payload inválido');
   }
 
+  console.log('🔴 [mapToDatabase] ===== INICIANDO MAPEAMENTO ====');
+  console.log('   Input payload keys:', Object.keys(payload));
+  console.log('   Campos críticos de entrada:', {
+    payerId_camelCase: payload.payerId,
+    payer_id_snake: payload.payer_id,
+    roomId_camelCase: payload.roomId,
+    room_id_snake: payload.room_id,
+    date: payload.date || payload.scheduled_date,
+    time: payload.time || payload.startTime || payload.scheduled_time,
+  });
+
   // ✅ ACEITAR AMBOS OS FORMATOS (camelCase E snake_case)
   const result = {
     clinic_id: payload.clinicId || payload.clinic_id,
@@ -204,6 +220,15 @@ function mapToDatabase(payload) {
   if (payload.id) {
     result.id = payload.id;
   }
+
+  console.log('🟢 [mapToDatabase] Output formatado para banco:', {
+    room_id: result.room_id,
+    payer_id: result.payer_id,
+    scheduled_date: result.scheduled_date,
+    scheduled_time: result.scheduled_time,
+    end_time: result.end_time,
+  });
+  console.log('   [COMPLETO] Result object tem', Object.keys(result).length, 'campos');
 
   return result;
 }
@@ -763,15 +788,29 @@ export async function createAppointment(payload) {
 }
 
 export async function updateAppointment(id, payload) {
-  console.log('🔴🔴🔴 [updateAppointment] INICIANDO UPDATE');
+  console.log('\n' + '='.repeat(70));
+  console.log('🔴 [updateAppointment] INICIANDO UPDATE');
+  console.log('='.repeat(70));
   console.log('   ID:', id);
-  console.log('   Payload recebido:', JSON.stringify(payload, null, 2));
+  console.log('   Payload recebido (campos críticos):', {
+    room_id: payload.room_id,
+    roomId: payload.roomId,
+    payer_id: payload.payer_id,
+    payerId: payload.payerId,
+    date: payload.scheduled_date || payload.date,
+    time: payload.scheduled_time || payload.time,
+  });
 
   const data = mapToDatabase(payload);
 
-  console.log('   Data após mapToDatabase:', JSON.stringify(data, null, 2));
+  console.log('\n📋 [updateAppointment] Data após mapToDatabase (verificação final):', {
+    room_id: data.room_id,
+    payer_id: data.payer_id,
+    scheduled_date: data.scheduled_date,
+    scheduled_time: data.scheduled_time,
+  });
 
-  console.log('📤 [updateAppointment] Enviando UPDATE para Supabase...');
+  console.log('\n📤 [updateAppointment] Enviando UPDATE para Supabase...');
   const { data: result, error } = await supabase.from('appointments').update(data).eq('id', id)
     .select(`
       *,
@@ -783,42 +822,44 @@ export async function updateAppointment(id, payload) {
     `);
 
   if (error) {
-    console.error('❌ [updateAppointment] SUPABASE ERROR:', {
+    console.error('\n❌ [updateAppointment] SUPABASE ERROR:', {
       message: error.message,
       code: error.code,
       details: error.details,
       hint: error.hint,
-      fullError: error,
     });
     throw error;
   }
 
-  console.log('✅ [updateAppointment] UPDATE executado com sucesso!');
+  console.log('\n✅ [updateAppointment] UPDATE enviado com sucesso!');
   console.log('   Result length:', result?.length);
-  console.log('   Result:', result);
-  console.log('🔥 [CRITICAL] scheduled_time na resposta:', result?.[0]?.scheduled_time);
-
-  // ✅ UPDATE was successful even if .select() returns empty (RLS might block)
+  
   if (result && result.length > 0) {
-    console.log('✅ [updateAppointment] Dados retornados:', {
+    console.log('\n✅ [SUCESSO COM SELECT] Dados retornados do Supabase:');
+    console.log('   Dados críticos:', {
       appointmentId: result[0]?.id,
+      payer_id: result[0]?.payer_id,
+      room_id: result[0]?.room_id,
       scheduled_time: result[0]?.scheduled_time,
-      patientName: result[0]?.patients?.name,
-      professionalName: result[0]?.professionals?.name,
-      serviceName: result[0]?.services?.name,
       payerName: result[0]?.payers?.name,
       roomName: result[0]?.rooms?.name,
     });
-    return mapFromDatabase(result[0]);
+    const mapped = mapFromDatabase(result[0]);
+    console.log('   Após mapFromDatabase:', {
+      payerId: mapped.payerId,
+      roomId: mapped.roomId,
+      time: mapped.time,
+    });
+    console.log('='.repeat(70) + '\n');
+    return mapped;
   }
 
   // If no data returned, still consider it a success but log warning
-  console.warn('⚠️ [updateAppointment] UPDATE executado mas sem dados retornados (possível RLS)');
-  console.warn('   ⚠️⚠️⚠️ POTENCIAL PROBLEMA: RLS bloqueou a SELECT após UPDATE! ⚠️⚠️⚠️');
-  console.warn('   ✅ [FIX v2] Construindo resposta mapeada corretamente do payload original');
+  console.warn('\n⚠️ [updateAppointment] UPDATE executado MAS SEM DADOS NA SELECT');
+  console.warn('   ⚠️⚠️⚠️ DIAGNÓSTICO: RLS provavelmente bloqueou SELECT após UPDATE');
+  console.warn('   ✅ [FALLBACK] Construindo resposta do payload original...');
 
-  // ✅ FIX v2: Se payload contém snake_case, mapear para frontend format
-  // Se payload contém camelCase, usar como está
+  // ✅ FIX v2 MELHORADO: Mapear fallback corretamente
   const responseData = {
     id,
     // Campos em camelCase (para frontend)
@@ -847,7 +888,12 @@ export async function updateAppointment(id, payload) {
     ...payload,
   };
 
-  console.warn('   Retornando resposta fallback mapeada:', responseData);
+  console.warn('   [FALLBACK] Resposta retornada:', {
+    payerId: responseData.payerId,
+    roomId: responseData.roomId,
+    time: responseData.time,
+  });
+  console.log('='.repeat(70) + '\n');
   return responseData;
 }
 
@@ -901,6 +947,76 @@ export async function deleteAppointment(id) {
   } catch (err) {
     console.error('Erro inesperado:', err);
     throw err;
+  }
+}
+
+/**
+ * 🔍 FUNÇÃO DE VALIDAÇÃO: Verificar se UPDATE foi realmente salvo no banco
+ * Útil para debug de RLS ou problemas de persistência
+ * 
+ * @param {string} appointmentId - ID do agendamento
+ * @param {Object} expectedFields - Campos que deveriam ter sido atualizados
+ * @returns {Object} Dados atuais do banco com comparação
+ */
+export async function validateAppointmentSaved(appointmentId, expectedFields) {
+  console.log('\n🔍 [VALIDAÇÃO] Verificando se UPDATE foi realmente salvo...');
+  console.log('   Verificando appointment:', appointmentId);
+  
+  try {
+    const { data, error } = await supabase
+      .from('appointments')
+      .select(`
+        id, room_id, payer_id, scheduled_date, scheduled_time, 
+        professional_id, service_id, duration, value,
+        rooms (id, name),
+        payers (id, name),
+        professionals (id, name),
+        services (id, name)
+      `)
+      .eq('id', appointmentId)
+      .single();
+    
+    if (error) {
+      console.error('❌ [VALIDAÇÃO] Erro ao buscar dados:', error);
+      return { valid: false, error: error.message, data: null };
+    }
+    
+    console.log('📊 [VALIDAÇÃO] Dados atuais no banco:');
+    const validation = {
+      id: data.id,
+      expected: expectedFields,
+      actual: {
+        room_id: data.room_id,
+        payer_id: data.payer_id,
+        scheduled_date: data.scheduled_date,
+        scheduled_time: data.scheduled_time,
+        professional_id: data.professional_id,
+        service_id: data.service_id,
+      },
+      roomName: data.rooms?.name,
+      payerName: data.payers?.name,
+      matches: {
+        room_id: data.room_id === (expectedFields.room_id || null),
+        payer_id: data.payer_id === (expectedFields.payer_id || null),
+        scheduled_time: data.scheduled_time === (expectedFields.scheduled_time || expectedFields.time || null),
+      },
+    };
+
+    console.log('✅ Comparação:', validation.matches);
+    if (!validation.matches.room_id) {
+      console.error('   ❌ room_id NÃO foi salvo! Esperado:', expectedFields.room_id, 'Banco:', data.room_id);
+    }
+    if (!validation.matches.payer_id) {
+      console.error('   ❌ payer_id NÃO foi salvo! Esperado:', expectedFields.payer_id, 'Banco:', data.payer_id);
+    }
+    if (!validation.matches.scheduled_time) {
+      console.error('   ❌ scheduled_time NÃO foi salvo! Esperado:', expectedFields.scheduled_time, 'Banco:', data.scheduled_time);
+    }
+
+    return validation;
+  } catch (err) {
+    console.error('❌ [VALIDAÇÃO] Erro inesperado:', err);
+    return { valid: false, error: err.message, data: null };
   }
 }
 

@@ -92,22 +92,33 @@ export async function logAppointmentAudit({
     }
     userAgent = navigator?.userAgent || null;
 
-    // Inserir log de auditoria
+    // Inserir log de auditoria using appointment_audit_log (singular) table
+    const auditEntry = {
+      clinic_id: null, // Will be filled by trigger if needed
+      appointment_id: appointmentId,
+      operation: actionType.toLowerCase() === 'appointment_created' ? 'CREATE' 
+               : actionType.toLowerCase() === 'status_changed' ? 'UPDATE'
+               : actionType.toLowerCase() === 'marked_no_show' ? 'UPDATE'
+               : actionType.toLowerCase() === 'rescheduled' ? 'UPDATE'
+               : actionType.toLowerCase() === 'cancelled' ? 'UPDATE'
+               : 'UPDATE',
+      changed_at: new Date().toISOString(),
+      before_snapshot: oldStatus ? { status: oldStatus } : null,
+      after_snapshot: newStatus ? { status: newStatus, ...context } : context ? context : null,
+      changed_fields: newStatus ? ['status'] : context ? Object.keys(context) : [],
+      source: 'api',
+      ip_address: ipAddress,
+      user_agent: userAgent,
+    };
+
+    // Only include changed_by if userId exists (to avoid type mismatch)
+    if (userId) {
+      auditEntry.changed_by = userId;
+    }
+
     const { data: log, error } = await supabase
-      .from('appointment_audit_logs')
-      .insert([
-        {
-          appointment_id: appointmentId,
-          action_type: actionType,
-          old_status: oldStatus,
-          new_status: newStatus,
-          performed_by: userId,
-          performed_by_role: userRole,
-          context: context ? JSON.stringify(context) : null,
-          ip_address: ipAddress,
-          user_agent: userAgent,
-        },
-      ])
+      .from('appointment_audit_log')
+      .insert([auditEntry])
       .select()
       .single();
 
@@ -136,10 +147,10 @@ export async function getAppointmentAuditLogs(appointmentId) {
 
   try {
     const { data, error } = await supabase
-      .from('appointment_audit_logs')
+      .from('appointment_audit_log')
       .select('*')
       .eq('appointment_id', appointmentId)
-      .order('performed_at', { ascending: true });
+      .order('changed_at', { ascending: true });
 
     if (error) {
       console.error('Erro ao buscar logs:', error);
@@ -163,16 +174,20 @@ export async function getAppointmentAuditLogs(appointmentId) {
 export async function getAuditLogsByDateRange({ startDate, endDate, actionType = null }) {
   try {
     let query = supabase
-      .from('appointment_audit_logs')
+      .from('appointment_audit_log')
       .select('*')
-      .gte('performed_at', startDate)
-      .lte('performed_at', endDate);
+      .gte('changed_at', startDate)
+      .lte('changed_at', endDate);
 
     if (actionType) {
-      query = query.eq('action_type', actionType);
+      // Map old action type names to new operation values
+      const operationValue = actionType.toLowerCase() === 'appointment_created' ? 'CREATE' 
+                          : actionType.toLowerCase() === 'status_changed' ? 'UPDATE'
+                          : actionType.toUpperCase();
+      query = query.eq('operation', operationValue);
     }
 
-    const { data, error } = await query.order('performed_at', {
+    const { data, error } = await query.order('changed_at', {
       ascending: false,
     });
 
@@ -200,7 +215,7 @@ export async function countAppointmentAuditLogs(appointmentId) {
 
   try {
     const { count, error } = await supabase
-      .from('appointment_audit_logs')
+      .from('appointment_audit_log')
       .select('*', { count: 'exact', head: true })
       .eq('appointment_id', appointmentId);
 
