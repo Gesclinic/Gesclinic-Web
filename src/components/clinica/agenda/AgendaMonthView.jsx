@@ -12,7 +12,11 @@ import {
   isSameDay,
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { utcToZonedTime, format as formatTz } from 'date-fns-tz';
+import {
+  toLocalTime,
+  formatLocalDate,
+  formatLocalTime,
+} from '@/utils/timezoneHelpers';
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -37,7 +41,7 @@ export default function AgendaMonthView({
     return eachDayOfInterval({ start, end });
   }, [selectedDate]);
 
-  // 🔵 Organizar appointments por dia (com timezone corrigido)
+  // ✅ Organizar appointments por dia usando timezone helpers
   const appointmentsByDay = useMemo(() => {
     const byDay = {};
 
@@ -48,13 +52,15 @@ export default function AgendaMonthView({
 
     appointments.forEach((apt) => {
       try {
-        const zoned = utcToZonedTime(apt.start_time, 'America/Sao_Paulo');
-        const key = format(zoned, 'yyyy-MM-dd');
+        const local = toLocalTime(apt.start_time);
+        const key = local.date; // Retorna 'YYYY-MM-DD'
 
         if (byDay[key]) {
           byDay[key].push(apt);
         }
-      } catch {}
+      } catch (e) {
+        console.warn('[MonthView] Error processing appointment timezone:', e);
+      }
     });
 
     return byDay;
@@ -141,10 +147,9 @@ export default function AgendaMonthView({
                   {/* Agendamentos */}
                   <div className="space-y-1">
                     {list.slice(0, 3).map((apt) => {
-                      const zoned = utcToZonedTime(apt.start_time, 'America/Sao_Paulo');
-                      const startTime = formatTz(zoned, 'HH:mm', {
-                        timeZone: 'America/Sao_Paulo',
-                      });
+                      // ✅ Use timezone helpers instead of utcToZonedTime + formatTz
+                      const local = toLocalTime(apt.start_time);
+                      const startTime = formatLocalTime(local.time);
 
                       const isBlocked = apt.is_blocked;
 

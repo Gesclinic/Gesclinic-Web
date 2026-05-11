@@ -8,7 +8,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useClinicContext } from '@/contexts/ClinicContext';
 import invoiceService, { INVOICE_STATUS, validateInvoiceData } from '@/lib/invoiceService';
 import { appointmentsApi } from '@/lib/appointmentsApi';

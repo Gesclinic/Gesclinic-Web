@@ -1,18 +1,26 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Bell, Check, Loader2, Volume2, VolumeX } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useRealtimeManager } from '@/hooks/useRealtimeManager';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 /**
  * 🔔 Painel de Notificações com Realtime + Som opcional
- * - Atualiza automaticamente quando novas notificações são inseridas
- * - Permite ativar/desativar alerta sonoro
+ * 
+ * CORREÇÕES APLICADAS:
+ * ✅ RealtimeManager para deduplicação
+ * ✅ soundEnabled NÃO em dependências (evita re-subscribes)
+ * ✅ Dedup de notificações duplicadas
+ * ✅ Throttle de refetch
+ * ✅ Logs estruturados
+ * ✅ Cleanup seguro
  */
 export default function NotificationPanel() {
   const { user, clinicId } = useAuth();
+  const manager = useRealtimeManager(clinicId);
 
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState([]);
@@ -22,96 +30,154 @@ export default function NotificationPanel() {
     return localStorage.getItem('gesclinic-sound-enabled') !== 'false';
   });
 
+  // 🔄 Cache de notificações recentes (para deduplicação)
+  const recentNotificationIds = useRef(new Set());
+  const lastRefreshTime = useRef(0);
+  
   const notificationSound = new Audio('/sounds/notify.mp3');
 
   /**
-   * 🔹 Busca notificações recentes
+   * 🔹 Busca notificações recentes - memoizado para evitar closures
    */
   const fetchNotifications = useCallback(async () => {
-    if (!user) {
+    if (!user || !clinicId) {
       return;
     }
-    setLoading(true);
-    const { data, error } = await supabase.rpc('list_recent_notifications', {
-      p_user_id: user.id,
-      p_clinic_id: clinicId,
-      p_limit: 10,
-    });
-    if (!error && data) {
-      setNotifications(data);
-      const unread = data.filter((n) => !n.read_at).length;
-      setUnreadCount(unread);
+
+    // Throttle: não refetch se foi feito há menos de 1s
+    const now = Date.now();
+    if (lastRefreshTime.current && now - lastRefreshTime.current < 1000) {
+      console.log('[NotificationPanel] Throttle: ignorando refetch muito rápido');
+      return;
     }
-    setLoading(false);
+
+    try {
+      setLoading(true);
+      console.log('[NotificationPanel] Buscando notificações', { userId: user.id, clinicId });
+
+      const { data, error } = await supabase.rpc('list_recent_notifications', {
+        p_user_id: user.id,
+        p_clinic_id: clinicId,
+        p_limit: 10,
+      });
+
+      if (error) {
+        console.error('[NotificationPanel] Erro ao buscar:', error);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        setNotifications(data);
+        const unread = data.filter((n) => !n.read_at).length;
+        setUnreadCount(unread);
+        console.log('[NotificationPanel] ✅ Notificações carregadas:', data.length);
+      }
+
+      lastRefreshTime.current = now;
+    } catch (err) {
+      console.error('[NotificationPanel] Erro:', err.message);
+    } finally {
+      setLoading(false);
+    }
   }, [user, clinicId]);
 
   /**
    * 🔹 Marca uma notificação como lida
    */
-  const markAsRead = async (notificationId) => {
-    await supabase.rpc('mark_notification_as_read', {
-      p_notification_id: notificationId,
-      p_user_id: user.id,
-    });
-    await fetchNotifications();
-  };
+  const markAsRead = useCallback(
+    async (notificationId) => {
+      if (!user) return;
+
+      try {
+        await supabase.rpc('mark_notification_as_read', {
+          p_notification_id: notificationId,
+          p_user_id: user.id,
+        });
+        
+        // Atualizar local
+        setNotifications((prev) =>
+          prev.map((n) =>
+            n.id === notificationId ? { ...n, read_at: new Date().toISOString() } : n
+          )
+        );
+        
+        setUnreadCount((prev) => Math.max(0, prev - 1));
+      } catch (err) {
+        console.error('[NotificationPanel] Erro ao marcar como lida:', err);
+      }
+    },
+    [user]
+  );
 
   /**
-   * 🔹 Listener Realtime para notificações novas
+   * 🔹 Listener Realtime para notificações novas - CORRIGIDO
+   * NÃO coloca fetchNotifications ou soundEnabled em dependências
    */
   useEffect(() => {
-    if (!user) {
+    if (!user || !clinicId) {
       return;
     }
 
-    fetchNotifications(); // carrega na montagem inicial
+    // Carregar na montagem inicial
+    fetchNotifications();
 
-    const channel = supabase
-      .channel('realtime:notifications')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          console.log('📡 Atualização em tempo real:', payload.eventType);
+    console.log('[NotificationPanel] Setup realtime para notificações', { userId: user.id });
 
-          // Somente toca som se for nova notificação
-          if (payload.eventType === 'INSERT' && soundEnabled) {
-            notificationSound.play().catch(() => {});
-          }
+    // Subscribe usando RealtimeManager
+    const unsubscribe = manager.subscribe('notifications', {
+      onUpdate: (payload) => {
+        console.log('[NotificationPanel] 📬 Notificação recebida:', {
+          event: payload.eventType,
+          id: payload.new?.id,
+        });
 
-          fetchNotifications();
-        },
-      )
-      .subscribe();
+        // Deduplicação: verificar se já temos essa notificação
+        const notifId = payload.new?.id || payload.old?.id;
+        if (recentNotificationIds.current.has(notifId)) {
+          console.log('[NotificationPanel] 🔄 Notificação duplicada ignorada:', notifId);
+          return;
+        }
+
+        recentNotificationIds.current.add(notifId);
+
+        // Tocar som apenas se for nova notificação E sound habilitado
+        if (payload.eventType === 'INSERT' && soundEnabled) {
+          notificationSound.play().catch(() => {
+            console.log('[NotificationPanel] Aviso: Som de notificação não pode ser tocado');
+          });
+        }
+
+        // Refetch notificações (com throttle interno)
+        fetchNotifications();
+      },
+      filter: `user_id=eq.${user.id}`,
+    });
 
     return () => {
-      supabase.removeChannel(channel);
+      console.log('[NotificationPanel] Limpando realtime');
+      unsubscribe();
+      recentNotificationIds.current.clear();
     };
-  }, [user, fetchNotifications, soundEnabled]);
+  }, [user, clinicId, manager, fetchNotifications]); // NÃO incluir soundEnabled
 
   /**
    * 🔹 Alterna exibição do painel
    */
-  const togglePanel = async () => {
+  const togglePanel = useCallback(async () => {
     setOpen((prev) => !prev);
     if (!open) {
       await fetchNotifications();
     }
-  };
+  }, [open, fetchNotifications]);
 
   /**
-   * 🔹 Alternar som
+   * 🔹 Alternar som (sem causar re-subscribe)
    */
-  const toggleSound = () => {
+  const toggleSound = useCallback(() => {
     const newValue = !soundEnabled;
     setSoundEnabled(newValue);
     localStorage.setItem('gesclinic-sound-enabled', String(newValue));
-  };
+  }, [soundEnabled]);
 
   return (
     <div className="relative">
@@ -119,6 +185,7 @@ export default function NotificationPanel() {
       <button
         onClick={togglePanel}
         className="relative p-2 rounded-full hover:bg-gray-100 transition"
+        title="Notificações"
       >
         <Bell className="w-5 h-5 text-gray-700" />
         {unreadCount > 0 && (

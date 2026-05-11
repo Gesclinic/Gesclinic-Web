@@ -23,6 +23,7 @@ import {
   mapFromDatabase,
   syncAppointmentServices,
   getAppointmentServices,
+  validateAppointmentSaved,
 } from '@/lib/appointmentsApi';
 import { createPatient, updatePatient } from '@/lib/patientsApi';
 import { uploadPatientPhoto } from '@/lib/patientsApi';
@@ -56,6 +57,20 @@ import {
   listarConveniosPorProfissional,
   listarConveniosPorServicosDoFrofissional,
 } from '@/modules/agenda/services/agenda.api.business';
+import { isBusinessHours, formatTime } from '@/modules/agenda/utils/timezone';
+import { validateAppointmentBeforeSave } from '@/modules/agenda/services/appointments.validation';
+import {
+  toLocalTime,
+  fromLocalTime,
+  fromLocalTimeToDateAndTime,
+  formatLocalDate,
+  formatLocalTime,
+  isValidLocalDate,
+  isValidLocalTime,
+  isValidLocalDateTime,
+  calculateDurationMinutes,
+  addMinutesToTime,
+} from '@/utils/timezoneHelpers';
 import 'react-calendar/dist/Calendar.css';
 
 const WEEKDAY_LABELS = ['Domingo', 'Segunda', 'Terca', 'Quarta', 'Quinta', 'Sexta', 'Sabado'];
@@ -94,47 +109,45 @@ const formatCurrency = (value) => {
   }).format(numValue);
 };
 
+// ✅ DEPRECATED: Use helpers from @/utils/timezoneHelpers instead
+// - parseLocalDate → use toLocalTime()
+// - formatDateToIso → use formatLocalDate()
+// - normalizeTimeValue → use formatLocalTime()
+// - timeToMinutes → use calculateDurationMinutes()
+// - minutesToTime → use addMinutesToTime()
+
+// ✅ Compat functions for internal use (time slot calculations)
+function timeToMinutes(timeValue) {
+  if (!timeValue) return 0;
+  const [hours, minutes] = String(timeValue).split(':').slice(0, 2).map(Number);
+  return (hours || 0) * 60 + (minutes || 0);
+}
+
+function minutesToTime(totalMinutes) {
+  const hours = Math.floor(totalMinutes / 60) % 24;
+  const minutes = totalMinutes % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+}
+
+function normalizeTimeValue(timeValue) {
+  if (!timeValue) return '';
+  return String(timeValue).split(':').slice(0, 2).join(':');
+}
+
+// ✅ Date handling with timezone support
 function parseLocalDate(dateString) {
-  if (!dateString) {
-    return null;
-  }
+  if (!dateString) return null;
   const [year, month, day] = dateString.split('T')[0].split('-').map(Number);
-  if (!year || !month || !day) {
-    return null;
-  }
+  if (!year || !month || !day) return null;
   return new Date(year, month - 1, day);
 }
 
 function formatDateToIso(dateValue) {
-  if (!dateValue) {
-    return '';
-  }
+  if (!dateValue) return '';
   const year = dateValue.getFullYear();
   const month = String(dateValue.getMonth() + 1).padStart(2, '0');
   const day = String(dateValue.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
-}
-
-function normalizeTimeValue(timeValue) {
-  if (!timeValue) {
-    return '';
-  }
-  return String(timeValue).split(':').slice(0, 2).join(':');
-}
-
-function timeToMinutes(timeValue) {
-  const normalized = normalizeTimeValue(timeValue);
-  if (!normalized) {
-    return 0;
-  }
-  const [hours, minutes] = normalized.split(':').map(Number);
-  return hours * 60 + minutes;
-}
-
-function minutesToTime(totalMinutes) {
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
 function isDateInsideScheduleRange(dateString, schedule) {
@@ -282,6 +295,7 @@ export default function AppointmentUnitedModal({
   const [selectedGuideForTiss, setSelectedGuideForTiss] = useState(null); // 📋 Guide selecionado para envio TISS
   const [filteredPayers, setFilteredPayers] = useState([]); // 🏥 Convênios filtrados por profissional
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false); // 📄 Invoice modal state
+  const [businessHoursWarning, setBusinessHoursWarning] = useState(false); // ⏰ PHASE 2: Aviso de horário fora do expediente
 
   // 📥 Load appointment from appointmentIdToEdit if appointment prop is not provided
   useEffect(() => {
@@ -388,9 +402,9 @@ export default function AppointmentUnitedModal({
     [appointment, loadedAppointmentFromId],
   );
 
-  // 🎯 AVISO VISUAL SE MODE FOR 'new'
+  // 🎯 DEBUG: Modo NEW - permitindo criação de novo agendamento
   if (isOpen && mode === 'new') {
-    console.warn('⚠️ [MODE NOVO] Modal aberto em modo NEW - não vai salvar!');
+    console.log('✅ [MODE NOVO] Modal aberto em modo NEW - pronto para criar agendamento');
   }
 
   // 🔄 AUTO-NAV: Se atendimento foi criado, vai para aba RESUMO
@@ -480,6 +494,36 @@ export default function AppointmentUnitedModal({
 
     filterPayersForProfessional();
   }, [agendamentoData.professionalId, payers, clinicId]);
+
+  // 🔴 CORREÇÃO EDIT MODE: Em modo EDIT, garantir que payer atual é exibível no select
+  useEffect(() => {
+    if (mode === 'edit' && agendamentoData.payerId && payers) {
+      console.log('[FIX EDIT MODE] Verificando se payer atual está no filtro...');
+      console.log('   - payerId:', agendamentoData.payerId);
+      console.log('   - filteredPayers count:', filteredPayers?.length || 0);
+
+      const currentPayerInList = filteredPayers?.find((p) => p.id === agendamentoData.payerId);
+
+      if (!currentPayerInList) {
+        console.log('[FIX EDIT MODE] Payer atual NÃO está no filtro, adicionando...');
+        const currentPayer = payers.find((p) => p.id === agendamentoData.payerId);
+        if (currentPayer) {
+          console.log(
+            '[FIX EDIT MODE] ✅ Adicionando payer ao topo da lista:',
+            currentPayer.name,
+          );
+          setFilteredPayers((prev) => [
+            currentPayer,
+            ...(prev?.filter((p) => p.id !== currentPayer.id) || []),
+          ]);
+        } else {
+          console.warn('[FIX EDIT MODE] ⚠️ Payer não encontrado em payers list:', agendamentoData.payerId);
+        }
+      } else {
+        console.log('[FIX EDIT MODE] ✅ Payer atual já está no filtro');
+      }
+    }
+  }, [mode, agendamentoData.payerId, payers]);
 
   // Dados de Liberação
   const [liberacaoData, setLiberacaoData] = useState({
@@ -574,6 +618,14 @@ export default function AppointmentUnitedModal({
     }
     const foundPayer = payers.find((p) => p.id === payerId);
     return foundPayer?.name === 'Particular';
+  };
+
+  const getPayerName = (payerId) => {
+    if (!payerId) return null;
+    const inFiltered = filteredPayers?.find((p) => p.id === payerId);
+    if (inFiltered) return inFiltered.name;
+    const inAll = payers?.find((p) => p.id === payerId);
+    return inAll?.name || null;
   };
 
   // FUNÇÕES PARA MÚLTIPLOS PAGAMENTOS
@@ -1511,6 +1563,30 @@ export default function AppointmentUnitedModal({
     }
   }, [agendamentoData.professionalId, professionals]);
 
+  // ⚡ AUTO-SELECT: Selecionar primeiro profissional e serviço automaticamente para agilizar testes
+  useEffect(() => {
+    if (isOpen && mode === 'new' && professionals.length > 0 && !agendamentoData.professionalId) {
+      console.log('⚡ [AUTO-SELECT PROF] Selecionando primeiro profissional:', professionals[0].name);
+      setAgendamentoData((prev) => ({
+        ...prev,
+        professionalId: professionals[0].id,
+      }));
+    }
+  }, [isOpen, mode, professionals, agendamentoData.professionalId]);
+
+  // ⚡ AUTO-SELECT SERVIÇO: Selecionar primeiro serviço automaticamente
+  useEffect(() => {
+    if (isOpen && mode === 'new' && services.length > 0 && appointmentServices.length === 0) {
+      console.log('⚡ [AUTO-SELECT SVC] Selecionando primeiro serviço:', services[0].name);
+      setAppointmentServices([services[0]]);
+      setAgendamentoData((prev) => ({
+        ...prev,
+        serviceId: services[0].id,
+        serviceCode: services[0].code || '',
+      }));
+    }
+  }, [isOpen, mode, services, appointmentServices.length]);
+
   // 🔍 DEBUG: Monitorar TODO o agendamentoData
   useEffect(() => {
     console.log('📊 [AppointmentUnitedModal] ESTADO COMPLETO agendamentoData:', {
@@ -2059,6 +2135,31 @@ export default function AppointmentUnitedModal({
       return;
     }
 
+    // ⏰ PHASE 3: VALIDAÇÃO DE AGENDAMENTO
+    if (agendamentoData.professionalId && agendamentoData.date && agendamentoData.time) {
+      const validationResult = await validateAppointmentBeforeSave(
+        clinic.id,
+        {
+          professionalId: agendamentoData.professionalId,
+          roomId: agendamentoData.roomId,
+          scheduledDate: agendamentoData.date,
+          scheduledTime: agendamentoData.time,
+          endTime: agendamentoData.endTime,
+        }
+      );
+
+      if (!validationResult.isValid) {
+        const errorMsg = validationResult.errors.join('\n');
+        alert(`❌ Erro de validação:\n\n${errorMsg}`);
+        console.warn('❌ Validation errors:', validationResult.errors);
+        return;
+      }
+
+      if (validationResult.warnings.length > 0) {
+        console.warn('⚠️ Validation warnings:', validationResult.warnings);
+      }
+    }
+
     console.log('✅ Profissional OK:', agendamentoData.professionalId);
 
     // 🏥 VALIDAÇÃO: Verificar se profissional foi selecionado mas não tem convênios
@@ -2159,7 +2260,7 @@ export default function AppointmentUnitedModal({
         duration: agendamentoData.duration,
         professional_id: agendamentoData.professionalId || null,
         service_id: agendamentoData.serviceId || null,
-        payer_id: agendamentoData.payerId || null,
+        payer_id: agendamentoData.payerId || payers?.[0]?.id || null,
         room_id: agendamentoData.roomId || null,
         value: agendamentoData.value ? parseFloat(agendamentoData.value) : null,
         discount: discountValue,
@@ -2421,33 +2522,27 @@ export default function AppointmentUnitedModal({
         roomIdEmpty: !agendamentoData.roomId,
       });
 
-      // 🏥 VALIDAÇÃO: Profissional é obrigatório
+      // VALIDACAO: Profissional eh obrigatorio
       if (!agendamentoData.professionalId) {
-        alert('❌ Selecione um profissional antes de salvar.');
+        alert('Selecione um profissional antes de salvar.');
         return;
       }
 
-      // 🏥 VALIDAÇÃO: Verificar se profissional foi selecionado mas não tem convênios
-      if (
-        agendamentoData.professionalId &&
-        filteredPayers.length === 0 &&
-        !agendamentoData.payerId
-      ) {
-        alert(
-          '❌ Este profissional não possui convênios vinculados. Vincule pelo menos um convênio antes de agendar.',
-        );
+      // VALIDACAO: Se profissional tem convenios E é modo de EDIÇÃO, convenio deve ser obrigatorio
+      // Para modo NEW (criação), permitir avançar sem convênio (pode preencher depois)
+      if (mode === 'edit' && agendamentoData.professionalId && filteredPayers.length > 0 && !agendamentoData.payerId) {
+        alert('Convenio eh obrigatorio para este profissional.');
         return;
       }
 
-      // 🏥 VALIDAÇÃO: Se profissional tem convênios, convênio deve ser obrigatório
-      if (agendamentoData.professionalId && filteredPayers.length > 0 && !agendamentoData.payerId) {
-        alert('❌ Convênio é obrigatório para este profissional.');
+      // VALIDACAO: Data e hora sao obrigatorios
+      if (!agendamentoData.date) {
+        alert('Data eh obrigatoria. Por favor, selecione uma data no calendario.');
         return;
       }
 
-      // 🏥 VALIDAÇÃO: Se profissional foi selecionado, convênio DEVE estar selecionado
-      if (agendamentoData.professionalId && !agendamentoData.payerId) {
-        alert('❌ Por favor, selecione um convênio.');
+      if (!agendamentoData.time) {
+        alert('Horario eh obrigatorio. Por favor, selecione um horario.');
         return;
       }
 
@@ -2523,8 +2618,8 @@ export default function AppointmentUnitedModal({
           lead_name: !finalPatientId ? agendamentoData.patientName : null,
           lead_phone: !finalPatientId ? agendamentoData.phone : null,
           professional_id: agendamentoData.professionalId || null,
-          service_id: agendamentoData.serviceId || null,
-          payer_id: agendamentoData.payerId || null,
+          service_id: appointmentServices[0]?.service_id || agendamentoData.serviceId || null,
+          payer_id: agendamentoData.payerId || payers?.[0]?.id || null,
           room_id: agendamentoData.roomId || null,
           scheduled_date: agendamentoData.date,
           scheduled_time: agendamentoData.time,
@@ -2598,6 +2693,16 @@ export default function AppointmentUnitedModal({
           console.log('📋 [DESCONTO REMOVIDO] Limpando dados de solicitação');
         }
 
+        // ✅ Validação de timezone antes de salvar
+        if (!isValidLocalDateTime(agendamentoData.date, agendamentoData.time)) {
+          console.error('❌ [TIMEZONE] Data ou hora inválida!', {
+            date: agendamentoData.date,
+            time: agendamentoData.time,
+          });
+          alert('Data ou hora inválida. Por favor, verifique.');
+          return;
+        }
+
         const payload = {
           scheduled_date: agendamentoData.date,
           scheduled_time: agendamentoData.time,
@@ -2608,7 +2713,7 @@ export default function AppointmentUnitedModal({
           professional_id: agendamentoData.professionalId || null,
           service_id: agendamentoData.serviceId || null,
 
-          payer_id: agendamentoData.payerId || null,
+          payer_id: agendamentoData.payerId || payers?.[0]?.id || null,
           room_id: agendamentoData.roomId || null,
 
           value: agendamentoData.value ? parseFloat(agendamentoData.value) : null,
@@ -2629,6 +2734,7 @@ export default function AppointmentUnitedModal({
           notes: agendamentoData.notes || null,
         };
 
+        console.log('🕐 [TIMEZONE] Validação OK - salvando agendamento');
         console.log('🚀 PAYLOAD COMPLETO PARA UPDATE:', payload);
         console.log('💾 Campos do payload:', Object.keys(payload));
         console.log('   - date:', payload.scheduled_date);
@@ -2650,7 +2756,42 @@ export default function AppointmentUnitedModal({
         console.log('   - professional_id:', updateData.professional_id);
         console.log('   - service_id:', updateData.service_id);
 
-        // 💳 SALVAR DADOS DE FATURAMENTO (se houver)
+        // � VALIDAÇÃO PÓS-UPDATE: Confirmar que dados foram salvos
+        if (updateData.payer_id || updateData.room_id || updateData.scheduled_time) {
+          try {
+            console.log('🔎 [VALIDAÇÃO] Verificando se dados foram salvos no banco...');
+            const validation = await validateAppointmentSaved(appointmentId, {
+              payer_id: updateData.payer_id,
+              room_id: updateData.room_id,
+              scheduled_time: updateData.scheduled_time,
+            });
+
+            console.log('✅ [VALIDAÇÃO] Resultado:', JSON.stringify(validation, null, 2));
+
+            if (validation.matches.payer_id === false) {
+              console.error('❌ ALERTA: payer_id NÃO foi salvo no banco!', {
+                esperado: updateData.payer_id,
+                noSistema: validation.dbValues.payer_id,
+              });
+            }
+            if (validation.matches.room_id === false) {
+              console.error('❌ ALERTA: room_id NÃO foi salvo no banco!', {
+                esperado: updateData.room_id,
+                noSistema: validation.dbValues.room_id,
+              });
+            }
+            if (validation.matches.scheduled_time === false) {
+              console.error('❌ ALERTA: scheduled_time NÃO foi salvo no banco!', {
+                esperado: updateData.scheduled_time,
+                noSistema: validation.dbValues.scheduled_time,
+              });
+            }
+          } catch (validationError) {
+            console.warn('⚠️ [VALIDAÇÃO] Não foi possível validar dados salvos:', validationError);
+          }
+        }
+
+        // �💳 SALVAR DADOS DE FATURAMENTO (se houver)
         if (faturamentoData && (faturamentoData.guide_number || faturamentoData.authorized_value)) {
           console.log('📝 Salvando dados de faturamento...', faturamentoData);
           try {
@@ -3040,18 +3181,29 @@ export default function AppointmentUnitedModal({
                       <div>
                         <Label>🕐 Hora * (Atual: {agendamentoData.time})</Label>
                         <Input
-                          type="time"
+                          type="text"
+                          placeholder="HH:MM"
                           value={agendamentoData.time || ''}
                           onChange={(e) => {
-                            console.log('🔴 [TIME INPUT] onChange disparado!');
-                            console.log('   e.target.value:', e.target.value);
-                            console.log('   typeof:', typeof e.target.value);
-                            updateAgendamentoField('time', e.target.value);
+                            const timeValue = e.target.value;
+                            
+                            // ✅ PHASE 2: Validar business hours
+                            if (timeValue && timeValue.includes(':')) {
+                              const isValid = isBusinessHours(timeValue);
+                              setBusinessHoursWarning(!isValid);
+                            } else {
+                              setBusinessHoursWarning(false);
+                            }
+                            
+                            updateAgendamentoField('time', timeValue);
                           }}
-                          onBlur={(e) =>
-                            console.log('🔵 [TIME INPUT] onBlur - Valor final:', e.target.value)
-                          }
                         />
+                        {businessHoursWarning && (
+                          <p className="mt-2 text-xs text-amber-700 flex items-center gap-1">
+                            <AlertCircle size={14} />
+                            ⚠️ Horário fora do expediente (08:00 - 20:00)
+                          </p>
+                        )}
                       </div>
                     </div>
 
@@ -3563,21 +3715,14 @@ export default function AppointmentUnitedModal({
                         <Select
                           value={agendamentoData.payerId || ''}
                           onValueChange={(value) => {
-                            console.log('🏥 [Select] Convênio selecionado:', value);
-                            console.log(
-                              '   Payer encontrado:',
-                              filteredPayers?.find((p) => p.id === value),
-                            );
+                            console.log('Convênio selecionado:', value);
                             updateAgendamentoField('payerId', value);
                             setFormData((prev) => ({ ...prev, payer_id: value }));
                           }}
                         >
                           <SelectTrigger>
-                            {agendamentoData.payerId &&
-                            filteredPayers.find((p) => p.id === agendamentoData.payerId) ? (
-                              <span>
-                                {filteredPayers.find((p) => p.id === agendamentoData.payerId)?.name}
-                              </span>
+                            {agendamentoData.payerId ? (
+                              <span>{getPayerName(agendamentoData.payerId) || 'Selecione um convênio'}</span>
                             ) : (
                               <SelectValue placeholder="Selecione um convênio" />
                             )}
@@ -5335,8 +5480,9 @@ export default function AppointmentUnitedModal({
                     onClick={() => setTabAtivo('cadastrais')}
                     disabled={
                       !agendamentoData.professionalId ||
-                      !agendamentoData.serviceId ||
-                      !agendamentoData.payerId
+                      !agendamentoData.date ||
+                      !agendamentoData.time ||
+                      !agendamentoData.patientId && !agendamentoData.patientName?.trim()
                     }
                     className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white"
                   >

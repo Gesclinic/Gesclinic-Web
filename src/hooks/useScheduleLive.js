@@ -1,25 +1,43 @@
 import { useEffect } from 'react';
-import { supabase } from '@/lib/customSupabaseClient';
+import { useClinicContext } from '@/contexts/ClinicContext';
+import { useRealtimeManager } from '@/hooks/useRealtimeManager';
 
-export default function useScheduleLive({ onChange }) {
+/**
+ * useScheduleLive - Monitor em realtime de mudanças de agendamentos
+ * 
+ * CORREÇÕES APLICADAS:
+ * ✅ Usa RealtimeManager (deduplicação, cleanup, reconexão)
+ * ✅ Dependency array completo
+ * ✅ Logs estruturados
+ * ✅ Sem memory leaks
+ */
+export default function useScheduleLive({ onChange } = {}) {
+  const { clinicId } = useClinicContext();
+  const manager = useRealtimeManager(clinicId);
+
   useEffect(() => {
-    const ch = supabase
-      .channel('appointments_live')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'appointments',
-        },
-        (payload) => {
-          onChange(payload);
-        },
-      )
-      .subscribe();
+    if (!clinicId || !onChange) {
+      return;
+    }
 
-    return () => supabase.removeChannel(ch);
-  }, []);
+    console.log('[useScheduleLive] Setup realtime para agendamentos', { clinicId });
+
+    // Subscribe
+    const unsubscribe = manager.subscribe('appointments', {
+      onUpdate: (payload) => {
+        console.log('📬 [useScheduleLive] Mudança detectada:', {
+          event: payload.eventType,
+          id: payload.new?.id || payload.old?.id,
+        });
+        onChange(payload);
+      },
+    });
+
+    // Cleanup
+    return () => {
+      unsubscribe();
+    };
+  }, [clinicId, onChange, manager]);
 
   return null;
 }
