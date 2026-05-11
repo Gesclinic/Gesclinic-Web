@@ -20,5 +20,5 @@ CREATE POLICY "appointments_update"
   WITH CHECK (auth.role() = 'authenticated');
 
 -- Verify policy exists
-SELECT policyname, permissive, action FROM pg_policies 
+SELECT policyname, permissive FROM pg_policies 
 WHERE tablename = 'appointments' AND policyname = 'appointments_update';

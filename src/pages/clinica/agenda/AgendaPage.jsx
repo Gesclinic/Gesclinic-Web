@@ -21,8 +21,18 @@ import AgendaProfessionalView from './components/AgendaProfessionalView';
 import AgendaProfessionalFilters from './components/AgendaProfessionalFilters';
 import CheckinDrawer from './components/CheckinDrawer';
 import AtendimentoModal from './components/AtendimentoModal';
+import AuditTrail, { AuditIndicator, ChangeNotification } from '@/modules/agenda/components/AuditTrail';
+import { useRealtimeAppointmentChanges } from '@/modules/agenda/hooks/useRealtimeAppointmentChanges';
 import { suggestEncaixes } from '@/modules/agenda/utils/suggestEncaixe';
 import { migrateStatus, SERVICE_STATUSES } from '@/lib/appointmentStatusConstants';
+import {
+  formatTime,
+  calculateEndTime,
+  isBusinessHours,
+  convertUTCToLocal,
+  convertLocalToUTC,
+  isValidDateFormat,
+} from '@/modules/agenda/utils/timezone';
 
 // APIs
 import {
@@ -110,6 +120,15 @@ export default function AgendaPage() {
   const [whatsappLoading, setWhatsappLoading] = useState(false);
   const [whatsappResult, setWhatsappResult] = useState(null);
   const [whatsappError, setWhatsappError] = useState(null);
+
+  // 📡 REALTIME: Subscribe to appointment changes
+  useRealtimeAppointmentChanges(clinicId || '', null, (event) => {
+    console.log('📡 [AgendaPage] Realtime change received:', event);
+    // Refresh appointments data when changes occur
+    if (event.shouldRefresh && clinicId) {
+      agenda.loadAppointments(clinicId);
+    }
+  });
 
   // ⚡ SEED de feriados - ATIVA AUTOMATICAMENTE
   // Garante que feriados nacionais existem no banco antes de carregar agenda
@@ -1021,27 +1040,29 @@ export default function AgendaPage() {
       });
 
       // Preparar dados para API (com valores calculados)
+      // ✅ PHASE 2: Usar timezone utilities para formatação
       let endTimeFormatted = null;
       if (appointmentCalculations.endTime) {
-        // Se for Date, extrair apenas HH:MM:SS
-        if (appointmentCalculations.endTime instanceof Date) {
-          const hours = String(appointmentCalculations.endTime.getHours()).padStart(2, '0');
-          const minutes = String(appointmentCalculations.endTime.getMinutes()).padStart(2, '0');
-          const seconds = String(appointmentCalculations.endTime.getSeconds()).padStart(2, '0');
-          endTimeFormatted = `${hours}:${minutes}:${seconds}`;
-        }
-        // Se for string com ISO (contém T), extrair apenas a parte de tempo
-        else if (
-          typeof appointmentCalculations.endTime === 'string' &&
-          appointmentCalculations.endTime.includes('T')
-        ) {
-          endTimeFormatted =
-            appointmentCalculations.endTime.split('T')[1]?.substring(0, 8) ||
-            appointmentCalculations.endTime;
-        }
-        // Se for HH:MM ou HH:MM:SS, usar como está
-        else {
-          endTimeFormatted = appointmentCalculations.endTime;
+        // Use timezone utility: formatTime converts HH:MM:SS → HH:MM
+        endTimeFormatted = formatTime(appointmentCalculations.endTime);
+        
+        // Fallback para lógica manual se timezone utility retornar null
+        if (!endTimeFormatted) {
+          if (appointmentCalculations.endTime instanceof Date) {
+            const hours = String(appointmentCalculations.endTime.getHours()).padStart(2, '0');
+            const minutes = String(appointmentCalculations.endTime.getMinutes()).padStart(2, '0');
+            const seconds = String(appointmentCalculations.endTime.getSeconds()).padStart(2, '0');
+            endTimeFormatted = `${hours}:${minutes}:${seconds}`;
+          } else if (
+            typeof appointmentCalculations.endTime === 'string' &&
+            appointmentCalculations.endTime.includes('T')
+          ) {
+            endTimeFormatted =
+              appointmentCalculations.endTime.split('T')[1]?.substring(0, 8) ||
+              appointmentCalculations.endTime;
+          } else {
+            endTimeFormatted = appointmentCalculations.endTime;
+          }
         }
       }
 
@@ -1672,6 +1693,20 @@ export default function AgendaPage() {
                   }
                 }}
               />
+            </CollapsibleSection>
+          )}
+
+          {/* 📋 Histórico de Auditoria - Mudanças Recentes (apenas Modo Gestor) */}
+          {clinicId && agendaMode === 'gestor' && !agenda.loading && (
+            <CollapsibleSection
+              title="Histórico de Mudanças"
+              icon="📋"
+              summary={<AuditIndicator clinicId={clinicId} />}
+              storageKey="agenda-audit-open"
+              defaultOpen={false}
+              className="mb-8"
+            >
+              <AuditTrail clinicId={clinicId} maxItems={20} compact={false} />
             </CollapsibleSection>
           )}
 

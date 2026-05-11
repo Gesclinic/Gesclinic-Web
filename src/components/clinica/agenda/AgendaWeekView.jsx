@@ -2,8 +2,12 @@ import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAgendaConfig } from '@/hooks/useAgendaConfig';
 import { format, addDays, startOfWeek, isSameDay } from 'date-fns';
-import { utcToZonedTime } from 'date-fns-tz';
 import { ptBR } from 'date-fns/locale';
+import {
+  toLocalTime,
+  formatLocalDate,
+  isSameLocalDay,
+} from '@/utils/timezoneHelpers';
 import { Button } from '@/components/ui/button';
 import { Edit, Trash2 } from 'lucide-react';
 import StatusSelector from './StatusSelector';
@@ -76,7 +80,7 @@ export default function AgendaWeekView({
     return slots;
   }, [agendaConfig, selectedDate]);
 
-  // Agrupar appointments por dia
+  // ✅ Agrupar appointments por dia usando timezone helpers
   const appointmentsByDay = useMemo(() => {
     const map = {};
 
@@ -86,13 +90,16 @@ export default function AgendaWeekView({
 
     appointments.forEach((apt) => {
       try {
-        const zoned = utcToZonedTime(apt.start_time, 'America/Sao_Paulo');
-        const key = format(zoned, 'yyyy-MM-dd');
+        // Use timezone helpers instead of utcToZonedTime
+        const local = toLocalTime(apt.start_time);
+        const key = local.date; // Retorna 'YYYY-MM-DD'
         if (!map[key]) {
           return;
         }
         map[key].push(apt);
-      } catch {}
+      } catch (e) {
+        console.warn('[WeekView] Error processing appointment timezone:', e);
+      }
     });
 
     return map;
@@ -154,9 +161,13 @@ export default function AgendaWeekView({
 
               const appointment = dayAppointments.find((apt) => {
                 try {
-                  const zoned = utcToZonedTime(apt.start_time, 'America/Sao_Paulo');
+                  // ✅ Use timezone helpers instead of utcToZonedTime
+                  const local = toLocalTime(apt.start_time);
+                  const [localHour, localMinute] = local.time.split(':').map(Number);
                   return (
-                    zoned.getHours() === h && zoned.getMinutes() === m && isSameDay(zoned, day)
+                    localHour === h && 
+                    localMinute === m && 
+                    local.date === format(day, 'yyyy-MM-dd')
                   );
                 } catch {
                   return false;

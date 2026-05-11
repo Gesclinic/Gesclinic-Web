@@ -35,6 +35,7 @@ const ROLE_PERMISSIONS = {
     'agenda.agenda',
     'agenda.confirmacoes',
     'agenda.espera',
+    'agenda.recepcao',
     'agenda.indicadores',
     'pacientes.lista',
     'base_sistema.*',
@@ -107,6 +108,14 @@ export function getMenuItems(role = 'admin') {
           path: '/clinica/agenda/espera',
           roles: ['admin', 'gestor', 'recepcao'],
           featurePath: 'agenda.espera',
+        },
+        {
+          id: 'agenda.recepcao',
+          label: 'Recepção',
+          icon: 'DoorOpen',
+          path: '/clinica/agenda/recepcao',
+          roles: ['admin', 'gestor', 'recepcao'],
+          featurePath: 'agenda.recepcao',
         },
         {
           id: 'agenda.indicadores',

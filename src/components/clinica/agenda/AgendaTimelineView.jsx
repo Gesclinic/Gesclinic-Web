@@ -1,8 +1,13 @@
 import React, { useMemo } from "react";
 import { useAgendaConfig } from "@/hooks/useAgendaConfig";
 import { format, addMinutes, isSameDay } from "date-fns";
-import { utcToZonedTime, format as formatTz } from 'date-fns-tz';
 import { ptBR } from "date-fns/locale";
+import {
+  toLocalTime,
+  fromLocalTime,
+  formatLocalTime,
+  formatLocalDate,
+} from '@/utils/timezoneHelpers';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -135,9 +140,12 @@ export default function AgendaTimelineView({
     };
   };
 
+  // ✅ Formatar tempo usando timezone helpers
   const formatTime = (dateTime) => {
-    const zoned = utcToZonedTime(dateTime, 'America/Sao_Paulo');
-    return formatTz(zoned, 'HH:mm', { timeZone: 'America/Sao_Paulo' });
+    // dateTime é ISO UTC string ou start_time do agendamento
+    // Converter para local e formatar como HH:mm
+    const local = toLocalTime(dateTime);
+    return formatLocalTime(local.time);
   };
 
   const handleTimeSlotClick = (time, professionalId) => {

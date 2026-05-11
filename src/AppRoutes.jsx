@@ -112,6 +112,10 @@ import AgendaLogNotificacoes from '@/pages/clinica/agenda/views/AgendaLogNotific
 // ✨ NOVA AGENDA REFATORADA - COMPONENTES
 import AgendaIndexNew from '@/pages/clinica/agenda/components/index';
 
+// 📋 RECEPÇÃO - PHASE 3
+import { ReceptionPage } from '@/pages/Reception/ReceptionPage';
+import { ReceptionTestPage } from '@/pages/Reception/ReceptionTestPage';
+
 // 👨‍⚕️ ATENDIMENTO DO PROFISSIONAL (DESCONTINUADO - Consolidado na Página de Paciente)
 // import AtendimentoProfissionalView from "@/pages/clinica/agenda/views/AtendimentoProfissionalView";
 
@@ -317,6 +321,10 @@ export default function AppRoutes() {
               </ProtectedWizardRoute>
             }
           />
+
+          {/* 📋 RECEPÇÃO - PHASE 3 */}
+          <Route path="agenda/recepcao" element={<ReceptionPage />} />
+          <Route path="agenda/recepcao/test" element={<ReceptionTestPage />} />
 
           {/* ✨ NOVA AGENDA REFATORADA - VERSÃO DE TESTE */}
           <Route
