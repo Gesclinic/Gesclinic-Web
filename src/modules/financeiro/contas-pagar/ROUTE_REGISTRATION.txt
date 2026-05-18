@@ -1,0 +1,54 @@
+/**
+ * 🔀 AppRoutes Configuration - Contas a Pagar Integration
+ * 
+ * Add this import and route to src/AppRoutes.jsx
+ */
+
+// IMPORT THIS:
+import ContasApagarPage from '@/modules/financeiro/contas-pagar/pages';
+
+// ADD THIS ROUTE (inside /clinica/financeiro/* routes):
+{
+  path: 'contas-pagar',
+  element: <ContasApagarPage />,
+  errorElement: <ErrorPage />,
+}
+
+// FULL CONTEXT (Example financeiro section):
+/*
+
+const financeiroRoutes = [
+  {
+    path: '',
+    element: <Navigate to="dashboard" replace />,
+  },
+  {
+    path: 'dashboard',
+    element: <DashboardPage />,
+  },
+  {
+    path: 'plano-contas',
+    element: <PlanoContasPage />,
+  },
+  {
+    path: 'fluxo-caixa',
+    element: <FluxoCaixaPage />,
+  },
+  {
+    path: 'contas-financeiras',
+    element: <ContasFinanceirasPage />,
+  },
+  {
+    path: 'contas-pagar',           // 👈 NEW ROUTE
+    element: <ContasApagarPage />,  // 👈 NEW COMPONENT
+    errorElement: <ErrorPage />,
+  },
+  {
+    path: 'lancamentos',
+    element: <LancamentosPage />,
+  },
+];
+
+*/
+
+// URL will be: /clinica/financeiro/contas-pagar
