@@ -2,7 +2,7 @@
 
 // ============================================================
 
-// CRUD Completo de Conv�nios - Base do Sistema com M:M Servi�os
+// CRUD Completo de Convênios - Base do Sistema com M:M Serviços
 
 // ============================================================
 
@@ -33,10 +33,10 @@ import { TISSConfigurationTab } from '@/components/TISSConfigurationTab';
 import { AlertCircle, Plus, Edit2, Trash2, Check, X, Landmark, Upload, Save } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
-// Mapear tipos de conv�nio para portugu�s
+// Mapear tipos de convênio para portugus
 
 const typeTranslations = {
-  health_plan: 'Plano de Sa�de',
+  health_plan: 'Plano de Saúde',
 
   private_insurance: 'Seguro Privado',
 
@@ -66,7 +66,7 @@ export function ConveniosPage() {
 
   const [editingId, setEditingId] = useState(null);
 
-  // Estado: Financeiro (integrado �s abas)
+  // Estado: Financeiro (integrado s abas)
 
   const [showFinancialForm, setShowFinancialForm] = useState(false);
 
@@ -78,13 +78,13 @@ export function ConveniosPage() {
     minimum_margin_percentage: 0,
   });
 
-  // Estado: Detalhe com M:M Servi�os
+  // Estado: Detalhe com M:M Serviços
 
   const [selectedInsurance, setSelectedInsurance] = useState(null);
 
   const [pricingTableData, setPricingTableData] = useState([]);
 
-  // ?? Estados para cadastro de pre�os
+  // ?? Estados para cadastro de preços
 
   const [showPricingForm, setShowPricingForm] = useState(false);
 
@@ -209,7 +209,7 @@ export function ConveniosPage() {
 
     bank_account: '',
 
-    // ===== NOVOS CAMPOS: ENDERE�O =====
+    // ===== NOVOS CAMPOS: ENDEREO =====
 
     address_street: '',
 
@@ -223,7 +223,7 @@ export function ConveniosPage() {
 
     address_zip_code: '',
 
-    // ===== NOVOS CAMPOS: IDENTIFICA��O FISCAL =====
+    // ===== NOVOS CAMPOS: IDENTIFICAO FISCAL =====
 
     municipal_registration: '',
 
@@ -311,7 +311,7 @@ export function ConveniosPage() {
   }, [selectedInsurance]);
 
   useEffect(() => {
-    // Carregar dados quando abrir a aba de pre�os
+    // Carregar dados quando abrir a aba de preços
 
     if ((editingId || showForm) && activeTab === 'pricing' && clinicId) {
       console.log('?? Disparando loadPricingTabData...', {
@@ -335,7 +335,7 @@ export function ConveniosPage() {
 
       setInsurances(Array.isArray(data) ? data : []);
     } catch (err) {
-      setError(err.message || 'Erro ao carregar conv�nios');
+      setError(err.message || 'Erro ao carregar convênios');
 
       console.error('Erro:', err);
 
@@ -345,30 +345,30 @@ export function ConveniosPage() {
     }
   };
 
-  // ===== CARREGAR DADOS PARA ABA DE PRE�OS =====
+  // ===== CARREGAR DADOS PARA ABA DE PREOS =====
   const loadPricingTabData = async () => {
     if (!clinicId) {
-      console.log('?? Pulando loadPricingTabData: clinicId n�o definido');
+      console.log('?? Pulando loadPricingTabData: clinicId no definido');
 
       return;
     }
 
     try {
-      console.log('?? Iniciando carregamento completo de dados para pre�os...');
+      console.log('?? Iniciando carregamento completo de dados para preços...');
 
-      // 1?? Carregar servi�os dispon�veis (sempre)
+      // 1?? Carregar serviços disponveis (sempre)
 
-      console.log('?? Etapa 1: Carregando servi�os...');
+      console.log('?? Etapa 1: Carregando serviços...');
 
       const srvs = await servicesApi.listServices(clinicId);
 
       const servicesLoaded = Array.isArray(srvs) ? srvs : [];
 
-      console.log(`? Servi�os carregados: ${servicesLoaded.length}`);
+      console.log(`? Serviços carregados: ${servicesLoaded.length}`);
 
       setServices(servicesLoaded);
 
-      // 2?? Carregar planos e pre�os APENAS se editando conv�nio existente
+      // 2?? Carregar planos e preços APENAS se editando convênio existente
 
       if (editingId) {
         console.log('?? Etapa 2: Carregando planos...');
@@ -383,7 +383,7 @@ export function ConveniosPage() {
 
           .eq('clinic_id', clinicId)
 
-          .maybeSingle(); // Use maybeSingle ao inv�s de single para evitar erros
+          .maybeSingle(); // Use maybeSingle ao invs de single para evitar erros
 
         if (payer) {
           console.log('? Payer encontrado:', payer.id);
@@ -402,20 +402,20 @@ export function ConveniosPage() {
 
           setPlansData(Array.isArray(plansLoaded) ? plansLoaded : []);
         } else {
-          console.warn('?? Payer n�o encontrado para:', formData.name);
+          console.warn('?? Payer no encontrado para:', formData.name);
 
           setPlansData([]);
         }
 
-        // 3?? Carregar dados da tabela de pre�os
+        // 3?? Carregar dados da tabela de preços
 
-        console.log('?? Etapa 3: Carregando tabela de pre�os...');
+        console.log('?? Etapa 3: Carregando tabela de preços...');
 
         await loadPricingTable();
       } else {
-        // Novo conv�nio: limpar planos e pre�os
+        // Novo convênio: limpar planos e preços
 
-        console.log('?? Etapa 2: Novo conv�nio (sem planos/pre�os ainda)');
+        console.log('?? Etapa 2: Novo convênio (sem planos/preços ainda)');
 
         setPlansData([]);
 
@@ -430,7 +430,7 @@ export function ConveniosPage() {
     }
   };
 
-  // ===== CARREGAR SERVI�OS (para aba de Servi�os)
+  // ===== CARREGAR SERVIOS (para aba de Serviços)
   const loadServicesTab = async () => {
     try {
       setTabLoading(true);
@@ -441,7 +441,7 @@ export function ConveniosPage() {
 
       setServices(Array.isArray(srvs) ? srvs : []);
     } catch (err) {
-      setError(err.message || 'Erro ao carregar servi�os');
+      setError(err.message || 'Erro ao carregar serviços');
 
       console.error('Erro:', err);
     } finally {
@@ -449,7 +449,7 @@ export function ConveniosPage() {
     }
   };
 
-  // ?? Carregar tabela de pre�os base do conv�nio
+  // ?? Carregar tabela de preços base do convênio
 
   const loadPricingTable = async () => {
     if (!editingId) {
@@ -472,14 +472,14 @@ export function ConveniosPage() {
         .maybeSingle();
 
       if (payerError || !payer) {
-        console.warn('?? Payer n�o encontrado para:', formData.name);
+        console.warn('?? Payer no encontrado para:', formData.name);
 
         setPricingTableData([]);
 
         return;
       }
 
-      // ?? Buscar todos os pre�os base do conv�nio (que possuem pre�o configurado)
+      // ?? Buscar todos os preços base do convênio (que possuem preço configurado)
 
       const { data: prices, error: pricesError } = await supabase
 
@@ -527,21 +527,21 @@ export function ConveniosPage() {
 
         .eq('clinic_id', clinicId)
 
-        .gt('price', 0); // ?? Apenas pre�os > 0
+        .gt('price', 0); // ?? Apenas preços > 0
 
       if (pricesError) {
-        console.error('Erro ao carregar pre�os:', pricesError);
+        console.error('Erro ao carregar preços:', pricesError);
 
         setPricingTableData([]);
 
         return;
       }
 
-      // ?? Enriquecer dados com informa��es financeiras
+      // ?? Enriquecer dados com informações financeiras
 
       const enrichedPrices = await Promise.all(
         (prices || []).map(async (price) => {
-          // Contar quantos profissionais t�m esse pre�o configurado
+          // Contar quantos profissionais tm esse preço configurado
 
           const { data: professionalPrices } = await supabase
 
@@ -563,7 +563,7 @@ export function ConveniosPage() {
         }),
       );
 
-      // Ordenar por nome do servi�o no frontend
+      // Ordenar por nome do serviço no frontend
 
       const sortedPrices = enrichedPrices.sort((a, b) => {
         const nameA = a.services?.name || '';
@@ -575,49 +575,49 @@ export function ConveniosPage() {
 
       setPricingTableData(sortedPrices);
     } catch (err) {
-      console.error('Erro ao carregar tabela de pre�os:', err);
+      console.error('Erro ao carregar tabela de preços:', err);
 
       setPricingTableData([]);
     }
   };
 
-  // ?? Carregar servi�os dispon�veis
+  // ?? Carregar serviços disponveis
 
   const loadAvailableServices = async () => {
     try {
-      console.log('?? Carregando servi�os da cl�nica...', { clinicId });
+      console.log('?? Carregando serviços da clnica...', { clinicId });
 
       const srvs = await servicesApi.listServices(clinicId);
 
-      console.log('? Servi�os carregados:', srvs?.length || 0);
+      console.log('? Serviços carregados:', srvs?.length || 0);
 
       setServices(Array.isArray(srvs) ? srvs : []);
     } catch (err) {
-      console.error('? Erro ao carregar servi�os:', err);
+      console.error('? Erro ao carregar serviços:', err);
 
       setServices([]);
     }
   };
 
-  // ?? Adicionar pre�o manualmente
+  // ?? Adicionar preço manualmente
 
   const handleAddPricingRow = async () => {
     console.log('?? [handleAddPricingRow] INICIANDO...', { pricingFormData, editingId });
 
     if (!pricingFormData.service_id || !pricingFormData.price) {
-      setError('Selecione um servi�o e informe um pre�o');
+      setError('Selecione um serviço e informe um preço');
 
-      console.warn('?? [handleAddPricingRow] Valida��o falhou: sem service_id ou price');
+      console.warn('?? [handleAddPricingRow] Validao falhou: sem service_id ou price');
 
       return;
     }
 
-    // ?? Verificar se est� criando novo conv�nio
+    // ?? Verificar se est criando novo convênio
 
     if (!editingId) {
-      setError('?? Salve o conv�nio PRIMEIRO antes de adicionar servi�os');
+      setError('?? Salve o convênio PRIMEIRO antes de adicionar serviços');
 
-      console.warn('?? [handleAddPricingRow] Sem editingId - conv�nio n�o foi salvo');
+      console.warn('?? [handleAddPricingRow] Sem editingId - convênio no foi salvo');
 
       return;
     }
@@ -642,9 +642,9 @@ export function ConveniosPage() {
 
         .maybeSingle();
 
-      // Se payer n�o existe, criar automaticamente
+      // Se payer no existe, criar automaticamente
       if (!payerData.data) {
-        console.log('?? [handleAddPricingRow] Payer n�o encontrado, criando novo...', {
+        console.log('?? [handleAddPricingRow] Payer no encontrado, criando novo...', {
           name: formData.name,
         });
 
@@ -667,7 +667,7 @@ export function ConveniosPage() {
         if (createError) {
           console.error('? [handleAddPricingRow] Erro ao criar payer:', createError);
 
-          setError('Erro ao criar conv�nio');
+          setError('Erro ao criar convênio');
 
           return;
         }
@@ -681,10 +681,10 @@ export function ConveniosPage() {
         });
       }
 
-      // Se est� em modo edi��o (tem ID), atualizar diretamente
+      // Se est em modo edio (tem ID), atualizar diretamente
 
       if (pricingFormData.id) {
-        console.log('?? [handleAddPricingRow] Etapa 3: Atualizando pre�o existente...', {
+        console.log('?? [handleAddPricingRow] Etapa 3: Atualizando preço existente...', {
           id: pricingFormData.id,
         });
 
@@ -707,7 +707,7 @@ export function ConveniosPage() {
           throw updateError;
         }
       } else {
-        // Verificar se j� existe pre�o para este servi�o
+        // Verificar se j existe preço para este serviço
 
         const { data: existing } = await supabase
 
@@ -745,7 +745,7 @@ export function ConveniosPage() {
         } else {
           // Criar novo
 
-          console.log('? [handleAddPricingRow] Etapa 4: Inserindo novo pre�o...', {
+          console.log('? [handleAddPricingRow] Etapa 4: Inserindo novo preço...', {
             service_id: pricingFormData.service_id,
 
             payer_id: payerData.data.id,
@@ -779,7 +779,7 @@ export function ConveniosPage() {
             throw insertError;
           }
 
-          console.log('? [handleAddPricingRow] Etapa 5: Pre�o inserido com sucesso!');
+          console.log('? [handleAddPricingRow] Etapa 5: Preço inserido com sucesso!');
         }
       }
 
@@ -787,19 +787,19 @@ export function ConveniosPage() {
 
       setShowPricingForm(false);
 
-      console.log('?? [handleAddPricingRow] Recarregando tabela de pre�os...');
+      console.log('?? [handleAddPricingRow] Recarregando tabela de preços...');
 
       await loadPricingTable();
 
-      console.log('? [handleAddPricingRow] SUCESSO! Servi�o salvo e tabela atualizada.');
+      console.log('? [handleAddPricingRow] SUCESSO! Serviço salvo e tabela atualizada.');
     } catch (err) {
-      setError(err.message || 'Erro ao adicionar pre�o');
+      setError(err.message || 'Erro ao adicionar preço');
 
       console.error('? [handleAddPricingRow] Erro capturado:', err);
     }
   };
 
-  // ?? Editar pre�o da tabela
+  // ?? Editar preço da tabela
 
   const handleEditPricingRow = async (priceEntry) => {
     setPricingFormData({
@@ -819,12 +819,12 @@ export function ConveniosPage() {
     setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
   };
 
-  // ?? Remover pre�o da tabela
+  // ?? Remover preço da tabela
 
   const handleRemovePricingRow = async (priceEntry) => {
     if (
       !window.confirm(
-        `Deseja remover o pre�o de "${priceEntry.services?.name || 'Servi�o desconhecido'}" (R$ ${(priceEntry.price || 0).toFixed(2).replace('.', ',')})?`,
+        `Deseja remover o preço de "${priceEntry.services?.name || 'Serviço desconhecido'}" (R$ ${(priceEntry.price || 0).toFixed(2).replace('.', ',')})?`,
       )
     ) {
       return;
@@ -849,13 +849,13 @@ export function ConveniosPage() {
 
       loadPricingTable();
     } catch (err) {
-      setError(err.message || 'Erro ao remover pre�o');
+      setError(err.message || 'Erro ao remover preço');
 
       console.error('Erro:', err);
     }
   };
 
-  // ?? Toggle status de pre�o (ativo/inativo)
+  // ?? Toggle status de preço (ativo/inativo)
 
   const togglePricingStatus = async (priceEntry) => {
     const schedulingConfig = priceEntry.scheduling_config
@@ -864,9 +864,9 @@ export function ConveniosPage() {
         : priceEntry.scheduling_config
       : null;
 
-    // Se est� ativo (tem scheduling_config), desativa (limpa)
+    // Se est ativo (tem scheduling_config), desativa (limpa)
 
-    // Se est� inativo (sem scheduling_config), ativa (cria objeto vazio)
+    // Se est inativo (sem scheduling_config), ativa (cria objeto vazio)
 
     const newConfig = schedulingConfig ? null : {};
 
@@ -885,13 +885,13 @@ export function ConveniosPage() {
         throw updateError;
       }
 
-      console.log(`? Pre�o ${priceEntry.id} agora est� ${newConfig ? 'ATIVO' : 'INATIVO'}`);
+      console.log(`? Preço ${priceEntry.id} agora est ${newConfig ? 'ATIVO' : 'INATIVO'}`);
 
       setError(null);
 
       loadPricingTable();
     } catch (err) {
-      setError(err.message || 'Erro ao alterar status do pre�o');
+      setError(err.message || 'Erro ao alterar status do preço');
 
       console.error('Erro:', err);
     }
@@ -915,7 +915,7 @@ export function ConveniosPage() {
 
       let rows = [];
 
-      // Detectar se � Excel ou CSV
+      // Detectar se  Excel ou CSV
 
       const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
 
@@ -936,11 +936,11 @@ export function ConveniosPage() {
           return;
         }
 
-        // Header � a primeira linha
+        // Header  a primeira linha
 
         headers = (data[0] || []).map((h) => String(h).toLowerCase().trim());
 
-        // Dados come�am a partir da 3� linha (�ndice 2) como no template
+        // Dados comeam a partir da 3 linha (ndice 2) como no template
 
         rows = data.slice(2).filter((row) => row.some((cell) => cell)); // Remover linhas vazias
       } else {
@@ -1012,7 +1012,7 @@ export function ConveniosPage() {
         return data[0];
 
         if (createError) {
-          setError('Erro ao criar conv�nio');
+          setError('Erro ao criar convênio');
 
           return;
         }
@@ -1020,21 +1020,21 @@ export function ConveniosPage() {
         payerDataUpload = { data: newPayer };
       }
 
-      // Mapear posi��es das colunas esperadas
+      // Mapear posies das colunas esperadas
 
       const codigoIdx = headers.findIndex((h) => h.includes('codigo'));
 
-      const servicoIdx = headers.findIndex((h) => h.includes('servico') || h.includes('servi�o'));
+      const servicoIdx = headers.findIndex((h) => h.includes('servico') || h.includes('serviço'));
 
       const valorIdx = headers.findIndex(
-        (h) => h.includes('valor') || h.includes('pre�o') || h.includes('preco'),
+        (h) => h.includes('valor') || h.includes('preço') || h.includes('preco'),
       );
 
       const planoIdx = headers.findIndex((h) => h.includes('plano'));
 
       const grupoIdx = headers.findIndex((h) => h.includes('grupo'));
 
-      // Processar linhas com suporte a m�ltiplas colunas
+      // Processar linhas com suporte a mltiplas colunas
 
       const processedRows = rows
         .map((cols) => {
@@ -1053,7 +1053,7 @@ export function ConveniosPage() {
         .filter((r) => r.serviceName && !isNaN(r.price));
 
       if (processedRows.length === 0) {
-        setError('Nenhum dado v�lido encontrado no arquivo');
+        setError('Nenhum dado vlido encontrado no arquivo');
 
         return;
       }
@@ -1064,7 +1064,7 @@ export function ConveniosPage() {
 
       for (const row of processedRows) {
         try {
-          // Buscar servi�o pelo c�digo ou nome
+          // Buscar serviço pelo código ou nome
 
           let service = null;
 
@@ -1106,7 +1106,7 @@ export function ConveniosPage() {
             continue;
           }
 
-          // Verificar se j� existe
+          // Verificar se j existe
 
           const { data: existing } = await supabase
 
@@ -1172,7 +1172,7 @@ export function ConveniosPage() {
 
       setError(null);
 
-      alert(`? ${successCount} pre�os importados com sucesso!\n?? ${errorCount} linhas com erro.`);
+      alert(`? ${successCount} preços importados com sucesso!\n?? ${errorCount} linhas com erro.`);
 
       loadPricingTable();
     } catch (err) {
@@ -1186,7 +1186,7 @@ export function ConveniosPage() {
     }
   };
 
-  // ?? Fun��o para converter categoria para label
+  // ?? Funo para converter categoria para label
   const getCategoryLabel = (categoryValue) => {
     const categoryMap = {
       consultation: '?? Consulta',
@@ -1198,17 +1198,17 @@ export function ConveniosPage() {
     return categoryMap[categoryValue] || categoryValue || '-';
   };
 
-  // ?? Fun��o para download de template Excel
+  // ?? Funo para download de template Excel
 
   const downloadExcelTemplate = () => {
     // Criar dados com header na linha 1 e dados a partir da linha 3
 
     const data = [
-      ['C�digo', 'Servi�o', 'Plano', 'Categoria', 'Valor', 'Status', 'A��es'],
+      ['Código', 'Serviço', 'Plano', 'Categoria', 'Valor', 'Status', 'Ações'],
 
       [], // Linha em branco
 
-      ['12345', 'Consulta Cl�nica', 'Plano B�sico', 'Consultas', 150.0, '? Ativo', ''],
+      ['12345', 'Consulta Clnica', 'Plano Bsico', 'Consultas', 150.0, '? Ativo', ''],
 
       ['12346', 'Eletrocardiograma', 'Plano Premium', 'Procedimentos', 250.0, '?? Incompleto', ''],
 
@@ -1224,9 +1224,9 @@ export function ConveniosPage() {
     // Definir largura das colunas
 
     worksheet['!cols'] = [
-      { wch: 12 }, // C�digo
+      { wch: 12 }, // Código
 
-      { wch: 25 }, // Servi�o
+      { wch: 25 }, // Serviço
 
       { wch: 15 }, // Plano
 
@@ -1236,7 +1236,7 @@ export function ConveniosPage() {
 
       { wch: 15 }, // Status
 
-      { wch: 8 }, // A��es
+      { wch: 8 }, // Ações
     ];
 
     // Aplicar negrito ao header (linha 1)
@@ -1257,7 +1257,7 @@ export function ConveniosPage() {
 
     const workbook = XLSX.utils.book_new();
 
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Pre�os');
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Preços');
 
     // Fazer download
 
@@ -1266,7 +1266,7 @@ export function ConveniosPage() {
 
   const loadPlansForPayer = async () => {
     if (!editingId || !formData) {
-      console.log('?? Pulando loadPlansForPayer: editingId ou formData n�o definido');
+      console.log('?? Pulando loadPlansForPayer: editingId ou formData no definido');
 
       return;
     }
@@ -1328,7 +1328,7 @@ export function ConveniosPage() {
     }
   };
 
-  // ?? Gerar c�digo autom�tico para o plano
+  // ?? Gerar código automtico para o plano
   const generatePlanCode = (planName) => {
     if (!planName.trim()) {
       return '';
@@ -1339,9 +1339,9 @@ export function ConveniosPage() {
     const initials = words
       .map((word) => word.charAt(0).toUpperCase())
       .join('')
-      .substring(0, 4); // At� 4 primeiras letras
+      .substring(0, 4); // At 4 primeiras letras
 
-    // Gerar n�mero sequencial de 3 d�gitos (001-999)
+    // Gerar número sequencial de 3 dgitos (001-999)
     const randomNumber = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
 
     return `${initials} - ${randomNumber}`;
@@ -1370,7 +1370,7 @@ export function ConveniosPage() {
         .maybeSingle();
 
       if (payerError || !payer) {
-        throw new Error(`Payer n�o encontrado para: ${formData.name}`);
+        throw new Error(`Payer no encontrado para: ${formData.name}`);
       }
 
       const { data, error } = await supabase
@@ -1526,7 +1526,7 @@ export function ConveniosPage() {
   };
 
   useEffect(() => {
-    // Carregar planos quando a aba � selecionada e h� um conv�nio em edi��o
+    // Carregar planos quando a aba  selecionada e h um convênio em edio
 
     if ((activeTab === 'plans' || activeTab === 'pricing') && editingId) {
       loadPlansForPayer();
@@ -1534,7 +1534,7 @@ export function ConveniosPage() {
   }, [activeTab, editingId]);
 
   const generateConvenioCode = () => {
-    // Extrai n�meros dos c�digos existentes (ex: CONV001 -> 1)
+    // Extrai números dos códigos existentes (ex: CONV001 -> 1)
 
     const existingCodes = insurances
 
@@ -1546,13 +1546,13 @@ export function ConveniosPage() {
 
       .filter((num) => !isNaN(num));
 
-    // Encontra o maior n�mero e incrementa
+    // Encontra o maior número e incrementa
 
     const maxNumber = existingCodes.length > 0 ? Math.max(...existingCodes) : 0;
 
     const nextNumber = maxNumber + 1;
 
-    // Formata com 3 d�gitos (CONV001, CONV002, etc)
+    // Formata com 3 dgitos (CONV001, CONV002, etc)
 
     return `CONV${String(nextNumber).padStart(3, '0')}`;
   };
@@ -1595,7 +1595,7 @@ export function ConveniosPage() {
 
       tiss_version: '3.05.00',
 
-      // ===== NOVOS CAMPOS: ENDERE�O =====
+      // ===== NOVOS CAMPOS: ENDEREO =====
 
       address_street: '',
 
@@ -1659,7 +1659,7 @@ export function ConveniosPage() {
 
       tiss_version: insurance.tiss_version || '3.05.00',
 
-      // ===== NOVOS CAMPOS: ENDERE�O =====
+      // ===== NOVOS CAMPOS: ENDEREO =====
 
       address_street: insurance.address_street || '',
 
@@ -1673,7 +1673,7 @@ export function ConveniosPage() {
 
       address_zip_code: insurance.address_zip_code || '',
 
-      // ===== NOVOS CAMPOS: IDENTIFICA��O FISCAL =====
+      // ===== NOVOS CAMPOS: IDENTIFICAO FISCAL =====
 
       municipal_registration: insurance.municipal_registration || '',
 
@@ -1837,7 +1837,7 @@ export function ConveniosPage() {
 
       tiss_version: '3.05.00',
 
-      // ===== NOVOS CAMPOS: ENDERE�O =====
+      // ===== NOVOS CAMPOS: ENDEREO =====
 
       address_street: '',
 
@@ -1851,7 +1851,7 @@ export function ConveniosPage() {
 
       address_zip_code: '',
 
-      // ===== NOVOS CAMPOS: IDENTIFICA��O FISCAL =====
+      // ===== NOVOS CAMPOS: IDENTIFICAO FISCAL =====
 
       municipal_registration: '',
 
@@ -1923,10 +1923,10 @@ export function ConveniosPage() {
     });
   };
 
-  // Fun��o para verificar se h� mudan�as antes de fechar
+  // Funo para verificar se h mudanas antes de fechar
 
   const handleCloseWithCheck = () => {
-    // Verifica se h� algum dado preenchido no formul�rio
+    // Verifica se h algum dado preenchido no formulrio
 
     const hasData = Object.entries(formData).some(([key, value]) => {
       if (typeof value === 'string') {
@@ -1945,7 +1945,7 @@ export function ConveniosPage() {
     });
 
     if (hasData) {
-      if (window.confirm('Tem certeza que deseja sair? As altera��es n�o salvas ser�o perdidas.')) {
+      if (window.confirm('Tem certeza que deseja sair? As alterações no salvas sero perdidas.')) {
         closeForm();
       }
     } else {
@@ -1965,7 +1965,7 @@ export function ConveniosPage() {
 
   const addServicePrice = async () => {
     if (!priceFormData.service_id || (!priceFormData.service_value && !priceFormData.copay_value)) {
-      setError('Selecione um servi�o e defina pelo menos um valor');
+      setError('Selecione um serviço e defina pelo menos um valor');
 
       return;
     }
@@ -1979,7 +1979,7 @@ export function ConveniosPage() {
 
       await loadServicesTab();
     } catch (err) {
-      setError(err.message || 'Erro ao adicionar servi�o');
+      setError(err.message || 'Erro ao adicionar serviço');
 
       console.error('Erro:', err);
     } finally {
@@ -1988,7 +1988,7 @@ export function ConveniosPage() {
   };
 
   const deleteServicePrice = async (serviceId) => {
-    if (!window.confirm('Tem certeza que deseja remover este servi�o?')) {
+    if (!window.confirm('Tem certeza que deseja remover este serviço?')) {
       return;
     }
 
@@ -1997,7 +1997,7 @@ export function ConveniosPage() {
 
       await loadServicesTab();
     } catch (err) {
-      setError(err.message || 'Erro ao remover servi�o');
+      setError(err.message || 'Erro ao remover serviço');
 
       console.error('Erro:', err);
     }
@@ -2005,19 +2005,19 @@ export function ConveniosPage() {
 
   const validateForm = () => {
     if (!formData.fantasy_name.trim()) {
-      setError('Nome Fantasia � obrigat�rio');
+      setError('Nome Fantasia  obrigatório');
 
       return false;
     }
 
     if (!formData.code.trim()) {
-      setError('C�digo � obrigat�rio');
+      setError('Código  obrigatório');
 
       return false;
     }
 
     if (!formData.type.trim()) {
-      setError('Tipo de conv�nio � obrigat�rio');
+      setError('Tipo de convênio  obrigatório');
 
       return false;
     }
@@ -2074,7 +2074,7 @@ export function ConveniosPage() {
 
         tiss_version: formData.tiss_version?.trim() || '3.05.00',
 
-        // ===== NOVOS CAMPOS: ENDERE�O =====
+        // ===== NOVOS CAMPOS: ENDEREO =====
 
         address_street: formData.address_street?.trim() || null,
 
@@ -2088,7 +2088,7 @@ export function ConveniosPage() {
 
         address_zip_code: formData.address_zip_code?.trim() || null,
 
-        // ===== NOVOS CAMPOS: IDENTIFICA��O FISCAL =====
+        // ===== NOVOS CAMPOS: IDENTIFICAO FISCAL =====
 
         municipal_registration: formData.municipal_registration?.trim() || null,
 
@@ -2155,9 +2155,9 @@ export function ConveniosPage() {
 
       closeForm();
     } catch (err) {
-      console.error('? Erro ao salvar conv�nio:', err);
+      console.error('? Erro ao salvar convênio:', err);
 
-      setError(err.message || 'Erro ao salvar conv�nio');
+      setError(err.message || 'Erro ao salvar convênio');
     } finally {
       setSubmitting(false);
     }
@@ -2175,7 +2175,7 @@ export function ConveniosPage() {
 
       setInsurances(insurances.filter((i) => i.id !== id));
     } catch (err) {
-      setError(err.message || 'Erro ao deletar conv�nio');
+      setError(err.message || 'Erro ao deletar convênio');
 
       console.error('Erro:', err);
     }
@@ -2191,14 +2191,14 @@ export function ConveniosPage() {
     );
   }
 
-  // Se formul�rio/modal est� aberto, renderizar somente o modal (n�o detalhes)
+  // Se formulrio/modal est aberto, renderizar somente o modal (no detalhes)
 
   if (showForm) {
-    // O modal ser� renderizado abaixo (no return principal)
-    // Retorna null aqui para que a p�gina de detalhes n�o tenha prioridade
+    // O modal ser renderizado abaixo (no return principal)
+    // Retorna null aqui para que a pgina de detalhes no tenha prioridade
   }
 
-  // Detalhe de Conv�nio com M:M Servi�os (s� se N�O est� em edi��o)
+  // Detalhe de Convênio com M:M Serviços (s se NO est em edio)
 
   if (selectedInsurance && !showForm) {
     return (
@@ -2207,13 +2207,13 @@ export function ConveniosPage() {
           onClick={closeInsuranceDetail}
           className="text-blue-600 hover:text-blue-700 text-sm font-medium mb-2"
         >
-          ? Voltar � lista
+          ? Voltar  lista
         </button>
 
         <div>
           <h1 className="text-3xl font-bold text-gray-900">{selectedInsurance.name}</h1>
 
-          <p className="text-gray-600 mt-1">C�digo: {selectedInsurance.code}</p>
+          <p className="text-gray-600 mt-1">Código: {selectedInsurance.code}</p>
         </div>
 
         {error && (
@@ -2230,7 +2230,7 @@ export function ConveniosPage() {
 
         <Card>
           <CardHeader className="border-b">
-            <CardTitle>Servi�os e Valores</CardTitle>
+            <CardTitle>Serviços e Valores</CardTitle>
           </CardHeader>
 
           <CardContent className="pt-6">
@@ -2248,18 +2248,18 @@ export function ConveniosPage() {
                     className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
                   >
                     <Plus className="w-4 h-4" />
-                    Adicionar Servi�o
+                    Adicionar Serviço
                   </Button>
                 </div>
 
                 {showPriceForm && (
                   <div className="border rounded-lg p-4 bg-blue-50">
-                    <h3 className="font-medium text-gray-900 mb-4">Novo Servi�o</h3>
+                    <h3 className="font-medium text-gray-900 mb-4">Novo Serviço</h3>
 
                     <div className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Servi�o <span className="text-red-500">*</span>
+                          Serviço <span className="text-red-500">*</span>
                         </label>
 
                         <select
@@ -2270,7 +2270,7 @@ export function ConveniosPage() {
                           className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                           disabled={submitting}
                         >
-                          <option value="">Selecione um servi�o</option>
+                          <option value="">Selecione um serviço</option>
 
                           {services.map((service) => (
                             <option key={service.id} value={service.id}>
@@ -2283,7 +2283,7 @@ export function ConveniosPage() {
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Valor do Servi�o (R$)
+                            Valor do Serviço (R$)
                           </label>
 
                           <input
@@ -2346,7 +2346,7 @@ export function ConveniosPage() {
                       <thead>
                         <tr className="border-b bg-gray-50">
                           <th className="text-left py-3 px-4 font-semibold text-gray-700">
-                            Servi�o
+                            Serviço
                           </th>
 
                           <th className="text-right py-3 px-4 font-semibold text-gray-700">
@@ -2358,7 +2358,7 @@ export function ConveniosPage() {
                           </th>
 
                           <th className="text-center py-3 px-4 font-semibold text-gray-700">
-                            A��es
+                            Ações
                           </th>
                         </tr>
                       </thead>
@@ -2398,7 +2398,7 @@ export function ConveniosPage() {
                   </div>
                 ) : (
                   <div className="text-center py-8 border rounded-lg bg-gray-50">
-                    <p className="text-gray-600">Nenhum servi�o cadastrado para este conv�nio</p>
+                    <p className="text-gray-600">Nenhum serviço cadastrado para este convênio</p>
                   </div>
                 )}
               </div>
@@ -2415,22 +2415,22 @@ export function ConveniosPage() {
     <div className="space-y-6 w-full mx-auto">
       <BaseSystemHeader
         category="4.1 Cadastros Estruturais"
-        title="Conv�nios"
-        subtitle="Cadastre conv�nios e seguradoras de sa�de"
+        title="Convênios"
+        subtitle="Cadastre convênios e seguradoras de saúde"
       />
 
       {error && <Alert type="error" title="Aviso" message={error} onClose={() => setError(null)} />}
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-4">
-          <CardTitle>Conv�nios Cadastrados ({insurances.length})</CardTitle>
+          <CardTitle>Convênios Cadastrados ({insurances.length})</CardTitle>
 
           <Button
             onClick={handleNew}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
           >
             <Plus className="w-4 h-4" />
-            Novo Conv�nio
+            Novo Convênio
           </Button>
         </CardHeader>
 
@@ -2438,11 +2438,11 @@ export function ConveniosPage() {
           {insurances.length === 0 ? (
             <EmptyState
               icon={<Landmark className="w-12 h-12 mx-auto text-gray-400" />}
-              title="Nenhum conv�nio cadastrado"
-              description="Comece criando seu primeiro conv�nio para gerenciar seguradoras e planos de sa�de"
+              title="Nenhum convênio cadastrado"
+              description="Comece criando seu primeiro convênio para gerenciar seguradoras e planos de saúde"
               action={
                 <Button onClick={handleNew} className="bg-blue-600 hover:bg-blue-700">
-                  Cadastrar Primeiro Conv�nio
+                  Cadastrar Primeiro Convênio
                 </Button>
               }
             />
@@ -2451,7 +2451,7 @@ export function ConveniosPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-gray-50">
-                    <th className="text-left py-3 px-4 font-semibold text-gray-700">C�digo</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Código</th>
 
                     <th className="text-left py-3 px-4 font-semibold text-gray-700">Nome</th>
 
@@ -2461,7 +2461,7 @@ export function ConveniosPage() {
 
                     <th className="text-center py-3 px-4 font-semibold text-gray-700">Status</th>
 
-                    <th className="text-center py-3 px-4 font-semibold text-gray-700">A��es</th>
+                    <th className="text-center py-3 px-4 font-semibold text-gray-700">Ações</th>
                   </tr>
                 </thead>
 
@@ -2509,7 +2509,7 @@ export function ConveniosPage() {
                           }}
                           className="p-2 hover:bg-blue-100 rounded-lg text-blue-600 transition"
                           disabled={submitting}
-                          title="Editar conv�nio"
+                          title="Editar convênio"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
@@ -2522,7 +2522,7 @@ export function ConveniosPage() {
                           }}
                           className="p-2 hover:bg-red-100 rounded-lg text-red-600 transition"
                           disabled={submitting}
-                          title="Deletar conv�nio"
+                          title="Deletar convênio"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -2540,7 +2540,7 @@ export function ConveniosPage() {
         <div className="app-modal-overlay">
           <div className="app-modal-shell app-modal-shell--form app-modal-shell--wide">
             <Card className="app-modal-card shadow-2xl border-0">
-              {/* Bot�o Fechar - Posicionado Absolutamente */}
+              {/* Boto Fechar - Posicionado Absolutamente */}
 
               <button
                 type="button"
@@ -2556,11 +2556,11 @@ export function ConveniosPage() {
                 style={{ flexShrink: 0, padding: '16px' }}
               >
                 <CardTitle className="text-white">
-                  {editingId ? 'Editar Conv�nio' : 'Novo Conv�nio'}
+                  {editingId ? 'Editar Convênio' : 'Novo Convênio'}
                 </CardTitle>
               </CardHeader>
 
-              {/* Abas de Navega��o */}
+              {/* Abas de Navegao */}
 
               <div
                 style={{
@@ -2631,7 +2631,7 @@ export function ConveniosPage() {
                     boxSizing: 'border-box',
                   }}
                 >
-                  Endere�o
+                  Endereo
                 </button>
 
                 <button
@@ -2811,7 +2811,7 @@ export function ConveniosPage() {
                     boxSizing: 'border-box',
                   }}
                 >
-                  Tabela de Pre�os
+                  Tabela de Preços
                 </button>
 
                 <button
@@ -2857,12 +2857,12 @@ export function ConveniosPage() {
 
                     {activeTab === 'general' && (
                       <div className="space-y-6">
-                        {/* Se��o: C�digo + Tipo */}
+                        {/* Seção: Código + Tipo */}
 
                         <div className="grid grid-cols-4 gap-4">
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                              C�digo <span className="text-red-500">*</span>
+                              Código <span className="text-red-500">*</span>
                             </label>
 
                             <input
@@ -2891,7 +2891,7 @@ export function ConveniosPage() {
                             >
                               <option value="">Selecione o tipo</option>
 
-                              <option value="health_plan">Plano de Sa�de</option>
+                              <option value="health_plan">Plano de Saúde</option>
 
                               <option value="private_insurance">Seguro Privado</option>
 
@@ -2904,7 +2904,7 @@ export function ConveniosPage() {
                           </div>
                         </div>
 
-                        {/* Se��o: Nome Fantasia + Raz�o Social */}
+                        {/* Seção: Nome Fantasia + Razo Social */}
 
                         <div className="grid grid-cols-2 gap-4">
                           <div className="col-span-1">
@@ -2918,7 +2918,7 @@ export function ConveniosPage() {
                               onChange={(e) =>
                                 setFormData({ ...formData, fantasy_name: e.target.value })
                               }
-                              placeholder="Ex: Unimed S�o Paulo"
+                              placeholder="Ex: Unimed So Paulo"
                               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                               required
                               disabled={submitting}
@@ -2927,7 +2927,7 @@ export function ConveniosPage() {
 
                           <div className="col-span-1">
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Raz�o Social
+                              Razo Social
                             </label>
 
                             <input
@@ -2943,7 +2943,7 @@ export function ConveniosPage() {
                           </div>
                         </div>
 
-                        {/* Se��o: CNPJ + Pessoa de Contato */}
+                        {/* Seção: CNPJ + Pessoa de Contato */}
 
                         <div className="grid grid-cols-2 gap-4">
                           <div>
@@ -2972,14 +2972,14 @@ export function ConveniosPage() {
                               onChange={(e) =>
                                 setFormData({ ...formData, contact_person: e.target.value })
                               }
-                              placeholder="Nome do respons�vel"
+                              placeholder="Nome do responsvel"
                               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                               disabled={submitting}
                             />
                           </div>
                         </div>
 
-                        {/* Se��o: Email (linha cheia) */}
+                        {/* Seção: Email (linha cheia) */}
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -2998,7 +2998,7 @@ export function ConveniosPage() {
                           />
                         </div>
 
-                        {/* Se��o: Telefone + Celular */}
+                        {/* Seção: Telefone + Celular */}
 
                         <div className="grid grid-cols-2 gap-4">
                           <div>
@@ -3036,11 +3036,11 @@ export function ConveniosPage() {
                           </div>
                         </div>
 
-                        {/* Se��o: Regras Espec�ficas em linha cheia */}
+                        {/* Seção: Regras Especficas em linha cheia */}
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Regras Espec�ficas
+                            Regras Especficas
                           </label>
 
                           <textarea
@@ -3048,14 +3048,14 @@ export function ConveniosPage() {
                             onChange={(e) =>
                               setFormData({ ...formData, special_rules: e.target.value })
                             }
-                            placeholder="Ex: Requer autoriza��o pr�via, limite de 10 consultas/m�s, etc"
+                            placeholder="Ex: Requer autorizao prvia, limite de 10 consultas/ms, etc"
                             className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             rows={2}
                             disabled={submitting}
                           />
                         </div>
 
-                        {/* Se��o: Checkbox Ativo */}
+                        {/* Seção: Checkbox Ativo */}
 
                         <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
                           <input
@@ -3071,7 +3071,7 @@ export function ConveniosPage() {
                             htmlFor="active"
                             className="text-sm font-medium text-gray-700 cursor-pointer"
                           >
-                            ? Conv�nio Ativo
+                            ? Convênio Ativo
                           </label>
 
                           <span className="text-xs text-gray-500 ml-auto">
@@ -3081,42 +3081,42 @@ export function ConveniosPage() {
                       </div>
                     )}
 
-                    {/* ABA: TABELA DE PRE�OS */}
+                    {/* ABA: TABELA DE PREOS */}
 
                     {activeTab === 'pricing' && (
                       <div className="space-y-6">
                         <div className="border-b pb-6">
-                          {/* ?? Cabe�alho Limpo */}
+                          {/* ?? Cabealho Limpo */}
 
                           <div className="mb-6">
                             <h3 className="text-lg font-bold text-gray-900 mb-1">
-                              ?? Tabela de Pre�os
+                              ?? Tabela de Preços
                             </h3>
 
                             <p className="text-xs text-gray-500">
-                              Gerencie servi�os e pre�os para este conv�nio
+                              Gerencie serviços e preços para este convênio
                             </p>
                           </div>
 
-                          {/* ?? Aviso se n�o salvou o conv�nio ainda */}
+                          {/* ?? Aviso se no salvou o convênio ainda */}
 
                           {!editingId && (
                             <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                               <p className="text-sm text-amber-800">
-                                ?? <strong>Salve o conv�nio primeiro</strong> antes de adicionar
-                                servi�os
+                                ?? <strong>Salve o convênio primeiro</strong> antes de adicionar
+                                serviços
                               </p>
                             </div>
                           )}
 
-                          {/* Bot�es de A��o */}
+                          {/* Botes de Ao */}
 
                           <div className="flex gap-2 flex-wrap mb-6">
                             <Button
                               type="button"
                               onClick={() => setShowPricingForm(!showPricingForm)}
                               disabled={!editingId}
-                              title={!editingId ? 'Salve o conv�nio primeiro' : ''}
+                              title={!editingId ? 'Salve o convênio primeiro' : ''}
                               className={`text-white text-sm py-2 px-4 rounded flex items-center gap-2 ${
                                 editingId
                                   ? 'bg-blue-600 hover:bg-blue-700'
@@ -3124,7 +3124,7 @@ export function ConveniosPage() {
                               }`}
                             >
                               <Plus className="w-4 h-4" />
-                              Novo Servi�o
+                              Novo Serviço
                             </Button>
 
                             <label className="inline-block">
@@ -3132,7 +3132,7 @@ export function ConveniosPage() {
                                 type="button"
                                 onClick={() => document.getElementById('pricingFileInput')?.click()}
                                 disabled={uploadingFile || !editingId}
-                                title={!editingId ? 'Salve o conv�nio primeiro' : ''}
+                                title={!editingId ? 'Salve o convênio primeiro' : ''}
                                 className={`text-white text-sm py-2 px-4 rounded flex items-center gap-2 ${
                                   editingId && !uploadingFile
                                     ? 'bg-green-600 hover:bg-green-700'
@@ -3157,7 +3157,7 @@ export function ConveniosPage() {
                               type="button"
                               onClick={downloadExcelTemplate}
                               disabled={!editingId}
-                              title={!editingId ? 'Salve o conv�nio primeiro' : ''}
+                              title={!editingId ? 'Salve o convênio primeiro' : ''}
                               className={`text-white text-sm py-2 px-4 rounded flex items-center gap-2 ${
                                 editingId
                                   ? 'bg-purple-600 hover:bg-purple-700'
@@ -3170,12 +3170,12 @@ export function ConveniosPage() {
 
                           <div className="space-y-6">
                             <>
-                              {/* Formul�rio Compacto */}
+                              {/* Formulrio Compacto */}
 
                               {showPricingForm && (
                                 <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
                                   <h4 className="text-sm font-semibold text-gray-900 mb-4">
-                                    {pricingFormData.id ? '?? Editar Servi�o' : '? Novo Servi�o'}
+                                    {pricingFormData.id ? '?? Editar Serviço' : '? Novo Serviço'}
                                   </h4>
 
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
@@ -3194,7 +3194,7 @@ export function ConveniosPage() {
                                       }}
                                       className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     >
-                                      <option value="">?? Selecione o servi�o</option>
+                                      <option value="">?? Selecione o serviço</option>
 
                                       {(services || [])
 
@@ -3246,7 +3246,7 @@ export function ConveniosPage() {
                                           price: e.target.value,
                                         })
                                       }
-                                      placeholder="?? Pre�o (R$)"
+                                      placeholder="?? Preço (R$)"
                                       className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     />
 
@@ -3310,7 +3310,7 @@ export function ConveniosPage() {
                                   <div className="space-y-4">
                                     <div className="flex flex-wrap gap-4 mb-6 p-3 bg-gray-50 rounded-lg border border-gray-200">
                                       <div className="text-center">
-                                        <p className="text-xs text-gray-600">Servi�os</p>
+                                        <p className="text-xs text-gray-600">Serviços</p>
 
                                         <p className="text-lg font-bold text-gray-900">
                                           {pricingTableData.length}
@@ -3364,11 +3364,11 @@ export function ConveniosPage() {
                                         <thead className="bg-gray-100 border-b border-gray-300 sticky top-0">
                                           <tr>
                                             <th className="text-center py-2 px-3 font-semibold text-gray-800 text-xs">
-                                              C�digo
+                                              Código
                                             </th>
 
                                             <th className="text-left py-2 px-3 font-semibold text-gray-800">
-                                              Servi�o
+                                              Serviço
                                             </th>
 
                                             <th className="text-left py-2 px-3 font-semibold text-gray-800">
@@ -3388,7 +3388,7 @@ export function ConveniosPage() {
                                             </th>
 
                                             <th className="text-center py-2 px-3 font-semibold text-gray-800">
-                                              A��es
+                                              Ações
                                             </th>
                                           </tr>
                                         </thead>
@@ -3416,7 +3416,7 @@ export function ConveniosPage() {
                                                 )
                                               : 0;
 
-                                            // Verificar se pre�o est� ATIVO (active = true)
+                                            // Verificar se preço est ATIVO (active = true)
 
                                             const isConfigured = priceEntry.active === true;
 
@@ -3509,7 +3509,7 @@ export function ConveniosPage() {
                                   <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
                                     <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
                                       <p className="text-xs text-gray-600 font-semibold">
-                                        Total de Servi�os
+                                        Total de Serviços
                                       </p>
 
                                       <p className="text-2xl font-bold text-blue-600">
@@ -3519,7 +3519,7 @@ export function ConveniosPage() {
 
                                     <div className="bg-green-50 p-3 rounded-lg border border-green-200">
                                       <p className="text-xs text-gray-600 font-semibold">
-                                        Pre�o M�dio
+                                        Preço Mdio
                                       </p>
 
                                       <p className="text-2xl font-bold text-green-600">
@@ -3600,11 +3600,11 @@ export function ConveniosPage() {
                                       <thead className="bg-gray-100 border-b border-gray-300 sticky top-0">
                                         <tr>
                                           <th className="text-center py-2 px-3 font-semibold text-gray-800 text-xs">
-                                            C�digo
+                                            Código
                                           </th>
 
                                           <th className="text-left py-2 px-3 font-semibold text-gray-800">
-                                            Servi�o
+                                            Serviço
                                           </th>
 
                                           <th className="text-left py-2 px-3 font-semibold text-gray-800">
@@ -3624,7 +3624,7 @@ export function ConveniosPage() {
                                           </th>
 
                                           <th className="text-center py-2 px-3 font-semibold text-gray-800">
-                                            A��es
+                                            Ações
                                           </th>
                                         </tr>
                                       </thead>
@@ -3665,7 +3665,7 @@ export function ConveniosPage() {
 
                                               <td className="py-3 px-4 text-gray-900 font-medium">
                                                 {priceEntry.services?.name ||
-                                                  'Servi�o desconhecido'}
+                                                  'Serviço desconhecido'}
                                               </td>
 
                                               <td className="py-3 px-4 text-gray-900">
@@ -3727,40 +3727,40 @@ export function ConveniosPage() {
                                 (!pricingTableData || pricingTableData.length === 0) && (
                                   <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
                                     <p className="text-sm text-gray-700">
-                                      <strong>Nenhum pre�o configurado</strong> para este conv�nio
+                                      <strong>Nenhum preço configurado</strong> para este convênio
                                       ainda.
                                     </p>
 
                                     <p className="text-sm text-gray-600 mt-2">
-                                      A tabela mostra apenas os <strong>pre�os base</strong>{' '}
-                                      efetivamente negociados com o conv�nio. Pre�os espec�ficos de
-                                      profissionais (negocia��es pontuais) aparecem como{' '}
-                                      <strong>"?? Negocia��o"</strong> na edi��o do profissional.
+                                      A tabela mostra apenas os <strong>preços base</strong>{' '}
+                                      efetivamente negociados com o convênio. Preços especficos de
+                                      profissionais (negociações pontuais) aparecem como{' '}
+                                      <strong>"?? Negociao"</strong> na edio do profissional.
                                     </p>
                                   </div>
                                 )}
                             </>
 
-                            {/* Instru��es de Upload - Ocultas */}
+                            {/* Instrues de Upload - Ocultas */}
                           </div>
 
                           {false && (
                             <>
                               <div>
                                 <p className="text-xs text-gray-600 mb-2">
-                                  Crie um arquivo CSV ou TXT com tr�s colunas:{' '}
-                                  <strong>C�digo CBHPM</strong>, <strong>Nome do Servi�o</strong> e{' '}
-                                  <strong>Pre�o</strong>
+                                  Crie um arquivo CSV ou TXT com trs colunas:{' '}
+                                  <strong>Código CBHPM</strong>, <strong>Nome do Serviço</strong> e{' '}
+                                  <strong>Preço</strong>
                                 </p>
 
                                 <div className="bg-white p-2 rounded text-xs font-mono text-gray-700 overflow-x-auto mb-2">
-                                  <div>C�digo CBHPM,Nome do Servi�o,Pre�o</div>
+                                  <div>Código CBHPM,Nome do Serviço,Preço</div>
 
                                   <div>
-                                    10101012,Consulta em hor�rio normal ou preestabelecido,150.00
+                                    10101012,Consulta em horrio normal ou preestabelecido,150.00
                                   </div>
 
-                                  <div>10101020,Consulta em domic�lio,80.50</div>
+                                  <div>10101020,Consulta em domiclio,80.50</div>
 
                                   <div>10101039,Consulta em pronto socorro,250.00</div>
                                 </div>
@@ -3768,22 +3768,22 @@ export function ConveniosPage() {
 
                               <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
                                 <p className="text-xs text-gray-600 font-semibold mb-3">
-                                  ?? Estrutura da Tabela de Pre�os (Vis�o Financeira):
+                                  ?? Estrutura da Tabela de Preços (Viso Financeira):
                                 </p>
 
                                 <div className="space-y-2 text-xs text-gray-600">
                                   <div className="flex gap-2">
-                                    <span className="font-semibold min-w-max">? C�digo CBHPM:</span>
+                                    <span className="font-semibold min-w-max">? Código CBHPM:</span>
 
                                     <span>
-                                      Identificador �nico do servi�o conforme tabela CBHPM da ANS
+                                      Identificador nico do serviço conforme tabela CBHPM da ANS
                                     </span>
                                   </div>
 
                                   <div className="flex gap-2">
-                                    <span className="font-semibold min-w-max">??? Pre�o Base:</span>
+                                    <span className="font-semibold min-w-max">??? Preço Base:</span>
 
-                                    <span>Valor negociado com o conv�nio para cada servi�o</span>
+                                    <span>Valor negociado com o convênio para cada serviço</span>
                                   </div>
 
                                   <div className="flex gap-2">
@@ -3792,7 +3792,7 @@ export function ConveniosPage() {
                                     </span>
 
                                     <span>
-                                      Quantidade de profissionais vinculados a este conv�nio
+                                      Quantidade de profissionais vinculados a este convênio
                                     </span>
                                   </div>
 
@@ -3800,32 +3800,32 @@ export function ConveniosPage() {
                                     <span className="font-semibold min-w-max">? Status:</span>
 
                                     <span>
-                                      Ativo (pre�o configurado) ou Incompleto (sem hor�rios
+                                      Ativo (preço configurado) ou Incompleto (sem horrios
                                       definidos)
                                     </span>
                                   </div>
 
                                   <div className="flex gap-2">
-                                    <span className="font-semibold min-w-max">?? Hor�rios:</span>
+                                    <span className="font-semibold min-w-max">?? Horrios:</span>
 
-                                    <span>N�mero de per�odos de agendamento configurados</span>
+                                    <span>Número de perodos de agendamento configurados</span>
                                   </div>
 
                                   <div className="flex gap-2">
                                     <span className="font-semibold min-w-max">
-                                      ?? �til. Atualiza��o:
+                                      ?? til. Atualizao:
                                     </span>
 
                                     <span>
-                                      Data da �ltima modifica��o (importante para auditoria)
+                                      Data da ltima modificao (importante para auditoria)
                                     </span>
                                   </div>
 
                                   <div className="flex gap-2">
-                                    <span className="font-semibold min-w-max">?? Negocia��o:</span>
+                                    <span className="font-semibold min-w-max">?? Negociao:</span>
 
                                     <span>
-                                      Pre�o espec�fico de um profissional (override) que difere do
+                                      Preço especfico de um profissional (override) que difere do
                                       base
                                     </span>
                                   </div>
@@ -3833,7 +3833,7 @@ export function ConveniosPage() {
 
                                 <div className="mt-3 pt-3 border-t border-blue-200">
                                   <p className="text-xs text-gray-600 font-semibold mb-2">
-                                    Para adicionar pre�os a este conv�nio:
+                                    Para adicionar preços a este convênio:
                                   </p>
 
                                   <ol className="text-xs text-gray-600 space-y-1">
@@ -3846,11 +3846,11 @@ export function ConveniosPage() {
                                     </li>
 
                                     <li>
-                                      3. Aba <strong>"Conv�nios"</strong> ? Adicionar este conv�nio
+                                      3. Aba <strong>"Convênios"</strong> ? Adicionar este convênio
                                     </li>
 
                                     <li>
-                                      4. <strong>Expandir servi�o</strong> e informar o pre�o base
+                                      4. <strong>Expandir serviço</strong> e informar o preço base
                                     </li>
 
                                     <li>
@@ -3867,21 +3867,21 @@ export function ConveniosPage() {
                       </div>
                     )}
 
-                    {/* ABA: ENDERE�O */}
+                    {/* ABA: ENDEREO */}
 
                     {activeTab === 'address' && (
                       <div className="space-y-6">
-                        {/* ===== SE��O: ENDERE�O ===== */}
+                        {/* ===== SEO: ENDEREO ===== */}
 
                         <div className="border-b pb-6">
                           <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
                             <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">
                               ??
                             </span>
-                            Endere�o
+                            Endereo
                           </h3>
 
-                          {/* Grid: Rua + N�mero */}
+                          {/* Grid: Rua + Número */}
 
                           <div className="grid grid-cols-3 gap-4 mb-4">
                             <div className="col-span-2">
@@ -3903,7 +3903,7 @@ export function ConveniosPage() {
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                N�mero
+                                Número
                               </label>
 
                               <input
@@ -3957,7 +3957,7 @@ export function ConveniosPage() {
                             </div>
                           </div>
 
-                          {/* Grid: Cidade + Estado + Pa�s */}
+                          {/* Grid: Cidade + Estado + Pas */}
 
                           <div className="grid grid-cols-3 gap-4 mb-4">
                             <div>
@@ -3971,7 +3971,7 @@ export function ConveniosPage() {
                                 onChange={(e) =>
                                   setFormData({ ...formData, address_city: e.target.value })
                                 }
-                                placeholder="Ex: S�o Paulo"
+                                placeholder="Ex: So Paulo"
                                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 disabled={submitting}
                               />
@@ -3997,7 +3997,7 @@ export function ConveniosPage() {
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Pa�s
+                                Pas
                               </label>
 
                               <input
@@ -4020,22 +4020,22 @@ export function ConveniosPage() {
 
                     {activeTab === 'fiscal' && (
                       <div className="space-y-6">
-                        {/* ===== SE��O: IDENTIFICA��O FISCAL ===== */}
+                        {/* ===== SEO: IDENTIFICAO FISCAL ===== */}
 
                         <div className="border-b pb-6">
                           <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
                             <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs">
                               ??
                             </span>
-                            Identifica��o Fiscal
+                            Identificao Fiscal
                           </h3>
 
-                          {/* Grid: Inscri��o Municipal + Inscri��o Estadual */}
+                          {/* Grid: Inscrio Municipal + Inscrio Estadual */}
 
                           <div className="grid grid-cols-2 gap-4 mb-4">
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Inscri��o Municipal
+                                Inscrio Municipal
                               </label>
 
                               <input
@@ -4055,7 +4055,7 @@ export function ConveniosPage() {
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Inscri��o Estadual
+                                Inscrio Estadual
                               </label>
 
                               <input
@@ -4083,7 +4083,7 @@ export function ConveniosPage() {
                             <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded text-xs">
                               ??
                             </span>
-                            Dados Obrigat�rios para Faturamento
+                            Dados Obrigatrios para Faturamento
                           </h3>
                         </div>
 
@@ -4110,12 +4110,12 @@ export function ConveniosPage() {
                           />
 
                           <p className="text-xs text-gray-500 mt-1">
-                            N�mero de registro na ANS (ag�ncia de seguros privados). Obrigat�rio
+                            Número de registro na ANS (agncia de seguros privados). Obrigatrio
                             para planos privados.
                           </p>
                         </div>
 
-                        {/* Checkbox: Segue padr�o TISS */}
+                        {/* Checkbox: Segue padro TISS */}
 
                         <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                           <input
@@ -4133,15 +4133,15 @@ export function ConveniosPage() {
                             htmlFor="tiss_pattern"
                             className="text-sm font-medium text-gray-700"
                           >
-                            Segue padr�o TISS (recomendado)
+                            Segue padro TISS (recomendado)
                           </label>
                         </div>
 
-                        {/* Campo: Vers�o TISS */}
+                        {/* Campo: Verso TISS */}
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Vers�o TISS <span className="text-red-500">*</span>
+                            Verso TISS <span className="text-red-500">*</span>
                           </label>
 
                           <select
@@ -4170,7 +4170,7 @@ export function ConveniosPage() {
                           </select>
 
                           <p className="text-xs text-gray-500 mt-1">
-                            Vers�o do padr�o TISS utilizado pelo conv�nio
+                            Verso do padro TISS utilizado pelo convênio
                           </p>
                         </div>
 
@@ -4199,11 +4199,11 @@ export function ConveniosPage() {
 
                             <option value="sadt">Guia de SADT</option>
 
-                            <option value="hospitalization">Guia de Interna��o</option>
+                            <option value="hospitalization">Guia de Internao</option>
                           </select>
 
                           <p className="text-xs text-gray-500 mt-1">
-                            Tipo padr�o de guia para este conv�nio
+                            Tipo padro de guia para este convênio
                           </p>
                         </div>
                       </div>
@@ -4213,21 +4213,21 @@ export function ConveniosPage() {
 
                     {activeTab === 'taxes' && (
                       <div className="space-y-6">
-                        {/* ===== SE��O: TRIBUTOS ===== */}
+                        {/* ===== SEO: TRIBUTOS ===== */}
 
                         <div className="border-b pb-6">
                           <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
                             <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs">
                               ??
                             </span>
-                            Tributos (Para NF-e - Reforma Tribut�ria 2024)
+                            Tributos (Para NF-e - Reforma Tributria 2024)
                           </h3>
 
-                          {/* Campo: Regime Tribut�rio */}
+                          {/* Campo: Regime Tributrio */}
 
                           <div className="mb-4">
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Regime Tribut�rio
+                              Regime Tributrio
                             </label>
 
                             <select
@@ -4248,7 +4248,7 @@ export function ConveniosPage() {
                             </select>
                           </div>
 
-                          {/* Checkbox: Ret�m impostos */}
+                          {/* Checkbox: Retm impostos */}
 
                           <div className="flex items-center gap-2 mb-6 p-3 bg-blue-50 rounded border border-blue-200">
                             <input
@@ -4270,7 +4270,7 @@ export function ConveniosPage() {
                               htmlFor="retains_taxes"
                               className="text-sm font-medium text-gray-700"
                             >
-                              ? Operadora ret�m impostos na fonte
+                              ? Operadora retm impostos na fonte
                             </label>
                           </div>
 
@@ -4278,14 +4278,14 @@ export function ConveniosPage() {
 
                           <div className="overflow-x-auto">
                             <div className="bg-gray-50 rounded border border-gray-200">
-                              {/* Cabe�alho */}
+                              {/* Cabealho */}
 
                               <div className="grid grid-cols-4 gap-2 p-3 border-b border-gray-200 font-bold text-xs text-gray-700 bg-gray-100">
                                 <div>Ativar</div>
 
                                 <div>Tributo</div>
 
-                                <div>Al�quota (%)</div>
+                                <div>Alquota (%)</div>
 
                                 <div>Notas</div>
                               </div>
@@ -4329,7 +4329,7 @@ export function ConveniosPage() {
                                   disabled={submitting || !formData.icms_applicable}
                                 />
 
-                                <div className="text-gray-500">Circula��o</div>
+                                <div className="text-gray-500">Circulao</div>
                               </div>
 
                               {/* PIS */}
@@ -4455,7 +4455,7 @@ export function ConveniosPage() {
                                   disabled={submitting || !formData.iss_applicable}
                                 />
 
-                                <div className="text-gray-500">Servi�o</div>
+                                <div className="text-gray-500">Serviço</div>
                               </div>
 
                               {/* ISSRF */}
@@ -4497,7 +4497,7 @@ export function ConveniosPage() {
                                   disabled={submitting || !formData.issrf_applicable}
                                 />
 
-                                <div className="text-gray-500">Servi�o Federal</div>
+                                <div className="text-gray-500">Serviço Federal</div>
                               </div>
 
                               {/* INSS */}
@@ -4539,10 +4539,10 @@ export function ConveniosPage() {
                                   disabled={submitting || !formData.inss_applicable}
                                 />
 
-                                <div className="text-gray-500">Previd�ncia</div>
+                                <div className="text-gray-500">Previdncia</div>
                               </div>
 
-                              {/* IBS (Reforma Tribut�ria) */}
+                              {/* IBS (Reforma Tributria) */}
 
                               <div className="grid grid-cols-4 gap-2 p-3 border-b border-gray-100 items-center text-xs bg-green-50">
                                 <div className="flex justify-center">
@@ -4584,7 +4584,7 @@ export function ConveniosPage() {
                                 <div className="text-green-600 text-xs">Reforma 2024+</div>
                               </div>
 
-                              {/* CBS (Reforma Tribut�ria) */}
+                              {/* CBS (Reforma Tributria) */}
 
                               <div className="grid grid-cols-4 gap-2 p-3 items-center text-xs bg-green-50">
                                 <div className="flex justify-center">
@@ -4635,14 +4635,14 @@ export function ConveniosPage() {
 
                     {activeTab === 'financial' && (
                       <div className="space-y-6">
-                        {/* SE��O 1: CONDI��ES COMERCIAIS */}
+                        {/* SEO 1: CONDIES COMERCIAIS */}
 
                         <div className="border-b pb-6">
                           <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
                             <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">
                               ??
                             </span>
-                            Condi��es Comerciais
+                            Condies Comerciais
                           </h3>
 
                           <div className="grid grid-cols-2 gap-4">
@@ -4672,15 +4672,15 @@ export function ConveniosPage() {
                               />
 
                               <p className="text-xs text-gray-500 mt-1">
-                                Desconto padr�o do conv�nio
+                                Desconto padro do convênio
                               </p>
                             </div>
 
-                            {/* Margem M�nima */}
+                            {/* Margem Mnima */}
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Margem M�nima (%)
+                                Margem Mnima (%)
                               </label>
 
                               <input
@@ -4701,14 +4701,14 @@ export function ConveniosPage() {
                                 disabled={submitting}
                               />
 
-                              <p className="text-xs text-gray-500 mt-1">Margem m�nima aceit�vel</p>
+                              <p className="text-xs text-gray-500 mt-1">Margem mnima aceitvel</p>
                             </div>
 
-                            {/* Taxa de Administra��o */}
+                            {/* Taxa de Administrao */}
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Taxa de Administra��o (%)
+                                Taxa de Administrao (%)
                               </label>
 
                               <input
@@ -4730,7 +4730,7 @@ export function ConveniosPage() {
                               />
 
                               <p className="text-xs text-gray-500 mt-1">
-                                Taxa cobrada pelo conv�nio
+                                Taxa cobrada pelo convênio
                               </p>
                             </div>
 
@@ -4793,7 +4793,7 @@ export function ConveniosPage() {
                           </div>
                         </div>
 
-                        {/* SE��O 2: PRAZOS E PAGAMENTO */}
+                        {/* SEO 2: PRAZOS E PAGAMENTO */}
 
                         <div className="border-b pb-6">
                           <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -4829,7 +4829,7 @@ export function ConveniosPage() {
                               />
 
                               <p className="text-xs text-gray-500 mt-1">
-                                Dias at� vencimento (ex: 30, 45, 60)
+                                Dias at vencimento (ex: 30, 45, 60)
                               </p>
                             </div>
 
@@ -4837,7 +4837,7 @@ export function ConveniosPage() {
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Ciclo de Faturamento (dias do m�s)
+                                Ciclo de Faturamento (dias do ms)
                               </label>
 
                               <div className="grid grid-cols-2 gap-2">
@@ -4853,7 +4853,7 @@ export function ConveniosPage() {
                                   }
                                   min="1"
                                   max="31"
-                                  placeholder="In�cio"
+                                  placeholder="Incio"
                                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                   disabled={submitting}
                                 />
@@ -4877,7 +4877,7 @@ export function ConveniosPage() {
                               </div>
 
                               <p className="text-xs text-gray-500 mt-1">
-                                De ___ at� ___ de cada m�s
+                                De ___ at ___ de cada ms
                               </p>
                             </div>
 
@@ -4890,7 +4890,7 @@ export function ConveniosPage() {
 
                               <div className="grid grid-cols-2 gap-3">
                                 {[
-                                  { id: 'debit', label: 'D�bito Autom�tico' },
+                                  { id: 'debit', label: 'Dbito Automtico' },
 
                                   { id: 'boleto', label: 'Boleto' },
 
@@ -4931,7 +4931,7 @@ export function ConveniosPage() {
                           </div>
                         </div>
 
-                        {/* SE��O 3: REAJUSTES */}
+                        {/* SEO 3: REAJUSTES */}
 
                         <div className="border-b pb-6">
                           <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -4942,11 +4942,11 @@ export function ConveniosPage() {
                           </h3>
 
                           <div className="grid grid-cols-2 gap-4">
-                            {/* �ndice de Reajuste */}
+                            {/* ndice de Reajuste */}
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                �ndice de Reajuste
+                                ndice de Reajuste
                               </label>
 
                               <select
@@ -4975,7 +4975,7 @@ export function ConveniosPage() {
                               </select>
 
                               <p className="text-xs text-gray-500 mt-1">
-                                �ndice para reajuste anual
+                                ndice para reajuste anual
                               </p>
                             </div>
 
@@ -4983,7 +4983,7 @@ export function ConveniosPage() {
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                M�s de Reajuste Anual
+                                Ms de Reajuste Anual
                               </label>
 
                               <input
@@ -5001,15 +5001,15 @@ export function ConveniosPage() {
                               />
 
                               <p className="text-xs text-gray-500 mt-1">
-                                Quando ocorre a atualiza��o
+                                Quando ocorre a atualizao
                               </p>
                             </div>
 
-                            {/* Pr�xima Data de Reajuste */}
+                            {/* Prxima Data de Reajuste */}
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Pr�xima Data de Reajuste
+                                Prxima Data de Reajuste
                               </label>
 
                               <input
@@ -5026,27 +5026,27 @@ export function ConveniosPage() {
                                 disabled={submitting}
                               />
 
-                              <p className="text-xs text-gray-500 mt-1">Para controle/avalia��o</p>
+                              <p className="text-xs text-gray-500 mt-1">Para controle/avaliao</p>
                             </div>
                           </div>
                         </div>
 
-                        {/* SE��O 4: VIG�NCIA DO CONTRATO */}
+                        {/* SEO 4: VIGNCIA DO CONTRATO */}
 
                         <div className="border-b pb-6">
                           <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
                             <span className="bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-xs">
                               ??
                             </span>
-                            Vig�ncia do Contrato
+                            Vigncia do Contrato
                           </h3>
 
                           <div className="grid grid-cols-2 gap-4">
-                            {/* Data In�cio */}
+                            {/* Data Incio */}
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Data de In�cio <span className="text-red-500">*</span>
+                                Data de Incio <span className="text-red-500">*</span>
                               </label>
 
                               <input
@@ -5087,7 +5087,7 @@ export function ConveniosPage() {
                               />
                             </div>
 
-                            {/* Renova��o Autom�tica */}
+                            {/* Renovao Automtica */}
 
                             <div className="col-span-1">
                               <label className="flex items-center gap-2 cursor-pointer">
@@ -5106,16 +5106,16 @@ export function ConveniosPage() {
                                 />
 
                                 <span className="text-sm font-medium text-gray-700">
-                                  Renova��o Autom�tica
+                                  Renovao Automtica
                                 </span>
                               </label>
                             </div>
 
-                            {/* Dias Aviso Pr�vio */}
+                            {/* Dias Aviso Prvio */}
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Dias de Aviso Pr�vio
+                                Dias de Aviso Prvio
                               </label>
 
                               <input
@@ -5134,27 +5134,27 @@ export function ConveniosPage() {
                                 disabled={submitting}
                               />
 
-                              <p className="text-xs text-gray-500 mt-1">Para n�o renova��o</p>
+                              <p className="text-xs text-gray-500 mt-1">Para no renovao</p>
                             </div>
                           </div>
                         </div>
 
-                        {/* SE��O 5: POL�TICA DE SUSPENS�O E MULTAS */}
+                        {/* SEO 5: POLTICA DE SUSPENSO E MULTAS */}
 
                         <div className="border-b pb-6">
                           <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
                             <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-xs">
                               ??
                             </span>
-                            Suspens�o e Multas
+                            Suspenso e Multas
                           </h3>
 
                           <div className="grid grid-cols-2 gap-4">
-                            {/* Dias para Suspens�o */}
+                            {/* Dias para Suspenso */}
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Dias para Suspens�o (ap�s atraso)
+                                Dias para Suspenso (aps atraso)
                               </label>
 
                               <input
@@ -5208,7 +5208,7 @@ export function ConveniosPage() {
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Taxa de Juros Di�ria (%)
+                                Taxa de Juros Diria (%)
                               </label>
 
                               <input
@@ -5229,12 +5229,12 @@ export function ConveniosPage() {
                                 disabled={submitting}
                               />
 
-                              <p className="text-xs text-gray-500 mt-1">Taxa di�ria de juros</p>
+                              <p className="text-xs text-gray-500 mt-1">Taxa diria de juros</p>
                             </div>
                           </div>
                         </div>
 
-                        {/* SE��O 6: LIMITES E TETOS */}
+                        {/* SEO 6: LIMITES E TETOS */}
 
                         <div className="border-b pb-6">
                           <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -5271,7 +5271,7 @@ export function ConveniosPage() {
                                 disabled={submitting}
                               />
 
-                              <p className="text-xs text-gray-500 mt-1">Limite m�ximo por m�s</p>
+                              <p className="text-xs text-gray-500 mt-1">Limite mximo por ms</p>
                             </div>
 
                             {/* Limite de Consultas */}
@@ -5302,11 +5302,11 @@ export function ConveniosPage() {
                               <p className="text-xs text-gray-500 mt-1">Se houver limite</p>
                             </div>
 
-                            {/* Co-participa��o */}
+                            {/* Co-participao */}
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Co-participa��o/Franquia (R$)
+                                Co-participao/Franquia (R$)
                               </label>
 
                               <input
@@ -5323,34 +5323,34 @@ export function ConveniosPage() {
                                 }
                                 min="0"
                                 step="0.01"
-                                placeholder="Sem co-participa��o"
+                                placeholder="Sem co-participao"
                                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                 disabled={submitting}
                               />
 
                               <p className="text-xs text-gray-500 mt-1">
-                                Valor m�nimo que o paciente paga
+                                Valor mnimo que o paciente paga
                               </p>
                             </div>
                           </div>
                         </div>
 
-                        {/* SE��O 7: CONTATOS FINANCEIROS E DADOS BANC�RIOS */}
+                        {/* SEO 7: CONTATOS FINANCEIROS E DADOS BANCRIOS */}
 
                         <div>
                           <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
                             <span className="bg-cyan-100 text-cyan-700 px-2 py-1 rounded text-xs">
                               ??
                             </span>
-                            Contatos Financeiros e Dados Banc�rios
+                            Contatos Financeiros e Dados Bancrios
                           </h3>
 
                           <div className="grid grid-cols-2 gap-4">
-                            {/* Respons�velFinanceiro */}
+                            {/* ResponsvelFinanceiro */}
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Respons�vel Financeiro
+                                Responsvel Financeiro
                               </label>
 
                               <input
@@ -5419,7 +5419,7 @@ export function ConveniosPage() {
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Banco para Dep�sitos
+                                Banco para Depsitos
                               </label>
 
                               <input
@@ -5432,17 +5432,17 @@ export function ConveniosPage() {
                                     bank_name: e.target.value,
                                   })
                                 }
-                                placeholder="Ex: Ita�, Bradesco"
+                                placeholder="Ex: Ita, Bradesco"
                                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                                 disabled={submitting}
                               />
                             </div>
 
-                            {/* Ag�ncia */}
+                            {/* Agncia */}
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Ag�ncia
+                                Agncia
                               </label>
 
                               <input
@@ -5465,7 +5465,7 @@ export function ConveniosPage() {
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                N�mero da Conta
+                                Número da Conta
                               </label>
 
                               <input
@@ -5498,7 +5498,7 @@ export function ConveniosPage() {
                               <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs">
                                 ??
                               </span>
-                              Planos de Sa�de
+                              Planos de Saúde
                             </h3>
 
                             {(editingId || showForm) && (
@@ -5533,7 +5533,7 @@ export function ConveniosPage() {
                                     type="text"
                                     value={newPlanCode}
                                     onChange={(e) => setNewPlanCode(e.target.value)}
-                                    placeholder="C�digo do plano (para vincular � agenda)"
+                                    placeholder="Código do plano (para vincular  agenda)"
                                     className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                                   />
 
@@ -5549,7 +5549,7 @@ export function ConveniosPage() {
                                 <textarea
                                   value={newPlanDescription}
                                   onChange={(e) => setNewPlanDescription(e.target.value)}
-                                  placeholder="Descri��o do plano (opcional)"
+                                  placeholder="Descrio do plano (opcional)"
                                   className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none h-20"
                                 />
 
@@ -5618,7 +5618,7 @@ export function ConveniosPage() {
                                             type="text"
                                             value={editingPlanCode}
                                             onChange={(e) => setEditingPlanCode(e.target.value)}
-                                            placeholder="C�digo do plano (para vincular � agenda)"
+                                            placeholder="Código do plano (para vincular  agenda)"
                                             className="flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                                           />
 
@@ -5638,7 +5638,7 @@ export function ConveniosPage() {
                                           onChange={(e) =>
                                             setEditingPlanDescription(e.target.value)
                                           }
-                                          placeholder="Descri��o do plano (opcional)"
+                                          placeholder="Descrio do plano (opcional)"
                                           className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none h-20"
                                         />
 
@@ -5669,7 +5669,7 @@ export function ConveniosPage() {
                                             onClick={handleUpdatePlan}
                                             className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                                           >
-                                            Salvar Altera��es
+                                            Salvar Alterações
                                           </button>
 
                                           <button
@@ -5689,7 +5689,7 @@ export function ConveniosPage() {
 
                                         {plan.code && (
                                           <p className="text-xs text-blue-600 font-mono mt-1">
-                                            C�digo: {plan.code}
+                                            Código: {plan.code}
                                           </p>
                                         )}
 
@@ -5748,9 +5748,9 @@ export function ConveniosPage() {
                         insurance={selectedInsurance}
                         insuranceId={editingId}
                         onUpdate={() => {
-                          console.log('[TISS] Configura��es salvas');
+                          console.log('[TISS] Configurações salvas');
 
-                          // Dados j� foram salvos no Supabase, apenas feche com sucesso
+                          // Dados j foram salvos no Supabase, apenas feche com sucesso
                         }}
                         clinicId={clinicId}
                       />
@@ -5759,7 +5759,7 @@ export function ConveniosPage() {
                 </form>
               </CardContent>
 
-              {/* Footer com Bot�es de A��o - Fica Fixo */}
+              {/* Footer com Botes de Ao - Fica Fixo */}
 
               <div className="border-t bg-white px-6 py-4 flex gap-3" style={{ flexShrink: 0 }}>
                 <Button
