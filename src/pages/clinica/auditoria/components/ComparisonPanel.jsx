@@ -190,13 +190,13 @@ export function AuditDiffView({ log }) {
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <h4 className="font-semibold text-red-700 mb-2">Antes (Removido)</h4>
+          <h4 className="font-semibold text-red-700 mb-2">Removido</h4>
           <pre className="bg-red-50 p-2 rounded text-xs overflow-x-auto border border-red-200">
             {JSON.stringify(old_values, null, 2)}
           </pre>
         </div>
         <div>
-          <h4 className="font-semibold text-green-700 mb-2">Depois (Adicionado)</h4>
+          <h4 className="font-semibold text-green-700 mb-2">Adicionado</h4>
           <pre className="bg-green-50 p-2 rounded text-xs overflow-x-auto border border-green-200">
             {JSON.stringify(new_values, null, 2)}
           </pre>
@@ -234,40 +234,57 @@ export function ComparisonPanel({ logs }) {
   
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
-      <h2 className="text-xl font-semibold text-gray-900 mb-4">🔄 Comparação Avançada (Before/After)</h2>
+      <h2 className="text-xl font-semibold text-gray-900 mb-4">🔄 Comparação Avançada (Antes/Depois)</h2>
       
       {/* View mode selector */}
       <div className="flex gap-2 mb-4">
-        <button
-          onClick={() => setViewMode('timeline')}
-          className={`px-3 py-1 rounded text-sm ${
-            viewMode === 'timeline'
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-          }`}
-        >
-          📍 Timeline
-        </button>
-        <button
-          onClick={() => setViewMode('snapshot')}
-          className={`px-3 py-1 rounded text-sm ${
-            viewMode === 'snapshot'
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-          }`}
-        >
-          📋 Snapshot
-        </button>
-        <button
-          onClick={() => setViewMode('diff')}
-          className={`px-3 py-1 rounded text-sm ${
-            viewMode === 'diff'
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-          }`}
-        >
-          🔍 Diff
-        </button>
+        <div className="relative group">
+          <button
+            onClick={() => setViewMode('timeline')}
+            className={`px-3 py-1 rounded text-sm ${
+              viewMode === 'timeline'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            📍 Linha do Tempo
+          </button>
+          <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
+            Sequência de mudanças com bolinhas coloridas (🟢=criado, 🔵=atualizado, 🔴=deletado)
+          </div>
+        </div>
+        
+        <div className="relative group">
+          <button
+            onClick={() => setViewMode('snapshot')}
+            className={`px-3 py-1 rounded text-sm ${
+              viewMode === 'snapshot'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            📋 Captura
+          </button>
+          <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
+            JSON lado a lado com campos destacados em vermelho/verde
+          </div>
+        </div>
+        
+        <div className="relative group">
+          <button
+            onClick={() => setViewMode('diff')}
+            className={`px-3 py-1 rounded text-sm ${
+              viewMode === 'diff'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            🔍 Diferenças
+          </button>
+          <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10">
+            Diferenças em vermelho (removido) e verde (adicionado)
+          </div>
+        </div>
       </div>
       
       {/* Appointment selector */}
