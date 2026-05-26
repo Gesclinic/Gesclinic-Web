@@ -5,6 +5,11 @@ import { listAuditLogs, getAuditSummary, AUDIT_ACTION_TYPES, AUDIT_ACTION_LABELS
 import { exportAuditLogsToCSV, exportAuditLogsToPDF, exportLogDetails } from '@/lib/exportApi';
 import { AuditLogDetailsModal } from './AuditLogDetailsModal';
 import { AuditTrendChart } from './AuditTrendChart';
+import { ReportsPanel } from './components/ReportsPanel';
+import { AlertsCenter, AlertBadge } from './components/AlertsCenter';
+import { ComparisonPanel } from './components/ComparisonPanel';
+import { UserAuditPanel, logUserEvent } from './components/UserAuditPanel';
+import { runAllAlertChecks, saveAlertsToStorage } from './components/AlertEngine';
 import PageLayout from '@/components/ui/PageLayout';
 import { Card } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
@@ -57,6 +62,10 @@ export default function AuditoriaPage() {
   // Modal
   const [selectedLog, setSelectedLog] = useState(null);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+
+  // Wave 3 Features
+  const [alerts, setAlerts] = useState([]);
+  const [activeTab, setActiveTab] = useState('logs'); // logs | reports | alerts | comparison | useraudit
 
   // Load audit data
   useEffect(() => {
@@ -180,6 +189,15 @@ export default function AuditoriaPage() {
       channel.unsubscribe();
     };
   }, [clinicId]);
+
+  // Wave 3: Alert Engine
+  useEffect(() => {
+    if (logs.length === 0) return;
+    
+    const generatedAlerts = runAllAlertChecks(logs);
+    setAlerts(generatedAlerts);
+    saveAlertsToStorage(generatedAlerts);
+  }, [logs.length]);
 
   // Pagination
   const totalPages = Math.ceil(filteredLogs.length / ITEMS_PER_PAGE);
@@ -483,6 +501,73 @@ export default function AuditoriaPage() {
           isOpen={detailsModalOpen}
           onOpenChange={setDetailsModalOpen}
         />
+
+        {/* Wave 3 Features Tabs */}
+        <div className="mt-8 space-y-4">
+          <div className="flex gap-2 border-b border-gray-200">
+            <button
+              onClick={() => setActiveTab('logs')}
+              className={`px-4 py-2 font-semibold border-b-2 ${
+                activeTab === 'logs'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              📋 Logs
+            </button>
+            <button
+              onClick={() => setActiveTab('reports')}
+              className={`px-4 py-2 font-semibold border-b-2 ${
+                activeTab === 'reports'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              📊 Relatórios
+            </button>
+            <button
+              onClick={() => setActiveTab('alerts')}
+              className={`px-4 py-2 font-semibold border-b-2 relative ${
+                activeTab === 'alerts'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              🔔 Alertas
+              {alerts.length > 0 && (
+                <span className="absolute top-0 right-2 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                  {alerts.length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('comparison')}
+              className={`px-4 py-2 font-semibold border-b-2 ${
+                activeTab === 'comparison'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              🔄 Comparação
+            </button>
+            <button
+              onClick={() => setActiveTab('useraudit')}
+              className={`px-4 py-2 font-semibold border-b-2 ${
+                activeTab === 'useraudit'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              👥 Usuários
+            </button>
+          </div>
+
+          {/* Tab Content */}
+          {activeTab === 'reports' && <ReportsPanel logs={filteredLogs} />}
+          {activeTab === 'alerts' && <AlertsCenter logs={filteredLogs} onAlertsChange={setAlerts} />}
+          {activeTab === 'comparison' && <ComparisonPanel logs={logs} />}
+          {activeTab === 'useraudit' && <UserAuditPanel />}
+        </div>
 
         {/* Toast Notifications */}
         {toastMessage && (
