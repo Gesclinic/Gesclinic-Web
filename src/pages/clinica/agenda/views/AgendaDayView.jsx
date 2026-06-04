@@ -238,33 +238,6 @@ const renderOccupiedSlot = (
   const statusStyle = getStatusStyle(statusLabel) || { background: '#fef3c7', color: '#854D0E' };
   const statusBgColor = statusStyle.background || '#fef3c7';
   const actionConfig = getAppointmentActionConfig(apt, currentRole);
-  console.log(
-    '🎨 [renderOccupiedSlot] Status:',
-    statusLabel,
-    '| Background:',
-    statusBgColor,
-    '| Full:',
-    statusStyle,
-  );
-
-  // 🔍 DEBUG: Se for agendamento das 8h, mostrar dados
-  if (time && time.includes('08:')) {
-    console.log('🕐 [renderOccupiedSlot] RENDERIZANDO 8h:', {
-      time,
-      patient_name: apt.patient_name,
-      patient_paciente: apt.paciente,
-      patient_patient: apt.patient,
-      phone: apt.patient_phone,
-      service_name: apt.service_name,
-      service_serviço: apt.serviço,
-      service_service: apt.service,
-      payer_name: apt.payer_name,
-      payer_convênio: apt.convênio,
-      professional_name: apt.professional_name,
-      professional_profissional: apt.profissional,
-      professional_professional: apt.professional,
-    });
-  }
 
   return (
     <div
@@ -284,9 +257,9 @@ const renderOccupiedSlot = (
         <div
           className="text-sm font-bold group-hover:font-black transition-all truncate text-center cursor-pointer hover:underline"
           style={{ color: statusStyle.color }}
-          title={apt.patient_name || apt.paciente || apt.patient || '—'}
+          title={apt.patientName || apt.patient_name || apt.paciente || apt.patient || '—'}
         >
-          {getFirstAndLastName(apt.patient_name || apt.paciente || apt.patient || '—')}
+          {getFirstAndLastName(apt.patientName || apt.patient_name || apt.paciente || apt.patient || '—')}
         </div>
       </div>
       <div className="col-span-2 px-3 border-r border-gray-200 flex items-center justify-center min-w-0 w-full">
@@ -308,7 +281,7 @@ const renderOccupiedSlot = (
           className="text-xs text-gray-600 group-hover:text-gray-700 transition-colors truncate"
           style={{ fontSize: '11px' }}
         >
-          {apt.service_name || apt.serviço || apt.service || '—'}
+          {apt.serviceName || apt.service_name || apt.serviço || apt.service || '—'}
         </div>
       </div>
       <div className="col-span-2 px-3 border-r border-gray-200 flex items-center justify-center min-w-0 w-full">
@@ -316,7 +289,7 @@ const renderOccupiedSlot = (
           className="text-xs text-gray-600 group-hover:text-gray-700 transition-colors truncate"
           style={{ fontSize: '11px' }}
         >
-          {apt.payer_name || apt.convênio || apt.healthplan || apt.plano || 'Particular'}
+          {apt.payerName || apt.payer_name || apt.convênio || apt.healthplan || apt.plano || 'Particular'}
         </div>
       </div>
       <div className="col-span-2 px-3 border-r border-gray-200 flex items-center justify-center min-w-0 w-full">
@@ -324,7 +297,7 @@ const renderOccupiedSlot = (
           className="text-xs text-gray-600 group-hover:text-gray-700 transition-colors truncate text-center"
           style={{ fontSize: '11px' }}
         >
-          {apt.professional_name || apt.profissional || apt.professional || '—'}
+          {apt.professionalName || apt.professional_name || apt.profissional || apt.professional || '—'}
         </div>
       </div>
       <div className="col-span-2 px-3 border-r border-gray-200 flex items-center justify-center gap-2 w-full">
@@ -360,11 +333,6 @@ export default function AgendaDayView({
   services = [], // 🆕 Lista de serviços
   payers = [], // 🆕 Lista de convênios
 }) {
-  console.log('🎬 [AgendaDayView] RENDERIZANDO com appointments:', {
-    count: appointments.length,
-    data: appointments,
-  });
-
   // ✅ WRAPPER PARA CONFIRMAR NOVO AGENDAMENTO
   const handleBookSlotWithConfirm = (slotData) => {
     const dateParts = (slotData.date || date).split('-');
@@ -372,12 +340,6 @@ export default function AgendaDayView({
     const formattedDate = `${day}/${month}/${year}`;
     const displayTime = slotData.time || '09:00';
     const professionalName = 'Profissional a definir';
-
-    console.log('📅 [AgendaDayView] handleBookSlotWithConfirm:', {
-      formattedDate,
-      displayTime,
-      slotData,
-    });
 
     const confirmed = window.confirm(
       'Deseja criar novo agendamento?\n\n' +
@@ -392,24 +354,6 @@ export default function AgendaDayView({
     }
   };
 
-  // 🔍 DEBUG: Mostrar específico agendamento das 8h
-  if (appointments.length > 0) {
-    const apt8h = appointments.find((a) => {
-      const time = a.scheduled_time || a.start_time || a.time || '';
-      return time.includes('08:');
-    });
-    if (apt8h) {
-      console.log('🕐 [AgendaDayView] AGENDAMENTO DAS 8H ENCONTRADO:');
-      console.log('   ID:', apt8h.id);
-      console.log('   scheduled_time:', apt8h.scheduled_time);
-      console.log('   patient_name:', apt8h.patient_name);
-      console.log('   professional_name:', apt8h.professional_name);
-      console.log('   service_name:', apt8h.service_name);
-      console.log('   payer_name:', apt8h.payer_name);
-      console.log('   status:', apt8h.status);
-    }
-  }
-
   const [currentTime, setCurrentTime] = useState(new Date());
   const [hoveredRow, setHoveredRow] = useState(null);
   const [contextMenu, setContextMenu] = useState(null);
@@ -423,9 +367,8 @@ export default function AgendaDayView({
   // 🆕 Estado LOCAL para appointments - isso vai ser atualizado via Realtime
   const [localAppointments, setLocalAppointments] = useState([]);
 
-  // 🆕 Quando appointments prop muda, atualizar state local
+  // Quando appointments prop muda, atualizar state local
   useEffect(() => {
-    console.log('📥 [AgendaDayView] Appointments prop recebidas:', appointments?.length);
     setLocalAppointments(appointments || []);
   }, [appointments]);
 
@@ -615,6 +558,7 @@ export default function AgendaDayView({
   // Agrupar por horário e ordenar
   const groupedByTime = useMemo(() => {
     const groups = {};
+    
     localAppointments.forEach((apt) => {
       // CORRIGIDO: Adicionar 'scheduled_time' ao fallback
       const time =
@@ -627,6 +571,7 @@ export default function AgendaDayView({
       }
       groups[normalizedTime].push(apt);
     });
+    
     return groups;
   }, [localAppointments, timeSlots]);
   const sortedTimes = useMemo(() => {
@@ -660,6 +605,8 @@ export default function AgendaDayView({
             availableProfs.push({ id: profId, name: profName });
           }
         });
+
+
 
         // Se há profissionais disponíveis, renderizar uma linha por profissional
         if (availableProfs.length > 0) {
@@ -729,11 +676,11 @@ export default function AgendaDayView({
 
     return {
       ...apt,
-      paciente: apt.paciente || apt.patient_name || apt.patient || '—',
-      serviço: apt.serviço || apt.service_name || apt.service || '—',
-      profissional: apt.profissional || apt.professional_name || apt.professional || '—',
-      sala: apt.sala || apt.room_name || apt.room || '—',
-      convênio: apt.convênio || apt.payer_name || apt.health_plan || apt.plano || 'Particular',
+      paciente: apt.patientName || apt.patient_name || apt.paciente || apt.patient || '—',
+      serviço: apt.serviceName || apt.service_name || apt.serviço || apt.service || '—',
+      profissional: apt.professionalName || apt.professional_name || apt.profissional || apt.professional || '—',
+      sala: apt.roomName || apt.room_name || apt.sala || apt.room || '—',
+      convênio: apt.payerName || apt.payer_name || apt.convênio || apt.health_plan || apt.plano || 'Particular',
       plan_code: apt.plan_code || apt.code || apt.plan_number || '—',
       telefone: apt.telefone || apt.phone || apt.patient_phone || '',
       celular: apt.celular || apt.mobile || apt.patient_mobile || '',
@@ -1027,14 +974,28 @@ export default function AgendaDayView({
               // Com filtro: todos os agendamentos do horário
               appointmentsForLine = groupedByTime[time] || [];
             } else {
-              // Sem filtro: apenas agendamentos do profissional específico neste horário
+              // Sem filtro: agendamentos do profissional específico neste horário
               const allApptsForTime = groupedByTime[time] || [];
-              appointmentsForLine = allApptsForTime.filter(
-                (apt) =>
-                  apt.professional_id === professionalId || apt.professionalId === professionalId,
-              );
+              // FIX: Mostrar TODOS os agendamentos, não filtrar por professionalId
+              // Porque agendamentos já criados devem ser visíveis,
+              // mesmo que o profissional não esteja em "availability" para este horário
+              appointmentsForLine = allApptsForTime;
             }
             const appointmentsForTime = appointmentsForLine;
+
+            // DEBUG: Log para o horário 14:30 com Marcia
+            if (time.includes('14:30')) {
+              console.warn(
+                '%c⏰ [RenderLinesToShow] Horário 14:30',
+                'background: purple; color: white; font-size: 12px;',
+                {
+                  type,
+                  appointmentsForTime_length: appointmentsForTime.length,
+                  appointmentsForTime,
+                  professionalId,
+                }
+              );
+            }
 
             // Se não tem agendamento, mostrar hora livre (ou bloqueado se feriado)
             if (appointmentsForTime.length === 0) {
@@ -1190,8 +1151,8 @@ export default function AgendaDayView({
             }
 
             return appointmentsForTime.map((apt, idx) => {
-              // CORRIGIDO: Verificar se tem paciente usando todos os possíveis nomes de campo
-              const isOccupied = apt.paciente || apt.patient || apt.patient_name;
+              // Verificar se tem paciente usando todos os possíveis nomes de campo
+              const isOccupied = apt.patientName || apt.patient_name || apt.paciente || apt.patient;
               const status = apt.status || 'disponivel';
               const statusLabel = apt.status || 'confirmado';
               const isCurrentTime = time === currentTimeStr;
@@ -1199,17 +1160,6 @@ export default function AgendaDayView({
               const statusColor = getStatusBgColor(statusLabel);
               const rowId = `${lineInfo.key}-${idx}`;
               const isHovered = hoveredRow === rowId;
-
-              // 🔍 DEBUG: Verificar que apt tem um ID válido
-              console.log('🔍 [AgendaDayView] apt objeto no loop:', {
-                temId: !!apt.id,
-                aptId: apt.id,
-                appointmentId: apt.appointment_id,
-                aptStatus: apt.status,
-                statusLabel: statusLabel,
-                temPaciente: !!isOccupied,
-                pacienteName: apt.paciente || apt.patient_name || 'SEM NOME',
-              });
 
               // 🆕 Verificar disponibilidade do profissional para este horário
               // Se há filtro de profissional ativo, usar APENAS aquele profissional
@@ -1287,7 +1237,16 @@ export default function AgendaDayView({
                     onClick={(e) => {
                       console.log('🖱️ [AgendaDayView] CLIQUE SIMPLES na célula!');
                       console.log('   apt.id:', apt?.id);
-                      handleContextMenu(e, apt);
+                      console.log('   onEditAppointment type:', typeof onEditAppointment);
+                      if (typeof onEditAppointment === 'function') {
+                        onEditAppointment(apt.id);
+                      } else {
+                        console.error(
+                          '❌ onEditAppointment NÃO É UMA FUNÇÃO!',
+                          typeof onEditAppointment,
+                        );
+                        handleContextMenu(e, apt);
+                      }
                     }}
                     onDoubleClick={() => {
                       console.log('🖱️ [AgendaDayView] DUPLO CLIQUE na célula!');
