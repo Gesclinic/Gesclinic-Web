@@ -44,7 +44,8 @@ import {
 import PaymentMethodFields from './PaymentMethodFields';
 import PaymentSplitFields from './PaymentSplitFields';
 import PatientSearchOrCreate from './PatientSearchOrCreate';
-import ServiceListItem from './ServiceListItem';
+import ServiceAddRow from './ServiceAddRow';
+import AppointmentItemsManager from './AppointmentItemsManager';
 import PhotoCapture from '@/components/PhotoCapture';
 import { TISSSubmissionDialog } from '@/components/TISSSubmissionDialog';
 import InvoiceEmissionModal from './InvoiceEmissionModal';
@@ -280,6 +281,16 @@ export default function AppointmentUnitedModal({
 }) {
   const { clinicId } = useClinicContext();
   const { user } = useAuth();
+  
+  // 🔍 DEBUG: Log de props ao inicializar ou mudar
+  console.log('📥 [AppointmentUnitedModal] PROPS RECEBIDAS:', {
+    isOpen,
+    mode,
+    appointmentIdToEdit,
+    'appointment?.id': appointment?.id,
+    'appointment.type': appointment?.type,
+  });
+
   const [tabAtivo, setTabAtivo] = useState('dados');
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -307,6 +318,13 @@ export default function AppointmentUnitedModal({
       'isOpen?',
       isOpen,
     );
+    
+    // 🔥 Guard: Se é novo agendamento, NÃO tentar carregar
+    if (!appointmentIdToEdit) {
+      console.log('✅ [AppointmentUnitedModal] NOVO AGENDAMENTO - Não carregando via appointmentIdToEdit');
+      return;
+    }
+    
     if (appointmentIdToEdit && !appointment && isOpen) {
       console.log(
         '📥 [AppointmentUnitedModal] Carregando agendamento via appointmentIdToEdit:',
@@ -420,6 +438,7 @@ export default function AppointmentUnitedModal({
 
   // Dados de Agendamento
   const [agendamentoData, setAgendamentoData] = useState({
+    id: null, // ✨ NOVO: ID do agendamento para AppointmentItemsManager
     date: '',
     time: '',
     endTime: '',
@@ -494,6 +513,14 @@ export default function AppointmentUnitedModal({
 
     filterPayersForProfessional();
   }, [agendamentoData.professionalId, payers, clinicId]);
+
+  // ✨ NOVO: Sincronizar ID do agendamento em modo EDIT
+  useEffect(() => {
+    if (isOpen && mode === 'edit' && finalAppointment && finalAppointment.id && agendamentoData.id !== finalAppointment.id) {
+      console.log('✨ [Sincronização] Atualizando agendamentoData.id para:', finalAppointment.id);
+      setAgendamentoData((prev) => ({ ...prev, id: finalAppointment.id }));
+    }
+  }, [isOpen, mode, finalAppointment?.id]);
 
   // 🔴 CORREÇÃO EDIT MODE: Em modo EDIT, garantir que payer atual é exibível no select
   useEffect(() => {
@@ -1391,11 +1418,12 @@ export default function AppointmentUnitedModal({
     setAgendamentoData((prev) => {
       const updated = {
         ...prev,
+        id: finalAppointment.id || null, // ✨ NOVO: Propagar ID para AppointmentItemsManager
         date: finalAppointment.scheduled_date || '',
         time: finalAppointment.scheduled_time || '',
         patientId: finalAppointment.patient_id || null,
-        patientName: finalAppointment.patient?.name || '',
-        phone: finalAppointment.patient?.cell_phone || '',
+        patientName: finalAppointment.patient?.name || finalAppointment.patients?.name || '',
+        phone: finalAppointment.patient?.cell_phone || finalAppointment.patients?.cell_phone || finalAppointment.patients?.phone || '',
         professionalId: finalAppointment.professional_id || '',
         serviceId: finalAppointment.service_id || '',
         payerId: finalAppointment.payer_id || '',
@@ -1408,6 +1436,57 @@ export default function AppointmentUnitedModal({
       return updated;
     });
   }, [isOpen, mode, finalAppointment?.id, appointmentServices.length]);
+
+  // 🔧 ETAPA 4.6: AUTO-SELECT: Preencher selectedPatient em modo EDIT
+  // Garante que o paciente é selecionado automaticamente quando o modal abre em modo EDIT
+  useEffect(() => {
+    if (!isOpen || mode !== 'edit' || !finalAppointment) {
+      console.log('❌ [AUTO-SELECT PATIENT] Condições não atendidas:', {
+        isOpen,
+        mode,
+        hasFinalAppointment: !!finalAppointment,
+      });
+      return;
+    }
+
+    if (!finalAppointment.patient_id) {
+      console.log('⚠️ [AUTO-SELECT PATIENT] Sem patient_id, não preenchendo selectedPatient');
+      setSelectedPatient(null);
+      return;
+    }
+
+    console.log('🔧 [AUTO-SELECT PATIENT] Preenchendo selectedPatient em modo EDIT');
+    console.log('   patient_id:', finalAppointment.patient_id);
+    console.log('   finalAppointment.patients:', finalAppointment.patients);
+    console.log('   finalAppointment.patient:', finalAppointment.patient);
+
+    // Construir objeto de paciente a partir de finalAppointment
+    const patientData = {
+      patientId: finalAppointment.patient_id,
+      name: finalAppointment.patients?.name || finalAppointment.patient?.name || '',
+      patientName: finalAppointment.patients?.name || finalAppointment.patient?.name || '',
+      phone: finalAppointment.patients?.phone || finalAppointment.patient?.phone || '',
+      cell_phone: finalAppointment.patients?.cell_phone || finalAppointment.patient?.cell_phone || '',
+      document_id: finalAppointment.patients?.document_id || finalAppointment.patient?.document_id || '',
+      birthdate: finalAppointment.patients?.birthdate || finalAppointment.patient?.birthdate || '',
+      gender: finalAppointment.patients?.gender || finalAppointment.patient?.gender || '',
+      email: finalAppointment.patients?.email || finalAppointment.patient?.email || '',
+      street: finalAppointment.patients?.street || finalAppointment.patient?.street || '',
+      number: finalAppointment.patients?.number || finalAppointment.patient?.number || '',
+      neighborhood: finalAppointment.patients?.neighborhood || finalAppointment.patient?.neighborhood || '',
+      city: finalAppointment.patients?.city || finalAppointment.patient?.city || '',
+      state: finalAppointment.patients?.state || finalAppointment.patient?.state || '',
+      zip_code: finalAppointment.patients?.zip_code || finalAppointment.patient?.zip_code || '',
+    };
+
+    console.log('✅ [AUTO-SELECT PATIENT] selectedPatient construído:', {
+      patientId: patientData.patientId,
+      name: patientData.name,
+      phone: patientData.phone,
+    });
+
+    setSelectedPatient(patientData);
+  }, [isOpen, mode, finalAppointment?.patient_id, finalAppointment?.patients, finalAppointment?.patient]);
 
   // �💰 AUTO-FETCH: Buscar valor quando profissional, serviço ou convênio mudar
   // OU quando o valor está vazio/zero (apenas quando há service)
@@ -2138,7 +2217,7 @@ export default function AppointmentUnitedModal({
     // ⏰ PHASE 3: VALIDAÇÃO DE AGENDAMENTO
     if (agendamentoData.professionalId && agendamentoData.date && agendamentoData.time) {
       const validationResult = await validateAppointmentBeforeSave(
-        clinic.id,
+        clinicId,
         {
           professionalId: agendamentoData.professionalId,
           roomId: agendamentoData.roomId,
@@ -2932,6 +3011,18 @@ export default function AppointmentUnitedModal({
 
       console.log('✅ Agendamento processado com sucesso! Chamando callbacks...');
 
+      // ✨ NOVO: Sincronizar ID do agendamento ao estado antes de fechar
+      if (appointmentId && agendamentoData.id !== appointmentId) {
+        console.log('✨ [Sincronização] Atualizando agendamentoData.id para:', appointmentId);
+        setAgendamentoData((prev) => ({ ...prev, id: appointmentId }));
+        
+        // 💾 AGUARDAR MAIS TEMPO PARA PERMITIR QUE APPOINTMENTITEMSMANAGER PERSISTA OS ITENS
+        // Aumentado de 500ms para 3s para garantir que useEffect dispare e complete
+        console.log('⏳ Aguardando 3 segundos para persistência de items...');
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        console.log('✅ Tempo de espera concluído, prosseguindo com callbacks...');
+      }
+
       // 🎉 SUCESSO: Chamar callbacks e fechar
       if (mode === 'edit' || mode === 'new') {
         console.log('📌 Chamando onSuccess...');
@@ -3043,15 +3134,13 @@ export default function AppointmentUnitedModal({
                   </>
                 )}
 
-                {isParticular && (
-                  <button
-                    type="button"
-                    onClick={() => setTabAtivo('pagamento')}
-                    className={tabClass('pagamento')}
-                  >
-                    💳 Pagamento
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setTabAtivo('pagamento')}
+                  className={tabClass('pagamento')}
+                >
+                  💳 Pagamento
+                </button>
 
                 <button
                   type="button"
@@ -3160,9 +3249,29 @@ export default function AppointmentUnitedModal({
                       <div>
                         <Label>📅 Data *</Label>
                         <Input
-                          type="date"
-                          value={agendamentoData.date}
-                          onChange={(e) => updateAgendamentoField('date', e.target.value)}
+                          type="text"
+                          placeholder="DD/MM/YYYY"
+                          value={
+                            agendamentoData.date
+                              ? formatDateToIso(parseLocalDate(agendamentoData.date))
+                                  .split('-')
+                                  .reverse()
+                                  .join('/')
+                              : ''
+                          }
+                          onChange={(e) => {
+                            const input = e.target.value;
+                            // Converter DD/MM/YYYY para ISO YYYY-MM-DD
+                            if (input.includes('/')) {
+                              const [day, month, year] = input.split('/');
+                              if (day && month && year && day.length === 2 && month.length === 2 && year.length === 4) {
+                                const isoDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                                updateAgendamentoField('date', isoDate);
+                              }
+                            } else if (input.length === 0) {
+                              updateAgendamentoField('date', '');
+                            }
+                          }}
                         />
                         {agendamentoData.date && selectedDateBlockedByHoliday && (
                           <p className="mt-2 text-xs text-red-700">
@@ -3584,178 +3693,6 @@ export default function AppointmentUnitedModal({
                         )}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>💊 Serviço *</Label>
-                        <Select
-                          value={agendamentoData.serviceId || ''}
-                          onValueChange={(value) => {
-                            console.log('💊 [Select] Serviço selecionado:', value);
-                            const selectedService = services.find((s) => s.id === value);
-                            console.log('💊 [DEBUG] Service found:', selectedService);
-                            console.log(
-                              '💊 [DEBUG] Service keys:',
-                              selectedService ? Object.keys(selectedService) : 'null',
-                            );
-                            console.log('💊 [DEBUG] Service code value:', selectedService?.code);
-                            updateAgendamentoField('serviceId', value);
-                            setFormData((prev) => ({ ...prev, service_id: value }));
-                            // ✅ Tenta: code, codigo, service_code, ou id como fallback
-                            const serviceCode =
-                              selectedService?.code ||
-                              selectedService?.codigo ||
-                              selectedService?.service_code ||
-                              selectedService?.id ||
-                              '';
-                            console.log('💊 [DEBUG] Final serviceCode:', serviceCode);
-                            updateAgendamentoField('serviceCode', serviceCode);
-                          }}
-                        >
-                          <SelectTrigger>
-                            {agendamentoData.serviceId &&
-                            services.find((s) => s.id === agendamentoData.serviceId) ? (
-                              <span>
-                                {services.find((s) => s.id === agendamentoData.serviceId)?.name}
-                              </span>
-                            ) : (
-                              <SelectValue placeholder="Selecione serviço" />
-                            )}
-                          </SelectTrigger>
-                          <SelectContent>
-                            {services.map((service) => (
-                              <SelectItem key={service.id} value={service.id}>
-                                {service.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>📋 Código do Serviço</Label>
-                        <Input
-                          type="text"
-                          value={agendamentoData.serviceCode || ''}
-                          disabled
-                          className="bg-gray-50"
-                          placeholder="Auto-preenchido"
-                        />
-                      </div>
-                    </div>
-
-                    {/* 📋 MÚLTIPLOS SERVIÇOS - SEÇÃO DESTAQUE */}
-                    <div
-                      style={{
-                        marginTop: 20,
-                        padding: 16,
-                        border: '2px solid #1976d2',
-                        borderRadius: 6,
-                        background: '#e3f2fd',
-                      }}
-                    >
-                      <ServiceListItem
-                        services={services}
-                        appointmentServices={appointmentServices}
-                        onServicesChange={(updatedServices) => {
-                          console.log('📢 [AppointmentUnitedModal.onServicesChange] Recebido:', {
-                            updatedServices_length: updatedServices?.length || 0,
-                            updatedServices:
-                              updatedServices?.map((s) => ({
-                                id: s.id,
-                                service_id: s.service_id,
-                                service_name: s.service_name,
-                                value: s.value,
-                                quantity: s.quantity,
-                              })) || [],
-                          });
-
-                          setAppointmentServices(updatedServices);
-                          console.log(
-                            '📢 [AppointmentUnitedModal.onServicesChange] State atualizado',
-                          );
-
-                          // 💰 Sincronizar valor total com o agendamento
-                          const totalValue = updatedServices.reduce((sum, item) => {
-                            const value = parseFloat(item.value || 0);
-                            const discount = parseFloat(item.discount || 0);
-                            const qty = parseInt(item.quantity || 1);
-                            return sum + (value * qty - discount * qty);
-                          }, 0);
-                          console.log(
-                            '💰 [AppointmentUnitedModal] Valor total dos serviços:',
-                            totalValue,
-                          );
-                          updateAgendamentoField('value', totalValue.toString());
-                        }}
-                        onError={(err) => console.error(err)}
-                        professionalId={agendamentoData.professionalId}
-                        payerId={agendamentoData.payerId}
-                        clinicId={clinicId}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>🏥 Convênio</Label>
-                        {(() => {
-                          console.log('🏥 [RENDER Select Convênio]', {
-                            payerId: agendamentoData.payerId,
-                            type: typeof agendamentoData.payerId,
-                            isEmpty: !agendamentoData.payerId,
-                            filteredPayersCount: filteredPayers?.length,
-                            selectedPayer: filteredPayers?.find(
-                              (p) => p.id === agendamentoData.payerId,
-                            ),
-                            allFilteredPayers: filteredPayers?.map((p) => ({
-                              id: p.id,
-                              name: p.name,
-                            })),
-                          });
-                          return null;
-                        })()}
-                        <Select
-                          value={agendamentoData.payerId || ''}
-                          onValueChange={(value) => {
-                            console.log('Convênio selecionado:', value);
-                            updateAgendamentoField('payerId', value);
-                            setFormData((prev) => ({ ...prev, payer_id: value }));
-                          }}
-                        >
-                          <SelectTrigger>
-                            {agendamentoData.payerId ? (
-                              <span>{getPayerName(agendamentoData.payerId) || 'Selecione um convênio'}</span>
-                            ) : (
-                              <SelectValue placeholder="Selecione um convênio" />
-                            )}
-                          </SelectTrigger>
-                          <SelectContent>
-                            {filteredPayers.length === 0 ? (
-                              <div className="px-2 py-1.5 text-sm text-gray-500">
-                                {agendamentoData.professionalId
-                                  ? 'Sem convênios vinculados'
-                                  : 'Selecione um profissional'}
-                              </div>
-                            ) : (
-                              filteredPayers.map((payer) => (
-                                <SelectItem key={payer.id} value={payer.id}>
-                                  {payer.name}
-                                </SelectItem>
-                              ))
-                            )}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label>💰 Valor (R$)</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={agendamentoData.value}
-                          onChange={(e) => updateAgendamentoField('value', e.target.value)}
-                        />
-                      </div>
-                    </div>
-
                     <div>
                       <Label>🔹 Status *</Label>
                       <Select
@@ -3787,6 +3724,34 @@ export default function AppointmentUnitedModal({
                         placeholder="Observações importantes..."
                         value={agendamentoData.notes}
                         onChange={(e) => updateAgendamentoField('notes', e.target.value)}
+                      />
+                    </div>
+
+                    {/* 📋 MÚLTIPLOS SERVIÇOS - Adicionado na aba DADOS */}
+                    <div className="border-t border-gray-200 pt-4 mt-4">
+                      <div className="bg-blue-50 border border-blue-300 rounded-lg p-3 mb-4">
+                        <p className="text-sm font-semibold text-blue-900">📋 Serviços do Agendamento</p>
+                      </div>
+                      <AppointmentItemsManager
+                        appointmentId={mode === 'edit' && finalAppointment?.id ? finalAppointment.id : agendamentoData.id || null}
+                        services={services}
+                        payers={payers}
+                        clinicId={clinicId}
+                        professionalId={agendamentoData.professionalId}
+                        payerId={agendamentoData.payerId}
+                        payerName={payers?.find((p) => p.id === agendamentoData.payerId)?.name}
+                        onItemsChange={(updatedServices) => {
+                          console.log('📢 [AppointmentUnitedModal.onItemsChange] Recebido:', {
+                            updatedServices_length: updatedServices?.length || 0,
+                          });
+                          setAppointmentServices(updatedServices);
+                        }}
+                        onTotalsUpdate={(totals) => {
+                          console.log('💰 [AppointmentUnitedModal] Totais atualizados:', totals);
+                          if (totals?.grand_total) {
+                            updateAgendamentoField('value', totals.grand_total.toString());
+                          }
+                        }}
                       />
                     </div>
                   </div>
@@ -5202,6 +5167,15 @@ export default function AppointmentUnitedModal({
                         {loading ? '⏳ Criando atendimento...' : '🎬 Criar Atendimento'}
                       </Button>
                     )}
+                  </div>
+                )}
+
+                {/* ABA: PAGAMENTO */}
+                {tabAtivo === 'pagamento' && (
+                  <div className="space-y-4 overflow-y-auto max-h-[600px]">
+                    <div className="bg-blue-50 border border-blue-300 rounded-lg p-3 mb-4">
+                      <p className="text-sm font-semibold text-blue-900">💳 Informações de Pagamento</p>
+                    </div>
                   </div>
                 )}
 
