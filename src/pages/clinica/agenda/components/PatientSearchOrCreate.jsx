@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,25 +26,30 @@ export default function PatientSearchOrCreate({
   const { clinic } = useClinicContext();
   const cId = clinicId || clinic?.id;
 
+  console.warn('🔍 [PatientSearchOrCreate] Rendered with cId:', cId, 'clinicId prop:', clinicId, 'clinic?.id:', clinic?.id);
+
   const [mode, setMode] = useState('search'); // 'search' | 'new' | 'selected'
   const [searchTerm, setSearchTerm] = useState(initialPhone || '');
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
-  const [debounceTimer, setDebounceTimer] = useState(null);
+  const debounceTimerRef = useRef(null);  // ✅ MUDADO: useState → useRef para evitar closure problems
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
   const containerRef = useRef(null);
 
   // 🔍 Buscar pacientes (com debounce)
   const handleSearchChange = async (value) => {
+    console.log('🔍 [SEARCH] handleSearchChange called with:', value, 'cId:', cId);
     setSearchTerm(value);
 
     // Limpar timeout anterior
-    if (debounceTimer) {
-      clearTimeout(debounceTimer);
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
     }
 
     // Se vazio, não buscar
     if (!value.trim()) {
+      console.log('🔍 [SEARCH] Empty value, clearing results');
       setSearchResults([]);
       setShowResults(false);
       return;
@@ -51,36 +57,41 @@ export default function PatientSearchOrCreate({
 
     // Se muito curto, não buscar
     if (value.trim().length < 2) {
+      console.log('🔍 [SEARCH] Value too short (<2), clearing results');
       setSearchResults([]);
       setShowResults(false);
       return;
     }
 
+    console.log('🔍 [SEARCH] Setting loading true, starting debounce...');
     setLoading(true);
 
     // Debounce 500ms
     const timer = setTimeout(async () => {
+      console.log('🔍 [SEARCH] Debounce fired, cId:', cId);
       if (!cId) {
-        console.error('❌ Sem clinic_id para buscar pacientes');
+        console.error('❌ [SEARCH] Sem clinic_id para buscar pacientes');
         setLoading(false);
         return;
       }
 
       try {
         // ✅ Usar a API com 'q' para filtros server-side
+        console.log('🔍 [SEARCH] Calling listPatients with query:', value.trim(), 'cId:', cId);
         const patients = await listPatients(cId, { q: value.trim() });
-        console.log('✅ Pacientes retornados:', patients);
+        console.log('✅ [SEARCH] Pacientes retornados:', patients, 'count:', patients?.length || 0);
+        console.warn('🔍 [SEARCH] Setting showResults=true, searchResults:', patients);
         setSearchResults(patients || []);
         setShowResults(true);
         setLoading(false);
       } catch (error) {
-        console.error('❌ Erro ao buscar pacientes:', error);
+        console.error('❌ [SEARCH] Erro ao buscar pacientes:', error.message, error.stack);
         setSearchResults([]);
         setLoading(false);
       }
     }, 500);
 
-    setDebounceTimer(timer);
+    debounceTimerRef.current = timer;  // ✅ MUDADO: setDebounceTimer → useRef.current
   };
 
   // Fechar dropdown ao clicar fora
@@ -95,9 +106,23 @@ export default function PatientSearchOrCreate({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // ✅ ATUALIZAR POSIÇÃO DO DROPDOWN
+  useEffect(() => {
+    if (showResults && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setDropdownPos({
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX,
+        width: rect.width,
+      });
+    }
+  }, [showResults, searchResults]);
+
   // ✅ Determinar modo baseado em selectedPatient
   useEffect(() => {
+    console.log('🔍 [PatientSearchOrCreate] useEffect selectedPatient:', selectedPatient);
     if (selectedPatient) {
+      console.log('✅ [PatientSearchOrCreate] Mudando para modo SELECTED');
       setMode('selected');
     }
   }, [selectedPatient]);
@@ -187,29 +212,8 @@ export default function PatientSearchOrCreate({
             <p className="text-xs text-gray-500 mt-1">Digite nome, telefone ou CPF</p>
           </div>
 
-          {/* 📍 AUTOCOMPLETE COM DROPDOWN ACIMA */}
+          {/* 📍 AUTOCOMPLETE COM DROPDOWN */}
           <div className="relative" ref={containerRef}>
-            {/* Dropdown acima do input */}
-            {showResults && searchResults.length > 0 && (
-              <div className="absolute bottom-full left-0 right-0 mb-2 max-h-48 overflow-y-auto border rounded bg-white shadow-lg z-50">
-                {searchResults.map((patient) => (
-                  <button
-                    key={patient.id}
-                    onClick={() => {
-                      handleSelectPatient(patient);
-                      setShowResults(false);
-                    }}
-                    className="w-full text-left p-3 hover:bg-blue-50 border-b last:border-b-0 transition"
-                  >
-                    <div className="font-semibold text-sm">{patient.name}</div>
-                    <div className="text-xs text-gray-600">
-                      {patient.phone} • {patient.document_id}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-
             {/* Input de busca */}
             <Input
               placeholder="Nome, telefone ou CPF..."
@@ -228,6 +232,48 @@ export default function PatientSearchOrCreate({
               </div>
             )}
           </div>
+
+          {/* ✅ DROPDOWN COM PORTAL - Renderiza fora da modal */}
+          {showResults && searchResults.length > 0 &&
+            createPortal(
+              <div
+                style={{
+                  position: 'fixed',
+                  top: `${dropdownPos.top}px`,
+                  left: `${dropdownPos.left}px`,
+                  width: `${dropdownPos.width}px`,
+                  minWidth: '300px',
+                  maxWidth: '100vw',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)',
+                  zIndex: 999999,
+                  pointerEvents: 'auto',
+                  opacity: 1,
+                }}
+              >
+                <div className="max-h-48 overflow-y-auto">
+                  {searchResults.map((patient) => (
+                    <button
+                      key={patient.id}
+                      type="button"
+                      onClick={() => {
+                        handleSelectPatient(patient);
+                        setShowResults(false);
+                      }}
+                      className="w-full text-left p-3 hover:bg-blue-50 border-b last:border-b-0 transition"
+                    >
+                      <div className="font-semibold text-sm">{patient.name}</div>
+                      <div className="text-xs text-gray-600">
+                        {patient.phone} • {patient.document_id}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>,
+              document.body
+            )}
 
           {/* Mensagem quando nenhum resultado */}
           {showResults && searchResults.length === 0 && searchTerm.length >= 2 && !loading && (

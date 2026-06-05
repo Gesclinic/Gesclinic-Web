@@ -19,6 +19,7 @@ export async function listPatients(clinicId, filters = {}) {
     return [];
   }
 
+  // ✅ Construir query base
   let query = supabase
     .from('patients')
     .select(
@@ -42,34 +43,54 @@ export async function listPatients(clinicId, filters = {}) {
       photo_url
     `,
     )
-    .eq('clinic_id', clinicId)
-    .order('name', { ascending: true })
-    .limit(40);
+    .eq('clinic_id', clinicId);
 
-  /**
-   * 🔎 Filtro de busca por nome/CPF
-   */
+  // ✅ APLICAR FILTRO DE BUSCA (com debugging)
   if (filters.q && filters.q.trim().length >= 2) {
-    const term = filters.q.trim();
-    query = query.or(`name.ilike.%${term}%,document_id.ilike.%${term}%`);
+    const searchTerm = filters.q.trim();
+    console.log('🔍 Aplicando filtro de busca:', searchTerm);
+    console.log('🔍 Usando .or() com termo:', `name.ilike.%${searchTerm}%,document_id.ilike.%${searchTerm}%`);
+    
+    // Usar OR para buscar em nome OU documento
+    const orCondition = `name.ilike.%${searchTerm}%,document_id.ilike.%${searchTerm}%`;
+    console.log('🔍 Condicao OR:', orCondition);
+    query = query.or(orCondition);
+    console.log('🔍 Query modificada com .or()');
   }
 
-  /**
-   * 🟣 Filtro por gênero
-   */
+  // ✅ FILTRO POR GÊNERO (se especificado)
   if (filters.gender && filters.gender !== 'Todos') {
     query = query.eq('gender', filters.gender);
   }
 
-  const { data, error } = await query;
+  // ✅ ORDENAR E LIMITAR
+  query = query.order('name', { ascending: true }).limit(40);
 
-  if (error) {
-    console.error('❌ Erro ao buscar pacientes:', error);
+  console.log('🔍 Executando query...');
+  console.log('🔍 Query object tipo:', typeof query);
+  
+  try {
+    const result = await query;
+    console.log('✅ Query retornou (await concluído)');
+    const { data, error } = result;
+    console.log('✅ Desestruturando: data=', data?.length || 0, ', error=', error);
+
+    if (error) {
+      console.error('❌ Erro ao buscar pacientes:', error);
+      console.error('❌ Erro completo:', JSON.stringify(error));
+      return [];
+    }
+
+    console.log('✅ Query retornou:', data?.length || 0, 'pacientes');
+    // Garantir ID válido
+    const filtered = (data || []).filter((p) => uuidRegex.test(p.id));
+    console.log('✅ Após filtro de UUID:', filtered.length, 'pacientes');
+    return filtered;
+  } catch (err) {
+    console.error('❌ CATCH error:', err.message);
+    console.error('❌ CATCH error stack:', err.stack);
     return [];
   }
-
-  // Garantir ID válido
-  return (data || []).filter((p) => uuidRegex.test(p.id));
 }
 
 /**
