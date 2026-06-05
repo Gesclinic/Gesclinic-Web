@@ -20,6 +20,7 @@ import AgendaHeaderNew from './AgendaHeaderNew';
 import AgendaToolbarNew from './AgendaToolbarNew';
 import AgendaFiltersNew from './AgendaFiltersNew';
 import ModalCriarAgendamento from './ModalCriarAgendamento';
+import AtendimentoUnificado from './AtendimentoUnificado';
 
 // Views
 import AgendaDayView from '../views/AgendaDayView';
@@ -342,6 +343,10 @@ export default function AgendaIndex() {
   const [novoAgendamentoInfo, setNovoAgendamentoInfo] = useState(null);
   const [appointmentIdToEdit, setAppointmentIdToEdit] = useState(null);
 
+  // 🧪 UNIFIED MODE MODAL
+  const [atendimentoUnificadoOpen, setAtendimentoUnificadoOpen] = useState(false);
+  const [selectedAppointmentForUnified, setSelectedAppointmentForUnified] = useState(null);
+
   // 🚩 Flag para rastrear se o modal foi fechado intencionalmente pelo usuário
   // Evita que o useEffect reabra a modal após o usuário clicar no X
   const hasModalBeenClosedRef = React.useRef(false);
@@ -415,12 +420,17 @@ export default function AgendaIndex() {
   // ============ FUNÇÃO PARA RECARREGAR APPOINTMENTS ============
   // ✅ Extraída em função separada para poder ser reutilizada no onCreated
   const loadAppointments = useCallback(async () => {
+    console.log(
+      '%c 🚀 [AgendaIndex] loadAppointments INICIANDO!',
+      'background: #ff0000; color: white; font-size: 14px; font-weight: bold;'
+    );
     console.log(' [loadAppointments] INICIANDO', { viewMode, clinicId });
 
     if (!clinicId) {
       console.error(' [loadAppointments] CRÍTICO: clinicId é', clinicId, '- não posso continuar!');
       console.error(' [loadAppointments] loadingClinic:', loadingClinic);
       console.error(' [loadAppointments] clinic:', clinic);
+      setLoading(false);  // 🔧 FIX: Ensure loading is always false when returning early
       return;
     }
 
@@ -491,26 +501,34 @@ export default function AgendaIndex() {
       // ✅ CHAMAR API REAL
       console.log(' [loadAppointments] Chamando APIs com clinicId:', clinicId);
 
-      const [appts, profs, svcs, pays] = await Promise.all([
-        listAppointments({
-          clinicId,
-          start: startUTC.toISOString(),
-          end: endUTC.toISOString(),
-          userRole: currentRole,
-          userProfessionalId: userProfessionalId,
-        }),
-        listProfessionals(clinicId).catch((err) => {
-          console.error('❌ Erro em listProfessionals:', err);
-          return [];
-        }),
-        listServices(clinicId).catch((err) => {
-          console.error('❌ Erro em listServices:', err);
-          return [];
-        }),
-        listPayers(clinicId).catch((err) => {
-          console.error('❌ Erro em listPayers:', err);
-          return [];
-        }),
+      // 🔧 FIX: Add timeout to prevent Promise.all from hanging indefinitely
+      const apiTimeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('API timeout - taking too long to load')), 60000)
+      );
+
+      const [appts, profs, svcs, pays] = await Promise.race([
+        Promise.all([
+          listAppointments({
+            clinicId,
+            start: startUTC.toISOString(),
+            end: endUTC.toISOString(),
+            userRole: currentRole,
+            userProfessionalId: userProfessionalId,
+          }),
+          listProfessionals(clinicId).catch((err) => {
+            console.error('❌ Erro em listProfessionals:', err);
+            return [];
+          }),
+          listServices(clinicId).catch((err) => {
+            console.error('❌ Erro em listServices:', err);
+            return [];
+          }),
+          listPayers(clinicId).catch((err) => {
+            console.error('❌ Erro em listPayers:', err);
+            return [];
+          }),
+        ]),
+        apiTimeout,
       ]);
 
       console.log('� [loadAppointments] Dados recebidos da API:', {
@@ -762,13 +780,32 @@ export default function AgendaIndex() {
   }, []);
 
   const handleNewAppointment = useCallback(async () => {
-    console.log(' Verificar se data é feriado bloqueado:', date);
+    console.log('🔵 [TRACE] handleNewAppointment called - date:', date);
+    console.log('🔵 [TRACE] date state:', date);
+    console.log('🔵 [TRACE] viewMode state:', viewMode);
+    console.log('🔵 [TRACE] clinic state:', clinic);
 
     try {
       // Verificar se a data é um feriado bloqueado
       const clinicId = clinic?.id || null;
-      const result = await checkMultipleDates([date], clinicId);
+      console.log('🔵 [TRACE] clinicId extracted:', clinicId);
+      
+      // 🔧 FIX: Add timeout to prevent infinite hanging
+      let result;
+      try {
+        console.log('🔵 [TRACE] About to call checkMultipleDates...');
+        result = await Promise.race([
+          checkMultipleDates([date], clinicId),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout checking holidays')), 3000))
+        ]);
+        console.log('🔵 [TRACE] checkMultipleDates result:', result);
+      } catch (timeoutError) {
+        console.warn('⚠️ Timeout ao verificar feriados, abrindo modal mesmo assim');
+        result = {};
+      }
+      
       const holiday = result[date];
+      console.log('🔵 [TRACE] holiday for date:', holiday);
 
       if (holiday && holiday.is_blocked && !holiday.has_override) {
         // Feriado bloqueado - não permitir agendamento
@@ -784,14 +821,16 @@ export default function AgendaIndex() {
       }
 
       // Permitir agendamento
-      console.log('✅ Abrindo modal de novo agendamento para:', date);
+      console.log('🔵 [TRACE] About to set modal state to true');
       setNovoAgendamentoInfo({
         date: date,
         viewMode: viewMode,
       });
       // 🔧 FIX: Zerar appointmentIdToEdit para garantir que abre em modo 'new'
       setAppointmentIdToEdit(null);
+      console.log('🔵 [TRACE] Calling setModalNovoOpen(true)...');
       setModalNovoOpen(true);
+      console.log('✅ Abrindo modal de novo agendamento para:', date);
     } catch (error) {
       console.error('❌ Erro ao verificar feriado:', error);
       // Em caso de erro, permitir agendamento mesmo assim
@@ -939,6 +978,21 @@ export default function AgendaIndex() {
       setWhatsappLoading(false);
     }
   }, [clinicId]);
+
+  // 🧪 UNIFIED MODE HANDLERS
+  const handleOpenAtendimentoUnificado = useCallback((appointment) => {
+    console.log('🧪 Abrindo AtendimentoUnificado com appointment:', appointment.id);
+    setSelectedAppointmentForUnified(appointment);
+    setAtendimentoUnificadoOpen(true);
+  }, []);
+
+  const handleCloseAtendimentoUnificado = useCallback(() => {
+    console.log('🧪 Fechando AtendimentoUnificado');
+    setAtendimentoUnificadoOpen(false);
+    setSelectedAppointmentForUnified(null);
+    // Recarregar appointments após fechar
+    loadAppointments();
+  }, [loadAppointments]);
 
   // ============ RENDER ============
 
@@ -1379,6 +1433,18 @@ export default function AgendaIndex() {
           await loadAppointments();
         }}
       />
+
+      {/* 🧪 UNIFIED MODE MODAL */}
+      {selectedAppointmentForUnified && atendimentoUnificadoOpen && (
+        <React.Suspense fallback={<div>Carregando...</div>}>
+          <AtendimentoUnificado
+            isOpen={atendimentoUnificadoOpen}
+            onClose={handleCloseAtendimentoUnificado}
+            appointment={selectedAppointmentForUnified}
+            onSaved={handleCloseAtendimentoUnificado}
+          />
+        </React.Suspense>
+      )}
 
       {/* DRAWER DE DETALHES DO AGENDAMENTO */}
       {detailsDrawerOpen && selectedAppointmentDetails && (

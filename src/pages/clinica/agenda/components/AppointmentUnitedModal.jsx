@@ -1440,11 +1440,24 @@ export default function AppointmentUnitedModal({
   // 🔧 ETAPA 4.6: AUTO-SELECT: Preencher selectedPatient em modo EDIT
   // Garante que o paciente é selecionado automaticamente quando o modal abre em modo EDIT
   useEffect(() => {
+    // LOG INICIAL - SEMPRE disparar este log para diagnosticar
+    console.log('📊 [AUTO-SELECT PATIENT] useEffect DISPARADO!', {
+      isOpen,
+      mode,
+      hasFinalAppointment: !!finalAppointment,
+      'finalAppointment?.id': finalAppointment?.id,
+      'finalAppointment?.patient_id': finalAppointment?.patient_id,
+      'finalAppointment?.patients (objeto)': finalAppointment?.patients ? 'SIM' : 'NÃO',
+      'finalAppointment?.patients?.name': finalAppointment?.patients?.name || 'N/A',
+      'finalAppointment?.patient': !!finalAppointment?.patient,
+    });
+
     if (!isOpen || mode !== 'edit' || !finalAppointment) {
-      console.log('❌ [AUTO-SELECT PATIENT] Condições não atendidas:', {
+      console.log('❌ [AUTO-SELECT PATIENT] Condições não atendidas - retornando:', {
         isOpen,
         mode,
         hasFinalAppointment: !!finalAppointment,
+        'finalAppointment?.id': finalAppointment?.id,
       });
       return;
     }
@@ -1486,7 +1499,7 @@ export default function AppointmentUnitedModal({
     });
 
     setSelectedPatient(patientData);
-  }, [isOpen, mode, finalAppointment?.patient_id, finalAppointment?.patients, finalAppointment?.patient]);
+  }, [isOpen, mode, finalAppointment?.patient_id, finalAppointment?.patients, finalAppointment?.patient, finalAppointment]);
 
   // �💰 AUTO-FETCH: Buscar valor quando profissional, serviço ou convênio mudar
   // OU quando o valor está vazio/zero (apenas quando há service)
