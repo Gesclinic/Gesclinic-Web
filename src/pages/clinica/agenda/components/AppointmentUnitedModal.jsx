@@ -153,11 +153,20 @@ function formatDateToIso(dateValue) {
 
 function isDateInsideScheduleRange(dateString, schedule) {
   if (!dateString) {
-    return false;
+    return true; // Se não há data, considerar como válido por enquanto
   }
-  const startsOk = !schedule?.start_date || dateString >= schedule.start_date;
-  const endsOk = !schedule?.end_date || dateString <= schedule.end_date;
-  return startsOk && endsOk;
+  
+  // NOTA: start_date e end_date foram adicionados em uma migration
+  // mas ainda não foram aplicadas ao banco de dados em produção.
+  // Enquanto isso, apenas retornar true para permitir que schedules sejam carregados.
+  // TODO: Aplicar migration 2026-02-14_add_date_range_to_professional_schedules.sql
+  
+  // Código futuro (quando migration for aplicada):
+  // const startsOk = !schedule?.start_date || dateString >= schedule.start_date;
+  // const endsOk = !schedule?.end_date || dateString <= schedule.end_date;
+  // return startsOk && endsOk;
+  
+  return true;
 }
 
 function getSchedulesForDate(dateString, schedules) {
@@ -168,7 +177,18 @@ function getSchedulesForDate(dateString, schedules) {
 
   const weekday = parsedDate.getDay();
 
-  return (schedules || [])
+  // 🔍 DEBUG: Log de agendamentos disponíveis
+  if (schedules && schedules.length > 0) {
+    console.log('🔍 [getSchedulesForDate] Procurando agendamentos para:', {
+      dateString,
+      parsedDate: parsedDate.toLocaleDateString('pt-BR'),
+      weekday,
+      totalSchedules: schedules.length,
+      scheduleWeekdays: schedules.map(s => ({ id: s.id, day_of_week: s.day_of_week, active: s.active }))
+    });
+  }
+
+  const filtered = (schedules || [])
     .filter(
       (schedule) =>
         schedule &&
@@ -177,6 +197,10 @@ function getSchedulesForDate(dateString, schedules) {
         isDateInsideScheduleRange(dateString, schedule),
     )
     .sort((left, right) => timeToMinutes(left.start_time) - timeToMinutes(right.start_time));
+  
+  console.log('🔍 [getSchedulesForDate] Resultado:', filtered.length, 'agendamentos');
+  
+  return filtered;
 }
 
 function buildAvailableSlots(schedules, fallbackDuration = 30) {
@@ -769,7 +793,7 @@ export default function AppointmentUnitedModal({
           setTabAtivo('dados');
           setSelectedPatient(null);
           console.log('⏰ TIME FINAL:', finalAppointment.time, finalAppointment.scheduled_time);
-          setAgendamentoData({
+          const newAgendamentoData = {
             date: finalAppointment.date || '',
             time: finalAppointment.time || finalAppointment.scheduled_time || '',
             endTime: '',
@@ -778,17 +802,24 @@ export default function AppointmentUnitedModal({
             patientId: null,
             phone: '',
             recordNumber: '',
-            professionalId: finalAppointment.professionalId || '', // ✅ PRÉ-PREENCHER DO SLOT
-            serviceId: '',
+            // 🔧 FIX: Adicionar fallback para snake_case (vem de slot)
+            professionalId: finalAppointment.professionalId || finalAppointment.professional_id || '', // ✅ PRÉ-PREENCHER DO SLOT
+            serviceId: finalAppointment.serviceId || finalAppointment.service_id || '',
             serviceCode: '',
-            payerId: '',
-            planId: '',
+            payerId: finalAppointment.payerId || finalAppointment.payer_id || '',
+            planId: finalAppointment.planId || finalAppointment.plan_id || '',
             planCode: '',
-            roomId: finalAppointment.roomId || '', // ✅ PRÉ-PREENCHER DO SLOT
+            roomId: finalAppointment.roomId || finalAppointment.room_id || '', // ✅ PRÉ-PREENCHER DO SLOT
             value: '0.00',
             notes: '',
             status: 'scheduled',
+          };
+          console.log('🚀 [NEW MODE] agendamentoData sendo inicializado com:', {
+            professionalId: newAgendamentoData.professionalId,
+            date: newAgendamentoData.date,
+            isEmpty: !newAgendamentoData.professionalId,
           });
+          setAgendamentoData(newAgendamentoData);
           setCadastralData({
             name: '',
             document_id: '',
@@ -834,6 +865,14 @@ export default function AppointmentUnitedModal({
             '✅ [AppointmentUnitedModal] Dados do slot pré-preenchidos com profissional:',
             finalAppointment.professionalId,
           );
+          console.log('   🔍 DEBUG PRÉ-PREENCHIMENTO:', {
+            hasData: !!finalAppointment,
+            professionalIdValue: finalAppointment.professionalId,
+            professionalIdType: typeof finalAppointment.professionalId,
+            professionalIdEmpty: !finalAppointment.professionalId,
+            professionalIdIsString: typeof finalAppointment.professionalId === 'string',
+            allKeys: Object.keys(finalAppointment),
+          });
         } else {
           // ✅ RESETAR TUDO para modo novo (sem dados de slot)
           console.log(
@@ -988,6 +1027,11 @@ export default function AppointmentUnitedModal({
 
         // ✅ TAMBÉM CARREGAR SELECTEDPATIENT PARA MOSTRAR EM DESTAQUE
         if (finalAppointment.patients) {
+          console.log('🎯 [EDIT MODE] Setando selectedPatient com dados do paciente:', {
+            patientId: finalAppointment.patientId,
+            patientName: finalAppointment.patientName || finalAppointment.patients?.name,
+            phone: finalAppointment.patients?.phone,
+          });
           setSelectedPatient({
             patientId: finalAppointment.patientId,
             patientName: finalAppointment.patientName || finalAppointment.patients?.name || '',
@@ -1005,6 +1049,8 @@ export default function AppointmentUnitedModal({
             state: finalAppointment.patients?.state || '',
             zip_code: finalAppointment.patients?.zip_code || '',
           });
+        } else {
+          console.log('⚠️ [EDIT MODE] finalAppointment.patients é nulo:', finalAppointment.patients);
         }
 
         // 💳 INICIALIZAR DADOS DE PAGAMENTO (para particular E convênio)
@@ -1655,7 +1701,7 @@ export default function AppointmentUnitedModal({
     }
   }, [agendamentoData.professionalId, professionals]);
 
-  // ⚡ AUTO-SELECT: Selecionar primeiro profissional e serviço automaticamente para agilizar testes
+  // ⚡ AUTO-SELECT: Selecionar primeiro profissional automaticamente para novo agendamento
   useEffect(() => {
     if (isOpen && mode === 'new' && professionals.length > 0 && !agendamentoData.professionalId) {
       console.log('⚡ [AUTO-SELECT PROF] Selecionando primeiro profissional:', professionals[0].name);
@@ -1927,8 +1973,16 @@ export default function AppointmentUnitedModal({
   useEffect(() => {
     let isMounted = true;
 
+    console.log('🔵 [loadProfessionalSchedules EFFECT] DISPARADO com dependências:', {
+      isOpen,
+      professionalId: agendamentoData.professionalId,
+      clinicId,
+      isEmpty: !agendamentoData.professionalId,
+    });
+
     async function loadProfessionalSchedules() {
       if (!isOpen || !agendamentoData.professionalId) {
+        console.log('⏭️  [loadProfessionalSchedules] EARLY RETURN - isOpen:', isOpen, 'professionalId:', agendamentoData.professionalId);
         if (isMounted) {
           setProfessionalSchedules([]);
           setLoadingProfessionalSchedules(false);
@@ -1954,6 +2008,14 @@ export default function AppointmentUnitedModal({
         if (error) {
           throw error;
         }
+
+        // 🔍 DEBUG: Log de agendamentos carregados
+        console.log('🔍 [loadProfessionalSchedules] Agendamentos carregados:', {
+          professionalId: agendamentoData.professionalId,
+          clinicId,
+          count: data?.length || 0,
+          data: data?.map(d => ({ id: d.id, day_of_week: d.day_of_week, active: d.active, start_time: d.start_time, end_time: d.end_time }))
+        });
 
         if (isMounted) {
           setProfessionalSchedules(data || []);
@@ -3028,12 +3090,46 @@ export default function AppointmentUnitedModal({
       if (appointmentId && agendamentoData.id !== appointmentId) {
         console.log('✨ [Sincronização] Atualizando agendamentoData.id para:', appointmentId);
         setAgendamentoData((prev) => ({ ...prev, id: appointmentId }));
-        
-        // 💾 AGUARDAR MAIS TEMPO PARA PERMITIR QUE APPOINTMENTITEMSMANAGER PERSISTA OS ITENS
-        // Aumentado de 500ms para 3s para garantir que useEffect dispare e complete
-        console.log('⏳ Aguardando 3 segundos para persistência de items...');
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        console.log('✅ Tempo de espera concluído, prosseguindo com callbacks...');
+      }
+
+      // 📋 SINCRONIZAR MÚLTIPLOS SERVIÇOS (se houver)
+      if (appointmentServices.length > 0 && appointmentId) {
+        try {
+          console.log('📋 [Sincronizando serviços em handleSaveChanges] Iniciando', {
+            appointmentId,
+            appointmentServices_length: appointmentServices.length,
+            appointmentServices: appointmentServices.map((s, idx) => ({
+              idx,
+              id: s.id,
+              service_id: s.service_id,
+              service_name: s.service_name,
+              value: s.value,
+              discount: s.discount,
+              quantity: s.quantity,
+              status: s.status,
+            })),
+          });
+
+          const result = await syncAppointmentServices(appointmentId, appointmentServices);
+
+          console.log('✅ Serviços sincronizados com sucesso em handleSaveChanges!', {
+            services_count: result?.length,
+            result,
+          });
+        } catch (servicesErr) {
+          console.error('❌ Erro ao sincronizar serviços em handleSaveChanges:', servicesErr);
+          console.error('   Stack:', servicesErr.stack);
+          // Não bloquear o salvamento se os serviços falharem
+          alert(
+            '⚠️ Agendamento salvo, mas houve erro ao sincronizar os serviços: ' +
+              servicesErr.message,
+          );
+        }
+      } else {
+        console.log('ℹ️ [Sincronizando serviços em handleSaveChanges] Nenhum serviço para sincronizar', {
+          appointmentServices_length: appointmentServices.length,
+          appointmentId,
+        });
       }
 
       // 🎉 SUCESSO: Chamar callbacks e fechar
