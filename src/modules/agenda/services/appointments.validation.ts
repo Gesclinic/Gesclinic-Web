@@ -130,6 +130,112 @@ export function formatAppointmentTime(timeString: string | null | undefined): st
 }
 
 /**
+ * CHECK PROFESSIONAL AVAILABILITY
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Validates that professional has working hours configured for the day
+ * and that the appointment time falls within those hours
+ *
+ * @param clinicId - Clinic ID
+ * @param professionalId - Professional ID
+ * @param scheduledDate - Appointment date (YYYY-MM-DD or ISO string)
+ * @param scheduledTime - Appointment time (HH:MM or HH:MM:SS)
+ * @returns Promise with availability validation
+ */
+async function checkProfessionalAvailability(
+  clinicId: string,
+  professionalId: string,
+  scheduledDate: string,
+  scheduledTime: string
+): Promise<{
+  isAvailable: boolean;
+  reason?: string;
+}> {
+  try {
+    // Parse date to get day of week (0 = Sunday, 6 = Saturday)
+    let dateObj: Date;
+    if (typeof scheduledDate === 'string') {
+      const dateParts = scheduledDate.split('T')[0].split('-');
+      dateObj = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
+    } else {
+      dateObj = new Date(scheduledDate);
+    }
+
+    const dayOfWeek = dateObj.getDay();
+
+    // Get professional schedules for this day
+    const { data: schedules, error } = await supabase
+      .from('professional_schedules')
+      .select('*')
+      .eq('professional_id', professionalId)
+      .eq('clinic_id', clinicId)
+      .eq('day_of_week', dayOfWeek)
+      .eq('active', true);
+
+    if (error) {
+      console.error('❌ [checkProfessionalAvailability] Database error:', error);
+      return {
+        isAvailable: false,
+        reason: 'Erro ao verificar disponibilidade do profissional',
+      };
+    }
+
+    // If no schedules found for this day, professional is not available
+    if (!schedules || schedules.length === 0) {
+      const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+      return {
+        isAvailable: false,
+        reason: `Este profissional não atende ${dayNames[dayOfWeek]}`,
+      };
+    }
+
+    // Parse appointment time
+    const [apptHour, apptMin] = scheduledTime.split(':').map(Number);
+    const apptTotalMinutes = apptHour * 60 + apptMin;
+
+    // Check if appointment time falls within any of the professional's working hours
+    for (const schedule of schedules) {
+      const [startHour, startMin] = schedule.start_time.split(':').map(Number);
+      const [endHour, endMin] = schedule.end_time.split(':').map(Number);
+
+      const startTotalMinutes = startHour * 60 + startMin;
+      const endTotalMinutes = endHour * 60 + endMin;
+
+      // Handle breaks if configured
+      let breakStartMinutes = -1;
+      let breakEndMinutes = -1;
+      if (schedule.break_start && schedule.break_end) {
+        const [breakStartHour, breakStartMin] = schedule.break_start.split(':').map(Number);
+        const [breakEndHour, breakEndMin] = schedule.break_end.split(':').map(Number);
+        breakStartMinutes = breakStartHour * 60 + breakStartMin;
+        breakEndMinutes = breakEndHour * 60 + breakEndMin;
+      }
+
+      // Check if time is within working hours and not during break
+      const isWithinWorkingHours = apptTotalMinutes >= startTotalMinutes && apptTotalMinutes < endTotalMinutes;
+      const isDuringBreak = breakStartMinutes >= 0 && apptTotalMinutes >= breakStartMinutes && apptTotalMinutes < breakEndMinutes;
+
+      if (isWithinWorkingHours && !isDuringBreak) {
+        return {
+          isAvailable: true,
+        };
+      }
+    }
+
+    // Time is outside all working hour windows
+    return {
+      isAvailable: false,
+      reason: 'Este profissional não atende neste horário',
+    };
+  } catch (error) {
+    console.error('❌ [checkProfessionalAvailability] Error:', error);
+    return {
+      isAvailable: false,
+      reason: 'Erro ao verificar disponibilidade do profissional',
+    };
+  }
+}
+
+/**
  * COMPREHENSIVE APPOINTMENT VALIDATION
  * ─────────────────────────────────────────────────────────────────────────────
  * Runs all validations on appointment data before creation/update
@@ -176,6 +282,20 @@ export async function validateAppointmentBeforeSave(
     // Validate business hours (warning, not error)
     if (appointmentData.scheduledTime && !validateBusinessHours(appointmentData.scheduledTime)) {
       warnings.push('⚠️ Time is outside business hours (08:00 - 20:00)');
+    }
+
+    // ✅ NEW: Check professional availability (day of week and working hours)
+    if (!errors.length && appointmentData.professionalId && appointmentData.scheduledDate && appointmentData.scheduledTime) {
+      const availabilityCheck = await checkProfessionalAvailability(
+        clinicId,
+        appointmentData.professionalId,
+        appointmentData.scheduledDate,
+        appointmentData.scheduledTime
+      );
+
+      if (!availabilityCheck.isAvailable) {
+        errors.push(availabilityCheck.reason || 'Professional is not available at this time');
+      }
     }
 
     // Check for overlaps
