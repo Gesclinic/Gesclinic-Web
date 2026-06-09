@@ -218,6 +218,7 @@ const ICONS = {
 export default function Sidebar({ isOpen, setIsOpen }) {
   const { currentRole, handleLogout } = useAuth();
   const location = useLocation();
+  const navRef = React.useRef(null);
 
   // Determina o role: primeiro da sessão customizada, depois do Supabase Auth
   const getRoleForMenu = () => {
@@ -292,6 +293,9 @@ export default function Sidebar({ isOpen, setIsOpen }) {
   const toggleItem = (item, siblingIds = []) => {
     const shouldOpen = !openItems[item.id];
 
+    // Preservar posição de scroll antes de atualizar o estado
+    const scrollPos = navRef.current?.scrollTop;
+
     if (!isOpen) {
       setPendingOpenItemId(item.id);
       setIsOpen(true);
@@ -320,6 +324,15 @@ export default function Sidebar({ isOpen, setIsOpen }) {
 
       return next;
     });
+
+    // Restaurar posição de scroll após renderização
+    if (scrollPos !== undefined) {
+      requestAnimationFrame(() => {
+        if (navRef.current) {
+          navRef.current.scrollTop = scrollPos;
+        }
+      });
+    }
   };
 
   const renderIcon = (name, size = 'h-5 w-5') => {
@@ -586,7 +599,11 @@ export default function Sidebar({ isOpen, setIsOpen }) {
       </div>
 
       {/* MENU */}
-      <nav className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-[hsl(var(--primary))]/20 scrollbar-track-[hsl(var(--primary))]/5 hover:scrollbar-thumb-[hsl(var(--primary))]/40 py-3 px-2 space-y-1">
+      <nav 
+        ref={navRef}
+        className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-[hsl(var(--primary))]/20 scrollbar-track-[hsl(var(--primary))]/5 hover:scrollbar-thumb-[hsl(var(--primary))]/40 py-3 px-2 space-y-1"
+        style={{ scrollPaddingTop: '0', scrollBehavior: 'auto' }}
+      >
         {isOpen && Object.keys(openItems).length > 0 && (
           <button
             type="button"
