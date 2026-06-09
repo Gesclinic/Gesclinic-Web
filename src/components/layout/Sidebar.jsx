@@ -94,18 +94,28 @@ const isPathActive = (itemPath, pathname) => {
 };
 
 const buildActiveTrail = (items, pathname, parents = []) => {
+  // First: search children recursively (highest priority - more specific paths)
   for (const item of items) {
-    const nextParents = [...parents, item.id];
-
     if (item.children?.length) {
-      const childTrail = buildActiveTrail(item.children, pathname, nextParents);
+      const childTrail = buildActiveTrail(item.children, pathname, [...parents, item.id]);
       if (childTrail.length > 0) {
         return childTrail;
       }
     }
+  }
 
-    if (isPathActive(item.path, pathname)) {
-      return nextParents;
+  // Second: look for exact match in current level (for items without children or leaf items)
+  for (const item of items) {
+    if (item.path === pathname) {
+      return [...parents, item.id];
+    }
+  }
+
+  // Third: look for prefix match (but only in leaf items without children)
+  for (const item of items) {
+    // Only use prefix matching for items without children
+    if (!item.children?.length && isPathActive(item.path, pathname)) {
+      return [...parents, item.id];
     }
   }
 
