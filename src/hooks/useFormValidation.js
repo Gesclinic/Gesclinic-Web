@@ -1,11 +1,15 @@
 import { useState, useCallback, useMemo } from 'react';
 
+const normalizeFormValues = (values = {}) => Object.fromEntries(
+  Object.entries(values).map(([key, value]) => [key, value ?? '']),
+);
+
 /**
  * Hook para validação avançada de formulários
  * Suporta validações síncronas e assincronas com feedback em tempo real
  */
 export function useFormValidation(initialValues = {}, onValidate) {
-  const [values, setValues] = useState(initialValues);
+  const [values, setValues] = useState(() => normalizeFormValues(initialValues));
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [validating, setValidating] = useState({});
@@ -83,7 +87,7 @@ export function useFormValidation(initialValues = {}, onValidate) {
 
   // Reseta o formulário
   const resetForm = useCallback(() => {
-    setValues(initialValues);
+    setValues(normalizeFormValues(initialValues));
     setErrors({});
     setTouched({});
     setIsDirty(false);
@@ -177,6 +181,9 @@ export const validators = {
       if (cpf.length !== 11) {
         return { error: 'CPF deve ter 11 dígitos' };
       }
+      if (/^(\d)\1{10}$/.test(cpf)) {
+        return { error: 'CPF inválido' };
+      }
       // Validar dígitos verificadores
       let sum = 0;
       for (let i = 0; i < 9; i++) {
@@ -187,6 +194,18 @@ export const validators = {
         remainder = 0;
       }
       if (parseInt(cpf[9]) !== remainder) {
+        return { error: 'CPF inválido' };
+      }
+
+      sum = 0;
+      for (let i = 0; i < 10; i++) {
+        sum += parseInt(cpf[i]) * (11 - i);
+      }
+      remainder = (sum * 10) % 11;
+      if (remainder === 10 || remainder === 11) {
+        remainder = 0;
+      }
+      if (parseInt(cpf[10]) !== remainder) {
         return { error: 'CPF inválido' };
       }
     }

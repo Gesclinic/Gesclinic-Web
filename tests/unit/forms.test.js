@@ -227,11 +227,11 @@ describe('Máscaras de Input', () => {
 
   describe('maskCNPJ', () => {
     it('formata CNPJ corretamente', () => {
-      expect(maskCNPJ('12345678901234')).toBe('12.345.678/0001-34');
+      expect(maskCNPJ('12345678901234')).toBe('12.345.678/9012-34');
     });
 
     it('limita a 14 dígitos', () => {
-      expect(maskCNPJ('123456789012345')).toBe('12.345.678/0001-34');
+      expect(maskCNPJ('123456789012345')).toBe('12.345.678/9012-34');
     });
   });
 });
@@ -241,7 +241,7 @@ describe('Máscaras de Input', () => {
  */
 describe('Integração: Validação + Máscaras', () => {
   it('valida CPF formatado', () => {
-    const cpfFormatado = maskCPF('12345678901');
+    const cpfFormatado = maskCPF('12345678909');
     const validation = validators.cpf(cpfFormatado);
     expect(validation.error).toBeNull();
   });

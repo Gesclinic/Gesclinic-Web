@@ -6,6 +6,88 @@
 
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 
+vi.mock('@/lib/customSupabaseClient', () => {
+  const rows = {
+    professional_services: [
+      {
+        id: 'link-1',
+        professional_id: '123',
+        service_id: '456',
+        clinic_id: 'clinic-1',
+        active: true,
+      },
+      {
+        id: 'link-2',
+        professional_id: 'prof-1',
+        service_id: 'service-1',
+        clinic_id: 'clinic-1',
+        active: true,
+      },
+      {
+        id: 'link-3',
+        professional_id: 'prof-sem-credential',
+        service_id: 'service-1',
+        clinic_id: 'clinic-1',
+        active: true,
+      },
+    ],
+    professional_payers: [
+      {
+        id: 'cred-1',
+        professional_id: 'prof-1',
+        payer_id: 'payer-1',
+        clinic_id: 'clinic-1',
+        credential_number: 'CRED123',
+        active: true,
+      },
+      {
+        id: 'cred-2',
+        professional_id: 'prof-sem-credential',
+        payer_id: 'payer-1',
+        clinic_id: 'clinic-1',
+        credential_number: '',
+        active: true,
+      },
+    ],
+  };
+
+  const createQuery = (table) => {
+    const filters = [];
+    return {
+      select() {
+        return this;
+      },
+      eq(column, value) {
+        filters.push([column, value]);
+        return this;
+      },
+      maybeSingle: vi.fn(async () => {
+        const data = (rows[table] || []).find((row) =>
+          filters.every(([column, value]) => row[column] === value),
+        );
+        return { data: data || null, error: null };
+      }),
+    };
+  };
+
+  return {
+    customSupabaseClient: {
+      from: vi.fn((table) => createQuery(table)),
+    },
+  };
+});
+
+import {
+  validateProfessionalServiceLinkage,
+  validateProfessionalCredentialAtPayer,
+  validateServiceTISSCompleteness,
+  validateProfessionalTISSCompleteness,
+  validatePayerTISSCompleteness,
+  validateAppointmentCascade,
+  validateTISSXMLGenerationCascade,
+  formatCascadeErrors,
+} from '@/lib/tiskCascadeValidationApi';
+
 // ============================================================
 // SUITE 1: Validação de Linkage Profissional-Serviço
 // ============================================================
@@ -92,7 +174,7 @@ describe('Phase 5.3: Service TISS Completeness Validation', () => {
     const result = validateServiceTISSCompleteness(service);
     
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain(expect.stringContaining('TUSS Code'));
+    expect(result.errors).toEqual(expect.arrayContaining([expect.stringContaining('TUSS Code')]));
   });
 
   it('❌ deve rejeitar TUSS code com formato inválido', () => {
@@ -107,7 +189,7 @@ describe('Phase 5.3: Service TISS Completeness Validation', () => {
     const result = validateServiceTISSCompleteness(service);
     
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain(expect.stringContaining('inválido'));
+    expect(result.errors).toEqual(expect.arrayContaining([expect.stringContaining('inválido')]));
   });
 
   it('❌ deve rejeitar type_service vazio', () => {
@@ -122,7 +204,7 @@ describe('Phase 5.3: Service TISS Completeness Validation', () => {
     const result = validateServiceTISSCompleteness(service);
     
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain(expect.stringContaining('Tipo de Serviço'));
+    expect(result.errors).toEqual(expect.arrayContaining([expect.stringContaining('Tipo de Serviço')]));
   });
 
   it('❌ deve rejeitar guide_type vazio', () => {
@@ -137,7 +219,7 @@ describe('Phase 5.3: Service TISS Completeness Validation', () => {
     const result = validateServiceTISSCompleteness(service);
     
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain(expect.stringContaining('Tipo de Guia'));
+    expect(result.errors).toEqual(expect.arrayContaining([expect.stringContaining('Tipo de Guia')]));
   });
 });
 
@@ -172,7 +254,7 @@ describe('Phase 5.4: Professional TISS Completeness Validation', () => {
     const result = validateProfessionalTISSCompleteness(professional);
     
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain(expect.stringContaining('CBO Code'));
+    expect(result.errors).toEqual(expect.arrayContaining([expect.stringContaining('CBO Code')]));
   });
 
   it('❌ deve rejeitar CBO code com formato inválido', () => {
@@ -187,7 +269,7 @@ describe('Phase 5.4: Professional TISS Completeness Validation', () => {
     const result = validateProfessionalTISSCompleteness(professional);
     
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain(expect.stringContaining('inválido'));
+    expect(result.errors).toEqual(expect.arrayContaining([expect.stringContaining('inválido')]));
   });
 
   it('❌ deve rejeitar council_state inválido', () => {
@@ -202,7 +284,7 @@ describe('Phase 5.4: Professional TISS Completeness Validation', () => {
     const result = validateProfessionalTISSCompleteness(professional);
     
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain(expect.stringContaining('UF'));
+    expect(result.errors).toEqual(expect.arrayContaining([expect.stringContaining('UF')]));
   });
 });
 
@@ -235,7 +317,7 @@ describe('Phase 5.5: Payer TISS Completeness Validation', () => {
     const result = validatePayerTISSCompleteness(payer);
     
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain(expect.stringContaining('ANS'));
+    expect(result.errors).toEqual(expect.arrayContaining([expect.stringContaining('ANS')]));
   });
 
   it('✅ deve permitir operadora SUS sem ANS', () => {

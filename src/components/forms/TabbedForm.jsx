@@ -35,6 +35,15 @@ export function TabbedForm({
       if (field && field.validate) {
         return await field.validate(value, allValues);
       }
+      if (field?.required) {
+        const requiredResult = validators.required(field.label || field.name)(value);
+        if (requiredResult.error) {
+          return requiredResult;
+        }
+      }
+      if (field?.type === 'email') {
+        return validators.email(value);
+      }
     }
     return { error: null };
   });
@@ -218,6 +227,7 @@ export function TabbedForm({
                   options={field.options}
                   help={field.help}
                   icon={field.icon}
+                  maskType={field.maskType}
                   maxLength={field.maxLength}
                   rows={field.rows}
                 />

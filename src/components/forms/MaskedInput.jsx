@@ -92,7 +92,7 @@ export function maskCurrency(value) {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
-  }).format(number);
+  }).format(number).replace(/\u00a0/g, ' ');
 }
 
 /**
@@ -156,6 +156,9 @@ export function MaskedInput({
   ...props
 }) {
   const [isFocused, setIsFocused] = React.useState(false);
+  const [internalValue, setInternalValue] = React.useState('');
+  const inputId = props.id || props.name || (label ? label.toLowerCase().replace(/\s+/g, '-') : undefined);
+  const fieldValue = value ?? internalValue;
 
   // Resolver máscara
   const maskFn = typeof maskType === 'string' ? masks[maskType] : maskType;
@@ -163,12 +166,17 @@ export function MaskedInput({
   const handleChange = (e) => {
     const rawValue = e.target.value;
     const maskedValue = maskFn ? maskFn(rawValue) : rawValue;
-    onChange({
-      target: {
-        value: maskedValue,
-        name: e.target.name,
-      },
-    });
+    if (value === undefined) {
+      setInternalValue(maskedValue);
+    }
+    if (onChange) {
+      onChange({
+        target: {
+          value: maskedValue,
+          name: e.target.name,
+        },
+      });
+    }
   };
 
   const handleFocus = () => setIsFocused(true);
@@ -185,14 +193,15 @@ export function MaskedInput({
   return (
     <div className={`space-y-1.5 ${containerClassName}`}>
       {label && (
-        <label className="block text-sm font-medium text-gray-700">
+        <label htmlFor={inputId} className="block text-sm font-medium text-gray-700">
           {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
+          {required && <span aria-hidden="true" className="text-red-500 ml-1">*</span>}
         </label>
       )}
 
       <Input
-        value={value || ''}
+        id={inputId}
+        value={fieldValue || ''}
         onChange={handleChange}
         onFocus={handleFocus}
         onBlur={handleBlur}

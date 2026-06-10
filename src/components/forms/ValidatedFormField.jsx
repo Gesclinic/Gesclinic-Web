@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { masks } from './MaskedInput';
 
 /**
  * Campo de formulário com validação em tempo real
@@ -39,9 +40,14 @@ export function ValidatedFormField({
   className = '',
   containerClassName = '',
   inputClassName = '',
+  maskType,
   ...props
 }) {
   const [isFocused, setIsFocused] = useState(false);
+  const [internalValue, setInternalValue] = useState('');
+  const inputId = props.id || name;
+  const fieldValue = value ?? internalValue;
+  const maskFn = typeof maskType === 'string' ? masks[maskType] : maskType;
 
   const showError = touched && error;
   const showSuccess = touched && !error && value && !validating;
@@ -60,8 +66,14 @@ export function ValidatedFormField({
   const containerClasses = `space-y-1.5 ${containerClassName}`.trim();
 
   const handleChange = (e) => {
-    const newValue = e.target ? e.target.value : e;
-    onChange(name, newValue);
+    const rawValue = e.target ? e.target.value : e;
+    const newValue = maskFn ? maskFn(rawValue) : rawValue;
+    if (value === undefined) {
+      setInternalValue(newValue);
+    }
+    if (onChange) {
+      onChange(name, newValue);
+    }
   };
 
   const handleBlur = (e) => {
@@ -78,14 +90,17 @@ export function ValidatedFormField({
   // Renderizar input baseado no type
   const renderInput = () => {
     if (type === 'select' && options) {
+      // Ensure value is never an empty string - use undefined instead for unselected state
+      const selectValue = (value && String(value).trim()) || undefined;
+
       return (
-        <Select value={value || ''} onValueChange={handleChange} disabled={disabled}>
-          <SelectTrigger className={baseInputClass}>
+        <Select value={selectValue} onValueChange={handleChange} disabled={disabled}>
+          <SelectTrigger id={inputId} className={baseInputClass}>
             <SelectValue placeholder={placeholder || 'Selecione...'} />
           </SelectTrigger>
           <SelectContent>
             {options.map((option) => (
-              <SelectItem key={option.value} value={option.value} disabled={option.disabled}>
+              <SelectItem key={option.value} value={String(option.value)} disabled={option.disabled}>
                 {option.label}
               </SelectItem>
             ))}
@@ -98,7 +113,8 @@ export function ValidatedFormField({
       return (
         <textarea
           name={name}
-          value={value || ''}
+          id={inputId}
+          value={fieldValue || ''}
           onChange={handleChange}
           onBlur={handleBlur}
           onFocus={handleFocus}
@@ -115,7 +131,8 @@ export function ValidatedFormField({
       <Input
         type={type}
         name={name}
-        value={value || ''}
+        id={inputId}
+        value={fieldValue || ''}
         onChange={handleChange}
         onBlur={handleBlur}
         onFocus={handleFocus}
@@ -137,13 +154,11 @@ export function ValidatedFormField({
     <div className={containerClasses}>
       {/* LABEL */}
       <div className="flex items-center justify-between">
-        <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+        <label htmlFor={inputId} className="flex items-center gap-2 text-sm font-medium text-gray-700">
           {Icon && <Icon className="w-4 h-4 text-gray-500" />}
-          <span>
-            {label}
-            {required && <span className="text-red-500 ml-1">*</span>}
-          </span>
+          <span>{label}</span>
         </label>
+        {required && <span aria-hidden="true" className="text-red-500 -ml-1">*</span>}
         {validating && (
           <div className="flex items-center gap-1 text-xs text-blue-600">
             <Loader2 className="w-3 h-3 animate-spin" />
@@ -217,8 +232,8 @@ export function ValidatedFormFieldCompact({
     <div className="space-y-1">
       <label className="block text-xs font-semibold text-gray-700">
         {label}
-        {required && <span className="text-red-500 ml-1">*</span>}
       </label>
+      {required && <span aria-hidden="true" className="text-red-500 ml-1">*</span>}
       <ValidatedFormField
         label=""
         name={name}

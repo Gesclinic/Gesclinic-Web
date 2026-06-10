@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, renderHook, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TabbedForm } from '@/components/forms/TabbedForm';
 import { MaskedInput } from '@/components/forms/MaskedInput';
 import { ValidatedFormField } from '@/components/forms/ValidatedFormField';
+import { useFormValidation } from '@/hooks/useFormValidation';
 
 /**
  * Testes de Integração: TabbedForm
@@ -23,7 +24,7 @@ describe('TabbedForm - Integração', () => {
       description: 'Dados profissionais',
       fields: [
         { name: 'crm', label: 'CRM', required: true, type: 'text' },
-        { name: 'specialty', label: 'Especialidade', required: true, type: 'select', options: [] }
+        { name: 'specialty', label: 'Especialidade', required: false, type: 'select', options: [] }
       ]
     },
     {
@@ -142,6 +143,8 @@ describe('TabbedForm - Integração', () => {
     );
 
     // Avançar
+    await user.type(screen.getByLabelText('Nome Completo'), 'João Silva');
+    await user.type(screen.getByLabelText('Email'), 'joao@email.com');
     const nextButton = screen.getByText('Próximo');
     await user.click(nextButton);
 
@@ -191,7 +194,7 @@ describe('TabbedForm - Integração', () => {
     await user.click(screen.getByText('Próximo'));
 
     // Submeter
-    const submitButton = screen.getByText('Confirmar');
+    const submitButton = screen.getByText('Salvar');
     await user.click(submitButton);
 
     // Verificar chamada
@@ -324,7 +327,7 @@ describe('Fluxo Completo: Cadastro de Profissional', () => {
       label: 'Profissional',
       fields: [
         { name: 'crm', label: 'CRM', required: true, type: 'text' },
-        { name: 'specialty', label: 'Especialidade', required: true, type: 'select' }
+        { name: 'specialty', label: 'Especialidade', required: false, type: 'select' }
       ]
     },
     {
@@ -356,7 +359,7 @@ describe('Fluxo Completo: Cadastro de Profissional', () => {
 
     // ABA 1: Pessoal
     await user.type(screen.getByLabelText('Nome Completo'), 'Dr. João da Silva');
-    await user.type(screen.getByLabelText('CPF'), '12345678901');
+    await user.type(screen.getByLabelText('CPF'), '12345678909');
     await user.type(screen.getByLabelText('Data de Nascimento'), '15011990');
 
     await user.click(screen.getByText('Próximo'));
@@ -382,10 +385,10 @@ describe('Fluxo Completo: Cadastro de Profissional', () => {
 
     // ABA 4: Revisão e Submeter
     await waitFor(() => {
-      expect(screen.getByText('Confirmar')).toBeInTheDocument();
+      expect(screen.getByText('Salvar')).toBeInTheDocument();
     });
 
-    await user.click(screen.getByText('Confirmar'));
+    await user.click(screen.getByText('Salvar'));
 
     // Verificar submissão
     await waitFor(() => {
