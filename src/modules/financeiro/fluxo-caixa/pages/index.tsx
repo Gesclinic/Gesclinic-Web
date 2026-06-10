@@ -20,7 +20,6 @@ import {
   useCashFlowForecastData,
   useCashFlowReportData,
 } from '../hooks/useCashFlowIntegration';
-import { SeedDataButton } from '@/components/SeedDataButton';
 
 export default function FluxoCaixaPage() {
   const { clinic, loadingClinic } = useClinicContext();
@@ -71,11 +70,6 @@ export default function FluxoCaixaPage() {
           <p className="text-gray-600 mt-2">
             Visão completa do fluxo de caixa realizado, previsto e projetado
           </p>
-        </div>
-
-        {/* Seed Data Button */}
-        <div className="flex justify-end">
-          <SeedDataButton />
         </div>
 
         {/* Tab Navigation */}

@@ -162,9 +162,6 @@ import {
 } from '@/pages/clinica/base-sistema/pages';
 import CBHPMManagement from '@/pages/clinica/base-sistema/CBHPMManagement';
 
-// Import TestDataPage for test data insertion
-import TestDataPage from '@/pages/TestDataPage';
-
 // Admin
 import Usuarios from '@/pages/admin/Usuarios';
 import NewUser from '@/pages/admin/NewUser';
@@ -296,7 +293,6 @@ export default function AppRoutes() {
       {/* PROTECTED */}
       <Route element={<ProtectedRoute />}>
         <Route path="/diagnostics" element={<DiagnosticsPage />} />
-        <Route path="/test-data" element={<TestDataPage />} />
 
         {/* 🔴 ADMIN */}
         <Route element={<AdminRoute />}>
