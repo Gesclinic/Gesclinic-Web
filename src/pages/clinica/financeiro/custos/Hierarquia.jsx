@@ -90,14 +90,14 @@ export default function Hierarquia() {
         .eq('id', editing.id)
         .select();
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
       if (error) {
         throw error;
       }
-      setAccounts((prev) => prev.map((a) => (a.id === editing.id ? { ...a, ...data } : a)));
+      if (!data || data.length === 0) {
+        throw new Error('Record not found');
+      }
+      const updated = data[0];
+      setAccounts((prev) => prev.map((a) => (a.id === editing.id ? { ...a, ...updated } : a)));
       setEditing(null);
       setSearchParams((prev) => {
         const p = new URLSearchParams(prev);
