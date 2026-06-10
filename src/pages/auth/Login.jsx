@@ -79,8 +79,25 @@ export default function Login() {
         return;
       }
 
-      // 5️⃣ Sistema customizado está funcionando - não precisa Supabase Auth
-      console.log('[LOGIN] ✅ Autenticação customizada validada com sucesso');
+      // 5️⃣ AGORA: Também fazer login no Supabase Auth para ativar RLS
+      console.log('[LOGIN] ✅ Autenticação customizada validada, tentando Supabase Auth...');
+
+      // Tentar login no Supabase Auth com email e senha
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: password // Usar a senha fornecida
+      });
+
+      if (authError) {
+        console.warn('[LOGIN] ⚠️  Supabase Auth falhou:', authError.message);
+        console.log('[LOGIN] Continuando com autenticação customizada apenas...');
+        // Continua mesmo que Supabase Auth falhe
+      } else {
+        console.log('[LOGIN] ✅ Supabase Auth bem-sucedido!', {
+          userId: authData?.user?.id,
+          userEmail: authData?.user?.email
+        });
+      }
 
       // 6️⃣ Salvar dados da sessão no localStorage
       const sessionData = {
