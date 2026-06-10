@@ -45,6 +45,7 @@ const ROLE_PERMISSIONS = {
     'faturamento.*',
     'configuracoes.financeiro',
     'configuracoes.faturamento',
+    'administracao.auditoria',
   ],
   financeiro: [
     'dashboard',
@@ -139,6 +140,7 @@ export function getMenuItems(role = 'admin') {
       id: 'pacientes',
       label: 'Pacientes',
       icon: 'Users',
+      path: '/clinica/pacientes',
       roles: ['admin', 'gestor', 'medico', 'recepcao', 'profissional'],
       featurePath: 'pacientes',
       children: [
@@ -168,6 +170,7 @@ export function getMenuItems(role = 'admin') {
       id: 'cadastros_basicos',
       label: 'Cadastros Básicos',
       icon: 'Building2',
+      path: '/clinica/base-sistema/servicos',
       roles: ['admin', 'gestor'],
       featurePath: 'cadastros_basicos',
       children: [
@@ -226,92 +229,96 @@ export function getMenuItems(role = 'admin') {
     // ============================
     // 5️⃣ FINANCEIRO — CONTROLE ECONÔMICO
     // ============================
+    // 🎯 REORGANIZAÇÃO: Estrutura simplificada com foco em integração Agenda → Lançamentos → DRE
+    // Removido: Caixa Individual, Caixa Gerencial, Autorização Descontos, ETAPA 1
+    // Reorganizado em 5 grupos: Dashboard, Movimento, Estrutura, Análise, Especiais
     {
       id: 'financeiro',
       label: 'Financeiro',
       icon: 'Wallet',
+      path: '/clinica/financeiro',
       roles: ['admin', 'gestor', 'financeiro'],
       featurePath: 'financeiro',
       children: [
+        // 1. DASHBOARD - Entry Point
         {
           id: 'financeiro.visao_geral',
-          label: 'Visão Geral',
+          label: 'Dashboard',
           icon: 'LayoutDashboard',
           path: '/clinica/financeiro',
           roles: ['admin', 'gestor', 'financeiro'],
           featurePath: 'financeiro.visao_geral',
         },
+
+        // 2. MOVIMENTO - Core Transactions (Motor Financeiro)
         {
-          id: 'financeiro.receber',
-          label: 'Contas a Receber',
-          icon: 'TrendingUp',
-          path: '/clinica/financeiro/receber',
+          id: 'financeiro.movimento',
+          label: 'Movimento',
+          icon: 'Workflow',
+          path: '/clinica/financeiro/lancamentos',
           roles: ['admin', 'gestor', 'financeiro'],
-          featurePath: 'financeiro.receber',
+          featurePath: 'financeiro.movimento',
+          children: [
+            {
+              id: 'financeiro.lancamentos',
+              label: 'Lançamentos',
+              icon: 'Book',
+              path: '/clinica/financeiro/lancamentos',
+              roles: ['admin', 'gestor', 'financeiro'],
+              featurePath: 'financeiro.lancamentos',
+            },
+            {
+              id: 'financeiro.receber',
+              label: 'Contas a Receber',
+              icon: 'TrendingUp',
+              path: '/clinica/financeiro/receber',
+              roles: ['admin', 'gestor', 'financeiro'],
+              featurePath: 'financeiro.receber',
+            },
+            {
+              id: 'financeiro.pagar',
+              label: 'Contas a Pagar',
+              icon: 'TrendingDown',
+              path: '/clinica/financeiro/contas-pagar',
+              roles: ['admin', 'gestor', 'financeiro'],
+              featurePath: 'financeiro.pagar',
+            },
+            {
+              id: 'financeiro.fluxo',
+              label: 'Fluxo de Caixa',
+              icon: 'LineChart',
+              path: '/clinica/financeiro/fluxo-caixa',
+              roles: ['admin', 'gestor', 'financeiro'],
+              featurePath: 'financeiro.fluxo',
+            },
+          ],
         },
-        {
-          id: 'financeiro.pagar',
-          label: 'Contas a Pagar',
-          icon: 'TrendingDown',
-          path: '/clinica/financeiro/pagar',
-          roles: ['admin', 'gestor', 'financeiro'],
-          featurePath: 'financeiro.pagar',
-        },
-        {
-          id: 'financeiro.fluxo',
-          label: 'Fluxo de Caixa',
-          icon: 'LineChart',
-          path: '/clinica/financeiro/fluxo',
-          roles: ['admin', 'gestor', 'financeiro'],
-          featurePath: 'financeiro.fluxo',
-        },
-        {
-          id: 'financeiro.resultado',
-          label: 'Demonstração de Resultado',
-          icon: 'PieChart',
-          path: '/clinica/financeiro/resultado',
-          roles: ['admin', 'gestor', 'financeiro'],
-          featurePath: 'financeiro.resultado',
-        },
-        {
-          id: 'financeiro.conciliacao',
-          label: 'Conciliação Bancária',
-          icon: 'Banknote',
-          path: '/clinica/financeiro/conciliacao-bancaria',
-          roles: ['admin', 'gestor', 'financeiro'],
-          featurePath: 'financeiro.conciliacao',
-        },
-        {
-          id: 'financeiro.caixa',
-          label: 'Caixa Individual',
-          icon: 'DollarSign',
-          path: '/clinica/financeiro/caixa',
-          roles: ['admin', 'gestor', 'financeiro', 'recepcao'],
-          featurePath: 'financeiro.caixa',
-        },
-        {
-          id: 'financeiro.caixa_gerencial',
-          label: 'Caixa Gerencial',
-          icon: 'BarChart3',
-          path: '/clinica/financeiro/caixa-gerencial',
-          roles: ['admin', 'gestor'],
-          featurePath: 'financeiro.caixa_gerencial',
-        },
-        {
-          id: 'financeiro.autorizacoes_descontos',
-          label: 'Autorização de Descontos',
-          icon: 'ShieldCheck',
-          path: '/clinica/financeiro/autorizacoes-descontos',
-          roles: ['admin', 'gestor'],
-          featurePath: 'financeiro.autorizacoes_descontos',
-        },
+
+        // 3. ESTRUTURA - Configuração Financeira
         {
           id: 'financeiro.estrutura',
-          label: 'Estrutura Financeira',
+          label: 'Estrutura',
           icon: 'Settings2',
+          path: '/clinica/financeiro/estrutura',
           roles: ['admin', 'gestor'],
           featurePath: 'financeiro.estrutura',
           children: [
+            {
+              id: 'financeiro.contas_bancarias',
+              label: 'Contas Bancárias',
+              icon: 'Landmark',
+              path: '/clinica/financeiro/contas-financeiras',
+              roles: ['admin', 'gestor', 'financeiro'],
+              featurePath: 'financeiro.contas_bancarias',
+            },
+            {
+              id: 'financeiro.plano_contas',
+              label: 'Plano de Contas',
+              icon: 'ListTree',
+              path: '/clinica/financeiro/plano-contas',
+              roles: ['admin', 'gestor'],
+              featurePath: 'financeiro.plano_contas',
+            },
             {
               id: 'financeiro.centro_custos',
               label: 'Centro de Custos',
@@ -328,8 +335,121 @@ export function getMenuItems(role = 'admin') {
               roles: ['admin', 'gestor'],
               featurePath: 'financeiro.automacoes',
             },
+            {
+              id: 'financeiro.cartoes',
+              label: 'Cartões',
+              icon: 'CreditCard',
+              path: '/clinica/financeiro/cartoes',
+              roles: ['admin', 'gestor'],
+              featurePath: 'financeiro.cartoes',
+            },
+            {
+              id: 'financeiro.cartoes-operadoras',
+              label: 'Operadoras',
+              icon: 'Building2',
+              path: '/clinica/financeiro/cartoes-operadoras',
+              roles: ['admin', 'gestor'],
+              featurePath: 'financeiro.cartoes-operadoras',
+            },
+            {
+              id: 'financeiro.cartoes-taxas-operadoras',
+              label: 'Taxas por Operadora',
+              icon: 'Percent',
+              path: '/clinica/financeiro/cartoes-taxas-operadoras',
+              roles: ['admin', 'gestor'],
+              featurePath: 'financeiro.cartoes-taxas-operadoras',
+            },
+            {
+              id: 'financeiro.cartoes-analytics',
+              label: 'Analytics de Taxas',
+              icon: 'BarChart3',
+              path: '/clinica/financeiro/cartoes-analytics',
+              roles: ['admin', 'gestor'],
+              featurePath: 'financeiro.cartoes-analytics',
+            },
           ],
         },
+
+        // ✅ ETAPA D.6: AUDITORIA - Rastreamento de Alterações
+        {
+          id: 'financeiro.auditoria',
+          label: 'Auditoria',
+          icon: 'ShieldAlert',
+          path: '/clinica/financeiro/auditoria',
+          roles: ['admin', 'gestor'],
+          featurePath: 'financeiro.auditoria',
+          children: [
+            {
+              id: 'financeiro.auditoria-taxas',
+              label: 'Relatório de Taxas',
+              icon: 'FileText',
+              path: '/clinica/financeiro/auditoria',
+              roles: ['admin', 'gestor'],
+              featurePath: 'financeiro.auditoria',
+            },
+            {
+              id: 'financeiro.auditoria-analytics',
+              label: 'Analytics',
+              icon: 'BarChart3',
+              path: '/clinica/financeiro/auditoria-analytics',
+              roles: ['admin', 'gestor'],
+              featurePath: 'financeiro.auditoria',
+            },
+          ],
+        },
+
+        // 4. ANÁLISE - Relatórios e Inteligência
+        {
+          id: 'financeiro.analise',
+          label: 'Análise',
+          icon: 'BarChart3',
+          roles: ['admin', 'gestor', 'financeiro'],
+          featurePath: 'financeiro.analise',
+          children: [
+            {
+              id: 'financeiro.resultado',
+              label: 'DRE',
+              icon: 'PieChart',
+              path: '/clinica/financeiro/resultado',
+              roles: ['admin', 'gestor', 'financeiro'],
+              featurePath: 'financeiro.resultado',
+            },
+            {
+              id: 'financeiro.dre_dinamica',
+              label: 'DRE Dinâmica',
+              icon: 'BarChart3',
+              path: '/clinica/financeiro/dre-dinamica',
+              roles: ['admin', 'gestor', 'financeiro'],
+              featurePath: 'financeiro.dre_dinamica',
+            },
+            {
+              id: 'financeiro.conciliacao',
+              label: 'Conciliação Bancária',
+              icon: 'Banknote',
+              path: '/clinica/financeiro/conciliacao-bancaria',
+              roles: ['admin', 'gestor', 'financeiro'],
+              featurePath: 'financeiro.conciliacao',
+            },
+            {
+              id: 'financeiro.cockpit_premium',
+              label: 'Cockpit Premium',
+              icon: 'Zap',
+              path: '/clinica/financeiro/cockpit-premium',
+              roles: ['admin', 'gestor', 'financeiro'],
+              featurePath: 'financeiro.cockpit_premium',
+            },
+            {
+              id: 'financeiro.alerts',
+              label: 'Alertas e Automações',
+              icon: 'Bell',
+              path: '/clinica/financeiro/alerts',
+              roles: ['admin', 'gestor', 'financeiro'],
+              featurePath: 'financeiro.alerts',
+            },
+          ],
+        },
+
+        // 5. ESPECIAIS - Repasse Médico
         {
           id: 'financeiro.repasse',
           label: 'Repasse Médico',
@@ -348,6 +468,7 @@ export function getMenuItems(role = 'admin') {
       id: 'estoque',
       label: 'Estoque',
       icon: 'Boxes',
+      path: '/clinica/estoque',
       roles: ['admin', 'gestor'],
       featurePath: 'estoque',
       children: [
@@ -387,6 +508,7 @@ export function getMenuItems(role = 'admin') {
           id: 'estoque.movimentacoes',
           label: 'Movimentações',
           icon: 'Shuffle',
+          path: '/clinica/estoque/entradas',
           roles: ['admin', 'gestor'],
           featurePath: 'estoque.movimentacoes',
           children: [
@@ -520,6 +642,7 @@ export function getMenuItems(role = 'admin') {
       id: 'configuracoes',
       label: 'Configurações',
       icon: 'Settings',
+      path: '/clinica/configuracoes/perfis',
       roles: ['admin', 'gestor'],
       featurePath: 'configuracoes',
       children: [
@@ -538,14 +661,6 @@ export function getMenuItems(role = 'admin') {
           path: '/clinica/configuracoes/agenda',
           roles: ['admin', 'gestor'],
           featurePath: 'configuracoes.agenda',
-        },
-        {
-          id: 'configuracoes.financeiro',
-          label: 'Financeiro',
-          icon: 'WalletCards',
-          path: '/clinica/configuracoes/conta',
-          roles: ['admin', 'gestor'],
-          featurePath: 'configuracoes.financeiro',
         },
         {
           id: 'configuracoes.estoque',
@@ -567,13 +682,14 @@ export function getMenuItems(role = 'admin') {
     },
 
     // ============================
-    // 9️⃣ ADMINISTRAÇÃO — SUPER ADMIN ONLY
+    // 9️⃣ ADMINISTRAÇÃO — SUPER ADMIN + AUDITORIA
     // ============================
     {
       id: 'administracao',
       label: 'Administração',
       icon: 'Shield',
-      roles: ['admin'],
+      path: '/clinica/administracao/usuarios',
+      roles: ['admin', 'gestor'],
       featurePath: 'administracao',
       children: [
         {
@@ -591,6 +707,54 @@ export function getMenuItems(role = 'admin') {
           path: '/clinica/administracao/clinicas',
           roles: ['admin'],
           featurePath: 'administracao.clinicas',
+        },
+        {
+          id: 'administracao.auditoria',
+          label: 'Auditoria',
+          icon: 'History',
+          path: '/clinica/auditoria',
+          roles: ['admin', 'gestor'],
+          featurePath: 'administracao.auditoria',
+        },
+        {
+          id: 'administracao.jobs',
+          label: 'Agendamentos de Tarefas',
+          icon: 'Clock3',
+          path: '/clinica/administracao/jobs',
+          roles: ['admin'],
+          featurePath: 'administracao.jobs',
+        },
+        {
+          id: 'administracao.alerts',
+          label: 'Alertas',
+          icon: 'Bell',
+          path: '/clinica/administracao/alerts',
+          roles: ['admin'],
+          featurePath: 'administracao.alerts',
+        },
+        {
+          id: 'administracao.saude',
+          label: 'Saude do Sistema',
+          icon: 'Activity',
+          path: '/clinica/administracao/saude',
+          roles: ['admin'],
+          featurePath: 'administracao.saude',
+        },
+        {
+          id: 'administracao.analytics',
+          label: 'Analytics Operacional',
+          icon: 'BarChart3',
+          path: '/clinica/administracao/analytics',
+          roles: ['admin'],
+          featurePath: 'administracao.analytics',
+        },
+        {
+          id: 'administracao.compliance',
+          label: 'Compliance Operacional',
+          icon: 'ShieldCheck',
+          path: '/clinica/administracao/compliance',
+          roles: ['admin'],
+          featurePath: 'administracao.compliance',
         },
       ],
     },

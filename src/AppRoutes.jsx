@@ -26,7 +26,6 @@ import GeraisConfig from '@/pages/clinica/configuracoes/GeraisConfig';
 import PerfisUsuarioConfig from '@/pages/clinica/configuracoes/PerfisUsuarioConfig';
 import PermissoesConfig from '@/pages/clinica/configuracoes/PermissoesConfig';
 import AgendaConfig from '@/pages/clinica/configuracoes/AgendaConfig';
-import ContaConfig from '@/pages/clinica/configuracoes/ContaConfig';
 import FaturamentoConfig from '@/pages/clinica/configuracoes/FaturamentoConfig';
 import EstoqueConfig from '@/pages/clinica/configuracoes/EstoqueConfig';
 
@@ -47,33 +46,50 @@ import DashboardEstoque from '@/pages/clinica/estoque/DashboardEstoque';
 
 // Financeiro - removed duplicate Dashboard import, using FinanceDashboard instead
 import FinanceDashboard from '@/pages/clinica/financeiro/DashboardFinanceiro';
-import FinanceContasPagar from '@/pages/clinica/financeiro/ContasPagar';
-import FinanceNovaConta from '@/pages/clinica/financeiro/NovaConta';
-import FinanceEditarConta from '@/pages/clinica/financeiro/EditarConta';
 import FinanceContasReceber from '@/pages/clinica/financeiro/ContasReceber';
 import FinanceNovoRecebimento from '@/pages/clinica/financeiro/NovoRecebimento';
 import FinanceFluxoCaixa from '@/pages/clinica/financeiro/FluxoCaixa';
+import DREPage from '@/pages/clinica/financeiro/DRE';
 import FinancePlanoContas from '@/pages/clinica/financeiro/PlanoContas';
-import CentroCustosLayout from '@/pages/clinica/financeiro/custos/CentroCustosLayout';
-import CentroCustosOverview from '@/pages/clinica/financeiro/custos/Overview';
-import CentroCustosCadastro from '@/pages/clinica/financeiro/custos/Cadastro';
-import CentroCustosHierarquia from '@/pages/clinica/financeiro/custos/Hierarquia';
-import CentroCustosVinculacoes from '@/pages/clinica/financeiro/custos/Vinculacoes';
-import CentroCustosRateio from '@/pages/clinica/financeiro/custos/Rateio';
-import CentroCustosAnalises from '@/pages/clinica/financeiro/custos/Analises';
-import CentroCustosConfig from '@/pages/clinica/financeiro/custos/Config';
 import FinanceConciliacaoBancaria from '@/pages/clinica/financeiro/ConciliacaoBancaria';
+import ChartOfAccountsPage from '@/modules/financeiro/plano-contas/pages/ChartOfAccountsPage';
+import CostCenterPage from '@/modules/financeiro/centro-custo/pages/CostCenterPage';
+import { FinancialAccountsPage } from '@/modules/financeiro/contas-financeiras';
+// Contas a Pagar Module
+import ContasApagarPage from '@/modules/financeiro/contas-pagar/pages';
 import FinanceAutomacaoFinanceira from '@/pages/clinica/financeiro/AutomacaoFinanceira';
 import AutorizacaoDescontos from '@/pages/clinica/financeiro/AutorizacaoDescontos';
-import DashboardDRE from '@/pages/clinica/financeiro/DashboardDRE';
 import CaixaIndividual from '@/pages/clinica/financeiro/CaixaIndividual';
 import CaixaGerencial from '@/pages/clinica/financeiro/CaixaGerencial';
+import CartasPage from '@/pages/clinica/financeiro/CartasPage';
+import CartasOperadorasPage from '@/pages/clinica/financeiro/CartasOperadorasPage';
+import CartasProcessadorTaxasPage from '@/pages/clinica/financeiro/CartasProcessadorTaxasPage';
+import AuditReportPage from '@/pages/clinica/financeiro/AuditReportPage'; // ✅ ETAPA D.6
+import AuditoryAnalyticsDashboard from '@/pages/clinica/financeiro/AuditoryAnalyticsDashboard'; // ✅ ETAPA F.1
+import ProcessadorFeesAnalytics from '@/pages/clinica/financeiro/ProcessadorFeesAnalytics';
+// Motor Financeiro Enterprise
+import { FinancialTransactionsPage } from '@/modules/financeiro/lancamentos';
+// ETAPA 1: Integração Agenda → Financeiro
+import AppointmentFinancialIntegrationConfig from '@/modules/financeiro/etapa1-integracao-agenda/AppointmentFinancialIntegrationConfig';
 // Novas páginas de repasse (estrutura real)
 import RepasseMedicoLayout from '@/pages/financeiro/RepasseMedicoLayout';
 import RepasseMedicoPage from '@/pages/financeiro/RepasseMedicoPage';
 import RepasseRegrasPage from '@/pages/financeiro/RepasseRegrasPage';
 import RepasseDashboardAnalyticsPage from '@/pages/financeiro/RepasseDashboardAnalyticsPage';
 import RepasseAutomacaoPage from '@/pages/financeiro/RepasseAutomacaoPage';
+// ETAPA 4 & 5: Dashboard DRE Dinâmica + Alertas
+import DashboardDRE from '@/pages/financeiro/DashboardDRE';
+import DREDashboard from '@/components/financeiro/DRE/DREDashboard';
+// ETAPA 6: Conciliação Inteligente
+import Conciliador from '@/pages/financeiro/Conciliador';
+// ETAPA 7: Financial Cockpit Premium
+import CockpitPremium from '@/pages/financeiro/CockpitPremium';
+// ETAPA 8: Alertas e Automações
+import AlertCenter from '@/pages/admin/AlertCenter';
+import JobMonitor from '@/pages/admin/JobMonitor';
+import SystemHealthPage from '@/pages/admin/SystemHealthPage';
+import OperationalAnalyticsPage from '@/pages/admin/OperationalAnalyticsPage';
+import OperationalCompliancePage from '@/pages/admin/OperationalCompliancePage';
 
 // Faturamento
 import FaturamentoPage from '@/pages/clinica/faturamento/FaturamentoPage';
@@ -127,6 +143,9 @@ import PatientListPage from '@/pages/clinica/pacientes/PatientListPage';
 import PatientCadastroPage from '@/pages/clinica/pacientes/PatientCadastroPage';
 import PatientDetailPage from '@/pages/clinica/pacientes/PatientDetailPage';
 
+// 📊 AUDITORIA
+import AuditoriaPage from '@/pages/clinica/auditoria/AuditoriaPage';
+
 // 🏗️ BASE DO SISTEMA - NOVO MÓDULO
 import {
   ServicesPage,
@@ -142,6 +161,9 @@ import {
   ProfessionalPayerPage,
 } from '@/pages/clinica/base-sistema/pages';
 import CBHPMManagement from '@/pages/clinica/base-sistema/CBHPMManagement';
+
+// Import TestDataPage for test data insertion
+import TestDataPage from '@/pages/TestDataPage';
 
 // Admin
 import Usuarios from '@/pages/admin/Usuarios';
@@ -274,6 +296,7 @@ export default function AppRoutes() {
       {/* PROTECTED */}
       <Route element={<ProtectedRoute />}>
         <Route path="/diagnostics" element={<DiagnosticsPage />} />
+        <Route path="/test-data" element={<TestDataPage />} />
 
         {/* 🔴 ADMIN */}
         <Route element={<AdminRoute />}>
@@ -315,11 +338,7 @@ export default function AppRoutes() {
           {/* ⭐ AGENDA - VERSÃO OTIMIZADA COM INTERFACE COMPACTA */}
           <Route
             path="agenda"
-            element={
-              <ProtectedWizardRoute feature="agenda">
-                <AgendaIndexNew />
-              </ProtectedWizardRoute>
-            }
+            element={<AgendaIndexNew />}
           />
 
           {/* 📋 RECEPÇÃO - PHASE 3 */}
@@ -368,8 +387,6 @@ export default function AppRoutes() {
           <Route path="configuracoes/perfis" element={<PerfisUsuarioConfig />} />
           <Route path="configuracoes/permissoes" element={<PermissoesConfig />} />
           <Route path="configuracoes/agenda/*" element={<AgendaConfig />} />
-          <Route path="configuracoes/conta" element={<ContaConfig />} />
-          <Route path="configuracoes/conta/:tab" element={<ContaConfig />} />
           <Route path="configuracoes/faturamento" element={<FaturamentoConfig />} />
           <Route path="configuracoes/estoque" element={<EstoqueConfig />} />
 
@@ -384,6 +401,11 @@ export default function AppRoutes() {
             <Route path="administracao/clinicas" element={<Clinicas embedded />} />
             <Route path="administracao/clinicas/nova" element={<NewClinic />} />
             <Route path="administracao/clinicas/editar/:id" element={<EditClinic />} />
+            <Route path="administracao/jobs" element={<JobMonitor />} />
+            <Route path="administracao/alerts" element={<AlertCenter />} />
+            <Route path="administracao/saude" element={<SystemHealthPage />} />
+            <Route path="administracao/analytics" element={<OperationalAnalyticsPage />} />
+            <Route path="administracao/compliance" element={<OperationalCompliancePage />} />
           </Route>
 
           {/* ESTOQUE */}
@@ -420,16 +442,14 @@ export default function AppRoutes() {
               </ProtectedWizardRoute>
             }
           />
+          <Route path="financeiro/dre-dinamica" element={<DashboardDRE />} />
+          <Route path="financeiro/dre" element={<DREDashboard />} />
+          <Route path="financeiro/conciliacao-bancaria" element={<Conciliador />} />
+          <Route path="financeiro/cockpit-premium" element={<CockpitPremium />} />
           <Route path="financeiro/caixa" element={<CaixaIndividual />} />
           <Route path="financeiro/caixa-gerencial" element={<CaixaGerencial />} />
-          <Route path="financeiro/resultado" element={<DashboardDRE />} />
-          <Route
-            path="financeiro/dre"
-            element={<Navigate to="/clinica/financeiro/resultado" replace />}
-          />
-          <Route path="financeiro/pagar" element={<FinanceContasPagar />} />
-          <Route path="financeiro/pagar/nova" element={<FinanceNovaConta />} />
-          <Route path="financeiro/pagar/:id/editar" element={<FinanceEditarConta />} />
+          <Route path="financeiro/resultado" element={<DREPage />} />
+          <Route path="financeiro/dre" element={<DREPage />} />
           <Route path="financeiro/receber" element={<FinanceContasReceber />} />
           <Route path="financeiro/contas-receber" element={<FinanceContasReceber />} />
           <Route path="financeiro/receber/nova" element={<FinanceNovoRecebimento />} />
@@ -442,23 +462,56 @@ export default function AppRoutes() {
             }
           />
           <Route path="financeiro/fluxo-caixa" element={<FinanceFluxoCaixa />} />
+          <Route path="financeiro/contas-pagar" element={<ContasApagarPage />} />
           <Route
             path="financeiro/fluxo"
             element={<Navigate to="/clinica/financeiro/fluxo-caixa" replace />}
           />
           <Route
             path="financeiro/plano-contas"
-            element={<Navigate to="/clinica/configuracoes/conta" replace />}
+            element={<ChartOfAccountsPage />}
           />
           <Route path="financeiro/conciliacao-bancaria" element={<FinanceConciliacaoBancaria />} />
           <Route
             path="financeiro/conciliacao"
             element={<Navigate to="/clinica/financeiro/conciliacao-bancaria" replace />}
           />
+          <Route path="financeiro/cockpit-premium" element={<CockpitPremium />} />
           <Route path="financeiro/automacao" element={<FinanceAutomacaoFinanceira />} />
           <Route
             path="financeiro/automacoes"
             element={<Navigate to="/clinica/financeiro/automacao" replace />}
+          />
+          <Route
+            path="financeiro/cartoes"
+            element={<CartasPage />}
+          />
+          <Route
+            path="financeiro/cartoes-operadoras"
+            element={<CartasOperadorasPage />}
+          />
+          <Route
+            path="financeiro/cartoes-taxas-operadoras"
+            element={<CartasProcessadorTaxasPage />}
+          />
+          {/* ✅ ETAPA D.6: Rota de Auditoria */}
+          <Route
+            path="financeiro/auditoria"
+            element={<AuditReportPage />}
+          />
+          {/* ✅ ETAPA F.1: Analytics de Auditoria */}
+          <Route
+            path="financeiro/auditoria-analytics"
+            element={<AuditoryAnalyticsDashboard />}
+          />
+          <Route
+            path="financeiro/cartoes-analytics"
+            element={<ProcessadorFeesAnalytics />}
+          />
+          {/* ETAPA 1: Integração Agenda → Financeiro */}
+          <Route
+            path="financeiro/etapa1-integracao-agenda"
+            element={<AppointmentFinancialIntegrationConfig />}
           />
           <Route
             path="automacoes"
@@ -484,15 +537,9 @@ export default function AppRoutes() {
             path="repasse"
             element={<Navigate to="/clinica/financeiro/repasse/?tab=visao-geral" replace />}
           />
-          <Route path="financeiro/centro-custos" element={<CentroCustosLayout />}>
-            <Route index element={<CentroCustosOverview />} />
-            <Route path="cadastro" element={<CentroCustosCadastro />} />
-            <Route path="hierarquia" element={<CentroCustosHierarquia />} />
-            <Route path="vinculacoes" element={<CentroCustosVinculacoes />} />
-            <Route path="rateio" element={<CentroCustosRateio />} />
-            <Route path="analises" element={<CentroCustosAnalises />} />
-            <Route path="config" element={<CentroCustosConfig />} />
-          </Route>
+          <Route path="financeiro/centro-custos" element={<CostCenterPage />} />
+          <Route path="financeiro/contas-financeiras" element={<FinancialAccountsPage />} />
+          <Route path="financeiro/lancamentos" element={<FinancialTransactionsPage />} />
 
           {/* FATURAMENTO */}
           <Route path="faturamento" element={<FaturamentoPage />} />
@@ -512,6 +559,9 @@ export default function AppRoutes() {
             <Route path=":patientId" element={<PatientDetailPage />} />
           </Route>
           <Route path="atendimento/:id" element={<Atendimento />} />
+
+          {/* 📊 AUDITORIA */}
+          <Route path="auditoria" element={<AuditoriaPage />} />
 
           {/* 🏗️ BASE DO SISTEMA - NOVO MÓDULO */}
           {/* Rota padrão - redireciona para Serviços */}
