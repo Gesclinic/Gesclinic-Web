@@ -18,15 +18,39 @@ export default function Checkout() {
 
   // Load plans on mount
   useEffect(() => {
-    // Carregar Stripe
+    // Carregar Stripe dinamicamente
     const loadStripe = async () => {
-      if (window.Stripe && !stripe) {
-        stripe = window.Stripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
-      }
+      return new Promise((resolve) => {
+        // Check if already loaded
+        if (window.Stripe && !stripe) {
+          stripe = window.Stripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
+          resolve();
+          return;
+        }
+
+        // If not loaded, load the script dynamically
+        if (!window.Stripe) {
+          const script = document.createElement('script');
+          script.src = 'https://js.stripe.com/v3/';
+          script.async = true;
+          script.onload = () => {
+            stripe = window.Stripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
+            resolve();
+          };
+          script.onerror = () => {
+            console.error('Failed to load Stripe script');
+            resolve(); // Continue anyway
+          };
+          document.head.appendChild(script);
+        } else {
+          resolve();
+        }
+      });
     };
 
-    loadStripe();
-    loadPlans();
+    loadStripe().then(() => {
+      loadPlans();
+    });
 
     // Check if returning from successful payment
     const sessionId = searchParams.get('session_id');

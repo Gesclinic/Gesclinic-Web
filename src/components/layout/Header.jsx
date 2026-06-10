@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { LogOut, Menu, Building } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useClinicContext } from '@/contexts/ClinicContext';
+import NotificationBell from '@/components/NotificationBell';
+import ThemeToggle from '@/components/layout/ThemeToggle';
 
 export default function Header({ onToggleMenu }) {
   const { user, signOut } = useAuth();
@@ -52,28 +54,34 @@ export default function Header({ onToggleMenu }) {
   };
 
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-3 h-16 flex items-center">
+    <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-3 h-16 flex items-center">
       <div className="flex items-center justify-between w-full">
         {/* Botão de menu (Sidebar PRÓ) */}
         <button
           onClick={onToggleMenu}
-          className="p-2 rounded-lg hover:bg-gray-100 text-[#1A5B8A] transition"
+          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-[#1A5B8A] dark:text-blue-400 transition"
         >
           <Menu className="w-6 h-6" />
         </button>
 
         {/* Info do usuário */}
-        <div className="flex items-center gap-6 ml-auto">
+        <div className="flex items-center gap-4 ml-auto">
           {/* Clínica */}
           <div className="flex items-center gap-2">
-            <Building className="w-4 h-4 text-gray-500" />
-            <span className="text-sm text-gray-700">{headerData.clinicName}</span>
+            <Building className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+            <span className="text-sm text-gray-700 dark:text-gray-300">{headerData.clinicName}</span>
           </div>
 
+          {/* Notificações - ETAPA 8 */}
+          <NotificationBell />
+
+          {/* Dark Mode Toggle */}
+          <ThemeToggle />
+
           {/* Usuário */}
-          <div className="text-right border-r border-gray-200 pr-6">
-            <p className="text-xs text-gray-600">Bem-vindo</p>
-            <p className="font-semibold text-gray-900 text-sm">{headerData.userName}</p>
+          <div className="text-right border-r border-gray-200 dark:border-gray-600 pr-4">
+            <p className="text-xs text-gray-600 dark:text-gray-400">Bem-vindo</p>
+            <p className="font-semibold text-gray-900 dark:text-white text-sm">{headerData.userName}</p>
           </div>
 
           {/* Botão Sair */}

@@ -1,4 +1,5 @@
 // src/main.jsx
+
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
@@ -8,6 +9,7 @@ import * as Sentry from '@sentry/react';
 
 import App from './App.jsx';
 import ErrorBoundary from '@/components/common/ErrorBoundary.jsx';
+import { ToastProvider } from '@/components/ToastSystem.jsx';
 
 import { AuthProvider } from '@/contexts/SupabaseAuthContext.jsx';
 import { ClinicProvider } from '@/contexts/ClinicContext.jsx';
@@ -15,12 +17,36 @@ import { PatientProvider } from '@/contexts/PatientContext.jsx';
 
 import './index.css';
 import './react-calendar-custom.css';
+import './styles/animations.css';
+
+// Force Portuguese locale for date inputs to use dd/mm/yyyy format
+Object.defineProperty(navigator, 'language', {
+  value: 'pt-BR',
+  writable: false
+});
+Object.defineProperty(navigator, 'languages', {
+  value: ['pt-BR', 'pt', 'en-US'],
+  writable: false
+});
+
+// Initialize theme from localStorage before rendering
+(() => {
+  const savedTheme = localStorage.getItem('gesclinic_theme');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const shouldBeDark = savedTheme ? savedTheme === 'dark' : prefersDark;
+
+  if (shouldBeDark) {
+    document.documentElement.classList.add('dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+  }
+})();
 
 // Configurar Sentry para produção
 if (import.meta.env.PROD) {
   try {
     const integrations = [];
-    
+
     // Apenas adicionar Replay se existir e DSN estiver configurado
     if (Sentry.Replay && import.meta.env.VITE_SENTRY_DSN) {
       integrations.push(
@@ -30,7 +56,7 @@ if (import.meta.env.PROD) {
         })
       );
     }
-    
+
     Sentry.init({
       dsn: import.meta.env.VITE_SENTRY_DSN || '',
       integrations: integrations,
@@ -51,15 +77,17 @@ createRoot(document.getElementById('root')).render(
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <HelmetProvider>
-          <AuthProvider>
-            <ClinicProvider>
-              <PatientProvider>
-                <BrowserRouter>
-                  <App />
-                </BrowserRouter>
-              </PatientProvider>
-            </ClinicProvider>
-          </AuthProvider>
+          <ToastProvider>
+            <AuthProvider>
+              <ClinicProvider>
+                <PatientProvider>
+                  <BrowserRouter>
+                    <App />
+                  </BrowserRouter>
+                </PatientProvider>
+              </ClinicProvider>
+            </AuthProvider>
+          </ToastProvider>
         </HelmetProvider>
       </QueryClientProvider>
     </ErrorBoundary>

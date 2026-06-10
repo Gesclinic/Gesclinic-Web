@@ -1,6 +1,6 @@
 // src/components/layout/Sidebar.jsx
 import React, { useState, useMemo, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Importar TODOS os novos ícones
@@ -218,7 +218,9 @@ const ICONS = {
 export default function Sidebar({ isOpen, setIsOpen }) {
   const { currentRole, handleLogout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const navRef = React.useRef(null);
+  const scrollPosRef = React.useRef(null);
 
   // Determina o role: primeiro da sessão customizada, depois do Supabase Auth
   const getRoleForMenu = () => {
@@ -289,6 +291,50 @@ export default function Sidebar({ isOpen, setIsOpen }) {
       setPendingOpenItemId(null);
     }
   }, [activeTrail, location.pathname, isOpen, pendingOpenItemId]);
+
+  // Interceptar cliques em links para prevenir auto-scroll do navegador
+  useEffect(() => {
+    const navElement = navRef.current;
+    if (!navElement) return;
+
+    const handleLinkClick = (e) => {
+      const linkElement = e.target.closest('a[href]');
+      if (!linkElement || !navElement.contains(linkElement)) return;
+
+      // Não interceptar links externos ou especiais
+      if (linkElement.hasAttribute('download') || linkElement.target === '_blank') return;
+
+      // Capturar scroll position
+      scrollPosRef.current = navElement.scrollTop;
+
+      // Extrair o path (remover leading slash se houver)
+      const href = linkElement.getAttribute('href');
+      if (!href) return;
+
+      // Deixar React Router handleLink fazer o seu trabalho
+      // Mas vamos restaurar o scroll após a navegação
+      requestAnimationFrame(() => {
+        // Verificar se a URL mudou (após React Router processar)
+        if (location.pathname !== href) {
+          // A navegação vai acontecer, restaurar scroll no próximo frame
+          setTimeout(() => {
+            if (navElement && scrollPosRef.current !== null) {
+              navElement.scrollTop = scrollPosRef.current;
+              // Restaurar novamente após reflow
+              setTimeout(() => {
+                if (navElement && scrollPosRef.current !== null) {
+                  navElement.scrollTop = scrollPosRef.current;
+                }
+              }, 0);
+            }
+          }, 0);
+        }
+      });
+    };
+
+    navElement.addEventListener('click', handleLinkClick, true);
+    return () => navElement.removeEventListener('click', handleLinkClick, true);
+  }, [location.pathname]);
 
   const toggleItem = (item, siblingIds = []) => {
     const shouldOpen = !openItems[item.id];
