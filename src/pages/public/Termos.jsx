@@ -20,7 +20,7 @@ const TermosPage = () => {
           <h2>1. Termos</h2>
           <p>
             Ao acessar ao site Gesclinic Web, concorda em cumprir estes termos de serviço, todas as
-            leis e regulamentos aplicáveis ​​e concorda que é responsável pelo cumprimento de todas
+            leis e regulamentos aplicáveis e concorda que é responsável pelo cumprimento de todas
             as leis locais aplicáveis. Se você não concordar com algum desses termos, está proibido
             de usar ou acessar este site. Os materiais contidos neste site são protegidos pelas leis
             de direitos autorais e marcas comerciais aplicáveis.
@@ -68,7 +68,7 @@ const TermosPage = () => {
 
           <h2>4. Limitações</h2>
           <p>
-            Em nenhum caso o Gesclinic Web ou seus fornecedores serão responsáveis ​​por quaisquer
+            Em nenhum caso o Gesclinic Web ou seus fornecedores serão responsáveis por quaisquer
             danos (incluindo, sem limitação, danos por perda de dados ou lucro ou devido a
             interrupção dos negócios) decorrentes do uso ou da incapacidade de usar os materiais em
             Gesclinic Web, mesmo que Gesclinic Web ou um representante autorizado da Gesclinic Web

@@ -1,11 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { importBankStatement, listBankStatements, reconcileStatement, markAsDivergent, ignoreStatement } from '@/lib/conciliationApi';
 import { suggestForStatement } from '@/lib/conciliationSuggest';
-  const [selectedStatement, setSelectedStatement] = useState(null);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [actionMessage, setActionMessage] = useState('');
-  const [selectedIds, setSelectedIds] = useState([]);
-  const allPendingIds = useMemo(() => statements.filter(st => st.status === 'pending').map(st => st.id), [statements]);
 
 // Estrutura inicial da página de Conciliação Bancária
 export default function ConciliacaoBancaria() {
@@ -20,6 +15,12 @@ export default function ConciliacaoBancaria() {
   const [statements, setStatements] = useState([]);
   const [filterStatus, setFilterStatus] = useState('');
   const [filterType, setFilterType] = useState('');
+  const [selectedStatement, setSelectedStatement] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionMessage, setActionMessage] = useState('');
+  const [selectedIds, setSelectedIds] = useState([]);
+  const allPendingIds = useMemo(() => statements.filter(st => st.status === 'pending').map(st => st.id), [statements]);
+
   // Carregar movimentações ao importar ou ao trocar filtros
   useEffect(() => {
     if (!bankAccountId) return;
@@ -118,7 +119,40 @@ export default function ConciliacaoBancaria() {
               </select>
             </div>
             <div className="flex gap-2">
-              <div className="mb-2 flex gap-2 items-center">
+              <input type="date" value={periodStart} onChange={e => setPeriodStart(e.target.value)} className="border rounded p-2 w-full" />
+              <input type="date" value={periodEnd} onChange={e => setPeriodEnd(e.target.value)} className="border rounded p-2 w-full" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium">Arquivo CSV</label>
+              <input type="file" accept=".csv,text/csv" onChange={e => setFile(e.target.files?.[0] || null)} className="w-full border rounded p-2" />
+            </div>
+            <button type="submit" disabled={importing || !bankAccountId || !file} className="bg-primary text-white px-4 py-2 rounded disabled:opacity-50">
+              {importing ? 'Importando...' : 'Importar extrato'}
+            </button>
+            {error && <div className="text-red-600 text-sm">{error}</div>}
+            {importResult && <div className="text-green-600 text-sm">Extrato importado com sucesso.</div>}
+          </form>
+        </div>
+
+        {/* Bloco 2: Extrato e Conciliação */}
+        <div className="md:col-span-2 bg-white rounded shadow p-4">
+          <h2 className="font-semibold mb-2">Movimentações Bancárias</h2>
+          <div className="flex flex-col md:flex-row gap-2 mb-3">
+            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="border rounded p-2">
+              <option value="">Todos os status</option>
+              <option value="pending">Pendentes</option>
+              <option value="reconciled">Conciliados</option>
+              <option value="adjusted">Ajustados</option>
+              <option value="divergent">Divergentes</option>
+              <option value="ignored">Ignorados</option>
+            </select>
+            <select value={filterType} onChange={e => setFilterType(e.target.value)} className="border rounded p-2">
+              <option value="">Créditos e Débitos</option>
+              <option value="credit">Créditos</option>
+              <option value="debit">Débitos</option>
+            </select>
+          </div>
+          <div className="mb-2 flex gap-2 items-center">
                 <button
                   className="bg-primary text-white px-3 py-1 rounded disabled:opacity-50"
                   disabled={selectedIds.length === 0 || actionLoading}
@@ -145,56 +179,6 @@ export default function ConciliacaoBancaria() {
                   onClick={() => setSelectedIds([])}
                   disabled={selectedIds.length === 0}
                 >Limpar seleção</button>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="p-2 w-8"></th>
-                      <th className="p-2">Data</th>
-                      <th className="p-2">Descrição</th>
-                      <th className="p-2">Valor</th>
-                      <th className="p-2">Tipo</th>
-                      <th className="p-2">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {statements.length === 0 && (
-                      <tr><td colSpan={6} className="text-center text-gray-400 p-4">Nenhum extrato importado ainda.</td></tr>
-                    )}
-                    {statements.map(st => (
-                      <tr key={st.id} className="border-b hover:bg-gray-50">
-                        <td className="p-2 text-center">
-                          <input
-                            type="checkbox"
-                            disabled={st.status !== 'pending'}
-                            checked={selectedIds.includes(st.id)}
-                            onChange={e => {
-                              if (e.target.checked) setSelectedIds(ids => [...ids, st.id]);
-                              else setSelectedIds(ids => ids.filter(id => id !== st.id));
-                            }}
-                          />
-                        </td>
-                        <td className="p-2 whitespace-nowrap cursor-pointer" onClick={() => setSelectedStatement(st)}>{st.date}</td>
-                        <td className="p-2 cursor-pointer" onClick={() => setSelectedStatement(st)}>{st.description}</td>
-                        <td className="p-2 text-right cursor-pointer" onClick={() => setSelectedStatement(st)}>{Number(st.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-                        <td className="p-2 cursor-pointer" onClick={() => setSelectedStatement(st)}>{st.type === 'credit' ? 'Crédito' : 'Débito'}</td>
-                        <td className="p-2 cursor-pointer" onClick={() => setSelectedStatement(st)}>
-                          {st.status === 'pending' && <span className="text-yellow-600">🟡 Pendente</span>}
-                          {st.status === 'reconciled' && <span className="text-green-600">🟢 Conciliado</span>}
-                          {st.status === 'adjusted' && <span className="text-blue-600">🔵 Ajustado</span>}
-                          {st.status === 'divergent' && <span className="text-red-600">🔴 Divergente</span>}
-                          {st.status === 'ignored' && <span className="text-gray-500">⚠ Ignorado</span>}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <option value="">Créditos e Débitos</option>
-              <option value="credit">Créditos</option>
-              <option value="debit">Débitos</option>
-            </select>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
@@ -209,15 +193,26 @@ export default function ConciliacaoBancaria() {
               </thead>
               <tbody>
                 {statements.length === 0 && (
-                  <tr><td colSpan={5} className="text-center text-gray-400 p-4">Nenhum extrato importado ainda.</td></tr>
+                  <tr><td colSpan={6} className="text-center text-gray-400 p-4">Nenhum extrato importado ainda.</td></tr>
                 )}
                 {statements.map(st => (
-                  <tr key={st.id} className="border-b hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedStatement(st)}>
-                    <td className="p-2 whitespace-nowrap">{st.date}</td>
-                    <td className="p-2">{st.description}</td>
-                    <td className="p-2 text-right">{Number(st.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
-                    <td className="p-2">{st.type === 'credit' ? 'Crédito' : 'Débito'}</td>
-                    <td className="p-2">
+                  <tr key={st.id} className="border-b hover:bg-gray-50">
+                    <td className="p-2 text-center">
+                      <input
+                        type="checkbox"
+                        disabled={st.status !== 'pending'}
+                        checked={selectedIds.includes(st.id)}
+                        onChange={e => {
+                          if (e.target.checked) setSelectedIds(ids => [...ids, st.id]);
+                          else setSelectedIds(ids => ids.filter(id => id !== st.id));
+                        }}
+                      />
+                    </td>
+                    <td className="p-2 whitespace-nowrap cursor-pointer" onClick={() => setSelectedStatement(st)}>{st.date}</td>
+                    <td className="p-2 cursor-pointer" onClick={() => setSelectedStatement(st)}>{st.description}</td>
+                    <td className="p-2 text-right cursor-pointer" onClick={() => setSelectedStatement(st)}>{Number(st.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                    <td className="p-2 cursor-pointer" onClick={() => setSelectedStatement(st)}>{st.type === 'credit' ? 'Crédito' : 'Débito'}</td>
+                    <td className="p-2 cursor-pointer" onClick={() => setSelectedStatement(st)}>
                       {st.status === 'pending' && <span className="text-yellow-600">🟡 Pendente</span>}
                       {st.status === 'reconciled' && <span className="text-green-600">🟢 Conciliado</span>}
                       {st.status === 'adjusted' && <span className="text-blue-600">🔵 Ajustado</span>}
@@ -226,88 +221,82 @@ export default function ConciliacaoBancaria() {
                     </td>
                   </tr>
                 ))}
-                    {/* Painel de Conciliação (Modal) */}
-                    {selectedStatement && (
-                      <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-                        <div className="bg-white rounded shadow-lg p-6 w-full max-w-lg relative">
-                          <button className="absolute top-2 right-2 text-gray-500 hover:text-black" onClick={() => { setSelectedStatement(null); setActionMessage(''); }}>×</button>
-                          <h3 className="text-lg font-bold mb-2">Conciliação de Extrato</h3>
-                          <div className="mb-2">
-                            <div><b>Data:</b> {selectedStatement.date}</div>
-                            <div><b>Descrição:</b> {selectedStatement.description}</div>
-                            <div><b>Valor:</b> {Number(selectedStatement.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-                            <div><b>Tipo:</b> {selectedStatement.type === 'credit' ? 'Crédito' : 'Débito'}</div>
-                            <div><b>Status:</b> {selectedStatement.status}</div>
-                          </div>
-                          {/* Sugestões automáticas */}
-                          <div className="mb-3">
-                            <div className="font-semibold mb-1">Sugestões automáticas</div>
-                            {(() => {
-                              const sug = suggestForStatement(selectedStatement);
-                              return (
-                                <div className="bg-gray-50 p-2 rounded text-gray-700 text-sm">
-                                  <div><b>Plano de Contas:</b> {sug.planoContas || <span className="text-gray-400">(nenhum)</span>}</div>
-                                  <div><b>Tipo de Lançamento:</b> {sug.tipoLancamento || <span className="text-gray-400">(nenhum)</span>}</div>
-                                  {sug.categoria && <div><b>Categoria:</b> {sug.categoria}</div>}
-                                  {sug.sugerirIgnorar && <div className="text-orange-600 font-semibold">Sugestão: Ignorar movimentação</div>}
-                                </div>
-                              );
-                            })()}
-                          </div>
-                          {/* Ações */}
-                          <div className="flex flex-col gap-2">
-                            <button disabled={actionLoading || selectedStatement.status !== 'pending'}
-                              className="bg-green-600 text-white px-3 py-2 rounded disabled:opacity-50"
-                              onClick={async () => {
-                                setActionLoading(true); setActionMessage('');
-                                try {
-                                  // Aqui normalmente pediria para escolher lançamento, mas mocka vínculo id=1
-                                  await reconcileStatement({ statementId: selectedStatement.id, financialId: '1' });
-                                  setActionMessage('Conciliado com sucesso!');
-                                } catch (e) { setActionMessage('Erro ao conciliar.'); }
-                                setActionLoading(false);
-                              }}>
-                              Conciliar com lançamento existente
-                            </button>
-                            <button disabled className="bg-blue-600 text-white px-3 py-2 rounded opacity-50">
-                              ➕ Criar lançamento (em breve)
-                            </button>
-                            <button disabled={actionLoading || selectedStatement.status !== 'pending'}
-                              className="bg-red-600 text-white px-3 py-2 rounded disabled:opacity-50"
-                              onClick={async () => {
-                                setActionLoading(true); setActionMessage('');
-                                try {
-                                  await markAsDivergent({ statementId: selectedStatement.id });
-                                  setActionMessage('Marcado como divergente.');
-                                } catch (e) { setActionMessage('Erro ao marcar divergente.'); }
-                                setActionLoading(false);
-                              }}>
-                              ⚠ Marcar como divergente
-                            </button>
-                            <button disabled={actionLoading || selectedStatement.status !== 'pending'}
-                              className="bg-gray-500 text-white px-3 py-2 rounded disabled:opacity-50"
-                              onClick={async () => {
-                                setActionLoading(true); setActionMessage('');
-                                try {
-                                  await ignoreStatement({ statementId: selectedStatement.id });
-                                  setActionMessage('Movimentação ignorada.');
-                                } catch (e) { setActionMessage('Erro ao ignorar.'); }
-                                setActionLoading(false);
-                              }}>
-                              🚫 Ignorar
-                            </button>
-                            {actionMessage && <div className="text-center text-sm mt-2">{actionMessage}</div>}
-                          </div>
-                        </div>
-                      </div>
-                    )}
               </tbody>
             </table>
           </div>
         </div>
       </div>
-      {/* Bloco 3: Painel de Conciliação (modal ou drawer ao clicar em item) */}
-      {/* TODO: Implementar painel de conciliação e ações */}
+      {selectedStatement && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white rounded shadow-lg p-6 w-full max-w-lg relative">
+            <button className="absolute top-2 right-2 text-gray-500 hover:text-black" onClick={() => { setSelectedStatement(null); setActionMessage(''); }}>×</button>
+            <h3 className="text-lg font-bold mb-2">Conciliação de Extrato</h3>
+            <div className="mb-2">
+              <div><b>Data:</b> {selectedStatement.date}</div>
+              <div><b>Descrição:</b> {selectedStatement.description}</div>
+              <div><b>Valor:</b> {Number(selectedStatement.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+              <div><b>Tipo:</b> {selectedStatement.type === 'credit' ? 'Crédito' : 'Débito'}</div>
+              <div><b>Status:</b> {selectedStatement.status}</div>
+            </div>
+            <div className="mb-3">
+              <div className="font-semibold mb-1">Sugestões automáticas</div>
+              {(() => {
+                const sug = suggestForStatement(selectedStatement);
+                return (
+                  <div className="bg-gray-50 p-2 rounded text-gray-700 text-sm">
+                    <div><b>Plano de Contas:</b> {sug.planoContas || <span className="text-gray-400">(nenhum)</span>}</div>
+                    <div><b>Tipo de Lançamento:</b> {sug.tipoLancamento || <span className="text-gray-400">(nenhum)</span>}</div>
+                    {sug.categoria && <div><b>Categoria:</b> {sug.categoria}</div>}
+                    {sug.sugerirIgnorar && <div className="text-orange-600 font-semibold">Sugestão: Ignorar movimentação</div>}
+                  </div>
+                );
+              })()}
+            </div>
+            <div className="flex flex-col gap-2">
+              <button disabled={actionLoading || selectedStatement.status !== 'pending'}
+                className="bg-green-600 text-white px-3 py-2 rounded disabled:opacity-50"
+                onClick={async () => {
+                  setActionLoading(true); setActionMessage('');
+                  try {
+                    await reconcileStatement({ statementId: selectedStatement.id, financialId: '1' });
+                    setActionMessage('Conciliado com sucesso!');
+                  } catch (e) { setActionMessage('Erro ao conciliar.'); }
+                  setActionLoading(false);
+                }}>
+                Conciliar com lançamento existente
+              </button>
+              <button disabled className="bg-blue-600 text-white px-3 py-2 rounded opacity-50">
+                ➕ Criar lançamento (em breve)
+              </button>
+              <button disabled={actionLoading || selectedStatement.status !== 'pending'}
+                className="bg-red-600 text-white px-3 py-2 rounded disabled:opacity-50"
+                onClick={async () => {
+                  setActionLoading(true); setActionMessage('');
+                  try {
+                    await markAsDivergent({ statementId: selectedStatement.id });
+                    setActionMessage('Marcado como divergente.');
+                  } catch (e) { setActionMessage('Erro ao marcar divergente.'); }
+                  setActionLoading(false);
+                }}>
+                ⚠ Marcar como divergente
+              </button>
+              <button disabled={actionLoading || selectedStatement.status !== 'pending'}
+                className="bg-gray-500 text-white px-3 py-2 rounded disabled:opacity-50"
+                onClick={async () => {
+                  setActionLoading(true); setActionMessage('');
+                  try {
+                    await ignoreStatement({ statementId: selectedStatement.id });
+                    setActionMessage('Movimentação ignorada.');
+                  } catch (e) { setActionMessage('Erro ao ignorar.'); }
+                  setActionLoading(false);
+                }}>
+                🚫 Ignorar
+              </button>
+              {actionMessage && <div className="text-center text-sm mt-2">{actionMessage}</div>}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
