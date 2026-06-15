@@ -3,6 +3,7 @@ import PageLayout from '@/components/ui/PageLayout';
 import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
 import DashboardAtendimentos from '@/pages/clinica/dashboard/DashboardAtendimentos';
 import DashboardFaturamento from '@/pages/clinica/dashboard/DashboardFaturamento';
 import DashboardEstoque from '@/pages/clinica/dashboard/DashboardEstoque';
@@ -24,7 +25,7 @@ export default function DashboardFinanceiro() {
   const clinicId = clinicContext?.clinicId || authClinicId;
 
   const [kpi, setKpi] = useState({ entradas: 0, saidas: 0, resultado_liquido: 0, saldo_final: 0, recentes: [] });
-  const [period, setPeriod] = useState(() => {
+  const [period] = useState(() => {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth(), 1);
     const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
@@ -33,8 +34,7 @@ export default function DashboardFinanceiro() {
     return { start: iso(start), end: iso(end) };
   });
 
-  // 💾 Cache para KPI (5 minutos TTL - dados financeiros mudam frequentemente)
-  const { data: cachedKpi } = useDataCache({
+  const { data: cachedKpi, loading } = useDataCache({
     key: `dashboard_financeiro_kpi_v4_${clinicId}_${period.start}_${period.end}`,
     fetcher: async () => {
       try {
@@ -59,11 +59,10 @@ export default function DashboardFinanceiro() {
         return { entradas: 0, saidas: 0, resultado_liquido: 0, saldo_final: 0, recentes: [] };
       }
     },
-    ttl: 5 * 60 * 1000, // 5 minutos (dados financeiros mudam frequentemente)
+    ttl: 5 * 60 * 1000,
     enabled: !!clinicId,
   });
 
-  // Sincronizar KPI em cache com estado local
   useEffect(() => {
     if (cachedKpi) {
       setKpi(cachedKpi);
@@ -77,6 +76,11 @@ export default function DashboardFinanceiro() {
     return year && month && day ? `${day}/${month}/${year}` : value;
   };
 
+  const formatDescription = (value) => String(value || 'Lançamento financeiro')
+    .replace(/OP�+O/gi, 'OPÇÃO')
+    .replace(/�+/g, '')
+    .trim();
+
   const dashboards = [
     { label: 'Financeiro', tab: 'financeiro' },
     { label: 'Atendimentos', tab: 'atendimentos' },
@@ -86,73 +90,84 @@ export default function DashboardFinanceiro() {
     { label: 'Orçamentos', tab: 'orcamentos' },
   ];
 
+  const kpiCards = [
+    {
+      title: 'Entradas do mês',
+      value: kpi.entradas,
+      color: 'text-green-700',
+      border: 'border-l-green-600',
+    },
+    {
+      title: 'Saídas do mês',
+      value: kpi.saidas,
+      color: 'text-red-600',
+      border: 'border-l-red-600',
+    },
+    {
+      title: 'Saldo Atual',
+      value: kpi.saldo_final,
+      color: kpi.saldo_final >= 0 ? 'text-blue-600' : 'text-red-600',
+      border: kpi.saldo_final >= 0 ? 'border-l-blue-600' : 'border-l-red-600',
+    },
+  ];
+
   return (
     <PageLayout
       breadcrumbs={breadcrumbs}
       title="Dashboard da Clínica"
       subtitle="Visão geral dos indicadores da clínica."
     >
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-        {dashboards.map((d) => (
-          <button
-            key={d.tab}
-            className={`rounded-lg border border-gray-200 bg-white shadow-sm p-4 flex flex-col items-center hover:bg-blue-50 transition font-medium ${tab === d.tab ? 'ring-2 ring-blue-400' : ''}`}
-            onClick={() => setTab(d.tab)}
-            type="button"
-          >
-            {d.label}
-          </button>
-        ))}
-      </div>
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
-          <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
-          <TabsTrigger value="atendimentos">Atendimentos</TabsTrigger>
-          <TabsTrigger value="faturamento">Faturamento</TabsTrigger>
-          <TabsTrigger value="estoque">Estoque</TabsTrigger>
-          <TabsTrigger value="repasses">Repasses</TabsTrigger>
-          <TabsTrigger value="orcamentos">Orçamentos</TabsTrigger>
+      <Tabs value={tab} onValueChange={setTab} className="space-y-4">
+        <TabsList className="h-auto w-full justify-start overflow-x-auto rounded-lg bg-slate-100 p-1">
+          {dashboards.map((dashboard) => (
+            <TabsTrigger
+              key={dashboard.tab}
+              value={dashboard.tab}
+              className="min-h-9 shrink-0 rounded-md px-4 text-sm data-[state=active]:bg-white data-[state=active]:text-slate-950 data-[state=active]:shadow-sm"
+            >
+              {dashboard.label}
+            </TabsTrigger>
+          ))}
         </TabsList>
-        <TabsContent value="financeiro">
-          {/* Conteúdo do dashboard financeiro atual */}
-          <div className="grid md:grid-cols-3 gap-4 mt-4">
-            <Card className="p-6">
-              <h3 className="text-gray-600 text-sm">Entradas do mês</h3>
-              <p className="text-2xl font-bold text-green-700 mt-2">
-                {formatCurrency(kpi.entradas)}
-              </p>
-            </Card>
-            <Card className="p-6">
-              <h3 className="text-gray-600 text-sm">Saídas do mês</h3>
-              <p className="text-2xl font-bold text-red-600 mt-2">
-                {formatCurrency(kpi.saidas)}
-              </p>
-            </Card>
-            <Card className="p-6">
-              <h3 className="text-gray-600 text-sm">Saldo Atual</h3>
-              <p className={`text-2xl font-bold mt-2 ${kpi.saldo_final >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                {formatCurrency(kpi.saldo_final)}
-              </p>
-            </Card>
+
+        <TabsContent value="financeiro" className="mt-0 space-y-5">
+          <div className="grid gap-4 md:grid-cols-3">
+            {kpiCards.map((card) => (
+              <Card key={card.title} className={cn('min-h-[112px] rounded-lg border-l-4 bg-white p-6 shadow-sm', card.border)}>
+                <p className="text-sm font-medium text-slate-500">{card.title}</p>
+                <p className={cn('mt-3 text-2xl font-bold tracking-normal', card.color)}>
+                  {loading ? 'Carregando...' : formatCurrency(card.value)}
+                </p>
+              </Card>
+            ))}
           </div>
-          <Card className="p-6 mt-6">
-            <h3 className="font-semibold mb-2">Movimentações recentes</h3>
+
+          <Card className="rounded-lg bg-white p-6 shadow-sm">
+            <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h3 className="font-semibold text-slate-950">Movimentações recentes</h3>
+                <p className="text-sm text-slate-500">Competência de {formatDate(period.start)} a {formatDate(period.end)}</p>
+              </div>
+            </div>
+
             {kpi.recentes?.length ? (
-              <div className="divide-y divide-gray-100">
+              <div className="divide-y divide-slate-100">
                 {kpi.recentes.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between py-3 gap-4">
+                  <div key={item.id} className="grid min-h-[64px] grid-cols-[minmax(0,1fr)_auto] items-center gap-4 py-3">
                     <div className="min-w-0">
-                      <p className="font-medium text-gray-900 truncate">{item.description}</p>
-                      <p className="text-sm text-gray-500">{formatDate(item.transaction_date)}</p>
+                      <p className="truncate text-sm font-semibold text-slate-950 sm:text-base" title={formatDescription(item.description)}>
+                        {formatDescription(item.description)}
+                      </p>
+                      <p className="mt-1 text-sm text-slate-500">{formatDate(item.transaction_date)}</p>
                     </div>
-                    <p className={`font-semibold whitespace-nowrap ${item.type === 'revenue' ? 'text-green-700' : 'text-red-600'}`}>
+                    <p className={`whitespace-nowrap text-sm font-semibold sm:text-base ${item.type === 'revenue' ? 'text-green-700' : 'text-red-600'}`}>
                       {item.type === 'revenue' ? '+' : '-'}{formatCurrency(item.amount)}
                     </p>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-gray-500">Nenhuma movimentação encontrada.</p>
+              <p className="rounded-lg bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">Nenhuma movimentação encontrada.</p>
             )}
           </Card>
         </TabsContent>
