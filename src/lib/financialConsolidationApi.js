@@ -1,0 +1,422 @@
+import { supabase } from '@/lib/customSupabaseClient';
+
+function money(value) {
+  const parsed = Number(value || 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function dateOnly(value) {
+  if (!value) return null;
+  return String(value).split('T')[0];
+}
+
+function inRange(value, startDate, endDate) {
+  const date = dateOnly(value);
+  if (!date) return false;
+  if (startDate && date < startDate) return false;
+  if (endDate && date > endDate) return false;
+  return true;
+}
+
+function lowerText(...values) {
+  return values.filter(Boolean).join(' ').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function isCanceledStatus(status) {
+  return ['canceled', 'cancelado', 'cancelada', 'reversed', 'estornado', 'estornada'].includes(
+    String(status || '').toLowerCase(),
+  );
+}
+
+function isPaidStatus(status) {
+  return ['paid', 'pago', 'paga', 'received', 'recebido', 'quitado', 'processed'].includes(
+    String(status || '').toLowerCase(),
+  );
+}
+
+function getReceivableCompetenceDate(row) {
+  return dateOnly(row.competency_date || row.invoice_date || row.due_date || row.received_date || row.created_at);
+}
+
+function getPayableCompetenceDate(row) {
+  return dateOnly(row.competency_date || row.issue_date || row.due_date || row.paid_at || row.created_at);
+}
+
+function getTransactionCompetenceDate(row) {
+  return dateOnly(row.transaction_date || row.competency_date || row.scheduled_date || row.due_date || row.created_at);
+}
+
+function getReceivableGross(row) {
+  return money(row.gross_amount ?? row.amount ?? row.service_value);
+}
+
+function isCardReceivable(row = {}) {
+  const text = lowerText(row.payment_method, row.forma_prevista, row.received_payment_method, row.card_brand, row.processor_name);
+  return /cartao|card|credito|debito/.test(text);
+}
+
+function getReceivableCardFee(row) {
+  const explicitFee = money(row.fee_amount ?? row.card_fee_amount ?? row.processing_fee_amount);
+  if (explicitFee > 0) return explicitFee;
+  if (!isCardReceivable(row)) return 0;
+
+  const gross = getReceivableGross(row);
+  const discount = money(row.discount_value ?? row.descontos);
+  const taxes = money(row.taxes_value ?? row.total_taxes);
+  const netCandidate = money(row.net_value ?? row.received_value ?? row.paid_total ?? row.balance_amount);
+  if (gross <= 0 || netCandidate <= 0) return 0;
+  return Math.max(0, gross - discount - taxes - netCandidate);
+}
+
+function getReceivableNet(row) {
+  const gross = getReceivableGross(row);
+  const discount = money(row.discount_value ?? row.descontos);
+  const fee = getReceivableCardFee(row);
+  return money(row.net_value ?? Math.max(0, gross - discount - fee));
+}
+
+function getReceivableCash(row) {
+  return money(row.received_value ?? row.paid_total ?? (isPaidStatus(row.status) ? getReceivableNet(row) : 0));
+}
+
+function getReceivableOpen(row) {
+  if (isPaidStatus(row.status)) return 0;
+  return money(row.balance_amount ?? getReceivableNet(row) - getReceivableCash(row));
+}
+
+function getPayableAmount(row) {
+  return money(row.net_amount ?? row.balance_amount ?? row.amount ?? row.valor);
+}
+
+function getPayablePaid(row) {
+  return money(row.paid_amount ?? row.paid_value ?? (isPaidStatus(row.status) ? getPayableAmount(row) : 0));
+}
+
+function classifyExpense(row = {}) {
+  const text = lowerText(row.category, row.category_name, row.description, row.vendor_name, row.notes, row.payment_method);
+  if (/tarifa|taxa|cartao|cartao|juros|multa|banco|financeir|iof|ted|pix/.test(text)) return 'financial';
+  if (/administr|contador|contabil|juridic|software|sistema|telefone|internet|escritorio/.test(text)) return 'administrative';
+  return 'operational';
+}
+
+function isCardFee(row = {}) {
+  const text = lowerText(row.category, row.category_name, row.description, row.notes, row.payment_method);
+  return /card_fee|taxa.*cartao|cartao.*taxa|taxa de cartao|cartao/.test(text);
+}
+
+function getTransactionType(row = {}) {
+  const type = String(row.type || '').toLowerCase();
+  const transactionType = String(row.transaction_type || '').toUpperCase();
+  if (type === 'revenue' || type === 'income' || transactionType === 'INCOME') return 'revenue';
+  if (['expense', 'cost', 'fee'].includes(type) || transactionType === 'EXPENSE' || transactionType === 'FEE') return 'expense';
+  if (type === 'deduction' || transactionType === 'ADJUSTMENT') return 'deduction';
+  return type || transactionType.toLowerCase();
+}
+
+function isReceivableOrPayableOrigin(row = {}) {
+  const origin = String(row.origin_module || '').toLowerCase();
+  return [
+    'accounts_receivable',
+    'accounts_payable',
+    'contas_receber',
+    'contas_pagar',
+    'ar_invoices',
+    'ap_bills',
+  ].includes(origin);
+}
+
+function isDerivedSyncDescription(row = {}) {
+  const description = lowerText(row.description);
+  return description.startsWith('receita bruta -')
+    || description.startsWith('taxa de cartao -')
+    || description.startsWith('desconto concedido -')
+    || description.startsWith('conta a pagar -');
+}
+
+function buildEmptyConsolidation(startDate, endDate) {
+  return {
+    period: { startDate, endDate },
+    revenue: {
+      grossRevenue: 0,
+      discounts: 0,
+      cardFees: 0,
+      taxes: 0,
+      netRevenueBeforeCardFees: 0,
+      netRevenue: 0,
+      receivedRevenue: 0,
+      openReceivables: 0,
+      receivableCount: 0,
+      receivedCount: 0,
+    },
+    expenses: {
+      operational: 0,
+      administrative: 0,
+      financial: 0,
+      cardFees: 0,
+      totalOperating: 0,
+      totalWithCardFees: 0,
+      paid: 0,
+      open: 0,
+      payableCount: 0,
+      paidPayableCount: 0,
+    },
+    result: {
+      ebitda: 0,
+      operatingIncome: 0,
+      netIncome: 0,
+      grossMarginPct: 0,
+      ebitdaMarginPct: 0,
+      netMarginPct: 0,
+    },
+    receivables: [],
+    payables: [],
+    transactions: [],
+  };
+}
+
+export async function getFinancialConsolidation(clinicId, startDate, endDate) {
+  if (!clinicId) return buildEmptyConsolidation(startDate, endDate);
+
+  const [receivablesResult, payablesResult, transactionsResult] = await Promise.all([
+    supabase.from('ar_invoices').select('*').eq('clinic_id', clinicId).limit(5000),
+    supabase.from('ap_bills').select('*').eq('clinic_id', clinicId).limit(5000),
+    supabase.from('financial_transactions').select('*').eq('clinic_id', clinicId).limit(5000),
+  ]);
+
+  if (receivablesResult.error) throw receivablesResult.error;
+  if (payablesResult.error) throw payablesResult.error;
+  if (transactionsResult.error) throw transactionsResult.error;
+
+  const receivables = (receivablesResult.data || []).filter(
+    (row) => !isCanceledStatus(row.status) && inRange(getReceivableCompetenceDate(row), startDate, endDate),
+  );
+  const payables = (payablesResult.data || []).filter(
+    (row) => !isCanceledStatus(row.status) && inRange(getPayableCompetenceDate(row), startDate, endDate),
+  );
+  const transactions = (transactionsResult.data || []).filter(
+    (row) => !isCanceledStatus(row.status)
+      && !isReceivableOrPayableOrigin(row)
+      && !isDerivedSyncDescription(row)
+      && inRange(getTransactionCompetenceDate(row), startDate, endDate),
+  );
+
+  const summary = buildEmptyConsolidation(startDate, endDate);
+  summary.receivables = receivables;
+  summary.payables = payables;
+  summary.transactions = transactions;
+
+  receivables.forEach((row) => {
+    const gross = getReceivableGross(row);
+    const discount = money(row.discount_value ?? row.descontos);
+    const cardFee = getReceivableCardFee(row);
+    const taxes = money(row.taxes_value ?? row.total_taxes);
+    const cash = getReceivableCash(row);
+
+    summary.revenue.grossRevenue += gross;
+    summary.revenue.discounts += discount;
+    summary.revenue.cardFees += cardFee;
+    summary.revenue.taxes += taxes;
+    summary.revenue.receivedRevenue += cash;
+    summary.revenue.openReceivables += getReceivableOpen(row);
+    summary.revenue.receivableCount += 1;
+    if (cash > 0 || isPaidStatus(row.status)) summary.revenue.receivedCount += 1;
+  });
+
+  payables.forEach((row) => {
+    const amount = getPayableAmount(row);
+    const paid = getPayablePaid(row);
+    const bucket = classifyExpense(row);
+
+    summary.expenses[bucket] += amount;
+    summary.expenses.paid += paid;
+    summary.expenses.open += Math.max(0, amount - paid);
+    summary.expenses.payableCount += 1;
+    if (paid > 0 || isPaidStatus(row.status)) summary.expenses.paidPayableCount += 1;
+  });
+
+  transactions.forEach((row) => {
+    const amount = money(row.amount);
+    const type = getTransactionType(row);
+
+    if (type === 'revenue') {
+      summary.revenue.grossRevenue += amount;
+      summary.revenue.receivableCount += 1;
+      if (isPaidStatus(row.status) || row.movement_type === 'REALIZED') {
+        summary.revenue.receivedRevenue += amount;
+        summary.revenue.receivedCount += 1;
+      } else {
+        summary.revenue.openReceivables += amount;
+      }
+      return;
+    }
+
+    if (type === 'deduction') {
+      summary.revenue.discounts += amount;
+      return;
+    }
+
+    if (type === 'expense') {
+      if (isCardFee(row)) {
+        summary.revenue.cardFees += amount;
+        return;
+      }
+      const bucket = classifyExpense(row);
+      summary.expenses[bucket] += amount;
+      summary.expenses.payableCount += 1;
+      if (isPaidStatus(row.status) || row.movement_type === 'REALIZED') {
+        summary.expenses.paid += amount;
+        summary.expenses.paidPayableCount += 1;
+      } else {
+        summary.expenses.open += amount;
+      }
+    }
+  });
+
+  summary.expenses.cardFees = summary.revenue.cardFees;
+  summary.revenue.netRevenueBeforeCardFees = Math.max(
+    0,
+    summary.revenue.grossRevenue - summary.revenue.discounts - summary.revenue.taxes,
+  );
+  summary.revenue.netRevenue = Math.max(0, summary.revenue.netRevenueBeforeCardFees - summary.revenue.cardFees);
+  summary.expenses.totalOperating = summary.expenses.operational + summary.expenses.administrative;
+  summary.expenses.totalWithCardFees = summary.expenses.totalOperating + summary.expenses.financial + summary.expenses.cardFees;
+
+  summary.result.ebitda = summary.revenue.netRevenue - summary.expenses.totalOperating;
+  summary.result.operatingIncome = summary.result.ebitda - summary.expenses.financial;
+  summary.result.netIncome = summary.result.operatingIncome;
+  summary.result.grossMarginPct = summary.revenue.grossRevenue > 0
+    ? (summary.revenue.netRevenueBeforeCardFees / summary.revenue.grossRevenue) * 100
+    : 0;
+  summary.result.ebitdaMarginPct = summary.revenue.netRevenueBeforeCardFees > 0
+    ? (summary.result.ebitda / summary.revenue.netRevenueBeforeCardFees) * 100
+    : 0;
+  summary.result.netMarginPct = summary.revenue.netRevenueBeforeCardFees > 0
+    ? (summary.result.netIncome / summary.revenue.netRevenueBeforeCardFees) * 100
+    : 0;
+
+  return summary;
+}
+
+export function buildDerivedFinancialTransactions(consolidation) {
+  const rows = [];
+
+  consolidation.receivables.forEach((row) => {
+    const date = getReceivableCompetenceDate(row);
+    const gross = getReceivableGross(row);
+    const discount = money(row.discount_value ?? row.descontos);
+    const fee = getReceivableCardFee(row);
+    const status = isPaidStatus(row.status) ? 'paid' : 'scheduled';
+    const description = row.description || row.service_description || row.patient_name || 'Conta a receber';
+
+    if (gross > 0) {
+      rows.push({
+        id: `ar-${row.id}-gross`,
+        clinic_id: row.clinic_id,
+        type: 'revenue',
+        transaction_type: 'INCOME',
+        status,
+        category: 'medical_service',
+        description: `Receita bruta - ${description}`,
+        amount: gross,
+        transaction_date: date,
+        competency_date: date,
+        origin_module: 'accounts_receivable',
+        origin_id: row.id,
+        is_reconciled: status === 'paid',
+        created_at: row.created_at,
+        notes: 'Lancamento derivado de contas a receber',
+      });
+    }
+
+    if (discount > 0) {
+      rows.push({
+        id: `ar-${row.id}-discount`,
+        clinic_id: row.clinic_id,
+        type: 'deduction',
+        transaction_type: 'ADJUSTMENT',
+        status,
+        category: 'revenue_deduction',
+        description: `Desconto concedido - ${description}`,
+        amount: discount,
+        transaction_date: date,
+        competency_date: date,
+        origin_module: 'accounts_receivable',
+        origin_id: row.id,
+        is_reconciled: status === 'paid',
+        created_at: row.created_at,
+        notes: 'Dedução derivada de contas a receber',
+      });
+    }
+
+    if (fee > 0) {
+      rows.push({
+        id: `ar-${row.id}-card-fee`,
+        clinic_id: row.clinic_id,
+        type: 'deduction',
+        transaction_type: 'ADJUSTMENT',
+        status,
+        category: 'card_fee',
+        description: `Taxa de cartão - ${description}`,
+        amount: fee,
+        transaction_date: date,
+        competency_date: date,
+        origin_module: 'accounts_receivable',
+        origin_id: row.id,
+        is_reconciled: status === 'paid',
+        created_at: row.created_at,
+        notes: 'Dedução de receita derivada de taxa de cartão',
+      });
+    }
+  });
+
+  consolidation.payables.forEach((row) => {
+    const date = getPayableCompetenceDate(row);
+    rows.push({
+      id: `ap-${row.id}`,
+      clinic_id: row.clinic_id,
+      type: 'expense',
+      transaction_type: 'EXPENSE',
+      status: isPaidStatus(row.status) ? 'paid' : 'scheduled',
+      category: classifyExpense(row),
+      description: row.description || row.vendor_name || 'Conta a pagar',
+      amount: getPayableAmount(row),
+      transaction_date: date,
+      competency_date: date,
+      origin_module: 'accounts_payable',
+      origin_id: row.id,
+      is_reconciled: isPaidStatus(row.status),
+      created_at: row.created_at,
+      notes: 'Lancamento derivado de contas a pagar',
+    });
+  });
+
+  (consolidation.transactions || []).forEach((row) => {
+    const date = getTransactionCompetenceDate(row);
+    const type = getTransactionType(row);
+    rows.push({
+      id: `ft-${row.id}`,
+      clinic_id: row.clinic_id,
+      type,
+      transaction_type: type === 'revenue' ? 'INCOME' : type === 'expense' ? 'EXPENSE' : 'ADJUSTMENT',
+      status: String(row.status || '').toLowerCase(),
+      category: row.category || row.category_id || 'general',
+      description: row.description || row.reference_document || 'Lancamento financeiro',
+      amount: money(row.amount),
+      transaction_date: date,
+      competency_date: date,
+      origin_module: row.origin_module || 'financial_transactions',
+      origin_id: row.origin_id || row.id,
+      is_reconciled: row.is_reconciled === true,
+      created_at: row.created_at,
+      reference_document: row.reference_document || row.document_number,
+      notes: row.notes,
+    });
+  });
+
+  return rows;
+}
+
+export default {
+  getFinancialConsolidation,
+  buildDerivedFinancialTransactions,
+};
