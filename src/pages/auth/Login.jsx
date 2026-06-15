@@ -83,21 +83,51 @@ export default function Login() {
       console.log('[LOGIN] ✅ Autenticação customizada validada, tentando Supabase Auth...');
 
       // Tentar login no Supabase Auth com email e senha
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      let { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: user.email,
         password: password // Usar a senha fornecida
       });
 
       if (authError) {
         console.warn('[LOGIN] ⚠️  Supabase Auth falhou:', authError.message);
-        console.log('[LOGIN] Continuando com autenticação customizada apenas...');
-        // Continua mesmo que Supabase Auth falhe
+        console.log('[LOGIN] Sincronizando credenciais customizadas com Supabase Auth...');
+
+        const { data: syncData, error: syncError } = await supabase.functions.invoke('sync-custom-auth', {
+          body: { clinicCode, username, password },
+        });
+
+        if (syncError || !syncData?.success) {
+          console.error('[LOGIN] Erro ao sincronizar Supabase Auth:', syncError || syncData);
+          setError('Não foi possível iniciar a sessão segura. Tente novamente.');
+          setLoading(false);
+          return;
+        }
+
+        const retry = await supabase.auth.signInWithPassword({
+          email: syncData.email || user.email,
+          password,
+        });
+
+        authData = retry.data;
+        authError = retry.error;
+
+        if (authError) {
+          console.error('[LOGIN] Supabase Auth ainda falhou após sincronização:', authError.message);
+          setError('Não foi possível iniciar a sessão segura. Tente novamente.');
+          setLoading(false);
+          return;
+        }
       } else {
         console.log('[LOGIN] ✅ Supabase Auth bem-sucedido!', {
           userId: authData?.user?.id,
           userEmail: authData?.user?.email
         });
       }
+
+      console.log('[LOGIN] ✅ Sessão Supabase ativa:', {
+        userId: authData?.user?.id,
+        userEmail: authData?.user?.email,
+      });
 
       // 6️⃣ Salvar dados da sessão no localStorage
       const sessionData = {
