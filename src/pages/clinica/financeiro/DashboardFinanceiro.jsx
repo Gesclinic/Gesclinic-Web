@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import PageLayout from '@/components/ui/PageLayout';
 import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 import { Card } from '@/components/ui/card';
@@ -8,10 +8,10 @@ import DashboardFaturamento from '@/pages/clinica/dashboard/DashboardFaturamento
 import DashboardEstoque from '@/pages/clinica/dashboard/DashboardEstoque';
 import DashboardRepasses from '@/pages/clinica/dashboard/DashboardRepasses';
 import DashboardOrcamentos from '@/pages/clinica/dashboard/DashboardOrcamentos';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
-import { supabase } from '@/lib/customSupabaseClient';
-import { useDataCache, CacheManager } from '@/hooks/useDataCache';
+import { useClinicContext } from '@/contexts/ClinicContext';
+import { useDataCache } from '@/hooks/useDataCache';
+import { buildDerivedFinancialTransactions, getFinancialConsolidation } from '@/lib/financialConsolidationApi';
 
 export default function DashboardFinanceiro() {
   const breadcrumbs = useBreadcrumbs([
@@ -19,10 +19,11 @@ export default function DashboardFinanceiro() {
     { label: 'Dashboard' },
   ]);
   const [tab, setTab] = useState('financeiro');
-  const navigate = useNavigate();
-  const { clinicId } = useAuth();
+  const { clinicId: authClinicId } = useAuth();
+  const clinicContext = useClinicContext();
+  const clinicId = clinicContext?.clinicId || authClinicId;
 
-  const [kpi, setKpi] = useState({ entradas: 0, saidas: 0, resultado_liquido: 0, saldo_final: 0 });
+  const [kpi, setKpi] = useState({ entradas: 0, saidas: 0, resultado_liquido: 0, saldo_final: 0, recentes: [] });
   const [period, setPeriod] = useState(() => {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -33,26 +34,30 @@ export default function DashboardFinanceiro() {
   });
 
   // 💾 Cache para KPI (5 minutos TTL - dados financeiros mudam frequentemente)
-  const { data: cachedKpi, loading: kpiLoading } = useDataCache({
-    key: `dashboard_financeiro_kpi_${clinicId}_${period.start}_${period.end}`,
+  const { data: cachedKpi } = useDataCache({
+    key: `dashboard_financeiro_kpi_v4_${clinicId}_${period.start}_${period.end}`,
     fetcher: async () => {
-      const { data, error } = await supabase.rpc('cashflow_summary', {
-        p_clinic_id: clinicId,
-        p_start: period.start,
-        p_end: period.end,
-      });
-      if (error) {
-        throw error;
+      try {
+        const consolidation = await getFinancialConsolidation(clinicId, period.start, period.end);
+        const entradas = consolidation.revenue.grossRevenue;
+        const saidas = consolidation.expenses.totalWithCardFees;
+        const resultado_liquido = consolidation.result.netIncome;
+        const saldo_final = resultado_liquido;
+        const recentes = buildDerivedFinancialTransactions(consolidation)
+          .sort((a, b) => String(b.transaction_date || b.created_at || '').localeCompare(String(a.transaction_date || a.created_at || '')))
+          .slice(0, 5);
+
+        return {
+          entradas: Number(entradas || 0),
+          saidas: Number(saidas || 0),
+          resultado_liquido: Number(resultado_liquido || 0),
+          saldo_final: Number(saldo_final || 0),
+          recentes,
+        };
+      } catch (error) {
+        console.error('Error fetching KPI:', error);
+        return { entradas: 0, saidas: 0, resultado_liquido: 0, saldo_final: 0, recentes: [] };
       }
-      const row = Array.isArray(data) ? data[0] : data;
-      return row
-        ? {
-            entradas: Number(row.entradas || 0),
-            saidas: Number(row.saidas || 0),
-            resultado_liquido: Number(row.resultado_liquido || 0),
-            saldo_final: Number(row.saldo_final || 0),
-          }
-        : { entradas: 0, saidas: 0, resultado_liquido: 0, saldo_final: 0 };
     },
     ttl: 5 * 60 * 1000, // 5 minutos (dados financeiros mudam frequentemente)
     enabled: !!clinicId,
@@ -64,6 +69,13 @@ export default function DashboardFinanceiro() {
       setKpi(cachedKpi);
     }
   }, [cachedKpi]);
+
+  const formatCurrency = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const formatDate = (value) => {
+    if (!value) return '-';
+    const [year, month, day] = String(value).split('T')[0].split('-');
+    return year && month && day ? `${day}/${month}/${year}` : value;
+  };
 
   const dashboards = [
     { label: 'Financeiro', tab: 'financeiro' },
@@ -107,25 +119,41 @@ export default function DashboardFinanceiro() {
             <Card className="p-6">
               <h3 className="text-gray-600 text-sm">Entradas do mês</h3>
               <p className="text-2xl font-bold text-green-700 mt-2">
-                {kpi.entradas.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                {formatCurrency(kpi.entradas)}
               </p>
             </Card>
             <Card className="p-6">
               <h3 className="text-gray-600 text-sm">Saídas do mês</h3>
               <p className="text-2xl font-bold text-red-600 mt-2">
-                {kpi.saidas.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                {formatCurrency(kpi.saidas)}
               </p>
             </Card>
             <Card className="p-6">
               <h3 className="text-gray-600 text-sm">Saldo Atual</h3>
-              <p className="text-2xl font-bold text-blue-600 mt-2">
-                {kpi.saldo_final.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+              <p className={`text-2xl font-bold mt-2 ${kpi.saldo_final >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                {formatCurrency(kpi.saldo_final)}
               </p>
             </Card>
           </div>
           <Card className="p-6 mt-6">
             <h3 className="font-semibold mb-2">Movimentações recentes</h3>
-            <p className="text-gray-500">Nenhuma movimentação encontrada.</p>
+            {kpi.recentes?.length ? (
+              <div className="divide-y divide-gray-100">
+                {kpi.recentes.map((item) => (
+                  <div key={item.id} className="flex items-center justify-between py-3 gap-4">
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900 truncate">{item.description}</p>
+                      <p className="text-sm text-gray-500">{formatDate(item.transaction_date)}</p>
+                    </div>
+                    <p className={`font-semibold whitespace-nowrap ${item.type === 'revenue' ? 'text-green-700' : 'text-red-600'}`}>
+                      {item.type === 'revenue' ? '+' : '-'}{formatCurrency(item.amount)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500">Nenhuma movimentação encontrada.</p>
+            )}
           </Card>
         </TabsContent>
         <TabsContent value="atendimentos">

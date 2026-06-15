@@ -4,9 +4,9 @@
  * 
  * MELHORIAS (v2026-05-19):
  * - Auto-refresh mantido (5 min) como fallback
- * - Listeners realtime para cash_flow_entries (novo)
+ * - Listeners realtime para fluxo_caixa_movimentos
  * - Listeners realtime para ap_bills (quando status muda)
- * - Listeners realtime para ar_receivables (quando status muda)
+ * - Listeners realtime para ar_invoices (quando status muda)
  */
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
@@ -107,7 +107,7 @@ export function useCashFlow() {
     // Auto-refresh fallback (5 minutos)
     const interval = setInterval(() => loadCashFlowData(), 5 * 60 * 1000);
 
-    // 🚀 LISTENER REALTIME: cash_flow_entries
+    // 🚀 LISTENER REALTIME: fluxo_caixa_movimentos
     const cashFlowSubscription = customSupabaseClient
       .channel(`cash_flow_${clinic.id}`)
       .on(
@@ -115,18 +115,18 @@ export function useCashFlow() {
         {
           event: '*',
           schema: 'public',
-          table: 'cash_flow_entries',
+          table: 'fluxo_caixa_movimentos',
           filter: `clinic_id=eq.${clinic.id}`,
         },
         (payload) => {
-          console.log('[REALTIME] cash_flow_entries updated:', payload);
+          console.log('[REALTIME] fluxo_caixa_movimentos updated:', payload);
           // Reload na próxima mudança (batching via isActive)
           setTimeout(() => loadCashFlowData(), 500);
         }
       )
       .subscribe();
 
-    // 🚀 LISTENER REALTIME: AP Bills (quando status muda para paid)
+    // 🚀 LISTENER REALTIME: AP Bills (quando muda estado financeiro)
     const apBillsSubscription = customSupabaseClient
       .channel(`ap_bills_paid_${clinic.id}`)
       .on(
@@ -138,8 +138,8 @@ export function useCashFlow() {
           filter: `clinic_id=eq.${clinic.id}`,
         },
         (payload) => {
-          if (payload.new.status === 'paid') {
-            console.log('[REALTIME] AP Bill marked as paid:', payload.new.id);
+          if (['PAID', 'PARTIAL', 'APPROVED', 'OPEN', 'OVERDUE', 'CANCELED', 'REVERSED'].includes(payload.new.status)) {
+            console.log('[REALTIME] AP Bill financial status changed:', payload.new.id);
             // Reload fluxo de caixa
             setTimeout(() => loadCashFlowData(), 500);
           }
@@ -147,20 +147,20 @@ export function useCashFlow() {
       )
       .subscribe();
 
-    // 🚀 LISTENER REALTIME: AR Receivables (quando status muda para received)
-    const arReceivablesSubscription = customSupabaseClient
-      .channel(`ar_receivables_paid_${clinic.id}`)
+    // 🚀 LISTENER REALTIME: AR Invoices (quando status muda para received)
+    const arInvoicesSubscription = customSupabaseClient
+      .channel(`ar_invoices_paid_${clinic.id}`)
       .on(
         'postgres_changes',
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'ar_receivables',
+          table: 'ar_invoices',
           filter: `clinic_id=eq.${clinic.id}`,
         },
         (payload) => {
           if (payload.new.status === 'received') {
-            console.log('[REALTIME] AR Receivable marked as received:', payload.new.id);
+            console.log('[REALTIME] AR Invoice marked as received:', payload.new.id);
             // Reload fluxo de caixa
             setTimeout(() => loadCashFlowData(), 500);
           }
@@ -173,7 +173,7 @@ export function useCashFlow() {
       clearInterval(interval);
       cashFlowSubscription.unsubscribe();
       apBillsSubscription.unsubscribe();
-      arReceivablesSubscription.unsubscribe();
+      arInvoicesSubscription.unsubscribe();
     };
   }, [clinic?.id, loadCashFlowData]);
 

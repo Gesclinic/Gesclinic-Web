@@ -339,7 +339,10 @@ export default function AgendaDayView({
     const [year, month, day] = dateParts;
     const formattedDate = `${day}/${month}/${year}`;
     const displayTime = slotData.time || '09:00';
-    const professionalName = 'Profissional a definir';
+
+    // ✅ PROCURAR PROFISSIONAL NA LISTA
+    const professional = professionals.find((p) => p.id === slotData.professionalId);
+    const professionalName = professional?.name || 'Profissional a definir';
 
     const confirmed = window.confirm(
       'Deseja criar novo agendamento?\n\n' +
@@ -427,7 +430,6 @@ export default function AgendaDayView({
         const result = await checkMultipleDates([date], clinicId);
         if (result[date]) {
           setHoliday(result[date]);
-          console.log(`🎉 [AgendaDayView] Feriado encontrado em ${date}:`, result[date]);
         } else {
           setHoliday(null);
         }
@@ -468,10 +470,7 @@ export default function AgendaDayView({
 
         if (filteredProfessionalId) {
           // Se há profissional filtrado, carregar apenas aquele
-          console.log(
-            '🔍 [AgendaDayView] Carregando disponibilidade do profissional filtrado:',
-            filteredProfessionalId,
-          );
+
           const slots = await getProfessionalAvailableSlots(filteredProfessionalId, date);
           availability[filteredProfessionalId] = slots;
         } else {
@@ -479,12 +478,7 @@ export default function AgendaDayView({
           // 🔒 Se é profissional logado, usar apenas ele
           const profIdToUse =
             userRole?.toLowerCase?.() === 'profissional' ? userProfessionalId : null;
-          console.log(
-            '🔍 [AgendaDayView] Buscando profissionais disponíveis para:',
-            date,
-            'userProf:',
-            profIdToUse,
-          );
+
           const availableProfessionals = await getAvailableProfessionalsForDay(
             date,
             null,
@@ -496,14 +490,10 @@ export default function AgendaDayView({
             availability[prof.id] = prof.available_slots;
           });
 
-          console.log(
-            '✅ [AgendaDayView] Profissionais disponíveis carregados:',
-            availableProfessionals,
-          );
+
         }
 
         setProfessionalAvailability(availability);
-        console.log('✅ [AgendaDayView] Disponibilidade carregada:', availability);
       } catch (error) {
         console.error('❌ [AgendaDayView] Erro ao carregar disponibilidade:', error);
         setProfessionalAvailability({});
@@ -541,7 +531,6 @@ export default function AgendaDayView({
         });
 
         setProfessionalsMap(map);
-        console.log('✅ Profissionais carregados:', map);
       } catch (error) {
         console.error('❌ Erro ao carregar dados dos profissionais:', error);
       }
@@ -558,7 +547,7 @@ export default function AgendaDayView({
   // Agrupar por horário e ordenar
   const groupedByTime = useMemo(() => {
     const groups = {};
-    
+
     localAppointments.forEach((apt) => {
       // CORRIGIDO: Adicionar 'scheduled_time' ao fallback
       const time =
@@ -571,7 +560,7 @@ export default function AgendaDayView({
       }
       groups[normalizedTime].push(apt);
     });
-    
+
     return groups;
   }, [localAppointments, timeSlots]);
   const sortedTimes = useMemo(() => {
@@ -690,17 +679,12 @@ export default function AgendaDayView({
   };
 
   const handleContextMenu = (e, apt) => {
-    console.log('🖱️ [AgendaDayView] handleContextMenu CHAMADO!');
-    console.log('   e.type:', e.type);
-    console.log('   apt.id:', apt?.id);
-    console.log('   e.preventDefault() será chamado');
     e.preventDefault();
     setContextMenu({
       x: e.clientX,
       y: e.clientY,
       appointment: apt,
     });
-    console.log('✅ [AgendaDayView] ContextMenu STATE ATUALIZADO');
   };
 
   /**
@@ -744,7 +728,6 @@ export default function AgendaDayView({
   };
 
   const handleCheckIn = (aptId, financialData = {}) => {
-    console.log('✅ [CHECK-IN] Iniciando...', aptId, { financialData });
 
     if (!aptId) {
       alert('❌ Erro: ID não encontrado');
@@ -766,7 +749,6 @@ export default function AgendaDayView({
         }
 
         if (!currentApt) {
-          console.warn('⚠️ Appointment não encontrado:', aptId);
           throw new Error('Agendamento não encontrado ou sem permissão de acesso');
         }
 
@@ -774,7 +756,6 @@ export default function AgendaDayView({
 
         // 1️⃣ Atualizar status apenas se for novo check-in
         if (!isEditing) {
-          console.log('📍 [CHECK-IN] Atualizando status para Na Recepção...');
           const { error: statusError } = await supabase
             .from('appointments')
             .update({ status: 'at_reception' })
@@ -786,14 +767,12 @@ export default function AgendaDayView({
             return;
           }
 
-          console.log('✅ Status atualizado para Na Recepção');
+          console.error('❌ Erro ao atualizar status:', statusError.message);
         } else {
-          console.log('📝 [CHECK-IN] Modo edição - atualizando apenas dados financeiros');
         }
 
         // 2️⃣ Salvar dados financeiros se houver
         if (Object.keys(financialData).length > 0) {
-          console.log('💰 [CHECK-IN] Processando dados financeiros...');
           const { saveCheckInFinancialData } = await import('@/lib/financialCheckInApi');
 
           const financialResult = await saveCheckInFinancialData(aptId, financialData);
@@ -832,17 +811,11 @@ export default function AgendaDayView({
 
         // Fechar drawer
         setDrawerOpen(false);
-        console.log('📭 Drawer fechado');
-
-        // Aguardar para Supabase propagar
-        console.log('⏳ Aguardando para Supabase propagar...');
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
         // Recarregar agenda
-        console.log('🔄 Recarregando agenda...');
         if (typeof onEditAppointment === 'function') {
           await onEditAppointment();
-          console.log('✅ Agenda recarregada com sucesso!');
         } else {
           console.error('❌ onEditAppointment não é uma função');
         }

@@ -167,10 +167,37 @@ export async function getAvailableProfessionalsForDay(
   }
 
   try {
+    console.log('🔍 [getAvailableProfessionsForDay] INPUT DATA RECEBIDA:', {
+      date,
+      dateType: typeof date,
+      dateIsString: typeof date === 'string',
+      dateLength: date?.length || 'N/A',
+      dateInspect: date,
+    });
+
     // Parse data
     let dateObj;
     if (typeof date === 'string') {
-      const [year, month, day] = date.split('T')[0].split('-');
+      // Suportar vários formatos: ISO (YYYY-MM-DD), BR (DD/MM/YYYY), e ISO com T
+      let year, month, day;
+
+      const isoMatch = date.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (isoMatch) {
+        // Formato ISO: YYYY-MM-DD
+        [, year, month, day] = isoMatch;
+        console.log('✅ Formato ISO detectado:', { year, month, day });
+      } else {
+        const brMatch = date.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+        if (brMatch) {
+          // Formato BR: DD/MM/YYYY
+          [, day, month, year] = brMatch;
+          console.log('✅ Formato BR detectado:', { day, month, year });
+        } else {
+          console.warn('⚠️ [getAvailableProfessionalsForDay] Formato de data não reconhecido:', date);
+          return [];
+        }
+      }
+
       dateObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
     } else {
       dateObj = date;
@@ -186,11 +213,18 @@ export async function getAvailableProfessionalsForDay(
     });
 
     // Buscar profissionais que têm disponibilidade para este dia
-    const { data: schedules, error } = await supabase
+    let query = supabase
       .from('professional_schedules')
       .select('professional_id, start_time, end_time, duration_minutes')
       .eq('day_of_week', dayOfWeek)
       .eq('active', true);
+
+    // Filtrar por clinic_id se fornecido
+    if (clinicId) {
+      query = query.eq('clinic_id', clinicId);
+    }
+
+    const { data: schedules, error } = await query;
 
     if (error) {
       console.error('❌ Erro ao buscar profissionais disponíveis:', error);

@@ -28,7 +28,15 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 
 import { Button } from '@/components/ui/button';
 
-import { TISSConfigurationTab } from '@/components/TISSConfigurationTab';
+import {
+  FormSection,
+  FormGrid,
+  FormInput,
+  FormSelect,
+  FormCheckbox,
+  InfoCard,
+} from '@/components/convenios/FormComponents';
+import { CONVENIENCE_TABS, FORM_OPTIONS } from '@/components/convenios/tabsConfig';
 
 import { AlertCircle, Plus, Edit2, Trash2, Check, X, Landmark, Upload, Save } from 'lucide-react';
 import * as XLSX from 'xlsx';
@@ -155,6 +163,34 @@ export function ConveniosPage() {
 
     tiss_version: '3.05.00',
 
+    // ===== NOVOS CAMPOS: NF-e =====
+
+    nfe_series: '',
+
+    cfm_code: '',
+
+    is_simple_nacional: false,
+
+    icms_indicator: '',
+
+    // ===== NOVOS CAMPOS: RPS =====
+
+    rps_series: '',
+
+    rps_initial: 0,
+
+    rps_type: '',
+
+    iss_retained: false,
+
+    // ===== NOVOS CAMPOS: INTEGRAÇÃO =====
+
+    beneficiary_type: '',
+
+    municipal_service_code: '',
+
+    enable_nfe_generation: false,
+
     // ===== NOVOS CAMPOS: FINANCEIRO =====
 
     payment_due_days: 30,
@@ -257,6 +293,14 @@ export function ConveniosPage() {
 
     inss_rate: 0,
 
+    ir_applicable: false,
+
+    ir_rate: 0,
+
+    csll_applicable: false,
+
+    csll_rate: 0,
+
     ibs_applicable: false,
 
     ibs_rate: 0,
@@ -268,6 +312,60 @@ export function ConveniosPage() {
     retains_taxes: false,
 
     tax_regime: '',
+
+    // ===== NOVOS CAMPOS: TISS =====
+
+    tiss_enabled: false,
+
+    submission_method: 'HTTP',
+
+    tiss_endpoint: '',
+
+    tiss_username: '',
+
+    tiss_password: '',
+
+    tiss_response_email: '',
+
+    // ===== NOVOS CAMPOS: PORTAL XML INTEGRATION =====
+
+    portal_username: '',
+
+    portal_password: '',
+
+    portal_webhook_url: '',
+
+    portal_api_key: '',
+
+    certificate_path: '',
+
+    certificate_password: '',
+
+    use_certificate: true,
+
+    submission_format: 'xml',
+
+    response_format: 'xml',
+
+    use_compression: true,
+
+    max_daily_submissions: 100,
+
+    max_file_size_mb: 50,
+
+    max_guides_per_submission: 500,
+
+    requires_manual_confirmation: false,
+
+    support_email: '',
+
+    support_phone: '',
+
+    support_hours: '08:00-18:00',
+
+    enable_rps_generation: false,
+
+    portal_connection_status: 'untested',
   });
 
   const [submitting, setSubmitting] = useState(false);
@@ -297,6 +395,26 @@ export function ConveniosPage() {
   const [editingPlanDescription, setEditingPlanDescription] = useState('');
 
   const [editingPlanActive, setEditingPlanActive] = useState(false);
+
+  // Helper function to format date display (ISO yyyy-mm-dd → dd/mm/yyyy)
+  const formatDateDisplay = (value) => {
+    if (!value) return '';
+    if (value.includes('-') && value.length === 10) {
+      const [year, month, day] = value.split('-');
+      return `${day}/${month}/${year}`;
+    }
+    return value;
+  };
+
+  // Helper function to format month display (ISO yyyy-mm → mm/yyyy)
+  const formatMonthDisplay = (value) => {
+    if (!value) return '';
+    if (value.includes('-') && value.length === 7) {
+      const [year, month] = value.split('-');
+      return `${month}/${year}`;
+    }
+    return value;
+  };
 
   useEffect(() => {
     if (clinicId && isAuthenticated) {
@@ -1186,14 +1304,14 @@ export function ConveniosPage() {
     }
   };
 
-  // ?? Funo para converter categoria para label
+  // Função para converter categoria para label
   const getCategoryLabel = (categoryValue) => {
     const categoryMap = {
-      consultation: '?? Consulta',
-      exam: '?? Exame/SADT',
-      procedure: '?? Procedimento',
-      surgery: '?? Cirurgia',
-      other: '?? Outro',
+      consultation: 'Consulta',
+      exam: 'Exame/SADT',
+      procedure: 'Procedimento',
+      surgery: 'Cirurgia',
+      other: 'Outro',
     };
     return categoryMap[categoryValue] || categoryValue || '-';
   };
@@ -1595,6 +1713,82 @@ export function ConveniosPage() {
 
       tiss_version: '3.05.00',
 
+      nfe_series: '',
+
+      cfm_code: '',
+
+      is_simple_nacional: false,
+
+      icms_indicator: '',
+
+      rps_series: '',
+
+      rps_initial: 0,
+
+      rps_type: '',
+
+      iss_retained: false,
+
+      beneficiary_type: '',
+
+      municipal_service_code: '',
+
+      enable_nfe_generation: false,
+
+      // ===== NOVOS CAMPOS: TISS =====
+
+      tiss_enabled: false,
+
+      submission_method: 'HTTP',
+
+      tiss_endpoint: '',
+
+      tiss_username: '',
+
+      tiss_password: '',
+
+      tiss_response_email: '',
+
+      // ===== NOVOS CAMPOS: PORTAL XML INTEGRATION =====
+
+      portal_username: '',
+
+      portal_password: '',
+
+      portal_webhook_url: '',
+
+      portal_api_key: '',
+
+      certificate_path: '',
+
+      certificate_password: '',
+
+      use_certificate: true,
+
+      submission_format: 'xml',
+
+      response_format: 'xml',
+
+      use_compression: true,
+
+      max_daily_submissions: 100,
+
+      max_file_size_mb: 50,
+
+      max_guides_per_submission: 500,
+
+      requires_manual_confirmation: false,
+
+      support_email: '',
+
+      support_phone: '',
+
+      support_hours: '08:00-18:00',
+
+      enable_rps_generation: false,
+
+      portal_connection_status: 'untested',
+
       // ===== NOVOS CAMPOS: ENDEREO =====
 
       address_street: '',
@@ -1659,6 +1853,28 @@ export function ConveniosPage() {
 
       tiss_version: insurance.tiss_version || '3.05.00',
 
+      nfe_series: insurance.nfe_series || '',
+
+      cfm_code: insurance.cfm_code || '',
+
+      is_simple_nacional: insurance.is_simple_nacional === true,
+
+      icms_indicator: insurance.icms_indicator || '',
+
+      rps_series: insurance.rps_series || '',
+
+      rps_initial: insurance.rps_initial || 0,
+
+      rps_type: insurance.rps_type || '',
+
+      iss_retained: insurance.iss_retained === true,
+
+      beneficiary_type: insurance.beneficiary_type || '',
+
+      municipal_service_code: insurance.municipal_service_code || '',
+
+      enable_nfe_generation: insurance.enable_nfe_generation === true,
+
       // ===== NOVOS CAMPOS: ENDEREO =====
 
       address_street: insurance.address_street || '',
@@ -1707,6 +1923,14 @@ export function ConveniosPage() {
 
       inss_rate: insurance.inss_rate || 0,
 
+      ir_applicable: insurance.ir_applicable === true,
+
+      ir_rate: insurance.ir_rate || 0,
+
+      csll_applicable: insurance.csll_applicable === true,
+
+      csll_rate: insurance.csll_rate || 0,
+
       ibs_applicable: insurance.ibs_applicable === true,
 
       ibs_rate: insurance.ibs_rate || 0,
@@ -1719,7 +1943,61 @@ export function ConveniosPage() {
 
       tax_regime: insurance.tax_regime || '',
 
-      // ===== NOVOS CAMPOS: FINANCEIRO =====
+      // ===== NOVOS CAMPOS: TISS =====
+
+      tiss_enabled: insurance.tiss_enabled === true,
+
+      submission_method: insurance.submission_method || 'HTTP',
+
+      tiss_endpoint: insurance.tiss_endpoint || '',
+
+      tiss_username: insurance.tiss_username || '',
+
+      tiss_password: insurance.tiss_password || '',
+
+      tiss_response_email: insurance.tiss_response_email || '',
+
+      // ===== NOVOS CAMPOS: PORTAL XML INTEGRATION =====
+
+      portal_username: insurance.portal_username || '',
+
+      portal_password: insurance.portal_password || '',
+
+      portal_webhook_url: insurance.portal_webhook_url || '',
+
+      portal_api_key: insurance.portal_api_key || '',
+
+      certificate_path: insurance.certificate_path || '',
+
+      certificate_password: insurance.certificate_password || '',
+
+      use_certificate: insurance.use_certificate ?? true,
+
+      submission_format: insurance.submission_format || 'xml',
+
+      response_format: insurance.response_format || 'xml',
+
+      use_compression: insurance.use_compression ?? true,
+
+      max_daily_submissions: insurance.max_daily_submissions || 100,
+
+      max_file_size_mb: insurance.max_file_size_mb || 50,
+
+      max_guides_per_submission: insurance.max_guides_per_submission || 500,
+
+      requires_manual_confirmation: insurance.requires_manual_confirmation ?? false,
+
+      support_email: insurance.support_email || '',
+
+      support_phone: insurance.support_phone || '',
+
+      support_hours: insurance.support_hours || '08:00-18:00',
+
+      enable_rps_generation: insurance.enable_rps_generation ?? false,
+
+      portal_connection_status: insurance.portal_connection_status || 'untested',
+
+      // ===== NOVOS CAMPOS: FINANCEIRO ====="
 
       payment_due_days: insurance.payment_due_days || 30,
 
@@ -1837,6 +2115,28 @@ export function ConveniosPage() {
 
       tiss_version: '3.05.00',
 
+      nfe_series: '',
+
+      cfm_code: '',
+
+      is_simple_nacional: false,
+
+      icms_indicator: '',
+
+      rps_series: '',
+
+      rps_initial: 0,
+
+      rps_type: '',
+
+      iss_retained: false,
+
+      beneficiary_type: '',
+
+      municipal_service_code: '',
+
+      enable_nfe_generation: false,
+
       // ===== NOVOS CAMPOS: ENDEREO =====
 
       address_street: '',
@@ -1885,6 +2185,14 @@ export function ConveniosPage() {
 
       inss_rate: 0,
 
+      ir_applicable: false,
+
+      ir_rate: 0,
+
+      csll_applicable: false,
+
+      csll_rate: 0,
+
       ibs_applicable: false,
 
       ibs_rate: 0,
@@ -1896,6 +2204,60 @@ export function ConveniosPage() {
       retains_taxes: false,
 
       tax_regime: '',
+
+      // ===== NOVOS CAMPOS: TISS =====
+
+      tiss_enabled: false,
+
+      submission_method: 'HTTP',
+
+      tiss_endpoint: '',
+
+      tiss_username: '',
+
+      tiss_password: '',
+
+      tiss_response_email: '',
+
+      // ===== NOVOS CAMPOS: PORTAL XML INTEGRATION =====
+
+      portal_username: '',
+
+      portal_password: '',
+
+      portal_webhook_url: '',
+
+      portal_api_key: '',
+
+      certificate_path: '',
+
+      certificate_password: '',
+
+      use_certificate: true,
+
+      submission_format: 'xml',
+
+      response_format: 'xml',
+
+      use_compression: true,
+
+      max_daily_submissions: 100,
+
+      max_file_size_mb: 50,
+
+      max_guides_per_submission: 500,
+
+      requires_manual_confirmation: false,
+
+      support_email: '',
+
+      support_phone: '',
+
+      support_hours: '08:00-18:00',
+
+      enable_rps_generation: false,
+
+      portal_connection_status: 'untested',
     });
 
     // ?? Limpar estados dos planos
@@ -2074,6 +2436,28 @@ export function ConveniosPage() {
 
         tiss_version: formData.tiss_version?.trim() || '3.05.00',
 
+        nfe_series: formData.nfe_series?.trim() || null,
+
+        cfm_code: formData.cfm_code?.trim() || null,
+
+        is_simple_nacional: formData.is_simple_nacional === true,
+
+        icms_indicator: formData.icms_indicator?.trim() || null,
+
+        rps_series: formData.rps_series?.trim() || null,
+
+        rps_initial: parseInt(formData.rps_initial) || 0,
+
+        rps_type: formData.rps_type?.trim() || null,
+
+        iss_retained: formData.iss_retained === true,
+
+        beneficiary_type: formData.beneficiary_type?.trim() || null,
+
+        municipal_service_code: formData.municipal_service_code?.trim() || null,
+
+        enable_nfe_generation: formData.enable_nfe_generation === true,
+
         // ===== NOVOS CAMPOS: ENDEREO =====
 
         address_street: formData.address_street?.trim() || null,
@@ -2133,6 +2517,60 @@ export function ConveniosPage() {
         retains_taxes: formData.retains_taxes === true,
 
         tax_regime: formData.tax_regime?.trim() || null,
+
+        // ===== NOVOS CAMPOS: TISS =====
+
+        tiss_enabled: formData.tiss_enabled === true,
+
+        submission_method: formData.submission_method?.trim() || 'HTTP',
+
+        tiss_endpoint: formData.tiss_endpoint?.trim() || null,
+
+        tiss_username: formData.tiss_username?.trim() || null,
+
+        tiss_password: formData.tiss_password?.trim() || null,
+
+        tiss_response_email: formData.tiss_response_email?.trim() || null,
+
+        // ===== NOVOS CAMPOS: PORTAL XML INTEGRATION =====
+
+        portal_username: formData.portal_username?.trim() || null,
+
+        portal_password: formData.portal_password?.trim() || null,
+
+        portal_webhook_url: formData.portal_webhook_url?.trim() || null,
+
+        portal_api_key: formData.portal_api_key?.trim() || null,
+
+        certificate_path: formData.certificate_path?.trim() || null,
+
+        certificate_password: formData.certificate_password?.trim() || null,
+
+        use_certificate: formData.use_certificate === true,
+
+        submission_format: formData.submission_format?.trim() || 'xml',
+
+        response_format: formData.response_format?.trim() || 'xml',
+
+        use_compression: formData.use_compression === true,
+
+        max_daily_submissions: parseInt(formData.max_daily_submissions) || 100,
+
+        max_file_size_mb: parseInt(formData.max_file_size_mb) || 50,
+
+        max_guides_per_submission: parseInt(formData.max_guides_per_submission) || 500,
+
+        requires_manual_confirmation: formData.requires_manual_confirmation === true,
+
+        support_email: formData.support_email?.trim() || null,
+
+        support_phone: formData.support_phone?.trim() || null,
+
+        support_hours: formData.support_hours?.trim() || '08:00-18:00',
+
+        enable_rps_generation: formData.enable_rps_generation === true,
+
+        portal_connection_status: formData.portal_connection_status?.trim() || 'untested',
       };
 
       console.log('?? Frontend - Dados a salvar:', dataToSave);
@@ -2631,7 +3069,7 @@ export function ConveniosPage() {
                     boxSizing: 'border-box',
                   }}
                 >
-                  Endereo
+                  Endereço
                 </button>
 
                 <button
@@ -2813,36 +3251,6 @@ export function ConveniosPage() {
                 >
                   Tabela de Preços
                 </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('tiss')}
-                  style={{
-                    flex: '1',
-                    padding: '0 !important',
-                    margin: '0 !important',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    border: 'none',
-                    borderBottom:
-                      activeTab === 'tiss' ? '2px solid #7c3aed' : '2px solid transparent',
-                    textAlign: 'center',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s',
-                    backgroundColor: 'transparent',
-                    color: activeTab === 'tiss' ? '#7c3aed' : '#4b5563',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    height: '100%',
-                    lineHeight: '1',
-                    whiteSpace: 'nowrap',
-                    fontFamily: 'inherit',
-                    boxSizing: 'border-box',
-                  }}
-                >
-                  ?? TISS
-                </button>
               </div>
 
               <CardContent className="app-modal-body p-6 modal-content-scroll">
@@ -2856,326 +3264,224 @@ export function ConveniosPage() {
                     {/* ABA: DADOS GERAIS */}
 
                     {activeTab === 'general' && (
-                      <div className="space-y-6">
-                        {/* Seção: Código + Tipo */}
-
-                        <div className="grid grid-cols-4 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Código <span className="text-red-500">*</span>
-                            </label>
-
-                            <input
-                              type="text"
-                              value={formData.code}
-                              onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                              placeholder="Ex: CONV001"
-                              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50"
-                              required
-                              disabled={submitting || !editingId}
-                              readOnly={!editingId}
-                            />
-                          </div>
-
+                      <FormSection icon="📋" title="Identificação" description="Dados básicos do convênio">
+                        {/* Código + Tipo */}
+                        <FormGrid columns={4}>
+                          <FormInput
+                            type="text"
+                            label="Código"
+                            required
+                            placeholder="Ex: CONV001"
+                            value={formData.code}
+                            onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                            disabled={submitting || !editingId}
+                          />
                           <div className="col-span-3">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Tipo <span className="text-red-500">*</span>
-                            </label>
-
-                            <select
+                            <FormSelect
+                              label="Tipo"
+                              required
+                              options={[
+                                { value: '', label: 'Selecione o tipo' },
+                                { value: 'health_plan', label: 'Plano de Saúde' },
+                                { value: 'private_insurance', label: 'Seguro Privado' },
+                                { value: 'government', label: 'Governamental (SUS/INSS)' },
+                                { value: 'direct_pay', label: 'Pagamento Direto' },
+                                { value: 'other', label: 'Outro' },
+                              ]}
                               value={formData.type}
                               onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              required
-                              disabled={submitting}
-                            >
-                              <option value="">Selecione o tipo</option>
-
-                              <option value="health_plan">Plano de Saúde</option>
-
-                              <option value="private_insurance">Seguro Privado</option>
-
-                              <option value="government">Governamental (SUS/INSS)</option>
-
-                              <option value="direct_pay">Pagamento Direto</option>
-
-                              <option value="other">Outro</option>
-                            </select>
-                          </div>
-                        </div>
-
-                        {/* Seção: Nome Fantasia + Razo Social */}
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="col-span-1">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Nome Fantasia <span className="text-red-500">*</span>
-                            </label>
-
-                            <input
-                              type="text"
-                              value={formData.fantasy_name}
-                              onChange={(e) =>
-                                setFormData({ ...formData, fantasy_name: e.target.value })
-                              }
-                              placeholder="Ex: Unimed So Paulo"
-                              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              required
                               disabled={submitting}
                             />
                           </div>
+                        </FormGrid>
 
-                          <div className="col-span-1">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Razo Social
-                            </label>
-
-                            <input
-                              type="text"
-                              value={formData.legal_name}
-                              onChange={(e) =>
-                                setFormData({ ...formData, legal_name: e.target.value })
-                              }
-                              placeholder="Ex: Unimed Brasil Administradora..."
-                              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              disabled={submitting}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Seção: CNPJ + Pessoa de Contato */}
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              CNPJ
-                            </label>
-
-                            <input
-                              type="text"
-                              value={formData.cnpj}
-                              onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
-                              placeholder="00.000.000/0000-00"
-                              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              disabled={submitting}
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Pessoa de Contato
-                            </label>
-
-                            <input
-                              type="text"
-                              value={formData.contact_person}
-                              onChange={(e) =>
-                                setFormData({ ...formData, contact_person: e.target.value })
-                              }
-                              placeholder="Nome do responsvel"
-                              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              disabled={submitting}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Seção: Email (linha cheia) */}
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Email de Contato
-                          </label>
-
-                          <input
-                            type="email"
-                            value={formData.contact_email}
-                            onChange={(e) =>
-                              setFormData({ ...formData, contact_email: e.target.value })
-                            }
-                            placeholder="contato@exemplo.com"
-                            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        {/* Nome Fantasia + Razão Social */}
+                        <FormGrid columns={2}>
+                          <FormInput
+                            type="text"
+                            label="Nome Fantasia"
+                            required
+                            placeholder="Ex: Unimed São Paulo"
+                            value={formData.fantasy_name}
+                            onChange={(e) => setFormData({ ...formData, fantasy_name: e.target.value })}
                             disabled={submitting}
                           />
-                        </div>
+                          <FormInput
+                            type="text"
+                            label="Razão Social"
+                            placeholder="Ex: Unimed Brasil Administradora..."
+                            value={formData.legal_name}
+                            onChange={(e) => setFormData({ ...formData, legal_name: e.target.value })}
+                            disabled={submitting}
+                          />
+                        </FormGrid>
 
-                        {/* Seção: Telefone + Celular */}
+                        {/* CNPJ + Pessoa de Contato */}
+                        <FormGrid columns={2}>
+                          <FormInput
+                            type="text"
+                            label="CNPJ"
+                            placeholder="00.000.000/0000-00"
+                            value={formData.cnpj}
+                            onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
+                            disabled={submitting}
+                          />
+                          <FormInput
+                            type="text"
+                            label="Pessoa de Contato"
+                            placeholder="Nome do responsável"
+                            value={formData.contact_person}
+                            onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })}
+                            disabled={submitting}
+                          />
+                        </FormGrid>
 
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Telefone de Contato
-                            </label>
+                        {/* Email */}
+                        <FormInput
+                          type="email"
+                          label="Email de Contato"
+                          placeholder="contato@exemplo.com"
+                          value={formData.contact_email}
+                          onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
+                          disabled={submitting}
+                        />
 
-                            <input
-                              type="tel"
-                              value={formData.contact_phone}
-                              onChange={(e) =>
-                                setFormData({ ...formData, contact_phone: e.target.value })
-                              }
-                              placeholder="(11) 3333-3333"
-                              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              disabled={submitting}
-                            />
-                          </div>
+                        {/* Telefone + Celular */}
+                        <FormGrid columns={2}>
+                          <FormInput
+                            type="tel"
+                            label="Telefone de Contato"
+                            placeholder="(11) 3333-3333"
+                            value={formData.contact_phone}
+                            onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
+                            disabled={submitting}
+                          />
+                          <FormInput
+                            type="tel"
+                            label="Celular de Contato"
+                            placeholder="(11) 99999-9999"
+                            value={formData.contact_mobile}
+                            onChange={(e) => setFormData({ ...formData, contact_mobile: e.target.value })}
+                            disabled={submitting}
+                          />
+                        </FormGrid>
 
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Celular de Contato
-                            </label>
-
-                            <input
-                              type="tel"
-                              value={formData.contact_mobile}
-                              onChange={(e) =>
-                                setFormData({ ...formData, contact_mobile: e.target.value })
-                              }
-                              placeholder="(11) 99999-9999"
-                              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              disabled={submitting}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Seção: Regras Especficas em linha cheia */}
-
+                        {/* Regras Especiais */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Regras Especficas
+                            Regras Especiais
                           </label>
-
                           <textarea
                             value={formData.special_rules}
-                            onChange={(e) =>
-                              setFormData({ ...formData, special_rules: e.target.value })
-                            }
-                            placeholder="Ex: Requer autorizao prvia, limite de 10 consultas/ms, etc"
+                            onChange={(e) => setFormData({ ...formData, special_rules: e.target.value })}
+                            placeholder="Ex: Requer autorização prévia, limite de 10 consultas/mês, etc"
                             className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             rows={2}
                             disabled={submitting}
                           />
                         </div>
 
-                        {/* Seção: Checkbox Ativo */}
-
-                        <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                          <input
-                            type="checkbox"
-                            id="active"
-                            checked={formData.active}
-                            onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
-                            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                            disabled={submitting}
-                          />
-
-                          <label
-                            htmlFor="active"
-                            className="text-sm font-medium text-gray-700 cursor-pointer"
-                          >
-                            ? Convênio Ativo
-                          </label>
-
-                          <span className="text-xs text-gray-500 ml-auto">
-                            {formData.active ? 'Habilitado para agendamentos' : 'Desabilitado'}
-                          </span>
-                        </div>
-                      </div>
+                        {/* Convênio Ativo */}
+                        <FormCheckbox
+                          id="active"
+                          label="Convênio Ativo"
+                          checked={formData.active}
+                          onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
+                          disabled={submitting}
+                          color="blue"
+                        />
+                      </FormSection>
                     )}
 
-                    {/* ABA: TABELA DE PREOS */}
+                    {/* ABA: TABELA DE PREÇOS */}
 
                     {activeTab === 'pricing' && (
                       <div className="space-y-6">
                         <div className="border-b pb-6">
-                          {/* ?? Cabealho Limpo */}
+                          <h3 className="text-lg font-bold text-gray-900 mb-1">
+                            🏷️ Tabela de Preços
+                          </h3>
 
-                          <div className="mb-6">
-                            <h3 className="text-lg font-bold text-gray-900 mb-1">
-                              ?? Tabela de Preços
-                            </h3>
+                          <p className="text-xs text-gray-500">
+                            Gerencie serviços e preços para este convênio
+                          </p>
+                        </div>
 
-                            <p className="text-xs text-gray-500">
-                              Gerencie serviços e preços para este convênio
+                        {/* Aviso se não salvou o convênio ainda */}
+                        {!editingId && (
+                          <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                            <p className="text-sm text-amber-800">
+                              ⚠️ <strong>Salve o convênio primeiro</strong> antes de adicionar serviços
                             </p>
                           </div>
+                        )}
 
-                          {/* ?? Aviso se no salvou o convênio ainda */}
+                        {/* Botões de Ação */}
+                        <div className="flex gap-2 flex-wrap mb-6">
+                          <Button
+                            type="button"
+                            onClick={() => setShowPricingForm(!showPricingForm)}
+                            disabled={!editingId}
+                            title={!editingId ? 'Salve o convênio primeiro' : ''}
+                            className={`text-white text-sm py-2 px-4 rounded flex items-center gap-2 ${
+                              editingId
+                                ? 'bg-blue-600 hover:bg-blue-700'
+                                : 'bg-gray-400 cursor-not-allowed'
+                            }`}
+                          >
+                            <Plus className="w-4 h-4" />
+                            Novo Serviço
+                          </Button>
 
-                          {!editingId && (
-                            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                              <p className="text-sm text-amber-800">
-                                ?? <strong>Salve o convênio primeiro</strong> antes de adicionar
-                                serviços
-                              </p>
-                            </div>
-                          )}
-
-                          {/* Botes de Ao */}
-
-                          <div className="flex gap-2 flex-wrap mb-6">
+                          <label className="inline-block">
                             <Button
                               type="button"
-                              onClick={() => setShowPricingForm(!showPricingForm)}
-                              disabled={!editingId}
+                              onClick={() => document.getElementById('pricingFileInput')?.click()}
+                              disabled={uploadingFile || !editingId}
                               title={!editingId ? 'Salve o convênio primeiro' : ''}
                               className={`text-white text-sm py-2 px-4 rounded flex items-center gap-2 ${
-                                editingId
-                                  ? 'bg-blue-600 hover:bg-blue-700'
+                                editingId && !uploadingFile
+                                  ? 'bg-green-600 hover:bg-green-700'
                                   : 'bg-gray-400 cursor-not-allowed'
                               }`}
                             >
-                              <Plus className="w-4 h-4" />
-                              Novo Serviço
+                              <Upload className="w-4 h-4" />
+
+                              {uploadingFile ? 'Carregando...' : 'Importar Excel'}
                             </Button>
 
-                            <label className="inline-block">
-                              <Button
-                                type="button"
-                                onClick={() => document.getElementById('pricingFileInput')?.click()}
-                                disabled={uploadingFile || !editingId}
-                                title={!editingId ? 'Salve o convênio primeiro' : ''}
-                                className={`text-white text-sm py-2 px-4 rounded flex items-center gap-2 ${
-                                  editingId && !uploadingFile
-                                    ? 'bg-green-600 hover:bg-green-700'
-                                    : 'bg-gray-400 cursor-not-allowed'
-                                }`}
-                              >
-                                <Upload className="w-4 h-4" />
+                            <input
+                              id="pricingFileInput"
+                              type="file"
+                              accept=".csv,.xlsx,.xls,.txt"
+                              onChange={handleFileUpload}
+                              style={{ display: 'none' }}
+                            />
+                          </label>
 
-                                {uploadingFile ? 'Carregando...' : 'Importar Excel'}
-                              </Button>
+                          <Button
+                            type="button"
+                            onClick={downloadExcelTemplate}
+                            disabled={!editingId}
+                            title={!editingId ? 'Salve o convênio primeiro' : ''}
+                            className={`text-white text-sm py-2 px-4 rounded flex items-center gap-2 ${
+                              editingId
+                                ? 'bg-purple-600 hover:bg-purple-700'
+                                : 'bg-gray-400 cursor-not-allowed'
+                            }`}
+                          >
+                            📋 Template Excel
+                          </Button>
+                        </div>
 
-                              <input
-                                id="pricingFileInput"
-                                type="file"
-                                accept=".csv,.xlsx,.xls,.txt"
-                                onChange={handleFileUpload}
-                                style={{ display: 'none' }}
-                              />
-                            </label>
-
-                            <Button
-                              type="button"
-                              onClick={downloadExcelTemplate}
-                              disabled={!editingId}
-                              title={!editingId ? 'Salve o convênio primeiro' : ''}
-                              className={`text-white text-sm py-2 px-4 rounded flex items-center gap-2 ${
-                                editingId
-                                  ? 'bg-purple-600 hover:bg-purple-700'
-                                  : 'bg-gray-400 cursor-not-allowed'
-                              }`}
-                            >
-                              ?? Template Excel
-                            </Button>
-                          </div>
-
-                          <div className="space-y-6">
+                        <div className="space-y-6">
                             <>
                               {/* Formulrio Compacto */}
 
                               {showPricingForm && (
                                 <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
                                   <h4 className="text-sm font-semibold text-gray-900 mb-4">
-                                    {pricingFormData.id ? '?? Editar Serviço' : '? Novo Serviço'}
+                                    {pricingFormData.id ? 'Editar Serviço' : 'Novo Serviço'}
                                   </h4>
 
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
@@ -3194,7 +3500,7 @@ export function ConveniosPage() {
                                       }}
                                       className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     >
-                                      <option value="">?? Selecione o serviço</option>
+                                      <option value="">Selecione o serviço</option>
 
                                       {(services || [])
 
@@ -3224,7 +3530,7 @@ export function ConveniosPage() {
                                       }
                                       className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     >
-                                      <option value="">?? Selecione o plano</option>
+                                      <option value="">Selecione o plano</option>
 
                                       {(plansData || []).map((plan) => (
                                         <option key={plan.id} value={plan.name}>
@@ -3246,7 +3552,7 @@ export function ConveniosPage() {
                                           price: e.target.value,
                                         })
                                       }
-                                      placeholder="?? Preço (R$)"
+                                      placeholder="Preço (R$)"
                                       className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     />
 
@@ -3260,17 +3566,17 @@ export function ConveniosPage() {
                                       }
                                       className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     >
-                                      <option value="">?? Selecione a Categoria</option>
+                                      <option value="">Selecione a Categoria</option>
 
-                                      <option value="consultation">?? Consulta</option>
+                                      <option value="consultation">Consulta</option>
 
-                                      <option value="exam">?? Exame/SADT</option>
+                                      <option value="exam">Exame/SADT</option>
 
-                                      <option value="procedure">?? Procedimento</option>
+                                      <option value="procedure">Procedimento</option>
 
-                                      <option value="surgery">?? Cirurgia</option>
+                                      <option value="surgery">Cirurgia</option>
 
-                                      <option value="other">?? Outro</option>
+                                      <option value="other">Outro</option>
                                     </select>
 
                                     <Button
@@ -3297,7 +3603,7 @@ export function ConveniosPage() {
                                       }}
                                       className="bg-gray-300 hover:bg-gray-400 text-gray-900 text-sm px-4 py-2 rounded"
                                     >
-                                      ?
+                                      Cancelar
                                     </Button>
                                   </div>
                                 </div>
@@ -3471,7 +3777,7 @@ export function ConveniosPage() {
                                                     <span
                                                       className={`text-xs font-semibold ${isConfigured ? 'text-green-600' : 'text-yellow-600'}`}
                                                     >
-                                                      {isConfigured ? '?' : '??'}
+                                                      {isConfigured ? '✓' : '✗'}
                                                     </span>
                                                   </div>
                                                 </td>
@@ -3482,7 +3788,7 @@ export function ConveniosPage() {
                                                     onClick={() => handleEditPricingRow(priceEntry)}
                                                     className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs font-semibold"
                                                   >
-                                                    ??
+                                                    Editar
                                                   </button>
 
                                                   <button
@@ -3492,7 +3798,7 @@ export function ConveniosPage() {
                                                     }
                                                     className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs font-semibold"
                                                   >
-                                                    ???
+                                                    Deletar
                                                   </button>
                                                 </td>
                                               </tr>
@@ -3692,7 +3998,7 @@ export function ConveniosPage() {
                                                   <span
                                                     className={`text-xs font-semibold ${isConfigured ? 'text-green-600' : 'text-yellow-600'}`}
                                                   >
-                                                    {isConfigured ? '? Ativo' : '?? Incompleto'}
+                                                    {isConfigured ? 'Ativo' : 'Incompleto'}
                                                   </span>
                                                 </div>
                                               </td>
@@ -3703,7 +4009,7 @@ export function ConveniosPage() {
                                                   onClick={() => handleEditPricingRow(priceEntry)}
                                                   className="inline-block bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs font-semibold"
                                                 >
-                                                  ?? Editar
+                                                  Editar
                                                 </button>
 
                                                 <button
@@ -3711,7 +4017,7 @@ export function ConveniosPage() {
                                                   onClick={() => handleRemovePricingRow(priceEntry)}
                                                   className="inline-block bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs font-semibold"
                                                 >
-                                                  ??? Remover
+                                                  Remover
                                                 </button>
                                               </td>
                                             </tr>
@@ -3733,9 +4039,9 @@ export function ConveniosPage() {
 
                                     <p className="text-sm text-gray-600 mt-2">
                                       A tabela mostra apenas os <strong>preços base</strong>{' '}
-                                      efetivamente negociados com o convênio. Preços especficos de
+                                      efetivamente negociados com o convênio. Preços específicos de
                                       profissionais (negociações pontuais) aparecem como{' '}
-                                      <strong>"?? Negociao"</strong> na edio do profissional.
+                                      <strong>"Negociação"</strong> na edição do profissional.
                                     </p>
                                   </div>
                                 )}
@@ -3822,7 +4128,7 @@ export function ConveniosPage() {
                                   </div>
 
                                   <div className="flex gap-2">
-                                    <span className="font-semibold min-w-max">?? Negociao:</span>
+                                    <span className="font-semibold min-w-max">Negociação:</span>
 
                                     <span>
                                       Preço especfico de um profissional (override) que difere do
@@ -3864,941 +4170,1236 @@ export function ConveniosPage() {
 
                           {/* End of pricing section */}
                         </div>
-                      </div>
                     )}
 
-                    {/* ABA: ENDEREO */}
+                    {/* ABA: ENDEREÇO */}
 
                     {activeTab === 'address' && (
-                      <div className="space-y-6">
-                        {/* ===== SEO: ENDEREO ===== */}
-
-                        <div className="border-b pb-6">
-                          <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                            <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">
-                              ??
-                            </span>
-                            Endereo
-                          </h3>
-
-                          {/* Grid: Rua + Número */}
-
-                          <div className="grid grid-cols-3 gap-4 mb-4">
-                            <div className="col-span-2">
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Rua
-                              </label>
-
-                              <input
-                                type="text"
-                                value={formData.address_street}
-                                onChange={(e) =>
-                                  setFormData({ ...formData, address_street: e.target.value })
-                                }
-                                placeholder="Ex: Avenida Paulista"
-                                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                disabled={submitting}
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Número
-                              </label>
-
-                              <input
-                                type="text"
-                                value={formData.address_number}
-                                onChange={(e) =>
-                                  setFormData({ ...formData, address_number: e.target.value })
-                                }
-                                placeholder="Ex: 1000"
-                                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                disabled={submitting}
-                              />
-                            </div>
+                      <FormSection icon="📍" title="Endereço" description="Localização do convênio">
+                        {/* Rua + Número */}
+                        <FormGrid columns={3}>
+                          <div className="col-span-2">
+                            <FormInput
+                              type="text"
+                              label="Rua"
+                              placeholder="Ex: Avenida Paulista"
+                              value={formData.address_street}
+                              onChange={(e) => setFormData({ ...formData, address_street: e.target.value })}
+                              disabled={submitting}
+                            />
                           </div>
+                          <FormInput
+                            type="text"
+                            label="Número"
+                            placeholder="Ex: 1000"
+                            value={formData.address_number}
+                            onChange={(e) => setFormData({ ...formData, address_number: e.target.value })}
+                            disabled={submitting}
+                          />
+                        </FormGrid>
 
-                          {/* Campo: Bairro + CEP */}
+                        {/* Bairro + CEP */}
+                        <FormGrid columns={2}>
+                          <FormInput
+                            type="text"
+                            label="Bairro"
+                            placeholder="Ex: Bela Vista"
+                            value={formData.address_neighborhood}
+                            onChange={(e) => setFormData({ ...formData, address_neighborhood: e.target.value })}
+                            disabled={submitting}
+                          />
+                          <FormInput
+                            type="text"
+                            label="CEP"
+                            placeholder="Ex: 01311-100"
+                            value={formData.address_zip_code}
+                            onChange={(e) => setFormData({ ...formData, address_zip_code: e.target.value })}
+                            disabled={submitting}
+                          />
+                        </FormGrid>
 
-                          <div className="grid grid-cols-2 gap-4 mb-4">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Bairro
-                              </label>
-
-                              <input
-                                type="text"
-                                value={formData.address_neighborhood}
-                                onChange={(e) =>
-                                  setFormData({ ...formData, address_neighborhood: e.target.value })
-                                }
-                                placeholder="Ex: Bela Vista"
-                                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                disabled={submitting}
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                CEP
-                              </label>
-
-                              <input
-                                type="text"
-                                value={formData.address_zip_code}
-                                onChange={(e) =>
-                                  setFormData({ ...formData, address_zip_code: e.target.value })
-                                }
-                                placeholder="Ex: 01311-100"
-                                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                disabled={submitting}
-                              />
-                            </div>
-                          </div>
-
-                          {/* Grid: Cidade + Estado + Pas */}
-
-                          <div className="grid grid-cols-3 gap-4 mb-4">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Cidade
-                              </label>
-
-                              <input
-                                type="text"
-                                value={formData.address_city}
-                                onChange={(e) =>
-                                  setFormData({ ...formData, address_city: e.target.value })
-                                }
-                                placeholder="Ex: So Paulo"
-                                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                disabled={submitting}
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Estado
-                              </label>
-
-                              <input
-                                type="text"
-                                value={formData.address_state}
-                                onChange={(e) =>
-                                  setFormData({ ...formData, address_state: e.target.value })
-                                }
-                                placeholder="Ex: SP"
-                                maxLength="2"
-                                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                disabled={submitting}
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Pas
-                              </label>
-
-                              <input
-                                type="text"
-                                value={formData.country}
-                                onChange={(e) =>
-                                  setFormData({ ...formData, country: e.target.value })
-                                }
-                                placeholder="Ex: Brasil"
-                                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                disabled={submitting}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                        {/* Cidade + Estado + País */}
+                        <FormGrid columns={3}>
+                          <FormInput
+                            type="text"
+                            label="Cidade"
+                            placeholder="Ex: São Paulo"
+                            value={formData.address_city}
+                            onChange={(e) => setFormData({ ...formData, address_city: e.target.value })}
+                            disabled={submitting}
+                          />
+                          <FormInput
+                            type="text"
+                            label="Estado"
+                            placeholder="Ex: SP"
+                            maxLength="2"
+                            value={formData.address_state}
+                            onChange={(e) => setFormData({ ...formData, address_state: e.target.value })}
+                            disabled={submitting}
+                          />
+                          <FormInput
+                            type="text"
+                            label="País"
+                            placeholder="Ex: Brasil"
+                            value={formData.country}
+                            onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                            disabled={submitting}
+                          />
+                        </FormGrid>
+                      </FormSection>
                     )}
 
                     {/* ABA: FISCAL */}
 
                     {activeTab === 'fiscal' && (
-                      <div className="space-y-6">
-                        {/* ===== SEO: IDENTIFICAO FISCAL ===== */}
-
-                        <div className="border-b pb-6">
-                          <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                            <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs">
-                              ??
-                            </span>
-                            Identificao Fiscal
-                          </h3>
-
-                          {/* Grid: Inscrio Municipal + Inscrio Estadual */}
-
-                          <div className="grid grid-cols-2 gap-4 mb-4">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Inscrio Municipal
-                              </label>
-
-                              <input
-                                type="text"
-                                value={formData.municipal_registration}
-                                onChange={(e) =>
-                                  setFormData({
-                                    ...formData,
-                                    municipal_registration: e.target.value,
-                                  })
-                                }
-                                placeholder="Ex: 123.456.789"
-                                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                disabled={submitting}
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Inscrio Estadual
-                              </label>
-
-                              <input
-                                type="text"
-                                value={formData.state_registration}
-                                onChange={(e) =>
-                                  setFormData({ ...formData, state_registration: e.target.value })
-                                }
-                                placeholder="Ex: 123.456.789.012"
-                                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                disabled={submitting}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                      <FormSection icon="🏛️" title="Identificação Fiscal" description="Dados de registros fiscais">
+                        <FormGrid columns={2}>
+                          <FormInput
+                            type="text"
+                            label="Inscrição Municipal"
+                            placeholder="Ex: 123.456.789"
+                            value={formData.municipal_registration}
+                            onChange={(e) => setFormData({ ...formData, municipal_registration: e.target.value })}
+                            disabled={submitting}
+                          />
+                          <FormInput
+                            type="text"
+                            label="Inscrição Estadual"
+                            placeholder="Ex: 123.456.789.012"
+                            value={formData.state_registration}
+                            onChange={(e) => setFormData({ ...formData, state_registration: e.target.value })}
+                            disabled={submitting}
+                          />
+                        </FormGrid>
+                      </FormSection>
                     )}
 
                     {/* ABA: FATURAMENTO */}
 
                     {activeTab === 'billing' && (
-                      <div className="space-y-6">
-                        <div className="border-b pb-6">
-                          <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                            <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded text-xs">
-                              ??
-                            </span>
-                            Dados Obrigatrios para Faturamento
-                          </h3>
-                        </div>
+                      <FormSection icon="💰" title="Dados de Faturamento" description="Informações obrigatórias para faturamento e TISS">
+                        {/* Registro ANS */}
+                        <FormInput
+                          type="text"
+                          label="Registro ANS"
+                          required
+                          placeholder="Ex: 352.500"
+                          hint="Número de registro na ANS (agência de seguros privados). Obrigatório para planos privados."
+                          value={formData.registration_ans}
+                          onChange={(e) => setFormData({ ...formData, registration_ans: e.target.value })}
+                          disabled={submitting}
+                        />
 
-                        {/* Campo: Registro ANS */}
+                        {/* TISS Pattern Checkbox */}
+                        <FormCheckbox
+                          id="tiss_pattern"
+                          label="Segue padrão TISS"
+                          checked={formData.tiss_pattern}
+                          onChange={(e) => setFormData({ ...formData, tiss_pattern: e.target.checked })}
+                          disabled={submitting}
+                          color="blue"
+                          hint="Recomendado para compatibilidade com operadoras"
+                        />
 
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Registro ANS <span className="text-red-500">*</span>
-                          </label>
-
-                          <input
-                            type="text"
-                            value={formData.registration_ans}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-
-                                registration_ans: e.target.value,
-                              })
-                            }
-                            placeholder="Ex: 352.500"
-                            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                            disabled={submitting}
-                          />
-
-                          <p className="text-xs text-gray-500 mt-1">
-                            Número de registro na ANS (agncia de seguros privados). Obrigatrio
-                            para planos privados.
-                          </p>
-                        </div>
-
-                        {/* Checkbox: Segue padro TISS */}
-
-                        <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                          <input
-                            type="checkbox"
-                            id="tiss_pattern"
-                            checked={formData.tiss_pattern}
-                            onChange={(e) =>
-                              setFormData({ ...formData, tiss_pattern: e.target.checked })
-                            }
-                            className="rounded border-gray-300 w-5 h-5"
-                            disabled={submitting}
-                          />
-
-                          <label
-                            htmlFor="tiss_pattern"
-                            className="text-sm font-medium text-gray-700"
-                          >
-                            Segue padro TISS (recomendado)
-                          </label>
-                        </div>
-
-                        {/* Campo: Verso TISS */}
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Verso TISS <span className="text-red-500">*</span>
-                          </label>
-
-                          <select
+                        {/* TISS Version + Guide Format */}
+                        <FormGrid columns={2}>
+                          <FormSelect
+                            label="Versão TISS"
+                            required
+                            options={[
+                              { value: '3.01.00', label: 'TISS 3.01.00' },
+                              { value: '3.02.00', label: 'TISS 3.02.00' },
+                              { value: '3.03.00', label: 'TISS 3.03.00' },
+                              { value: '3.04.00', label: 'TISS 3.04.00' },
+                              { value: '3.05.00', label: 'TISS 3.05.00 (Recomendado)' },
+                              { value: '3.06.00', label: 'TISS 3.06.00' },
+                            ]}
+                            hint="Versão do padrão TISS utilizado pelo convênio"
                             value={formData.tiss_version}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-
-                                tiss_version: e.target.value,
-                              })
-                            }
-                            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                            onChange={(e) => setFormData({ ...formData, tiss_version: e.target.value })}
                             disabled={submitting}
-                          >
-                            <option value="3.01.00">TISS 3.01.00</option>
-
-                            <option value="3.02.00">TISS 3.02.00</option>
-
-                            <option value="3.03.00">TISS 3.03.00</option>
-
-                            <option value="3.04.00">TISS 3.04.00</option>
-
-                            <option value="3.05.00">TISS 3.05.00 (Recomendado)</option>
-
-                            <option value="3.06.00">TISS 3.06.00</option>
-                          </select>
-
-                          <p className="text-xs text-gray-500 mt-1">
-                            Verso do padro TISS utilizado pelo convênio
-                          </p>
-                        </div>
-
-                        {/* Campo: Formato de Guia */}
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Formato de Guia
-                          </label>
-
-                          <select
+                          />
+                          <FormSelect
+                            label="Formato de Guia"
+                            options={[
+                              { value: '', label: 'Selecione...' },
+                              { value: 'consultation', label: 'Guia de Consulta' },
+                              { value: 'sadt', label: 'Guia de SADT' },
+                              { value: 'hospitalization', label: 'Guia de Internação' },
+                            ]}
+                            hint="Tipo padrão de guia para este convênio"
                             value={formData.guide_format}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-
-                                guide_format: e.target.value,
-                              })
-                            }
-                            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                            onChange={(e) => setFormData({ ...formData, guide_format: e.target.value })}
                             disabled={submitting}
-                          >
-                            <option value="">Selecione...</option>
+                          />
+                        </FormGrid>
 
-                            <option value="consultation">Guia de Consulta</option>
+                        {/* DIVISOR VISUAL */}
+                        <div className="border-t border-gray-300 my-6 pt-6">
+                          <div className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2 pb-2 border-b-2 border-orange-300">
+                            <span className="text-lg">📄</span> Configuração NF-e
+                          </div>
 
-                            <option value="sadt">Guia de SADT</option>
+                          <FormGrid columns={2}>
+                            <FormInput
+                              type="text"
+                              label="Série NF-e"
+                              placeholder="Ex: 1"
+                              hint="Série de numeração para Notas Fiscais Eletrônicas"
+                              value={formData.nfe_series || ''}
+                              onChange={(e) => setFormData({ ...formData, nfe_series: e.target.value })}
+                              disabled={submitting}
+                            />
+                            <FormInput
+                              type="text"
+                              label="CFM (Código Formatação Mensagem)"
+                              placeholder="Ex: 01"
+                              hint="Código que identifica formato/padrão de transmissão"
+                              value={formData.cfm_code || ''}
+                              onChange={(e) => setFormData({ ...formData, cfm_code: e.target.value })}
+                              disabled={submitting}
+                            />
+                          </FormGrid>
 
-                            <option value="hospitalization">Guia de Internao</option>
-                          </select>
-
-                          <p className="text-xs text-gray-500 mt-1">
-                            Tipo padro de guia para este convênio
-                          </p>
+                          <FormGrid columns={2}>
+                            <FormCheckbox
+                              id="is_simple_nacional"
+                              label="Optante do Simples Nacional"
+                              checked={formData.is_simple_nacional || false}
+                              onChange={(e) => setFormData({ ...formData, is_simple_nacional: e.target.checked })}
+                              disabled={submitting}
+                              color="blue"
+                              hint="Marcar se a operadora é optante do regime Simples Nacional"
+                            />
+                            <FormSelect
+                              label="Indicador ICMS"
+                              options={[
+                                { value: '', label: 'Selecione...' },
+                                { value: '0', label: '0 - ICMS não incidente' },
+                                { value: '1', label: '1 - ICMS isento' },
+                                { value: '2', label: '2 - ICMS retido' },
+                                { value: '3', label: '3 - ICMS normal' },
+                              ]}
+                              hint="Situação do ICMS na operação"
+                              value={formData.icms_indicator || ''}
+                              onChange={(e) => setFormData({ ...formData, icms_indicator: e.target.value })}
+                              disabled={submitting}
+                            />
+                          </FormGrid>
                         </div>
-                      </div>
+
+                        {/* DIVISOR VISUAL */}
+                        <div className="border-t border-gray-300 my-6 pt-6">
+                          <div className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2 pb-2 border-b-2 border-yellow-300">
+                            <span className="text-lg">🧾</span> Configuração RPS (ISS)
+                          </div>
+
+                          <FormGrid columns={3}>
+                            <FormInput
+                              type="text"
+                              label="Série RPS"
+                              placeholder="Ex: A"
+                              hint="Série de Recibos Provisórios de Serviços"
+                              value={formData.rps_series || ''}
+                              onChange={(e) => setFormData({ ...formData, rps_series: e.target.value })}
+                              disabled={submitting}
+                            />
+                            <FormInput
+                              type="number"
+                              label="RPS Inicial"
+                              placeholder="Ex: 1000"
+                              hint="Número inicial da sequência RPS"
+                              value={formData.rps_initial || ''}
+                              onChange={(e) => setFormData({ ...formData, rps_initial: parseInt(e.target.value) || 0 })}
+                              disabled={submitting}
+                              min="1"
+                            />
+                            <FormSelect
+                              label="Tipo de RPS"
+                              options={[
+                                { value: '', label: 'Selecione...' },
+                                { value: '1', label: '1 - RPS Padrão' },
+                                { value: '2', label: '2 - RPS por Fax' },
+                                { value: '3', label: '3 - RPS por Email' },
+                              ]}
+                              hint="Meio de transmissão do RPS"
+                              value={formData.rps_type || ''}
+                              onChange={(e) => setFormData({ ...formData, rps_type: e.target.value })}
+                              disabled={submitting}
+                            />
+                          </FormGrid>
+
+                          <FormCheckbox
+                            id="iss_retained"
+                            label="ISS Retido na Fonte"
+                            checked={formData.iss_retained || false}
+                            onChange={(e) => setFormData({ ...formData, iss_retained: e.target.checked })}
+                            disabled={submitting}
+                            color="amber"
+                            hint="Marcar se o ISS é retido na fonte pelo tomador"
+                          />
+                        </div>
+
+                        {/* DIVISOR VISUAL */}
+                        <div className="border-t border-gray-300 my-6 pt-6">
+                          <div className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2 pb-2 border-b-2 border-purple-300">
+                            <span className="text-lg">🔗</span> Configuração de Integração
+                          </div>
+
+                          <FormGrid columns={2}>
+                            <FormSelect
+                              label="Tipo de Beneficiário"
+                              required
+                              options={[
+                                { value: '', label: 'Selecione...' },
+                                { value: 'operator', label: 'Operadora de Saúde' },
+                                { value: 'insurance', label: 'Seguradora' },
+                                { value: 'third_party', label: 'Terceirizado' },
+                                { value: 'direct', label: 'Pagamento Direto' },
+                              ]}
+                              hint="Qual o tipo de relacionamento com esta operadora"
+                              value={formData.beneficiary_type || ''}
+                              onChange={(e) => setFormData({ ...formData, beneficiary_type: e.target.value })}
+                              disabled={submitting}
+                            />
+                            <FormInput
+                              type="text"
+                              label="Código de Serviço Municipal"
+                              placeholder="Ex: 107"
+                              hint="Código do serviço para integração com ISS municipal"
+                              value={formData.municipal_service_code || ''}
+                              onChange={(e) => setFormData({ ...formData, municipal_service_code: e.target.value })}
+                              disabled={submitting}
+                            />
+                          </FormGrid>
+
+                          <FormCheckbox
+                            id="enable_nfe_generation"
+                            label="Habilitar Geração de NF-e"
+                            checked={formData.enable_nfe_generation || false}
+                            onChange={(e) => setFormData({ ...formData, enable_nfe_generation: e.target.checked })}
+                            disabled={submitting}
+                            color="green"
+                            hint="Ativar geração automática de Notas Fiscais Eletrônicas para esta operadora"
+                          />
+                        </div>
+
+                        {/* DIVISOR VISUAL */}
+                        <div className="border-t border-gray-300 my-6 pt-6">
+                          <div className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2 pb-2 border-b-2 border-purple-300">
+                            <span className="text-lg">🔐</span> Configuração TISS/ANS
+                          </div>
+
+                          {/* INFO BOX */}
+                          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
+                            <p className="text-xs font-semibold text-purple-900">📋 Integração TISS</p>
+                            <p className="text-xs text-purple-800 mt-1">
+                              Preencha os dados para habilitar integração TISS com esta operadora. O Código ANS é obrigatório.
+                            </p>
+                          </div>
+
+                          {/* Habilitar TISS */}
+                          <FormCheckbox
+                            id="tiss_enabled"
+                            label="Habilitar TISS"
+                            checked={formData.tiss_enabled || false}
+                            onChange={(e) => setFormData({ ...formData, tiss_enabled: e.target.checked })}
+                            disabled={submitting}
+                            color="purple"
+                            hint="Ativar integração TISS/ANS para submissão automática de guias"
+                          />
+
+                          {/* Campos TISS - mostrar apenas se habilitado */}
+                          {formData.tiss_enabled && (
+                            <div className="mt-4 space-y-4 bg-white p-4 rounded-lg border border-purple-200">
+                              {/* Validação: ANS é obrigatório */}
+                              {!formData.registration_ans?.trim() && (
+                                <div className="bg-amber-50 border border-amber-200 rounded p-3 text-xs text-amber-800">
+                                  ⚠️ <strong>Atenção:</strong> Código ANS (preenchido acima) é obrigatório quando TISS está habilitado.
+                                </div>
+                              )}
+
+                              {/* Método de Submissão */}
+                              <FormSelect
+                                label="Método de Submissão"
+                                required
+                                options={[
+                                  { value: 'HTTP', label: '🌐 HTTP API' },
+                                  { value: 'SFTP', label: '📁 SFTP' },
+                                  { value: 'PORTAL', label: '🌍 Web Portal' },
+                                ]}
+                                hint="Como as guias TISS serão enviadas"
+                                value={formData.submission_method || 'HTTP'}
+                                onChange={(e) => setFormData({ ...formData, submission_method: e.target.value })}
+                                disabled={submitting}
+                              />
+
+                              {/* Endpoint TISS - mostrar apenas se HTTP */}
+                              {formData.submission_method === 'HTTP' && (
+                                <FormInput
+                                  type="url"
+                                  label="Endpoint TISS"
+                                  required
+                                  placeholder="Ex: https://api.unimed.com.br/tiss"
+                                  hint="URL do servidor TISS da operadora"
+                                  value={formData.tiss_endpoint || ''}
+                                  onChange={(e) => setFormData({ ...formData, tiss_endpoint: e.target.value })}
+                                  disabled={submitting}
+                                />
+                              )}
+
+                              {/* Usuário TISS */}
+                              <FormInput
+                                type="text"
+                                label="Usuário TISS"
+                                required
+                                placeholder="Usuário para autenticação"
+                                hint="Login para acesso ao sistema TISS"
+                                value={formData.tiss_username || ''}
+                                onChange={(e) => setFormData({ ...formData, tiss_username: e.target.value })}
+                                disabled={submitting}
+                              />
+
+                              {/* Senha TISS */}
+                              <FormInput
+                                type="password"
+                                label="Senha TISS"
+                                required
+                                placeholder="Senha para autenticação"
+                                hint="Será encriptada no servidor"
+                                value={formData.tiss_password || ''}
+                                onChange={(e) => setFormData({ ...formData, tiss_password: e.target.value })}
+                                disabled={submitting}
+                              />
+
+                              {/* Email de Resposta */}
+                              <FormInput
+                                type="email"
+                                label="Email para Respostas TISS"
+                                placeholder="contato@clinica.com.br"
+                                hint="Opcional: para receber notificações TISS"
+                                value={formData.tiss_response_email || ''}
+                                onChange={(e) => setFormData({ ...formData, tiss_response_email: e.target.value })}
+                                disabled={submitting}
+                              />
+                            </div>
+                          )}
+
+                          {/* ===== PORTAL XML INTEGRATION ===== */}
+                          <div className="mt-8 pt-6 border-t border-gray-200">
+                            {/* Habilitar Portal XML */}
+                            <FormCheckbox
+                              id="enable_rps_generation"
+                              label="Habilitar Integração Portal XML"
+                              checked={formData.enable_rps_generation || false}
+                              onChange={(e) => setFormData({ ...formData, enable_rps_generation: e.target.checked })}
+                              disabled={submitting}
+                              color="blue"
+                              hint="Ativar integração com Portal XML para RPS e faturamento"
+                            />
+
+                            {/* Campos Portal XML - mostrar apenas se habilitado */}
+                            {formData.enable_rps_generation && (
+                              <div className="mt-4 space-y-6 bg-blue-50 p-4 rounded-lg border border-blue-200">
+                                {/* Seção: Autenticação */}
+                                <div>
+                                  <h4 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                                    <span>🔐</span> Autenticação Portal
+                                  </h4>
+                                  <div className="space-y-3 bg-white p-3 rounded">
+                                    <FormInput
+                                      type="text"
+                                      label="Usuário Portal"
+                                      placeholder="Ex: user@domain.com"
+                                      hint="Usuário para acesso ao Portal XML"
+                                      value={formData.portal_username || ''}
+                                      onChange={(e) => setFormData({ ...formData, portal_username: e.target.value })}
+                                      disabled={submitting}
+                                    />
+
+                                    <FormInput
+                                      type="password"
+                                      label="Senha Portal"
+                                      placeholder="••••••••"
+                                      hint="Será encriptada no servidor"
+                                      value={formData.portal_password || ''}
+                                      onChange={(e) => setFormData({ ...formData, portal_password: e.target.value })}
+                                      disabled={submitting}
+                                    />
+
+                                    <FormInput
+                                      type="text"
+                                      label="Chave de API Portal"
+                                      placeholder="Ex: sk_live_xxx..."
+                                      hint="Token de autenticação da API"
+                                      value={formData.portal_api_key || ''}
+                                      onChange={(e) => setFormData({ ...formData, portal_api_key: e.target.value })}
+                                      disabled={submitting}
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* Seção: Certificados */}
+                                <div>
+                                  <h4 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                                    <span>📜</span> Certificados
+                                  </h4>
+                                  <div className="space-y-3 bg-white p-3 rounded">
+                                    <FormCheckbox
+                                      id="use_certificate"
+                                      label="Usar Certificado Digital"
+                                      checked={formData.use_certificate !== false}
+                                      onChange={(e) => setFormData({ ...formData, use_certificate: e.target.checked })}
+                                      disabled={submitting}
+                                      color="blue"
+                                      hint="Requerido para submissões seguras"
+                                    />
+
+                                    {formData.use_certificate && (
+                                      <>
+                                        <FormInput
+                                          type="text"
+                                          label="Caminho do Certificado"
+                                          placeholder="Ex: /certs/company.p12"
+                                          hint="Caminho local ou URL para arquivo .p12/.pfx"
+                                          value={formData.certificate_path || ''}
+                                          onChange={(e) => setFormData({ ...formData, certificate_path: e.target.value })}
+                                          disabled={submitting}
+                                        />
+
+                                        <FormInput
+                                          type="password"
+                                          label="Senha do Certificado"
+                                          placeholder="••••••••"
+                                          hint="Será encriptada no servidor"
+                                          value={formData.certificate_password || ''}
+                                          onChange={(e) => setFormData({ ...formData, certificate_password: e.target.value })}
+                                          disabled={submitting}
+                                        />
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Seção: Especificações Técnicas */}
+                                <div>
+                                  <h4 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                                    <span>⚙️</span> Especificações Técnicas
+                                  </h4>
+                                  <div className="space-y-3 bg-white p-3 rounded">
+                                    <div className="grid grid-cols-2 gap-3">
+                                      <FormSelect
+                                        label="Formato Submissão"
+                                        options={[
+                                          { value: 'xml', label: '📄 XML' },
+                                          { value: 'zip', label: '📦 ZIP' },
+                                          { value: 'gzip', label: '🗜️ GZIP' },
+                                        ]}
+                                        value={formData.submission_format || 'xml'}
+                                        onChange={(e) => setFormData({ ...formData, submission_format: e.target.value })}
+                                        disabled={submitting}
+                                      />
+
+                                      <FormSelect
+                                        label="Formato Resposta"
+                                        options={[
+                                          { value: 'xml', label: '📄 XML' },
+                                          { value: 'json', label: '🔲 JSON' },
+                                        ]}
+                                        value={formData.response_format || 'xml'}
+                                        onChange={(e) => setFormData({ ...formData, response_format: e.target.value })}
+                                        disabled={submitting}
+                                      />
+                                    </div>
+
+                                    <FormCheckbox
+                                      id="use_compression"
+                                      label="Usar Compressão"
+                                      checked={formData.use_compression !== false}
+                                      onChange={(e) => setFormData({ ...formData, use_compression: e.target.checked })}
+                                      disabled={submitting}
+                                      color="blue"
+                                      hint="Reduz tamanho dos arquivos transmitidos"
+                                    />
+
+                                    <FormInput
+                                      type="url"
+                                      label="URL Webhook"
+                                      placeholder="Ex: https://seu-dominio.com/webhooks/portal"
+                                      hint="Para receber notificações em tempo real"
+                                      value={formData.portal_webhook_url || ''}
+                                      onChange={(e) => setFormData({ ...formData, portal_webhook_url: e.target.value })}
+                                      disabled={submitting}
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* Seção: Políticas de Submissão */}
+                                <div>
+                                  <h4 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                                    <span>📋</span> Políticas de Submissão
+                                  </h4>
+                                  <div className="space-y-3 bg-white p-3 rounded">
+                                    <div className="grid grid-cols-2 gap-3">
+                                      <FormInput
+                                        type="number"
+                                        label="Máximo de Submissões/Dia"
+                                        placeholder="100"
+                                        hint="Limite de envios por dia"
+                                        value={formData.max_daily_submissions || 100}
+                                        onChange={(e) => setFormData({ ...formData, max_daily_submissions: parseInt(e.target.value) || 100 })}
+                                        disabled={submitting}
+                                      />
+
+                                      <FormInput
+                                        type="number"
+                                        label="Tamanho Máximo (MB)"
+                                        placeholder="50"
+                                        hint="Tamanho máximo arquivo"
+                                        value={formData.max_file_size_mb || 50}
+                                        onChange={(e) => setFormData({ ...formData, max_file_size_mb: parseInt(e.target.value) || 50 })}
+                                        disabled={submitting}
+                                      />
+                                    </div>
+
+                                    <FormInput
+                                      type="number"
+                                      label="Guias por Submissão"
+                                      placeholder="500"
+                                      hint="Máximo de guias em um arquivo"
+                                      value={formData.max_guides_per_submission || 500}
+                                      onChange={(e) => setFormData({ ...formData, max_guides_per_submission: parseInt(e.target.value) || 500 })}
+                                      disabled={submitting}
+                                    />
+
+                                    <FormCheckbox
+                                      id="requires_manual_confirmation"
+                                      label="Requer Confirmação Manual"
+                                      checked={formData.requires_manual_confirmation === true}
+                                      onChange={(e) => setFormData({ ...formData, requires_manual_confirmation: e.target.checked })}
+                                      disabled={submitting}
+                                      color="blue"
+                                      hint="Submissões precisam aprovação antes de enviar"
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* Seção: Suporte */}
+                                <div>
+                                  <h4 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                                    <span>📞</span> Informações de Suporte
+                                  </h4>
+                                  <div className="space-y-3 bg-white p-3 rounded">
+                                    <FormInput
+                                      type="email"
+                                      label="Email Suporte Portal"
+                                      placeholder="suporte@portal.com.br"
+                                      hint="Contato para problemas técnicos"
+                                      value={formData.support_email || ''}
+                                      onChange={(e) => setFormData({ ...formData, support_email: e.target.value })}
+                                      disabled={submitting}
+                                    />
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                      <FormInput
+                                        type="tel"
+                                        label="Telefone Suporte"
+                                        placeholder="(11) 9999-9999"
+                                        hint="Contato telefônico para suporte"
+                                        value={formData.support_phone || ''}
+                                        onChange={(e) => setFormData({ ...formData, support_phone: e.target.value })}
+                                        disabled={submitting}
+                                      />
+
+                                      <FormInput
+                                        type="text"
+                                        label="Horário de Funcionamento"
+                                        placeholder="Ex: 08:00-18:00"
+                                        hint="Formato: HH:MM-HH:MM ou 24h"
+                                        value={formData.support_hours || '08:00-18:00'}
+                                        onChange={(e) => setFormData({ ...formData, support_hours: e.target.value })}
+                                        disabled={submitting}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Status da Conexão */}
+                                <div className="bg-gray-50 p-3 rounded border border-gray-200">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <h4 className="text-sm font-bold text-gray-800">Status da Conexão Portal</h4>
+                                    <span className={`text-xs px-2 py-1 rounded font-semibold ${
+                                      formData.portal_connection_status === 'connected' ? 'bg-green-100 text-green-800' :
+                                      formData.portal_connection_status === 'failed' ? 'bg-red-100 text-red-800' :
+                                      formData.portal_connection_status === 'disconnected' ? 'bg-yellow-100 text-yellow-800' :
+                                      'bg-gray-100 text-gray-800'
+                                    }`}>
+                                      {formData.portal_connection_status === 'connected' && '✅ Conectado'}
+                                      {formData.portal_connection_status === 'failed' && '❌ Falha'}
+                                      {formData.portal_connection_status === 'disconnected' && '⚠️ Desconectado'}
+                                      {formData.portal_connection_status === 'untested' && '❓ Não testado'}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-gray-600">
+                                    Última atualização: {formData.portal_config_updated_at ? new Date(formData.portal_config_updated_at).toLocaleString() : 'Nunca'}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </FormSection>
                     )}
 
                     {/* ABA: TRIBUTOS */}
 
                     {activeTab === 'taxes' && (
-                      <div className="space-y-6">
-                        {/* ===== SEO: TRIBUTOS ===== */}
-
-                        <div className="border-b pb-6">
-                          <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                            <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs">
-                              ??
-                            </span>
-                            Tributos (Para NF-e - Reforma Tributria 2024)
-                          </h3>
-
-                          {/* Campo: Regime Tributrio */}
-
-                          <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Regime Tributrio
-                            </label>
-
-                            <select
-                              value={formData.tax_regime}
-                              onChange={(e) =>
-                                setFormData({ ...formData, tax_regime: e.target.value })
-                              }
-                              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              disabled={submitting}
-                            >
-                              <option value="">Selecione...</option>
-
-                              <option value="Simples">Simples Nacional</option>
-
-                              <option value="Lucro Real">Lucro Real</option>
-
-                              <option value="Lucro Presumido">Lucro Presumido</option>
-                            </select>
+                      <FormSection icon="📊" title="Tributos" description="Configurações tributárias para NF-e e processamento de operadora">
+                        {/* Informação Principal */}
+                        <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-300 rounded-lg p-4 mb-6 shadow-sm">
+                          <div className="flex gap-3">
+                            <div className="text-2xl">📋</div>
+                            <div className="flex-1">
+                              <p className="text-sm font-bold text-blue-900">Configuração de Tributos e Encargos</p>
+                              <p className="text-xs text-blue-800 mt-2">
+                                Configure os regimes tributários e alíquotas que incidem sobre as operações com esta operadora. Os valores são utilizados para cálculo de margens, análise de rentabilidade e geração de relatórios financeiros.
+                              </p>
+                            </div>
                           </div>
+                        </div>
 
-                          {/* Checkbox: Retm impostos */}
+                        {/* Regime Tributário e Configuração Geral */}
+                        <div className="grid grid-cols-2 gap-4 mb-6">
+                          <FormSelect
+                            label="Regime Tributário da Operadora"
+                            options={[
+                              { value: '', label: 'Selecione...' },
+                              { value: 'Simples', label: 'Simples Nacional' },
+                              { value: 'Lucro Real', label: 'Lucro Real' },
+                              { value: 'Lucro Presumido', label: 'Lucro Presumido' },
+                            ]}
+                            value={formData.tax_regime}
+                            onChange={(e) => setFormData({ ...formData, tax_regime: e.target.value })}
+                            disabled={submitting}
+                          />
 
-                          <div className="flex items-center gap-2 mb-6 p-3 bg-blue-50 rounded border border-blue-200">
-                            <input
-                              type="checkbox"
+                          <div className="flex items-end">
+                            <FormCheckbox
                               id="retains_taxes"
+                              label="Operadora retém impostos na fonte"
                               checked={formData.retains_taxes}
-                              onChange={(e) =>
-                                setFormData({
-                                  ...formData,
-
-                                  retains_taxes: e.target.checked,
-                                })
-                              }
-                              className="rounded border-gray-300"
+                              onChange={(e) => setFormData({ ...formData, retains_taxes: e.target.checked })}
                               disabled={submitting}
+                              color="blue"
                             />
+                          </div>
+                        </div>
 
-                            <label
-                              htmlFor="retains_taxes"
-                              className="text-sm font-medium text-gray-700"
-                            >
-                              ? Operadora retm impostos na fonte
-                            </label>
+                        {/* Resumo de Carga Tributária */}
+                        <div className="bg-gray-50 border border-gray-300 rounded-lg p-4 mb-8">
+                          <h4 className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
+                            <span>📊</span> Resumo Estimado de Carga Tributária
+                          </h4>
+                          <div className="grid grid-cols-3 gap-4">
+                            <div className="bg-white border border-gray-200 rounded p-3 text-center">
+                              <p className="text-xs text-gray-600 mb-1">Tributos Federais</p>
+                              <p className="text-lg font-bold text-red-600">
+                                {(parseFloat(formData.pis_rate || 0) + parseFloat(formData.cofins_rate || 0) + parseFloat(formData.inss_rate || 0) + parseFloat(formData.ir_rate || 0) + parseFloat(formData.csll_rate || 0)).toFixed(2)}%
+                              </p>
+                            </div>
+                            <div className="bg-white border border-gray-200 rounded p-3 text-center">
+                              <p className="text-xs text-gray-600 mb-1">Tributos Estaduais</p>
+                              <p className="text-lg font-bold text-orange-600">
+                                {(parseFloat(formData.icms_rate || 0)).toFixed(2)}%
+                              </p>
+                            </div>
+                            <div className="bg-white border border-gray-200 rounded p-3 text-center">
+                              <p className="text-xs text-gray-600 mb-1">Tributos Municipais</p>
+                              <p className="text-lg font-bold text-yellow-600">
+                                {(parseFloat(formData.iss_rate || 0) + parseFloat(formData.issrf_rate || 0)).toFixed(2)}%
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* SEÇÃO: TRIBUTOS FEDERAIS */}
+                        <div className="mb-8">
+                          <div className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2 pb-2 border-b-2 border-red-300">
+                            <span className="text-lg">🏛️</span> Tributos Federais
                           </div>
 
-                          {/* Tabela de Tributos - Grid compacto 4 colunas */}
-
-                          <div className="overflow-x-auto">
-                            <div className="bg-gray-50 rounded border border-gray-200">
-                              {/* Cabealho */}
-
-                              <div className="grid grid-cols-4 gap-2 p-3 border-b border-gray-200 font-bold text-xs text-gray-700 bg-gray-100">
-                                <div>Ativar</div>
-
-                                <div>Tributo</div>
-
-                                <div>Alquota (%)</div>
-
-                                <div>Notas</div>
-                              </div>
-
-                              {/* ICMS */}
-
-                              <div className="grid grid-cols-4 gap-2 p-3 border-b border-gray-100 items-center text-xs">
-                                <div className="flex justify-center">
-                                  <input
-                                    type="checkbox"
-                                    checked={formData.icms_applicable}
-                                    onChange={(e) =>
-                                      setFormData({
-                                        ...formData,
-
-                                        icms_applicable: e.target.checked,
-                                      })
-                                    }
-                                    disabled={submitting}
-                                    className="rounded"
-                                  />
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* PIS Card */}
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-4 hover:border-red-300 transition">
+                              <div className="flex items-start justify-between mb-3">
+                                <div>
+                                  <p className="font-bold text-sm text-red-900">PIS</p>
+                                  <p className="text-xs text-red-700 mt-1">Programa de Integração Social</p>
                                 </div>
-
-                                <div className="font-medium">ICMS</div>
-
-                                <input
-                                  type="number"
-                                  value={formData.icms_rate}
-                                  onChange={(e) =>
-                                    setFormData({
-                                      ...formData,
-
-                                      icms_rate: parseFloat(e.target.value) || 0,
-                                    })
-                                  }
-                                  placeholder="0.00"
-                                  step="0.01"
-                                  min="0"
-                                  max="100"
-                                  className="w-full px-2 py-1 border rounded text-xs"
-                                  disabled={submitting || !formData.icms_applicable}
-                                />
-
-                                <div className="text-gray-500">Circulao</div>
+                                <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-semibold">Federal</span>
                               </div>
-
-                              {/* PIS */}
-
-                              <div className="grid grid-cols-4 gap-2 p-3 border-b border-gray-100 items-center text-xs">
-                                <div className="flex justify-center">
+                              <div className="bg-white rounded p-2 mb-3">
+                                <p className="text-xs text-gray-600 mb-2">💡 Incide sobre faturamento. Alíquota típica: 1,65% a 2,76%</p>
+                                <div className="flex gap-2 items-center">
                                   <input
                                     type="checkbox"
                                     checked={formData.pis_applicable}
-                                    onChange={(e) =>
-                                      setFormData({
-                                        ...formData,
-
-                                        pis_applicable: e.target.checked,
-                                      })
-                                    }
+                                    onChange={(e) => setFormData({ ...formData, pis_applicable: e.target.checked })}
                                     disabled={submitting}
-                                    className="rounded"
+                                    className="rounded cursor-pointer"
                                   />
+                                  <span className="text-xs text-gray-700 flex-1">Aplicável</span>
+                                  <input
+                                    type="number"
+                                    value={formData.pis_rate}
+                                    onChange={(e) => setFormData({ ...formData, pis_rate: parseFloat(e.target.value) || 0 })}
+                                    placeholder="1.65"
+                                    step="0.01"
+                                    min="0"
+                                    max="100"
+                                    className="w-20 px-2 py-1 border border-red-300 rounded text-xs"
+                                    disabled={submitting || !formData.pis_applicable}
+                                  />
+                                  <span className="text-xs font-semibold text-gray-700">%</span>
                                 </div>
-
-                                <div className="font-medium">PIS</div>
-
-                                <input
-                                  type="number"
-                                  value={formData.pis_rate}
-                                  onChange={(e) =>
-                                    setFormData({
-                                      ...formData,
-
-                                      pis_rate: parseFloat(e.target.value) || 0,
-                                    })
-                                  }
-                                  placeholder="0.00"
-                                  step="0.01"
-                                  min="0"
-                                  max="100"
-                                  className="w-full px-2 py-1 border rounded text-xs"
-                                  disabled={submitting || !formData.pis_applicable}
-                                />
-
-                                <div className="text-gray-500">Social</div>
                               </div>
+                            </div>
 
-                              {/* COFINS */}
-
-                              <div className="grid grid-cols-4 gap-2 p-3 border-b border-gray-100 items-center text-xs">
-                                <div className="flex justify-center">
+                            {/* COFINS Card */}
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-4 hover:border-red-300 transition">
+                              <div className="flex items-start justify-between mb-3">
+                                <div>
+                                  <p className="font-bold text-sm text-red-900">COFINS</p>
+                                  <p className="text-xs text-red-700 mt-1">Contribuição para Financiamento da Seguridade Social</p>
+                                </div>
+                                <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-semibold">Federal</span>
+                              </div>
+                              <div className="bg-white rounded p-2 mb-3">
+                                <p className="text-xs text-gray-600 mb-2">💡 Incide sobre faturamento. Alíquota típica: 3% a 7,6%</p>
+                                <div className="flex gap-2 items-center">
                                   <input
                                     type="checkbox"
                                     checked={formData.cofins_applicable}
-                                    onChange={(e) =>
-                                      setFormData({
-                                        ...formData,
-
-                                        cofins_applicable: e.target.checked,
-                                      })
-                                    }
+                                    onChange={(e) => setFormData({ ...formData, cofins_applicable: e.target.checked })}
                                     disabled={submitting}
-                                    className="rounded"
+                                    className="rounded cursor-pointer"
                                   />
-                                </div>
-
-                                <div className="font-medium">COFINS</div>
-
-                                <input
-                                  type="number"
-                                  value={formData.cofins_rate}
-                                  onChange={(e) =>
-                                    setFormData({
-                                      ...formData,
-
-                                      cofins_rate: parseFloat(e.target.value) || 0,
-                                    })
-                                  }
-                                  placeholder="0.00"
-                                  step="0.01"
-                                  min="0"
-                                  max="100"
-                                  className="w-full px-2 py-1 border rounded text-xs"
-                                  disabled={submitting || !formData.cofins_applicable}
-                                />
-
-                                <div className="text-gray-500">Financiamento</div>
-                              </div>
-
-                              {/* ISS */}
-
-                              <div className="grid grid-cols-4 gap-2 p-3 border-b border-gray-100 items-center text-xs">
-                                <div className="flex justify-center">
+                                  <span className="text-xs text-gray-700 flex-1">Aplicável</span>
                                   <input
-                                    type="checkbox"
-                                    checked={formData.iss_applicable}
-                                    onChange={(e) =>
-                                      setFormData({
-                                        ...formData,
-
-                                        iss_applicable: e.target.checked,
-                                      })
-                                    }
-                                    disabled={submitting}
-                                    className="rounded"
+                                    type="number"
+                                    value={formData.cofins_rate}
+                                    onChange={(e) => setFormData({ ...formData, cofins_rate: parseFloat(e.target.value) || 0 })}
+                                    placeholder="3.00"
+                                    step="0.01"
+                                    min="0"
+                                    max="100"
+                                    className="w-20 px-2 py-1 border border-red-300 rounded text-xs"
+                                    disabled={submitting || !formData.cofins_applicable}
                                   />
+                                  <span className="text-xs font-semibold text-gray-700">%</span>
                                 </div>
-
-                                <div className="font-medium">ISS</div>
-
-                                <input
-                                  type="number"
-                                  value={formData.iss_rate}
-                                  onChange={(e) =>
-                                    setFormData({
-                                      ...formData,
-
-                                      iss_rate: parseFloat(e.target.value) || 0,
-                                    })
-                                  }
-                                  placeholder="0.00"
-                                  step="0.01"
-                                  min="0"
-                                  max="100"
-                                  className="w-full px-2 py-1 border rounded text-xs"
-                                  disabled={submitting || !formData.iss_applicable}
-                                />
-
-                                <div className="text-gray-500">Serviço</div>
                               </div>
+                            </div>
 
-                              {/* ISSRF */}
-
-                              <div className="grid grid-cols-4 gap-2 p-3 border-b border-gray-100 items-center text-xs">
-                                <div className="flex justify-center">
-                                  <input
-                                    type="checkbox"
-                                    checked={formData.issrf_applicable}
-                                    onChange={(e) =>
-                                      setFormData({
-                                        ...formData,
-
-                                        issrf_applicable: e.target.checked,
-                                      })
-                                    }
-                                    disabled={submitting}
-                                    className="rounded"
-                                  />
+                            {/* INSS Card */}
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-4 hover:border-red-300 transition">
+                              <div className="flex items-start justify-between mb-3">
+                                <div>
+                                  <p className="font-bold text-sm text-red-900">INSS</p>
+                                  <p className="text-xs text-red-700 mt-1">Instituto Nacional de Seguridade Social</p>
                                 </div>
-
-                                <div className="font-medium">ISSRF</div>
-
-                                <input
-                                  type="number"
-                                  value={formData.issrf_rate}
-                                  onChange={(e) =>
-                                    setFormData({
-                                      ...formData,
-
-                                      issrf_rate: parseFloat(e.target.value) || 0,
-                                    })
-                                  }
-                                  placeholder="0.00"
-                                  step="0.01"
-                                  min="0"
-                                  max="100"
-                                  className="w-full px-2 py-1 border rounded text-xs"
-                                  disabled={submitting || !formData.issrf_applicable}
-                                />
-
-                                <div className="text-gray-500">Serviço Federal</div>
+                                <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-semibold">Federal</span>
                               </div>
-
-                              {/* INSS */}
-
-                              <div className="grid grid-cols-4 gap-2 p-3 border-b border-gray-100 items-center text-xs">
-                                <div className="flex justify-center">
+                              <div className="bg-white rounded p-2 mb-3">
+                                <p className="text-xs text-gray-600 mb-2">💡 Contribuição previdenciária. Alíquota: 20% em média (para pessoas jurídicas)</p>
+                                <div className="flex gap-2 items-center">
                                   <input
                                     type="checkbox"
                                     checked={formData.inss_applicable}
-                                    onChange={(e) =>
-                                      setFormData({
-                                        ...formData,
-
-                                        inss_applicable: e.target.checked,
-                                      })
-                                    }
+                                    onChange={(e) => setFormData({ ...formData, inss_applicable: e.target.checked })}
                                     disabled={submitting}
-                                    className="rounded"
+                                    className="rounded cursor-pointer"
                                   />
+                                  <span className="text-xs text-gray-700 flex-1">Aplicável</span>
+                                  <input
+                                    type="number"
+                                    value={formData.inss_rate}
+                                    onChange={(e) => setFormData({ ...formData, inss_rate: parseFloat(e.target.value) || 0 })}
+                                    placeholder="20.00"
+                                    step="0.01"
+                                    min="0"
+                                    max="100"
+                                    className="w-20 px-2 py-1 border border-red-300 rounded text-xs"
+                                    disabled={submitting || !formData.inss_applicable}
+                                  />
+                                  <span className="text-xs font-semibold text-gray-700">%</span>
                                 </div>
-
-                                <div className="font-medium">INSS</div>
-
-                                <input
-                                  type="number"
-                                  value={formData.inss_rate}
-                                  onChange={(e) =>
-                                    setFormData({
-                                      ...formData,
-
-                                      inss_rate: parseFloat(e.target.value) || 0,
-                                    })
-                                  }
-                                  placeholder="0.00"
-                                  step="0.01"
-                                  min="0"
-                                  max="100"
-                                  className="w-full px-2 py-1 border rounded text-xs"
-                                  disabled={submitting || !formData.inss_applicable}
-                                />
-
-                                <div className="text-gray-500">Previdncia</div>
                               </div>
+                            </div>
 
-                              {/* IBS (Reforma Tributria) */}
-
-                              <div className="grid grid-cols-4 gap-2 p-3 border-b border-gray-100 items-center text-xs bg-green-50">
-                                <div className="flex justify-center">
+                            {/* IR Card */}
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-4 hover:border-red-300 transition">
+                              <div className="flex items-start justify-between mb-3">
+                                <div>
+                                  <p className="font-bold text-sm text-red-900">IR</p>
+                                  <p className="text-xs text-red-700 mt-1">Imposto de Renda Pessoa Jurídica</p>
+                                </div>
+                                <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-semibold">Federal</span>
+                              </div>
+                              <div className="bg-white rounded p-2 mb-3">
+                                <p className="text-xs text-gray-600 mb-2">💡 Imposto sobre renda. Alíquota: 3% a 34% (conforme regime e lucro)</p>
+                                <div className="flex gap-2 items-center">
                                   <input
                                     type="checkbox"
-                                    checked={formData.ibs_applicable}
-                                    onChange={(e) =>
-                                      setFormData({
-                                        ...formData,
-
-                                        ibs_applicable: e.target.checked,
-                                      })
-                                    }
+                                    checked={formData.ir_applicable}
+                                    onChange={(e) => setFormData({ ...formData, ir_applicable: e.target.checked })}
                                     disabled={submitting}
-                                    className="rounded"
+                                    className="rounded cursor-pointer"
                                   />
+                                  <span className="text-xs text-gray-700 flex-1">Aplicável</span>
+                                  <input
+                                    type="number"
+                                    value={formData.ir_rate}
+                                    onChange={(e) => setFormData({ ...formData, ir_rate: parseFloat(e.target.value) || 0 })}
+                                    placeholder="15.00"
+                                    step="0.01"
+                                    min="0"
+                                    max="100"
+                                    className="w-20 px-2 py-1 border border-red-300 rounded text-xs"
+                                    disabled={submitting || !formData.ir_applicable}
+                                  />
+                                  <span className="text-xs font-semibold text-gray-700">%</span>
                                 </div>
-
-                                <div className="font-medium text-green-700">IBS</div>
-
-                                <input
-                                  type="number"
-                                  value={formData.ibs_rate}
-                                  onChange={(e) =>
-                                    setFormData({
-                                      ...formData,
-
-                                      ibs_rate: parseFloat(e.target.value) || 0,
-                                    })
-                                  }
-                                  placeholder="0.00"
-                                  step="0.01"
-                                  min="0"
-                                  max="100"
-                                  className="w-full px-2 py-1 border rounded text-xs bg-green-50"
-                                  disabled={submitting || !formData.ibs_applicable}
-                                />
-
-                                <div className="text-green-600 text-xs">Reforma 2024+</div>
                               </div>
+                            </div>
 
-                              {/* CBS (Reforma Tributria) */}
-
-                              <div className="grid grid-cols-4 gap-2 p-3 items-center text-xs bg-green-50">
-                                <div className="flex justify-center">
+                            {/* CSLL Card */}
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-4 hover:border-red-300 transition">
+                              <div className="flex items-start justify-between mb-3">
+                                <div>
+                                  <p className="font-bold text-sm text-red-900">CSLL</p>
+                                  <p className="text-xs text-red-700 mt-1">Contribuição Social sobre Lucro Líquido</p>
+                                </div>
+                                <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-semibold">Federal</span>
+                              </div>
+                              <div className="bg-white rounded p-2 mb-3">
+                                <p className="text-xs text-gray-600 mb-2">💡 Contribuição sobre lucro. Alíquota: 7% a 9% (conforme regime de apuração)</p>
+                                <div className="flex gap-2 items-center">
                                   <input
                                     type="checkbox"
-                                    checked={formData.cbs_applicable}
-                                    onChange={(e) =>
-                                      setFormData({
-                                        ...formData,
-
-                                        cbs_applicable: e.target.checked,
-                                      })
-                                    }
+                                    checked={formData.csll_applicable}
+                                    onChange={(e) => setFormData({ ...formData, csll_applicable: e.target.checked })}
                                     disabled={submitting}
-                                    className="rounded"
+                                    className="rounded cursor-pointer"
                                   />
+                                  <span className="text-xs text-gray-700 flex-1">Aplicável</span>
+                                  <input
+                                    type="number"
+                                    value={formData.csll_rate}
+                                    onChange={(e) => setFormData({ ...formData, csll_rate: parseFloat(e.target.value) || 0 })}
+                                    placeholder="9.00"
+                                    step="0.01"
+                                    min="0"
+                                    max="100"
+                                    className="w-20 px-2 py-1 border border-red-300 rounded text-xs"
+                                    disabled={submitting || !formData.csll_applicable}
+                                  />
+                                  <span className="text-xs font-semibold text-gray-700">%</span>
                                 </div>
-
-                                <div className="font-medium text-green-700">CBS</div>
-
-                                <input
-                                  type="number"
-                                  value={formData.cbs_rate}
-                                  onChange={(e) =>
-                                    setFormData({
-                                      ...formData,
-
-                                      cbs_rate: parseFloat(e.target.value) || 0,
-                                    })
-                                  }
-                                  placeholder="0.00"
-                                  step="0.01"
-                                  min="0"
-                                  max="100"
-                                  className="w-full px-2 py-1 border rounded text-xs bg-green-50"
-                                  disabled={submitting || !formData.cbs_applicable}
-                                />
-
-                                <div className="text-green-600 text-xs">Reforma 2024+</div>
                               </div>
                             </div>
                           </div>
                         </div>
-                      </div>
+
+                        {/* SEÇÃO: TRIBUTOS ESTADUAIS */}
+                        <div className="mb-8">
+                          <div className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2 pb-2 border-b-2 border-orange-300">
+                            <span className="text-lg">🏢</span> Tributos Estaduais
+                          </div>
+
+                          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 hover:border-orange-300 transition">
+                            <div className="flex items-start justify-between mb-3">
+                              <div>
+                                <p className="font-bold text-sm text-orange-900">ICMS</p>
+                                <p className="text-xs text-orange-700 mt-1">Imposto sobre Circulação de Mercadorias e Serviços</p>
+                              </div>
+                              <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs font-semibold">Estadual</span>
+                            </div>
+                            <div className="bg-white rounded p-2 mb-3">
+                              <p className="text-xs text-gray-600 mb-2">💡 Varia por estado. Serviços de saúde: geralmente isento ou 0%. Variar conforme estado: SP ~7%, RJ ~20%</p>
+                              <div className="flex gap-2 items-center">
+                                <input
+                                  type="checkbox"
+                                  checked={formData.icms_applicable}
+                                  onChange={(e) => setFormData({ ...formData, icms_applicable: e.target.checked })}
+                                  disabled={submitting}
+                                  className="rounded cursor-pointer"
+                                />
+                                <span className="text-xs text-gray-700 flex-1">Aplicável</span>
+                                <input
+                                  type="number"
+                                  value={formData.icms_rate}
+                                  onChange={(e) => setFormData({ ...formData, icms_rate: parseFloat(e.target.value) || 0 })}
+                                  placeholder="0.00"
+                                  step="0.01"
+                                  min="0"
+                                  max="100"
+                                  className="w-20 px-2 py-1 border border-orange-300 rounded text-xs"
+                                  disabled={submitting || !formData.icms_applicable}
+                                />
+                                <span className="text-xs font-semibold text-gray-700">%</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* SEÇÃO: TRIBUTOS MUNICIPAIS */}
+                        <div className="mb-8">
+                          <div className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2 pb-2 border-b-2 border-yellow-300">
+                            <span className="text-lg">🏛️</span> Tributos Municipais
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* ISS Card */}
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 hover:border-yellow-300 transition">
+                              <div className="flex items-start justify-between mb-3">
+                                <div>
+                                  <p className="font-bold text-sm text-yellow-900">ISS</p>
+                                  <p className="text-xs text-yellow-700 mt-1">Imposto sobre Serviços</p>
+                                </div>
+                                <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold">Municipal</span>
+                              </div>
+                              <div className="bg-white rounded p-2 mb-3">
+                                <p className="text-xs text-gray-600 mb-2">💡 Varia por município. Alíquota típica: 2% a 5% (Saúde: pode ter isenção/redução)</p>
+                                <div className="flex gap-2 items-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={formData.iss_applicable}
+                                    onChange={(e) => setFormData({ ...formData, iss_applicable: e.target.checked })}
+                                    disabled={submitting}
+                                    className="rounded cursor-pointer"
+                                  />
+                                  <span className="text-xs text-gray-700 flex-1">Aplicável</span>
+                                  <input
+                                    type="number"
+                                    value={formData.iss_rate}
+                                    onChange={(e) => setFormData({ ...formData, iss_rate: parseFloat(e.target.value) || 0 })}
+                                    placeholder="2.00"
+                                    step="0.01"
+                                    min="0"
+                                    max="100"
+                                    className="w-20 px-2 py-1 border border-yellow-300 rounded text-xs"
+                                    disabled={submitting || !formData.iss_applicable}
+                                  />
+                                  <span className="text-xs font-semibold text-gray-700">%</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* ISSRF Card */}
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 hover:border-yellow-300 transition">
+                              <div className="flex items-start justify-between mb-3">
+                                <div>
+                                  <p className="font-bold text-sm text-yellow-900">ISSRF</p>
+                                  <p className="text-xs text-yellow-700 mt-1">Imposto sobre Serviços Retido na Fonte</p>
+                                </div>
+                                <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold">Federal</span>
+                              </div>
+                              <div className="bg-white rounded p-2 mb-3">
+                                <p className="text-xs text-gray-600 mb-2">💡 Retenção de ISS. Alíquota: 3% a 5% quando a operadora retém na fonte</p>
+                                <div className="flex gap-2 items-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={formData.issrf_applicable}
+                                    onChange={(e) => setFormData({ ...formData, issrf_applicable: e.target.checked })}
+                                    disabled={submitting}
+                                    className="rounded cursor-pointer"
+                                  />
+                                  <span className="text-xs text-gray-700 flex-1">Aplicável</span>
+                                  <input
+                                    type="number"
+                                    value={formData.issrf_rate}
+                                    onChange={(e) => setFormData({ ...formData, issrf_rate: parseFloat(e.target.value) || 0 })}
+                                    placeholder="0.00"
+                                    step="0.01"
+                                    min="0"
+                                    max="100"
+                                    className="w-20 px-2 py-1 border border-yellow-300 rounded text-xs"
+                                    disabled={submitting || !formData.issrf_applicable}
+                                  />
+                                  <span className="text-xs font-semibold text-gray-700">%</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* SEÇÃO: REFORMA TRIBUTÁRIA (BETA) */}
+                        <div className="border-t-2 border-yellow-300 pt-8 mt-8">
+                          <div className="text-sm font-bold text-yellow-800 mb-4 flex items-center gap-2 pb-2 border-b-2 border-yellow-300">
+                            <span className="text-lg">🧪</span> Reforma Tributária (BETA - Em Testes)
+                          </div>
+
+                          <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-400 rounded-lg p-4 mb-6">
+                            <p className="text-xs text-yellow-900 flex items-start gap-2">
+                              <span className="text-lg">⚠️</span>
+                              <span><strong>Importante:</strong> Os tributos abaixo estão em fase de testes e validação. Ainda não devem ser usados para cálculos de margens em produção. Acompanhe as atualizações legislativas.</span>
+                            </p>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* IBS Card */}
+                            <div className="bg-yellow-100 border-2 border-yellow-300 rounded-lg p-4 opacity-80">
+                              <div className="flex items-start justify-between mb-3">
+                                <div>
+                                  <p className="font-bold text-sm text-yellow-900">IBS</p>
+                                  <p className="text-xs text-yellow-800 mt-1">Imposto sobre Bens e Serviços</p>
+                                </div>
+                                <span className="bg-yellow-200 text-yellow-900 px-2 py-1 rounded text-xs font-bold">BETA</span>
+                              </div>
+                              <div className="bg-white bg-opacity-70 rounded p-2 mb-3">
+                                <p className="text-xs text-gray-700 mb-2">📌 Previsto para substituir ICMS, PIS, COFINS e IPI. Ainda em discussão legislativa.</p>
+                                <div className="flex gap-2 items-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={formData.ibs_applicable}
+                                    onChange={(e) => setFormData({ ...formData, ibs_applicable: e.target.checked })}
+                                    disabled={submitting}
+                                    className="rounded cursor-pointer"
+                                  />
+                                  <span className="text-xs text-gray-700 flex-1">Testar</span>
+                                  <input
+                                    type="number"
+                                    value={formData.ibs_rate}
+                                    onChange={(e) => setFormData({ ...formData, ibs_rate: parseFloat(e.target.value) || 0 })}
+                                    placeholder="0.00"
+                                    step="0.01"
+                                    min="0"
+                                    max="100"
+                                    className="w-20 px-2 py-1 border border-yellow-400 rounded text-xs bg-yellow-50"
+                                    disabled={submitting || !formData.ibs_applicable}
+                                  />
+                                  <span className="text-xs font-semibold text-gray-700">%</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* CBS Card */}
+                            <div className="bg-yellow-100 border-2 border-yellow-300 rounded-lg p-4 opacity-80">
+                              <div className="flex items-start justify-between mb-3">
+                                <div>
+                                  <p className="font-bold text-sm text-yellow-900">CBS</p>
+                                  <p className="text-xs text-yellow-800 mt-1">Contribuição sobre Bens e Serviços</p>
+                                </div>
+                                <span className="bg-yellow-200 text-yellow-900 px-2 py-1 rounded text-xs font-bold">BETA</span>
+                              </div>
+                              <div className="bg-white bg-opacity-70 rounded p-2 mb-3">
+                                <p className="text-xs text-gray-700 mb-2">📌 Contribuição social no modelo da reforma. Ainda em negociação legislativa.</p>
+                                <div className="flex gap-2 items-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={formData.cbs_applicable}
+                                    onChange={(e) => setFormData({ ...formData, cbs_applicable: e.target.checked })}
+                                    disabled={submitting}
+                                    className="rounded cursor-pointer"
+                                  />
+                                  <span className="text-xs text-gray-700 flex-1">Testar</span>
+                                  <input
+                                    type="number"
+                                    value={formData.cbs_rate}
+                                    onChange={(e) => setFormData({ ...formData, cbs_rate: parseFloat(e.target.value) || 0 })}
+                                    placeholder="0.00"
+                                    step="0.01"
+                                    min="0"
+                                    max="100"
+                                    className="w-20 px-2 py-1 border border-yellow-400 rounded text-xs bg-yellow-50"
+                                    disabled={submitting || !formData.cbs_applicable}
+                                  />
+                                  <span className="text-xs font-semibold text-gray-700">%</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </FormSection>
                     )}
 
                     {/* ABA: FINANCEIRO */}
 
                     {activeTab === 'financial' && (
-                      <div className="space-y-6">
-                        {/* SEO 1: CONDIES COMERCIAIS */}
-
-                        <div className="border-b pb-6">
-                          <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                            <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">
-                              ??
-                            </span>
-                            Condies Comerciais
-                          </h3>
-
-                          <div className="grid grid-cols-2 gap-4">
-                            {/* Desconto */}
-
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Desconto (%)
-                              </label>
-
-                              <input
-                                type="number"
-                                value={formData.discount_percentage}
-                                onChange={(e) =>
-                                  setFormData({
-                                    ...formData,
-
-                                    discount_percentage: parseFloat(e.target.value) || 0,
-                                  })
-                                }
-                                min="0"
-                                max="100"
-                                step="0.01"
-                                placeholder="0.00"
-                                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                disabled={submitting}
-                              />
-
-                              <p className="text-xs text-gray-500 mt-1">
-                                Desconto padro do convênio
-                              </p>
-                            </div>
-
-                            {/* Margem Mnima */}
-
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Margem Mnima (%)
-                              </label>
-
-                              <input
-                                type="number"
-                                value={formData.minimum_margin_percentage}
-                                onChange={(e) =>
-                                  setFormData({
-                                    ...formData,
-
-                                    minimum_margin_percentage: parseFloat(e.target.value) || 0,
-                                  })
-                                }
-                                min="0"
-                                max="100"
-                                step="0.01"
-                                placeholder="0.00"
-                                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                disabled={submitting}
-                              />
-
-                              <p className="text-xs text-gray-500 mt-1">Margem mnima aceitvel</p>
-                            </div>
-
-                            {/* Taxa de Administrao */}
-
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Taxa de Administrao (%)
-                              </label>
-
-                              <input
-                                type="number"
-                                value={formData.administration_fee_percentage}
-                                onChange={(e) =>
-                                  setFormData({
-                                    ...formData,
-
-                                    administration_fee_percentage: parseFloat(e.target.value) || 0,
-                                  })
-                                }
-                                min="0"
-                                max="100"
-                                step="0.01"
-                                placeholder="0.00"
-                                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                disabled={submitting}
-                              />
-
-                              <p className="text-xs text-gray-500 mt-1">
-                                Taxa cobrada pelo convênio
-                              </p>
-                            </div>
-
-                            {/* Desconto por Pronta Pagamento */}
-
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Desconto Pronta Pagamento (%)
-                              </label>
-
-                              <input
-                                type="number"
-                                value={formData.early_payment_discount_percentage}
-                                onChange={(e) =>
-                                  setFormData({
-                                    ...formData,
-
-                                    early_payment_discount_percentage:
-                                      parseFloat(e.target.value) || 0,
-                                  })
-                                }
-                                min="0"
-                                max="100"
-                                step="0.01"
-                                placeholder="0.00"
-                                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                disabled={submitting}
-                              />
-
-                              <p className="text-xs text-gray-500 mt-1">Se pagar antecipado</p>
-                            </div>
-
-                            {/* Desconto por Volume */}
-
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Desconto por Volume (%)
-                              </label>
-
-                              <input
-                                type="number"
-                                value={formData.volume_discount_percentage}
-                                onChange={(e) =>
-                                  setFormData({
-                                    ...formData,
-
-                                    volume_discount_percentage: parseFloat(e.target.value) || 0,
-                                  })
-                                }
-                                min="0"
-                                max="100"
-                                step="0.01"
-                                placeholder="0.00"
-                                className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                disabled={submitting}
-                              />
-
-                              <p className="text-xs text-gray-500 mt-1">Acordo de volume</p>
-                            </div>
-                          </div>
-                        </div>
+                      <div className="space-y-6" lang="pt-BR">
+                        {/* SEÇÃO 1: CONDIÇÕES COMERCIAIS */}
+                        <FormSection icon="💳" title="Condições Comerciais" description="Descontos, margens e taxas">
+                          <FormGrid columns={2}>
+                            <FormInput
+                              type="number"
+                              label="Desconto (%)"
+                              placeholder="0.00"
+                              min="0"
+                              max="100"
+                              step="0.01"
+                              hint="Desconto padrão do convênio"
+                              value={formData.discount_percentage}
+                              onChange={(e) => setFormData({ ...formData, discount_percentage: parseFloat(e.target.value) || 0 })}
+                              disabled={submitting}
+                            />
+                            <FormInput
+                              type="number"
+                              label="Margem Mínima (%)"
+                              placeholder="0.00"
+                              min="0"
+                              max="100"
+                              step="0.01"
+                              hint="Margem mínima aceitável"
+                              value={formData.minimum_margin_percentage}
+                              onChange={(e) => setFormData({ ...formData, minimum_margin_percentage: parseFloat(e.target.value) || 0 })}
+                              disabled={submitting}
+                            />
+                            <FormInput
+                              type="number"
+                              label="Taxa de Administração (%)"
+                              placeholder="0.00"
+                              min="0"
+                              max="100"
+                              step="0.01"
+                              hint="Taxa cobrada pelo convênio"
+                              value={formData.administration_fee_percentage}
+                              onChange={(e) => setFormData({ ...formData, administration_fee_percentage: parseFloat(e.target.value) || 0 })}
+                              disabled={submitting}
+                            />
+                            <FormInput
+                              type="number"
+                              label="Desconto Pronta Pagamento (%)"
+                              placeholder="0.00"
+                              min="0"
+                              max="100"
+                              step="0.01"
+                              hint="Se pagar antecipado"
+                              value={formData.early_payment_discount_percentage}
+                              onChange={(e) => setFormData({ ...formData, early_payment_discount_percentage: parseFloat(e.target.value) || 0 })}
+                              disabled={submitting}
+                            />
+                            <FormInput
+                              type="number"
+                              label="Desconto por Volume (%)"
+                              placeholder="0.00"
+                              min="0"
+                              max="100"
+                              step="0.01"
+                              hint="Acordo de volume"
+                              value={formData.volume_discount_percentage}
+                              onChange={(e) => setFormData({ ...formData, volume_discount_percentage: parseFloat(e.target.value) || 0 })}
+                              disabled={submitting}
+                            />
+                          </FormGrid>
+                        </FormSection>
 
                         {/* SEO 2: PRAZOS E PAGAMENTO */}
 
                         <div className="border-b pb-6">
                           <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
                             <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs">
-                              ?
+                              ⏱️
                             </span>
                             Prazos e Formas de Pagamento
                           </h3>
@@ -4829,7 +5430,7 @@ export function ConveniosPage() {
                               />
 
                               <p className="text-xs text-gray-500 mt-1">
-                                Dias at vencimento (ex: 30, 45, 60)
+                                Dias até vencimento (ex: 30, 45, 60)
                               </p>
                             </div>
 
@@ -4837,7 +5438,7 @@ export function ConveniosPage() {
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Ciclo de Faturamento (dias do ms)
+                                Ciclo de Faturamento (dias do mês)
                               </label>
 
                               <div className="grid grid-cols-2 gap-2">
@@ -4853,7 +5454,7 @@ export function ConveniosPage() {
                                   }
                                   min="1"
                                   max="31"
-                                  placeholder="Incio"
+                                  placeholder="Início"
                                   className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                   disabled={submitting}
                                 />
@@ -4877,7 +5478,7 @@ export function ConveniosPage() {
                               </div>
 
                               <p className="text-xs text-gray-500 mt-1">
-                                De ___ at ___ de cada ms
+                                De ___ até ___ de cada mês
                               </p>
                             </div>
 
@@ -4890,7 +5491,7 @@ export function ConveniosPage() {
 
                               <div className="grid grid-cols-2 gap-3">
                                 {[
-                                  { id: 'debit', label: 'Dbito Automtico' },
+                                  { id: 'debit', label: 'Débito Automático' },
 
                                   { id: 'boleto', label: 'Boleto' },
 
@@ -4936,17 +5537,17 @@ export function ConveniosPage() {
                         <div className="border-b pb-6">
                           <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
                             <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded text-xs">
-                              ??
+                              📊
                             </span>
                             Reajustes
                           </h3>
 
                           <div className="grid grid-cols-2 gap-4">
-                            {/* ndice de Reajuste */}
+                            {/* Índice de Reajuste */}
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                ndice de Reajuste
+                                Índice de Reajuste
                               </label>
 
                               <select
@@ -4975,90 +5576,115 @@ export function ConveniosPage() {
                               </select>
 
                               <p className="text-xs text-gray-500 mt-1">
-                                ndice para reajuste anual
+                                Índice para reajuste anual
                               </p>
                             </div>
 
-                            {/* Data Reajuste Anual */}
+                            {/* Mês de Reajuste Anual */}
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Ms de Reajuste Anual
+                                Mês de Reajuste Anual
                               </label>
 
                               <input
-                                type="month"
-                                value={formData.annual_reajustment_date}
-                                onChange={(e) =>
-                                  setFormData({
-                                    ...formData,
-
-                                    annual_reajustment_date: e.target.value,
-                                  })
-                                }
+                                type="text"
+                                inputMode="numeric"
+                                placeholder="mm/yyyy"
+                                lang="pt-BR"
+                                value={formatMonthDisplay(formData.annual_reajustment_date)}
+                                onChange={(e) => {
+                                  let val = e.target.value.replace(/\D/g, '');
+                                  if (val.length >= 2) val = val.substring(0, 2) + '/' + val.substring(2);
+                                  if (val.length === 7) {
+                                    const [month, year] = val.split('/');
+                                    const isoDate = `${year}-${month}`;
+                                    setFormData({...formData, annual_reajustment_date: isoDate});
+                                  } else {
+                                    setFormData({...formData, annual_reajustment_date: val});
+                                  }
+                                }}
                                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                                 disabled={submitting}
                               />
 
                               <p className="text-xs text-gray-500 mt-1">
-                                Quando ocorre a atualizao
+                                Quando ocorre a atualização
                               </p>
                             </div>
 
-                            {/* Prxima Data de Reajuste */}
+                            {/* Próxima Data de Reajuste */}
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Prxima Data de Reajuste
+                                Próxima Data de Reajuste
                               </label>
 
                               <input
-                                type="date"
-                                value={formData.next_reajustment_date}
-                                onChange={(e) =>
-                                  setFormData({
-                                    ...formData,
-
-                                    next_reajustment_date: e.target.value,
-                                  })
-                                }
+                                type="text"
+                                inputMode="numeric"
+                                placeholder="dd/mm/yyyy"
+                                value={formatDateDisplay(formData.next_reajustment_date)}
+                                onChange={(e) => {
+                                  // Format: accept dd/mm/yyyy and convert to yyyy-mm-dd
+                                  let val = e.target.value.replace(/\D/g, '');
+                                  if (val.length >= 2) val = val.substring(0, 2) + '/' + val.substring(2);
+                                  if (val.length >= 5) val = val.substring(0, 5) + '/' + val.substring(5, 9);
+                                  // Convert dd/mm/yyyy to yyyy-mm-dd for storage
+                                  if (val.length === 10) {
+                                    const [day, month, year] = val.split('/');
+                                    const isoDate = `${year}-${month}-${day}`;
+                                    setFormData({...formData, next_reajustment_date: isoDate});
+                                  } else {
+                                    setFormData({...formData, next_reajustment_date: val});
+                                  }
+                                }}
                                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                                 disabled={submitting}
                               />
 
-                              <p className="text-xs text-gray-500 mt-1">Para controle/avaliao</p>
+                              <p className="text-xs text-gray-500 mt-1">Para controle/avaliação</p>
                             </div>
                           </div>
                         </div>
 
-                        {/* SEO 4: VIGNCIA DO CONTRATO */}
+                        {/* SEO 4: VIGÊNCIA DO CONTRATO */}
 
                         <div className="border-b pb-6">
                           <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
                             <span className="bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-xs">
-                              ??
+                              📅
                             </span>
-                            Vigncia do Contrato
+                            Vigência do Contrato
                           </h3>
 
                           <div className="grid grid-cols-2 gap-4">
-                            {/* Data Incio */}
+                            {/* Data de Início */}
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Data de Incio <span className="text-red-500">*</span>
+                                Data de Início <span className="text-red-500">*</span>
                               </label>
 
                               <input
-                                type="date"
-                                value={formData.contract_start_date}
-                                onChange={(e) =>
-                                  setFormData({
-                                    ...formData,
-
-                                    contract_start_date: e.target.value,
-                                  })
-                                }
+                                type="text"
+                                inputMode="numeric"
+                                placeholder="dd/mm/yyyy"
+                                value={formatDateDisplay(formData.contract_start_date)}
+                                onChange={(e) => {
+                                  // Format: accept dd/mm/yyyy and convert to yyyy-mm-dd
+                                  let val = e.target.value.replace(/\D/g, '');
+                                  if (val.length >= 2) val = val.substring(0, 2) + '/' + val.substring(2);
+                                  if (val.length >= 5) val = val.substring(0, 5) + '/' + val.substring(5, 9);
+                                  // Convert dd/mm/yyyy to yyyy-mm-dd for storage
+                                  if (val.length === 10) {
+                                    const [day, month, year] = val.split('/');
+                                    const isoDate = `${year}-${month}-${day}`;
+                                    setFormData({...formData, contract_start_date: isoDate});
+                                  } else {
+                                    setFormData({...formData, contract_start_date: val});
+                                  }
+                                }}
                                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                                 disabled={submitting}
                                 required
@@ -5073,21 +5699,30 @@ export function ConveniosPage() {
                               </label>
 
                               <input
-                                type="date"
-                                value={formData.contract_end_date}
-                                onChange={(e) =>
-                                  setFormData({
-                                    ...formData,
-
-                                    contract_end_date: e.target.value,
-                                  })
-                                }
+                                type="text"
+                                inputMode="numeric"
+                                placeholder="dd/mm/yyyy"
+                                value={formatDateDisplay(formData.contract_end_date)}
+                                onChange={(e) => {
+                                  // Format: accept dd/mm/yyyy and convert to yyyy-mm-dd
+                                  let val = e.target.value.replace(/\D/g, '');
+                                  if (val.length >= 2) val = val.substring(0, 2) + '/' + val.substring(2);
+                                  if (val.length >= 5) val = val.substring(0, 5) + '/' + val.substring(5, 9);
+                                  // Convert dd/mm/yyyy to yyyy-mm-dd for storage
+                                  if (val.length === 10) {
+                                    const [day, month, year] = val.split('/');
+                                    const isoDate = `${year}-${month}-${day}`;
+                                    setFormData({...formData, contract_end_date: isoDate});
+                                  } else {
+                                    setFormData({...formData, contract_end_date: val});
+                                  }
+                                }}
                                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                                 disabled={submitting}
                               />
                             </div>
 
-                            {/* Renovao Automtica */}
+                            {/* Renovação Automática */}
 
                             <div className="col-span-1">
                               <label className="flex items-center gap-2 cursor-pointer">
@@ -5106,7 +5741,7 @@ export function ConveniosPage() {
                                 />
 
                                 <span className="text-sm font-medium text-gray-700">
-                                  Renovao Automtica
+                                  Renovação Automática
                                 </span>
                               </label>
                             </div>
@@ -5115,7 +5750,7 @@ export function ConveniosPage() {
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Dias de Aviso Prvio
+                                Dias de Aviso Prévio
                               </label>
 
                               <input
@@ -5134,27 +5769,27 @@ export function ConveniosPage() {
                                 disabled={submitting}
                               />
 
-                              <p className="text-xs text-gray-500 mt-1">Para no renovao</p>
+                              <p className="text-xs text-gray-500 mt-1">Para não renovação</p>
                             </div>
                           </div>
                         </div>
 
-                        {/* SEO 5: POLTICA DE SUSPENSO E MULTAS */}
+                        {/* SEO 5: POLÍTICA DE SUSPENSÃO E MULTAS */}
 
                         <div className="border-b pb-6">
                           <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
                             <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-xs">
-                              ??
+                              ⛔
                             </span>
-                            Suspenso e Multas
+                            Suspensão e Multas
                           </h3>
 
                           <div className="grid grid-cols-2 gap-4">
-                            {/* Dias para Suspenso */}
+                            {/* Dias para Suspensão */}
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Dias para Suspenso (aps atraso)
+                                Dias para Suspensão (após atraso)
                               </label>
 
                               <input
@@ -5239,7 +5874,7 @@ export function ConveniosPage() {
                         <div className="border-b pb-6">
                           <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
                             <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">
-                              ??
+                              📏
                             </span>
                             Limites e Tetos
                           </h3>
@@ -5271,7 +5906,7 @@ export function ConveniosPage() {
                                 disabled={submitting}
                               />
 
-                              <p className="text-xs text-gray-500 mt-1">Limite mximo por ms</p>
+                              <p className="text-xs text-gray-500 mt-1">Limite máximo por mês</p>
                             </div>
 
                             {/* Limite de Consultas */}
@@ -5302,11 +5937,11 @@ export function ConveniosPage() {
                               <p className="text-xs text-gray-500 mt-1">Se houver limite</p>
                             </div>
 
-                            {/* Co-participao */}
+                            {/* Co-participação */}
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Co-participao/Franquia (R$)
+                                Co-participação/Franquia (R$)
                               </label>
 
                               <input
@@ -5323,34 +5958,34 @@ export function ConveniosPage() {
                                 }
                                 min="0"
                                 step="0.01"
-                                placeholder="Sem co-participao"
+                                placeholder="Sem co-participação"
                                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                 disabled={submitting}
                               />
 
                               <p className="text-xs text-gray-500 mt-1">
-                                Valor mnimo que o paciente paga
+                                Valor mínimo que o paciente paga
                               </p>
                             </div>
                           </div>
                         </div>
 
-                        {/* SEO 7: CONTATOS FINANCEIROS E DADOS BANCRIOS */}
+                        {/* SEO 7: CONTATOS FINANCEIROS E DADOS BANCÁRIOS */}
 
                         <div>
                           <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
                             <span className="bg-cyan-100 text-cyan-700 px-2 py-1 rounded text-xs">
-                              ??
+                              🏦
                             </span>
-                            Contatos Financeiros e Dados Bancrios
+                            Contatos Financeiros e Dados Bancários
                           </h3>
 
                           <div className="grid grid-cols-2 gap-4">
-                            {/* ResponsvelFinanceiro */}
+                            {/* Responsável Financeiro */}
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Responsvel Financeiro
+                                Responsável Financeiro
                               </label>
 
                               <input
@@ -5419,7 +6054,7 @@ export function ConveniosPage() {
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Banco para Depsitos
+                                Banco para Depósitos
                               </label>
 
                               <input
@@ -5438,11 +6073,11 @@ export function ConveniosPage() {
                               />
                             </div>
 
-                            {/* Agncia */}
+                            {/* Agência */}
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Agncia
+                                Agência
                               </label>
 
                               <input
@@ -5491,32 +6126,23 @@ export function ConveniosPage() {
                     {/* ABA: PLANOS */}
 
                     {activeTab === 'plans' && (
-                      <div className="space-y-6">
-                        <div className="border-b pb-6">
-                          <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                              <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs">
-                                ??
-                              </span>
-                              Planos de Saúde
-                            </h3>
-
-                            {(editingId || showForm) && (
-                              <button
-                                type="button"
-                                onClick={() => setShowNewPlanForm(!showNewPlanForm)}
-                                className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition"
-                              >
-                                <Plus size={14} />
-                                Novo Plano
-                              </button>
-                            )}
-                          </div>
+                      <FormSection icon="🏥" title="Planos de Saúde" description="Gerenciar planos vinculados ao convênio">
+                        <div className="space-y-4">
+                          {(editingId || showForm) && (
+                            <button
+                              type="button"
+                              onClick={() => setShowNewPlanForm(!showNewPlanForm)}
+                              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition"
+                            >
+                              <Plus size={16} />
+                              Novo Plano
+                            </button>
+                          )}
 
                           {/* Form Criar Novo Plano */}
 
                           {showNewPlanForm && (
-                            <div className="bg-purple-50 p-4 rounded-lg mb-4 border border-purple-200">
+                            <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
                               <h4 className="font-medium text-gray-900 mb-3">Criar Novo Plano</h4>
 
                               <div className="space-y-3">
@@ -5549,7 +6175,7 @@ export function ConveniosPage() {
                                 <textarea
                                   value={newPlanDescription}
                                   onChange={(e) => setNewPlanDescription(e.target.value)}
-                                  placeholder="Descrio do plano (opcional)"
+                                  placeholder="Descrição do plano (opcional)"
                                   className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none h-20"
                                 />
 
@@ -5638,7 +6264,7 @@ export function ConveniosPage() {
                                           onChange={(e) =>
                                             setEditingPlanDescription(e.target.value)
                                           }
-                                          placeholder="Descrio do plano (opcional)"
+                                          placeholder="Descrição do plano (opcional)"
                                           className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none h-20"
                                         />
 
@@ -5655,7 +6281,7 @@ export function ConveniosPage() {
                                             htmlFor={`plan-active-${editingPlanId}`}
                                             className="text-sm font-medium text-gray-700"
                                           >
-                                            ? Plano Ativo
+                                            ✅ Plano Ativo
                                           </label>
 
                                           <span className="text-xs text-gray-500 ml-auto">
@@ -5738,22 +6364,7 @@ export function ConveniosPage() {
                             </div>
                           )}
                         </div>
-                      </div>
-                    )}
-
-                    {/* ABA: TISS */}
-
-                    {activeTab === 'tiss' && selectedInsurance && editingId && (
-                      <TISSConfigurationTab
-                        insurance={selectedInsurance}
-                        insuranceId={editingId}
-                        onUpdate={() => {
-                          console.log('[TISS] Configurações salvas');
-
-                          // Dados j foram salvos no Supabase, apenas feche com sucesso
-                        }}
-                        clinicId={clinicId}
-                      />
+                      </FormSection>
                     )}
                   </div>
                 </form>

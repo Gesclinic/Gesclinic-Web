@@ -2,18 +2,15 @@
  * Payment Registration & Accounts Integration
  *
  * Integra pagamento com:
- * - Contas a Receber (accounts_receivable)
+ * - Contas a Receber canonicas (ar_invoices/receivable_payments)
  * - Plano de Contas (chart_of_accounts)
  * - Caixa (cash_register)
  * - Auditoria (financial_audits)
  */
 
 import { supabase } from '@/lib/customSupabaseClient';
-import {
-  getAccountingAccountForPayment,
-  getReceivableTypeForPayment,
-  PAYMENT_METHODS,
-} from '@/lib/paymentMethodsConfig';
+import { createReceivable, registerReceivablePayment } from '@/lib/receivablesApi';
+import { getAccountingAccountForPayment } from '@/lib/paymentMethodsConfig';
 
 /**
  * 1️⃣ CRIAR/ATUALIZAR CONTA A RECEBER
@@ -36,12 +33,15 @@ export async function registerOrUpdateReceivable({
       receivedBy,
     });
 
-    // Verificar se já existe conta a receber para este agendamento
+    // Verificar se ja existe conta a receber canonica para este agendamento
     const { data: existing, error: existingError } = await supabase
-      .from('accounts_receivable')
-      .select('id, status, amount_remaining')
+      .from('ar_invoices')
+      .select('id, status, amount, net_value, received_value, paid_total')
+      .eq('clinic_id', clinicId)
       .eq('appointment_id', appointmentId)
-      .single();
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle();
 
     if (existingError && existingError.code !== 'PGRST116') {
       // PGRST116 = no rows returned (normal)
@@ -49,79 +49,75 @@ export async function registerOrUpdateReceivable({
       throw new Error(`Erro de autorização ao buscar conta: ${existingError.message}`);
     }
 
-    const receivableType = getReceivableTypeForPayment(paymentMethod);
     const now = new Date().toISOString();
-
-    let receivable;
+    const paymentDate = now.split('T')[0];
+    const paymentAmount = Number(amount || 0);
+    const paymentReference = paymentData?.reference
+      || paymentData?.transaction_id
+      || paymentData?.authorization_code
+      || paymentData?.nsu
+      || null;
 
     if (existing) {
-      // Atualizar conta existente
+      // Baixar conta existente no fluxo canonico
       console.log('📝 Atualizando conta a receber existente:', existing.id);
 
-      const { data, error } = await supabase
-        .from('accounts_receivable')
-        .update({
-          status: 'received',
-          amount_received: amount,
-          amount_remaining: 0,
-          payment_method: paymentMethod,
-          received_by: receivedBy,
-          received_at: now,
-          payment_details: JSON.stringify(paymentData),
-          updated_at: now,
-        })
-        .eq('id', existing.id)
-        .select();
-
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
+      if (paymentAmount <= 0) {
+        return existing;
       }
-      return data[0];
 
-      if (error) {
-        console.error('❌ Erro UPDATE accounts_receivable:', error);
-        throw new Error(`Falha ao atualizar conta: ${error.message}. Verifique RLS policies.`);
-      }
-      receivable = data;
-    } else {
-      // Criar nova conta a receber
-      console.log('✨ Criando nova conta a receber', { clinicId, appointmentId, amount });
-
-      const { data, error } = await supabase
-        .from('accounts_receivable')
-        .insert({
-          clinic_id: clinicId,
-          appointment_id: appointmentId,
-          patient_id: patientId,
-          amount: amount,
-          amount_received: amount,
-          amount_remaining: 0,
-          status: 'received',
-          receivable_type: receivableType,
-          payment_method: paymentMethod,
-          received_by: receivedBy,
-          received_at: now,
-          payment_details: JSON.stringify(paymentData),
-          due_date: now,
-          created_at: now,
-          updated_at: now,
-        })
-        .select();
-
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
-
-      if (error) {
-        console.error('❌ Erro INSERT accounts_receivable:', error);
-        console.error('📋 Detalhes:', { code: error.code, message: error.message });
-        throw new Error(
-          `Falha ao criar conta: ${error.message}. Verifique RLS policies. (${error.code})`,
-        );
-      }
-      receivable = data;
+      return registerReceivablePayment({
+        clinicId,
+        receivableId: existing.id,
+        amount: paymentAmount,
+        paymentDate,
+        payments: [{
+          method: paymentMethod,
+          amount: paymentAmount,
+          reference: paymentReference,
+        }],
+        notes: paymentData?.notes || 'Pagamento registrado pela agenda',
+        createdBy: receivedBy || 'system',
+      });
     }
+
+    // Criar nova conta a receber canonica
+    console.log('✨ Criando nova conta a receber', { clinicId, appointmentId, amount });
+
+    const created = await createReceivable(clinicId, {
+      appointment_id: appointmentId,
+      patient_id: patientId,
+      amount: paymentAmount,
+      net_value: paymentAmount,
+      status: 'open',
+      due_date: paymentDate,
+      payment_method: paymentMethod,
+      description: 'Recebimento registrado pela agenda',
+      metadata: {
+        source: 'payment_registration_api',
+        payment_data: paymentData || {},
+        received_by: receivedBy || null,
+        received_at: now,
+      },
+    });
+
+    if (paymentAmount <= 0) {
+      return created;
+    }
+
+    const receivable = await registerReceivablePayment({
+      clinicId,
+      receivableId: created.id,
+      amount: paymentAmount,
+      paymentDate,
+      payments: [{
+        method: paymentMethod,
+        amount: paymentAmount,
+        reference: paymentReference,
+      }],
+      notes: paymentData?.notes || 'Pagamento registrado pela agenda',
+      createdBy: receivedBy || 'system',
+    });
 
     console.log('✅ Conta a receber registrada:', receivable.id);
     return receivable;

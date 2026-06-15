@@ -2,7 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useClinicContext } from '@/contexts/ClinicContext';
 import { supabase } from '@/lib/customSupabaseClient';
-import { calcularRepasse, dashboardRepasseMedico } from '@/lib/medicalRepasseApi';
+import {
+  calcularRepasse,
+  dashboardRepasseMedico,
+  liberarComissoesPeriodoParaContasPagar,
+  liberarComissaoParaContasPagar,
+} from '@/lib/medicalRepasseApi';
 import { listProfessionals } from '@/lib/professionalsApi';
 
 const RepasseMedicoPage = () => {
@@ -17,6 +22,14 @@ const RepasseMedicoPage = () => {
   const [profissionais, setProfissionais] = useState([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState(null);
+  const pendingApCount =
+    dashboard?.porProfissional?.filter(
+      (prof) =>
+        prof.commission_id &&
+        prof.status !== 'scheduled' &&
+        prof.paymentMethod !== 'AP' &&
+        Number(prof.totalRepasse || 0) > 0,
+    ).length || 0;
 
   // Calcular datas do período
   const dataInicio = `${ano}-${String(mes).padStart(2, '0')}-01`;
@@ -104,6 +117,51 @@ const RepasseMedicoPage = () => {
     } catch (err) {
       console.error('❌ [REPASSE MÉDICO] Erro ao gerar repasse:', err);
       setErro(err.message || 'Erro ao gerar repasse');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLiberarAP = async (commissionId) => {
+    console.log('[REPASSE MEDICO] Liberando comissao para Contas a Pagar:', commissionId);
+    setLoading(true);
+    setErro(null);
+
+    try {
+      const result = await liberarComissaoParaContasPagar(commissionId, { actorId: user?.id });
+      await carregarDados();
+      alert(
+        result.created
+          ? `AP gerado: ${result.payable?.description || result.payable?.id}`
+          : `AP ja existia para esta comissao: ${result.payable?.id}`,
+      );
+    } catch (err) {
+      console.error('[REPASSE MEDICO] Erro ao liberar AP:', err);
+      setErro(err.message || 'Erro ao gerar AP do repasse');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLiberarAPLote = async () => {
+    console.log('[REPASSE MEDICO] Liberando AP em lote para fechamento:', { clinicId, mes, ano });
+    setLoading(true);
+    setErro(null);
+
+    try {
+      const result = await liberarComissoesPeriodoParaContasPagar({
+        clinicId,
+        month: mes,
+        year: ano,
+        actorId: user?.id,
+      });
+      await carregarDados();
+      alert(
+        `AP em lote concluido: ${result.created} criado(s), ${result.existing} existente(s), ${result.skipped} ignorado(s), ${result.failed} erro(s).`,
+      );
+    } catch (err) {
+      console.error('[REPASSE MEDICO] Erro ao liberar AP em lote:', err);
+      setErro(err.message || 'Erro ao gerar AP em lote do repasse');
     } finally {
       setLoading(false);
     }
@@ -206,6 +264,14 @@ const RepasseMedicoPage = () => {
                 >
                   {loading ? 'Gerando...' : '⚡ Gerar Repasse'}
                 </button>
+                <button
+                  onClick={handleLiberarAPLote}
+                  disabled={loading || pendingApCount === 0}
+                  className="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 disabled:opacity-50 ml-2"
+                  title="Gera contas a pagar para todos os repasses pendentes do período"
+                >
+                  {loading ? 'Processando...' : `Gerar AP em lote (${pendingApCount})`}
+                </button>
               </div>
             </div>
           </div>
@@ -270,6 +336,9 @@ const RepasseMedicoPage = () => {
                     </th>
                     <th className="px-6 py-3 text-right text-sm font-medium text-gray-700">%</th>
                     <th className="px-6 py-3 text-center text-sm font-medium text-gray-700">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-center text-sm font-medium text-gray-700">
                       Ações
                     </th>
                   </tr>
@@ -277,7 +346,7 @@ const RepasseMedicoPage = () => {
                 <tbody>
                   {dashboard?.porProfissional?.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="text-center py-4 text-gray-600">
+                      <td colSpan={8} className="text-center py-4 text-gray-600">
                         Nenhuma produção neste período
                       </td>
                     </tr>
@@ -305,14 +374,30 @@ const RepasseMedicoPage = () => {
                         <td className="px-6 py-4 text-right text-sm text-gray-600">
                           {formatarPercentual(prof.percentualProfissional)}
                         </td>
+                        <td className="px-6 py-4 text-center text-sm text-gray-600">
+                          {prof.status === 'scheduled' || prof.paymentMethod === 'AP'
+                            ? 'AP gerado'
+                            : prof.status || 'pendente'}
+                        </td>
                         <td className="px-6 py-4 text-center">
-                          <button
-                            onClick={() => handleCalcularRepasse(prof.professional_id)}
-                            disabled={loading}
-                            className="text-blue-600 hover:text-blue-900 text-sm font-medium disabled:opacity-50"
-                          >
-                            Recalcular
-                          </button>
+                          <div className="flex items-center justify-center gap-3">
+                            <button
+                              onClick={() => handleCalcularRepasse(prof.professional_id)}
+                              disabled={loading}
+                              className="text-blue-600 hover:text-blue-900 text-sm font-medium disabled:opacity-50"
+                            >
+                              Recalcular
+                            </button>
+                            {prof.commission_id && prof.status !== 'scheduled' && (
+                              <button
+                                onClick={() => handleLiberarAP(prof.commission_id)}
+                                disabled={loading}
+                                className="text-green-700 hover:text-green-900 text-sm font-medium disabled:opacity-50"
+                              >
+                                Gerar AP
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))

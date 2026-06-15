@@ -42,6 +42,7 @@ export const CashFilters: React.FC<CashFiltersProps> = ({
         {/* Data Inicial */}
         <Input
           type="date"
+          lang="pt-BR"
           value={filters.startDate || ''}
           onChange={(e) =>
             onFiltersChange({
@@ -56,6 +57,7 @@ export const CashFilters: React.FC<CashFiltersProps> = ({
         {/* Data Final */}
         <Input
           type="date"
+          lang="pt-BR"
           value={filters.endDate || ''}
           onChange={(e) =>
             onFiltersChange({
@@ -69,11 +71,11 @@ export const CashFilters: React.FC<CashFiltersProps> = ({
 
         {/* Profissional */}
         <Select
-          value={filters.professionalId || ''}
+          value={filters.professionalId || 'all'}
           onValueChange={(value) =>
             onFiltersChange({
               ...filters,
-              professionalId: value || undefined,
+              professionalId: value && value !== 'all' ? value : undefined,
             })
           }
         >
@@ -81,7 +83,7 @@ export const CashFilters: React.FC<CashFiltersProps> = ({
             <SelectValue placeholder="Profissional" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todos</SelectItem>
+            <SelectItem value="all">Todos</SelectItem>
             {professionals.map((prof) => (
               <SelectItem key={prof.id} value={prof.id}>
                 {prof.name}
@@ -92,11 +94,11 @@ export const CashFilters: React.FC<CashFiltersProps> = ({
 
         {/* Convênio */}
         <Select
-          value={filters.payerId || ''}
+          value={filters.payerId || 'all'}
           onValueChange={(value) =>
             onFiltersChange({
               ...filters,
-              payerId: value || undefined,
+              payerId: value && value !== 'all' ? value : undefined,
             })
           }
         >
@@ -104,7 +106,7 @@ export const CashFilters: React.FC<CashFiltersProps> = ({
             <SelectValue placeholder="Convênio" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todos</SelectItem>
+            <SelectItem value="all">Todos</SelectItem>
             {payers.map((payer) => (
               <SelectItem key={payer.id} value={payer.id}>
                 {payer.name}
@@ -115,11 +117,11 @@ export const CashFilters: React.FC<CashFiltersProps> = ({
 
         {/* Tipo */}
         <Select
-          value={filters.type || ''}
+          value={filters.type || 'all'}
           onValueChange={(value) =>
             onFiltersChange({
               ...filters,
-              type: (value as 'entrada' | 'saida') || undefined,
+              type: (value && value !== 'all' ? value : undefined) as 'entrada' | 'saida' | undefined,
             })
           }
         >
@@ -127,7 +129,7 @@ export const CashFilters: React.FC<CashFiltersProps> = ({
             <SelectValue placeholder="Tipo" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todos</SelectItem>
+            <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="entrada">Entrada</SelectItem>
             <SelectItem value="saida">Saída</SelectItem>
           </SelectContent>

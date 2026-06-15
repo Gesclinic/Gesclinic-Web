@@ -76,6 +76,48 @@ export async function updateProfessionalPayer(id, data) {
 }
 
 /**
+ * Get payers for a specific professional
+ * @param {string} professionalId - ID do profissional
+ * @param {string} clinicId - ID da clínica
+ * @returns {Promise<Array>} Lista de payers que o profissional atende
+ */
+export async function getPayersForProfessional(professionalId, clinicId) {
+  try {
+    const { data, error } = await customSupabaseClient
+      .from('professional_payers')
+      .select(`
+        id,
+        payer_id,
+        payers(
+          id,
+          name,
+          type
+        )
+      `)
+      .eq('professional_id', professionalId)
+      .eq('clinic_id', clinicId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    // Map to payer format
+    return (data || [])
+      .map((pp) => ({
+        id: pp.payers.id,
+        name: pp.payers.name,
+        type: pp.payers.type,
+        professional_payer_id: pp.id,
+      }))
+      .filter((p) => p.id); // Remove null payers
+  } catch (error) {
+    console.error('Error fetching payers for professional:', error);
+    return [];
+  }
+}
+
+/**
  * Delete a professional-payer relationship
  */
 export async function deleteProfessionalPayer(id) {

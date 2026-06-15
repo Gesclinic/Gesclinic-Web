@@ -4,6 +4,7 @@
  */
 
 import { supabase } from '@/lib/customSupabaseClient';
+import { stockMovementsApi } from '@/lib/stockApi';
 import {
   Payable,
   PayableCreateInput,
@@ -17,7 +18,91 @@ import {
   PayableStatus,
   PayableType,
   PaymentMethodType,
+  ApprovalStage,
+  PayableApprovalAction,
+  PayableReconciliationSummary,
+  PayableReconciliationMatch,
 } from '../types';
+
+function invalidateFinanceCaches(clinicId?: string | null) {
+  if (!clinicId) return;
+  import('@/services/dashboardDataService')
+    .then(({ invalidateDashboardDataCache }) => invalidateDashboardDataCache(clinicId))
+    .catch(() => {});
+}
+
+function isOptionalSchemaError(error: any): boolean {
+  const text = String(error?.message || error?.details || '').toLowerCase();
+  return error?.code === '42P01'
+    || error?.code === '42703'
+    || text.includes('does not exist')
+    || text.includes('could not find');
+}
+
+async function ignoreOptionalDelete(promise: PromiseLike<{ error: any }>) {
+  const { error } = await promise;
+  if (error && !isOptionalSchemaError(error)) throw error;
+}
+
+async function ignoreOptionalUpdate(promise: PromiseLike<{ error: any }>) {
+  const { error } = await promise;
+  if (error && !isOptionalSchemaError(error)) throw error;
+}
+
+async function cleanupPayableDependencies(ids: string[]) {
+  const payableIds = ids.filter(Boolean);
+  if (!payableIds.length) return;
+
+  await ignoreOptionalDelete(
+    supabase
+      .from('financial_transactions')
+      .delete()
+      .in('origin_module', ['accounts_payable', 'contas_pagar', 'ap_bills'])
+      .in('origin_id', payableIds)
+  );
+
+  await ignoreOptionalDelete(
+    supabase
+      .from('payable_attachments')
+      .delete()
+      .in('ap_bill_id', payableIds)
+  );
+
+  await ignoreOptionalDelete(
+    supabase
+      .from('ap_items')
+      .delete()
+      .in('ap_bill_id', payableIds)
+  );
+
+  await ignoreOptionalDelete(
+    supabase
+      .from('ap_items')
+      .delete()
+      .in('bill_id', payableIds)
+  );
+
+  await ignoreOptionalUpdate(
+    supabase
+      .from('payable_recurring_configs')
+      .update({ template_ap_bill_id: null, is_active: false })
+      .in('template_ap_bill_id', payableIds)
+  );
+
+  await ignoreOptionalUpdate(
+    supabase
+      .from('ap_bills')
+      .update({ parent_payable_id: null })
+      .in('parent_payable_id', payableIds)
+  );
+
+  await ignoreOptionalUpdate(
+    supabase
+      .from('ap_bills')
+      .update({ parent_installment_id: null })
+      .in('parent_installment_id', payableIds)
+  );
+}
 
 // ============================================================
 // UTILITY FUNCTIONS
@@ -31,19 +116,315 @@ function normalizePayableStatus(status: string): PayableStatus {
     'open': PayableStatus.OPEN,
     'aberto': PayableStatus.OPEN,
     'pending': PayableStatus.OPEN,
+    'approving': PayableStatus.APPROVING,
+    'aprovando': PayableStatus.APPROVING,
+    'approved': PayableStatus.APPROVED,
+    'aprovado': PayableStatus.APPROVED,
     'overdue': PayableStatus.OVERDUE,
     'vencido': PayableStatus.OVERDUE,
     'partial': PayableStatus.PARTIAL,
     'parcial': PayableStatus.PARTIAL,
     'paid': PayableStatus.PAID,
     'pago': PayableStatus.PAID,
+    'blocked': PayableStatus.BLOCKED,
+    'bloqueado': PayableStatus.BLOCKED,
     'canceled': PayableStatus.CANCELED,
     'cancelado': PayableStatus.CANCELED,
     'negotiated': PayableStatus.NEGOTIATED,
     'negociado': PayableStatus.NEGOTIATED,
+    'reversed': PayableStatus.REVERSED,
+    'estornado': PayableStatus.REVERSED,
   };
-  
+
   return statusMap[status?.toLowerCase() || ''] || PayableStatus.OPEN;
+}
+
+function isUuid(value?: string | null): boolean {
+  return !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function addMonths(dateString: string, months: number): string {
+  const date = new Date(`${dateString}T00:00:00`);
+  date.setMonth(date.getMonth() + months);
+  return date.toISOString().split('T')[0];
+}
+
+function createClientId(): string {
+  return typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function stripInstallmentSuffix(description?: string | null): string {
+  return String(description || 'Conta a pagar').replace(/\s+-\s+Parcela\s+\d+\/\d+$/i, '');
+}
+
+function buildInstallmentMetadata(payable: any, installmentGroupId: string, installmentNumber: number, installmentTotal: number) {
+  const metadata = payable.metadata || {};
+  return {
+    ...metadata,
+    enterprise: {
+      ...(metadata.enterprise || {}),
+      installment_group_id: installmentGroupId,
+      installment_number: installmentNumber,
+      installment_total: installmentTotal,
+    },
+  };
+}
+
+async function syncEditedPayableInstallments(updatedPayable: any, input: PayableUpdateInput): Promise<Payable> {
+  const desiredInstallments = Math.max(1, Number(input.installments || updatedPayable.installments || 1));
+  if (desiredInstallments <= 1) return transformPayable(updatedPayable);
+
+  const { data: rows, error: rowsError } = await supabase
+    .from('ap_bills')
+    .select('*')
+    .or(`id.eq.${updatedPayable.id},parent_payable_id.eq.${updatedPayable.id},parent_installment_id.eq.${updatedPayable.id}`)
+    .order('installment_number', { ascending: true });
+
+  if (rowsError) throw rowsError;
+
+  const installmentRows = rows || [];
+  const hasCompleteGroup = installmentRows.length >= desiredInstallments
+    && installmentRows.every((row) => Number(row.installment_total || row.installments || 1) === desiredInstallments);
+  if (hasCompleteGroup) return transformPayable(updatedPayable);
+
+  if (installmentRows.some((row) => Number(row.paid_value || 0) > 0)) {
+    throw new Error('Nao e possivel alterar o parcelamento de titulos com pagamento registrado.');
+  }
+
+  const totalAmount = Number(input.amount ?? updatedPayable.amount ?? 0);
+  if (!Number.isFinite(totalAmount) || totalAmount <= 0) return transformPayable(updatedPayable);
+
+  const totalDiscount = Number(input.discount_amount ?? updatedPayable.discount_amount ?? 0);
+  const installmentAmount = Number((totalAmount / desiredInstallments).toFixed(2));
+  const installmentDiscount = Number((totalDiscount / desiredInstallments).toFixed(2));
+  const baseDueDate = input.due_date || updatedPayable.due_date;
+  const baseDescription = stripInstallmentSuffix(input.description || updatedPayable.description);
+  const installmentGroupId = updatedPayable.metadata?.enterprise?.installment_group_id || createClientId();
+
+  const firstAmount = desiredInstallments === 1
+    ? totalAmount
+    : Number((totalAmount - installmentAmount * (desiredInstallments - 1)).toFixed(2));
+  const firstDiscount = desiredInstallments === 1
+    ? totalDiscount
+    : Number((totalDiscount - installmentDiscount * (desiredInstallments - 1)).toFixed(2));
+
+  const { data: firstRow, error: firstError } = await supabase
+    .from('ap_bills')
+    .update({
+      amount: firstAmount,
+      discount_amount: firstDiscount,
+      due_date: baseDueDate,
+      description: `${baseDescription} - Parcela 1/${desiredInstallments}`,
+      installments: desiredInstallments,
+      installment_number: 1,
+      installment_total: desiredInstallments,
+      parent_payable_id: null,
+      parent_installment_id: null,
+      metadata: buildInstallmentMetadata(updatedPayable, installmentGroupId, 1, desiredInstallments),
+    })
+    .eq('id', updatedPayable.id)
+    .select()
+    .single();
+
+  if (firstError) throw firstError;
+
+  const existingNumbers = new Set(installmentRows.map((row) => Number(row.installment_number || 1)));
+  const rowsToInsert = [];
+
+  for (let installmentNumber = 2; installmentNumber <= desiredInstallments; installmentNumber += 1) {
+    if (existingNumbers.has(installmentNumber)) continue;
+
+    rowsToInsert.push({
+      clinic_id: updatedPayable.clinic_id,
+      supplier_name: updatedPayable.supplier_name,
+      supplier_id: updatedPayable.supplier_id || null,
+      supplier_document: updatedPayable.supplier_document || null,
+      document_number: updatedPayable.document_number || null,
+      invoice_number: updatedPayable.invoice_number || null,
+      invoice_series: updatedPayable.invoice_series || null,
+      description: `${baseDescription} - Parcela ${installmentNumber}/${desiredInstallments}`,
+      observations: updatedPayable.observations || null,
+      type: updatedPayable.type || 'SUPPLIER',
+      category: updatedPayable.category || null,
+      subcategory: updatedPayable.subcategory || null,
+      unit_id: updatedPayable.unit_id || null,
+      unit_name: updatedPayable.unit_name || null,
+      issue_date: updatedPayable.issue_date || null,
+      competency_date: updatedPayable.competency_date || null,
+      due_date: addMonths(baseDueDate, installmentNumber - 1),
+      amount: installmentNumber === desiredInstallments
+        ? Number((totalAmount - firstAmount - installmentAmount * (desiredInstallments - 2)).toFixed(2))
+        : installmentAmount,
+      interest_amount: Number(updatedPayable.interest_amount || 0),
+      fine_amount: Number(updatedPayable.fine_amount || 0),
+      discount_amount: installmentNumber === desiredInstallments
+        ? Number((totalDiscount - firstDiscount - installmentDiscount * (desiredInstallments - 2)).toFixed(2))
+        : installmentDiscount,
+      paid_value: 0,
+      payment_method: updatedPayable.payment_method || null,
+      payment_bank: updatedPayable.payment_bank || null,
+      payment_reference: updatedPayable.payment_reference || null,
+      chart_account_id: updatedPayable.chart_account_id || null,
+      cost_center_id: updatedPayable.cost_center_id || null,
+      financial_account_id: updatedPayable.financial_account_id || null,
+      dre_classification: updatedPayable.dre_classification || null,
+      cost_allocations: updatedPayable.cost_allocations || [],
+      is_recurring: updatedPayable.is_recurring || false,
+      recurrence_type: updatedPayable.recurrence_type || null,
+      recurrence_interval: updatedPayable.recurrence_interval || 1,
+      recurrence_end_date: updatedPayable.recurrence_end_date || null,
+      installments: desiredInstallments,
+      installment_number: installmentNumber,
+      installment_total: desiredInstallments,
+      parent_payable_id: updatedPayable.id,
+      parent_installment_id: updatedPayable.id,
+      has_invoice: updatedPayable.has_invoice || false,
+      invoice_xml_url: updatedPayable.invoice_xml_url || null,
+      invoice_pdf_url: updatedPayable.invoice_pdf_url || null,
+      attachment_url: updatedPayable.attachment_url || null,
+      document_taxes: updatedPayable.document_taxes || {},
+      document_items: updatedPayable.document_items || [],
+      medication_traceability: updatedPayable.medication_traceability || [],
+      is_forecast: updatedPayable.is_forecast !== false,
+      is_manual: updatedPayable.is_manual !== false,
+      approval_stage: updatedPayable.approval_stage || 'LAUNCHED',
+      status: updatedPayable.status || 'OPEN',
+      created_by: updatedPayable.created_by || null,
+      metadata: buildInstallmentMetadata(updatedPayable, installmentGroupId, installmentNumber, desiredInstallments),
+    });
+  }
+
+  if (rowsToInsert.length) {
+    const { error: insertError } = await supabase
+      .from('ap_bills')
+      .insert(rowsToInsert);
+
+    if (insertError) throw insertError;
+  }
+
+  return transformPayable(firstRow);
+}
+
+function buildEnterpriseMetadata(input: PayableCreateInput | PayableUpdateInput, patch: Record<string, any> = {}) {
+  const baseMetadata = input.metadata || {};
+  return {
+    ...baseMetadata,
+    enterprise: {
+      ...(baseMetadata.enterprise || {}),
+      approval_stage: patch.approval_stage || baseMetadata.enterprise?.approval_stage || 'LAUNCHED',
+      cash_flow: {
+        expected_entry_type: 'OUTFLOW',
+        projection_status: patch.status === PayableStatus.PAID ? 'REALIZED' : 'FORECAST',
+        source: 'accounts_payable',
+      },
+      dre: {
+        classification: input.dre_classification || baseMetadata.enterprise?.dre?.classification || null,
+        competency_date: input.competency_date || baseMetadata.enterprise?.dre?.competency_date || null,
+        chart_account_id: input.chart_account_id || baseMetadata.enterprise?.dre?.chart_account_id || null,
+        cost_center_id: input.cost_center_id || baseMetadata.enterprise?.dre?.cost_center_id || null,
+      },
+      reconciliation: {
+        method: input.payment_method || baseMetadata.enterprise?.reconciliation?.method || null,
+        status: patch.status === PayableStatus.PAID ? 'PENDING_MATCH' : 'NOT_DUE',
+      },
+      medical_repass: {
+        prepared: input.type === PayableType.PAYROLL || input.dre_classification === 'MEDICAL_REPASS',
+      },
+      cost_allocations: input.cost_allocations || baseMetadata.enterprise?.cost_allocations || [],
+    },
+  };
+}
+
+function mergeEnterpriseMetadata(payable: Payable, enterprisePatch: Record<string, any>) {
+  const currentMetadata = payable.metadata || {};
+  return {
+    ...currentMetadata,
+    enterprise: {
+      ...(currentMetadata.enterprise || {}),
+      ...enterprisePatch,
+    },
+  };
+}
+
+function getDocumentInstallments(input: PayableCreateInput | PayableUpdateInput): Array<{ number: number; due_date?: string; amount?: number }> {
+  const rawInstallments = input.metadata?.document_installments
+    || input.metadata?.document_extraction?.installments
+    || input.metadata?.nfe?.installments
+    || [];
+
+  if (!Array.isArray(rawInstallments)) return [];
+
+  return rawInstallments
+    .map((item: any, index: number) => ({
+      number: Number(item?.number || item?.nDup || index + 1) || index + 1,
+      due_date: item?.due_date || item?.dueDate || item?.dVenc || undefined,
+      amount: item?.amount !== undefined && item?.amount !== null ? Number(item.amount) : undefined,
+    }))
+    .filter((item) => item.due_date || Number.isFinite(item.amount));
+}
+
+function normalizeText(value?: string | null): string {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9 ]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function dateDiffDays(first?: string | null, second?: string | null): number {
+  if (!first || !second) return 999;
+  const a = new Date(`${first}T00:00:00`).getTime();
+  const b = new Date(`${second}T00:00:00`).getTime();
+  return Math.abs(Math.round((a - b) / 86400000));
+}
+
+function scorePayableTransaction(payable: Payable, transaction: any): { score: number; reason: string } {
+  const payableAmount = Number(payable.net_amount || payable.balance_amount || payable.amount || 0);
+  const transactionAmount = Math.abs(Number(transaction.amount || 0));
+  const amountDiff = Math.abs(payableAmount - transactionAmount);
+  const amountTolerance = Math.max(0.05, payableAmount * 0.01);
+  const days = dateDiffDays(payable.payment_date || payable.due_date, transaction.transaction_date);
+  const payableText = normalizeText(`${payable.supplier_name} ${payable.description} ${payable.document_number || ''}`);
+  const transactionText = normalizeText(transaction.description);
+  const textTokens = payableText.split(' ').filter((token) => token.length >= 4);
+  const tokenHits = textTokens.filter((token) => transactionText.includes(token)).length;
+
+  let score = 0;
+  const reasons: string[] = [];
+
+  if (amountDiff <= amountTolerance) {
+    score += 55;
+    reasons.push('valor exato');
+  } else if (amountDiff <= Math.max(5, payableAmount * 0.05)) {
+    score += 30;
+    reasons.push('valor aproximado');
+  }
+
+  if (days <= 1) {
+    score += 25;
+    reasons.push('data D+1');
+  } else if (days <= 7) {
+    score += 15;
+    reasons.push('data em 7 dias');
+  }
+
+  if (tokenHits >= 2) {
+    score += 20;
+    reasons.push('texto compatível');
+  } else if (tokenHits === 1) {
+    score += 10;
+    reasons.push('texto parcial');
+  }
+
+  if (transactionAmount === 0 || payableAmount === 0) {
+    score = 0;
+  }
+
+  return { score: Math.min(score, 100), reason: reasons.join(', ') || 'sem evidência suficiente' };
 }
 
 /**
@@ -52,6 +433,7 @@ function normalizePayableStatus(status: string): PayableStatus {
 function transformPayable(data: any): Payable {
   return {
     ...data,
+    payment_date: data.payment_date || (data.paid_at ? String(data.paid_at).split('T')[0] : undefined),
     status: normalizePayableStatus(data.status),
     type: data.type as PayableType,
     payment_method: data.payment_method as PaymentMethodType,
@@ -92,6 +474,14 @@ export async function listPayables(
       query = query.ilike('supplier_name', `%${params.supplier_name}%`);
     }
 
+    if (params.category) {
+      query = query.ilike('category', `%${params.category}%`);
+    }
+
+    if (params.subcategory) {
+      query = query.ilike('subcategory', `%${params.subcategory}%`);
+    }
+
     // Chart account filter
     if (params.chart_account_id) {
       query = query.eq('chart_account_id', params.chart_account_id);
@@ -102,6 +492,18 @@ export async function listPayables(
       query = query.eq('cost_center_id', params.cost_center_id);
     }
 
+    if (params.financial_account_id) {
+      query = query.eq('financial_account_id', params.financial_account_id);
+    }
+
+    if (params.payment_method && params.payment_method.length > 0) {
+      query = query.in('payment_method', params.payment_method);
+    }
+
+    if (params.unit_id) {
+      query = query.eq('unit_id', params.unit_id);
+    }
+
     // Date range filters
     if (params.due_date_start) {
       query = query.gte('due_date', params.due_date_start);
@@ -110,11 +512,27 @@ export async function listPayables(
       query = query.lte('due_date', params.due_date_end);
     }
 
+    if (params.issue_date_start) {
+      query = query.gte('issue_date', params.issue_date_start);
+    }
+
+    if (params.issue_date_end) {
+      query = query.lte('issue_date', params.issue_date_end);
+    }
+
     if (params.payment_date_start) {
-      query = query.gte('payment_date', params.payment_date_start);
+      query = query.gte('paid_at', params.payment_date_start);
     }
     if (params.payment_date_end) {
-      query = query.lte('payment_date', params.payment_date_end);
+      query = query.lte('paid_at', `${params.payment_date_end}T23:59:59`);
+    }
+
+    if (params.competency_date_start) {
+      query = query.gte('competency_date', params.competency_date_start);
+    }
+
+    if (params.competency_date_end) {
+      query = query.lte('competency_date', params.competency_date_end);
     }
 
     // Amount filters
@@ -199,50 +617,103 @@ export async function createPayable(
   input: PayableCreateInput
 ): Promise<Payable> {
   try {
-    const { data, error } = await supabase
-      .from('ap_bills')
-      .insert({
+    const documentInstallments = getDocumentInstallments(input);
+    const installmentsCount = Math.max(1, documentInstallments.length || Number(input.installments || 1));
+    const installmentGroupId = installmentsCount > 1 ? createClientId() : null;
+    const grossAmount = Number(input.amount || 0);
+    const installmentAmount = installmentsCount > 1
+      ? Number((grossAmount / installmentsCount).toFixed(2))
+      : grossAmount;
+
+    const rows = Array.from({ length: installmentsCount }, (_, index) => {
+      const installmentNumber = index + 1;
+      const documentInstallment = documentInstallments[index];
+      const amount = Number.isFinite(documentInstallment?.amount)
+        ? Number(documentInstallment.amount)
+        : installmentNumber === installmentsCount
+        ? Number((grossAmount - installmentAmount * (installmentsCount - 1)).toFixed(2))
+        : installmentAmount;
+
+      return {
         clinic_id: clinicId,
         supplier_name: input.supplier_name,
         supplier_id: input.supplier_id || null,
+        supplier_document: input.supplier_document || null,
         document_number: input.document_number || null,
         invoice_number: input.invoice_number || null,
         invoice_series: input.invoice_series || null,
-        description: input.description,
+        description: installmentsCount > 1
+          ? `${input.description} - Parcela ${installmentNumber}/${installmentsCount}`
+          : input.description,
         observations: input.observations || null,
         type: input.type || 'SUPPLIER',
         category: input.category || null,
+        subcategory: input.subcategory || null,
+        unit_id: input.unit_id || null,
+        unit_name: input.unit_name || null,
         issue_date: input.issue_date || null,
         competency_date: input.competency_date || null,
-        due_date: input.due_date,
-        amount: input.amount,
+        due_date: documentInstallment?.due_date || (installmentsCount > 1 ? addMonths(input.due_date, index) : input.due_date),
+        amount,
         interest_amount: input.interest_amount || 0,
         fine_amount: input.fine_amount || 0,
-        discount_amount: input.discount_amount || 0,
+        discount_amount: installmentsCount > 1 ? Number(((input.discount_amount || 0) / installmentsCount).toFixed(2)) : input.discount_amount || 0,
         payment_method: input.payment_method || null,
         payment_bank: input.payment_bank || null,
+        payment_reference: input.payment_reference || null,
         chart_account_id: input.chart_account_id || null,
         cost_center_id: input.cost_center_id || null,
+        financial_account_id: input.financial_account_id || null,
+        dre_classification: input.dre_classification || null,
+        cost_allocations: input.cost_allocations || null,
         is_recurring: input.is_recurring || false,
         recurrence_type: input.recurrence_type || null,
         recurrence_interval: input.recurrence_interval || 1,
         recurrence_end_date: input.recurrence_end_date || null,
-        installments: input.installments || 1,
-        installment_number: 1,
+        installments: installmentsCount,
+        installment_number: installmentNumber,
+        installment_total: installmentsCount,
+        parent_payable_id: input.parent_payable_id || null,
         has_invoice: input.has_invoice || false,
         invoice_xml_url: input.invoice_xml_url || null,
         invoice_pdf_url: input.invoice_pdf_url || null,
-        is_forecast: input.is_forecast || false,
+        attachment_url: input.attachment_url || null,
+        document_taxes: input.document_taxes || {},
+        document_items: input.document_items || [],
+        medication_traceability: input.medication_traceability || [],
+        is_forecast: input.is_forecast !== false,
         is_manual: input.is_manual !== false,
-        metadata: input.metadata || {},
+        approval_stage: 'LAUNCHED',
+        metadata: buildEnterpriseMetadata(input, {
+          installment_group_id: installmentGroupId,
+          installment_number: installmentNumber,
+          installment_total: installmentsCount,
+        }),
         status: 'OPEN',
         paid_value: 0,
-      })
+      };
+    });
+
+    const { data, error } = await supabase
+      .from('ap_bills')
+      .insert(rows)
       .select()
-      .single();
+      .order('installment_number', { ascending: true });
 
     if (error) throw error;
-    return transformPayable(data);
+    if (!data?.length) throw new Error('Payable was not created');
+    try {
+      await stockMovementsApi.createEntriesFromPayableDocument(data[0].clinic_id, data[0], {
+        items: input.document_items || [],
+        supplierName: input.supplier_name,
+        invoiceNumber: input.invoice_number || input.document_number,
+        issueDate: input.issue_date || input.competency_date || input.due_date,
+      });
+    } catch (stockError: any) {
+      console.warn('Payable created, but XML stock entry integration failed:', stockError?.message || stockError);
+    }
+    invalidateFinanceCaches(data[0].clinic_id);
+    return transformPayable(data[0]);
   } catch (error) {
     console.error('Error creating payable:', error);
     throw error;
@@ -263,6 +734,11 @@ export async function updatePayable(
       (updateData as any).status = normalizePayableStatus(updateData.status);
     }
 
+    (updateData as any).metadata = buildEnterpriseMetadata(input, {
+      status: (updateData as any).status,
+      approval_stage: input.approval_stage,
+    });
+
     const { data, error } = await supabase
       .from('ap_bills')
       .update(updateData)
@@ -271,7 +747,8 @@ export async function updatePayable(
       .single();
 
     if (error) throw error;
-    return transformPayable(data);
+    invalidateFinanceCaches(data.clinic_id);
+    return await syncEditedPayableInstallments(data, input);
   } catch (error) {
     console.error('Error updating payable:', error);
     throw error;
@@ -283,12 +760,24 @@ export async function updatePayable(
  */
 export async function deletePayable(id: string): Promise<void> {
   try {
+    const { data: existing } = await supabase
+      .from('ap_bills')
+      .select('clinic_id')
+      .eq('id', id)
+      .maybeSingle();
+
+    await cleanupPayableDependencies([id]);
+
     const { error } = await supabase
       .from('ap_bills')
       .delete()
       .eq('id', id);
 
-    if (error) throw error;
+    if (error) {
+      const { error: rpcError } = await supabase.rpc('delete_ap_bill_cascade', { p_ap_bill_id: id });
+      if (rpcError) throw rpcError;
+    }
+    invalidateFinanceCaches(existing?.clinic_id);
   } catch (error) {
     console.error('Error deleting payable:', error);
     throw error;
@@ -306,8 +795,10 @@ export async function payPayable(
   id: string,
   paidValue: number,
   paymentMethod: PaymentMethodType,
-  paidBy: string,
-  paymentDate?: string
+  paidBy?: string,
+  paymentDate?: string,
+  paymentBank?: string,
+  notes?: string
 ): Promise<Payable> {
   try {
     const payable = await getPayable(id);
@@ -316,16 +807,30 @@ export async function payPayable(
     const totalPaid = payable.paid_value + paidValue;
     const newStatus =
       totalPaid >= payable.net_amount ? 'PAID' : 'PARTIAL';
+    const paymentPatch: Record<string, any> = {
+      paid_value: totalPaid,
+      status: newStatus,
+      payment_method: paymentMethod,
+      payment_bank: paymentBank || payable.payment_bank || null,
+      paid_at: `${paymentDate || new Date().toISOString().split('T')[0]}T12:00:00`,
+      approval_stage: newStatus === 'PAID' ? 'PAID' : payable.approval_stage || 'RELEASED',
+      metadata: buildEnterpriseMetadata(payable, {
+        status: newStatus,
+        approval_stage: newStatus === 'PAID' ? 'PAID' : payable.approval_stage || 'RELEASED',
+      }),
+    };
+
+    if (isUuid(paidBy)) {
+      paymentPatch.paid_by = paidBy;
+    }
+
+    if (notes) {
+      paymentPatch.payment_reference = notes;
+    }
 
     const { data, error } = await supabase
       .from('ap_bills')
-      .update({
-        paid_value: totalPaid,
-        status: newStatus,
-        payment_method: paymentMethod,
-        payment_date: paymentDate || new Date().toISOString().split('T')[0],
-        paid_by: paidBy,
-      })
+      .update(paymentPatch)
       .eq('id', id)
       .select()
       .single();
@@ -343,11 +848,16 @@ export async function payPayable(
  */
 export async function cancelPayable(id: string): Promise<Payable> {
   try {
+    const payable = await getPayable(id);
+    if (!payable) throw new Error('Payable not found');
+
     const { data, error } = await supabase
       .from('ap_bills')
       .update({
         status: 'CANCELED',
         paid_value: 0,
+        canceled_at: new Date().toISOString(),
+        metadata: buildEnterpriseMetadata(payable, { status: PayableStatus.CANCELED }),
       })
       .eq('id', id)
       .select()
@@ -359,6 +869,314 @@ export async function cancelPayable(id: string): Promise<Payable> {
     console.error('Error canceling payable:', error);
     throw error;
   }
+}
+
+// ============================================================
+// APPROVAL WORKFLOW
+// ============================================================
+
+export async function applyPayableApprovalAction(
+  id: string,
+  action: PayableApprovalAction,
+  actorId?: string,
+  reason?: string
+): Promise<Payable> {
+  const payable = await getPayable(id);
+  if (!payable) throw new Error('Payable not found');
+
+  const now = new Date().toISOString();
+  const patch: Record<string, any> = {
+    approval_reason: reason || payable.approval_reason || null,
+  };
+  const workflowEvent = { action, actor_id: actorId || null, reason: reason || null, at: now };
+  const workflow = [
+    ...(payable.metadata?.enterprise?.workflow || []),
+    workflowEvent,
+  ];
+
+  if (action === PayableApprovalAction.SEND_TO_APPROVAL) {
+    patch.status = PayableStatus.APPROVING;
+    patch.approval_stage = ApprovalStage.REVIEWED;
+  }
+  if (action === PayableApprovalAction.CHECK) {
+    patch.status = PayableStatus.APPROVING;
+    patch.approval_stage = ApprovalStage.REVIEWED;
+    if (isUuid(actorId)) patch.checked_by = actorId;
+    patch.checked_at = now;
+  }
+  if (action === PayableApprovalAction.APPROVE) {
+    patch.status = PayableStatus.APPROVED;
+    patch.approval_stage = ApprovalStage.APPROVED;
+    if (isUuid(actorId)) patch.approved_by = actorId;
+    patch.approved_at = now;
+  }
+  if (action === PayableApprovalAction.RELEASE) {
+    patch.status = PayableStatus.APPROVED;
+    patch.approval_stage = ApprovalStage.RELEASED;
+    if (isUuid(actorId)) patch.released_by = actorId;
+    patch.released_at = now;
+  }
+  if (action === PayableApprovalAction.BLOCK) {
+    patch.status = PayableStatus.BLOCKED;
+    patch.approval_stage = payable.approval_stage || ApprovalStage.LAUNCHED;
+  }
+  if (action === PayableApprovalAction.REVERSE) {
+    patch.status = PayableStatus.REVERSED;
+    patch.approval_stage = payable.approval_stage || ApprovalStage.PAID;
+    if (isUuid(actorId)) patch.reversed_by = actorId;
+    patch.reversed_at = now;
+  }
+
+  patch.metadata = mergeEnterpriseMetadata(payable, { workflow });
+
+  const { data, error } = await supabase
+    .from('ap_bills')
+    .update(patch)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return transformPayable(data);
+}
+
+// ============================================================
+// INTELLIGENT RECONCILIATION
+// ============================================================
+
+export async function runPayablesSmartReconciliation(
+  clinicId: string,
+  actorId?: string
+): Promise<PayableReconciliationSummary> {
+  try {
+    const { data, error } = await supabase.rpc('match_payables_to_bank_transactions', {
+      p_clinic_id: clinicId,
+      p_actor_id: isUuid(actorId) ? actorId : null,
+    });
+
+    if (!error && data) {
+      const rows = Array.isArray(data) ? data : [];
+      const matches = rows.map((row: any) => ({
+        payable_id: row.payable_id,
+        bank_transaction_id: row.bank_transaction_id,
+        transaction_date: row.transaction_date,
+        amount: Number(row.amount || 0),
+        description: row.description || '',
+        match_type: row.match_type || 'auto_fuzzy',
+        confidence: Number(row.confidence || 0),
+        status: row.status || 'review',
+        score_reason: row.score_reason || 'RPC',
+      })) as PayableReconciliationMatch[];
+      return {
+        total_candidates: matches.length,
+        matched: matches.filter((match) => match.status === 'matched').length,
+        review: matches.filter((match) => match.status === 'review').length,
+        unmatched: matches.filter((match) => match.status === 'unmatched').length,
+        matches,
+      };
+    }
+  } catch (error) {
+    console.warn('RPC reconciliation unavailable, using client fallback:', error);
+  }
+
+  const { data: payablesData, error: payablesError } = await supabase
+    .from('ap_bills')
+    .select('*')
+    .eq('clinic_id', clinicId)
+    .in('status', ['PAID', 'PARTIAL', 'APPROVED', 'OPEN'])
+    .neq('status', 'CANCELED')
+    .order('due_date', { ascending: false })
+    .limit(500);
+
+  if (payablesError) throw payablesError;
+
+  const { data: statements, error: statementsError } = await supabase
+    .from('bank_statements')
+    .select('id')
+    .eq('clinic_id', clinicId)
+    .order('statement_date', { ascending: false })
+    .limit(100);
+
+  if (statementsError) throw statementsError;
+  const statementIds = (statements || []).map((statement: any) => statement.id);
+  if (!statementIds.length) {
+    return { total_candidates: 0, matched: 0, review: 0, unmatched: 0, matches: [] };
+  }
+
+  const { data: transactions, error: transactionsError } = await supabase
+    .from('bank_transactions')
+    .select('*')
+    .in('statement_id', statementIds)
+    .is('matched_to_id', null)
+    .order('transaction_date', { ascending: false })
+    .limit(1000);
+
+  if (transactionsError) throw transactionsError;
+
+  const payables = (payablesData || []).map(transformPayable);
+  const usedTransactions = new Set<string>();
+  const matches: PayableReconciliationMatch[] = [];
+
+  for (const payable of payables) {
+    let best: any = null;
+    let bestScore = { score: 0, reason: '' };
+
+    for (const transaction of transactions || []) {
+      if (usedTransactions.has(transaction.id)) continue;
+      const score = scorePayableTransaction(payable, transaction);
+      if (score.score > bestScore.score) {
+        best = transaction;
+        bestScore = score;
+      }
+    }
+
+    if (!best || bestScore.score < 60) continue;
+
+    usedTransactions.add(best.id);
+    const status = bestScore.score >= 85 ? 'matched' : 'review';
+    const matchType = bestScore.score >= 95 ? 'auto_exact' : bestScore.score >= 75 ? 'auto_fuzzy' : 'auto_partial';
+    const reconciliation = {
+      status: status === 'matched' ? 'MATCHED' : 'AWAITING_REVIEW',
+      bank_transaction_id: best.id,
+      confidence: bestScore.score,
+      match_type: matchType,
+      matched_at: new Date().toISOString(),
+      matched_by: isUuid(actorId) ? actorId : null,
+      score_reason: bestScore.reason,
+    };
+
+    await supabase
+      .from('bank_transactions')
+      .update({
+        matched_to_id: payable.id,
+        match_type: matchType,
+        match_confidence: bestScore.score,
+        status,
+        notes: `Contas a Pagar: ${bestScore.reason}`,
+      })
+      .eq('id', best.id);
+
+    await supabase
+      .from('ap_bills')
+      .update({ metadata: mergeEnterpriseMetadata(payable, { reconciliation }) })
+      .eq('id', payable.id);
+
+    matches.push({
+      payable_id: payable.id,
+      bank_transaction_id: best.id,
+      transaction_date: best.transaction_date,
+      amount: Number(best.amount || 0),
+      description: best.description || '',
+      match_type: matchType,
+      confidence: bestScore.score,
+      status,
+      score_reason: bestScore.reason,
+    });
+  }
+
+  return {
+    total_candidates: matches.length,
+    matched: matches.filter((match) => match.status === 'matched').length,
+    review: matches.filter((match) => match.status === 'review').length,
+    unmatched: Math.max(0, (transactions || []).length - matches.length),
+    matches,
+  };
+}
+
+export async function approvePayableReconciliationMatch(input: {
+  payableId: string;
+  bankTransactionId: string;
+  actorId?: string;
+  confidence?: number;
+  matchType?: PayableReconciliationMatch['match_type'];
+  scoreReason?: string;
+}): Promise<Payable> {
+  const { data: payableData, error: payableError } = await supabase
+    .from('ap_bills')
+    .select('*')
+    .eq('id', input.payableId)
+    .single();
+
+  if (payableError) throw payableError;
+
+  const payable = transformPayable(payableData);
+  const approvedAt = new Date().toISOString();
+  const reconciliation = {
+    status: 'MATCHED',
+    bank_transaction_id: input.bankTransactionId,
+    confidence: Number(input.confidence || payable.metadata?.enterprise?.reconciliation?.confidence || 100),
+    match_type: input.matchType || payable.metadata?.enterprise?.reconciliation?.match_type || 'manual_approved',
+    approved_at: approvedAt,
+    approved_by: isUuid(input.actorId) ? input.actorId : null,
+    score_reason: input.scoreReason || payable.metadata?.enterprise?.reconciliation?.score_reason || null,
+  };
+
+  const { error: transactionError } = await supabase
+    .from('bank_transactions')
+    .update({
+      matched_to_id: input.payableId,
+      status: 'matched',
+      notes: `Match AP aprovado em ${approvedAt}`,
+    })
+    .eq('id', input.bankTransactionId);
+
+  if (transactionError) throw transactionError;
+
+  const { data, error } = await supabase
+    .from('ap_bills')
+    .update({ metadata: mergeEnterpriseMetadata(payable, { reconciliation }) })
+    .eq('id', input.payableId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return transformPayable(data);
+}
+
+export async function rejectPayableReconciliationMatch(input: {
+  payableId: string;
+  bankTransactionId: string;
+  actorId?: string;
+  scoreReason?: string;
+}): Promise<Payable> {
+  const { data: payableData, error: payableError } = await supabase
+    .from('ap_bills')
+    .select('*')
+    .eq('id', input.payableId)
+    .single();
+
+  if (payableError) throw payableError;
+
+  const payable = transformPayable(payableData);
+  const rejectedAt = new Date().toISOString();
+  const reconciliation = {
+    ...(payable.metadata?.enterprise?.reconciliation || {}),
+    status: 'REJECTED',
+    rejected_at: rejectedAt,
+    rejected_by: isUuid(input.actorId) ? input.actorId : null,
+    rejection_reason: input.scoreReason || 'Rejeitado na revisão manual',
+  };
+
+  const { error: transactionError } = await supabase
+    .from('bank_transactions')
+    .update({
+      matched_to_id: null,
+      status: 'rejected',
+      notes: reconciliation.rejection_reason,
+    })
+    .eq('id', input.bankTransactionId);
+
+  if (transactionError) throw transactionError;
+
+  const { data, error } = await supabase
+    .from('ap_bills')
+    .update({ metadata: mergeEnterpriseMetadata(payable, { reconciliation }) })
+    .eq('id', input.payableId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return transformPayable(data);
 }
 
 // ============================================================
@@ -380,6 +1198,7 @@ export async function bulkUpdatePayables(
       .select();
 
     if (error) throw error;
+  invalidateFinanceCaches(data?.[0]?.clinic_id);
     return (data || []).map(transformPayable);
   } catch (error) {
     console.error('Error bulk updating payables:', error);
@@ -392,12 +1211,26 @@ export async function bulkUpdatePayables(
  */
 export async function bulkDeletePayables(ids: string[]): Promise<void> {
   try {
+    const { data: existing } = await supabase
+      .from('ap_bills')
+      .select('clinic_id')
+      .in('id', ids)
+      .limit(1);
+
+    await cleanupPayableDependencies(ids);
+
     const { error } = await supabase
       .from('ap_bills')
       .delete()
       .in('id', ids);
 
-    if (error) throw error;
+    if (error) {
+      for (const id of ids) {
+        const { error: rpcError } = await supabase.rpc('delete_ap_bill_cascade', { p_ap_bill_id: id });
+        if (rpcError) throw rpcError;
+      }
+    }
+    invalidateFinanceCaches(existing?.[0]?.clinic_id);
   } catch (error) {
     console.error('Error bulk deleting payables:', error);
     throw error;
@@ -560,13 +1393,14 @@ export async function getPayablesSummary(
       .from('payables_summary')
       .select('*')
       .eq('clinic_id', clinicId)
-      .single();
+      .limit(1);
 
     if (error) throw error;
-    return data || null;
+    return data?.[0] || null;
   } catch (error) {
     console.error('Error getting payables summary:', error);
-    throw error;
+    // Retorna null ao invés de lançar erro - permite que a página continue funcionando
+    return null;
   }
 }
 
@@ -575,17 +1409,278 @@ export async function getPayablesSummary(
  */
 export async function getOverdueCount(clinicId: string): Promise<number> {
   try {
-    const { count, error } = await supabase
-      .from('ap_bills')
-      .select('*', { count: 'exact', head: true })
+    const { data, error } = await supabase
+      .from('payables_summary')
+      .select('overdue_count')
       .eq('clinic_id', clinicId)
-      .eq('status', 'OVERDUE');
+      .limit(1);
 
     if (error) throw error;
-    return count || 0;
+    return Number(data?.[0]?.overdue_count || 0);
   } catch (error) {
     console.error('Error getting overdue count:', error);
     return 0;
+  }
+}
+
+// ============================================================
+// INSTALLMENTS OPERATIONS
+// ============================================================
+
+/**
+ * Create multiple payables from a single payable split into installments
+ * @param clinicId Clinic ID
+ * @param payableId Original payable ID
+ * @param installmentsCount Number of installments to create
+ * @returns Array of created payable IDs
+ */
+export async function splitPayableIntoInstallments(
+  clinicId: string,
+  payableId: string,
+  installmentsCount: number
+): Promise<string[]> {
+  try {
+    if (installmentsCount < 2) {
+      throw new Error('Must have at least 2 installments');
+    }
+
+    // Get the original payable
+    const original = await getPayable(payableId);
+    if (!original) {
+      throw new Error('Payable not found');
+    }
+
+    // Calculate installment details
+    const amountPerInstallment = original.amount / installmentsCount;
+    const baseDate = new Date(original.due_date);
+    const createdIds: string[] = [];
+
+    // Create each installment
+    for (let i = 1; i <= installmentsCount; i++) {
+      // Calculate due date for this installment (add months)
+      const dueDate = new Date(baseDate);
+      dueDate.setMonth(dueDate.getMonth() + (i - 1));
+
+      const installmentData = {
+        clinic_id: clinicId,
+        supplier_name: `${original.supplier_name} (Parcela ${i}/${installmentsCount})`,
+        supplier_id: original.supplier_id || null,
+        supplier_document: original.supplier_document || null,
+        document_number: original.document_number || null,
+        description: original.description,
+        amount: amountPerInstallment,
+        status: 'OPEN',
+        type: original.type,
+        category: original.category,
+        subcategory: original.subcategory || null,
+        due_date: dueDate.toISOString().split('T')[0],
+        competency_date: original.competency_date,
+        chart_account_id: original.chart_account_id,
+        cost_center_id: original.cost_center_id,
+        financial_account_id: original.financial_account_id || null,
+        dre_classification: original.dre_classification || null,
+        cost_allocations: original.cost_allocations || null,
+        created_by: original.created_by,
+        installments: 1,
+        is_recurring: false,
+        installment_number: i,
+        installment_total: installmentsCount,
+        parent_payable_id: payableId,
+        approval_stage: 'LAUNCHED',
+        metadata: buildEnterpriseMetadata(original, {
+          installment_number: i,
+          installment_total: installmentsCount,
+        }),
+      };
+
+      const { data, error } = await supabase
+        .from('ap_bills')
+        .insert([installmentData])
+        .select();
+
+      if (error) throw error;
+      if (data?.[0]) {
+        createdIds.push(data[0].id);
+      }
+    }
+
+    // Mark original as split
+    const { error: updateError } = await supabase
+      .from('ap_bills')
+      .update({ installments: installmentsCount })
+      .eq('id', payableId);
+
+    if (updateError) throw updateError;
+
+    return createdIds;
+  } catch (error) {
+    console.error('Error splitting payable into installments:', error);
+    throw error;
+  }
+}
+
+// ============================================================
+// RECURRENCE OPERATIONS
+// ============================================================
+
+/**
+ * Setup recurring payment for a payable
+ * Creates a recurring configuration template
+ */
+export async function setupRecurringPayable(
+  clinicId: string,
+  payableId: string,
+  recurrenceType: string,
+  recurrenceInterval: number,
+  recurrenceEndDate?: string
+): Promise<PayableRecurringConfig> {
+  try {
+    const payable = await getPayable(payableId);
+    if (!payable) {
+      throw new Error('Payable not found');
+    }
+
+    const config = {
+      clinic_id: clinicId,
+      name: `${payable.supplier_name} - ${payable.description}`.slice(0, 180),
+      description: payable.description,
+      template_ap_bill_id: payableId,
+      recurrence_type: recurrenceType,
+      recurrence_interval: recurrenceInterval,
+      recurrence_end_date: recurrenceEndDate || null,
+      is_active: true,
+      next_generation_date: payable.due_date,
+      created_by: payable.created_by,
+    };
+
+    const { data, error } = await supabase
+      .from('payable_recurring_configs')
+      .insert([config])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error setting up recurring payable:', error);
+    throw error;
+  }
+}
+
+/**
+ * Generate next occurrences for recurring payables
+ * This should be called periodically (e.g., daily cron job)
+ */
+export async function generateRecurringPayables(
+  clinicId: string
+): Promise<string[]> {
+  try {
+    // Get all active recurring configs
+    const { data: configs, error: configError } = await supabase
+      .from('payable_recurring_configs')
+      .select('*')
+      .eq('clinic_id', clinicId)
+      .eq('is_active', true);
+
+    if (configError) throw configError;
+    if (!configs || configs.length === 0) return [];
+
+    const createdIds: string[] = [];
+    const today = new Date();
+
+    for (const config of configs) {
+      // Check if end date has passed
+      if (config.recurrence_end_date && new Date(config.recurrence_end_date) < today) {
+        // Deactivate this config
+        await supabase
+          .from('payable_recurring_configs')
+          .update({ is_active: false })
+          .eq('id', config.id);
+        continue;
+      }
+
+      // Get original payable
+      const templatePayableId = config.template_ap_bill_id || config.payable_id;
+      const original = await getPayable(templatePayableId);
+      if (!original) continue;
+
+      // Calculate next occurrence date
+      const nextDate = new Date(`${config.next_generation_date || config.next_occurrence_date}T00:00:00`);
+      const interval = config.recurrence_interval || 1;
+
+      switch (config.recurrence_type) {
+        case 'DAILY':
+          nextDate.setDate(nextDate.getDate() + interval);
+          break;
+        case 'WEEKLY':
+          nextDate.setDate(nextDate.getDate() + 7 * interval);
+          break;
+        case 'BIWEEKLY':
+          nextDate.setDate(nextDate.getDate() + 14 * interval);
+          break;
+        case 'MONTHLY':
+          nextDate.setMonth(nextDate.getMonth() + interval);
+          break;
+        case 'QUARTERLY':
+          nextDate.setMonth(nextDate.getMonth() + 3 * interval);
+          break;
+        case 'SEMIANNUAL':
+          nextDate.setMonth(nextDate.getMonth() + 6 * interval);
+          break;
+        case 'ANNUAL':
+          nextDate.setFullYear(nextDate.getFullYear() + interval);
+          break;
+      }
+
+      // If next occurrence is today or in future, create it
+      if (nextDate <= new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1)) {
+        const newPayable = {
+          clinic_id: clinicId,
+          supplier_name: original.supplier_name,
+          description: original.description,
+          amount: original.amount,
+          status: 'OPEN',
+          type: original.type,
+          category: original.category,
+          subcategory: original.subcategory || null,
+          due_date: nextDate.toISOString().split('T')[0],
+          competency_date: nextDate.toISOString().split('T')[0],
+          chart_account_id: original.chart_account_id,
+          cost_center_id: original.cost_center_id,
+          financial_account_id: original.financial_account_id || null,
+          dre_classification: original.dre_classification || null,
+          created_by: original.created_by,
+          is_recurring: true,
+          recurrence_type: config.recurrence_type,
+          parent_payable_id: templatePayableId,
+          approval_stage: 'LAUNCHED',
+          metadata: buildEnterpriseMetadata(original, { recurrence_config_id: config.id }),
+        };
+
+        const { data: newData, error: insertError } = await supabase
+          .from('ap_bills')
+          .insert([newPayable])
+          .select();
+
+        if (!insertError && newData?.[0]) {
+          createdIds.push(newData[0].id);
+
+          // Update config with new next occurrence date
+          await supabase
+            .from('payable_recurring_configs')
+            .update({
+              last_generated_date: new Date().toISOString().split('T')[0],
+              next_generation_date: nextDate.toISOString().split('T')[0],
+            })
+            .eq('id', config.id);
+        }
+      }
+    }
+
+    return createdIds;
+  } catch (error) {
+    console.error('Error generating recurring payables:', error);
+    throw error;
   }
 }
 

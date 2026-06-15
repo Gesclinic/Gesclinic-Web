@@ -31,16 +31,24 @@ import EstoqueConfig from '@/pages/clinica/configuracoes/EstoqueConfig';
 
 // Estoque
 import EstoqueProdutos from '@/pages/clinica/estoque/Produtos';
+import EstoqueProdutoForm from '@/pages/clinica/estoque/ProdutoFormPage';
 import EstoqueCategorias from '@/pages/clinica/estoque/Categorias';
+import EstoqueCategoriaForm from '@/pages/clinica/estoque/CategoriaFormPage';
 import EstoqueFornecedores from '@/pages/clinica/estoque/Fornecedores';
+import EstoqueFornecedorForm from '@/pages/clinica/estoque/FornecedorFormPage';
 import EstoqueMovimentacoes from '@/pages/clinica/estoque/Movimentacoes';
 import EstoqueLocais from '@/pages/clinica/estoque/Locais';
+import EstoqueLocalForm from '@/pages/clinica/estoque/LocalFormPage';
 import EstoqueEntradas from '@/pages/clinica/estoque/Entradas';
 import EstoqueSaidas from '@/pages/clinica/estoque/Saidas';
 import EstoqueUnidades from '@/pages/clinica/estoque/Unidades';
+import EstoqueUnidadeForm from '@/pages/clinica/estoque/UnidadeFormPage';
 import EstoqueTransferencias from '@/pages/clinica/estoque/Transferencias';
+import EstoqueMovimentoForm from '@/pages/clinica/estoque/MovimentoFormPage';
 import EstoqueRequisicoes from '@/pages/clinica/estoque/Requisicoes';
+import EstoqueRequisicaoForm from '@/pages/clinica/estoque/RequisicaoFormPage';
 import EstoqueInventario from '@/pages/clinica/estoque/Inventario';
+import EstoqueInventarioForm from '@/pages/clinica/estoque/InventarioFormPage';
 import EstoqueRelatorios from '@/pages/clinica/estoque/Relatorios';
 import DashboardEstoque from '@/pages/clinica/estoque/DashboardEstoque';
 
@@ -57,6 +65,7 @@ import CostCenterPage from '@/modules/financeiro/centro-custo/pages/CostCenterPa
 import { FinancialAccountsPage } from '@/modules/financeiro/contas-financeiras';
 // Contas a Pagar Module
 import ContasApagarPage from '@/modules/financeiro/contas-pagar/pages';
+import NovaContaPagarPage from '@/modules/financeiro/contas-pagar/pages/NovaContaPagarPage';
 import FinanceAutomacaoFinanceira from '@/pages/clinica/financeiro/AutomacaoFinanceira';
 import AutorizacaoDescontos from '@/pages/clinica/financeiro/AutorizacaoDescontos';
 import CaixaIndividual from '@/pages/clinica/financeiro/CaixaIndividual';
@@ -81,7 +90,6 @@ import RepasseAutomacaoPage from '@/pages/financeiro/RepasseAutomacaoPage';
 import DashboardDRE from '@/pages/financeiro/DashboardDRE';
 import DREDashboard from '@/components/financeiro/DRE/DREDashboard';
 // ETAPA 6: Conciliação Inteligente
-import Conciliador from '@/pages/financeiro/Conciliador';
 // ETAPA 7: Financial Cockpit Premium
 import CockpitPremium from '@/pages/financeiro/CockpitPremium';
 // ETAPA 8: Alertas e Automações
@@ -92,13 +100,14 @@ import OperationalAnalyticsPage from '@/pages/admin/OperationalAnalyticsPage';
 import OperationalCompliancePage from '@/pages/admin/OperationalCompliancePage';
 
 // Faturamento
-import FaturamentoPage from '@/pages/clinica/faturamento/FaturamentoPage';
 import GuiasPage from '@/pages/clinica/faturamento/GuiasPage';
 import XMLPage from '@/pages/clinica/faturamento/XMLPage';
 import RetornosPage from '@/pages/clinica/faturamento/RetornosPage';
 import LotesPage from '@/pages/clinica/faturamento/LotesPage';
 import RelatoriosPage from '@/pages/clinica/faturamento/RelatoriosPage';
 import TISSPage from '@/pages/clinica/faturamento/TISSPage';
+import FaturamentoDashboard from '@/pages/clinica/faturamento/FaturamentoDashboard';
+import FaturamentoEnterprisePage from '@/pages/clinica/faturamento/FaturamentoEnterprisePage';
 
 // Dashboards
 import DashboardAtendimentos from '@/pages/clinica/dashboard/DashboardAtendimentos';
@@ -263,6 +272,11 @@ function LegacyAdminClinicEditRedirect() {
   return <Navigate to={`/clinica/administracao/clinicas/editar/${id}`} replace />;
 }
 
+function LegacyPayableEditRedirect() {
+  const { id } = useParams();
+  return <Navigate to={`/clinica/financeiro/contas-pagar?edit=${id}&trace=legacy-editar-conta`} replace />;
+}
+
 /* 🔓 Public Route */
 function PublicRoute() {
   const { isAuthenticated } = useAuth();
@@ -408,17 +422,34 @@ export default function AppRoutes() {
           <Route path="estoque" element={<DashboardEstoque />} />
           <Route path="estoque/dashboard" element={<DashboardEstoque />} />
           <Route path="estoque/produtos" element={<EstoqueProdutos />} />
+          <Route path="estoque/produtos/novo" element={<EstoqueProdutoForm />} />
+          <Route path="estoque/produtos/editar/:id" element={<EstoqueProdutoForm />} />
           <Route path="estoque/categorias" element={<EstoqueCategorias />} />
+          <Route path="estoque/categorias/nova" element={<EstoqueCategoriaForm />} />
+          <Route path="estoque/categorias/editar/:id" element={<EstoqueCategoriaForm />} />
           <Route path="estoque/fornecedores" element={<EstoqueFornecedores />} />
+          <Route path="estoque/fornecedores/novo" element={<EstoqueFornecedorForm />} />
+          <Route path="estoque/fornecedores/editar/:id" element={<EstoqueFornecedorForm />} />
           <Route path="estoque/movimentacoes" element={<EstoqueMovimentacoes />} />
           <Route path="estoque/locais" element={<EstoqueLocais />} />
+          <Route path="estoque/locais/novo" element={<EstoqueLocalForm />} />
+          <Route path="estoque/locais/editar/:id" element={<EstoqueLocalForm />} />
           <Route path="estoque/depositos" element={<EstoqueLocais />} />
           <Route path="estoque/entradas" element={<EstoqueEntradas />} />
+          <Route path="estoque/entradas/nova" element={<EstoqueMovimentoForm kind="entrada" />} />
+          <Route path="estoque/entradas/editar/:id" element={<EstoqueMovimentoForm kind="entrada" />} />
           <Route path="estoque/saidas" element={<EstoqueSaidas />} />
+          <Route path="estoque/saidas/nova" element={<EstoqueMovimentoForm kind="saida" />} />
+          <Route path="estoque/saidas/editar/:id" element={<EstoqueMovimentoForm kind="saida" />} />
           <Route path="estoque/unidades" element={<EstoqueUnidades />} />
+          <Route path="estoque/unidades/nova" element={<EstoqueUnidadeForm />} />
+          <Route path="estoque/unidades/editar/:id" element={<EstoqueUnidadeForm />} />
           <Route path="estoque/transferencias" element={<EstoqueTransferencias />} />
+          <Route path="estoque/transferencias/nova" element={<EstoqueMovimentoForm kind="transferencia" />} />
           <Route path="estoque/requisicoes" element={<EstoqueRequisicoes />} />
+          <Route path="estoque/requisicoes/nova" element={<EstoqueRequisicaoForm />} />
           <Route path="estoque/inventario" element={<EstoqueInventario />} />
+          <Route path="estoque/inventario/novo" element={<EstoqueInventarioForm />} />
           <Route path="estoque/relatorios" element={<EstoqueRelatorios />} />
 
           {/* FINANCEIRO */}
@@ -440,7 +471,6 @@ export default function AppRoutes() {
           />
           <Route path="financeiro/dre-dinamica" element={<DashboardDRE />} />
           <Route path="financeiro/dre" element={<DREDashboard />} />
-          <Route path="financeiro/conciliacao-bancaria" element={<Conciliador />} />
           <Route path="financeiro/cockpit-premium" element={<CockpitPremium />} />
           <Route path="financeiro/caixa" element={<CaixaIndividual />} />
           <Route path="financeiro/caixa-gerencial" element={<CaixaGerencial />} />
@@ -448,6 +478,10 @@ export default function AppRoutes() {
           <Route path="financeiro/dre" element={<DREPage />} />
           <Route path="financeiro/receber" element={<FinanceContasReceber />} />
           <Route path="financeiro/contas-receber" element={<FinanceContasReceber />} />
+          <Route
+            path="financeiro/movimento/contas-a-receber"
+            element={<Navigate to="/clinica/financeiro/receber?from=fluxo-caixa&trace=legacy-movimento&status=open" replace />}
+          />
           <Route path="financeiro/receber/nova" element={<FinanceNovoRecebimento />} />
           <Route
             path="financeiro/receber/:id/editar"
@@ -459,6 +493,15 @@ export default function AppRoutes() {
           />
           <Route path="financeiro/fluxo-caixa" element={<FinanceFluxoCaixa />} />
           <Route path="financeiro/contas-pagar" element={<ContasApagarPage />} />
+          <Route
+            path="financeiro/contas-pagar/nova"
+            element={<NovaContaPagarPage />}
+          />
+          <Route path="financeiro/contas-pagar/:id/editar" element={<LegacyPayableEditRedirect />} />
+          <Route
+            path="financeiro/movimento/contas-a-pagar"
+            element={<Navigate to="/clinica/financeiro/contas-pagar?from=fluxo-caixa&trace=legacy-movimento&status=open,partial,approved,overdue" replace />}
+          />
           <Route
             path="financeiro/fluxo"
             element={<Navigate to="/clinica/financeiro/fluxo-caixa" replace />}
@@ -538,13 +581,22 @@ export default function AppRoutes() {
           <Route path="financeiro/lancamentos" element={<FinancialTransactionsPage />} />
 
           {/* FATURAMENTO */}
-          <Route path="faturamento" element={<FaturamentoPage />} />
-          <Route path="faturamento/dashboard" element={<FaturamentoPage />} />
+          <Route path="faturamento" element={<Navigate to="/clinica/faturamento/dashboard" replace />} />
+          <Route path="faturamento/dashboard" element={<FaturamentoDashboard />} />
+          <Route path="faturamento/producao" element={<FaturamentoEnterprisePage page="producao" />} />
+          <Route path="faturamento/atendimentos" element={<FaturamentoEnterprisePage page="atendimentos" />} />
+          <Route path="faturamento/convenios" element={<FaturamentoEnterprisePage page="convenios" />} />
           <Route path="faturamento/guias" element={<GuiasPage />} />
+          <Route path="faturamento/lotes-faturamento" element={<LotesPage />} />
           <Route path="faturamento/xml" element={<XMLPage />} />
           <Route path="faturamento/retornos" element={<RetornosPage />} />
           <Route path="faturamento/lotes" element={<LotesPage />} />
+          <Route path="faturamento/auditoria" element={<FaturamentoEnterprisePage page="auditoria" />} />
+          <Route path="faturamento/forecast" element={<FaturamentoEnterprisePage page="forecast" />} />
+          <Route path="faturamento/inteligencia" element={<FaturamentoEnterprisePage page="inteligencia" />} />
+          <Route path="faturamento/pendencias" element={<FaturamentoEnterprisePage page="pendencias" />} />
           <Route path="faturamento/relatorios" element={<RelatoriosPage />} />
+          <Route path="faturamento/configuracoes" element={<Navigate to="/clinica/configuracoes/faturamento" replace />} />
           <Route path="faturamento/tiss" element={<TISSPage />} />
 
           {/* OUTRAS */}

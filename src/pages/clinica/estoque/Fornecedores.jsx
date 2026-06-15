@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,17 +7,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import { stockSuppliersApi } from '@/lib/stockApi';
-import StockSupplierDialog from '@/components/clinica/estoque/StockSupplierDialog';
 import ConfirmationDialog from '@/components/clinica/ConfirmationDialog';
 
 export default function EstoqueFornecedores() {
   const { clinicId } = useAuth();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState(null);
   const [deleteAlertOpen, setDeleteAlertOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
 
@@ -42,31 +41,6 @@ export default function EstoqueFornecedores() {
   useEffect(() => {
     fetchItems();
   }, [fetchItems]);
-
-  const handleOpenDialog = (item = null) => {
-    setSelectedItem(item);
-    setDialogOpen(true);
-  };
-
-  const handleSubmit = async (payload) => {
-    try {
-      if (payload.id) {
-        await stockSuppliersApi.update(payload.id, payload);
-        toast({ title: 'Fornecedor atualizado com sucesso!' });
-      } else {
-        await stockSuppliersApi.create(clinicId, payload);
-        toast({ title: 'Fornecedor criado com sucesso!' });
-      }
-      fetchItems();
-      setDialogOpen(false);
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Erro ao salvar fornecedor',
-        description: error.message,
-      });
-    }
-  };
 
   const openDeleteAlert = (item) => {
     setItemToDelete(item);
@@ -103,7 +77,7 @@ export default function EstoqueFornecedores() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Fornecedores</h1>
-        <Button onClick={() => handleOpenDialog()}>
+        <Button onClick={() => navigate('/clinica/estoque/fornecedores/novo')}>
           <PlusCircle className="mr-2 h-4 w-4" />
           Novo Fornecedor
         </Button>
@@ -162,7 +136,7 @@ export default function EstoqueFornecedores() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleOpenDialog(item)}
+                          onClick={() => navigate(`/clinica/estoque/fornecedores/editar/${item.id}`)}
                           title="Editar"
                         >
                           <Edit className="h-4 w-4" />
@@ -189,15 +163,6 @@ export default function EstoqueFornecedores() {
           </div>
         </CardContent>
       </Card>
-
-      {dialogOpen && (
-        <StockSupplierDialog
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          onSubmit={handleSubmit}
-          initialData={selectedItem}
-        />
-      )}
 
       <ConfirmationDialog
         open={deleteAlertOpen}

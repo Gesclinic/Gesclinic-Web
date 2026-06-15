@@ -1,56 +1,56 @@
-﻿import { supabase } from '@/lib/customSupabaseClient';
+import { supabase } from '@/lib/customSupabaseClient';
 import { normalizeCodeCBHPM } from '@/utils/formatters/formatters';
 
 /**
- * Lista todos os serviÃ§os de uma clÃ­nica
+ * Lista todos os serviços de uma clínica
  * @param {string} clinicId
  * @returns {Promise<Array>}
  */
 export async function listServices(clinicId) {
-  console.log('ðŸ“‹ [listServices] Iniciando com clinicId:', clinicId);
+  console.log('📋 [listServices] Iniciando com clinicId:', clinicId);
 
   if (!clinicId) {
-    console.log('ðŸ“‹ [listServices] Sem clinicId, retornando vazio');
+    console.log('📋 [listServices] Sem clinicId, retornando vazio');
     return [];
   }
 
   try {
-    console.log('ðŸ“‹ [listServices] Executando query para clinic_id ==', clinicId);
+    console.log('📋 [listServices] Executando query para clinic_id ==', clinicId);
 
     const { data, error } = await supabase
       .from('services')
       .select(
-        'id, name, code, description, default_duration_minutes, type_billing, allow_scheduling_fit, requires_authorization, base_value, service_category, is_billable, tuss_code, type_service, guide_type, unit_measure, cost_value, active',
+        'id, name, code, description, default_duration_minutes, type_billing, allow_scheduling_fit, requires_authorization, base_value, service_category, is_billable, is_hospital_service, tuss_code, type_service, guide_type, unit_measure, cost_value, active',
       )
       .eq('clinic_id', clinicId)
       .order('name', { ascending: true });
 
-    console.log('ðŸ“‹ [listServices] Query executada. Resultado:', {
+    console.log('📋 [listServices] Query executada. Resultado:', {
       count: data?.length || 0,
       error: error?.message || 'nenhum',
     });
 
     if (error) {
-      console.error('ðŸ“‹ [listServices] Erro na query:', error);
+      console.error('📋 [listServices] Erro na query:', error);
       throw error;
     }
 
     return data || [];
   } catch (err) {
-    console.error('ðŸ“‹ [listServices] Erro no try/catch:', err);
+    console.error('📋 [listServices] Erro no try/catch:', err);
     throw err;
   }
 }
 
 /**
- * Cria um novo serviÃ§o
+ * Cria um novo serviço
  * @param {string} clinicId
  * @param {Object} serviceData
  * @returns {Promise<Object>}
  */
 export async function createService(clinicId, serviceData) {
   if (!clinicId || !serviceData.name) {
-    throw new Error('clinic_id e name sÃ£o obrigatÃ³rios');
+    throw new Error('clinic_id e name são obrigatórios');
   }
 
   const { data, error } = await supabase
@@ -68,6 +68,7 @@ export async function createService(clinicId, serviceData) {
         code: serviceData.code ? normalizeCodeCBHPM(serviceData.code) : null,
         service_category: serviceData.service_category || 'consultation',
         is_billable: serviceData.is_billable !== false,
+        is_hospital_service: serviceData.is_hospital_service || false,
         tuss_code: serviceData.tuss_code ? normalizeCodeCBHPM(serviceData.tuss_code) : null,
         type_service: serviceData.type_service || null,
         guide_type: serviceData.guide_type || null,
@@ -86,13 +87,13 @@ export async function createService(clinicId, serviceData) {
 }
 
 /**
- * Atualiza um serviÃ§o
+ * Atualiza um serviço
  * @param {string} serviceId
  * @param {Object} serviceData
  * @returns {Promise<Object>}
  */
 export async function updateService(serviceId, serviceData) {
-  // Normalizar cÃ³digos CBHPM/TUSS se fornecidos
+  // Normalizar códigos CBHPM/TUSS se fornecidos
   const normalizedData = {
     ...serviceData,
     ...(serviceData.code && { code: normalizeCodeCBHPM(serviceData.code) }),
@@ -117,7 +118,7 @@ export async function updateService(serviceId, serviceData) {
 }
 
 /**
- * Deleta um serviÃ§o (soft delete via active flag)
+ * Deleta um serviço (soft delete via active flag)
  * @param {string} serviceId
  * @returns {Promise<Object>}
  */
@@ -141,35 +142,35 @@ export async function deleteService(serviceId) {
 
 /**
  * ============================================================
- * VALIDAÃ‡ÃƒO TISS PARA SERVIÃ‡OS
+ * VALIDAÇÃO TISS PARA SERVIÇOS
  * ============================================================
  */
 
 /**
- * Valida se serviÃ§o tem campos obrigatÃ³rios para TISS
+ * Valida se serviço tem campos obrigatórios para TISS
  * @param {Object} serviceData
  * @returns {Object} { valid: boolean, errors: string[] }
  */
 export function validateServiceForTISS(serviceData) {
   const errors = [];
 
-  // TUSS Code (obrigatÃ³rio)
+  // TUSS Code (obrigatório)
   if (!serviceData.tuss_code) {
-    errors.push('TUSS Code Ã© obrigatÃ³rio');
+    errors.push('TUSS Code é obrigatório');
   } else if (serviceData.tuss_code.length !== 10) {
-    errors.push('TUSS Code deve ter exatamente 10 dÃ­gitos');
+    errors.push('TUSS Code deve ter exatamente 10 dígitos');
   } else if (!/^\d{10}$/.test(serviceData.tuss_code)) {
-    errors.push('TUSS Code deve conter apenas nÃºmeros');
+    errors.push('TUSS Code deve conter apenas números');
   }
 
-  // Type Service (obrigatÃ³rio)
+  // Type Service (obrigatório)
   if (!serviceData.type_service) {
-    errors.push('Tipo de ServiÃ§o Ã© obrigatÃ³rio');
+    errors.push('Tipo de Serviço é obrigatório');
   }
 
   // Guide Type (recomendado)
   if (!serviceData.guide_type) {
-    console.warn('âš ï¸ Guide Type nÃ£o definido para serviÃ§o');
+    console.warn('⚠️ Guide Type não definido para serviço');
   }
 
   return {
@@ -179,20 +180,20 @@ export function validateServiceForTISS(serviceData) {
 }
 
 /**
- * Atualizar serviÃ§o com validaÃ§Ã£o TISS
+ * Atualizar serviço com validação TISS
  * @param {string} serviceId
  * @param {Object} serviceData
  * @returns {Promise<Object>}
  */
 export async function updateServiceWithValidation(serviceId, serviceData) {
-  // Validar se vai ativar sem campos obrigatÃ³rios
+  // Validar se vai ativar sem campos obrigatórios
   if (serviceData.active && !serviceData.tuss_code) {
-    throw new Error('NÃ£o Ã© possÃ­vel ativar serviÃ§o sem TUSS Code (obrigatÃ³rio para TISS)');
+    throw new Error('Não é possível ativar serviço sem TUSS Code (obrigatório para TISS)');
   }
 
   const validation = validateServiceForTISS(serviceData);
   if (!validation.valid) {
-    console.warn('âš ï¸ Avisos TISS para serviÃ§o:', validation.errors);
+    console.warn('⚠️ Avisos TISS para serviço:', validation.errors);
     // Continua mesmo com avisos, mas registra
   }
 

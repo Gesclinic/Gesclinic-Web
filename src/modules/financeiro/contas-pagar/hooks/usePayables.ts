@@ -23,6 +23,10 @@ import {
   getPayableAudit,
   getPayablesSummary,
   getOverdueCount,
+  applyPayableApprovalAction,
+  runPayablesSmartReconciliation,
+  approvePayableReconciliationMatch,
+  rejectPayableReconciliationMatch,
 } from '../services/payablesApi';
 import {
   Payable,
@@ -34,6 +38,8 @@ import {
   PayableAudit,
   PayablesSummary,
   PaymentMethodType,
+  PayableApprovalAction,
+  PayableReconciliationMatch,
 } from '../types';
 
 // ============================================================
@@ -52,6 +58,7 @@ export const payablesQueryKeys = {
   attachments: (id: string) => [PAYABLES_QUERY_KEY, 'attachments', id],
   recurring: (clinicId: string) => [PAYABLES_QUERY_KEY, 'recurring', clinicId],
   overdue: (clinicId: string) => [PAYABLES_QUERY_KEY, 'overdue', clinicId],
+  reconciliation: (clinicId: string) => [PAYABLES_QUERY_KEY, 'reconciliation', clinicId],
 };
 
 // ============================================================
@@ -160,7 +167,7 @@ export function useCreatePayable() {
       queryClient.invalidateQueries({
         queryKey: payablesQueryKeys.all,
       });
-      
+
       // Invalidate summary
       queryClient.invalidateQueries({
         queryKey: [PAYABLES_QUERY_KEY, 'summary'],
@@ -180,12 +187,12 @@ export function useUpdatePayable() {
     onSuccess: (updatedPayable) => {
       // Update detail query
       queryClient.setQueryData(payablesQueryKeys.detail(updatedPayable.id), updatedPayable);
-      
+
       // Invalidate list queries
       queryClient.invalidateQueries({
         queryKey: payablesQueryKeys.all,
       });
-      
+
       // Invalidate summary
       queryClient.invalidateQueries({
         queryKey: [PAYABLES_QUERY_KEY, 'summary'],
@@ -205,12 +212,12 @@ export function useDeletePayable() {
     onSuccess: (_, id) => {
       // Remove from detail cache
       queryClient.removeQueries({ queryKey: payablesQueryKeys.detail(id) });
-      
+
       // Invalidate lists
       queryClient.invalidateQueries({
         queryKey: payablesQueryKeys.all,
       });
-      
+
       // Invalidate summary
       queryClient.invalidateQueries({
         queryKey: [PAYABLES_QUERY_KEY, 'summary'],
@@ -221,6 +228,13 @@ export function useDeletePayable() {
 
 /**
  * Pay payable mutation
+ *
+ * IMPORTANTE: Invalida caches dependentes
+ * - Fluxo de caixa (cash_flow)
+ * - DRE (financial_statements)
+ * - Saldos bancários (financial_accounts)
+ *
+ * Isso garante que a integração financeira funciona corretamente
  */
 export function usePayPayable() {
   const queryClient = useQueryClient();
@@ -232,22 +246,26 @@ export function usePayPayable() {
       paymentMethod,
       paidBy,
       paymentDate,
+      paymentBank,
+      notes,
     }: {
       id: string;
       paidValue: number;
       paymentMethod: PaymentMethodType;
-      paidBy: string;
+      paidBy?: string;
       paymentDate?: string;
-    }) => payPayable(id, paidValue, paymentMethod, paidBy, paymentDate),
+      paymentBank?: string;
+      notes?: string;
+    }) => payPayable(id, paidValue, paymentMethod, paidBy, paymentDate, paymentBank, notes),
     onSuccess: (updatedPayable) => {
       // Update cache
       queryClient.setQueryData(payablesQueryKeys.detail(updatedPayable.id), updatedPayable);
-      
+
       // Invalidate lists
       queryClient.invalidateQueries({
         queryKey: payablesQueryKeys.all,
       });
-      
+
       // Invalidate summary and overdue
       queryClient.invalidateQueries({
         queryKey: [PAYABLES_QUERY_KEY, 'summary'],
@@ -255,12 +273,59 @@ export function usePayPayable() {
       queryClient.invalidateQueries({
         queryKey: [PAYABLES_QUERY_KEY, 'overdue'],
       });
+
+      // 🔥 CRÍTICO: Invalidar módulos dependentes para integração financeira funcionar
+      // Fluxo de Caixa
+      queryClient.invalidateQueries({
+        queryKey: ['cashflow'],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['cash_flow'],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['cash_flow_snapshots'],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['cashflow_summary'],
+      });
+
+      // DRE / Demonstração de Resultados
+      queryClient.invalidateQueries({
+        queryKey: ['dre'],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['financial_statements'],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['dre_summary'],
+      });
+
+      // Contas Financeiras / Saldos Bancários
+      queryClient.invalidateQueries({
+        queryKey: ['financial_accounts'],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['balance_summary'],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['consolidated_balance'],
+      });
+
+      // Conciliação Bancária
+      queryClient.invalidateQueries({ queryKey: ['bank_reconciliation'] });
+      queryClient.invalidateQueries({ queryKey: ['reconciliation_matches'] });
+
+      // Repasse Médico
+      queryClient.invalidateQueries({ queryKey: ['medical_repass'] });
+      queryClient.invalidateQueries({ queryKey: ['doctor_commissions'] });
     },
   });
 }
 
 /**
  * Cancel payable mutation
+ *
+ * IMPORTANTE: Invalida fluxo de caixa pois cancelamento gera reversal
  */
 export function useCancelPayable() {
   const queryClient = useQueryClient();
@@ -275,6 +340,11 @@ export function useCancelPayable() {
       queryClient.invalidateQueries({
         queryKey: [PAYABLES_QUERY_KEY, 'summary'],
       });
+
+      // 🔥 Invalidar fluxo de caixa pois cancelamento cria reversal
+      queryClient.invalidateQueries({ queryKey: ['cashflow'] });
+      queryClient.invalidateQueries({ queryKey: ['cash_flow'] });
+      queryClient.invalidateQueries({ queryKey: ['dre'] });
     },
   });
 }
@@ -314,6 +384,86 @@ export function useBulkDeletePayables() {
       queryClient.invalidateQueries({
         queryKey: [PAYABLES_QUERY_KEY, 'summary'],
       });
+    },
+  });
+}
+
+export function useApplyPayableApprovalAction() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      action,
+      actorId,
+      reason,
+    }: {
+      id: string;
+      action: PayableApprovalAction;
+      actorId?: string;
+      reason?: string;
+    }) => applyPayableApprovalAction(id, action, actorId, reason),
+    onSuccess: (updatedPayable) => {
+      queryClient.setQueryData(payablesQueryKeys.detail(updatedPayable.id), updatedPayable);
+      queryClient.invalidateQueries({ queryKey: payablesQueryKeys.all });
+      queryClient.invalidateQueries({ queryKey: [PAYABLES_QUERY_KEY, 'summary'] });
+      queryClient.invalidateQueries({ queryKey: ['cashflow'] });
+      queryClient.invalidateQueries({ queryKey: ['dre'] });
+    },
+  });
+}
+
+export function useRunPayablesSmartReconciliation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ clinicId, actorId }: { clinicId: string; actorId?: string }) =>
+      runPayablesSmartReconciliation(clinicId, actorId),
+    onSuccess: (_, { clinicId }) => {
+      queryClient.invalidateQueries({ queryKey: payablesQueryKeys.all });
+      queryClient.invalidateQueries({ queryKey: payablesQueryKeys.reconciliation(clinicId) });
+      queryClient.invalidateQueries({ queryKey: ['bank_reconciliation'] });
+      queryClient.invalidateQueries({ queryKey: ['reconciliation_matches'] });
+    },
+  });
+}
+
+export function useApprovePayableReconciliationMatch() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: {
+      payableId: string;
+      bankTransactionId: string;
+      actorId?: string;
+      confidence?: number;
+      matchType?: PayableReconciliationMatch['match_type'];
+      scoreReason?: string;
+    }) => approvePayableReconciliationMatch(input),
+    onSuccess: (updatedPayable) => {
+      queryClient.setQueryData(payablesQueryKeys.detail(updatedPayable.id), updatedPayable);
+      queryClient.invalidateQueries({ queryKey: payablesQueryKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['bank_reconciliation'] });
+      queryClient.invalidateQueries({ queryKey: ['reconciliation_matches'] });
+    },
+  });
+}
+
+export function useRejectPayableReconciliationMatch() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: {
+      payableId: string;
+      bankTransactionId: string;
+      actorId?: string;
+      scoreReason?: string;
+    }) => rejectPayableReconciliationMatch(input),
+    onSuccess: (updatedPayable) => {
+      queryClient.setQueryData(payablesQueryKeys.detail(updatedPayable.id), updatedPayable);
+      queryClient.invalidateQueries({ queryKey: payablesQueryKeys.all });
+      queryClient.invalidateQueries({ queryKey: ['bank_reconciliation'] });
+      queryClient.invalidateQueries({ queryKey: ['reconciliation_matches'] });
     },
   });
 }
@@ -395,10 +545,11 @@ export function useDeletePayableAttachment() {
 /**
  * Hook for complete payable management
  */
-export function usePayableManagement(clinicId: string) {
+export function usePayableManagement(clinicId: string, filters: Partial<PayableFilterParams> = {}) {
   const payablesQuery = usePayables({
+    ...filters,
     clinic_id: clinicId,
-    limit: 50,
+    limit: filters.limit || 50,
   });
 
   const summaryQuery = usePayablesSummary(clinicId);
@@ -409,6 +560,10 @@ export function usePayableManagement(clinicId: string) {
   const deleteMutation = useDeletePayable();
   const payMutation = usePayPayable();
   const cancelMutation = useCancelPayable();
+  const approvalMutation = useApplyPayableApprovalAction();
+  const reconciliationMutation = useRunPayablesSmartReconciliation();
+  const approveReconciliationMutation = useApprovePayableReconciliationMatch();
+  const rejectReconciliationMutation = useRejectPayableReconciliationMatch();
 
   return {
     // Queries
@@ -427,6 +582,10 @@ export function usePayableManagement(clinicId: string) {
     deletePayable: deleteMutation.mutateAsync,
     payPayable: payMutation.mutateAsync,
     cancelPayable: cancelMutation.mutateAsync,
+    applyApprovalAction: approvalMutation.mutateAsync,
+    runSmartReconciliation: reconciliationMutation.mutateAsync,
+    approveReconciliationMatch: approveReconciliationMutation.mutateAsync,
+    rejectReconciliationMatch: rejectReconciliationMutation.mutateAsync,
 
     // Mutation states
     isCreating: createMutation.isPending,
@@ -434,6 +593,10 @@ export function usePayableManagement(clinicId: string) {
     isDeleting: deleteMutation.isPending,
     isPaying: payMutation.isPending,
     isCanceling: cancelMutation.isPending,
+    isApplyingApproval: approvalMutation.isPending,
+    isReconciling: reconciliationMutation.isPending,
+    isApprovingReconciliation: approveReconciliationMutation.isPending,
+    isRejectingReconciliation: rejectReconciliationMutation.isPending,
   };
 }
 
@@ -491,6 +654,97 @@ export function usePrefetchPayable(id: string) {
   }, [queryClient, id]);
 }
 
+// ============================================================
+// INSTALLMENT OPERATIONS
+// ============================================================
+
+/**
+ * Hook to split a payable into multiple installments
+ */
+export function useSplitPayableIntoInstallments() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      clinicId,
+      payableId,
+      installmentsCount,
+    }: {
+      clinicId: string;
+      payableId: string;
+      installmentsCount: number;
+    }) => {
+      const { splitPayableIntoInstallments } = await import('../services/payablesApi');
+      return splitPayableIntoInstallments(clinicId, payableId, installmentsCount);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [PAYABLES_QUERY_KEY],
+      });
+    },
+  });
+}
+
+// ============================================================
+// RECURRENCE OPERATIONS
+// ============================================================
+
+/**
+ * Hook to setup recurring payment
+ */
+export function useSetupRecurringPayable() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      clinicId,
+      payableId,
+      recurrenceType,
+      recurrenceInterval,
+      recurrenceEndDate,
+    }: {
+      clinicId: string;
+      payableId: string;
+      recurrenceType: string;
+      recurrenceInterval: number;
+      recurrenceEndDate?: string;
+    }) => {
+      const { setupRecurringPayable } = await import('../services/payablesApi');
+      return setupRecurringPayable(
+        clinicId,
+        payableId,
+        recurrenceType,
+        recurrenceInterval,
+        recurrenceEndDate
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [PAYABLES_QUERY_KEY, 'recurring'],
+      });
+    },
+  });
+}
+
+/**
+ * Hook to generate next occurrences for recurring payables
+ */
+export function useGenerateRecurringPayables() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (clinicId: string) => {
+      const { generateRecurringPayables } = await import('../services/payablesApi');
+      return generateRecurringPayables(clinicId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [PAYABLES_QUERY_KEY],
+      });
+    },
+  });
+}
+
 export default {
   usePayables,
   usePayable,
@@ -506,6 +760,8 @@ export default {
   useCancelPayable,
   useBulkUpdatePayables,
   useBulkDeletePayables,
+  useApplyPayableApprovalAction,
+  useRunPayablesSmartReconciliation,
   useCreateRecurringConfig,
   useAddPayableAttachment,
   useDeletePayableAttachment,

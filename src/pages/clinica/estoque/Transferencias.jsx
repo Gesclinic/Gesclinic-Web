@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/ui/PageLayout';
 import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowRightLeft } from 'lucide-react';
-import StockMovementDialog from '@/components/clinica/estoque/StockMovementDialog';
 import LocationSelect from '@/components/clinica/estoque/LocationSelect';
 import { useClinicContext } from '@/contexts/useClinicContext';
 import { useToast } from '@/components/ui/use-toast';
@@ -12,7 +12,7 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { format } from 'date-fns';
 
 export default function Transferencias() {
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const navigate = useNavigate();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [startDate, setStartDate] = useState('');
@@ -83,57 +83,6 @@ export default function Transferencias() {
     { label: 'Estoque', path: '/clinica/estoque' },
     { label: 'Transferências' },
   ]);
-
-  const handleSubmit = async (payload) => {
-    try {
-      const items = (payload.products || [])
-        .map((p) => ({
-          qty: parseFloat(p.qty) || 0,
-          item_id: p.itemId,
-        }))
-        .filter((i) => i.item_id && i.qty > 0);
-
-      if (items.length === 0) {
-        toast({ variant: 'destructive', title: 'Informe ao menos um produto' });
-        return;
-      }
-
-      // Gerar identificador da transferência para pareamento
-      const token =
-        globalThis.crypto && crypto.randomUUID
-          ? crypto.randomUUID()
-          : Math.random().toString(36).slice(2, 10);
-      const baseNote = `Transferência ${token} - ${payload.location_name} -> ${payload.target_location_name} | DEST_ID=${payload.targetLocationId}`;
-
-      const exitRows = items.map((i) => ({
-        clinic_id: clinicId,
-        item_id: i.item_id,
-        type: 'exit',
-        location_id: payload.locationId, // origem
-        qty: i.qty,
-        unit_cost: null,
-        move_date: payload.date,
-        notes: payload.notes ? `${baseNote} | ${payload.notes}` : baseNote,
-      }));
-
-      // Registra apenas a saída; a entrada será criada quando o destino aceitar a transferência
-      const { error: exitError } = await supabase.from('stock_movements').insert(exitRows);
-      if (exitError) {
-        throw exitError;
-      }
-
-      toast({ title: 'Transferência criada e pendente de aceite no destino' });
-      setDialogOpen(false);
-      await loadTransfers();
-    } catch (error) {
-      console.error('Erro ao registrar transferência:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Erro ao registrar transferência',
-        description: error.message,
-      });
-    }
-  };
 
   const loadTransfers = async () => {
     if (!clinicId) {
@@ -355,7 +304,7 @@ export default function Transferencias() {
       actions={
         <Button
           className="bg-purple-600 text-white flex items-center"
-          onClick={() => setDialogOpen(true)}
+          onClick={() => navigate('/clinica/estoque/transferencias/nova')}
         >
           <ArrowRightLeft className="mr-2 w-4 h-4" /> Nova Transferência
         </Button>
@@ -515,13 +464,6 @@ export default function Transferencias() {
         )}
       </Card>
 
-      <StockMovementDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        onSubmit={handleSubmit}
-        type="transfer"
-        clinicId={clinicId}
-      />
     </PageLayout>
   );
 }

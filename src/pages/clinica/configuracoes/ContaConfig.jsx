@@ -2,7 +2,6 @@ import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import PlanoDeContas from '@/pages/clinica/configuracoes/PlanoDeContas';
 import BankAccountsManager from '@/pages/clinica/configuracoes/BankAccountsManager';
 import RepassesRulesManager from '@/pages/clinica/configuracoes/RepassesRulesManager';
 import PageLayout from '@/components/ui/PageLayout';
@@ -11,7 +10,7 @@ import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 export default function ContaConfig() {
   const { tab } = useParams();
   const navigate = useNavigate();
-  const currentTab = tab || 'plano-contas';
+  const currentTab = tab || 'bancos';
 
   const breadcrumbs = useBreadcrumbs([
     { label: 'Clínica', path: '/clinica' },
@@ -31,15 +30,10 @@ export default function ContaConfig() {
     >
       <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="w-full justify-start overflow-x-auto">
-          <TabsTrigger value="plano-contas">2.1 Plano de Contas</TabsTrigger>
-          <TabsTrigger value="bancos">2.2 Contas Bancárias</TabsTrigger>
-          <TabsTrigger value="repasses">2.3 Repasses Médicos</TabsTrigger>
-          <TabsTrigger value="convenios">2.4 Convênios</TabsTrigger>
+          <TabsTrigger value="bancos">2.1 Contas Bancárias</TabsTrigger>
+          <TabsTrigger value="repasses">2.2 Repasses Médicos</TabsTrigger>
+          <TabsTrigger value="convenios">2.3 Convênios</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="plano-contas" className="mt-4">
-          <PlanoDeContas />
-        </TabsContent>
 
         <TabsContent value="bancos" className="mt-4">
           <BankAccountsManager />

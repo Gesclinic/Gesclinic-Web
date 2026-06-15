@@ -9,7 +9,7 @@
 
 import { customSupabaseClient } from '@/lib/customSupabaseClient';
 import { Database } from '@/types/database.types';
-import { calculateTaxes, type TaxCalculationOutput } from './taxCalculationEngine';
+import { createFaturamento360FromAppointment } from './faturamento360Api';
 
 // Types
 export type AppointmentFinancialRule = Database['public']['Tables']['appointment_financial_rules']['Row'];
@@ -72,7 +72,7 @@ interface ValidationResult {
 export async function finalizeAppointmentWithFinancials(
   appointmentId: string,
   clinicId: string
-): Promise<{ success: boolean; message?: string; data?: any }> {
+): Promise<{ success: boolean; message?: string; data?: any; ar?: any; receivableId?: string }> {
   try {
     console.log('[finalizeAppointmentWithFinancials] Starting for:', { appointmentId, clinicId });
 
@@ -105,141 +105,19 @@ export async function finalizeAppointmentWithFinancials(
 
     console.log('[finalizeAppointmentWithFinancials] Appointment updated:', updatedAppointment);
 
-    // 3. Get appointment value - fetch from appointment_services if not set
-    let appointmentValue = appointment.value;
-    if (!appointmentValue || appointmentValue <= 0) {
-      console.log('[finalizeAppointmentWithFinancials] Appointment.value is null, fetching from appointment_services...');
-
-      const { data: services, error: servicesError } = await customSupabaseClient
-        .from('appointment_services')
-        .select('quantity, unit_price')
-        .eq('appointment_id', appointmentId);
-
-      if (!servicesError && services && services.length > 0) {
-        appointmentValue = services.reduce((sum, s) => {
-          const qty = parseFloat(s.quantity) || 0;
-          const price = parseFloat(s.unit_price) || 0;
-          return sum + (qty * price);
-        }, 0);
-        console.log('[finalizeAppointmentWithFinancials] Calculated value from services:', appointmentValue);
-      }
-
-      // If still no value, use default 100
-      if (!appointmentValue || appointmentValue <= 0) {
-        appointmentValue = 100;
-        console.log('[finalizeAppointmentWithFinancials] No services found, using default value: 100');
-      }
-    }
-
-    // 4. Return success if somehow we still have no value
-    if (!appointmentValue || appointmentValue <= 0) {
-      console.log('[finalizeAppointmentWithFinancials] Appointment has no valid value, skipping receivable creation');
-      return {
-        success: true,
-        message: 'Agendamento finalizado (sem recebível - valor zero)',
-        data: { appointmentId },
-      };
-    }
-
-    // 4. Get payer information from appointment
-    let payerType: 'CONVENIO' | 'PARTICULAR' = 'PARTICULAR';
-    let payerId: string | undefined;
-
-    // Determine payer type based on appointment data
-    if (appointment.payer_id && appointment.payer_type === 'CONVENIO') {
-      payerType = 'CONVENIO';
-      payerId = appointment.payer_id;
-    } else if (appointment.payer_id && appointment.payer_type === 'PARTICULAR') {
-      payerType = 'PARTICULAR';
-      payerId = appointment.payer_id;
-    } else {
-      // Default to PARTICULAR without specific client
-      payerType = 'PARTICULAR';
-    }
-
-    console.log('[finalizeAppointmentWithFinancials v2.0] Payer Type:', payerType, 'Payer ID:', payerId);
-
-    // 5. Calculate taxes using new engine (v2.0)
-    let taxCalculation: TaxCalculationOutput;
-    try {
-      taxCalculation = await calculateTaxes({
-        grossValue: appointmentValue,
-        clinicId: clinicId,
-        payerType: payerType,
-        payerId: payerId,
-      });
-      console.log('[finalizeAppointmentWithFinancials v2.0] Tax calculation:', taxCalculation);
-    } catch (taxError) {
-      console.error('[finalizeAppointmentWithFinancials v2.0] Tax calculation error:', taxError);
-      return {
-        success: false,
-        message: 'Erro ao calcular impostos',
-        data: { error: taxError },
-      };
-    }
-
-    // 6. Create detailed receivable (AR Invoice) with all tax details
-    // Using correct column names that exist in ar_invoices table
-    const { data: receivable, error: receivableError } = await customSupabaseClient
-      .from('ar_invoices')
-      .insert({
-        clinic_id: clinicId,
-        appointment_id: appointmentId,
-        patient_id: appointment.patient_id,
-        patient_name: appointment.patient_name || 'Paciente', // Fallback
-
-        // Payer info
-        payer_type: payerType,
-        payer_id: payerId,
-        payer_rule_id: taxCalculation.payerRuleId,
-        tax_regime: taxCalculation.taxRegime,
-
-        // Values (using correct column names)
-        amount: taxCalculation.grossValue,
-        discount_value: taxCalculation.discountValue,
-        service_value: taxCalculation.grossValue,
-        total_impostos: taxCalculation.totalImpostos,
-        net_value: taxCalculation.netValue,
-
-        // Individual taxes (v2.0)
-        pis_percent: taxCalculation.pisPercent,
-        pis_value: taxCalculation.pisValue,
-        cofins_percent: taxCalculation.cofinsPercent,
-        cofins_value: taxCalculation.cofinsValue,
-        csll_percent: taxCalculation.csllPercent,
-        csll_value: taxCalculation.csllValue,
-        ir_percent: taxCalculation.irPercent,
-        ir_value: taxCalculation.irValue,
-        issqn_percent: taxCalculation.issqnPercent,
-        issqn_value: taxCalculation.issqnValue,
-
-        // Status and dates (using correct column names)
-        status: 'pending',
-        invoice_date: new Date().toISOString().split('T')[0],
-        due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-
-        // Metadata (using description instead of descricao)
-        description: `Faturamento automático de atendimento #${appointmentId}`,
-        payment_method: 'pix',
-      })
-      .select()
-      .single();
-
-    if (receivableError || !receivable) {
-      console.error('[finalizeAppointmentWithFinancials v2.0] Error creating receivable:', receivableError);
-      return { success: false, message: 'Erro ao criar recebível' };
-    }
-
-    console.log('[finalizeAppointmentWithFinancials v2.0] Receivable created:', receivable);
+    const faturamento360 = await createFaturamento360FromAppointment(appointmentId);
 
     return {
       success: true,
-      message: 'Agendamento finalizado e recebível criado automaticamente (v2.0)',
+      message: 'Agendamento finalizado e faturamento 360 criado automaticamente',
       data: {
         appointmentId,
-        receivableId: receivable.id,
-        taxCalculation, // Return all tax details
+        receivableId: faturamento360.receivableId,
+        event: faturamento360.event,
+        automation: faturamento360.automation,
       },
+      ar: faturamento360.receivable,
+      receivableId: faturamento360.receivableId,
     };
   } catch (err) {
     console.error('[finalizeAppointmentWithFinancials] Error:', err);
@@ -303,27 +181,18 @@ export async function createReceivableFromAppointment(
   ruleId?: number
 ): Promise<CreateReceivableResult> {
   try {
-    // 1. Validate appointment
-    const validation = await validateAppointmentForReceivable(appointmentId);
-    if (!validation.valid) {
-      return {
-        success: false,
-        error: 'Validation failed',
-        details: validation,
-      };
-    }
+    const faturamento360 = await createFaturamento360FromAppointment(appointmentId);
 
-    // 2. Call RPC to create receivable
-    const { data, error } = await customSupabaseClient
-      .rpc('create_receivable_from_appointment', {
-        p_appointment_id: appointmentId,
-        p_clinic_id: clinicId,
-        p_rule_id: ruleId || null,
-      });
-
-    if (error) throw error;
-
-    return data as CreateReceivableResult;
+    return {
+      success: true,
+      receivable_id: faturamento360.receivableId as any,
+      details: {
+        source: 'faturamento_360',
+        ruleId: ruleId || null,
+        event: faturamento360.event,
+        automation: faturamento360.automation,
+      },
+    };
   } catch (err) {
     console.error('[createReceivableFromAppointment] Error:', err);
     throw err;
@@ -869,6 +738,93 @@ export async function getAppointmentFinancialStats(
   } catch (err) {
     console.error('[getAppointmentFinancialStats] Error:', err);
     throw err;
+  }
+}
+
+/**
+ * List appointments enriched with canonical financial status.
+ */
+export async function listAppointmentsWithFinancialStatus(
+  clinicId: string,
+  fromDate: string,
+  toDate: string
+): Promise<any[]> {
+  try {
+    const { data: appointments, error: appointmentsError } = await customSupabaseClient
+      .from('appointments')
+      .select('*')
+      .eq('clinic_id', clinicId)
+      .gte('appointment_date', fromDate)
+      .lt('appointment_date', toDate);
+
+    if (appointmentsError) throw appointmentsError;
+
+    const rows = appointments || [];
+    const appointmentIds = rows.map((appointment: any) => appointment.id).filter(Boolean);
+
+    if (appointmentIds.length === 0) {
+      return [];
+    }
+
+    const [receivablesResult, guidesResult] = await Promise.all([
+      customSupabaseClient
+        .from('ar_invoices')
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .in('appointment_id', appointmentIds),
+      customSupabaseClient
+        .from('billing_guides')
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .in('appointment_id', appointmentIds),
+    ]);
+
+    if (receivablesResult.error) throw receivablesResult.error;
+    if (guidesResult.error) throw guidesResult.error;
+
+    const invoicesByAppointment = new Map<string, any[]>();
+    for (const invoice of receivablesResult.data || []) {
+      const key = invoice.appointment_id;
+      if (!key) continue;
+      invoicesByAppointment.set(key, [...(invoicesByAppointment.get(key) || []), invoice]);
+    }
+
+    const guidesByAppointment = new Map<string, any[]>();
+    for (const guide of guidesResult.data || []) {
+      const key = guide.appointment_id;
+      if (!key) continue;
+      guidesByAppointment.set(key, [...(guidesByAppointment.get(key) || []), guide]);
+    }
+
+    return rows.map((appointment: any) => {
+      const arInvoices = invoicesByAppointment.get(appointment.id) || [];
+      const billingGuides = guidesByAppointment.get(appointment.id) || [];
+      const hasReceivable = arInvoices.length > 0;
+      const needsGuide = Boolean(appointment.payer_id || appointment.health_insurance_id || appointment.insurance_id);
+
+      let financialStatus = 'pending';
+      if (appointment.status === 'cancelado' || appointment.status === 'canceled') {
+        financialStatus = 'canceled';
+      } else if (hasReceivable && needsGuide && billingGuides.length > 0) {
+        financialStatus = 'complete_with_guide';
+      } else if (hasReceivable && needsGuide) {
+        financialStatus = 'partial_missing_guide';
+      } else if (hasReceivable) {
+        financialStatus = 'complete_particular';
+      } else if (appointment.status === 'attended' || appointment.status === 'completed') {
+        financialStatus = 'attended_no_financial';
+      }
+
+      return {
+        ...appointment,
+        ar_invoices: arInvoices,
+        billing_guides: billingGuides,
+        financial_status: financialStatus,
+      };
+    });
+  } catch (err) {
+    console.error('[listAppointmentsWithFinancialStatus] Error:', err);
+    return [];
   }
 }
 

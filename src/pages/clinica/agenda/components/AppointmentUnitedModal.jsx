@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -43,6 +43,7 @@ import {
 } from '@/lib/appointmentStatusConstants';
 import PaymentMethodFields from './PaymentMethodFields';
 import PaymentSplitFields from './PaymentSplitFields';
+import CardProcessorSelectorFields from './CardProcessorSelectorFields';
 import PatientSearchOrCreate from './PatientSearchOrCreate';
 import ServiceAddRow from './ServiceAddRow';
 import AppointmentItemsManager from './AppointmentItemsManager';
@@ -101,7 +102,7 @@ const FIXED_NATIONAL_HOLIDAYS = {
   '12-25': { name: 'Natal', is_blocked: true, is_mandatory: true },
 };
 
-// 💰 Formatação de moeda brasileira
+// ?? Formata��o de moeda brasileira
 const formatCurrency = (value) => {
   const numValue = parseFloat(value || 0);
   return new Intl.NumberFormat('pt-BR', {
@@ -110,14 +111,14 @@ const formatCurrency = (value) => {
   }).format(numValue);
 };
 
-// ✅ DEPRECATED: Use helpers from @/utils/timezoneHelpers instead
-// - parseLocalDate → use toLocalTime()
-// - formatDateToIso → use formatLocalDate()
-// - normalizeTimeValue → use formatLocalTime()
-// - timeToMinutes → use calculateDurationMinutes()
-// - minutesToTime → use addMinutesToTime()
+// ? DEPRECATED: Use helpers from @/utils/timezoneHelpers instead
+// - parseLocalDate ? use toLocalTime()
+// - formatDateToIso ? use formatLocalDate()
+// - normalizeTimeValue ? use formatLocalTime()
+// - timeToMinutes ? use calculateDurationMinutes()
+// - minutesToTime ? use addMinutesToTime()
 
-// ✅ Compat functions for internal use (time slot calculations)
+// ? Compat functions for internal use (time slot calculations)
 function timeToMinutes(timeValue) {
   if (!timeValue) return 0;
   const [hours, minutes] = String(timeValue).split(':').slice(0, 2).map(Number);
@@ -135,12 +136,38 @@ function normalizeTimeValue(timeValue) {
   return String(timeValue).split(':').slice(0, 2).join(':');
 }
 
-// ✅ Date handling with timezone support
+// ? Date handling with timezone support
 function parseLocalDate(dateString) {
   if (!dateString) return null;
-  const [year, month, day] = dateString.split('T')[0].split('-').map(Number);
-  if (!year || !month || !day) return null;
-  return new Date(year, month - 1, day);
+
+  let year, month, day;
+
+  // Suportar ISO format: YYYY-MM-DD
+  if (dateString.includes('-')) {
+    const parts = dateString.split('T')[0].split('-').map(Number);
+    [year, month, day] = parts;
+  }
+  // Suportar DD/MM/YYYY format (brasileiro)
+  else if (dateString.includes('/')) {
+    const parts = dateString.split('/').map(Number);
+    if (parts.length === 3) {
+      [day, month, year] = parts;
+    }
+  }
+
+  if (!year || !month || !day) {
+    console.warn('?? [parseLocalDate] N�o consegui fazer parse de:', dateString);
+    return null;
+  }
+
+  const date = new Date(year, month - 1, day);
+  console.log('? [parseLocalDate] Parseado com sucesso:', {
+    input: dateString,
+    parsed: date.toLocaleDateString('pt-BR'),
+    weekday: date.getDay()
+  });
+
+  return date;
 }
 
 function formatDateToIso(dateValue) {
@@ -153,19 +180,19 @@ function formatDateToIso(dateValue) {
 
 function isDateInsideScheduleRange(dateString, schedule) {
   if (!dateString) {
-    return true; // Se não há data, considerar como válido por enquanto
+    return true; // Se n�o h� data, considerar como v�lido por enquanto
   }
-  
+
   // NOTA: start_date e end_date foram adicionados em uma migration
-  // mas ainda não foram aplicadas ao banco de dados em produção.
+  // mas ainda n�o foram aplicadas ao banco de dados em produ��o.
   // Enquanto isso, apenas retornar true para permitir que schedules sejam carregados.
   // TODO: Aplicar migration 2026-02-14_add_date_range_to_professional_schedules.sql
-  
-  // Código futuro (quando migration for aplicada):
+
+  // C�digo futuro (quando migration for aplicada):
   // const startsOk = !schedule?.start_date || dateString >= schedule.start_date;
   // const endsOk = !schedule?.end_date || dateString <= schedule.end_date;
   // return startsOk && endsOk;
-  
+
   return true;
 }
 
@@ -177,9 +204,9 @@ function getSchedulesForDate(dateString, schedules) {
 
   const weekday = parsedDate.getDay();
 
-  // 🔍 DEBUG: Log de agendamentos disponíveis
+  // ?? DEBUG: Log de agendamentos dispon�veis
   if (schedules && schedules.length > 0) {
-    console.log('🔍 [getSchedulesForDate] Procurando agendamentos para:', {
+    console.log('?? [getSchedulesForDate] Procurando agendamentos para:', {
       dateString,
       parsedDate: parsedDate.toLocaleDateString('pt-BR'),
       weekday,
@@ -197,9 +224,9 @@ function getSchedulesForDate(dateString, schedules) {
         isDateInsideScheduleRange(dateString, schedule),
     )
     .sort((left, right) => timeToMinutes(left.start_time) - timeToMinutes(right.start_time));
-  
-  console.log('🔍 [getSchedulesForDate] Resultado:', filtered.length, 'agendamentos');
-  
+
+  console.log('?? [getSchedulesForDate] Resultado:', filtered.length, 'agendamentos');
+
   return filtered;
 }
 
@@ -282,12 +309,12 @@ function getFixedNationalHoliday(dateValue) {
 }
 
 /**
- * 🎯 AppointmentUnitedModal - Componente Unificado
+ * ?? AppointmentUnitedModal - Componente Unificado
  *
- * Modos de operação:
+ * Modos de opera��o:
  * - 'new': Criar novo agendamento
  * - 'edit': Editar agendamento existente
- * - 'reception': Atender paciente na recepção
+ * - 'reception': Atender paciente na recep��o
  */
 export default function AppointmentUnitedModal({
   isOpen = false,
@@ -305,9 +332,9 @@ export default function AppointmentUnitedModal({
 }) {
   const { clinicId } = useClinicContext();
   const { user } = useAuth();
-  
-  // 🔍 DEBUG: Log de props ao inicializar ou mudar
-  console.log('📥 [AppointmentUnitedModal] PROPS RECEBIDAS:', {
+
+  // ?? DEBUG: Log de props ao inicializar ou mudar
+  console.log('?? [AppointmentUnitedModal] PROPS RECEBIDAS:', {
     isOpen,
     mode,
     appointmentIdToEdit,
@@ -318,40 +345,43 @@ export default function AppointmentUnitedModal({
   const [tabAtivo, setTabAtivo] = useState('dados');
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [selectedPatient, setSelectedPatient] = useState(null); // ✅ Paciente selecionado
-  const [attendanceCreated, setAttendanceCreated] = useState(false); // 🎬 Flag: Atendimento foi criado com sucesso
+  const [selectedPatient, setSelectedPatient] = useState(null); // ? Paciente selecionado
+  const [attendanceCreated, setAttendanceCreated] = useState(false); // ?? Flag: Atendimento foi criado com sucesso
   const [professionalSchedules, setProfessionalSchedules] = useState([]);
   const [loadingProfessionalSchedules, setLoadingProfessionalSchedules] = useState(false);
   const [holidayMap, setHolidayMap] = useState({});
   const [calendarActiveStartDate, setCalendarActiveStartDate] = useState(new Date());
   const [accountPlans, setAccountPlans] = useState([]);
   const [loadedAppointmentFromId, setLoadedAppointmentFromId] = useState(null);
-  const [tissDialogOpen, setTissDialogOpen] = useState(false); // 🎯 TISS Dialog state
-  const [selectedGuideForTiss, setSelectedGuideForTiss] = useState(null); // 📋 Guide selecionado para envio TISS
-  const [filteredPayers, setFilteredPayers] = useState([]); // 🏥 Convênios filtrados por profissional
-  const [invoiceModalOpen, setInvoiceModalOpen] = useState(false); // 📄 Invoice modal state
-  const [businessHoursWarning, setBusinessHoursWarning] = useState(false); // ⏰ PHASE 2: Aviso de horário fora do expediente
+  const [tissDialogOpen, setTissDialogOpen] = useState(false); // ?? TISS Dialog state
+  const [selectedGuideForTiss, setSelectedGuideForTiss] = useState(null); // ?? Guide selecionado para envio TISS
+  const [filteredPayers, setFilteredPayers] = useState([]); // ?? Conv�nios filtrados por profissional
+  const [invoiceModalOpen, setInvoiceModalOpen] = useState(false); // ?? Invoice modal state
+  const [businessHoursWarning, setBusinessHoursWarning] = useState(false); // ? PHASE 2: Aviso de hor�rio fora do expediente
 
-  // 📥 Load appointment from appointmentIdToEdit if appointment prop is not provided
+  // ? Guardar profissional inicial que veio do slot (para proteger contra overrides)
+  const initialSlotProfessionalIdRef = useRef(null);
+
+  // ??? Load appointment from appointmentIdToEdit if appointment prop is not provided
   useEffect(() => {
     console.log(
-      '🔍 [AppointmentUnitedModal] useEffect DISPARO 1: appointmentIdToEdit?',
+      '?? [AppointmentUnitedModal] useEffect DISPARO 1: appointmentIdToEdit?',
       appointmentIdToEdit,
       '!appointment?',
       !appointment,
       'isOpen?',
       isOpen,
     );
-    
-    // 🔥 Guard: Se é novo agendamento, NÃO tentar carregar
+
+    // ?? Guard: Se � novo agendamento, N�O tentar carregar
     if (!appointmentIdToEdit) {
-      console.log('✅ [AppointmentUnitedModal] NOVO AGENDAMENTO - Não carregando via appointmentIdToEdit');
+      console.log('? [AppointmentUnitedModal] NOVO AGENDAMENTO - N�o carregando via appointmentIdToEdit');
       return;
     }
-    
+
     if (appointmentIdToEdit && !appointment && isOpen) {
       console.log(
-        '📥 [AppointmentUnitedModal] Carregando agendamento via appointmentIdToEdit:',
+        '?? [AppointmentUnitedModal] Carregando agendamento via appointmentIdToEdit:',
         appointmentIdToEdit,
       );
 
@@ -381,31 +411,31 @@ export default function AppointmentUnitedModal({
             .maybeSingle();
 
           if (error) {
-            console.error('❌ Erro ao carregar agendamento:', error);
+            console.error('? Erro ao carregar agendamento:', error);
             setLoadedAppointmentFromId(null);
           } else if (!apt) {
-            console.warn('⚠️ Agendamento não encontrado:', appointmentIdToEdit);
+            console.warn('?? Agendamento n�o encontrado:', appointmentIdToEdit);
             setLoadedAppointmentFromId(null);
           } else {
-            console.log('✅ Agendamento carregado via appointmentIdToEdit:', apt);
-            // 🚨 DEBUG: Verificar se payer_id e room_id estão sendo trazidos
-            console.log('🚨 [DEBUG] Dados críticos do banco:', {
+            console.log('? Agendamento carregado via appointmentIdToEdit:', apt);
+            // ?? DEBUG: Verificar se payer_id e room_id est�o sendo trazidos
+            console.log('?? [DEBUG] Dados cr�ticos do banco:', {
               payer_id: apt.payer_id,
               room_id: apt.room_id,
               payers: apt.payers,
               rooms: apt.rooms,
             });
-            // ✅ Aplicar mapFromDatabase para normalizar campos em camelCase
+            // ? Aplicar mapFromDatabase para normalizar campos em camelCase
             const mappedApt = mapFromDatabase(apt);
-            console.log('📊 [DEBUG] Agendamento após mapFromDatabase:', mappedApt);
-            console.log('🚨 [DEBUG] payerId e roomId após mapFromDatabase:', {
+            console.log('?? [DEBUG] Agendamento ap�s mapFromDatabase:', mappedApt);
+            console.log('?? [DEBUG] payerId e roomId ap�s mapFromDatabase:', {
               payerId: mappedApt.payerId,
               roomId: mappedApt.roomId,
             });
             setLoadedAppointmentFromId(mappedApt);
           }
         } catch (err) {
-          console.error('❌ Exceção ao carregar agendamento:', err);
+          console.error('? Exce��o ao carregar agendamento:', err);
           setLoadedAppointmentFromId(null);
         }
       })();
@@ -414,20 +444,20 @@ export default function AppointmentUnitedModal({
     }
   }, [appointmentIdToEdit, appointment, isOpen]);
 
-  // 🔍 DEBUG - COMPREHENSIVE LOGGING
+  // ?? DEBUG - COMPREHENSIVE LOGGING
   console.log('='.repeat(70));
-  console.log('📋 [AppointmentUnitedModal] RENDER STATE SNAPSHOT');
+  console.log('?? [AppointmentUnitedModal] RENDER STATE SNAPSHOT');
   console.log('='.repeat(70));
-  console.log('🔹 MODO E ABERTURA:');
+  console.log('?? MODO E ABERTURA:');
   console.log('   isOpen:', isOpen, '| mode:', mode, '| appointmentIdToEdit:', appointmentIdToEdit);
-  console.log('🔹 DADOS RECEBIDOS:');
+  console.log('?? DADOS RECEBIDOS:');
   console.log('   appointment prop:', !!appointment, appointment?.id);
   console.log(
     '   loadedAppointmentFromId:',
     !!loadedAppointmentFromId,
     loadedAppointmentFromId?.id,
   );
-  console.log('🔹 DADOS CRÍTICOS DO APPOINTMENT:');
+  console.log('?? DADOS CR�TICOS DO APPOINTMENT:');
   if (appointment || loadedAppointmentFromId) {
     const apt = appointment || loadedAppointmentFromId;
     console.log('   payerId/payer_id:', apt.payerId || apt.payer_id);
@@ -437,32 +467,40 @@ export default function AppointmentUnitedModal({
     console.log('   time:', apt.time || apt.startTime || apt.scheduled_time);
   }
   console.log('='.repeat(70));
+  console.log('?? [MODAL RENDER] appointment prop recebido:', {
+    hasAppointment: !!appointment,
+    appointmentKeys: appointment ? Object.keys(appointment).slice(0, 10) : [],
+    professional_id: appointment?.professional_id,
+    professionalId: appointment?.professionalId,
+    type: appointment?.type,
+    date: appointment?.date,
+  });
 
-  // 🔗 Consolidate appointment from both sources (prop or loaded via ID)
+  // ?? Consolidate appointment from both sources (prop or loaded via ID)
   const finalAppointment = useMemo(
     () => appointment || loadedAppointmentFromId,
     [appointment, loadedAppointmentFromId],
   );
 
-  // 🎯 DEBUG: Modo NEW - permitindo criação de novo agendamento
+  // ?? DEBUG: Modo NEW - permitindo cria��o de novo agendamento
   if (isOpen && mode === 'new') {
-    console.log('✅ [MODE NOVO] Modal aberto em modo NEW - pronto para criar agendamento');
+    console.log('? [MODE NOVO] Modal aberto em modo NEW - pronto para criar agendamento');
   }
 
-  // 🔄 AUTO-NAV: Se atendimento foi criado, vai para aba RESUMO
+  // ?? AUTO-NAV: Se atendimento foi criado, vai para aba RESUMO
   useEffect(() => {
     if (attendanceCreated && tabAtivo !== 'resumo') {
-      console.log('🎬 [AUTO-NAV] Atendimento criado! Navegando para aba RESUMO...');
+      console.log('?? [AUTO-NAV] Atendimento criado! Navegando para aba RESUMO...');
       setTabAtivo('resumo');
     }
   }, [attendanceCreated, tabAtivo]);
 
-  // 🔧 HOOK: Gerenciar estado do formulário de agendamento
+  // ?? HOOK: Gerenciar estado do formul�rio de agendamento
   const { formData, setFormData, fillFromAppointment, reset: resetFormData } = useAppointmentForm();
 
   // Dados de Agendamento
   const [agendamentoData, setAgendamentoData] = useState({
-    id: null, // ✨ NOVO: ID do agendamento para AppointmentItemsManager
+    id: null, // ? NOVO: ID do agendamento para AppointmentItemsManager
     date: '',
     time: '',
     endTime: '',
@@ -483,7 +521,7 @@ export default function AppointmentUnitedModal({
     status: 'scheduled',
   });
 
-  // 📋 Estado para múltiplos serviços
+  // ?? Estado para m�ltiplos servi�os
   const [appointmentServices, setAppointmentServices] = useState([]);
 
   // Dados Cadastrais
@@ -503,34 +541,34 @@ export default function AppointmentUnitedModal({
     zip_code: '',
   });
 
-  // 🏥 Filtrar convênios baseado nos SERVIÇOS do profissional selecionado
+  // ?? Filtrar conv�nios baseado nos SERVI�OS do profissional selecionado
   useEffect(() => {
     console.log(
-      '🏥 [EFFECT] Filtrando payers pelos serviços. professionalId:',
+      '?? [EFFECT] Filtrando payers pelos servi�os. professionalId:',
       agendamentoData.professionalId,
     );
 
     async function filterPayersForProfessional() {
       if (!agendamentoData.professionalId) {
-        console.log('🏥 [EFFECT] Sem profissional selecionado, usando todos os payers');
+        console.log('?? [EFFECT] Sem profissional selecionado, usando todos os payers');
         setFilteredPayers(payers || []);
         return;
       }
 
       try {
         console.log(
-          '🏥 [EFFECT] Carregando convênios dos SERVIÇOS do profissional:',
+          '?? [EFFECT] Carregando conv�nios dos SERVI�OS do profissional:',
           agendamentoData.professionalId,
         );
-        // 🔗 Buscar convênios através dos serviços do profissional
+        // ?? Buscar conv�nios atrav�s dos servi�os do profissional
         const linked = await listarConveniosPorServicosDoFrofissional({
           profissionalId: agendamentoData.professionalId,
           clinicId: clinicId,
         });
-        console.log('🏥 [EFFECT] Convênios dos serviços carregados:', linked);
+        console.log('?? [EFFECT] Conv�nios dos servi�os carregados:', linked);
         setFilteredPayers(linked || []);
       } catch (err) {
-        console.error('❌ [EFFECT] Erro ao filtrar payers:', err);
+        console.error('? [EFFECT] Erro ao filtrar payers:', err);
         setFilteredPayers([]);
       }
     }
@@ -538,29 +576,29 @@ export default function AppointmentUnitedModal({
     filterPayersForProfessional();
   }, [agendamentoData.professionalId, payers, clinicId]);
 
-  // ✨ NOVO: Sincronizar ID do agendamento em modo EDIT
+  // ? NOVO: Sincronizar ID do agendamento em modo EDIT
   useEffect(() => {
     if (isOpen && mode === 'edit' && finalAppointment && finalAppointment.id && agendamentoData.id !== finalAppointment.id) {
-      console.log('✨ [Sincronização] Atualizando agendamentoData.id para:', finalAppointment.id);
+      console.log('? [Sincroniza��o] Atualizando agendamentoData.id para:', finalAppointment.id);
       setAgendamentoData((prev) => ({ ...prev, id: finalAppointment.id }));
     }
   }, [isOpen, mode, finalAppointment?.id]);
 
-  // 🔴 CORREÇÃO EDIT MODE: Em modo EDIT, garantir que payer atual é exibível no select
+  // ?? CORRE��O EDIT MODE: Em modo EDIT, garantir que payer atual � exib�vel no select
   useEffect(() => {
     if (mode === 'edit' && agendamentoData.payerId && payers) {
-      console.log('[FIX EDIT MODE] Verificando se payer atual está no filtro...');
+      console.log('[FIX EDIT MODE] Verificando se payer atual est� no filtro...');
       console.log('   - payerId:', agendamentoData.payerId);
       console.log('   - filteredPayers count:', filteredPayers?.length || 0);
 
       const currentPayerInList = filteredPayers?.find((p) => p.id === agendamentoData.payerId);
 
       if (!currentPayerInList) {
-        console.log('[FIX EDIT MODE] Payer atual NÃO está no filtro, adicionando...');
+        console.log('[FIX EDIT MODE] Payer atual N�O est� no filtro, adicionando...');
         const currentPayer = payers.find((p) => p.id === agendamentoData.payerId);
         if (currentPayer) {
           console.log(
-            '[FIX EDIT MODE] ✅ Adicionando payer ao topo da lista:',
+            '[FIX EDIT MODE] ? Adicionando payer ao topo da lista:',
             currentPayer.name,
           );
           setFilteredPayers((prev) => [
@@ -568,15 +606,15 @@ export default function AppointmentUnitedModal({
             ...(prev?.filter((p) => p.id !== currentPayer.id) || []),
           ]);
         } else {
-          console.warn('[FIX EDIT MODE] ⚠️ Payer não encontrado em payers list:', agendamentoData.payerId);
+          console.warn('[FIX EDIT MODE] ?? Payer n�o encontrado em payers list:', agendamentoData.payerId);
         }
       } else {
-        console.log('[FIX EDIT MODE] ✅ Payer atual já está no filtro');
+        console.log('[FIX EDIT MODE] ? Payer atual j� est� no filtro');
       }
     }
   }, [mode, agendamentoData.payerId, payers]);
 
-  // Dados de Liberação
+  // Dados de Libera��o
   const [liberacaoData, setLiberacaoData] = useState({
     payer_name: '',
     plan_name: '',
@@ -617,17 +655,17 @@ export default function AppointmentUnitedModal({
   // Dados de Pagamento (com estrutura completa)
   const [pagamentoData, setPagamentoData] = useState(defaultPaymentData);
 
-  // � Estado para habilitar/desabilitar múltiplos pagamentos
+  // ? Estado para habilitar/desabilitar m�ltiplos pagamentos
   const [enableMultiplePayments, setEnableMultiplePayments] = useState(false);
 
   // Estado para splits de pagamento (multiplas formas)
   const [pagamentoSplits, setPagamentoSplits] = useState([]);
 
-  // Estado para formulario de novo split - com campos específicos por método
+  // Estado para formulario de novo split - com campos espec�ficos por m�todo
   const [splitFormData, setSplitFormData] = useState({
     payment_method: 'DINHEIRO',
     value: '',
-    // Cartão
+    // Cart�o
     card_brand: '',
     card_number: '',
     card_expiry: '',
@@ -645,21 +683,31 @@ export default function AppointmentUnitedModal({
     cheque_account: '',
     cheque_number: '',
     cheque_due_date: '',
-    // Transferência/Depósito
+    // Transfer�ncia/Dep�sito
     bank_name: '',
     bank_agency: '',
     bank_account: '',
     transfer_type: 'DOC',
     // Boleto
     boleto_number: '',
-    // Data de vencimento (genérico para todos)
+    // Data de vencimento (gen�rico para todos)
     payment_due_date: '',
-    // Observações
+    // Observa��es
     observation: '',
   });
 
-  // �🔍 FUNÇÃO HELPER PARA DETECTAR SE É PAYER "PARTICULAR"
-  // Verifica se é particular pelo ID ('particular') OU pelo nome do payer ('Particular')
+  // ?? Estado para processador de cart�o (taxa de processamento)
+  const [cardProcessorData, setCardProcessorData] = useState({
+    processor_id: '',
+    card_brand: 'VISA',
+    settlement_type: 'D+1',
+    fee_percent: null,
+    fee_amount: null,
+    net_amount: null,
+  });
+
+  // ??? FUN��O HELPER PARA DETECTAR SE � PAYER "PARTICULAR"
+  // Verifica se � particular pelo ID ('particular') OU pelo nome do payer ('Particular')
   const checkIsParticular = (payerId) => {
     if (!payerId) {
       return true;
@@ -679,16 +727,16 @@ export default function AppointmentUnitedModal({
     return inAll?.name || null;
   };
 
-  // FUNÇÕES PARA MÚLTIPLOS PAGAMENTOS
+  // FUN��ES PARA M�LTIPLOS PAGAMENTOS
   const addPaymentSplit = () => {
     if (!splitFormData.value || parseFloat(splitFormData.value) <= 0) {
-      alert('Por favor, insira um valor válido');
+      alert('Por favor, insira um valor v�lido');
       return;
     }
 
-    // Validações específicas por método de pagamento
+    // Valida��es espec�ficas por m�todo de pagamento
     if (splitFormData.payment_method === 'CARTAO' && !splitFormData.card_number) {
-      alert('Por favor, insira o número do cartão');
+      alert('Por favor, insira o n�mero do cart�o');
       return;
     }
     if (splitFormData.payment_method === 'PIX' && !splitFormData.pix_key) {
@@ -696,7 +744,7 @@ export default function AppointmentUnitedModal({
       return;
     }
     if (splitFormData.payment_method === 'CHEQUE' && !splitFormData.cheque_number) {
-      alert('Por favor, insira o número do cheque');
+      alert('Por favor, insira o n�mero do cheque');
       return;
     }
 
@@ -708,7 +756,7 @@ export default function AppointmentUnitedModal({
     const valorTotal = parseFloat(agendamentoData.value || 0) - desconto;
     if (totalAtual + parseFloat(splitFormData.value) > valorTotal) {
       alert(
-        `Valor com desconto é ${formatCurrency(valorTotal)}. Valor total não pode exceder este valor.`,
+        `Valor com desconto � ${formatCurrency(valorTotal)}. Valor total n�o pode exceder este valor.`,
       );
       return;
     }
@@ -727,7 +775,7 @@ export default function AppointmentUnitedModal({
     setPagamentoSplits(pagamentoSplits.filter((split) => split.id !== id));
   };
 
-  // Limpar formulário de split
+  // Limpar formul�rio de split
   const resetSplitFormData = () => {
     setSplitFormData({
       payment_method: 'DINHEIRO',
@@ -759,7 +807,7 @@ export default function AppointmentUnitedModal({
 
   // Inicializar/resetar dados ao abrir
   useEffect(() => {
-    console.log('🎯 [INITIALIZATION EFFECT] Disparado! Estado atual:');
+    console.log('?? [INITIALIZATION EFFECT] Disparado! Estado atual:');
     console.log('   isOpen:', isOpen);
     console.log('   mode:', mode);
     console.log('   hasAppointment:', !!finalAppointment);
@@ -769,15 +817,20 @@ export default function AppointmentUnitedModal({
 
     if (isOpen) {
       if (mode === 'new') {
-        console.log('✅ MODO: NEW - Resetando form para novo agendamento');
+        console.log('? MODO: NEW - Resetando form para novo agendamento');
+        console.log('   finalAppointment:', finalAppointment);
+        console.log('   finalAppointment?.id:', finalAppointment?.id);
+        console.log('   finalAppointment?.id === undefined:', finalAppointment?.id === undefined);
+        console.log('   !finalAppointment?.id:', !finalAppointment?.id);
         console.log(
           '   finalAppointment && !finalAppointment.id =',
           finalAppointment && !finalAppointment.id,
         );
-        // ✅ Se há appointment sem ID (vindo de slot), preencher com dados do slot
+        // ? Se h� appointment sem ID (vindo de slot), preencher com dados do slot
         if (finalAppointment && !finalAppointment.id) {
+          console.log('??? ENTERING IF BRANCH - WILL SET PROFESSIONAL_ID FROM SLOT');
           console.log(
-            '📅 [AppointmentUnitedModal] ✅ ENTRANDO NO IF - Modo NEW com slot data:',
+            '?? [AppointmentUnitedModal] ? ENTRANDO NO IF - Modo NEW com slot data:',
             finalAppointment,
           );
           console.log('   Setting professionalId:', finalAppointment.professionalId);
@@ -792,7 +845,7 @@ export default function AppointmentUnitedModal({
           );
           setTabAtivo('dados');
           setSelectedPatient(null);
-          console.log('⏰ TIME FINAL:', finalAppointment.time, finalAppointment.scheduled_time);
+          console.log('? TIME FINAL:', finalAppointment.time, finalAppointment.scheduled_time);
           const newAgendamentoData = {
             date: finalAppointment.date || '',
             time: finalAppointment.time || finalAppointment.scheduled_time || '',
@@ -802,24 +855,36 @@ export default function AppointmentUnitedModal({
             patientId: null,
             phone: '',
             recordNumber: '',
-            // 🔧 FIX: Adicionar fallback para snake_case (vem de slot)
-            professionalId: finalAppointment.professionalId || finalAppointment.professional_id || '', // ✅ PRÉ-PREENCHER DO SLOT
+            // ?? FIX: Adicionar fallback para snake_case (vem de slot)
+            professionalId: finalAppointment.professionalId || finalAppointment.professional_id || '', // ? PR�-PREENCHER DO SLOT
             serviceId: finalAppointment.serviceId || finalAppointment.service_id || '',
             serviceCode: '',
             payerId: finalAppointment.payerId || finalAppointment.payer_id || '',
             planId: finalAppointment.planId || finalAppointment.plan_id || '',
             planCode: '',
-            roomId: finalAppointment.roomId || finalAppointment.room_id || '', // ✅ PRÉ-PREENCHER DO SLOT
+            roomId: finalAppointment.roomId || finalAppointment.room_id || '', // ? PR�-PREENCHER DO SLOT
             value: '0.00',
             notes: '',
             status: 'scheduled',
           };
-          console.log('🚀 [NEW MODE] agendamentoData sendo inicializado com:', {
+          console.log('?? [NEW MODE] ANTES de setAgendamentoData - finalAppointment:', {
+            professional_id: finalAppointment.professional_id,
+            professionalId: finalAppointment.professionalId,
+            hasAny: finalAppointment.professional_id !== undefined || finalAppointment.professionalId !== undefined,
+            finalAllKeys: Object.keys(finalAppointment),
+          });
+          console.log('?? [NEW MODE] agendamentoData sendo inicializado com:', {
             professionalId: newAgendamentoData.professionalId,
             date: newAgendamentoData.date,
             isEmpty: !newAgendamentoData.professionalId,
           });
+          // ?? GUARDAR o profissional inicial do slot
+          if (newAgendamentoData.professionalId) {
+            initialSlotProfessionalIdRef.current = newAgendamentoData.professionalId;
+            console.log('?? [REF] Guardando profissional inicial do slot:', newAgendamentoData.professionalId);
+          }
           setAgendamentoData(newAgendamentoData);
+          console.log('?? [NEW MODE] DEPOIS de setAgendamentoData - estado foi atualizado');
           setCadastralData({
             name: '',
             document_id: '',
@@ -862,10 +927,10 @@ export default function AppointmentUnitedModal({
           });
           setPagamentoData(defaultPaymentData);
           console.log(
-            '✅ [AppointmentUnitedModal] Dados do slot pré-preenchidos com profissional:',
+            '? [AppointmentUnitedModal] Dados do slot pr�-preenchidos com profissional:',
             finalAppointment.professionalId,
           );
-          console.log('   🔍 DEBUG PRÉ-PREENCHIMENTO:', {
+          console.log('   ?? DEBUG PR�-PREENCHIMENTO:', {
             hasData: !!finalAppointment,
             professionalIdValue: finalAppointment.professionalId,
             professionalIdType: typeof finalAppointment.professionalId,
@@ -874,14 +939,17 @@ export default function AppointmentUnitedModal({
             allKeys: Object.keys(finalAppointment),
           });
         } else {
-          // ✅ RESETAR TUDO para modo novo (sem dados de slot)
+          // ? RESETAR TUDO para modo novo (sem dados de slot)
           console.log(
-            '📅 [AppointmentUnitedModal] ❌ Entrando no ELSE - Resetando dados (sem slot data)',
+            '??? ENTERING ELSE BRANCH - WILL RESET PROFESSIONAL_ID TO EMPTY',
           );
           console.log('   finalAppointment:', finalAppointment);
           console.log('   finalAppointment?.id:', finalAppointment?.id);
+          console.log('   Reason: finalAppointment falsy OR has an id');
+          console.log('?? [AppointmentUnitedModal] ? Entrando no ELSE - Resetando dados (sem slot data)',
+          );
           setTabAtivo('dados');
-          setSelectedPatient(null); // ✅ Limpar paciente selecionado
+          setSelectedPatient(null); // ? Limpar paciente selecionado
           setAgendamentoData({
             date: '',
             time: '',
@@ -902,7 +970,9 @@ export default function AppointmentUnitedModal({
             notes: '',
             status: 'scheduled',
           });
-          setAppointmentServices([]); // 📋 RESETAR SERVIÇOS
+          // ? FIX: N�O resetar appointmentServices aqui
+          // AppointmentItemsManager j� gerencia os servi�os e isso causava perda de dados
+          // setAppointmentServices([]); // ? REMOVIDO - causa reset quando muda de aba
           setCadastralData({
             name: '',
             document_id: '',
@@ -954,9 +1024,9 @@ export default function AppointmentUnitedModal({
           setPagamentoData(defaultPaymentData);
         }
       } else if (mode === 'edit' && finalAppointment) {
-        console.log('✅ MODO: EDIT - Populando form com dados do agendamento');
+        console.log('? MODO: EDIT - Populando form com dados do agendamento');
         console.log(
-          '📋 [AppointmentUnitedModal] EDIT MODE - appointment recebido:',
+          '?? [AppointmentUnitedModal] EDIT MODE - appointment recebido:',
           finalAppointment,
         );
         console.log('  date (camelCase):', finalAppointment.date);
@@ -966,48 +1036,50 @@ export default function AppointmentUnitedModal({
         console.log('  payerId (camelCase):', finalAppointment.payerId);
         console.log('  roomId (camelCase):', finalAppointment.roomId);
         console.log(
-          '🚨 [CRITICAL] Convênio (payer) detectado?',
-          finalAppointment.payerId ? '✅ SIM' : '❌ NÃO',
+          '?? [CRITICAL] Conv�nio (payer) detectado?',
+          finalAppointment.payerId ? '? SIM' : '? N�O',
         );
         setTabAtivo('dados');
         const newData = {
+          id: finalAppointment.id || finalAppointment.appointment_id || null,
           date: finalAppointment.date || '',
-          time: finalAppointment.startTime || '',
-          endTime: finalAppointment.endTime || '',
+          time: finalAppointment.startTime || finalAppointment.time || '',
+          endTime: finalAppointment.endTime || finalAppointment.end_time || '',
           duration: finalAppointment.duration || 30,
-          patientName: finalAppointment.patientName || finalAppointment.patients?.name || '',
-          patientId: finalAppointment.patientId || null,
-          phone: finalAppointment.patientPhone || finalAppointment.patients?.phone || '',
+          patientName: finalAppointment.patientName || finalAppointment.patients?.name || finalAppointment.patient_name || '',
+          patientId: finalAppointment.patientId || finalAppointment.patient_id || null,
+          phone: finalAppointment.patientPhone || finalAppointment.patients?.phone || finalAppointment.patient_phone || '',
           recordNumber:
-            finalAppointment.patientProntuario || finalAppointment.patients?.record_number || '',
-          professionalId: finalAppointment.professionalId || '',
-          serviceId: finalAppointment.serviceId || '',
-          serviceCode: finalAppointment.serviceName || finalAppointment.services?.code || '',
-          payerId: finalAppointment.payerId || '',
-          planId: finalAppointment.planId || '',
-          planCode: finalAppointment.planCode || finalAppointment.plans?.code || '',
-          roomId: finalAppointment.roomId || '',
+            finalAppointment.patientProntuario || finalAppointment.patients?.record_number || finalAppointment.prontuario_numero || '',
+          professionalId: finalAppointment.professionalId || finalAppointment.professional_id || '',
+          serviceId: finalAppointment.serviceId || finalAppointment.service_id || '',
+          serviceCode: finalAppointment.serviceName || finalAppointment.services?.code || finalAppointment.service_name || '',
+          payerId: finalAppointment.payerId || finalAppointment.payer_id || '',
+          planId: finalAppointment.planId || finalAppointment.plan_id || '',
+          planCode: finalAppointment.planCode || finalAppointment.plans?.code || finalAppointment.plan_code || '',
+          roomId: finalAppointment.roomId || finalAppointment.room_id || '',
           value: finalAppointment.value?.toString() || '0.00',
           notes: finalAppointment.notes || '',
           status: finalAppointment.status || 'scheduled',
         };
-        console.log('📝 [AppointmentUnitedModal] setAgendamentoData com:', newData);
+        console.log('?? [AppointmentUnitedModal] setAgendamentoData com:', newData);
         console.log(
-          '💳 [DEBUG] payerId no newData:',
+          '?? [DEBUG] payerId no newData:',
           newData.payerId,
           '| tipo:',
           typeof newData.payerId,
         );
-        console.log('🎬 [IMPORTANTE] STATUS DO AGENDAMENTO:', newData.status);
+        console.log('?? [IMPORTANTE] STATUS DO AGENDAMENTO:', newData.status);
         console.log(
-          '🎬 [BOTÃO VISÍVEL?] status === "at_checkout"?',
+          '?? [BOT�O VIS�VEL?] status === "at_checkout"?',
           newData.status === 'at_checkout',
         );
+        console.log('?? [DEBUG] Dados sendo setados - professionalId:', newData.professionalId, ' | serviceId:', newData.serviceId, ' | payerId:', newData.payerId, ' | appointmentId:', newData.id);
         setAgendamentoData(newData);
-        console.log('💳 [AFTER setAgendamentoData] agendamentoData será:', newData);
+        console.log('?? [AFTER setAgendamentoData] agendamentoData ser�:', newData);
 
-        // 👤 TAMBÉM CARREGAR DADOS CADASTRAIS DO PACIENTE
-        console.log('👤 [AppointmentUnitedModal] Carregando dados cadastrais do paciente');
+        // ?? TAMB�M CARREGAR DADOS CADASTRAIS DO PACIENTE
+        console.log('?? [AppointmentUnitedModal] Carregando dados cadastrais do paciente');
         setCadastralData({
           name: finalAppointment.patients?.name || '',
           document_id: finalAppointment.patients?.document_id || '',
@@ -1025,9 +1097,9 @@ export default function AppointmentUnitedModal({
           photo_url: finalAppointment.patients?.photo_url || null,
         });
 
-        // ✅ TAMBÉM CARREGAR SELECTEDPATIENT PARA MOSTRAR EM DESTAQUE
+        // ? TAMB�M CARREGAR SELECTEDPATIENT PARA MOSTRAR EM DESTAQUE
         if (finalAppointment.patients) {
-          console.log('🎯 [EDIT MODE] Setando selectedPatient com dados do paciente:', {
+          console.log('?? [EDIT MODE] Setando selectedPatient com dados do paciente:', {
             patientId: finalAppointment.patientId,
             patientName: finalAppointment.patientName || finalAppointment.patients?.name,
             phone: finalAppointment.patients?.phone,
@@ -1050,11 +1122,11 @@ export default function AppointmentUnitedModal({
             zip_code: finalAppointment.patients?.zip_code || '',
           });
         } else {
-          console.log('⚠️ [EDIT MODE] finalAppointment.patients é nulo:', finalAppointment.patients);
+          console.log('?? [EDIT MODE] finalAppointment.patients � nulo:', finalAppointment.patients);
         }
 
-        // 💳 INICIALIZAR DADOS DE PAGAMENTO (para particular E convênio)
-        console.log('💳 [AppointmentUnitedModal] Carregando dados de pagamento');
+        // ?? INICIALIZAR DADOS DE PAGAMENTO (para particular E conv�nio)
+        console.log('?? [AppointmentUnitedModal] Carregando dados de pagamento');
         console.log('   discount:', finalAppointment.discount);
         console.log('   paymentMethod:', finalAppointment.paymentMethod);
         console.log('   discountReason:', finalAppointment.discountReason);
@@ -1076,8 +1148,8 @@ export default function AppointmentUnitedModal({
           },
         }));
 
-        // 💳 CARREGAR MÚLTIPLOS PAGAMENTOS (payment_splits)
-        console.log('💳 [AppointmentUnitedModal] Carregando múltiplos pagamentos');
+        // ?? CARREGAR M�LTIPLOS PAGAMENTOS (payment_splits)
+        console.log('?? [AppointmentUnitedModal] Carregando m�ltiplos pagamentos');
         console.log('   payment_splits:', finalAppointment.payment_splits);
 
         if (finalAppointment.payment_splits && Array.isArray(finalAppointment.payment_splits)) {
@@ -1088,34 +1160,50 @@ export default function AppointmentUnitedModal({
                 : finalAppointment.payment_splits;
 
             if (splits.length > 0) {
-              console.log('✅ [AppointmentUnitedModal] Splits carregados:', splits);
+              console.log('? [AppointmentUnitedModal] Splits carregados:', splits);
               setPagamentoSplits(splits);
               setEnableMultiplePayments(true);
             } else {
-              console.log('⚠️ [AppointmentUnitedModal] payment_splits está vazio');
+              console.log('?? [AppointmentUnitedModal] payment_splits est� vazio');
               setPagamentoSplits([]);
               setEnableMultiplePayments(false);
             }
           } catch (err) {
-            console.warn('⚠️ Erro ao desserializar payment_splits:', err);
+            console.warn('?? Erro ao desserializar payment_splits:', err);
             setPagamentoSplits([]);
             setEnableMultiplePayments(false);
           }
         } else {
-          console.log('⚠️ [AppointmentUnitedModal] payment_splits é null/undefined');
+          console.log('?? [AppointmentUnitedModal] payment_splits � null/undefined');
           setPagamentoSplits([]);
           setEnableMultiplePayments(false);
         }
 
-        // 💳 SE FOR PARTICULAR, ADICIONAR CAMPOS ESPECÍFICOS
+        // ?? CARREGAR DADOS DE PROCESSADOR DE CART�O
+        console.log('?? [AppointmentUnitedModal] Carregando dados de processador de cart�o');
+        console.log('   processor_id:', finalAppointment.processor_id);
+        console.log('   card_brand:', finalAppointment.card_brand);
+        console.log('   settlement_type:', finalAppointment.settlement_type);
+        console.log('   fee_percent:', finalAppointment.fee_percent);
+
+        setCardProcessorData({
+          processor_id: finalAppointment.processor_id || '',
+          card_brand: finalAppointment.card_brand || 'VISA',
+          settlement_type: finalAppointment.settlement_type || 'D+1',
+          fee_percent: finalAppointment.fee_percent || null,
+          fee_amount: finalAppointment.fee_amount || null,
+          net_amount: finalAppointment.net_amount || null,
+        });
+
+        // ?? SE FOR PARTICULAR, ADICIONAR CAMPOS ESPEC�FICOS
         if (checkIsParticular(finalAppointment.payerId || finalAppointment.payer_id)) {
-          console.log('💳 [AppointmentUnitedModal] Pagador é particular');
+          console.log('?? [AppointmentUnitedModal] Pagador � particular');
         } else {
-          console.log('💳 [AppointmentUnitedModal] Pagador é convênio/empresa');
+          console.log('?? [AppointmentUnitedModal] Pagador � conv�nio/empresa');
         }
 
-        // 📋 CARREGAR DADOS DE LIBERAÇÃO (Liberação tab)
-        console.log('📋 [AppointmentUnitedModal] Carregando dados de liberação');
+        // ?? CARREGAR DADOS DE LIBERA��O (Libera��o tab)
+        console.log('?? [AppointmentUnitedModal] Carregando dados de libera��o');
         console.log('   finalAppointment.card_number:', finalAppointment.card_number);
         console.log(
           '   finalAppointment.authorization_number:',
@@ -1149,8 +1237,8 @@ export default function AppointmentUnitedModal({
 
         setLiberacaoData(liberacaoFromStorage || liberacaoValores);
 
-        // 📝 CARREGAR DADOS DE FATURAMENTO (Faturamento tab)
-        console.log('📝 [AppointmentUnitedModal] Carregando dados de faturamento');
+        // ?? CARREGAR DADOS DE FATURAMENTO (Faturamento tab)
+        console.log('?? [AppointmentUnitedModal] Carregando dados de faturamento');
         console.log('   finalAppointment.billing_data:', finalAppointment.billing_data);
         console.log('   finalAppointment.guide_number:', finalAppointment.guide_number);
         console.log('   finalAppointment.value:', finalAppointment.value);
@@ -1159,28 +1247,28 @@ export default function AppointmentUnitedModal({
         const savedFaturamento = sessionStorage.getItem(`faturamentoData_${finalAppointment.id}`);
         const faturamentoFromStorage = savedFaturamento ? JSON.parse(savedFaturamento) : null;
 
-        // 🔍 DESSERIALIZAR billing_data JSON se existir
+        // ?? DESSERIALIZAR billing_data JSON se existir
         let billingDataParsed = {};
         if (finalAppointment.billing_data) {
           try {
-            console.log('   📦 billing_data exists, tipo:', typeof finalAppointment.billing_data);
+            console.log('   ?? billing_data exists, tipo:', typeof finalAppointment.billing_data);
             billingDataParsed =
               typeof finalAppointment.billing_data === 'string'
                 ? JSON.parse(finalAppointment.billing_data)
                 : finalAppointment.billing_data;
             console.log(
-              '✅ [AppointmentUnitedModal] billing_data desserializado:',
+              '? [AppointmentUnitedModal] billing_data desserializado:',
               billingDataParsed,
             );
           } catch (err) {
-            console.warn('⚠️ Erro ao desserializar billing_data:', err);
+            console.warn('?? Erro ao desserializar billing_data:', err);
             console.warn('   billing_data raw:', finalAppointment.billing_data);
           }
         } else {
-          console.log('   ⚠️ finalAppointment.billing_data é null/undefined');
+          console.log('   ?? finalAppointment.billing_data � null/undefined');
         }
 
-        console.log('📝 [Debug] Valores que serão usados no faturamentoData:');
+        console.log('?? [Debug] Valores que ser�o usados no faturamentoData:');
         console.log('   guide_type:', billingDataParsed.guide_type || 'consulta');
         console.log('   code_type:', billingDataParsed.code_type || 'tuss');
         console.log(
@@ -1279,20 +1367,20 @@ export default function AppointmentUnitedModal({
     }
   }, [isOpen, mode, appointment, loadedAppointmentFromId, finalAppointment]);
 
-  // � FIX: Garantir que o payerId seja restaurado quando o agendamento for carregado em modo EDIT
+  // ? FIX: Garantir que o payerId seja restaurado quando o agendamento for carregado em modo EDIT
   useEffect(() => {
     if (isOpen && mode === 'edit' && finalAppointment && finalAppointment.id) {
-      console.log('🔧 [FIX payerId + planId] Modal aberto em EDIT mode com agendamento carregado');
+      console.log('?? [FIX payerId + planId] Modal aberto em EDIT mode com agendamento carregado');
       console.log('   finalAppointment.payerId:', finalAppointment.payerId);
       console.log('   finalAppointment.payer_id:', finalAppointment.payer_id);
       console.log('   finalAppointment.planId:', finalAppointment.planId);
       console.log('   finalAppointment.plan_id:', finalAppointment.plan_id);
 
       const payerId = finalAppointment.payerId || finalAppointment.payer_id || '';
-      console.log('   → payerId final a ser setado:', payerId);
+      console.log('   ? payerId final a ser setado:', payerId);
 
       const planId = finalAppointment.planId || finalAppointment.plan_id || '';
-      console.log('   → planId final a ser setado:', planId);
+      console.log('   ? planId final a ser setado:', planId);
       setAgendamentoData((prev) => ({
         ...prev,
         payerId: payerId,
@@ -1301,14 +1389,14 @@ export default function AppointmentUnitedModal({
     }
   }, [isOpen, mode, finalAppointment]);
 
-  // �💰 Carregar planos de contas
+  // ??? Carregar planos de contas
   useEffect(() => {
     if (!clinicId) {
       return;
     }
     const loadPlans = async () => {
       try {
-        console.log('📊 Carregando planos de contas para clinic:', clinicId);
+        console.log('?? Carregando planos de contas para clinic:', clinicId);
         const { data: plans, error } = await supabase
           .from('account_plans')
           .select('id, name, parent_id')
@@ -1317,11 +1405,11 @@ export default function AppointmentUnitedModal({
         if (error) {
           throw error;
         }
-        console.log('📊 Planos carregados:', plans);
+        console.log('?? Planos carregados:', plans);
 
         // Apenas sub-planos (com parent_id)
         const filteredPlans = (plans || []).filter((p) => p.parent_id);
-        console.log('📊 Planos filtrados (com parent_id):', filteredPlans);
+        console.log('?? Planos filtrados (com parent_id):', filteredPlans);
         setAccountPlans(filteredPlans);
       } catch (err) {
         console.warn('Erro ao carregar planos de contas:', err);
@@ -1330,7 +1418,7 @@ export default function AppointmentUnitedModal({
     loadPlans();
   }, [clinicId]);
 
-  // 📋 ETAPA 3b: Carregar appointment_services quando agendamento é carregado
+  // ?? ETAPA 3b: Carregar appointment_services quando agendamento � carregado
   // Track if we've already loaded appointment services to avoid reloading
   const appointmentIdForServiceLoad = useMemo(
     () => (mode === 'edit' && (finalAppointment?.id || appointment?.id)) || null,
@@ -1339,57 +1427,26 @@ export default function AppointmentUnitedModal({
 
   const appointmentServiceLoadedRef = React.useRef(null);
 
-  // 🔴 Reset ref quando modal fecha (para poder recarregar na próxima abertura)
+  // ?? Reset ref quando modal fecha (para poder recarregar na pr�xima abertura)
   useEffect(() => {
     if (!isOpen) {
       appointmentServiceLoadedRef.current = null;
-      console.log('🔴 [loadAppointmentServices] Modal fechada - resetando ref');
+      console.log('?? [loadAppointmentServices] Modal fechada - resetando ref');
     }
   }, [isOpen]);
 
   useEffect(() => {
     const loadAppointmentServices = async () => {
-      // Only load services on first mount when in edit mode
-      if (!isOpen || mode !== 'edit') {
-        console.log('ℹ️ [loadAppointmentServices] Modal fechado ou modo novo - ignorando');
-        return;
-      }
-
-      const apt = finalAppointment || appointment;
-      if (!apt?.id) {
-        console.log('ℹ️ [loadAppointmentServices] Sem agendamento para carregar serviços');
-        return;
-      }
-
-      // Only load once per appointment
-      if (appointmentServiceLoadedRef.current === apt.id) {
-        console.log(
-          'ℹ️ [loadAppointmentServices] Serviços já foram carregados para este agendamento:',
-          apt.id,
-        );
-        return;
-      }
-
-      try {
-        console.log('📋 [loadAppointmentServices] Carregando serviços do agendamento:', apt.id);
-        const services = await getAppointmentServices(apt.id);
-        console.log(
-          '✅ [loadAppointmentServices] Serviços carregados - setando state com',
-          services?.length || 0,
-          'serviço(s)',
-        );
-        setAppointmentServices(services || []);
-        appointmentServiceLoadedRef.current = apt.id;
-      } catch (err) {
-        console.error('❌ [loadAppointmentServices] Erro ao carregar serviços:', err);
-        setAppointmentServices([]);
-      }
+      // ?? NOTA: AppointmentItemsManager cuida de carregar os servi�os via onItemsChange
+      // Este m�todo N�O precisa mais carregar servi�os separadamente
+      console.log('?? [loadAppointmentServices] AppointmentItemsManager gerencia os servi�os agora');
+      return;
     };
 
     loadAppointmentServices();
   }, [isOpen, mode, appointmentIdForServiceLoad]);
 
-  // 🔧 ETAPA 3.5: Recalcular total quando appointmentServices muda
+  // ?? ETAPA 3.5: Recalcular total quando appointmentServices muda
   useEffect(() => {
     if (appointmentServices && appointmentServices.length > 0) {
       const totalValue = appointmentServices.reduce((sum, item) => {
@@ -1399,11 +1456,11 @@ export default function AppointmentUnitedModal({
         return sum + (value * qty - discount * qty);
       }, 0);
       console.log(
-        '💰 [useEffect appointmentServices] Recalculando total:',
+        '?? [useEffect appointmentServices] Recalculando total:',
         totalValue,
         'com',
         appointmentServices.length,
-        'serviços',
+        'servi�os',
       );
       setAgendamentoData((prev) => ({
         ...prev,
@@ -1412,28 +1469,85 @@ export default function AppointmentUnitedModal({
     }
   }, [appointmentServices]);
 
-  // 🔧 ETAPA 4: Sincronizar appointment com formData do hook
+  // ?? ETAPA 3.6: AUTO-SINCRONIZAR SERVI�OS QUANDO MUDAM (fix para mudan�a de abas)
+  // Este useEffect garante que os servi�os s�o salvos automaticamente quando alterados
+  // Isso previne perda de dados ao mudar de aba
   useEffect(() => {
-    console.log('═══════════════════════════════════════════════');
-    console.log('🔧 [ETAPA 4] useEffect sincronização disparado');
+    if (!isOpen || !finalAppointment?.id || appointmentServices.length === 0) {
+      console.log('?? [AUTO-SYNC SERVICES] Condi��es n�o atendidas:', {
+        isOpen,
+        hasAppointmentId: !!finalAppointment?.id,
+        servicesCount: appointmentServices.length,
+      });
+      return;
+    }
+
+    console.log('?? [AUTO-SYNC SERVICES] Sincronizando servi�os ap�s mudan�a:', {
+      appointmentId: finalAppointment.id,
+      servicesCount: appointmentServices.length,
+      services: appointmentServices.map(s => ({ id: s.id, name: s.service_name })),
+    });
+
+    const autoSyncServices = async () => {
+      try {
+        const formattedServices = appointmentServices.map(s => ({
+          service_id: s.service_id || s.id,
+          service_name: s.service_name || s.name,
+          service_code: s.service_code || s.code || '',
+          value: parseFloat(s.value || 0),
+          discount: parseFloat(s.discount || 0),
+          quantity: parseInt(s.quantity || 1),
+          billing_type: s.billing_type || 'per_consultation',
+          sessions_completed: s.sessions_completed || 0,
+          status: s.status || 'pending',
+        }));
+
+        console.log('?? [AUTO-SYNC] Enviando servi�os para sincroniza��o:', {
+          appointmentId: finalAppointment.id,
+          services: formattedServices,
+        });
+
+        const result = await syncAppointmentServices(finalAppointment.id, formattedServices);
+
+        console.log('? [AUTO-SYNC] Servi�os sincronizados com sucesso!', {
+          result_length: result?.length,
+        });
+      } catch (err) {
+        console.error('? [AUTO-SYNC] Erro ao sincronizar servi�os:', err);
+        // N�o bloquear a experi�ncia do usu�rio, apenas logar o erro
+      }
+    };
+
+    // Usar delay para evitar sincroniza��es muito frequentes
+    const timer = setTimeout(() => {
+      autoSyncServices();
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [appointmentServices, finalAppointment?.id, isOpen]);
+
+  // ?? ETAPA 4: Sincronizar appointment com formData do hook
+  useEffect(() => {
+    console.log('-----------------------------------------------');
+    console.log('?? [ETAPA 4] useEffect sincroniza��o disparado');
     console.log('   isOpen:', isOpen);
     console.log('   mode:', mode);
     console.log('   finalAppointment?.id:', finalAppointment?.id);
-    console.log('═══════════════════════════════════════════════');
+    console.log('-----------------------------------------------');
 
     if (!isOpen) {
-      console.log('   ℹ️ Modal fechado - ignorando');
+      console.log('   ?? Modal fechado - ignorando');
       return;
     }
 
     if (mode === 'new' || mode === 'create') {
-      console.log('   📝 Modo CREATE - resetando form');
+      console.log('   ?? Modo CREATE - resetando form');
       resetFormData();
       return;
     }
 
     if (mode === 'edit' && finalAppointment) {
-      console.log('   ✏️ Modo EDIT - preenchendo form com appointment');
+      console.log('   ?? Modo EDIT - preenchendo form com appointment');
       console.log('   appointment:', {
         id: finalAppointment.id,
         patient_id: finalAppointment.patient_id,
@@ -1448,23 +1562,23 @@ export default function AppointmentUnitedModal({
         notes: finalAppointment.notes,
       });
       fillFromAppointment(finalAppointment);
-      console.log('   ✅ formData preenchido com sucesso');
+      console.log('   ? formData preenchido com sucesso');
       console.log('   formData atual:', formData);
     }
   }, [isOpen, mode, finalAppointment?.id]);
 
-  // 🔧 ETAPA 4.5: Sincronizar agendamentoData com finalAppointment (sem sobrescrever múltiplos serviços)
+  // ?? ETAPA 4.5: Sincronizar agendamentoData com finalAppointment (sem sobrescrever m�ltiplos servi�os)
   useEffect(() => {
     if (!isOpen || mode !== 'edit' || !finalAppointment) {
       return;
     }
 
-    console.log('🔄 [ETAPA 4.5] Sincronizando agendamentoData com finalAppointment');
+    console.log('?? [ETAPA 4.5] Sincronizando agendamentoData com finalAppointment');
 
     setAgendamentoData((prev) => {
       const updated = {
         ...prev,
-        id: finalAppointment.id || null, // ✨ NOVO: Propagar ID para AppointmentItemsManager
+        id: finalAppointment.id || null, // ? NOVO: Propagar ID para AppointmentItemsManager
         date: finalAppointment.scheduled_date || '',
         time: finalAppointment.scheduled_time || '',
         patientId: finalAppointment.patient_id || null,
@@ -1476,30 +1590,30 @@ export default function AppointmentUnitedModal({
         roomId: finalAppointment.room_id || '',
         status: finalAppointment.status || 'scheduled',
         notes: finalAppointment.notes || '',
-        // NÃO sobrescrever value se há múltiplos serviços
+        // N�O sobrescrever value se h� m�ltiplos servi�os
         value: appointmentServices.length > 0 ? prev.value : finalAppointment.value || '0.00',
       };
       return updated;
     });
   }, [isOpen, mode, finalAppointment?.id, appointmentServices.length]);
 
-  // 🔧 ETAPA 4.6: AUTO-SELECT: Preencher selectedPatient em modo EDIT
-  // Garante que o paciente é selecionado automaticamente quando o modal abre em modo EDIT
+  // ?? ETAPA 4.6: AUTO-SELECT: Preencher selectedPatient em modo EDIT
+  // Garante que o paciente � selecionado automaticamente quando o modal abre em modo EDIT
   useEffect(() => {
     // LOG INICIAL - SEMPRE disparar este log para diagnosticar
-    console.log('📊 [AUTO-SELECT PATIENT] useEffect DISPARADO!', {
+    console.log('?? [AUTO-SELECT PATIENT] useEffect DISPARADO!', {
       isOpen,
       mode,
       hasFinalAppointment: !!finalAppointment,
       'finalAppointment?.id': finalAppointment?.id,
       'finalAppointment?.patient_id': finalAppointment?.patient_id,
-      'finalAppointment?.patients (objeto)': finalAppointment?.patients ? 'SIM' : 'NÃO',
+      'finalAppointment?.patients (objeto)': finalAppointment?.patients ? 'SIM' : 'N�O',
       'finalAppointment?.patients?.name': finalAppointment?.patients?.name || 'N/A',
       'finalAppointment?.patient': !!finalAppointment?.patient,
     });
 
     if (!isOpen || mode !== 'edit' || !finalAppointment) {
-      console.log('❌ [AUTO-SELECT PATIENT] Condições não atendidas - retornando:', {
+      console.log('? [AUTO-SELECT PATIENT] Condi��es n�o atendidas - retornando:', {
         isOpen,
         mode,
         hasFinalAppointment: !!finalAppointment,
@@ -1509,12 +1623,12 @@ export default function AppointmentUnitedModal({
     }
 
     if (!finalAppointment.patient_id) {
-      console.log('⚠️ [AUTO-SELECT PATIENT] Sem patient_id, não preenchendo selectedPatient');
+      console.log('?? [AUTO-SELECT PATIENT] Sem patient_id, n�o preenchendo selectedPatient');
       setSelectedPatient(null);
       return;
     }
 
-    console.log('🔧 [AUTO-SELECT PATIENT] Preenchendo selectedPatient em modo EDIT');
+    console.log('?? [AUTO-SELECT PATIENT] Preenchendo selectedPatient em modo EDIT');
     console.log('   patient_id:', finalAppointment.patient_id);
     console.log('   finalAppointment.patients:', finalAppointment.patients);
     console.log('   finalAppointment.patient:', finalAppointment.patient);
@@ -1538,7 +1652,7 @@ export default function AppointmentUnitedModal({
       zip_code: finalAppointment.patients?.zip_code || finalAppointment.patient?.zip_code || '',
     };
 
-    console.log('✅ [AUTO-SELECT PATIENT] selectedPatient construído:', {
+    console.log('? [AUTO-SELECT PATIENT] selectedPatient constru�do:', {
       patientId: patientData.patientId,
       name: patientData.name,
       phone: patientData.phone,
@@ -1547,10 +1661,10 @@ export default function AppointmentUnitedModal({
     setSelectedPatient(patientData);
   }, [isOpen, mode, finalAppointment?.patient_id, finalAppointment?.patients, finalAppointment?.patient, finalAppointment]);
 
-  // �💰 AUTO-FETCH: Buscar valor quando profissional, serviço ou convênio mudar
-  // OU quando o valor está vazio/zero (apenas quando há service)
+  // ??? AUTO-FETCH: Buscar valor quando profissional, servi�o ou conv�nio mudar
+  // OU quando o valor est� vazio/zero (apenas quando h� service)
   useEffect(() => {
-    console.log('📊 [AppointmentUnitedModal] useEffect de preço disparado!', {
+    console.log('?? [AppointmentUnitedModal] useEffect de pre�o disparado!', {
       serviceId: agendamentoData.serviceId,
       value: agendamentoData.value,
       isOpen,
@@ -1558,18 +1672,18 @@ export default function AppointmentUnitedModal({
     });
 
     const fetchServicePrice = async () => {
-      // Só buscar se temos pelo menos service
+      // S� buscar se temos pelo menos service
       if (!agendamentoData.serviceId) {
-        console.log('  ❌ Sem serviceId, abortando busca');
+        console.log('  ? Sem serviceId, abortando busca');
         return;
       }
 
-      // Só buscar automatically se o valor está vazio ou zero
+      // S� buscar automatically se o valor est� vazio ou zero
       const currentValue = parseFloat(agendamentoData.value || '0');
       const valueIsEmpty =
         currentValue === 0 || agendamentoData.value === '0.00' || !agendamentoData.value;
 
-      console.log('  📋 Verificando valor:', {
+      console.log('  ?? Verificando valor:', {
         currentValue,
         valueIsEmpty,
         agendamentoData_value: agendamentoData.value,
@@ -1577,15 +1691,15 @@ export default function AppointmentUnitedModal({
 
       if (!valueIsEmpty) {
         console.log(
-          '  ✅ Valor já preenchido:',
+          '  ? Valor j� preenchido:',
           agendamentoData.value,
-          '- não buscando preço automático',
+          '- n�o buscando pre�o autom�tico',
         );
         return;
       }
 
       try {
-        console.log('  💰 Iniciando busca de preço automático...', {
+        console.log('  ?? Iniciando busca de pre�o autom�tico...', {
           serviceId: agendamentoData.serviceId,
           professionalId: agendamentoData.professionalId,
           payerId: agendamentoData.payerId,
@@ -1599,28 +1713,28 @@ export default function AppointmentUnitedModal({
           payerId: agendamentoData.payerId || undefined,
         });
 
-        console.log('  🔍 Resultado da busca:', price);
+        console.log('  ?? Resultado da busca:', price);
 
         if (price !== null) {
-          console.log('  ✅ Preço encontrado automaticamente:', price);
+          console.log('  ? Pre�o encontrado automaticamente:', price);
           setAgendamentoData((prev) => ({
             ...prev,
             value: price.toFixed(2).toString(),
           }));
         } else {
-          console.log('  ⚠️ Nenhum preço encontrado em nenhuma tabela');
+          console.log('  ?? Nenhum pre�o encontrado em nenhuma tabela');
         }
       } catch (error) {
-        console.error('  ❌ Erro ao buscar preço:', error);
+        console.error('  ? Erro ao buscar pre�o:', error);
       }
     };
 
     // Chamar quando service, professional, payer mudam OU quando o modal abre com valor vazio
     if (agendamentoData.serviceId && clinicId) {
-      console.log('  📌 Condições OK! Chamando fetchServicePrice()');
+      console.log('  ?? Condi��es OK! Chamando fetchServicePrice()');
       fetchServicePrice();
     } else {
-      console.log('  ⚠️ Condições não atendidas:', {
+      console.log('  ?? Condi��es n�o atendidas:', {
         hasServiceId: !!agendamentoData.serviceId,
         hasClinicId: !!clinicId,
       });
@@ -1632,12 +1746,12 @@ export default function AppointmentUnitedModal({
     clinicId,
   ]);
 
-  // � AUTO-UPDATE: Buscar preço quando o usuário MUDA profissional/serviço/convênio (mesmo com valor)
+  // ? AUTO-UPDATE: Buscar pre�o quando o usu�rio MUDA profissional/servi�o/conv�nio (mesmo com valor)
   useEffect(() => {
     const isLoadingInitial = mode === 'edit' && !isOpen;
     if (isLoadingInitial) {
       return;
-    } // Não buscar durante o carregamento inicial
+    } // N�o buscar durante o carregamento inicial
 
     const fetchUpdatedServicePrice = async () => {
       if (!agendamentoData.serviceId) {
@@ -1646,7 +1760,7 @@ export default function AppointmentUnitedModal({
 
       try {
         console.log(
-          '💰 [AppointmentUnitedModal] Buscando preço atualizado (usuário mudou seleção):',
+          '?? [AppointmentUnitedModal] Buscando pre�o atualizado (usu�rio mudou sele��o):',
           {
             serviceId: agendamentoData.serviceId,
             professionalId: agendamentoData.professionalId,
@@ -1662,14 +1776,14 @@ export default function AppointmentUnitedModal({
         });
 
         if (price !== null) {
-          console.log('✅ [AppointmentUnitedModal] Preço atualizado encontrado:', price);
+          console.log('? [AppointmentUnitedModal] Pre�o atualizado encontrado:', price);
           setAgendamentoData((prev) => ({
             ...prev,
             value: price.toFixed(2).toString(),
           }));
         }
       } catch (error) {
-        console.error('❌ [AppointmentUnitedModal] Erro ao buscar preço:', error);
+        console.error('? [AppointmentUnitedModal] Erro ao buscar pre�o:', error);
       }
     };
 
@@ -1690,44 +1804,138 @@ export default function AppointmentUnitedModal({
   ]);
   useEffect(() => {
     console.log(
-      '🎯 [AppointmentUnitedModal] agendamentoData.professionalId MUDOU:',
+      '?? [AppointmentUnitedModal] agendamentoData.professionalId MUDOU:',
       agendamentoData.professionalId,
     );
     if (agendamentoData.professionalId) {
-      const profEstáNaLista = professionals.find((p) => p.id === agendamentoData.professionalId);
-      console.log('   ✅ Profissional encontrado na lista:', profEstáNaLista);
+      const professionalInList = professionals.find((p) => p.id === agendamentoData.professionalId);
+      console.log('   ? Profissional encontrado na lista:', professionalInList);
     } else {
-      console.log('   ⚠️ professionalId está vazio!');
+      console.log('   ?? professionalId est� vazio!');
     }
   }, [agendamentoData.professionalId, professionals]);
 
-  // ⚡ AUTO-SELECT: Selecionar primeiro profissional automaticamente para novo agendamento
-  useEffect(() => {
-    if (isOpen && mode === 'new' && professionals.length > 0 && !agendamentoData.professionalId) {
-      console.log('⚡ [AUTO-SELECT PROF] Selecionando primeiro profissional:', professionals[0].name);
-      setAgendamentoData((prev) => ({
-        ...prev,
-        professionalId: professionals[0].id,
-      }));
-    }
-  }, [isOpen, mode, professionals, agendamentoData.professionalId]);
+  // ? AUTO-SELECT: Selecionar primeiro profissional automaticamente para novo agendamento
+  // ?? IMPORTANTE: Rastrear se professional_id foi explicitamente passado para n�o sobrescrever
+  const [professionalIdExplicitlySet, setProfessionalIdExplicitlySet] = useState(false);
 
-  // ⚡ AUTO-SELECT SERVIÇO: Selecionar primeiro serviço automaticamente
   useEffect(() => {
-    if (isOpen && mode === 'new' && services.length > 0 && appointmentServices.length === 0) {
-      console.log('⚡ [AUTO-SELECT SVC] Selecionando primeiro serviço:', services[0].name);
-      setAppointmentServices([services[0]]);
-      setAgendamentoData((prev) => ({
-        ...prev,
-        serviceId: services[0].id,
-        serviceCode: services[0].code || '',
-      }));
-    }
-  }, [isOpen, mode, services, appointmentServices.length]);
+    // Quando appointment muda (novo slot foi selecionado), marcar que professional_id foi explicitamente setado
+    console.log('?? [FLAG-SETTER-EFFECT] DISPARADO! Appointment:', {
+      hasAppointment: !!appointment,
+      appointmentKeys: appointment ? Object.keys(appointment) : [],
+      professional_id: appointment?.professional_id,
+      professionalId: appointment?.professionalId,
+      professional_id_isDefined: appointment?.professional_id !== undefined,
+      professionalId_isDefined: appointment?.professionalId !== undefined,
+      professional_id_type: typeof appointment?.professional_id,
+      professionalId_type: typeof appointment?.professionalId,
+      mode,
+    });
 
-  // 🔍 DEBUG: Monitorar TODO o agendamentoData
+    // ?? IMPORTANTE: Verificar se professional_id foi EXPLICITAMENTE passado (n�o undefined, mas pode ser null, '', ou um valor real)
+    const hasProfessionalIdSet =
+      appointment?.professional_id !== undefined ||
+      appointment?.professionalId !== undefined;
+
+    console.log('?? [FLAG-SETTER] hasProfessionalIdSet:', hasProfessionalIdSet);
+
+    if (hasProfessionalIdSet) {
+      console.log('?? [FLAG-SETTER] ? professional_id EXPLICITAMENTE SETADO:',
+        appointment?.professional_id ?? appointment?.professionalId);
+      setProfessionalIdExplicitlySet(true);
+    } else if (mode === 'new' && !appointment) {
+      // Se � novo modo sem appointment, permitir auto-select
+      console.log('?? [FLAG-SETTER] ?? Novo modo SEM appointment, permitindo auto-select');
+      setProfessionalIdExplicitlySet(false);
+    } else {
+      console.log('?? [FLAG-SETTER] ?? Situa��o amb�gua - mantendo flag como est�');
+    }
+  }, [appointment, mode]);
+
   useEffect(() => {
-    console.log('📊 [AppointmentUnitedModal] ESTADO COMPLETO agendamentoData:', {
+    console.log('? [AUTO-SELECT PROF] Verificando auto-select:', {
+      isOpen,
+      mode,
+      profsCount: professionals.length,
+      profselectionado: agendamentoData.professionalId,
+      explicitlySet: professionalIdExplicitlySet,
+      appointmentProfId: appointment?.professionalId,
+      appointmentProf_id: appointment?.professional_id
+    });
+
+    if (isOpen && mode === 'new' && professionals.length > 0) {
+      // ?? Se h� um profissional guardado do slot, NUNCA DEIXAR MUDAR
+      if (initialSlotProfessionalIdRef.current) {
+        console.log('? [AUTO-SELECT PROF] ?? Profissional do slot guardado, protegendo contra override:', {
+          guarded: initialSlotProfessionalIdRef.current,
+          atual: agendamentoData.professionalId,
+        });
+        // Se o profissional atual � diferente do guardado, corrigir
+        if (agendamentoData.professionalId !== initialSlotProfessionalIdRef.current) {
+          console.log('? [AUTO-SELECT PROF] ?? CORRIGINDO profissional para o valor do slot');
+          setAgendamentoData((prev) => ({
+            ...prev,
+            professionalId: initialSlotProfessionalIdRef.current,
+          }));
+        }
+        return;
+      }
+
+      // ?? IMPORTANTE: Check DIRETO do appointment prop, n�o da flag que pode estar atrasada!
+      const hasProfessionalIdFromSlot = appointment?.professional_id !== undefined || appointment?.professionalId !== undefined;
+
+      if (professionalIdExplicitlySet || hasProfessionalIdFromSlot) {
+        console.log('? [AUTO-SELECT PROF] ? Respeitando professional_id explicitamente setado do slot');
+        console.log('   professionalIdExplicitlySet:', professionalIdExplicitlySet);
+        console.log('   hasProfessionalIdFromSlot:', hasProfessionalIdFromSlot);
+        // Verificar se profissional ainda est� na lista de dispon�veis
+        const profStillAvailable = professionals.find(p => p.id === agendamentoData.professionalId);
+        if (!profStillAvailable && agendamentoData.professionalId && professionals.length > 0) {
+          console.log('? [AUTO-SELECT PROF] ??  Profissional do slot n�o est� na lista filtrada, mantendo valor original');
+          // Mesmo se n�o estiver dispon�vel, manter o valor do slot
+        }
+        return;
+      }
+
+      // Caso contr�rio, fazer auto-select do primeiro profissional
+      if (!agendamentoData.professionalId) {
+        console.log('? [AUTO-SELECT PROF] ?? Selecionando primeiro profissional:', professionals[0].name);
+        setAgendamentoData((prev) => ({
+          ...prev,
+          professionalId: professionals[0].id,
+        }));
+      } else {
+        // Se um foi selecionado, verificar se ainda est� na lista
+        const profStillAvailable = professionals.find(p => p.id === agendamentoData.professionalId);
+        if (!profStillAvailable && professionals.length > 0) {
+          console.log('? [AUTO-SELECT PROF] Profissional selecionado n�o est� mais dispon�vel, re-selecionando:', professionals[0].name);
+          setAgendamentoData((prev) => ({
+            ...prev,
+            professionalId: professionals[0].id,
+          }));
+        }
+      }
+    }
+  }, [isOpen, mode, professionals, agendamentoData.professionalId, professionalIdExplicitlySet, appointment]);
+
+  // ? AUTO-SELECT SERVI�O: Selecionar primeiro servi�o automaticamente
+  // ? DESABILITADO: AppointmentItemsManager gerencia os servi�os
+  // useEffect(() => {
+  //   if (isOpen && mode === 'new' && services.length > 0 && appointmentServices.length === 0) {
+  //     console.log('? [AUTO-SELECT SVC] Selecionando primeiro servi�o:', services[0].name);
+  //     setAppointmentServices([services[0]]);
+  //     setAgendamentoData((prev) => ({
+  //       ...prev,
+  //       serviceId: services[0].id,
+  //       serviceCode: services[0].code || '',
+  //     }));
+  //   }
+  // }, [isOpen, mode, services, appointmentServices.length]);
+
+  // ?? DEBUG: Monitorar TODO o agendamentoData
+  useEffect(() => {
+    console.log('?? [AppointmentUnitedModal] ESTADO COMPLETO agendamentoData:', {
       date: agendamentoData.date,
       time: agendamentoData.time,
       professionalId: agendamentoData.professionalId,
@@ -1738,9 +1946,9 @@ export default function AppointmentUnitedModal({
     });
   }, [agendamentoData]);
 
-  // 🔍 DEBUG: Monitorar listas de dados disponíveis
+  // ?? DEBUG: Monitorar listas de dados dispon�veis
   useEffect(() => {
-    console.log('📋 [AppointmentUnitedModal] LISTAS DISPONÍVEIS:', {
+    console.log('?? [AppointmentUnitedModal] LISTAS DISPON�VEIS:', {
       professionalsCount: professionals?.length || 0,
       servicesCount: services?.length || 0,
       payersCount: payers?.length || 0,
@@ -1749,45 +1957,45 @@ export default function AppointmentUnitedModal({
     if (agendamentoData.serviceId) {
       const foundService = services.find((s) => s.id === agendamentoData.serviceId);
       console.log(
-        `  ✅ Serviço ${agendamentoData.serviceId}: ${foundService?.name || 'NÃO ENCONTRADO'}`,
+        `  ? Servi�o ${agendamentoData.serviceId}: ${foundService?.name || 'N�O ENCONTRADO'}`,
       );
     }
     if (agendamentoData.payerId) {
       const foundPayer = payers.find((p) => p.id === agendamentoData.payerId);
       console.log(
-        `  ✅ Convênio ${agendamentoData.payerId}: ${foundPayer?.name || 'NÃO ENCONTRADO'}`,
+        `  ? Conv�nio ${agendamentoData.payerId}: ${foundPayer?.name || 'N�O ENCONTRADO'}`,
       );
     }
   }, [professionals, services, payers, rooms, agendamentoData.serviceId, agendamentoData.payerId]);
 
-  // 🔄 SINCRONIZAR CÓDIGO DO SERVIÇO COM SERVIÇO SELECIONADO
+  // ?? SINCRONIZAR C�DIGO DO SERVI�O COM SERVI�O SELECIONADO
   useEffect(() => {
     if (agendamentoData.serviceId && services.length > 0) {
       const selectedService = services.find((s) => s.id === agendamentoData.serviceId);
-      // ✅ Tenta diferentes propriedades possíveis para o código
+      // ? Tenta diferentes propriedades poss�veis para o c�digo
       const serviceCode =
         selectedService?.code ||
         selectedService?.codigo ||
         selectedService?.service_code ||
         selectedService?.id ||
         '';
-      console.log('🔄 [ServiceCode] Sincronizando código do serviço:', {
+      console.log('?? [ServiceCode] Sincronizando c�digo do servi�o:', {
         serviceId: agendamentoData.serviceId,
         serviceName: selectedService?.name,
         serviceCode: serviceCode,
         availableKeys: selectedService ? Object.keys(selectedService) : [],
       });
-      // ✅ Sempre sincroniza se temos um serviço selecionado, mesmo com código vazio
+      // ? Sempre sincroniza se temos um servi�o selecionado, mesmo com c�digo vazio
       if (serviceCode && agendamentoData.serviceCode !== serviceCode) {
         setAgendamentoData((prev) => ({ ...prev, serviceCode }));
       } else if (!serviceCode && agendamentoData.serviceCode) {
-        // Se não encontrou código mas tinha antes, pode estar em branco
+        // Se n�o encontrou c�digo mas tinha antes, pode estar em branco
         setAgendamentoData((prev) => ({ ...prev, serviceCode: '' }));
       }
     }
   }, [agendamentoData.serviceId, services]);
 
-  // ⚡ EM MODO EDIT: Se não temos o código do serviço, buscar diretamente do Supabase
+  // ? EM MODO EDIT: Se n�o temos o c�digo do servi�o, buscar diretamente do Supabase
   useEffect(() => {
     if (
       mode === 'edit' &&
@@ -1796,7 +2004,7 @@ export default function AppointmentUnitedModal({
       !agendamentoData.serviceCode
     ) {
       console.log(
-        '⚡ [ServiceCode] Buscando código do serviço diretamente do Supabase (modo edit)...',
+        '? [ServiceCode] Buscando c�digo do servi�o diretamente do Supabase (modo edit)...',
       );
 
       supabase
@@ -1806,18 +2014,18 @@ export default function AppointmentUnitedModal({
         .maybeSingle()
         .then(({ data, error }) => {
           if (error) {
-            console.warn('⚡ [ServiceCode] Erro ao buscar serviço:', error);
+            console.warn('? [ServiceCode] Erro ao buscar servi�o:', error);
             return;
           }
 
           if (!data) {
-            console.warn('⚡ [ServiceCode] Serviço não encontrado:', agendamentoData.serviceId);
+            console.warn('? [ServiceCode] Servi�o n�o encontrado:', agendamentoData.serviceId);
             return;
           }
 
-          console.log('⚡ [ServiceCode] Serviço encontrado no Supabase:', data);
+          console.log('? [ServiceCode] Servi�o encontrado no Supabase:', data);
           if (data?.code) {
-            console.log('⚡ [ServiceCode] Atualizando serviceCode com:', data.code);
+            console.log('? [ServiceCode] Atualizando serviceCode com:', data.code);
             setAgendamentoData((prev) => ({ ...prev, serviceCode: data.code }));
           }
         });
@@ -1831,10 +2039,10 @@ export default function AppointmentUnitedModal({
     }
   }, [agendamentoData.serviceCode]);
 
-  // � SINCRONIZAR LIBERAÇÃO COM FATURAMENTO ao avançar
+  // ? SINCRONIZAR LIBERA��O COM FATURAMENTO ao avan�ar
   useEffect(() => {
     if (tabAtivo === 'pagamento') {
-      console.log('📋 [AppointmentUnitedModal] Sincronizando dados de Liberação para Pagamento');
+      console.log('?? [AppointmentUnitedModal] Sincronizando dados de Libera��o para Pagamento');
       setFaturamentoData((prev) => ({
         ...prev,
         guide_number: liberacaoData.auth_number || prev.guide_number || '',
@@ -1847,7 +2055,7 @@ export default function AppointmentUnitedModal({
   // ATUALIZAR LIBERACAO QUANDO MUDAR ABA
   useEffect(() => {
     if (tabAtivo === 'liberacao' && appointment && mode === 'edit') {
-      console.log('🔴 [LIBERACAO TAB CARREGANDO]');
+      console.log('?? [LIBERACAO TAB CARREGANDO]');
       console.log('   appointment.card_number (do banco):', appointment.card_number);
       console.log('   appointment.authorization_number:', appointment.authorization_number);
       console.log('   appointment.authorization_expiry:', appointment.authorization_expiry);
@@ -1871,7 +2079,7 @@ export default function AppointmentUnitedModal({
             : prev.authorized || false,
       }));
 
-      console.log('   ✅ liberacaoData após setLiberacaoData será:', {
+      console.log('   ? liberacaoData ap�s setLiberacaoData ser�:', {
         card_number: appointment.card_number || '',
         auth_number: appointment.authorization_number || '',
       });
@@ -1883,7 +2091,7 @@ export default function AppointmentUnitedModal({
     const apt = finalAppointment || appointment;
     if (mode === 'edit' && apt?.id && liberacaoData.auth_number) {
       sessionStorage.setItem(`liberacaoData_${apt.id}`, JSON.stringify(liberacaoData));
-      console.log('💾 Dados de Liberação guardados em sessão');
+      console.log('?? Dados de Libera��o guardados em sess�o');
     }
   }, [liberacaoData, finalAppointment, appointment, mode]);
 
@@ -1892,26 +2100,26 @@ export default function AppointmentUnitedModal({
     const apt = finalAppointment || appointment;
     if (mode === 'edit' && apt?.id && faturamentoData.guide_number) {
       sessionStorage.setItem(`faturamentoData_${apt.id}`, JSON.stringify(faturamentoData));
-      console.log('💾 Dados de Faturamento guardados em sessão');
+      console.log('?? Dados de Faturamento guardados em sess�o');
     }
   }, [faturamentoData, finalAppointment, appointment, mode]);
 
-  // Sincronizar NF Autorização (Liberação) com N° Guia TISS (Faturamento) ao carregar
+  // Sincronizar NF Autoriza��o (Libera��o) com N� Guia TISS (Faturamento) ao carregar
   useEffect(() => {
     const apt = finalAppointment || appointment;
     if (mode === 'edit' && apt && (liberacaoData.auth_number || faturamentoData.guide_number)) {
-      // Se um tem valor e outro está vazio, sincronizar
+      // Se um tem valor e outro est� vazio, sincronizar
       if (liberacaoData.auth_number && !faturamentoData.guide_number) {
-        console.log('🔗 Sincronizando na carga: auth_number → guide_number');
+        console.log('?? Sincronizando na carga: auth_number ? guide_number');
         setFaturamentoData((prev) => ({ ...prev, guide_number: liberacaoData.auth_number }));
       } else if (faturamentoData.guide_number && !liberacaoData.auth_number) {
-        console.log('🔗 Sincronizando na carga: guide_number → auth_number');
+        console.log('?? Sincronizando na carga: guide_number ? auth_number');
         setLiberacaoData((prev) => ({ ...prev, auth_number: faturamentoData.guide_number }));
       }
     }
   }, [mode, finalAppointment, appointment]); // Executar apenas uma vez ao abrir o appointment
 
-  // �💳 SINCRONIZAR VALOR DE PAGAMENTO COM VALOR DO AGENDAMENTO
+  // ??? SINCRONIZAR VALOR DE PAGAMENTO COM VALOR DO AGENDAMENTO
   useEffect(() => {
     const isParticular = checkIsParticular(agendamentoData.payerId);
     if (tabAtivo === 'pagamento' && isParticular) {
@@ -1926,13 +2134,13 @@ export default function AppointmentUnitedModal({
         },
       }));
       console.log(
-        '💳 [AppointmentUnitedModal] Sincronizado valor de pagamento:',
+        '?? [AppointmentUnitedModal] Sincronizado valor de pagamento:',
         agendamentoData.value,
       );
     }
   }, [tabAtivo, agendamentoData.value, agendamentoData.payerId]);
 
-  // 🎁 SINCRONIZAR DESCONTO COM VALOR RECEBIDO (dinheiro)
+  // ?? SINCRONIZAR DESCONTO COM VALOR RECEBIDO (dinheiro)
   useEffect(() => {
     const isParticular = checkIsParticular(agendamentoData.payerId);
     const paymentMethod = pagamentoData.payment_method;
@@ -1952,7 +2160,7 @@ export default function AppointmentUnitedModal({
       }));
 
       console.log(
-        '🎁 [AppointmentUnitedModal] Desconto sincronizado - Valor recebido atualizado:',
+        '?? [AppointmentUnitedModal] Desconto sincronizado - Valor recebido atualizado:',
         {
           total: totalValue,
           desconto: discount,
@@ -1973,7 +2181,7 @@ export default function AppointmentUnitedModal({
   useEffect(() => {
     let isMounted = true;
 
-    console.log('🔵 [loadProfessionalSchedules EFFECT] DISPARADO com dependências:', {
+    console.log('?? [loadProfessionalSchedules EFFECT] DISPARADO com depend�ncias:', {
       isOpen,
       professionalId: agendamentoData.professionalId,
       clinicId,
@@ -1981,8 +2189,11 @@ export default function AppointmentUnitedModal({
     });
 
     async function loadProfessionalSchedules() {
-      if (!isOpen || !agendamentoData.professionalId) {
-        console.log('⏭️  [loadProfessionalSchedules] EARLY RETURN - isOpen:', isOpen, 'professionalId:', agendamentoData.professionalId);
+      // ?? PROTE��O: Se estamos em modo NEW com profissional do slot, usar a ref
+      const profIdToUse = initialSlotProfessionalIdRef.current || agendamentoData.professionalId;
+
+      if (!isOpen || !profIdToUse) {
+        console.log('??  [loadProfessionalSchedules] EARLY RETURN - isOpen:', isOpen, 'profIdToUse:', profIdToUse);
         if (isMounted) {
           setProfessionalSchedules([]);
           setLoadingProfessionalSchedules(false);
@@ -1990,13 +2201,15 @@ export default function AppointmentUnitedModal({
         return;
       }
 
+      console.log('?? [loadProfessionalSchedules] Carregando schedules com profIdToUse:', profIdToUse);
+
       try {
         setLoadingProfessionalSchedules(true);
 
         let query = supabase
           .from('professional_schedules')
           .select('*')
-          .eq('professional_id', agendamentoData.professionalId)
+          .eq('professional_id', profIdToUse)
           .eq('active', true);
 
         if (clinicId) {
@@ -2009,8 +2222,8 @@ export default function AppointmentUnitedModal({
           throw error;
         }
 
-        // 🔍 DEBUG: Log de agendamentos carregados
-        console.log('🔍 [loadProfessionalSchedules] Agendamentos carregados:', {
+        // ?? DEBUG: Log de agendamentos carregados
+        console.log('?? [loadProfessionalSchedules] Agendamentos carregados:', {
           professionalId: agendamentoData.professionalId,
           clinicId,
           count: data?.length || 0,
@@ -2022,7 +2235,7 @@ export default function AppointmentUnitedModal({
         }
       } catch (error) {
         console.error(
-          '❌ [AppointmentUnitedModal] Erro ao carregar disponibilidade do profissional:',
+          '? [AppointmentUnitedModal] Erro ao carregar disponibilidade do profissional:',
           error,
         );
         if (isMounted) {
@@ -2040,7 +2253,7 @@ export default function AppointmentUnitedModal({
     return () => {
       isMounted = false;
     };
-  }, [isOpen, agendamentoData.professionalId, clinicId]);
+  }, [isOpen, agendamentoData.professionalId, clinicId, initialSlotProfessionalIdRef.current]);
 
   const selectedProfessional = useMemo(
     () =>
@@ -2103,7 +2316,7 @@ export default function AppointmentUnitedModal({
         }
       } catch (error) {
         console.error(
-          '❌ [AppointmentUnitedModal] Erro ao carregar feriados do calendario:',
+          '? [AppointmentUnitedModal] Erro ao carregar feriados do calendario:',
           error,
         );
         if (isMounted) {
@@ -2182,10 +2395,10 @@ export default function AppointmentUnitedModal({
   };
 
   const updateAgendamentoField = (field, value) => {
-    console.log(`📝 [updateAgendamentoField] Atualizando ${field}:`, value);
+    console.log(`?? [updateAgendamentoField] Atualizando ${field}:`, value);
     setAgendamentoData((prev) => {
       const updated = { ...prev, [field]: value };
-      console.log(`   ✅ agendamentoData.${field} agora é:`, updated[field]);
+      console.log(`   ? agendamentoData.${field} agora �:`, updated[field]);
       return updated;
     });
   };
@@ -2206,7 +2419,7 @@ export default function AppointmentUnitedModal({
   const updateFaturamentoField = (field, value) => {
     setFaturamentoData((prev) => ({ ...prev, [field]: value }));
 
-    // Sincronizar com Liberação
+    // Sincronizar com Libera��o
     if (field === 'guide_number' && value) {
       setLiberacaoData((prev) => ({ ...prev, auth_number: value }));
     }
@@ -2216,7 +2429,7 @@ export default function AppointmentUnitedModal({
     setPagamentoData((prev) => ({ ...prev, [field]: value }));
   };
 
-  // Handler para mudanças em campos de pagamento
+  // Handler para mudan�as em campos de pagamento
   const handlePaymentFieldChange = (field, value) => {
     const paymentMethod = pagamentoData.payment_method;
     const methodKey = paymentMethod.toLowerCase();
@@ -2230,7 +2443,7 @@ export default function AppointmentUnitedModal({
     }));
   };
 
-  // Handler para cálculo de troco (dinheiro)
+  // Handler para c�lculo de troco (dinheiro)
   const handleCalculateChange = (sent, value) => {
     const amount = parseFloat(agendamentoData.value) || 0;
     const sentAmount = parseFloat(sent) || 0;
@@ -2246,25 +2459,27 @@ export default function AppointmentUnitedModal({
     }));
   };
 
-  // ✅ Handler para fechar a modal
+  // ? Handler para fechar a modal
   const handleCloseModal = () => {
-    console.log('🔴 Fechando modal...');
+    console.log('?? Fechando modal...');
+    setProfessionalIdExplicitlySet(false); // ? Resetar flag ao fechar
+    initialSlotProfessionalIdRef.current = null; // ?? Resetar ref ao fechar
     setSelectedPatient(null); // Limpar paciente selecionado
     onClose();
   };
 
-  // 💾 SALVAR APENAS OS DADOS (sem criar atendimento)
+  // ?? SALVAR APENAS OS DADOS (sem criar atendimento)
   const handleSaveDataOnly = async () => {
     const apt = finalAppointment || appointment;
 
-    console.log('🔍 [handleSaveDataOnly] Verificando agendamento:', {
+    console.log('?? [handleSaveDataOnly] Verificando agendamento:', {
       apt_id: apt?.id,
       finalAppointment_id: finalAppointment?.id,
       appointment_id: appointment?.id,
     });
 
-    // 🔥 DEBUG: Mostrar estado dos serviços ANTES de salvar
-    console.log('🔥 [DEBUG SERVIÇOS ANTES DE SALVAR]', {
+    // ?? DEBUG: Mostrar estado dos servi�os ANTES de salvar
+    console.log('?? [DEBUG SERVI�OS ANTES DE SALVAR]', {
       appointmentServices_length: appointmentServices.length,
       appointmentServices_data: appointmentServices.map((s) => ({
         id: s.id,
@@ -2277,19 +2492,19 @@ export default function AppointmentUnitedModal({
     });
 
     if (!apt?.id) {
-      alert('❌ Nenhum agendamento carregado para salvar');
-      console.error('❌ apt?.id vazio!', { apt, finalAppointment, appointment });
+      alert('? Nenhum agendamento carregado para salvar');
+      console.error('? apt?.id vazio!', { apt, finalAppointment, appointment });
       return;
     }
 
-    // 🏥 VALIDAÇÃO: Profissional é obrigatório
+    // ?? VALIDA��O: Profissional � obrigat�rio
     if (!agendamentoData.professionalId) {
-      alert('❌ Selecione um profissional antes de salvar.');
-      console.warn('❌ professionalId vazio');
+      alert('? Selecione um profissional antes de salvar.');
+      console.warn('? professionalId vazio');
       return;
     }
 
-    // ⏰ PHASE 3: VALIDAÇÃO DE AGENDAMENTO
+    // ? PHASE 3: VALIDA��O DE AGENDAMENTO
     if (agendamentoData.professionalId && agendamentoData.date && agendamentoData.time) {
       const validationResult = await validateAppointmentBeforeSave(
         clinicId,
@@ -2304,50 +2519,50 @@ export default function AppointmentUnitedModal({
 
       if (!validationResult.isValid) {
         const errorMsg = validationResult.errors.join('\n');
-        alert(`❌ Erro de validação:\n\n${errorMsg}`);
-        console.warn('❌ Validation errors:', validationResult.errors);
+        alert(`? Erro de valida��o:\n\n${errorMsg}`);
+        console.warn('? Validation errors:', validationResult.errors);
         return;
       }
 
       if (validationResult.warnings.length > 0) {
-        console.warn('⚠️ Validation warnings:', validationResult.warnings);
+        console.warn('?? Validation warnings:', validationResult.warnings);
       }
     }
 
-    console.log('✅ Profissional OK:', agendamentoData.professionalId);
+    console.log('? Profissional OK:', agendamentoData.professionalId);
 
-    // 🏥 VALIDAÇÃO: Verificar se profissional foi selecionado mas não tem convênios
+    // ?? VALIDA��O: Verificar se profissional foi selecionado mas n�o tem conv�nios
     if (agendamentoData.professionalId && filteredPayers.length === 0 && !agendamentoData.payerId) {
       alert(
-        '❌ Este profissional não possui convênios vinculados. Vincule pelo menos um convênio antes de atualizar.',
+        '? Este profissional n�o possui conv�nios vinculados. Vincule pelo menos um conv�nio antes de atualizar.',
       );
-      console.warn('❌ Profissional sem convênios');
+      console.warn('? Profissional sem conv�nios');
       return;
     }
 
-    // 🏥 VALIDAÇÃO: Se profissional tem convênios, convênio deve ser obrigatório
+    // ?? VALIDA��O: Se profissional tem conv�nios, conv�nio deve ser obrigat�rio
     if (agendamentoData.professionalId && filteredPayers.length > 0 && !agendamentoData.payerId) {
-      alert('❌ Convênio é obrigatório para este profissional.');
-      console.warn('❌ Convênio obrigatório mas não selecionado', {
+      alert('? Conv�nio � obrigat�rio para este profissional.');
+      console.warn('? Conv�nio obrigat�rio mas n�o selecionado', {
         filteredPayers_length: filteredPayers.length,
         payerId: agendamentoData.payerId,
       });
       return;
     }
 
-    // 🏥 VALIDAÇÃO: Se profissional foi selecionado, convênio DEVE estar selecionado
+    // ?? VALIDA��O: Se profissional foi selecionado, conv�nio DEVE estar selecionado
     if (agendamentoData.professionalId && !agendamentoData.payerId) {
-      alert('❌ Por favor, selecione um convênio.');
-      console.warn('❌ Convênio não selecionado');
+      alert('? Por favor, selecione um conv�nio.');
+      console.warn('? Conv�nio n�o selecionado');
       return;
     }
 
-    console.log('✅ Todas as validações passaram! Iniciando salvamento...');
+    console.log('? Todas as valida��es passaram! Iniciando salvamento...');
 
     try {
       setLoading(true);
-      // 🚨 DEBUG ANTES DO SAVE
-      console.log('🚨 DEBUG SAVE (handleSaveDataOnly)', {
+      // ?? DEBUG ANTES DO SAVE
+      console.log('?? DEBUG SAVE (handleSaveDataOnly)', {
         payerId: agendamentoData.payerId,
         roomId: agendamentoData.roomId,
         payerIdType: typeof agendamentoData.payerId,
@@ -2356,14 +2571,14 @@ export default function AppointmentUnitedModal({
         roomIdEmpty: !agendamentoData.roomId,
       });
 
-      console.log('💾 [SAVE DATA ONLY] Iniciando salvamento...', { id: apt.id });
+      console.log('?? [SAVE DATA ONLY] Iniciando salvamento...', { id: apt.id });
       console.log(
-        '   ⚠️ [LIBERAÇÃO] liberacaoData COMPLETO:',
+        '   ?? [LIBERA��O] liberacaoData COMPLETO:',
         JSON.stringify(liberacaoData, null, 2),
       );
-      console.log('   ⚠️ [LIBERAÇÃO] card_number:', liberacaoData.card_number);
-      console.log('   ⚠️ [LIBERAÇÃO] auth_number:', liberacaoData.auth_number);
-      console.log('   ⚠️ [LIBERAÇÃO] authorized:', liberacaoData.authorized);
+      console.log('   ?? [LIBERA��O] card_number:', liberacaoData.card_number);
+      console.log('   ?? [LIBERA��O] auth_number:', liberacaoData.auth_number);
+      console.log('   ?? [LIBERA��O] authorized:', liberacaoData.authorized);
       console.log('   agendamentoData:', agendamentoData);
       console.log('   pagamentoData.payment_method:', pagamentoData.payment_method);
       console.log('   pagamentoData.plano_contas_id:', pagamentoData.plano_contas_id);
@@ -2371,32 +2586,32 @@ export default function AppointmentUnitedModal({
       console.log('   faturamentoData.convenio_id:', faturamentoData?.convenio_id);
       console.log('   faturamentoData:', faturamentoData);
 
-      // 🔍 DETERMINAR A ORIGEM CORRETA DO PLANO DE CONTAS
-      // Se for particular, usar pagamentoData; senão, usar faturamentoData
+      // ?? DETERMINAR A ORIGEM CORRETA DO PLANO DE CONTAS
+      // Se for particular, usar pagamentoData; sen�o, usar faturamentoData
       const isParticular = checkIsParticular(agendamentoData.payerId);
       const planoContasValue = isParticular
         ? pagamentoData?.plano_contas_id || null
         : faturamentoData?.plano_contas_id || null;
 
-      // 🔍 Determinar se desconto foi solicitado ou removido
+      // ?? Determinar se desconto foi solicitado ou removido
       const discountValue = pagamentoData.discount ? parseFloat(pagamentoData.discount) : 0;
       const originalDiscountValue = apt?.discount ? parseFloat(apt.discount) : 0;
-      // ✅ CORRIGIDO: Usar valores de pagamentoData (estado atual) ao invés de appointment (banco de dados)
+      // ? CORRIGIDO: Usar valores de pagamentoData (estado atual) ao inv�s de appointment (banco de dados)
       const currentDiscountRequestedAt =
         pagamentoData.discount_requested_at || apt?.discount_requested_at;
       const currentDiscountRequestedBy =
         pagamentoData.discount_requested_by || apt?.discount_requested_by;
 
-      // Lógica para salvar dados de solicitação (mesma que em handleSaveChanges)
+      // L�gica para salvar dados de solicita��o (mesma que em handleSaveChanges)
       let discountRequestData = {};
 
       if (discountValue > 0) {
-        // ✅ Se houver desconto, sempre usar os valores do estado (que podem ter sido atualizados pelo botão)
+        // ? Se houver desconto, sempre usar os valores do estado (que podem ter sido atualizados pelo bot�o)
         discountRequestData = {
           discount_requested_by: currentDiscountRequestedBy || null,
           discount_requested_at: currentDiscountRequestedAt || null,
           discount_requested_by_name:
-            pagamentoData.discount_requested_by_name || user?.email || null, // ✅ NOVO: Armazena nome do usuário
+            pagamentoData.discount_requested_by_name || user?.email || null, // ? NOVO: Armazena nome do usu�rio
         };
       } else {
         discountRequestData = {
@@ -2427,12 +2642,12 @@ export default function AppointmentUnitedModal({
         payment_method: pagamentoData.payment_method || null,
         convenio_id: faturamentoData?.convenio_id || null,
         plano_contas_id: planoContasValue,
-        // � MÚLTIPLOS PAGAMENTOS
+        // ? M�LTIPLOS PAGAMENTOS
         payment_splits:
           enableMultiplePayments && pagamentoSplits.length > 0
             ? JSON.stringify(pagamentoSplits)
             : null,
-        // �📋 DADOS DE LIBERAÇÃO
+        // ??? DADOS DE LIBERA��O
         card_number: liberacaoData.card_number || null,
         authorization_number: liberacaoData.auth_number || null,
         authorization_expiry: liberacaoData.auth_expiry || null,
@@ -2441,16 +2656,16 @@ export default function AppointmentUnitedModal({
 
       console.log('   updateData a enviar:', JSON.stringify(updateData, null, 2));
 
-      // � Normalizar strings vazias em null para campos UUID
+      // ? Normalizar strings vazias em null para campos UUID
 
-      // �🔴 DEBUG CARD_NUMBER
-      console.log('🔴 [CARD_NUMBER DEBUG ANTES DE ENVIAR]');
+      // ??? DEBUG CARD_NUMBER
+      console.log('?? [CARD_NUMBER DEBUG ANTES DE ENVIAR]');
       console.log('   liberacaoData.card_number:', liberacaoData.card_number);
       console.log('   updateData.card_number:', updateData.card_number);
       console.log('   updateData.authorization_number:', updateData.authorization_number);
       console.log('   updateData.authorization_verified:', updateData.authorization_verified);
 
-      console.log('🔍 [PLANO_CONTAS DEBUG]', {
+      console.log('?? [PLANO_CONTAS DEBUG]', {
         isParticular,
         source: isParticular ? 'pagamentoData (Particular)' : 'faturamentoData (Insurance)',
         valor: planoContasValue,
@@ -2462,16 +2677,16 @@ export default function AppointmentUnitedModal({
         updateData.end_time = agendamentoData.endTime;
       }
 
-      console.log('📤 Enviando updateData para API:', JSON.stringify(updateData, null, 2));
+      console.log('?? Enviando updateData para API:', JSON.stringify(updateData, null, 2));
       const result = await updateAppointment(apt.id, updateData);
 
       // VERIFICAR O QUE RETORNOU DO UPDATE
-      console.log('✅ API retornou:', result);
-      console.log('🔴 [CARD_NUMBER DEBUG APÓS UPDATE]');
+      console.log('? API retornou:', result);
+      console.log('?? [CARD_NUMBER DEBUG AP�S UPDATE]');
       console.log('   result.card_number:', result?.card_number);
       console.log('   result.authorization_number:', result?.authorization_number);
 
-      console.log('   Valores específicos enviados:');
+      console.log('   Valores espec�ficos enviados:');
       console.log('   - payment_method:', updateData.payment_method);
       console.log('   - convenio_id:', updateData.convenio_id);
       console.log('   - plano_contas_id:', updateData.plano_contas_id);
@@ -2480,12 +2695,12 @@ export default function AppointmentUnitedModal({
       console.log('   - card_number:', updateData.card_number);
       console.log('   - authorization_number:', updateData.authorization_number);
 
-      // 💳 SALVAR DADOS DE FATURAMENTO (incluindo billing_data JSON)
+      // ?? SALVAR DADOS DE FATURAMENTO (incluindo billing_data JSON)
       if (faturamentoData && (faturamentoData.guide_number || faturamentoData.authorized_value)) {
         try {
-          console.log('📝 Salvando dados de faturamento...', faturamentoData);
+          console.log('?? Salvando dados de faturamento...', faturamentoData);
 
-          // 🔍 Construir objeto billing_data com todos os campos
+          // ?? Construir objeto billing_data com todos os campos
           const billingData = {
             guide_type: faturamentoData.guide_type || 'consulta',
             code_type: faturamentoData.code_type || 'tuss',
@@ -2499,29 +2714,29 @@ export default function AppointmentUnitedModal({
             notes: faturamentoData.notes || '',
           };
 
-          console.log('💾 billing_data a ser salvo:', billingData);
+          console.log('?? billing_data a ser salvo:', billingData);
 
           await supabase
             .from('appointments')
             .update({
-              // 📋 DADOS DE LIBERAÇÃO
+              // ?? DADOS DE LIBERA��O
               card_number: liberacaoData.card_number || null,
               guide_number: faturamentoData.guide_number || null,
               authorization_number: faturamentoData.authorization_number || null,
               authorization_expiry: faturamentoData.auth_expiry || null,
               authorization_verified: faturamentoData.authorized === true,
-              billing_data: billingData, // ✅ SALVAR JSON ESTRUTURADO
+              billing_data: billingData, // ? SALVAR JSON ESTRUTURADO
             })
             .eq('id', apt.id);
-          console.log('✅ Dados de faturamento salvos (incluindo billing_data)');
+          console.log('? Dados de faturamento salvos (incluindo billing_data)');
         } catch (billingErr) {
-          console.warn('⚠️ Erro ao salvar dados de faturamento:', billingErr);
+          console.warn('?? Erro ao salvar dados de faturamento:', billingErr);
         }
       }
 
-      // 🔄 RECARREGAR AGENDAMENTO DO BANCO PARA REFLETIR AS MUDANÇAS
+      // ?? RECARREGAR AGENDAMENTO DO BANCO PARA REFLETIR AS MUDAN�AS
       try {
-        console.log('🔄 Recarregando agendamento do banco...');
+        console.log('?? Recarregando agendamento do banco...');
         const { data: refreshedAppointment, error: fetchError } = await supabase
           .from('appointments')
           .select('*')
@@ -2529,11 +2744,11 @@ export default function AppointmentUnitedModal({
           .maybeSingle();
 
         if (fetchError) {
-          console.error('❌ Erro ao recarregar:', fetchError);
+          console.error('? Erro ao recarregar:', fetchError);
         } else if (!refreshedAppointment) {
-          console.warn('⚠️ Agendamento não encontrado após atualização');
+          console.warn('?? Agendamento n�o encontrado ap�s atualiza��o');
         } else if (refreshedAppointment) {
-          console.log('🔄 Agendamento recarregado:', {
+          console.log('?? Agendamento recarregado:', {
             plano_contas_id: refreshedAppointment.plano_contas_id,
             convenio_id: refreshedAppointment.convenio_id,
             payment_method: refreshedAppointment.payment_method,
@@ -2554,13 +2769,13 @@ export default function AppointmentUnitedModal({
           }));
         }
       } catch (reloadErr) {
-        console.warn('⚠️ Erro ao recarregar agendamento:', reloadErr);
+        console.warn('?? Erro ao recarregar agendamento:', reloadErr);
       }
 
-      // 📋 SINCRONIZAR MÚLTIPLOS SERVIÇOS (se houver)
+      // ?? SINCRONIZAR M�LTIPLOS SERVI�OS (se houver)
       if (appointmentServices.length > 0) {
         try {
-          console.log('📋 [Sincronizando serviços] Começando sincronização', {
+          console.log('?? [Sincronizando servi�os] Come�ando sincroniza��o', {
             appointmentServices_length: appointmentServices.length,
             apt_id: apt.id,
             appointmentServices: appointmentServices.map((s, idx) => ({
@@ -2577,44 +2792,44 @@ export default function AppointmentUnitedModal({
 
           const result = await syncAppointmentServices(apt.id, appointmentServices);
 
-          console.log('✅ Serviços sincronizados com sucesso!', {
+          console.log('? Servi�os sincronizados com sucesso!', {
             services_count: result?.length,
             result,
           });
         } catch (servicesErr) {
-          console.error('❌ Erro ao sincronizar serviços:', servicesErr);
+          console.error('? Erro ao sincronizar servi�os:', servicesErr);
           console.error('   Stack:', servicesErr.stack);
-          // Não bloquear o salvamento se os serviços falharem
+          // N�o bloquear o salvamento se os servi�os falharem
           alert(
-            '⚠️ Agendamento salvo, mas houve erro ao sincronizar os serviços: ' +
+            '?? Agendamento salvo, mas houve erro ao sincronizar os servi�os: ' +
               servicesErr.message,
           );
         }
       } else {
-        console.log('ℹ️ [Sincronizando serviços] Nenhum serviço para sincronizar', {
+        console.log('?? [Sincronizando servi�os] Nenhum servi�o para sincronizar', {
           appointmentServices_length: appointmentServices.length,
         });
       }
 
-      console.log('✅ Dados salvos com sucesso!');
-      alert('✅ Dados do agendamento salvos com sucesso!');
+      console.log('? Dados salvos com sucesso!');
+      alert('? Dados do agendamento salvos com sucesso!');
       setLoading(false);
     } catch (err) {
-      console.error('❌ Erro ao salvar dados:', err);
-      alert(`❌ Erro ao salvar: ${err.message}`);
+      console.error('? Erro ao salvar dados:', err);
+      alert(`? Erro ao salvar: ${err.message}`);
       setLoading(false);
     }
   };
 
-  // 🎁 Registrar desconto (se houver)
-  const registerDiscountIfNeeded = async (appointmentId, accountsReceivableId) => {
+  // ?? Registrar desconto (se houver)
+  const registerDiscountIfNeeded = async (appointmentId) => {
     const discount = parseFloat(pagamentoData.discount || 0);
     if (discount <= 0 || !pagamentoData.discount_reason) {
       return null;
     }
 
     try {
-      console.log('🎁 Registrando desconto...', { appointment: appointmentId, amount: discount });
+      console.log('?? Registrando desconto...', { appointment: appointmentId, amount: discount });
 
       const { data, error } = await supabase
         .from('discount_authorizations')
@@ -2623,7 +2838,7 @@ export default function AppointmentUnitedModal({
             clinic_id: clinicId,
             appointment_id: appointmentId,
             patient_id: agendamentoData.patientId || null,
-            accounts_receivable_id: accountsReceivableId || null,
+            accounts_receivable_id: null,
             discount_amount: discount,
             discount_reason: pagamentoData.discount_reason,
             discount_observation: pagamentoData.discount_observation || '',
@@ -2635,14 +2850,14 @@ export default function AppointmentUnitedModal({
         .maybeSingle();
 
       if (error) {
-        console.error('❌ Erro ao registrar desconto:', error);
+        console.error('? Erro ao registrar desconto:', error);
         throw error;
       }
 
-      console.log('✅ Desconto registrado com sucesso:', data.id);
+      console.log('? Desconto registrado com sucesso:', data.id);
       return data;
     } catch (err) {
-      console.error('❌ Erro ao registrar desconto:', err);
+      console.error('? Erro ao registrar desconto:', err);
       throw err;
     }
   };
@@ -2650,12 +2865,12 @@ export default function AppointmentUnitedModal({
   // Handle saving appointment changes
   const handleSaveChanges = async () => {
     try {
-      // � DEBUG ETAPA 6: Verificar formData
-      console.log('═══════════════════════════════════════════════');
-      console.log('🔧 [ETAPA 6] handleSaveChanges DISPARADO');
-      console.log('═══════════════════════════════════════════════');
-      console.log('📝 formData (hook state):', formData);
-      console.log('📋 agendamentoData (modal state):', {
+      // ? DEBUG ETAPA 6: Verificar formData
+      console.log('-----------------------------------------------');
+      console.log('?? [ETAPA 6] handleSaveChanges DISPARADO');
+      console.log('-----------------------------------------------');
+      console.log('?? formData (hook state):', formData);
+      console.log('?? agendamentoData (modal state):', {
         payer_id: agendamentoData.payerId,
         room_id: agendamentoData.roomId,
         professional_id: agendamentoData.professionalId,
@@ -2664,10 +2879,10 @@ export default function AppointmentUnitedModal({
         scheduled_time: agendamentoData.time,
         value: agendamentoData.value,
       });
-      console.log('═══════════════════════════════════════════════');
+      console.log('-----------------------------------------------');
 
-      // �🚨 DEBUG ANTES DO SAVE
-      console.log('🚨 DEBUG SAVE (handleSaveChanges)', {
+      // ??? DEBUG ANTES DO SAVE
+      console.log('?? DEBUG SAVE (handleSaveChanges)', {
         payerId: agendamentoData.payerId,
         roomId: agendamentoData.roomId,
         payerIdType: typeof agendamentoData.payerId,
@@ -2682,8 +2897,8 @@ export default function AppointmentUnitedModal({
         return;
       }
 
-      // VALIDACAO: Se profissional tem convenios E é modo de EDIÇÃO, convenio deve ser obrigatorio
-      // Para modo NEW (criação), permitir avançar sem convênio (pode preencher depois)
+      // VALIDACAO: Se profissional tem convenios E � modo de EDI��O, convenio deve ser obrigatorio
+      // Para modo NEW (cria��o), permitir avan�ar sem conv�nio (pode preencher depois)
       if (mode === 'edit' && agendamentoData.professionalId && filteredPayers.length > 0 && !agendamentoData.payerId) {
         alert('Convenio eh obrigatorio para este profissional.');
         return;
@@ -2701,7 +2916,7 @@ export default function AppointmentUnitedModal({
       }
 
       const apt = finalAppointment || appointment;
-      console.log('💾 [SAVE INITIATED]', {
+      console.log('?? [SAVE INITIATED]', {
         mode,
         appointmentId: apt?.id,
         currentStatus: agendamentoData.status,
@@ -2710,20 +2925,20 @@ export default function AppointmentUnitedModal({
       let appointmentId = apt?.id;
       let patientId = apt?.patient_id;
 
-      // 📝 MODO NOVO: Criar novo agendamento
+      // ?? MODO NOVO: Criar novo agendamento
       if (mode === 'new') {
-        console.log('📝 Criando novo agendamento...', {
+        console.log('?? Criando novo agendamento...', {
           data: agendamentoData.date,
           tempo: agendamentoData.time,
         });
 
         let finalPatientId = agendamentoData.patientId || null;
 
-        // 👤 SE NENHUM PACIENTE SELECIONADO, CRIAR NOVO PACIENTE COM DADOS BÁSICOS
-        // ✅ FIX: Garantir que NÃO vai criar novo paciente se um paciente foi selecionado mas patientId ficou vazio
-        // O patientId deve vir preenchido quando selectedPatient está setado
+        // ?? SE NENHUM PACIENTE SELECIONADO, CRIAR NOVO PACIENTE COM DADOS B�SICOS
+        // ? FIX: Garantir que N�O vai criar novo paciente se um paciente foi selecionado mas patientId ficou vazio
+        // O patientId deve vir preenchido quando selectedPatient est� setado
         if (!finalPatientId && agendamentoData.patientName?.trim() && !selectedPatient) {
-          console.log('👤 Criando novo paciente automaticamente...', {
+          console.log('?? Criando novo paciente automaticamente...', {
             name: agendamentoData.patientName,
             phone: agendamentoData.phone,
             birthdate: cadastralData.birthdate,
@@ -2737,27 +2952,27 @@ export default function AppointmentUnitedModal({
           };
 
           const newPatient = await createPatient(clinicId, newPatientData);
-          console.log('✅ Novo paciente criado!', newPatient);
+          console.log('? Novo paciente criado!', newPatient);
           finalPatientId = newPatient.id;
         } else if (selectedPatient && !finalPatientId) {
-          // ⚠️ AVISO: Se um paciente foi selecionado mas patientId ficou vazio, isso é um erro
-          console.warn('⚠️ [AVISO] Paciente selecionado mas patientId está vazio!', {
+          // ?? AVISO: Se um paciente foi selecionado mas patientId ficou vazio, isso � um erro
+          console.warn('?? [AVISO] Paciente selecionado mas patientId est� vazio!', {
             selectedPatient,
             agendamentoData,
           });
           throw new Error(
-            'Paciente selecionado mas ID não foi preenchido. Por favor, selecione o paciente novamente.',
+            'Paciente selecionado mas ID n�o foi preenchido. Por favor, selecione o paciente novamente.',
           );
         }
 
-        // 🔍 Determinar se desconto foi solicitado (novo desconto)
+        // ?? Determinar se desconto foi solicitado (novo desconto)
         const discountValue = pagamentoData.discount ? parseFloat(pagamentoData.discount) : 0;
         const discountRequested =
           discountValue > 0
             ? {
                 discount_requested_by: user?.id || null,
                 discount_requested_at: new Date().toISOString(),
-                discount_requested_by_name: user?.user_metadata?.name || user?.email || null, // ✅ NOVO: Armazenar nome/email do usuário
+                discount_requested_by_name: user?.user_metadata?.name || user?.email || null, // ? NOVO: Armazenar nome/email do usu�rio
               }
             : {
                 discount_requested_by: null,
@@ -2793,17 +3008,24 @@ export default function AppointmentUnitedModal({
             enableMultiplePayments && pagamentoSplits.length > 0
               ? JSON.stringify(pagamentoSplits)
               : null,
+          // ?? Dados de processador de cart�o (se aplic�vel)
+          processor_id: cardProcessorData.processor_id || null,
+          card_brand: cardProcessorData.card_brand || null,
+          settlement_type: cardProcessorData.settlement_type || null,
+          fee_percent: cardProcessorData.fee_percent || null,
+          fee_amount: cardProcessorData.fee_amount || null,
+          net_amount: cardProcessorData.net_amount || null,
         };
 
         const createdAppointment = await createAppointment(newAppointmentData);
-        console.log('✅ Novo agendamento criado com sucesso!', createdAppointment);
+        console.log('? Novo agendamento criado com sucesso!', createdAppointment);
 
         appointmentId = createdAppointment.id;
         patientId = createdAppointment.patient_id;
       }
-      // ✏️ MODO EDITAR: Atualizar agendamento existente
+      // ?? MODO EDITAR: Atualizar agendamento existente
       else if (mode === 'edit' && appointmentId) {
-        console.log('💾 Atualizando agendamento...', { id: appointmentId });
+        console.log('?? Atualizando agendamento...', { id: appointmentId });
 
         const calcularEndTime = (startTime, durationMinutes = 30) => {
           if (!startTime) {
@@ -2814,10 +3036,10 @@ export default function AppointmentUnitedModal({
           return minutesToTime(endMinutes);
         };
 
-        // 🔍 Determinar se desconto foi solicitado ou removido
+        // ?? Determinar se desconto foi solicitado ou removido
         const discountValue = pagamentoData.discount ? parseFloat(pagamentoData.discount) : 0;
         const originalDiscountValue = apt?.discount ? parseFloat(apt.discount) : 0;
-        // ✅ CORRIGIDO: Usar valores de pagamentoData (estado atual) ao invés de appointment (banco de dados)
+        // ? CORRIGIDO: Usar valores de pagamentoData (estado atual) ao inv�s de appointment (banco de dados)
         const currentDiscountRequestedAt =
           pagamentoData.discount_requested_at || apt?.discount_requested_at;
         const currentDiscountRequestedBy =
@@ -2825,35 +3047,35 @@ export default function AppointmentUnitedModal({
         const currentDiscountRequestedByName =
           pagamentoData.discount_requested_by_name || apt?.discount_requested_by_name;
 
-        // Lógica para salvar dados de solicitação (mesma que em handleSaveDataOnly)
+        // L�gica para salvar dados de solicita��o (mesma que em handleSaveDataOnly)
         let discountRequestData = {};
 
         if (discountValue > 0) {
-          // ✅ Se houver desconto, sempre usar os valores do estado (que podem ter sido atualizados pelo botão)
+          // ? Se houver desconto, sempre usar os valores do estado (que podem ter sido atualizados pelo bot�o)
           discountRequestData = {
             discount_requested_by: currentDiscountRequestedBy || null,
             discount_requested_at: currentDiscountRequestedAt || null,
             discount_requested_by_name:
-              currentDiscountRequestedByName || user?.user_metadata?.name || user?.email || null, // ✅ NOVO: Armazena nome do usuário
+              currentDiscountRequestedByName || user?.user_metadata?.name || user?.email || null, // ? NOVO: Armazena nome do usu�rio
           };
-          console.log('📋 [DESCONTO ATIVO] Salvando dados de solicitação:', discountRequestData);
+          console.log('?? [DESCONTO ATIVO] Salvando dados de solicita��o:', discountRequestData);
         } else {
-          // Desconto removido: limpar dados de solicitação
+          // Desconto removido: limpar dados de solicita��o
           discountRequestData = {
             discount_requested_by: null,
             discount_requested_at: null,
             discount_requested_by_name: null,
           };
-          console.log('📋 [DESCONTO REMOVIDO] Limpando dados de solicitação');
+          console.log('?? [DESCONTO REMOVIDO] Limpando dados de solicita��o');
         }
 
-        // ✅ Validação de timezone antes de salvar
+        // ? Valida��o de timezone antes de salvar
         if (!isValidLocalDateTime(agendamentoData.date, agendamentoData.time)) {
-          console.error('❌ [TIMEZONE] Data ou hora inválida!', {
+          console.error('? [TIMEZONE] Data ou hora inv�lida!', {
             date: agendamentoData.date,
             time: agendamentoData.time,
           });
-          alert('Data ou hora inválida. Por favor, verifique.');
+          alert('Data ou hora inv�lida. Por favor, verifique.');
           return;
         }
 
@@ -2886,11 +3108,18 @@ export default function AppointmentUnitedModal({
 
           status: agendamentoData.status,
           notes: agendamentoData.notes || null,
+          // ?? Dados de processador de cart�o (se aplic�vel)
+          processor_id: cardProcessorData.processor_id || null,
+          card_brand: cardProcessorData.card_brand || null,
+          settlement_type: cardProcessorData.settlement_type || null,
+          fee_percent: cardProcessorData.fee_percent || null,
+          fee_amount: cardProcessorData.fee_amount || null,
+          net_amount: cardProcessorData.net_amount || null,
         };
 
-        console.log('🕐 [TIMEZONE] Validação OK - salvando agendamento');
-        console.log('🚀 PAYLOAD COMPLETO PARA UPDATE:', payload);
-        console.log('💾 Campos do payload:', Object.keys(payload));
+        console.log('?? [TIMEZONE] Valida��o OK - salvando agendamento');
+        console.log('?? PAYLOAD COMPLETO PARA UPDATE:', payload);
+        console.log('?? Campos do payload:', Object.keys(payload));
         console.log('   - date:', payload.scheduled_date);
         console.log('   - time:', payload.scheduled_time);
         console.log('   - payer_id:', payload.payer_id);
@@ -2902,54 +3131,54 @@ export default function AppointmentUnitedModal({
 
         const result = await updateAppointment(appointmentId, updateData);
 
-        console.log('✅ Agendamento atualizado com sucesso!');
-        console.log('🔍 [DEBUG] Resposta retornada:', JSON.stringify(result, null, 2));
-        console.log('   Valores específicos que foram atualizados:');
+        console.log('? Agendamento atualizado com sucesso!');
+        console.log('?? [DEBUG] Resposta retornada:', JSON.stringify(result, null, 2));
+        console.log('   Valores espec�ficos que foram atualizados:');
         console.log('   - payer_id:', updateData.payer_id);
         console.log('   - room_id:', updateData.room_id);
         console.log('   - professional_id:', updateData.professional_id);
         console.log('   - service_id:', updateData.service_id);
 
-        // � VALIDAÇÃO PÓS-UPDATE: Confirmar que dados foram salvos
+        // ? VALIDA��O P�S-UPDATE: Confirmar que dados foram salvos
         if (updateData.payer_id || updateData.room_id || updateData.scheduled_time) {
           try {
-            console.log('🔎 [VALIDAÇÃO] Verificando se dados foram salvos no banco...');
+            console.log('?? [VALIDA��O] Verificando se dados foram salvos no banco...');
             const validation = await validateAppointmentSaved(appointmentId, {
               payer_id: updateData.payer_id,
               room_id: updateData.room_id,
               scheduled_time: updateData.scheduled_time,
             });
 
-            console.log('✅ [VALIDAÇÃO] Resultado:', JSON.stringify(validation, null, 2));
+            console.log('? [VALIDA��O] Resultado:', JSON.stringify(validation, null, 2));
 
             if (validation.matches.payer_id === false) {
-              console.error('❌ ALERTA: payer_id NÃO foi salvo no banco!', {
+              console.error('? ALERTA: payer_id N�O foi salvo no banco!', {
                 esperado: updateData.payer_id,
                 noSistema: validation.dbValues.payer_id,
               });
             }
             if (validation.matches.room_id === false) {
-              console.error('❌ ALERTA: room_id NÃO foi salvo no banco!', {
+              console.error('? ALERTA: room_id N�O foi salvo no banco!', {
                 esperado: updateData.room_id,
                 noSistema: validation.dbValues.room_id,
               });
             }
             if (validation.matches.scheduled_time === false) {
-              console.error('❌ ALERTA: scheduled_time NÃO foi salvo no banco!', {
+              console.error('? ALERTA: scheduled_time N�O foi salvo no banco!', {
                 esperado: updateData.scheduled_time,
                 noSistema: validation.dbValues.scheduled_time,
               });
             }
           } catch (validationError) {
-            console.warn('⚠️ [VALIDAÇÃO] Não foi possível validar dados salvos:', validationError);
+            console.warn('?? [VALIDA��O] N�o foi poss�vel validar dados salvos:', validationError);
           }
         }
 
-        // �💳 SALVAR DADOS DE FATURAMENTO (se houver)
+        // ??? SALVAR DADOS DE FATURAMENTO (se houver)
         if (faturamentoData && (faturamentoData.guide_number || faturamentoData.authorized_value)) {
-          console.log('📝 Salvando dados de faturamento...', faturamentoData);
+          console.log('?? Salvando dados de faturamento...', faturamentoData);
           try {
-            // 🔍 Construir objeto billing_data com todos os campos
+            // ?? Construir objeto billing_data com todos os campos
             const billingData = {
               guide_type: faturamentoData.guide_type || 'consulta',
               code_type: faturamentoData.code_type || 'tuss',
@@ -2966,27 +3195,27 @@ export default function AppointmentUnitedModal({
             await supabase
               .from('appointments')
               .update({
-                // 📋 DADOS DE LIBERAÇÃO
+                // ?? DADOS DE LIBERA��O
                 card_number: liberacaoData.card_number || null,
                 guide_number: faturamentoData.guide_number || null,
                 authorization_number: faturamentoData.authorization_number || null,
                 authorization_expiry: faturamentoData.auth_expiry || null,
                 authorization_verified: faturamentoData.authorized === true,
-                billing_data: billingData, // ✅ SALVAR JSON ESTRUTURADO
+                billing_data: billingData, // ? SALVAR JSON ESTRUTURADO
                 billing_notes: faturamentoData.service_name || null,
               })
               .eq('id', appointmentId);
-            console.log('✅ Dados de faturamento salvos com sucesso!');
+            console.log('? Dados de faturamento salvos com sucesso!');
           } catch (billingErr) {
-            console.error('⚠️ Erro ao salvar dados de faturamento:', billingErr);
-            // Não bloqueia o salvamento do agendamento
+            console.error('?? Erro ao salvar dados de faturamento:', billingErr);
+            // N�o bloqueia o salvamento do agendamento
           }
         }
       }
 
-      // � SE FOR RECEPÇÃO, ATUALIZAR DADOS DO PACIENTE
+      // ? SE FOR RECEP��O, ATUALIZAR DADOS DO PACIENTE
       if (mode === 'reception' && patientId) {
-        console.log('👤 Atualizando dados do paciente em modo recepção:', patientId);
+        console.log('?? Atualizando dados do paciente em modo recep��o:', patientId);
         try {
           const patientUpdateData = {
             name: cadastralData.name,
@@ -3006,40 +3235,40 @@ export default function AppointmentUnitedModal({
 
           await updatePatient(patientId, patientUpdateData);
           window.location.reload();
-          console.log('✅ Dados do paciente atualizados com sucesso!');
+          console.log('? Dados do paciente atualizados com sucesso!');
         } catch (patientErr) {
-          console.error('⚠️ Erro ao atualizar paciente:', patientErr);
-          // Não bloqueia o salvamento
+          console.error('?? Erro ao atualizar paciente:', patientErr);
+          // N�o bloqueia o salvamento
         }
       }
 
-      // �💳 SE FOR PARTICULAR E HOUVER DADOS DE PAGAMENTO, PROCESSAR
+      // ??? SE FOR PARTICULAR E HOUVER DADOS DE PAGAMENTO, PROCESSAR
       if (
         (isParticular || !agendamentoData.payerId) &&
         appointmentId &&
         user?.id &&
         pagamentoData.payment_method
       ) {
-        console.log('💳 Processando pagamento para appointmentId:', appointmentId);
+        console.log('?? Processando pagamento para appointmentId:', appointmentId);
 
-        // ⚠️ Validar pagamento APENAS se há dados preenchidos
+        // ?? Validar pagamento APENAS se h� dados preenchidos
         if (pagamentoData.payment_method !== 'DINHEIRO' || pagamentoData.dinheiro?.value_received) {
           const validation = validatePaymentData(pagamentoData.payment_method, pagamentoData);
 
           if (!validation.valid) {
             console.warn(
-              '⚠️ Dados de pagamento incompletos (será preenchido na recepção):',
+              '?? Dados de pagamento incompletos (ser� preenchido na recep��o):',
               validation.errors,
             );
-            // Não vai bloquear a criação do agendamento
+            // N�o vai bloquear a cria��o do agendamento
           } else {
-            // 💰 Calcular valor com desconto
+            // ?? Calcular valor com desconto
             const originalValue = parseFloat(agendamentoData.value) || 0;
             const discountAmount = parseFloat(pagamentoData.discount || 0);
             const finalValue = originalValue - discountAmount;
 
             console.log(
-              `💰 Valor original: ${originalValue}, Desconto: ${discountAmount}, Valor final: ${finalValue}`,
+              `?? Valor original: ${originalValue}, Desconto: ${discountAmount}, Valor final: ${finalValue}`,
             );
 
             try {
@@ -3060,42 +3289,42 @@ export default function AppointmentUnitedModal({
               });
 
               if (!paymentResult.success) {
-                console.warn('⚠️ Pagamento não processado:', paymentResult.error);
+                console.warn('?? Pagamento n�o processado:', paymentResult.error);
               } else {
-                console.log('✅ Pagamento processado com sucesso!', paymentResult);
+                console.log('? Pagamento processado com sucesso!', paymentResult);
 
-                // 🎁 Registrar desconto (se houver)
+                // ?? Registrar desconto (se houver)
                 if (discountAmount > 0) {
                   try {
-                    await registerDiscountIfNeeded(appointmentId, paymentResult.receivableId);
+                    await registerDiscountIfNeeded(appointmentId);
                   } catch (discountErr) {
-                    console.error('⚠️ Desconto não foi registrado:', discountErr);
+                    console.error('?? Desconto n�o foi registrado:', discountErr);
                   }
                 }
               }
             } catch (paymentErr) {
-              console.warn('⚠️ Erro ao processar pagamento (será feito na recepção):', paymentErr);
+              console.warn('?? Erro ao processar pagamento (ser� feito na recep��o):', paymentErr);
             }
           }
         } else {
-          console.log('ℹ️ Agendamento criado sem pagamento (será feito na recepção)');
+          console.log('?? Agendamento criado sem pagamento (ser� feito na recep��o)');
         }
       } else {
-        console.log('ℹ️ Agendamento criado para convênio (pagamento será administrado depois)');
+        console.log('?? Agendamento criado para conv�nio (pagamento ser� administrado depois)');
       }
 
-      console.log('✅ Agendamento processado com sucesso! Chamando callbacks...');
+      console.log('? Agendamento processado com sucesso! Chamando callbacks...');
 
-      // ✨ NOVO: Sincronizar ID do agendamento ao estado antes de fechar
+      // ? NOVO: Sincronizar ID do agendamento ao estado antes de fechar
       if (appointmentId && agendamentoData.id !== appointmentId) {
-        console.log('✨ [Sincronização] Atualizando agendamentoData.id para:', appointmentId);
+        console.log('? [Sincroniza��o] Atualizando agendamentoData.id para:', appointmentId);
         setAgendamentoData((prev) => ({ ...prev, id: appointmentId }));
       }
 
-      // 📋 SINCRONIZAR MÚLTIPLOS SERVIÇOS (se houver)
+      // ?? SINCRONIZAR M�LTIPLOS SERVI�OS (se houver)
       if (appointmentServices.length > 0 && appointmentId) {
         try {
-          console.log('📋 [Sincronizando serviços em handleSaveChanges] Iniciando', {
+          console.log('?? [Sincronizando servi�os em handleSaveChanges] Iniciando', {
             appointmentId,
             appointmentServices_length: appointmentServices.length,
             appointmentServices: appointmentServices.map((s, idx) => ({
@@ -3112,40 +3341,40 @@ export default function AppointmentUnitedModal({
 
           const result = await syncAppointmentServices(appointmentId, appointmentServices);
 
-          console.log('✅ Serviços sincronizados com sucesso em handleSaveChanges!', {
+          console.log('? Servi�os sincronizados com sucesso em handleSaveChanges!', {
             services_count: result?.length,
             result,
           });
         } catch (servicesErr) {
-          console.error('❌ Erro ao sincronizar serviços em handleSaveChanges:', servicesErr);
+          console.error('? Erro ao sincronizar servi�os em handleSaveChanges:', servicesErr);
           console.error('   Stack:', servicesErr.stack);
-          // Não bloquear o salvamento se os serviços falharem
+          // N�o bloquear o salvamento se os servi�os falharem
           alert(
-            '⚠️ Agendamento salvo, mas houve erro ao sincronizar os serviços: ' +
+            '?? Agendamento salvo, mas houve erro ao sincronizar os servi�os: ' +
               servicesErr.message,
           );
         }
       } else {
-        console.log('ℹ️ [Sincronizando serviços em handleSaveChanges] Nenhum serviço para sincronizar', {
+        console.log('?? [Sincronizando servi�os em handleSaveChanges] Nenhum servi�o para sincronizar', {
           appointmentServices_length: appointmentServices.length,
           appointmentId,
         });
       }
 
-      // 🎉 SUCESSO: Chamar callbacks e fechar
+      // ?? SUCESSO: Chamar callbacks e fechar
       if (mode === 'edit' || mode === 'new') {
-        console.log('📌 Chamando onSuccess...');
+        console.log('?? Chamando onSuccess...');
         onSuccess?.();
-        console.log('📌 Fechando modal...');
+        console.log('?? Fechando modal...');
         handleCloseModal();
       } else if (mode === 'reception') {
-        console.log('📌 Modo recepção: Aguardando ação do usuário...');
+        console.log('?? Modo recep��o: Aguardando a��o do usu�rio...');
         onSuccess?.();
       }
 
       return true;
     } catch (err) {
-      console.error('❌ Erro ao salvar agendamento:', err);
+      console.error('? Erro ao salvar agendamento:', err);
       throw err;
     }
   };
@@ -3159,18 +3388,18 @@ export default function AppointmentUnitedModal({
     }
   `;
 
-  // 🎯 RENDER LOG - COMPREHENSIVE STATE SNAPSHOT
+  // ?? RENDER LOG - COMPREHENSIVE STATE SNAPSHOT
   if (isOpen) {
-    console.log('🎨 [AppointmentUnitedModal RENDER]');
+    console.log('?? [AppointmentUnitedModal RENDER]');
     console.log('   Mode:', mode, '| Tab:', tabAtivo, '| IsOpen:', isOpen);
-    console.log('   📋 Form State Summary:');
+    console.log('   ?? Form State Summary:');
     console.log('     - Data:', agendamentoData.date, '|', 'Time:', agendamentoData.time);
     console.log('     - Patient:', agendamentoData.patientName);
     console.log('     - Professional:', agendamentoData.professionalId);
     console.log('     - Service:', agendamentoData.serviceId);
-    console.log('     - 💳 Payer:', agendamentoData.payerId, agendamentoData.payerId ? '✅' : '❌');
+    console.log('     - ?? Payer:', agendamentoData.payerId, agendamentoData.payerId ? '?' : '?');
     console.log('     - Room:', agendamentoData.roomId);
-    console.log('   📚 Loaded Data:');
+    console.log('   ?? Loaded Data:');
     console.log('     - Professionals:', professionals?.length);
     console.log('     - Services:', services?.length);
     console.log('     - Payers:', payers?.length);
@@ -3184,9 +3413,9 @@ export default function AppointmentUnitedModal({
           <DialogHeader className="border-b border-gray-200 px-6 pb-4 pt-6 text-left">
             <DialogTitle className="flex items-center gap-3">
               <span>
-                {mode === 'new' && '📅 Novo Agendamento'}
-                {mode === 'edit' && '✏️ Editar Agendamento'}
-                {mode === 'reception' && `📋 Atendimento - ${agendamentoData.patientName}`}
+                {mode === 'new' && '?? Novo Agendamento'}
+                {mode === 'edit' && '?? Editar Agendamento'}
+                {mode === 'reception' && `?? Atendimento - ${agendamentoData.patientName}`}
               </span>
             </DialogTitle>
           </DialogHeader>
@@ -3201,7 +3430,7 @@ export default function AppointmentUnitedModal({
                     onClick={() => setTabAtivo('dados')}
                     className={tabClass('dados')}
                   >
-                    📅 Dados do Agendamento
+                    ?? Dados do Agendamento
                   </button>
                 )}
 
@@ -3210,7 +3439,7 @@ export default function AppointmentUnitedModal({
                   onClick={() => setTabAtivo('cadastrais')}
                   className={tabClass('cadastrais')}
                 >
-                  👤 Dados Cadastrais
+                  ?? Dados Cadastrais
                 </button>
 
                 {mode === 'reception' && (
@@ -3219,7 +3448,7 @@ export default function AppointmentUnitedModal({
                     onClick={() => setTabAtivo('status')}
                     className={tabClass('status')}
                   >
-                    📊 Status & Liberação
+                    ?? Status & Libera��o
                   </button>
                 )}
 
@@ -3230,7 +3459,7 @@ export default function AppointmentUnitedModal({
                       onClick={() => setTabAtivo('liberacao')}
                       className={tabClass('liberacao')}
                     >
-                      ✓ Liberação
+                      ? Libera��o
                     </button>
 
                     <button
@@ -3238,7 +3467,7 @@ export default function AppointmentUnitedModal({
                       onClick={() => setTabAtivo('faturamento')}
                       className={tabClass('faturamento')}
                     >
-                      💰 Faturamento
+                      ?? Faturamento
                     </button>
                   </>
                 )}
@@ -3248,7 +3477,7 @@ export default function AppointmentUnitedModal({
                   onClick={() => setTabAtivo('pagamento')}
                   className={tabClass('pagamento')}
                 >
-                  💳 Pagamento
+                  ?? Pagamento
                 </button>
 
                 <button
@@ -3256,18 +3485,18 @@ export default function AppointmentUnitedModal({
                   onClick={() => setTabAtivo('resumo')}
                   className={tabClass('resumo')}
                 >
-                  ✅ Resumo & NF
+                  ? Resumo & NF
                 </button>
               </div>
 
-              {/* CONTEÚDO */}
+              {/* CONTE�DO */}
               <div className="space-y-4">
                 {/* ABA: DADOS AGENDAMENTO */}
                 {tabAtivo === 'dados' && (
                   <div className="space-y-4">
                     <div className="bg-blue-50 border border-blue-300 rounded-lg p-3 mb-4">
                       <p className="text-sm font-semibold text-blue-900">
-                        📅 Preencha os dados do agendamento
+                        ?? Preencha os dados do agendamento
                       </p>
                     </div>
 
@@ -3276,7 +3505,7 @@ export default function AppointmentUnitedModal({
                       initialPhone={agendamentoData.phone}
                       selectedPatient={selectedPatient}
                       onSelect={(pacientData) => {
-                        console.log('✅ Paciente selecionado:', pacientData);
+                        console.log('? Paciente selecionado:', pacientData);
                         setSelectedPatient(pacientData);
                         setAgendamentoData((prev) => ({
                           ...prev,
@@ -3301,28 +3530,28 @@ export default function AppointmentUnitedModal({
                         });
                       }}
                       onCreateNew={() => {
-                        console.log('➕ Modo: criar novo paciente');
+                        console.log('? Modo: criar novo paciente');
                         setSelectedPatient(null);
                       }}
                       onClearSelection={() => {
-                        console.log('🔄 Limpando seleção de paciente');
+                        console.log('?? Limpando sele��o de paciente');
                         setSelectedPatient(null);
                       }}
                     />
 
-                    {/* ✅ MODO: NOVO PACIENTE (sem seleção) - CAMPOS SIMPLES */}
+                    {/* ? MODO: NOVO PACIENTE (sem sele��o) - CAMPOS SIMPLES */}
                     {!selectedPatient && (
                       <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
                         <p className="text-sm font-semibold text-blue-900 mb-3">
-                          ➕ Novo Paciente - Preencha dados básicos
+                          ? Novo Paciente - Preencha dados b�sicos
                         </p>
                         <p className="text-xs text-blue-700 mb-4">
-                          Dados completos serão preenchidos quando o paciente chegar na recepção
+                          Dados completos ser�o preenchidos quando o paciente chegar na recep��o
                         </p>
 
                         <div className="grid grid-cols-3 gap-4">
                           <div>
-                            <Label className="text-sm">👤 Nome do Paciente *</Label>
+                            <Label className="text-sm">?? Nome do Paciente *</Label>
                             <Input
                               placeholder="Nome"
                               value={agendamentoData.patientName}
@@ -3333,7 +3562,7 @@ export default function AppointmentUnitedModal({
                             />
                           </div>
                           <div>
-                            <Label className="text-sm">🎂 Data de Nascimento</Label>
+                            <Label className="text-sm">?? Data de Nascimento</Label>
                             <Input
                               type="date"
                               value={cadastralData.birthdate || ''}
@@ -3342,7 +3571,7 @@ export default function AppointmentUnitedModal({
                             />
                           </div>
                           <div>
-                            <Label className="text-sm">📱 Telefone *</Label>
+                            <Label className="text-sm">?? Telefone *</Label>
                             <Input
                               placeholder="Telefone"
                               value={agendamentoData.phone}
@@ -3356,7 +3585,7 @@ export default function AppointmentUnitedModal({
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label>📅 Data *</Label>
+                        <Label>?? Data *</Label>
                         <Input
                           type="text"
                           placeholder="DD/MM/YYYY"
@@ -3397,29 +3626,29 @@ export default function AppointmentUnitedModal({
                           )}
                       </div>
                       <div>
-                        <Label>🕐 Hora * (Atual: {agendamentoData.time})</Label>
+                        <Label>?? Hora * (Atual: {agendamentoData.time})</Label>
                         <Input
                           type="text"
                           placeholder="HH:MM"
                           value={agendamentoData.time || ''}
                           onChange={(e) => {
                             const timeValue = e.target.value;
-                            
-                            // ✅ PHASE 2: Validar business hours
+
+                            // ? PHASE 2: Validar business hours
                             if (timeValue && timeValue.includes(':')) {
                               const isValid = isBusinessHours(timeValue);
                               setBusinessHoursWarning(!isValid);
                             } else {
                               setBusinessHoursWarning(false);
                             }
-                            
+
                             updateAgendamentoField('time', timeValue);
                           }}
                         />
                         {businessHoursWarning && (
                           <p className="mt-2 text-xs text-amber-700 flex items-center gap-1">
                             <AlertCircle size={14} />
-                            ⚠️ Horário fora do expediente (08:00 - 20:00)
+                            ?? Hor�rio fora do expediente (08:00 - 20:00)
                           </p>
                         )}
                       </div>
@@ -3427,7 +3656,7 @@ export default function AppointmentUnitedModal({
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label>⏱️ Duração (min)</Label>
+                        <Label>?? Dura��o (min)</Label>
                         <Input
                           type="number"
                           min="5"
@@ -3438,11 +3667,11 @@ export default function AppointmentUnitedModal({
                         />
                       </div>
                       <div>
-                        <Label>🚪 Sala</Label>
+                        <Label>?? Sala</Label>
                         <Select
                           value={agendamentoData.roomId || ''}
                           onValueChange={(value) => {
-                            console.log('🚪 [SELECT SALA] Valor selecionado:', value);
+                            console.log('?? [SELECT SALA] Valor selecionado:', value);
                             console.log(
                               '   Room encontrada:',
                               rooms?.find((r) => r.id === value),
@@ -3474,7 +3703,7 @@ export default function AppointmentUnitedModal({
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label>👤 Paciente *</Label>
+                        <Label>?? Paciente *</Label>
                         <Input
                           placeholder="Nome do paciente"
                           value={agendamentoData.patientName}
@@ -3482,7 +3711,7 @@ export default function AppointmentUnitedModal({
                         />
                       </div>
                       <div>
-                        <Label>📞 Telefone</Label>
+                        <Label>?? Telefone</Label>
                         <Input
                           placeholder="(11) 99999-9999"
                           value={agendamentoData.phone}
@@ -3492,11 +3721,11 @@ export default function AppointmentUnitedModal({
                     </div>
 
                     <div>
-                      <Label>🏥 Profissional *</Label>
+                      <Label>?? Profissional *</Label>
                       <Select
                         value={agendamentoData.professionalId || ''}
                         onValueChange={(value) => {
-                          console.log('👥 [Select] Profissional selecionado:', value);
+                          console.log('?? [Select] Profissional selecionado:', value);
                           updateAgendamentoField('professionalId', value);
                         }}
                       >
@@ -3803,11 +4032,11 @@ export default function AppointmentUnitedModal({
                     </div>
 
                     <div>
-                      <Label>🔹 Status *</Label>
+                      <Label>?? Status *</Label>
                       <Select
                         value={agendamentoData.status || 'scheduled'}
                         onValueChange={(value) => {
-                          console.log('🔹 [Status] Alterando status para:', value);
+                          console.log('?? [Status] Alterando status para:', value);
                           updateAgendamentoField('status', value);
                         }}
                       >
@@ -3819,7 +4048,7 @@ export default function AppointmentUnitedModal({
                             const statusConfig = STATUS_CONFIG[statusValue];
                             return (
                               <SelectItem key={statusValue} value={statusValue}>
-                                {statusConfig?.icon || '•'} {statusConfig?.label || statusValue}
+                                {statusConfig?.icon || '�'} {statusConfig?.label || statusValue}
                               </SelectItem>
                             );
                           })}
@@ -3828,18 +4057,29 @@ export default function AppointmentUnitedModal({
                     </div>
 
                     <div>
-                      <Label>�📝 Observações</Label>
+                      <Label>??? Observa��es</Label>
                       <Textarea
-                        placeholder="Observações importantes..."
+                        placeholder="Observa��es importantes..."
                         value={agendamentoData.notes}
                         onChange={(e) => updateAgendamentoField('notes', e.target.value)}
                       />
                     </div>
 
-                    {/* 📋 MÚLTIPLOS SERVIÇOS - Adicionado na aba DADOS */}
+                    {/* ?? M�LTIPLOS SERVI�OS - Adicionado na aba DADOS */}
                     <div className="border-t border-gray-200 pt-4 mt-4">
                       <div className="bg-blue-50 border border-blue-300 rounded-lg p-3 mb-4">
-                        <p className="text-sm font-semibold text-blue-900">📋 Serviços do Agendamento</p>
+                        <p className="text-sm font-semibold text-blue-900">?? Servi�os do Agendamento</p>
+                        {(() => {
+                          const appointmentIdToPass = mode === 'edit' && finalAppointment?.id ? finalAppointment.id : agendamentoData.id || null;
+                          console.log('?? [AppointmentUnitedModal] Passando para AppointmentItemsManager:', {
+                            appointmentIdToPass,
+                            mode,
+                            finalAppointmentId: finalAppointment?.id,
+                            agendamentoDentaId: agendamentoData.id,
+                            finalAppointmentKeys: finalAppointment ? Object.keys(finalAppointment).slice(0, 5) : 'SEM finalAppointment',
+                          });
+                          return null;
+                        })()}
                       </div>
                       <AppointmentItemsManager
                         appointmentId={mode === 'edit' && finalAppointment?.id ? finalAppointment.id : agendamentoData.id || null}
@@ -3849,19 +4089,42 @@ export default function AppointmentUnitedModal({
                         professionalId={agendamentoData.professionalId}
                         payerId={agendamentoData.payerId}
                         payerName={payers?.find((p) => p.id === agendamentoData.payerId)?.name}
+                        savedServices={appointmentServices}
                         onItemsChange={(updatedServices) => {
-                          console.log('📢 [AppointmentUnitedModal.onItemsChange] Recebido:', {
+                          console.log('? [AppointmentUnitedModal.onItemsChange] CHAMADO! Recebido:', {
                             updatedServices_length: updatedServices?.length || 0,
+                            updatedServices: updatedServices?.map(s => ({ id: s.id, service_name: s.service_name })),
                           });
-                          setAppointmentServices(updatedServices);
+
+                          // ?? CRITICAL: Show state change
+                          setAppointmentServices((prev) => {
+                            console.log('?? [setAppointmentServices] STATE UPDATED:', {
+                              prev_length: prev?.length || 0,
+                              new_length: updatedServices?.length || 0,
+                            });
+                            return updatedServices;
+                          });
                         }}
                         onTotalsUpdate={(totals) => {
-                          console.log('💰 [AppointmentUnitedModal] Totais atualizados:', totals);
+                          console.log('?? [AppointmentUnitedModal] Totais atualizados:', totals);
                           if (totals?.grand_total) {
                             updateAgendamentoField('value', totals.grand_total.toString());
                           }
                         }}
                       />
+                      {/* DEBUG: Log appointmentId value */}
+                      {(() => {
+                        const computedId = mode === 'edit' && finalAppointment?.id ? finalAppointment.id : agendamentoData.id || null;
+                        console.log('?? [AppointmentItemsManager appointmentId]:', {
+                          mode,
+                          finalAppointment_id: finalAppointment?.id,
+                          agendamentoData_id: agendamentoData.id,
+                          computedId,
+                          condition_mode_edit: mode === 'edit',
+                          condition_finalAppointment_id: !!finalAppointment?.id,
+                        });
+                        return null;
+                      })()}
                     </div>
                   </div>
                 )}
@@ -3872,10 +4135,10 @@ export default function AppointmentUnitedModal({
                     {selectedPatient && (
                       <div className="bg-green-50 border border-green-300 rounded-lg p-3 mb-4">
                         <p className="text-sm font-semibold text-green-900">
-                          ✅ Dados do paciente "{selectedPatient.patientName}" carregados
+                          ? Dados do paciente "{selectedPatient.patientName}" carregados
                         </p>
                         <p className="text-xs text-green-800 mt-1">
-                          Você pode editar os dados abaixo se necessário
+                          Voc� pode editar os dados abaixo se necess�rio
                         </p>
                       </div>
                     )}
@@ -3886,12 +4149,12 @@ export default function AppointmentUnitedModal({
                       <div className="col-span-2 space-y-4">
                         <div className="bg-blue-50 border border-blue-300 rounded-lg p-3">
                           <p className="text-sm font-semibold text-blue-900">
-                            📋 Dados Cadastrais (Padrão TISS)
+                            ?? Dados Cadastrais (Padr�o TISS)
                           </p>
                         </div>
 
                         <div>
-                          <Label>📝 Nome Completo *</Label>
+                          <Label>?? Nome Completo *</Label>
                           <Input
                             placeholder="Nome completo"
                             value={cadastralData.name}
@@ -3901,7 +4164,7 @@ export default function AppointmentUnitedModal({
 
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <Label>🆔 CPF/RG *</Label>
+                            <Label>?? CPF/RG *</Label>
                             <Input
                               placeholder="CPF ou RG"
                               value={cadastralData.document_id}
@@ -3909,7 +4172,7 @@ export default function AppointmentUnitedModal({
                             />
                           </div>
                           <div>
-                            <Label>🎂 Data de Nascimento</Label>
+                            <Label>?? Data de Nascimento</Label>
                             <Input
                               type="date"
                               value={cadastralData.birthdate}
@@ -3920,7 +4183,7 @@ export default function AppointmentUnitedModal({
 
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <Label>📞 Telefone *</Label>
+                            <Label>?? Telefone *</Label>
                             <Input
                               placeholder="(11) 9999-9999"
                               value={cadastralData.phone}
@@ -3928,7 +4191,7 @@ export default function AppointmentUnitedModal({
                             />
                           </div>
                           <div>
-                            <Label>📱 Celular</Label>
+                            <Label>?? Celular</Label>
                             <Input
                               placeholder="(11) 99999-9999"
                               value={cadastralData.cell_phone}
@@ -3938,7 +4201,7 @@ export default function AppointmentUnitedModal({
                         </div>
 
                         <div>
-                          <Label>✉️ Email</Label>
+                          <Label>?? Email</Label>
                           <Input
                             type="email"
                             placeholder="email@example.com"
@@ -3948,7 +4211,7 @@ export default function AppointmentUnitedModal({
                         </div>
 
                         <div className="space-y-3">
-                          <p className="text-sm font-semibold text-gray-700">📍 Endereço</p>
+                          <p className="text-sm font-semibold text-gray-700">?? Endere�o</p>
                           <div className="grid grid-cols-2 gap-4">
                             <input
                               type="text"
@@ -3959,7 +4222,7 @@ export default function AppointmentUnitedModal({
                             />
                             <input
                               type="text"
-                              placeholder="Número"
+                              placeholder="N�mero"
                               value={cadastralData.number}
                               onChange={(e) => updateCadastralField('number', e.target.value)}
                               className="px-3 py-2 border border-gray-300 rounded-md"
@@ -3997,10 +4260,10 @@ export default function AppointmentUnitedModal({
                         </div>
                       </div>
 
-                      {/* COLUNA DIREITA: Seção de Foto do Paciente */}
+                      {/* COLUNA DIREITA: Se��o de Foto do Paciente */}
                       <div className="bg-green-50 border border-green-300 rounded-lg p-4 h-fit">
                         <p className="text-sm font-semibold text-gray-700 mb-3">
-                          📸 Foto do Paciente
+                          ?? Foto do Paciente
                         </p>
 
                         {/* Exibir foto atual */}
@@ -4013,15 +4276,15 @@ export default function AppointmentUnitedModal({
                             />
                             <button
                               onClick={() => {
-                                // Apenas remove do state local - será salvo quando clicar em "Salvar Dados Cadastrais"
+                                // Apenas remove do state local - ser� salvo quando clicar em "Salvar Dados Cadastrais"
                                 setCadastralData((prev) => ({ ...prev, photo_url: null }));
                                 alert(
-                                  '✅ Foto removida! Clique em "Salvar Dados Cadastrais" para confirmar.',
+                                  '? Foto removida! Clique em "Salvar Dados Cadastrais" para confirmar.',
                                 );
                               }}
                               className="mt-2 px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 transition"
                             >
-                              🗑️ Remover Foto
+                              ??? Remover Foto
                             </button>
                           </div>
                         )}
@@ -4034,21 +4297,21 @@ export default function AppointmentUnitedModal({
                                 ...prev,
                                 photo_url: photoDataUrl,
                               }));
-                              console.log('📸 Foto capturada e salva no state');
+                              console.log('?? Foto capturada e salva no state');
                             }}
                           />
                         )}
                       </div>
                     </div>
 
-                    {/* Botão de salvar dados cadastrais - Full width abaixo do grid */}
+                    {/* Bot�o de salvar dados cadastrais - Full width abaixo do grid */}
                     {mode === 'edit' && appointment?.patient_id && (
                       <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200">
                         <button
                           onClick={async () => {
                             try {
                               setSubmitting(true);
-                              console.log('💾 Salvando dados cadastrais do paciente...');
+                              console.log('?? Salvando dados cadastrais do paciente...');
 
                               const patientUpdateData = {
                                 name: cadastralData.name,
@@ -4069,30 +4332,30 @@ export default function AppointmentUnitedModal({
 
                               await updatePatient(appointment.patient_id, patientUpdateData);
                               window.location.reload();
-                              console.log('✅ Dados cadastrais salvos com sucesso!');
-                              alert('✅ Dados cadastrais salvos com sucesso!');
+                              console.log('? Dados cadastrais salvos com sucesso!');
+                              alert('? Dados cadastrais salvos com sucesso!');
                               setSubmitting(false);
                             } catch (err) {
-                              console.error('❌ Erro ao salvar dados cadastrais:', err);
-                              alert('❌ Erro ao salvar dados cadastrais: ' + err.message);
+                              console.error('? Erro ao salvar dados cadastrais:', err);
+                              alert('? Erro ao salvar dados cadastrais: ' + err.message);
                               setSubmitting(false);
                             }
                           }}
                           className="flex-1 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium"
                         >
-                          {submitting ? '⏳ Salvando...' : '💾 Salvar Dados Cadastrais'}
+                          {submitting ? '? Salvando...' : '?? Salvar Dados Cadastrais'}
                         </button>
                       </div>
                     )}
                   </div>
                 )}
 
-                {/* ABA: STATUS & LIBERAÇÃO (RECEPÇÃO) */}
+                {/* ABA: STATUS & LIBERA��O (RECEP��O) */}
                 {tabAtivo === 'status' && mode === 'reception' && (
                   <div className="space-y-4">
                     <div className="bg-blue-50 border border-blue-300 rounded-lg p-3 mb-4">
                       <p className="text-sm font-semibold text-blue-900">
-                        📊 Status do Agendamento
+                        ?? Status do Agendamento
                       </p>
                     </div>
 
@@ -4106,33 +4369,33 @@ export default function AppointmentUnitedModal({
 
                     {/* Seletor de Status */}
                     <div>
-                      <Label>🔄 Atualizar Status *</Label>
+                      <Label>?? Atualizar Status *</Label>
                       <Select
                         value={agendamentoData.status || 'scheduled'}
                         onValueChange={(newStatus) => {
-                          console.log('🔄 Tentando transicionar:', {
+                          console.log('?? Tentando transicionar:', {
                             from: agendamentoData.status,
                             to: newStatus,
                           });
 
-                          // Validar transição
+                          // Validar transi��o
                           const validation = isStatusTransitionAllowed(
                             agendamentoData.status,
                             newStatus,
                           );
                           if (!validation.allowed) {
-                            alert(`⚠️ ${validation.reason}`);
+                            alert(`?? ${validation.reason}`);
                             return;
                           }
 
-                          // Validar dados obrigatórios
+                          // Validar dados obrigat�rios
                           const missingFields = validatePatientDataForStatus(
                             newStatus,
                             cadastralData,
                           );
                           if (missingFields.length > 0) {
                             alert(
-                              `⚠️ Dados obrigatórios não preenchidos:\n\n${missingFields.join('\n')}`,
+                              `?? Dados obrigat�rios n�o preenchidos:\n\n${missingFields.join('\n')}`,
                             );
                             return;
                           }
@@ -4153,69 +4416,69 @@ export default function AppointmentUnitedModal({
                       </Select>
                     </div>
 
-                    {/* Aviso de Validação */}
+                    {/* Aviso de Valida��o */}
                     {(agendamentoData.status === BOOKING_STATUSES.AT_CHECKOUT ||
                       agendamentoData.status === SERVICE_STATUSES.AWAITING_PROFESSIONAL) && (
                       <div className="bg-orange-50 border border-orange-300 rounded-lg p-4">
                         <p className="text-sm text-orange-900 font-semibold">
-                          ⚠️ Dados Obrigatórios Validados
+                          ?? Dados Obrigat�rios Validados
                         </p>
-                        <p className="text-xs text-orange-800 mt-1">Nome Completo ✓ e CPF/RG ✓</p>
+                        <p className="text-xs text-orange-800 mt-1">Nome Completo ? e CPF/RG ?</p>
                       </div>
                     )}
 
-                    {/* Info sobre Transições */}
+                    {/* Info sobre Transi��es */}
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800 space-y-1">
                       <p>
-                        <strong>🗓️ Agendado:</strong> Criado na agenda
+                        <strong>??? Agendado:</strong> Criado na agenda
                       </p>
                       <p>
-                        <strong>☎️ Confirmado via Telefone:</strong> Paciente confirmou por telefone
+                        <strong>?? Confirmado via Telefone:</strong> Paciente confirmou por telefone
                       </p>
                       <p>
-                        <strong>💬 Confirmado via WhatsApp:</strong> Paciente confirmou por WhatsApp
+                        <strong>?? Confirmado via WhatsApp:</strong> Paciente confirmou por WhatsApp
                       </p>
                       <p>
-                        <strong>📍 Na Recepção:</strong> Paciente chegou e iniciou check-in
+                        <strong>?? Na Recep��o:</strong> Paciente chegou e iniciou check-in
                       </p>
                       <p>
-                        <strong>🪟 No Guichê:</strong> Validando dados obrigatórios
+                        <strong>?? No Guich�:</strong> Validando dados obrigat�rios
                       </p>
                       <p>
-                        <strong>👨‍⚕️ Aguardando Profissional:</strong> Pronto para ser atendido
+                        <strong>????? Aguardando Profissional:</strong> Pronto para ser atendido
                       </p>
                       <p>
-                        <strong>⏳ Em Atendimento:</strong> Profissional atendendo o paciente
+                        <strong>? Em Atendimento:</strong> Profissional atendendo o paciente
                       </p>
                       <p>
-                        <strong>✔️ Atendido:</strong> Atendimento finalizado
+                        <strong>?? Atendido:</strong> Atendimento finalizado
                       </p>
                     </div>
                   </div>
                 )}
 
-                {/* ABA: LIBERAÇÃO */}
+                {/* ABA: LIBERA��O */}
                 {tabAtivo === 'liberacao' && isConvenioFaturado && (
                   <div className="space-y-4">
                     <div className="bg-green-50 border border-green-300 rounded-lg p-3 mb-4">
                       <p className="text-sm font-semibold text-green-900">
-                        ✓ Validação do Convênio
+                        ? Valida��o do Conv�nio
                       </p>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label>🎫 Nº Carteira/Matrícula *</Label>
+                        <Label>?? N� Carteira/Matr�cula *</Label>
                         <Input
-                          placeholder="Número da carteira"
+                          placeholder="N�mero da carteira"
                           value={liberacaoData.card_number}
                           onChange={(e) => updateLiberacaoField('card_number', e.target.value)}
                         />
                       </div>
                       <div>
-                        <Label>📋 Nº Autorização</Label>
+                        <Label>?? N� Autoriza��o</Label>
                         <Input
-                          placeholder="Número da autorização"
+                          placeholder="N�mero da autoriza��o"
                           value={liberacaoData.auth_number}
                           onChange={(e) => updateLiberacaoField('auth_number', e.target.value)}
                         />
@@ -4223,7 +4486,7 @@ export default function AppointmentUnitedModal({
                     </div>
 
                     <div>
-                      <Label>📅 Validade da Autorização</Label>
+                      <Label>?? Validade da Autoriza��o</Label>
                       <Input
                         type="date"
                         value={liberacaoData.auth_expiry || ''}
@@ -4232,7 +4495,7 @@ export default function AppointmentUnitedModal({
                     </div>
 
                     <div>
-                      <Label>✓ Autorizado?</Label>
+                      <Label>? Autorizado?</Label>
                       <label className="flex items-center gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
                         <input
                           type="checkbox"
@@ -4241,7 +4504,7 @@ export default function AppointmentUnitedModal({
                           className="w-4 h-4"
                         />
                         <span className="text-sm font-medium text-gray-700">
-                          ✅ Paciente está autorizado para atendimento
+                          ? Paciente est� autorizado para atendimento
                         </span>
                       </label>
                     </div>
@@ -4253,21 +4516,21 @@ export default function AppointmentUnitedModal({
                   <div className="space-y-4">
                     <div className="bg-purple-50 border border-purple-300 rounded-lg p-3 mb-4">
                       <p className="text-sm font-semibold text-purple-900">
-                        💰 Dados de Faturamento TISS
+                        ?? Dados de Faturamento TISS
                       </p>
                     </div>
 
                     <div>
-                      <Label>📋 Nº Guia TISS *</Label>
+                      <Label>?? N� Guia TISS *</Label>
                       <Input
-                        placeholder="Número da guia"
+                        placeholder="N�mero da guia"
                         value={faturamentoData.guide_number}
                         onChange={(e) => updateFaturamentoField('guide_number', e.target.value)}
                       />
                     </div>
 
                     <div>
-                      <Label>💳 Forma de Pagamento</Label>
+                      <Label>?? Forma de Pagamento</Label>
                       <Select
                         value={pagamentoData.payment_method || 'DINHEIRO'}
                         onValueChange={(value) => updatePagamentoField('payment_method', value)}
@@ -4276,27 +4539,27 @@ export default function AppointmentUnitedModal({
                           <SelectValue placeholder="Selecionar forma de pagamento" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="DINHEIRO">💵 Dinheiro</SelectItem>
-                          <SelectItem value="CARTAO">💳 Cartão</SelectItem>
-                          <SelectItem value="PIX">📱 PIX</SelectItem>
-                          <SelectItem value="CHEQUE">📋 Cheque</SelectItem>
-                          <SelectItem value="BOLETO">📄 Boleto</SelectItem>
-                          <SelectItem value="DOC">🏦 DOC</SelectItem>
-                          <SelectItem value="TED">⚡ TED</SelectItem>
-                          <SelectItem value="DEPOSITO">💰 Depósito</SelectItem>
+                          <SelectItem value="DINHEIRO">?? Dinheiro</SelectItem>
+                          <SelectItem value="CARTAO">?? Cart�o</SelectItem>
+                          <SelectItem value="PIX">?? PIX</SelectItem>
+                          <SelectItem value="CHEQUE">?? Cheque</SelectItem>
+                          <SelectItem value="BOLETO">?? Boleto</SelectItem>
+                          <SelectItem value="DOC">?? DOC</SelectItem>
+                          <SelectItem value="TED">? TED</SelectItem>
+                          <SelectItem value="DEPOSITO">?? Dep�sito</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label>Tipo de Código</Label>
+                        <Label>Tipo de C�digo</Label>
                         <Select
                           value={faturamentoData.code_type || 'tuss'}
                           onValueChange={(value) => updateFaturamentoField('code_type', value)}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Tipo de código" />
+                            <SelectValue placeholder="Tipo de c�digo" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="tuss">TUSS</SelectItem>
@@ -4306,9 +4569,9 @@ export default function AppointmentUnitedModal({
                         </Select>
                       </div>
                       <div>
-                        <Label>📌 Código Procedimento</Label>
+                        <Label>?? C�digo Procedimento</Label>
                         <Input
-                          placeholder="Código TUSS/CPT"
+                          placeholder="C�digo TUSS/CPT"
                           value={
                             agendamentoData.serviceCode || faturamentoData.procedure_code || ''
                           }
@@ -4319,7 +4582,7 @@ export default function AppointmentUnitedModal({
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label>💵 Valor Estimado (R$)</Label>
+                        <Label>?? Valor Estimado (R$)</Label>
                         <Input
                           type="number"
                           step="0.01"
@@ -4331,7 +4594,7 @@ export default function AppointmentUnitedModal({
                         />
                       </div>
                       <div>
-                        <Label>✓ Valor Autorizado (R$)</Label>
+                        <Label>? Valor Autorizado (R$)</Label>
                         <Input
                           type="number"
                           step="0.01"
@@ -4345,7 +4608,7 @@ export default function AppointmentUnitedModal({
                     </div>
 
                     <div>
-                      <Label>📊 Plano de Contas *</Label>
+                      <Label>?? Plano de Contas *</Label>
                       <Select
                         value={faturamentoData.plano_contas_id || ''}
                         onValueChange={(value) => updateFaturamentoField('plano_contas_id', value)}
@@ -4363,15 +4626,15 @@ export default function AppointmentUnitedModal({
                       </Select>
                     </div>
 
-                    {/* SEÇÃO DE DADOS TISS ADICIONAIS */}
+                    {/* SE��O DE DADOS TISS ADICIONAIS */}
                     <div className="border-t border-purple-200 pt-4 mt-4">
                       <p className="text-sm font-semibold text-purple-900 mb-4">
-                        📋 Dados Adicionais TISS
+                        ?? Dados Adicionais TISS
                       </p>
 
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <Label>🔍 Código CID (Diagnóstico)</Label>
+                          <Label>?? C�digo CID (Diagn�stico)</Label>
                           <Input
                             placeholder="Ex: E11 (Diabetes)"
                             value={faturamentoData.diagnosis_code || ''}
@@ -4381,7 +4644,7 @@ export default function AppointmentUnitedModal({
                           />
                         </div>
                         <div>
-                          <Label>🔢 Quantidade de Procedimentos</Label>
+                          <Label>?? Quantidade de Procedimentos</Label>
                           <Input
                             type="number"
                             min="1"
@@ -4394,9 +4657,9 @@ export default function AppointmentUnitedModal({
                       </div>
 
                       <div>
-                        <Label className="mt-3">👤 Nº Beneficiário (Segurado)</Label>
+                        <Label className="mt-3">?? N� Benefici�rio (Segurado)</Label>
                         <Input
-                          placeholder="Número do beneficiário principal"
+                          placeholder="N�mero do benefici�rio principal"
                           value={faturamentoData.subscriber_number || ''}
                           onChange={(e) =>
                             updateFaturamentoField('subscriber_number', e.target.value)
@@ -4407,14 +4670,14 @@ export default function AppointmentUnitedModal({
                       {/* DADOS DE DEPENDENTE */}
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
                         <p className="text-sm font-semibold text-blue-900 mb-3">
-                          👨‍👩‍👧 Dados do Dependente (se aplicável)
+                          ???????? Dados do Dependente (se aplic�vel)
                         </p>
 
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <Label>Nº Beneficiário Dependente</Label>
+                            <Label>N� Benefici�rio Dependente</Label>
                             <Input
-                              placeholder="Matrícula do dependente"
+                              placeholder="Matr�cula do dependente"
                               value={faturamentoData.dependent_number || ''}
                               onChange={(e) =>
                                 updateFaturamentoField('dependent_number', e.target.value)
@@ -4445,7 +4708,7 @@ export default function AppointmentUnitedModal({
                             />
                           </div>
                           <div>
-                            <Label>Gênero Dependente</Label>
+                            <Label>G�nero Dependente</Label>
                             <Select
                               value={faturamentoData.dependent_gender || ''}
                               onValueChange={(value) =>
@@ -4465,16 +4728,16 @@ export default function AppointmentUnitedModal({
                       </div>
 
                       <div className="mt-4">
-                        <Label>📝 Observações/Notas</Label>
+                        <Label>?? Observa��es/Notas</Label>
                         <Textarea
-                          placeholder="Observações adicionais para faturamento"
+                          placeholder="Observa��es adicionais para faturamento"
                           value={faturamentoData.notes || ''}
                           onChange={(e) => updateFaturamentoField('notes', e.target.value)}
                           rows={3}
                         />
                       </div>
 
-                      {/* BOTÃO ENVIAR TISS */}
+                      {/* BOT�O ENVIAR TISS */}
                       {finalAppointment?.id && (
                         <div className="mt-6 pt-4 border-t border-purple-200">
                           <Button
@@ -4485,7 +4748,7 @@ export default function AppointmentUnitedModal({
                             className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2"
                           >
                             <Send className="mr-2 h-4 w-4" />
-                            📤 Enviar para TISS
+                            ?? Enviar para TISS
                           </Button>
                           <p className="text-xs text-gray-500 mt-2">
                             Enviar dados desta guia para processamento TISS da operadora
@@ -4500,10 +4763,10 @@ export default function AppointmentUnitedModal({
                 {tabAtivo === 'pagamento' && isParticular && (
                   <div className="space-y-4">
                     <div className="bg-orange-50 border border-orange-300 rounded-lg p-3 mb-4">
-                      <p className="text-sm font-semibold text-orange-900">💳 Dados de Pagamento</p>
+                      <p className="text-sm font-semibold text-orange-900">?? Dados de Pagamento</p>
                     </div>
 
-                    {/* ✅ CHECKBOX: Habilitar Múltiplos Pagamentos */}
+                    {/* ? CHECKBOX: Habilitar M�ltiplos Pagamentos */}
                     <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
                       <label className="flex items-center gap-3 cursor-pointer">
                         <input
@@ -4515,27 +4778,27 @@ export default function AppointmentUnitedModal({
                         <div className="flex-1">
                           <p className="font-semibold text-gray-900">
                             {enableMultiplePayments
-                              ? '✅ Múltiplos Pagamentos Habilitados'
-                              : '⏳ Pagamento Único'}
+                              ? '? M�ltiplos Pagamentos Habilitados'
+                              : '? Pagamento �nico'}
                           </p>
                           <p className="text-xs text-gray-600">
                             {enableMultiplePayments
-                              ? 'Você pode dividir o pagamento em várias formas (Cartão, PIX, Dinheiro, etc)'
-                              : 'Clique para habilitar e dividir o pagamento em múltiplas formas'}
+                              ? 'Voc� pode dividir o pagamento em v�rias formas (Cart�o, PIX, Dinheiro, etc)'
+                              : 'Clique para habilitar e dividir o pagamento em m�ltiplas formas'}
                           </p>
                         </div>
                       </label>
                     </div>
 
-                    {/* INTERFACE PARA MÚLTIPLOS PAGAMENTOS */}
+                    {/* INTERFACE PARA M�LTIPLOS PAGAMENTOS */}
                     {enableMultiplePayments && (
                       <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-400 rounded-lg p-4 space-y-4">
                         <div>
                           <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                            <span className="text-2xl">💳</span>
+                            <span className="text-2xl">??</span>
                             Adicionar Forma de Pagamento
                           </h3>
-                          {/* Informação sobre saldo com desconto */}
+                          {/* Informa��o sobre saldo com desconto */}
                           {(() => {
                             const desconto = parseFloat(pagamentoData.discount || 0);
                             const valorOriginal = parseFloat(agendamentoData.value || 0);
@@ -4549,7 +4812,7 @@ export default function AppointmentUnitedModal({
                             return (
                               <div className="mt-2 p-2 bg-white rounded border border-blue-200">
                                 <p className="text-xs text-gray-600">
-                                  💰 Saldo a receber:{' '}
+                                  ?? Saldo a receber:{' '}
                                   <span className="font-bold text-blue-900">
                                     {formatCurrency(saldoRestante)}
                                   </span>
@@ -4567,7 +4830,7 @@ export default function AppointmentUnitedModal({
 
                         <div className="grid grid-cols-3 gap-3">
                           <div>
-                            <Label className="text-xs font-semibold">Método de Pagamento</Label>
+                            <Label className="text-xs font-semibold">M�todo de Pagamento</Label>
                             <Select
                               value={splitFormData.payment_method}
                               onValueChange={(value) =>
@@ -4578,14 +4841,14 @@ export default function AppointmentUnitedModal({
                                 <SelectValue placeholder="Selecione" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="DINHEIRO">💵 Dinheiro</SelectItem>
-                                <SelectItem value="CARTAO">💳 Cartão</SelectItem>
-                                <SelectItem value="PIX">📱 PIX</SelectItem>
-                                <SelectItem value="CHEQUE">📝 Cheque</SelectItem>
-                                <SelectItem value="BOLETO">🏦 Boleto</SelectItem>
-                                <SelectItem value="DOC">🏦 DOC</SelectItem>
-                                <SelectItem value="TED">⚡ TED</SelectItem>
-                                <SelectItem value="DEPOSITO">💰 Depósito</SelectItem>
+                                <SelectItem value="DINHEIRO">?? Dinheiro</SelectItem>
+                                <SelectItem value="CARTAO">?? Cart�o</SelectItem>
+                                <SelectItem value="PIX">?? PIX</SelectItem>
+                                <SelectItem value="CHEQUE">?? Cheque</SelectItem>
+                                <SelectItem value="BOLETO">?? Boleto</SelectItem>
+                                <SelectItem value="DOC">?? DOC</SelectItem>
+                                <SelectItem value="TED">? TED</SelectItem>
+                                <SelectItem value="DEPOSITO">?? Dep�sito</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -4611,12 +4874,12 @@ export default function AppointmentUnitedModal({
                               onClick={addPaymentSplit}
                               className="w-full h-9 px-4 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition text-sm"
                             >
-                              ➕ Adicionar
+                              ? Adicionar
                             </button>
                           </div>
                         </div>
 
-                        {/* Campos específicos do método de pagamento */}
+                        {/* Campos espec�ficos do m�todo de pagamento */}
                         {splitFormData.payment_method !== 'DINHEIRO' && (
                           <PaymentSplitFields
                             method={splitFormData.payment_method}
@@ -4630,7 +4893,7 @@ export default function AppointmentUnitedModal({
                         {/* RESUMO DE PAGAMENTOS */}
                         <div className="bg-white rounded-lg p-3 border border-gray-200 space-y-2">
                           <p className="font-semibold text-sm text-gray-900">
-                            📊 Pagamentos Adicionados
+                            ?? Pagamentos Adicionados
                           </p>
 
                           {pagamentoSplits.length === 0 ? (
@@ -4641,17 +4904,17 @@ export default function AppointmentUnitedModal({
                             <div className="space-y-2">
                               {pagamentoSplits.map((split) => {
                                 const metodosMap = {
-                                  DINHEIRO: '💵 Dinheiro',
-                                  CARTAO: '💳 Cartão',
-                                  PIX: '📱 PIX',
-                                  CHEQUE: '📝 Cheque',
-                                  BOLETO: '🏦 Boleto',
-                                  DOC: '🏦 DOC',
-                                  TED: '⚡ TED',
-                                  DEPOSITO: '💰 Depósito',
+                                  DINHEIRO: '?? Dinheiro',
+                                  CARTAO: '?? Cart�o',
+                                  PIX: '?? PIX',
+                                  CHEQUE: '?? Cheque',
+                                  BOLETO: '?? Boleto',
+                                  DOC: '?? DOC',
+                                  TED: '? TED',
+                                  DEPOSITO: '?? Dep�sito',
                                 };
 
-                                // Renderizar detalhes específicos do pagamento
+                                // Renderizar detalhes espec�ficos do pagamento
                                 const renderSplitDetails = () => {
                                   const details = [];
 
@@ -4713,7 +4976,7 @@ export default function AppointmentUnitedModal({
 
                                     {details.length > 0 && (
                                       <p className="text-xs text-gray-600 mb-2">
-                                        {details.join(' • ')}
+                                        {details.join(' � ')}
                                       </p>
                                     )}
 
@@ -4723,7 +4986,7 @@ export default function AppointmentUnitedModal({
                                         onClick={() => removePaymentSplit(split.id)}
                                         className="text-red-600 hover:text-red-800 text-xs font-bold hover:underline transition"
                                       >
-                                        ✕ Remover
+                                        ? Remover
                                       </button>
                                     </div>
                                   </div>
@@ -4732,7 +4995,7 @@ export default function AppointmentUnitedModal({
                             </div>
                           )}
 
-                          {/* GRID DE CÁLCULO COM DESCONTO */}
+                          {/* GRID DE C�LCULO COM DESCONTO */}
                           {(() => {
                             const desconto = parseFloat(pagamentoData.discount || 0);
                             const valorOriginal = parseFloat(agendamentoData.value || 0);
@@ -4776,7 +5039,7 @@ export default function AppointmentUnitedModal({
                                     </p>
                                   </div>
                                   <div className="bg-green-50 p-2 rounded text-center">
-                                    <p className="text-gray-600 font-semibold text-xs">Já Pago</p>
+                                    <p className="text-gray-600 font-semibold text-xs">J� Pago</p>
                                     <p className="text-green-900 font-bold text-sm">
                                       {formatCurrency(totalPago)}
                                     </p>
@@ -4797,7 +5060,7 @@ export default function AppointmentUnitedModal({
                                     <p
                                       className={`font-bold text-sm ${Math.abs(saldo) < 0.01 ? 'text-green-600' : 'text-orange-600'}`}
                                     >
-                                      {Math.abs(saldo) < 0.01 ? '✓ Completo' : '⚠️ Incompleto'}
+                                      {Math.abs(saldo) < 0.01 ? '? Completo' : '?? Incompleto'}
                                     </p>
                                   </div>
                                 </div>
@@ -4818,20 +5081,20 @@ export default function AppointmentUnitedModal({
                           <SelectValue placeholder="Selecione a forma de pagamento" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="DINHEIRO">💵 Dinheiro</SelectItem>
-                          <SelectItem value="CARTAO">💳 Cartão de Crédito/Débito</SelectItem>
-                          <SelectItem value="PIX">📱 PIX</SelectItem>
-                          <SelectItem value="CHEQUE">📝 Cheque</SelectItem>
-                          <SelectItem value="BOLETO">🏦 Boleto</SelectItem>
-                          <SelectItem value="DOC">🏦 DOC</SelectItem>
-                          <SelectItem value="TED">⚡ TED</SelectItem>
-                          <SelectItem value="DEPOSITO">💰 Depósito</SelectItem>
+                          <SelectItem value="DINHEIRO">?? Dinheiro</SelectItem>
+                          <SelectItem value="CARTAO">?? Cart�o de Cr�dito/D�bito</SelectItem>
+                          <SelectItem value="PIX">?? PIX</SelectItem>
+                          <SelectItem value="CHEQUE">?? Cheque</SelectItem>
+                          <SelectItem value="BOLETO">?? Boleto</SelectItem>
+                          <SelectItem value="DOC">?? DOC</SelectItem>
+                          <SelectItem value="TED">? TED</SelectItem>
+                          <SelectItem value="DEPOSITO">?? Dep�sito</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
                     <div>
-                      <Label>📊 Plano de Contas *</Label>
+                      <Label>?? Plano de Contas *</Label>
                       <Select
                         value={pagamentoData.plano_contas_id || ''}
                         onValueChange={(value) => updatePagamentoField('plano_contas_id', value)}
@@ -4851,7 +5114,7 @@ export default function AppointmentUnitedModal({
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label>💰 Valor Total (R$) *</Label>
+                        <Label>?? Valor Total (R$) *</Label>
                         <Input
                           type="text"
                           value={formatCurrency(agendamentoData.value || 0)}
@@ -4868,7 +5131,7 @@ export default function AppointmentUnitedModal({
                       </div>
                     </div>
 
-                    {/* SEÇÃO DE DESCONTO - COM AUTORIZAÇÃO - SEMPRE VISÍVEL */}
+                    {/* SE��O DE DESCONTO - COM AUTORIZA��O - SEMPRE VIS�VEL */}
                     <div
                       className={`rounded-lg p-4 space-y-3 ${
                         parseFloat(pagamentoData.discount || 0) > 0
@@ -4878,9 +5141,9 @@ export default function AppointmentUnitedModal({
                     >
                       <div className="font-bold">
                         {parseFloat(pagamentoData.discount || 0) > 0 ? (
-                          <span className="text-yellow-900">⚠️ Desconto Aplicado</span>
+                          <span className="text-yellow-900">?? Desconto Aplicado</span>
                         ) : (
-                          <span className="text-gray-900">💬 Desconto e Observações</span>
+                          <span className="text-gray-900">?? Desconto e Observa��es</span>
                         )}
                       </div>
 
@@ -4889,7 +5152,7 @@ export default function AppointmentUnitedModal({
                         parseFloat(pagamentoData.discount || 0) > 0 && (
                           <div className="bg-blue-50 border border-blue-300 rounded p-3">
                             <p className="text-sm text-blue-900 font-semibold mb-2">
-                              🔒 Campos Protegidos - Desconto Já Autorizado
+                              ?? Campos Protegidos - Desconto J� Autorizado
                             </p>
                             <div className="text-xs text-blue-700 mb-3 space-y-1">
                               <p>
@@ -4907,7 +5170,7 @@ export default function AppointmentUnitedModal({
                                   {new Date(
                                     pagamentoData.discount_authorized_at,
                                   ).toLocaleDateString('pt-BR')}{' '}
-                                  às{' '}
+                                  �s{' '}
                                   {new Date(
                                     pagamentoData.discount_authorized_at,
                                   ).toLocaleTimeString('pt-BR', {
@@ -4917,71 +5180,71 @@ export default function AppointmentUnitedModal({
                                 </p>
                               )}
                               <p className="mt-2">
-                                Para alterar os valores, você deve primeiro remover a autorização.
+                                Para alterar os valores, voc� deve primeiro remover a autoriza��o.
                               </p>
                             </div>
                             <button
                               type="button"
                               onClick={async (e) => {
                                 e.preventDefault();
-                                console.log('🔘 [RemoveAuthorization] Botão clicado');
+                                console.log('?? [RemoveAuthorization] Bot�o clicado');
 
                                 const confirmRemove = window.confirm(
-                                  '⚠️ Tem certeza que deseja remover a autorização deste desconto?\n\nIsso permitirá editar os valores, mas a autorização será cancelada no sistema.',
+                                  '?? Tem certeza que deseja remover a autoriza��o deste desconto?\n\nIsso permitir� editar os valores, mas a autoriza��o ser� cancelada no sistema.',
                                 );
 
-                                console.log('📋 [RemoveAuthorization] Confirmação:', confirmRemove);
+                                console.log('?? [RemoveAuthorization] Confirma��o:', confirmRemove);
                                 if (!confirmRemove) {
-                                  console.log('⏭️  [RemoveAuthorization] Usuário cancelou');
+                                  console.log('??  [RemoveAuthorization] Usu�rio cancelou');
                                   return;
                                 }
 
                                 try {
-                                  console.log('🔄 [RemoveAuthorization] Iniciando remoção...');
+                                  console.log('?? [RemoveAuthorization] Iniciando remo��o...');
                                   setLoading(true);
 
                                   const appointmentId = finalAppointment?.id || appointment?.id;
                                   console.log(
-                                    '📍 [RemoveAuthorization] Appointment ID:',
+                                    '?? [RemoveAuthorization] Appointment ID:',
                                     appointmentId,
                                   );
 
                                   if (!appointmentId) {
-                                    throw new Error('ID do agendamento não encontrado');
+                                    throw new Error('ID do agendamento n�o encontrado');
                                   }
 
                                   // Atualizar campos locais primeiro
                                   console.log(
-                                    '✏️  [RemoveAuthorization] Atualizando campos locais',
+                                    '??  [RemoveAuthorization] Atualizando campos locais',
                                   );
                                   updatePagamentoField('discount_authorized_by', null);
                                   updatePagamentoField('discount_authorized_at', null);
 
                                   // Atualizar no banco de dados
                                   console.log(
-                                    '💾 [RemoveAuthorization] Atualizando banco de dados',
+                                    '?? [RemoveAuthorization] Atualizando banco de dados',
                                   );
                                   const result = await updateAppointment(appointmentId, {
                                     discountAuthorizedBy: null,
                                     discountAuthorizedAt: null,
                                   });
-                                  console.log('✅ [RemoveAuthorization] Resultado:', result);
+                                  console.log('? [RemoveAuthorization] Resultado:', result);
 
                                   setLoading(false);
                                   alert(
-                                    '✅ Autorização removida com sucesso!\n\nOs campos estão desbloqueados para edição.',
+                                    '? Autoriza��o removida com sucesso!\n\nOs campos est�o desbloqueados para edi��o.',
                                   );
                                 } catch (error) {
                                   setLoading(false);
-                                  console.error('❌ [RemoveAuthorization] Erro:', error);
+                                  console.error('? [RemoveAuthorization] Erro:', error);
                                   console.error('Stack:', error.stack);
-                                  alert(`❌ Erro ao remover autorização:\n\n${error.message}`);
+                                  alert(`? Erro ao remover autoriza��o:\n\n${error.message}`);
                                 }
                               }}
                               disabled={loading}
                               className="text-xs bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-3 py-1 rounded transition font-semibold"
                             >
-                              {loading ? '⏳ Removendo...' : '🔓 Remover Autorização para Alterar'}
+                              {loading ? '? Removendo...' : '?? Remover Autoriza��o para Alterar'}
                             </button>
                           </div>
                         )}
@@ -5033,70 +5296,70 @@ export default function AppointmentUnitedModal({
                             <SelectContent>
                               <SelectGroup>
                                 <SelectLabel className="text-blue-600 font-bold">
-                                  📊 MOTIVOS COMERCIAIS
+                                  ?? MOTIVOS COMERCIAIS
                                 </SelectLabel>
-                                <SelectItem value="promocao">🎁 Promoção</SelectItem>
+                                <SelectItem value="promocao">?? Promo��o</SelectItem>
                                 <SelectItem value="primeira_consulta">
-                                  ✨ Primeira Consulta
+                                  ? Primeira Consulta
                                 </SelectItem>
-                                <SelectItem value="indicacao">👥 Indicação/Referência</SelectItem>
+                                <SelectItem value="indicacao">?? Indica��o/Refer�ncia</SelectItem>
                                 <SelectItem value="fidelidade">
-                                  ⭐ Fidelidade/Cliente Recorrente
+                                  ? Fidelidade/Cliente Recorrente
                                 </SelectItem>
                                 <SelectItem value="desconto_grupo">
-                                  👨‍👩‍👧‍👦 Desconto Grupo/Pacote
+                                  ??????????? Desconto Grupo/Pacote
                                 </SelectItem>
                               </SelectGroup>
 
                               <SelectGroup>
                                 <SelectLabel className="text-green-600 font-bold">
-                                  🏥 MOTIVOS DO PACIENTE
+                                  ?? MOTIVOS DO PACIENTE
                                 </SelectLabel>
                                 <SelectItem value="dificuldade_financeira">
-                                  💰 Dificuldade Financeira
+                                  ?? Dificuldade Financeira
                                 </SelectItem>
                                 <SelectItem value="cortesia_medica">
-                                  🏥 Cortesia Médica/Profissional
+                                  ?? Cortesia M�dica/Profissional
                                 </SelectItem>
                                 <SelectItem value="cortesia_administrativo">
-                                  📋 Cortesia Administrativa
+                                  ?? Cortesia Administrativa
                                 </SelectItem>
                               </SelectGroup>
 
                               <SelectGroup>
                                 <SelectLabel className="text-orange-600 font-bold">
-                                  ⚙️ MOTIVOS OPERACIONAIS
+                                  ?? MOTIVOS OPERACIONAIS
                                 </SelectLabel>
                                 <SelectItem value="erro_cobranca">
-                                  ❌ Erro de Cobrança/Faturamento
+                                  ? Erro de Cobran�a/Faturamento
                                 </SelectItem>
                                 <SelectItem value="correcao_sistema">
-                                  🔧 Correção de Sistema
+                                  ?? Corre��o de Sistema
                                 </SelectItem>
-                                <SelectItem value="ajuste_convenio">🏪 Ajuste Convênio</SelectItem>
+                                <SelectItem value="ajuste_convenio">?? Ajuste Conv�nio</SelectItem>
                               </SelectGroup>
 
                               <SelectGroup>
                                 <SelectLabel className="text-purple-600 font-bold">
-                                  📅 MOTIVOS CRONOLÓGICOS
+                                  ?? MOTIVOS CRONOL�GICOS
                                 </SelectLabel>
-                                <SelectItem value="feriado">🎉 Feriado/Data Especial</SelectItem>
+                                <SelectItem value="feriado">?? Feriado/Data Especial</SelectItem>
                                 <SelectItem value="agendamento_bloqueado">
-                                  🚫 Liberação de Agendamento Bloqueado
+                                  ?? Libera��o de Agendamento Bloqueado
                                 </SelectItem>
                               </SelectGroup>
 
                               <SelectGroup>
                                 <SelectLabel className="text-gray-600 font-bold">
-                                  📝 OUTROS
+                                  ?? OUTROS
                                 </SelectLabel>
                                 <SelectItem value="cancelamento_anterior">
-                                  ↩️ Compensação Cancelamento Anterior
+                                  ?? Compensa��o Cancelamento Anterior
                                 </SelectItem>
                                 <SelectItem value="cortesia_outros">
-                                  💝 Cortesia Especial
+                                  ?? Cortesia Especial
                                 </SelectItem>
-                                <SelectItem value="outros">📝 Outros Motivos</SelectItem>
+                                <SelectItem value="outros">?? Outros Motivos</SelectItem>
                               </SelectGroup>
                             </SelectContent>
                           </Select>
@@ -5104,7 +5367,7 @@ export default function AppointmentUnitedModal({
                       </div>
 
                       <div>
-                        <Label>Observações sobre Desconto</Label>
+                        <Label>Observa��es sobre Desconto</Label>
                         <Textarea
                           placeholder="Justificativa ou detalhes adicionais..."
                           value={pagamentoData.discount_observation || ''}
@@ -5125,13 +5388,13 @@ export default function AppointmentUnitedModal({
                         />
                       </div>
 
-                      {/* Mostrar status de autorização apenas se há desconto */}
+                      {/* Mostrar status de autoriza��o apenas se h� desconto */}
                       {parseFloat(pagamentoData.discount || 0) > 0 && (
                         <>
                           {pagamentoData.discount_authorized_by ? (
                             <div className="bg-green-50 border border-green-200 rounded p-3">
                               <p className="text-sm text-green-900 font-semibold">
-                                ✅ Desconto Autorizado
+                                ? Desconto Autorizado
                               </p>
                               {pagamentoData.discount_authorized_at && (
                                 <p className="text-xs text-green-700 mt-1">
@@ -5146,18 +5409,18 @@ export default function AppointmentUnitedModal({
                             <div className="space-y-3">
                               <div className="bg-red-50 border border-red-200 rounded p-3">
                                 <p className="text-sm text-red-900 font-semibold">
-                                  🔒 Este desconto requer autorização de administrador
+                                  ?? Este desconto requer autoriza��o de administrador
                                 </p>
                                 <p className="text-xs text-red-700 mt-1">
-                                  O desconto será registrado e enviado para aprovação
+                                  O desconto ser� registrado e enviado para aprova��o
                                 </p>
                               </div>
 
-                              {/* Botão para submeter desconto para autorização */}
+                              {/* Bot�o para submeter desconto para autoriza��o */}
                               {pagamentoData.discount_requested_at ? (
                                 <div className="bg-blue-50 border border-blue-200 rounded p-3">
                                   <p className="text-sm text-blue-900 font-semibold">
-                                    📋 Desconto já foi solicitado
+                                    ?? Desconto j� foi solicitado
                                   </p>
                                   <p className="text-xs text-blue-700 mt-1">
                                     Solicitado em:{' '}
@@ -5171,9 +5434,9 @@ export default function AppointmentUnitedModal({
                                   onClick={async () => {
                                     try {
                                       setLoading(true);
-                                      console.log('📤 Enviando desconto para autorização...');
+                                      console.log('?? Enviando desconto para autoriza��o...');
 
-                                      // Atualizar os campos de solicitação
+                                      // Atualizar os campos de solicita��o
                                       updatePagamentoField(
                                         'discount_requested_at',
                                         new Date().toISOString(),
@@ -5182,15 +5445,15 @@ export default function AppointmentUnitedModal({
                                       updatePagamentoField(
                                         'discount_requested_by_name',
                                         user?.user_metadata?.name || user?.email,
-                                      ); // ✅ NOVO: Armazenar nome do usuário
+                                      ); // ? NOVO: Armazenar nome do usu�rio
 
                                       alert(
-                                        '✅ Desconto enviado para autorização!\n\nVocê pode acompanhar em Financeiro > Autorização de Descontos',
+                                        '? Desconto enviado para autoriza��o!\n\nVoc� pode acompanhar em Financeiro > Autoriza��o de Descontos',
                                       );
                                       setLoading(false);
                                     } catch (error) {
                                       setLoading(false);
-                                      alert(`❌ Erro ao enviar desconto: ${error.message}`);
+                                      alert(`? Erro ao enviar desconto: ${error.message}`);
                                       console.error('Erro:', error);
                                     }
                                   }}
@@ -5198,8 +5461,8 @@ export default function AppointmentUnitedModal({
                                   className="w-full bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white"
                                 >
                                   {loading
-                                    ? '⏳ Enviando...'
-                                    : '📤 Solicitar Autorização de Desconto'}
+                                    ? '? Enviando...'
+                                    : '?? Solicitar Autoriza��o de Desconto'}
                                 </Button>
                               )}
                             </div>
@@ -5208,12 +5471,12 @@ export default function AppointmentUnitedModal({
                       )}
                     </div>
 
-                    {/* NOTA: Campos de método de pagamento específicos foram removidos desta seção.
-                       Use a seção de "Múltiplos Pagamentos" para registrar pagamentos com detalhes específicos. */}
+                    {/* NOTA: Campos de m�todo de pagamento espec�ficos foram removidos desta se��o.
+                       Use a se��o de "M�ltiplos Pagamentos" para registrar pagamentos com detalhes espec�ficos. */}
 
                     {/* RESUMO FINANCEIRO */}
                     <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-300 rounded-lg p-4 space-y-2 mt-6">
-                      <p className="font-semibold text-blue-900">📊 Resumo Financeiro</p>
+                      <p className="font-semibold text-blue-900">?? Resumo Financeiro</p>
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-700">Valor Total:</span>
                         <span className="font-bold text-gray-900">
@@ -5241,14 +5504,14 @@ export default function AppointmentUnitedModal({
                       )}
                     </div>
 
-                    {/* 🎬 BOTÃO CRIAR ATENDIMENTO - Quando status é at_checkout */}
+                    {/* ?? BOT�O CRIAR ATENDIMENTO - Quando status � at_checkout */}
                     {agendamentoData.status === 'at_checkout' && (
                       <Button
                         onClick={async () => {
                           try {
                             setLoading(true);
                             console.log(
-                              '🎬 [CreateAttendance] Criando atendimento e atualizando status para awaiting_professional',
+                              '?? [CreateAttendance] Criando atendimento e atualizando status para awaiting_professional',
                             );
 
                             // Atualizar status para awaiting_professional
@@ -5256,24 +5519,24 @@ export default function AppointmentUnitedModal({
                               status: 'awaiting_professional',
                             });
 
-                            console.log('✅ [CreateAttendance] Atendimento criado com sucesso!');
+                            console.log('? [CreateAttendance] Atendimento criado com sucesso!');
 
                             // Atualizar estado local
                             updateAgendamentoField('status', 'awaiting_professional');
 
-                            // 🎬 MARCAR COMO CRIADO - vai auto-navegar para resumo
+                            // ?? MARCAR COMO CRIADO - vai auto-navegar para resumo
                             setAttendanceCreated(true);
                             setLoading(false);
                           } catch (error) {
                             setLoading(false);
-                            alert(`❌ Erro ao criar atendimento: ${error.message}`);
+                            alert(`? Erro ao criar atendimento: ${error.message}`);
                             console.error('Erro ao criar atendimento:', error);
                           }
                         }}
                         disabled={loading}
                         className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white animate-pulse"
                       >
-                        {loading ? '⏳ Criando atendimento...' : '🎬 Criar Atendimento'}
+                        {loading ? '? Criando atendimento...' : '?? Criar Atendimento'}
                       </Button>
                     )}
                   </div>
@@ -5283,8 +5546,31 @@ export default function AppointmentUnitedModal({
                 {tabAtivo === 'pagamento' && (
                   <div className="space-y-4 overflow-y-auto max-h-[600px]">
                     <div className="bg-blue-50 border border-blue-300 rounded-lg p-3 mb-4">
-                      <p className="text-sm font-semibold text-blue-900">💳 Informações de Pagamento</p>
+                      <p className="text-sm font-semibold text-blue-900">?? Informa��es de Pagamento</p>
                     </div>
+
+                    {/* Card Processor Selector para pagamentos em cart�o */}
+                    <CardProcessorSelectorFields
+                      clinicId={clinicId}
+                      paymentMethod={pagamentoData.payment_method}
+                      grossAmount={agendamentoData.value}
+                      processorId={cardProcessorData.processor_id}
+                      cardBrand={cardProcessorData.card_brand}
+                      settlementType={cardProcessorData.settlement_type}
+                      onProcessorChange={(id) => setCardProcessorData((prev) => ({ ...prev, processor_id: id }))}
+                      onCardBrandChange={(brand) => setCardProcessorData((prev) => ({ ...prev, card_brand: brand }))}
+                      onSettlementTypeChange={(type) => setCardProcessorData((prev) => ({ ...prev, settlement_type: type }))}
+                      onFeeCalculated={(fee) => {
+                        if (fee) {
+                          setCardProcessorData((prev) => ({
+                            ...prev,
+                            fee_percent: fee.feePercent,
+                            fee_amount: fee.feeAmount,
+                            net_amount: fee.netAmount,
+                          }));
+                        }
+                      }}
+                    />
                   </div>
                 )}
 
@@ -5293,17 +5579,17 @@ export default function AppointmentUnitedModal({
                   <div className="space-y-4 overflow-y-auto max-h-[600px]">
                     <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-300 rounded-lg p-4 mb-4">
                       <p className="text-lg font-bold text-green-900">
-                        ✅ Resumo Completo do Atendimento
+                        ? Resumo Completo do Atendimento
                       </p>
                       <p className="text-sm text-green-700 mt-1">
                         Todos os dados foram salvos com sucesso
                       </p>
                     </div>
 
-                    {/* 👤 PACIENTE */}
+                    {/* ?? PACIENTE */}
                     <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                       <p className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                        <span>👤 Paciente</span>
+                        <span>?? Paciente</span>
                       </p>
                       <div className="grid grid-cols-2 gap-3 text-sm">
                         <div>
@@ -5335,10 +5621,10 @@ export default function AppointmentUnitedModal({
                       </div>
                     </div>
 
-                    {/* 🏥 AGENDAMENTO */}
+                    {/* ?? AGENDAMENTO */}
                     <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                       <p className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                        <span>🏥 Agendamento</span>
+                        <span>?? Agendamento</span>
                       </p>
                       <div className="grid grid-cols-2 gap-3 text-sm">
                         <div>
@@ -5346,11 +5632,11 @@ export default function AppointmentUnitedModal({
                           <p className="text-gray-900 font-bold">{agendamentoData.date || '-'}</p>
                         </div>
                         <div>
-                          <span className="text-gray-600 block text-xs font-semibold">Horário</span>
+                          <span className="text-gray-600 block text-xs font-semibold">Hor�rio</span>
                           <p className="text-gray-900 font-bold">{agendamentoData.time || '-'}</p>
                         </div>
                         <div>
-                          <span className="text-gray-600 block text-xs font-semibold">Duração</span>
+                          <span className="text-gray-600 block text-xs font-semibold">Dura��o</span>
                           <p className="text-gray-900 font-bold">
                             {agendamentoData.duration || 30} minutos
                           </p>
@@ -5373,15 +5659,15 @@ export default function AppointmentUnitedModal({
                       </div>
                     </div>
 
-                    {/* 📋 SERVIÇO */}
+                    {/* ?? SERVI�O */}
                     <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
                       <p className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                        <span>📋 Serviço</span>
+                        <span>?? Servi�o</span>
                       </p>
                       <div className="grid grid-cols-1 gap-3 text-sm">
                         <div>
                           <span className="text-gray-600 block text-xs font-semibold">
-                            Nome do Serviço
+                            Nome do Servi�o
                           </span>
                           <p className="text-gray-900 font-bold">
                             {services.find((s) => s.id === agendamentoData.serviceId)?.name || '-'}
@@ -5390,7 +5676,7 @@ export default function AppointmentUnitedModal({
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <span className="text-gray-600 block text-xs font-semibold">
-                              Código
+                              C�digo
                             </span>
                             <p className="text-gray-900 font-bold">
                               {agendamentoData.serviceCode || '-'}
@@ -5406,11 +5692,11 @@ export default function AppointmentUnitedModal({
                       </div>
                     </div>
 
-                    {/* 💳 PAGAMENTO / CONVÊNIO */}
+                    {/* ?? PAGAMENTO / CONV�NIO */}
                     {!checkIsParticular(agendamentoData.payerId) && isConvenioFaturado && (
                       <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
                         <p className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                          <span>💳 Convênio/Faturamento</span>
+                          <span>?? Conv�nio/Faturamento</span>
                         </p>
                         <div className="grid grid-cols-2 gap-3 text-sm">
                           <div className="col-span-2">
@@ -5421,7 +5707,7 @@ export default function AppointmentUnitedModal({
                           </div>
                           <div>
                             <span className="text-gray-600 block text-xs font-semibold">
-                              Cartão
+                              Cart�o
                             </span>
                             <p className="text-gray-900 font-bold">
                               {liberacaoData.card_number || '-'}
@@ -5429,7 +5715,7 @@ export default function AppointmentUnitedModal({
                           </div>
                           <div>
                             <span className="text-gray-600 block text-xs font-semibold">
-                              Autorização
+                              Autoriza��o
                             </span>
                             <p className="text-gray-900 font-bold">
                               {liberacaoData.auth_number || '-'}
@@ -5437,7 +5723,7 @@ export default function AppointmentUnitedModal({
                           </div>
                           <div>
                             <span className="text-gray-600 block text-xs font-semibold">
-                              Código TISS
+                              C�digo TISS
                             </span>
                             <p className="text-gray-900 font-bold">
                               {faturamentoData.procedure_code || '-'}
@@ -5458,7 +5744,7 @@ export default function AppointmentUnitedModal({
                     {checkIsParticular(agendamentoData.payerId) && isParticular && (
                       <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
                         <p className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                          <span>💰 Pagamento Particular</span>
+                          <span>?? Pagamento Particular</span>
                         </p>
                         <div className="grid grid-cols-2 gap-3 text-sm">
                           <div>
@@ -5471,7 +5757,7 @@ export default function AppointmentUnitedModal({
                           </div>
                           <div>
                             <span className="text-gray-600 block text-xs font-semibold">
-                              Método
+                              M�todo
                             </span>
                             <p className="text-gray-900 font-bold">
                               {pagamentoData.payment_method || '-'}
@@ -5504,10 +5790,10 @@ export default function AppointmentUnitedModal({
                       </div>
                     )}
 
-                    {/* 📊 STATUS */}
+                    {/* ?? STATUS */}
                     <div className="bg-emerald-50 rounded-lg p-4 border border-emerald-200">
                       <p className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                        <span>📊 Status</span>
+                        <span>?? Status</span>
                       </p>
                       <div className="text-sm">
                         <span className="text-gray-600 block text-xs font-semibold mb-1">
@@ -5515,7 +5801,7 @@ export default function AppointmentUnitedModal({
                         </span>
                         <div className="inline-block bg-green-600 text-white px-3 py-1 rounded-full text-xs font-bold">
                           {agendamentoData.status === 'awaiting_professional'
-                            ? '⏳ Aguardando Profissional'
+                            ? '? Aguardando Profissional'
                             : getFormattedStatus(agendamentoData.status)}
                         </div>
                       </div>
@@ -5523,10 +5809,10 @@ export default function AppointmentUnitedModal({
 
                     <div className="bg-blue-100 border-2 border-blue-500 rounded-lg p-4 text-center">
                       <p className="text-blue-900 font-bold text-base">
-                        ✨ Atendimento pronto para ser iniciado!
+                        ? Atendimento pronto para ser iniciado!
                       </p>
                       <p className="text-blue-800 text-sm mt-2">
-                        O profissional pode clicar em "Iniciar Atendimento" para começar.
+                        O profissional pode clicar em "Iniciar Atendimento" para come�ar.
                       </p>
                     </div>
                   </div>
@@ -5534,7 +5820,7 @@ export default function AppointmentUnitedModal({
               </div>
             </div>
 
-            {/* FOOTER COM BOTÕES */}
+            {/* FOOTER COM BOT�ES */}
             <div className="border-t border-gray-200 p-4 bg-white flex gap-2 justify-end flex-shrink-0">
               {tabAtivo === 'dados' && (
                 <>
@@ -5542,7 +5828,7 @@ export default function AppointmentUnitedModal({
                     Cancelar
                   </Button>
 
-                  {/* 💾 BOTÃO SALVAR DADOS - Em modo EDIT, permite salvar sem avançar */}
+                  {/* ?? BOT�O SALVAR DADOS - Em modo EDIT, permite salvar sem avan�ar */}
                   {mode === 'edit' && (
                     <Button
                       onClick={async () => {
@@ -5555,7 +5841,7 @@ export default function AppointmentUnitedModal({
                       disabled={loading}
                       className="bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white"
                     >
-                      {loading ? '⏳ Salvando...' : '💾 Salvar Dados'}
+                      {loading ? '? Salvando...' : '?? Salvar Dados'}
                     </Button>
                   )}
 
@@ -5569,7 +5855,7 @@ export default function AppointmentUnitedModal({
                     }
                     className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white"
                   >
-                    ✓ Avançar →
+                    ? Avan�ar ?
                   </Button>
                 </>
               )}
@@ -5578,14 +5864,14 @@ export default function AppointmentUnitedModal({
                 <>
                   {mode !== 'reception' && (
                     <Button variant="outline" onClick={() => setTabAtivo('dados')}>
-                      ← Voltar
+                      ? Voltar
                     </Button>
                   )}
                   <Button variant="outline" onClick={onClose}>
                     Cancelar
                   </Button>
 
-                  {/* 💾 BOTÃO SALVAR DADOS - Em modo EDIT, permite salvar sem avançar */}
+                  {/* ?? BOT�O SALVAR DADOS - Em modo EDIT, permite salvar sem avan�ar */}
                   {mode === 'edit' && (
                     <Button
                       onClick={async () => {
@@ -5603,18 +5889,18 @@ export default function AppointmentUnitedModal({
                         !agendamentoData.professionalId
                           ? 'Selecione um profissional'
                           : !agendamentoData.payerId
-                            ? 'Selecione um convênio'
+                            ? 'Selecione um conv�nio'
                             : ''
                       }
                     >
-                      {loading ? '⏳ Salvando...' : '💾 Salvar Dados'}
+                      {loading ? '? Salvando...' : '?? Salvar Dados'}
                     </Button>
                   )}
 
                   <Button
                     onClick={async () => {
                       try {
-                        // 🔒 SE FOR RECEPÇÃO, VALIDAR DADOS CADASTRAIS OBRIGATÓRIOS
+                        // ?? SE FOR RECEP��O, VALIDAR DADOS CADASTRAIS OBRIGAT�RIOS
                         if (mode === 'reception') {
                           const validateReceptionFields = () => {
                             const errors = [];
@@ -5630,7 +5916,7 @@ export default function AppointmentUnitedModal({
                           const missingFields = validateReceptionFields();
                           if (missingFields.length > 0) {
                             alert(
-                              `⚠️ Dados obrigatórios não preenchidos:\n\n${missingFields.join('\n')}`,
+                              `?? Dados obrigat�rios n�o preenchidos:\n\n${missingFields.join('\n')}`,
                             );
                             return;
                           }
@@ -5649,14 +5935,14 @@ export default function AppointmentUnitedModal({
                         }
                       } catch (error) {
                         setLoading(false);
-                        alert(`❌ Erro ao salvar: ${error.message}`);
+                        alert(`? Erro ao salvar: ${error.message}`);
                         console.error('Erro ao salvar:', error);
                       }
                     }}
                     disabled={loading}
                     className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white"
                   >
-                    {loading ? '⏳ Salvando...' : '✓ Avançar →'}
+                    {loading ? '? Salvando...' : '? Avan�ar ?'}
                   </Button>
                 </>
               )}
@@ -5664,7 +5950,7 @@ export default function AppointmentUnitedModal({
               {tabAtivo === 'status' && mode === 'reception' && (
                 <>
                   <Button variant="outline" onClick={() => setTabAtivo('cadastrais')}>
-                    ← Voltar
+                    ? Voltar
                   </Button>
                   <Button variant="outline" onClick={onClose}>
                     Cancelar
@@ -5678,14 +5964,14 @@ export default function AppointmentUnitedModal({
                         onSuccess?.();
                       } catch (error) {
                         setLoading(false);
-                        alert(`❌ Erro ao salvar: ${error.message}`);
+                        alert(`? Erro ao salvar: ${error.message}`);
                         console.error('Erro ao salvar:', error);
                       }
                     }}
                     disabled={loading}
                     className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white"
                   >
-                    {loading ? '⏳ Salvando...' : '✅ Atualizar Status'}
+                    {loading ? '? Salvando...' : '? Atualizar Status'}
                   </Button>
                 </>
               )}
@@ -5693,10 +5979,10 @@ export default function AppointmentUnitedModal({
               {tabAtivo === 'liberacao' && (
                 <>
                   <Button variant="outline" onClick={() => setTabAtivo('cadastrais')}>
-                    ← Voltar
+                    ? Voltar
                   </Button>
 
-                  {/* 💾 BOTÃO SALVAR DADOS - Em modo EDIT, permite salvar sem avançar */}
+                  {/* ?? BOT�O SALVAR DADOS - Em modo EDIT, permite salvar sem avan�ar */}
                   {mode === 'edit' && (
                     <Button
                       onClick={async () => {
@@ -5714,11 +6000,11 @@ export default function AppointmentUnitedModal({
                         !agendamentoData.professionalId
                           ? 'Selecione um profissional'
                           : !agendamentoData.payerId
-                            ? 'Selecione um convênio'
+                            ? 'Selecione um conv�nio'
                             : ''
                       }
                     >
-                      {loading ? '⏳ Salvando...' : '💾 Salvar Dados'}
+                      {loading ? '? Salvando...' : '?? Salvar Dados'}
                     </Button>
                   )}
 
@@ -5731,7 +6017,7 @@ export default function AppointmentUnitedModal({
                     disabled={loading}
                     className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white"
                   >
-                    ✓ Avançar →
+                    ? Avan�ar ?
                   </Button>
                 </>
               )}
@@ -5739,10 +6025,10 @@ export default function AppointmentUnitedModal({
               {tabAtivo === 'pagamento' && (
                 <>
                   <Button variant="outline" onClick={() => setTabAtivo('liberacao')}>
-                    ← Voltar
+                    ? Voltar
                   </Button>
 
-                  {/* 💾 BOTÃO SALVAR DADOS - Em modo EDIT, permite salvar sem criar atendimento */}
+                  {/* ?? BOT�O SALVAR DADOS - Em modo EDIT, permite salvar sem criar atendimento */}
                   {mode === 'edit' && (
                     <Button
                       onClick={async () => {
@@ -5760,52 +6046,52 @@ export default function AppointmentUnitedModal({
                         !agendamentoData.professionalId
                           ? 'Selecione um profissional'
                           : !agendamentoData.payerId
-                            ? 'Selecione um convênio'
+                            ? 'Selecione um conv�nio'
                             : ''
                       }
                     >
-                      {loading ? '⏳ Salvando...' : '💾 Salvar Dados'}
+                      {loading ? '? Salvando...' : '?? Salvar Dados'}
                     </Button>
                   )}
 
-                  {/* 🎬 BOTÃO CRIAR ATENDIMENTO - Só em modo NEW quando status é at_checkout */}
+                  {/* ?? BOT�O CRIAR ATENDIMENTO - S� em modo NEW quando status � at_checkout */}
                   {mode === 'new' && agendamentoData.status === 'at_checkout' && (
                     <Button
                       onClick={async () => {
                         try {
                           setLoading(true);
-                          console.log('🎬 [CreateAttendance] PASSO 1: Salvando TODOS os dados...');
+                          console.log('?? [CreateAttendance] PASSO 1: Salvando TODOS os dados...');
 
-                          // 1️⃣ SALVAR TODOS OS DADOS (agendamento, cadastrais, liberação, pagamento)
+                          // 1?? SALVAR TODOS OS DADOS (agendamento, cadastrais, libera��o, pagamento)
                           await handleSaveChanges();
 
                           console.log(
-                            '🎬 [CreateAttendance] PASSO 2: Atualizando status para awaiting_professional...',
+                            '?? [CreateAttendance] PASSO 2: Atualizando status para awaiting_professional...',
                           );
 
-                          // 2️⃣ ATUALIZAR STATUS
+                          // 2?? ATUALIZAR STATUS
                           await updateAppointment(finalAppointment?.id || appointment?.id, {
                             status: 'awaiting_professional',
                           });
 
-                          // 3️⃣ ATUALIZAR ESTADO LOCAL
+                          // 3?? ATUALIZAR ESTADO LOCAL
                           updateAgendamentoField('status', 'awaiting_professional');
 
-                          console.log('✅ [CreateAttendance] Sucesso! Dados de Pagamento salvos.');
+                          console.log('? [CreateAttendance] Sucesso! Dados de Pagamento salvos.');
 
-                          // 🎬 MARCAR COMO CRIADO - vai auto-navegar para resumo
+                          // ?? MARCAR COMO CRIADO - vai auto-navegar para resumo
                           setAttendanceCreated(true);
                           setLoading(false);
                         } catch (error) {
                           setLoading(false);
-                          alert(`❌ Erro ao criar atendimento: ${error.message}`);
+                          alert(`? Erro ao criar atendimento: ${error.message}`);
                           console.error('Erro ao criar atendimento:', error);
                         }
                       }}
                       disabled={loading}
                       className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white animate-pulse"
                     >
-                      {loading ? '⏳ Salvando e criando...' : '🎬 Criar Atendimento'}
+                      {loading ? '? Salvando e criando...' : '?? Criar Atendimento'}
                     </Button>
                   )}
 
@@ -5819,14 +6105,14 @@ export default function AppointmentUnitedModal({
                           onSuccess?.() || onClose();
                         } catch (error) {
                           setLoading(false);
-                          alert(`❌ Erro ao salvar: ${error.message}`);
+                          alert(`? Erro ao salvar: ${error.message}`);
                           console.error('Erro ao salvar:', error);
                         }
                       }}
                       disabled={loading}
                       className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white"
                     >
-                      {loading ? '⏳ Salvando...' : '✓ Criar Agendamento'}
+                      {loading ? '? Salvando...' : '? Criar Agendamento'}
                     </Button>
                   )}
                 </>
@@ -5835,10 +6121,10 @@ export default function AppointmentUnitedModal({
               {tabAtivo === 'faturamento' && isConvenioFaturado && (
                 <>
                   <Button variant="outline" onClick={() => setTabAtivo('liberacao')}>
-                    ← Voltar
+                    ? Voltar
                   </Button>
 
-                  {/* 💾 BOTÃO SALVAR DADOS - Em modo EDIT, permite salvar sem criar atendimento */}
+                  {/* ?? BOT�O SALVAR DADOS - Em modo EDIT, permite salvar sem criar atendimento */}
                   {mode === 'edit' && (
                     <Button
                       onClick={async () => {
@@ -5856,54 +6142,54 @@ export default function AppointmentUnitedModal({
                         !agendamentoData.professionalId
                           ? 'Selecione um profissional'
                           : !agendamentoData.payerId
-                            ? 'Selecione um convênio'
+                            ? 'Selecione um conv�nio'
                             : ''
                       }
                     >
-                      {loading ? '⏳ Salvando...' : '💾 Salvar Dados'}
+                      {loading ? '? Salvando...' : '?? Salvar Dados'}
                     </Button>
                   )}
 
-                  {/* 🎬 BOTÃO CRIAR ATENDIMENTO - Só em modo NEW quando status é at_checkout */}
+                  {/* ?? BOT�O CRIAR ATENDIMENTO - S� em modo NEW quando status � at_checkout */}
                   {mode === 'new' && agendamentoData.status === 'at_checkout' && (
                     <Button
                       onClick={async () => {
                         try {
                           setLoading(true);
-                          console.log('🎬 [CreateAttendance] PASSO 1: Salvando TODOS os dados...');
+                          console.log('?? [CreateAttendance] PASSO 1: Salvando TODOS os dados...');
 
-                          // 1️⃣ SALVAR TODOS OS DADOS (agendamento, cadastrais, liberação, faturamento)
+                          // 1?? SALVAR TODOS OS DADOS (agendamento, cadastrais, libera��o, faturamento)
                           await handleSaveChanges();
 
                           console.log(
-                            '🎬 [CreateAttendance] PASSO 2: Atualizando status para awaiting_professional...',
+                            '?? [CreateAttendance] PASSO 2: Atualizando status para awaiting_professional...',
                           );
 
-                          // 2️⃣ ATUALIZAR STATUS
+                          // 2?? ATUALIZAR STATUS
                           await updateAppointment(finalAppointment?.id || appointment?.id, {
                             status: 'awaiting_professional',
                           });
 
-                          // 3️⃣ ATUALIZAR ESTADO LOCAL
+                          // 3?? ATUALIZAR ESTADO LOCAL
                           updateAgendamentoField('status', 'awaiting_professional');
 
                           console.log(
-                            '✅ [CreateAttendance] Sucesso! Dados de Faturamento TISS salvos.',
+                            '? [CreateAttendance] Sucesso! Dados de Faturamento TISS salvos.',
                           );
 
-                          // 🎬 MARCAR COMO CRIADO - vai auto-navegar para resumo
+                          // ?? MARCAR COMO CRIADO - vai auto-navegar para resumo
                           setAttendanceCreated(true);
                           setLoading(false);
                         } catch (error) {
                           setLoading(false);
-                          alert(`❌ Erro ao criar atendimento: ${error.message}`);
+                          alert(`? Erro ao criar atendimento: ${error.message}`);
                           console.error('Erro ao criar atendimento:', error);
                         }
                       }}
                       disabled={loading}
                       className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white animate-pulse"
                     >
-                      {loading ? '⏳ Salvando e criando...' : '🎬 Criar Atendimento'}
+                      {loading ? '? Salvando e criando...' : '?? Criar Atendimento'}
                     </Button>
                   )}
 
@@ -5917,14 +6203,14 @@ export default function AppointmentUnitedModal({
                           onSuccess?.() || onClose();
                         } catch (error) {
                           setLoading(false);
-                          alert(`❌ Erro ao salvar: ${error.message}`);
+                          alert(`? Erro ao salvar: ${error.message}`);
                           console.error('Erro ao salvar:', error);
                         }
                       }}
                       disabled={loading}
                       className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white"
                     >
-                      {loading ? '⏳ Salvando...' : '✓ Criar Agendamento'}
+                      {loading ? '? Salvando...' : '? Criar Agendamento'}
                     </Button>
                   )}
                 </>
@@ -5933,16 +6219,16 @@ export default function AppointmentUnitedModal({
               {tabAtivo === 'resumo' && (
                 <>
                   <Button variant="outline" onClick={() => setTabAtivo('cadastrais')}>
-                    ← Voltar
+                    ? Voltar
                   </Button>
                   <Button
                     onClick={() => {
-                      // Abrir modal de emissão de NF
+                      // Abrir modal de emiss�o de NF
                       setInvoiceModalOpen(true);
                     }}
                     className="bg-orange-600 hover:bg-orange-700 text-white font-bold gap-2"
                   >
-                    📄 Emitir NF
+                    ?? Emitir NF
                   </Button>
                   <Button
                     onClick={() => {
@@ -5951,7 +6237,7 @@ export default function AppointmentUnitedModal({
                     }}
                     className="bg-green-600 hover:bg-green-700 text-white font-bold"
                   >
-                    ✅ Liberar para Atendimento
+                    ? Liberar para Atendimento
                   </Button>
                 </>
               )}
@@ -5965,9 +6251,9 @@ export default function AppointmentUnitedModal({
         isOpen={invoiceModalOpen}
         onClose={() => setInvoiceModalOpen(false)}
         onSuccess={(invoiceData) => {
-          console.log('✅ NF emitida com sucesso:', invoiceData);
+          console.log('? NF emitida com sucesso:', invoiceData);
           // Fechar o modal de NF automaticamente
-          // O callback já fecha após 2 segundos
+          // O callback j� fecha ap�s 2 segundos
         }}
         appointmentData={finalAppointment || appointment}
         patientData={selectedPatient || cadastralData}

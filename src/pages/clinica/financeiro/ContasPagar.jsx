@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/ui/PageLayout';
 import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
+import { useSavedFilters } from '@/hooks/useSavedFilters';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,8 +24,10 @@ import {
   Filter,
   Check,
   AlertCircle,
+  Save,
 } from 'lucide-react';
 import SummaryCards from '@/components/clinica/financeiro/SummaryCards';
+import { SaveFilterDialog } from '@/components/clinica/financeiro/SaveFilterDialog';
 import { formatBRL } from '@/utils/formatters/formatCurrency';
 import { toDate, todayStart } from '@/utils/helpers/dateUtils';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -43,9 +46,11 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useClinicContext } from '@/contexts/useClinicContext';
 import { supabase } from '@/lib/customSupabaseClient';
 import {
   listAPQuery,
@@ -61,6 +66,7 @@ import { parseSearchGeneral, parcelLabel } from '@/utils/helpers/financeHelpers'
 import StatusBadge from '@/components/clinica/financeiro/StatusBadge';
 import { useDataCache, CacheManager } from '@/hooks/useDataCache';
 import { usePagination } from '@/hooks/usePagination';
+import RelatoriosToolbar from '@/components/financeiro/RelatoriosToolbar';
 
 // Memoized APRow component - prevents re-renders when parent updates
 const APRow = React.memo(
@@ -230,7 +236,7 @@ export default function ContasPagar() {
   ]);
 
   const { toast } = useToast();
-  const { clinicId } = useAuth();
+  const { clinicId, loadingClinic } = useClinicContext();
 
   const [form, setForm] = useState({
     vendor_name: '',
@@ -302,6 +308,10 @@ export default function ContasPagar() {
   const [sortBy, setSortBy] = useState('due_date');
   const [sortDir, setSortDir] = useState('asc');
   const [showFilters, setShowFilters] = useState(false);
+  const [saveFilterDialogOpen, setSaveFilterDialogOpen] = useState(false);
+
+  // Hook para gerenciar filtros salvos
+  const { savedFilters, saveFilter, deleteFilter, getFilter } = useSavedFilters('contas_pagar_filters');
   const fmtBR = (iso) => {
     if (!iso) {
       return '';
@@ -348,7 +358,8 @@ export default function ContasPagar() {
 
   // Busca geral agora via helper parseSearchGeneral
 
-  const triggerLoad = (autoSelect = false) => {
+  const triggerLoad = useCallback((autoSelect = false) => {
+    console.log('[ContasPagar] triggerLoad chamado com clinicId:', clinicId);
     const adv = parseSearchGeneral(searchFilter);
     loadBills({
       clinicId,
@@ -367,7 +378,21 @@ export default function ContasPagar() {
       orderDir: sortDir,
       autoSelect,
     });
-  };
+  }, [
+    clinicId,
+    loadBills,
+    searchFilter,
+    vendorFilter,
+    paymentMethodFilter,
+    startFilter,
+    endFilter,
+    statusFilter,
+    amountMinFilter,
+    amountMaxFilter,
+    costCenterFilter,
+    sortBy,
+    sortDir,
+  ]);
 
   const toggleSort = (field) => {
     if (sortBy === field) {
@@ -410,11 +435,30 @@ export default function ContasPagar() {
   } = useDataCache({
     key: `contas_pagar_metadata_${clinicId}`,
     fetcher: async () => {
+      console.log('[ContasPagar] Iniciando carregamento de metadata com clinicId:', clinicId);
+      if (!clinicId) {
+        console.log('[ContasPagar] Sem clinicId, pulando metadata');
+        return { costCenters: [], vendors: [], paymentMethods: [] };
+      }
       const [costCentersData, vendorNames, paymentMethodsData] = await Promise.all([
-        listAccountPlans(clinicId).catch(() => []),
-        listVendorNames(clinicId).catch(() => []),
-        listPaymentMethods(clinicId).catch(() => []),
+        listAccountPlans(clinicId).catch((err) => {
+          console.error('[ContasPagar] Erro em listAccountPlans:', err.message);
+          return [];
+        }),
+        listVendorNames(clinicId).catch((err) => {
+          console.error('[ContasPagar] Erro em listVendorNames:', err.message);
+          return [];
+        }),
+        listPaymentMethods(clinicId).catch((err) => {
+          console.error('[ContasPagar] Erro em listPaymentMethods:', err.message);
+          return [];
+        }),
       ]);
+      console.log('[ContasPagar] Metadata carregada:', {
+        costCenters: costCentersData?.length || 0,
+        vendors: vendorNames?.length || 0,
+        paymentMethods: paymentMethodsData?.length || 0,
+      });
       return {
         costCenters: Array.isArray(costCentersData) ? costCentersData : [],
         vendors: Array.isArray(vendorNames) ? vendorNames : [],
@@ -500,6 +544,17 @@ export default function ContasPagar() {
       overdueCount,
     };
   }, [items, isOverdue]);
+
+  // Debug log
+  useEffect(() => {
+    console.log('[ContasPagar] Estado atual:', {
+      clinicId,
+      loadingClinic,
+      loading,
+      itemsCount: items.length,
+      summaryVisual
+    });
+  }, [items, loading, clinicId, loadingClinic, summaryVisual]);
 
   // 📄 Pagination: 30 items per page
   const {
@@ -602,12 +657,11 @@ export default function ContasPagar() {
   }, [formItems, itemsGrandTotal]);
 
   const saveFavorite = () => {
-    const name = window.prompt('Nome do filtro');
-    if (!name) {
-      return;
-    }
-    const fav = {
-      name,
+    setSaveFilterDialogOpen(true);
+  };
+
+  const handleSaveFilter = (name) => {
+    const filterData = {
       vendorFilter,
       paymentMethodFilter,
       startFilter,
@@ -620,12 +674,25 @@ export default function ContasPagar() {
       sortBy,
       sortDir,
     };
-    const next = [...favorites.filter((f) => f.name !== name), fav];
-    setFavorites(next);
-    try {
-      localStorage.setItem('ap_filter_favorites', JSON.stringify(next));
-    } catch {}
-    setSelectedFavorite(name);
+    saveFilter(name, filterData);
+  };
+
+  const handleLoadFilter = (name) => {
+    const filterData = getFilter(name);
+    if (filterData) {
+      setVendorFilter(filterData.vendorFilter || '');
+      setPaymentMethodFilter(filterData.paymentMethodFilter || '');
+      setStartFilter(filterData.startFilter || '');
+      setEndFilter(filterData.endFilter || '');
+      setSearchFilter(filterData.searchFilter || '');
+      setStatusFilter(filterData.statusFilter || '');
+      setAmountMinFilter(filterData.amountMinFilter || '');
+      setAmountMaxFilter(filterData.amountMaxFilter || '');
+      setCostCenterFilter(filterData.costCenterFilter || '');
+      setSortBy(filterData.sortBy || 'due_date');
+      setSortDir(filterData.sortDir || 'asc');
+      triggerLoad(true);
+    }
   };
 
   const applyFavorite = () => {
@@ -665,8 +732,10 @@ export default function ContasPagar() {
       autoSelect = false,
     } = {}) => {
       if (!cId) {
+        console.log('[ContasPagar] loadBills: clinicId não fornecido, retornando silenciosamente');
         return;
       }
+      console.log('[ContasPagar] loadBills: iniciando com clinicId:', cId);
       setLoading(true);
       try {
         const statusLower = status ? String(status).toLowerCase() : '';
@@ -687,6 +756,7 @@ export default function ContasPagar() {
           orderBy,
           orderDir,
         });
+        console.log('[ContasPagar] listAPQuery retornou:', data?.length || 0, 'itens');
         if (isOverdueSelected) {
           const filtered = Array.isArray(data) ? data.filter((it) => isOverdue(it)) : [];
           setItems(filtered);
@@ -717,10 +787,11 @@ export default function ContasPagar() {
 
   // Carrega inicialmente e quando a clínica muda
   useEffect(() => {
-    if (clinicId) {
+    console.log('[ContasPagar] useEffect(clinicId) acionado com clinicId:', clinicId, 'loadingClinic:', loadingClinic);
+    if (clinicId && !loadingClinic) {
       triggerLoad(false);
     }
-  }, [clinicId]);
+  }, [clinicId, loadingClinic, triggerLoad]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -927,6 +998,28 @@ export default function ContasPagar() {
           </Card>
         </div>
 
+        {/* RELATÓRIOS TOOLBAR */}
+        <RelatoriosToolbar
+          title="Contas a Pagar"
+          data={items.map(item => ({
+            descricao: item.description,
+            fornecedor: item.vendor_name,
+            vencimento: item.due_date,
+            status: item.status,
+            valor: item.amount,
+            centro_custo: item.cc_name || '-'
+          }))}
+          columns={[
+            { key: 'descricao', label: 'Descrição', width: 25 },
+            { key: 'fornecedor', label: 'Fornecedor', width: 20 },
+            { key: 'vencimento', label: 'Vencimento', width: 12 },
+            { key: 'status', label: 'Status', width: 12 },
+            { key: 'valor', label: 'Valor', width: 15, format: 'currency' },
+            { key: 'centro_custo', label: 'Centro de Custo', width: 16 }
+          ]}
+          templateFileName="contas_pagar"
+        />
+
         <Card className="p-4 w-full">
           {/* 🔍 FILTROS COM COLLAPSE */}
           <div className="flex items-center justify-between mb-4">
@@ -1071,7 +1164,7 @@ export default function ContasPagar() {
               </div>
 
               {/* BARRA DE AÇÕES */}
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <Button
                   size="sm"
                   className="bg-blue-600"
@@ -1113,11 +1206,68 @@ export default function ContasPagar() {
                 >
                   Limpar
                 </Button>
+
+                {/* Salvar Filtro */}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setSaveFilterDialogOpen(true)}
+                  disabled={loading}
+                  title="Salvar configuração atual como filtro"
+                >
+                  <Save className="w-4 h-4" />
+                </Button>
+
+                {/* Carregar Filtro */}
+                {savedFilters.length > 0 && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={loading}
+                        title="Carregar um filtro salvo"
+                      >
+                        <Download className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Filtros Salvos</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {savedFilters.map((filter) => (
+                        <div key={filter.name} className="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-100">
+                          <button
+                            onClick={() => handleLoadFilter(filter.name)}
+                            className="flex-1 text-left text-sm hover:text-blue-600"
+                          >
+                            {filter.name}
+                          </button>
+                          <button
+                            onClick={() => deleteFilter(filter.name)}
+                            className="text-gray-400 hover:text-red-600"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+
                 <Button size="sm" variant="ghost" className="ml-auto">
                   <Download className="w-4 h-4 mr-2" />
                   Exportar
                 </Button>
               </div>
+
+              {/* SaveFilterDialog */}
+              <SaveFilterDialog
+                open={saveFilterDialogOpen}
+                onOpenChange={setSaveFilterDialogOpen}
+                onSave={handleSaveFilter}
+                existingNames={savedFilters.map((f) => f.name)}
+                loading={loading}
+              />
             </div>
           ) : (
             <div className="flex gap-2 items-center">

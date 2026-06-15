@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import PageLayout from '@/components/ui/PageLayout';
 import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 import { Card } from '@/components/ui/card';
@@ -14,7 +14,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import LocationSelect from '@/components/clinica/estoque/LocationSelect';
 import { Skeleton } from '@/components/ui/skeleton';
-import StockRequestDialog from '@/components/clinica/estoque/StockRequestDialog';
 import { useClinicContext } from '@/contexts/useClinicContext';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -25,7 +24,7 @@ import { useAuth } from '@/contexts/SupabaseAuthContext';
 import StockMovementDialog from '@/components/clinica/estoque/StockMovementDialog';
 
 export default function Requisicoes() {
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const navigate = useNavigate();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [itemsOpen, setItemsOpen] = useState(false);
@@ -303,21 +302,6 @@ export default function Requisicoes() {
     }
   };
 
-  const handleSubmit = async (form) => {
-    try {
-      await stockRequestsApi.create({ ...form, clinic_id: clinicId });
-      toast({ title: 'Requisição criada' });
-      setDialogOpen(false);
-      await loadRequests();
-    } catch (err) {
-      toast({
-        variant: 'destructive',
-        title: 'Erro ao criar requisição',
-        description: err.message,
-      });
-    }
-  };
-
   return (
     <PageLayout
       breadcrumbs={breadcrumbs}
@@ -327,7 +311,7 @@ export default function Requisicoes() {
         <div className="flex gap-2">
           <Button
             className="bg-blue-600 text-white flex items-center"
-            onClick={() => setDialogOpen(true)}
+            onClick={() => navigate('/clinica/estoque/requisicoes/nova')}
           >
             <FilePlus className="mr-2 w-4 h-4" /> Nova Requisição
           </Button>
@@ -579,13 +563,6 @@ export default function Requisicoes() {
           </div>
         )}
       </Card>
-
-      <StockRequestDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        onSubmit={handleSubmit}
-        clinicId={clinicId}
-      />
 
       <Dialog
         open={itemsOpen}

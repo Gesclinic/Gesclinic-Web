@@ -12,7 +12,7 @@
 const PREREQUISITES = {
   database: [
     "✅ Tabela 'invoices' criada",
-    "✅ Tabela 'ar_receivables' tem coluna 'invoice_id'",
+    "✅ Tabela 'ar_invoices' tem metadata/colunas de invoice",
     "✅ Trigger 'fn_create_ar_from_invoice' criada",
     "✅ Trigger 'fn_cancel_invoice_with_ar' criada",
     '✅ RLS policies habilitadas em invoices',
@@ -85,9 +85,9 @@ const TEST_CREATE_INVOICE = {
       'appointment_id vinculado',
     ],
 
-    ar_receivables: [
+    ar_invoices: [
       'Novo registro criado automaticamente',
-      'invoice_id = invoices.id',
+      'metadata.invoice_id = invoices.id',
       'amount = invoices.net_amount',
       "origem = 'nf'",
       "status = 'open'",
@@ -161,7 +161,7 @@ const TEST_CANCEL_INVOICE = {
     database: [
       "invoices.status = 'canceled'",
       'invoices.canceled_at preenchido',
-      "ar_receivables.status = 'canceled' (automático via trigger)",
+      "ar_invoices.status = 'canceled' (automático via trigger)",
       'medical_production mantém registro (histórico)',
     ],
   },
@@ -197,7 +197,7 @@ const TEST_COMPLETE_FLOW = {
       net_amount: 150.0,
     },
 
-    ar_receivables: {
+    ar_invoices: {
       amount: 150.0,
       status: 'open',
       origem: 'nf',
@@ -263,7 +263,7 @@ const TEST_AR_INTEGRATION = {
 
   validation: [
     'AR é criado automaticamente ao emitir NF (trigger SQL)',
-    'invoice_id FK vinculado ao AR',
+    'metadata.invoice_id vinculado ao AR',
     'Valor em AR = valor líquido da NF',
     "Status inicial em AR = 'open'",
     "Origem = 'nf' (identificação da origem)",

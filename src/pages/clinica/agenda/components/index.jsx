@@ -1,10 +1,10 @@
-﻿import React, { useState, useEffect, useLayoutEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { format, addDays, subDays, addMonths, subMonths, parseISO, startOfWeek } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Edit, Eye } from 'lucide-react';
 
-// ✅ IMPORTAR API
+// ? IMPORTAR API
 import { listAppointments } from '@/lib/appointmentsApi';
 import { listProfessionals } from '@/lib/professionalsApi';
 import { listServices } from '@/lib/servicesApi';
@@ -12,7 +12,7 @@ import { listPayers } from '@/lib/payersApi';
 import { sendBatchConfirmations } from '@/lib/whatsappConfirmationApi';
 import { supabase } from '@/lib/customSupabaseClient';
 
-// ⚙️ Configuração de abas por perfil
+// ?? Configura��o de abas por perfil
 import { getAccessibleAgendaTabs, DEFAULT_AGENDA_TAB_BY_ROLE } from '@/config/agendaTabs.config';
 
 // Componentes novos
@@ -41,16 +41,16 @@ import {
 } from '@/lib/appointmentStatusConstants';
 
 /**
- * EXEMPLO DE INTEGRAÇÃO COMPLETA
+ * EXEMPLO DE INTEGRA��O COMPLETA
  *
  * Este arquivo demonstra como usar todos os novos componentes juntos.
- * Substitua as importações com APIs reais do seu projeto.
+ * Substitua as importa��es com APIs reais do seu projeto.
  *
  * Estrutura:
  * 1. Estado central (data, viewMode, filters, agendaMode)
  * 2. Efeitos para carregar dados
- * 3. Lógica de filtragem com useMemo
- * 4. Handlers para navegação, filtragem, ações
+ * 3. L�gica de filtragem com useMemo
+ * 4. Handlers para navega��o, filtragem, a��es
  * 5. Render com todos os componentes
  */
 
@@ -63,7 +63,7 @@ export default function AgendaIndex() {
   const appointmentDateFromQuery = searchParams.get('appointmentDate');
   const appointmentDateFromState = location.state?.appointmentDate;
   const appointmentIdFromState = location.state?.appointmentId;
-  const modeParam = searchParams.get('mode'); // 📝 Ler o modo (edit, new, etc.)
+  const modeParam = searchParams.get('mode'); // ?? Ler o modo (edit, new, etc.)
 
   //  Tentar recuperar do localStorage (backup se state/params foram perdidos)
   const appointmentDateFromLocalStorage =
@@ -76,9 +76,9 @@ export default function AgendaIndex() {
     appointmentDateFromQuery || appointmentDateFromState || appointmentDateFromLocalStorage;
   const appointmentIdFinal = appointmentIdFromState || appointmentIdFromLocalStorage;
 
-  console.log('╔═══════════════════════════════════════════════════════════════╗');
-  console.log('║            [AgendaIndex] STARTUP DIAGNOSTICS              ║');
-  console.log('╚═══════════════════════════════════════════════════════════════╝');
+  console.log('+---------------------------------------------------------------+');
+  console.log('�            [AgendaIndex] STARTUP DIAGNOSTICS              �');
+  console.log('+---------------------------------------------------------------+');
   console.log(' appointmentDateFromQuery:', appointmentDateFromQuery);
   console.log(' appointmentDateFromState:', appointmentDateFromState);
   console.log(' appointmentDateFromLocalStorage:', appointmentDateFromLocalStorage);
@@ -89,7 +89,7 @@ export default function AgendaIndex() {
   console.log(' location.pathname:', location.pathname);
   console.log(' location.search (query string):', location.search);
   console.log(' location.state:', location.state);
-  console.log('═══════════════════════════════════════════════════════════════');
+  console.log('---------------------------------------------------------------');
 
   // ============ CONTEXTOS & AUTH ============
   let auth, clinicId, clinic, loadingClinic;
@@ -100,9 +100,9 @@ export default function AgendaIndex() {
     clinic = clinicCtx?.clinic;
     loadingClinic = clinicCtx?.loadingClinic;
   } catch (e) {
-    console.warn('⚠️ Contextos não disponíveis');
+    console.warn('?? Contextos n�o dispon�veis');
     auth = { user: { role: 'gestor', id: 'user-demo' } };
-    clinic = { id: 'clinic-123', name: 'Clínica Demo' };
+    clinic = { id: 'clinic-123', name: 'Cl�nica Demo' };
     clinicId = 'clinic-123';
     loadingClinic = false;
   }
@@ -116,12 +116,12 @@ export default function AgendaIndex() {
   const [date, setDate] = useState(() => {
     //  Se vem appointmentDate do query param ou state, usar essa data
     if (appointmentDateFinal) {
-      console.log(' [DATE INIT] ✅ appointmentDateFinal encontrado:', appointmentDateFinal);
+      console.log(' [DATE INIT] ? appointmentDateFinal encontrado:', appointmentDateFinal);
       if (/^\d{4}-\d{2}-\d{2}$/.test(appointmentDateFinal)) {
-        console.log(' [DATE INIT] ✅ Formato válido! Retornando:', appointmentDateFinal);
+        console.log(' [DATE INIT] ? Formato v�lido! Retornando:', appointmentDateFinal);
         return appointmentDateFinal;
       }
-      console.log(' [DATE INIT] ❌ Formato inválido! Usando data de hoje');
+      console.log(' [DATE INIT] ? Formato inv�lido! Usando data de hoje');
     }
 
     // Fallback: data de hoje
@@ -131,12 +131,12 @@ export default function AgendaIndex() {
     return todayDate;
   });
 
-  // Inicializar com a aba padrão do perfil, se tiver acesso
+  // Inicializar com a aba padr�o do perfil, se tiver acesso
   const [viewMode, setViewMode] = useState(() => {
     if (accessibleTabs.includes(defaultViewMode)) {
       return defaultViewMode;
     }
-    // Fallback: usar primeira aba acessível
+    // Fallback: usar primeira aba acess�vel
     return accessibleTabs[0] || 'dia';
   });
 
@@ -160,16 +160,16 @@ export default function AgendaIndex() {
   console.log('  - accessibleTabs:', accessibleTabs);
   console.log('  - viewMode:', viewMode);
   console.log('  - clinicId:', clinicId);
-  console.log('  ⭐ date (estado atual usado para agenda):', date);
+  console.log('  ? date (estado atual usado para agenda):', date);
   console.log('  - appointmentDateFinal:', appointmentDateFinal);
   console.log('  - location.search:', location.search);
 
-  //  DEBUG: Verificar se índice está montando
+  //  DEBUG: Verificar se �ndice est� montando
   if (!clinicId && !loadingClinic) {
-    console.warn('⚠️ CLINIC ID undefined e loading concluído');
+    console.warn('?? CLINIC ID undefined e loading conclu�do');
   }
 
-  // � EFEITO: Limpar localStorage após usar
+  // ? EFEITO: Limpar localStorage ap�s usar
   useEffect(() => {
     if (appointmentDateFinal || appointmentIdFinal) {
       // Already used, so clear after a moment to avoid reuse
@@ -183,7 +183,7 @@ export default function AgendaIndex() {
     }
   }, [appointmentDateFinal, appointmentIdFinal]);
 
-  // ⚡ CRÍTICO: useLayoutEffect roda ANTES do render, forçando date correto SINCRONAMENTE
+  // ? CR�TICO: useLayoutEffect roda ANTES do render, for�ando date correto SINCRONAMENTE
   useLayoutEffect(() => {
     if (!appointmentDateFinal) {
       return;
@@ -194,74 +194,74 @@ export default function AgendaIndex() {
     }
 
     if (date !== appointmentDateFinal) {
-      console.log('✅ [useLayoutEffect] FORÇANDO UPDATE de date:', date, '→', appointmentDateFinal);
+      console.log('? [useLayoutEffect] FOR�ANDO UPDATE de date:', date, '?', appointmentDateFinal);
       setDate(appointmentDateFinal);
     }
   }, [appointmentDateFinal]);
 
-  // � EFEITO: Monitorar mudanças de appointmentDateFinal e SEMPRE atualizar date
+  // ? EFEITO: Monitorar mudan�as de appointmentDateFinal e SEMPRE atualizar date
   useEffect(() => {
-    console.log('═══════════════════════════════════════════════════════');
+    console.log('-------------------------------------------------------');
     console.log(' [useEffect MONITOR] DISPARADO - Monitorar appointmentDateFinal');
     console.log('   appointmentDateFinal:', appointmentDateFinal);
     console.log('   date atual:', date);
     console.log('   searchParams:', location.search);
     console.log('   location.state:', location.state);
-    console.log('═══════════════════════════════════════════════════════');
+    console.log('-------------------------------------------------------');
 
     if (!appointmentDateFinal) {
-      console.log('⚠️  appointmentDateFinal está vazio, ignorando');
+      console.log('??  appointmentDateFinal est� vazio, ignorando');
       return;
     }
 
     // Validar formato
     if (!/^\d{4}-\d{2}-\d{2}$/.test(appointmentDateFinal)) {
-      console.warn('❌ appointmentDateFinal com formato inválido:', appointmentDateFinal);
+      console.warn('? appointmentDateFinal com formato inv�lido:', appointmentDateFinal);
       return;
     }
 
-    // Se é diferente do state atual, atualizar
+    // Se � diferente do state atual, atualizar
     if (date !== appointmentDateFinal) {
-      console.log('✅ Atualizando date de', date, 'para', appointmentDateFinal);
+      console.log('? Atualizando date de', date, 'para', appointmentDateFinal);
       setDate(appointmentDateFinal);
     } else {
-      console.log('ℹ️  Date já está correto, não precisa atualizar');
+      console.log('??  Date j� est� correto, n�o precisa atualizar');
     }
   }, [appointmentDateFinal, date, location.search, location.state]);
 
-  // ⚡ SEED de feriados - ATIVA AUTOMATICAMENTE
-  // Garante que feriados nacionais existem no banco para múltiplos anos
+  // ? SEED de feriados - ATIVA AUTOMATICAMENTE
+  // Garante que feriados nacionais existem no banco para m�ltiplos anos
   useEffect(() => {
-    console.log('⚡ [useEffect] Hook disparado - iniciando seed de feriados');
+    console.log('? [useEffect] Hook disparado - iniciando seed de feriados');
 
     const ensureHolidaysExist = async () => {
       console.log(' [Agenda] Iniciando seed de feriados para 2024-2028');
       console.log(
-        ' [Agenda] Função seedNationalHolidaysMultipleYears:',
+        ' [Agenda] Fun��o seedNationalHolidaysMultipleYears:',
         typeof seedNationalHolidaysMultipleYears,
       );
 
       try {
-        // Semeia feriados de múltiplos anos (2024, 2025, 2026, 2027, 2028)
+        // Semeia feriados de m�ltiplos anos (2024, 2025, 2026, 2027, 2028)
         console.log(' [Agenda] Chamando seedNationalHolidaysMultipleYears...');
         const seedResult = await seedNationalHolidaysMultipleYears();
         console.log(' [Seed] Resultado:', seedResult);
         if (seedResult) {
-          console.log('✅ [Seed] SUCESSO - Feriados de múltiplos anos inseridos');
+          console.log('? [Seed] SUCESSO - Feriados de m�ltiplos anos inseridos');
         } else {
-          console.error('⚠️ [Seed] FALHOU - Erro ao inserir feriados');
+          console.error('?? [Seed] FALHOU - Erro ao inserir feriados');
         }
       } catch (error) {
-        console.error('❌ [Seed] Exceção:', error.message, error);
+        console.error('? [Seed] Exce��o:', error.message, error);
       }
     };
 
     try {
       ensureHolidaysExist();
     } catch (err) {
-      console.error('❌ [Seed] Erro ao chamar função:', err);
+      console.error('? [Seed] Erro ao chamar fun��o:', err);
     }
-  }, []); // ✅ Dependência vazia - roda APENAS UMA VEZ ao montar
+  }, []); // ? Depend�ncia vazia - roda APENAS UMA VEZ ao montar
 
   //  RBAC: Carregar ID do profissional logado (se for profissional)
   useEffect(() => {
@@ -272,11 +272,11 @@ export default function AgendaIndex() {
 
       const currentRole = auth?.currentRole;
 
-      //  LÓGICA RBAC:
-      // - Profissional: Vê apenas sua agenda (userProfessionalId = seu ID)
-      // - Recepção/Admin/Gestor: Vê agenda de todos (userProfessionalId = null)
+      //  L�GICA RBAC:
+      // - Profissional: V� apenas sua agenda (userProfessionalId = seu ID)
+      // - Recep��o/Admin/Gestor: V� agenda de todos (userProfessionalId = null)
       if (currentRole?.toLowerCase?.() !== 'profissional') {
-        console.log(`✅ [RBAC] Usuário é ${currentRole} → verá TODOS os profissionais`);
+        console.log(`? [RBAC] Usu�rio � ${currentRole} ? ver� TODOS os profissionais`);
         setUserProfessionalId(null);
         return;
       }
@@ -294,18 +294,18 @@ export default function AgendaIndex() {
 
         if (allProfs?.length === 1) {
           setUserProfessionalId(allProfs[0].id);
-          console.log(`✅ [RBAC] Profissional logado → verá apenas sua agenda: ${allProfs[0].id}`);
+          console.log(`? [RBAC] Profissional logado ? ver� apenas sua agenda: ${allProfs[0].id}`);
         } else if (allProfs?.length > 1) {
-          console.warn(`⚠️ [RBAC] Múltiplos profissionais para email ${auth.user.email}`);
+          console.warn(`?? [RBAC] M�ltiplos profissionais para email ${auth.user.email}`);
           // Usar o primeiro
           setUserProfessionalId(allProfs[0].id);
-          console.log(`✅ [RBAC] Usando primeiro profissional: ${allProfs[0].id}`);
+          console.log(`? [RBAC] Usando primeiro profissional: ${allProfs[0].id}`);
         } else {
-          console.error(`❌ [RBAC] Nenhum profissional encontrado para ${auth.user.email}`);
+          console.error(`? [RBAC] Nenhum profissional encontrado para ${auth.user.email}`);
           setUserProfessionalId(null);
         }
       } catch (err) {
-        console.error('❌ [RBAC] Erro ao carregar profissional:', err);
+        console.error('? [RBAC] Erro ao carregar profissional:', err);
         setUserProfessionalId(null);
       }
     };
@@ -313,14 +313,14 @@ export default function AgendaIndex() {
     loadUserProfessionalId();
   }, [clinicId, auth?.user?.email, auth?.currentRole]);
 
-  // ⚙️ Garantir que viewMode seja sempre acessível para o perfil
+  // ?? Garantir que viewMode seja sempre acess�vel para o perfil
   useEffect(() => {
     if (!accessibleTabs.includes(viewMode)) {
       console.log(
-        `⚠️ [ViewMode] viewMode atual "${viewMode}" não é acessível para "${currentRole}"`,
+        `?? [ViewMode] viewMode atual "${viewMode}" n�o � acess�vel para "${currentRole}"`,
       );
       console.log(`   Alternando para: "${accessibleTabs[0] || 'dia'}"`);
-      // Resetar para a primeira aba acessível
+      // Resetar para a primeira aba acess�vel
       setViewMode(accessibleTabs[0] || 'dia');
     }
   }, [accessibleTabs, viewMode, currentRole]);
@@ -338,17 +338,17 @@ export default function AgendaIndex() {
   const [whatsappResult, setWhatsappResult] = useState(null);
   const [whatsappError, setWhatsappError] = useState(null);
 
-  // Modal de novo/edição de agendamento
+  // Modal de novo/edi��o de agendamento
   const [modalNovoOpen, setModalNovoOpen] = useState(false);
   const [novoAgendamentoInfo, setNovoAgendamentoInfo] = useState(null);
   const [appointmentIdToEdit, setAppointmentIdToEdit] = useState(null);
 
-  // 🧪 UNIFIED MODE MODAL
+  // ?? UNIFIED MODE MODAL
   const [atendimentoUnificadoOpen, setAtendimentoUnificadoOpen] = useState(false);
   const [selectedAppointmentForUnified, setSelectedAppointmentForUnified] = useState(null);
 
-  // 🚩 Flag para rastrear se o modal foi fechado intencionalmente pelo usuário
-  // Evita que o useEffect reabra a modal após o usuário clicar no X
+  // ?? Flag para rastrear se o modal foi fechado intencionalmente pelo usu�rio
+  // Evita que o useEffect reabra a modal ap�s o usu�rio clicar no X
   const hasModalBeenClosedRef = React.useRef(false);
 
   // Drawer de detalhes do agendamento
@@ -358,9 +358,9 @@ export default function AgendaIndex() {
   //  Context Menu para Week/Month views
   const [contextMenu, setContextMenu] = useState(null);
 
-  // 🎬 AUTO-OPEN MODAL: Quando vindo de Contas a Receber com mode=edit
+  // ?? AUTO-OPEN MODAL: Quando vindo de Contas a Receber com mode=edit
   useEffect(() => {
-    console.log('🎬 [AutoOpen Modal] useEffect executando');
+    console.log('?? [AutoOpen Modal] useEffect executando');
     console.log('   modeParam:', modeParam);
     console.log('   appointmentIdFinal:', appointmentIdFinal);
     console.log('   appointmentDateFinal:', appointmentDateFinal);
@@ -369,88 +369,88 @@ export default function AgendaIndex() {
     console.log('   modalNovoOpen:', modalNovoOpen);
     console.log('   hasModalBeenClosed:', hasModalBeenClosedRef.current);
 
-    // Se o usuário fechou intencionalmente a modal, não reabrir
+    // Se o usu�rio fechou intencionalmente a modal, n�o reabrir
     if (hasModalBeenClosedRef.current) {
-      console.log('⏭️ Modal foi fechada intencionalmente pelo usuário, não reabrindo');
+      console.log('?? Modal foi fechada intencionalmente pelo usu�rio, n�o reabrindo');
       return;
     }
 
-    // Se o modal já está aberto, não tentar abrir novamente
+    // Se o modal j� est� aberto, n�o tentar abrir novamente
     if (modalNovoOpen) {
-      console.log('⏭️ Modal já está aberto, saindo');
+      console.log('?? Modal j� est� aberto, saindo');
       return;
     }
 
-    // Verificar se temos os parâmetros para auto-open
+    // Verificar se temos os par�metros para auto-open
     if (modeParam === 'edit' && appointmentIdFinal) {
-      console.log('✅ Parâmetros encontrados: mode=edit + appointmentId');
+      console.log('? Par�metros encontrados: mode=edit + appointmentId');
 
-      // CRÍTICO: Verificar se a data foi navegada corretamente
+      // CR�TICO: Verificar se a data foi navegada corretamente
       if (appointmentDateFinal && date !== appointmentDateFinal) {
-        console.log('⏳ Aguardando navegação para data correta...');
+        console.log('? Aguardando navega��o para data correta...');
         console.log('   Esperada:', appointmentDateFinal);
         console.log('   Atual:', date);
-        return; // Aguardar próxima execução quando date mudar
+        return; // Aguardar pr�xima execu��o quando date mudar
       }
 
       // Verificar se os appointments foram carregados
       if (!appointments || appointments.length === 0) {
-        console.log('⏳ Aguardando carregamento dos appointments...');
-        return; // Aguardar próxima execução quando appointments mudarem
+        console.log('? Aguardando carregamento dos appointments...');
+        return; // Aguardar pr�xima execu��o quando appointments mudarem
       }
 
       // Procurar pelo appointment na lista
-      console.log('🔍 Procurando appointment com ID:', appointmentIdFinal);
+      console.log('?? Procurando appointment com ID:', appointmentIdFinal);
       const foundAppointment = appointments.find((apt) => apt.id === appointmentIdFinal);
 
       if (foundAppointment) {
-        console.log('✅ Appointment encontrado! Abrindo modal...');
+        console.log('? Appointment encontrado! Abrindo modal...');
         console.log('   Dados:', foundAppointment);
         setAppointmentIdToEdit(appointmentIdFinal);
         setNovoAgendamentoInfo(foundAppointment);
         setModalNovoOpen(true);
-        console.log('✅ Modal aberto com appointmentIdToEdit:', appointmentIdFinal);
+        console.log('? Modal aberto com appointmentIdToEdit:', appointmentIdFinal);
       } else {
-        console.warn('⚠️ Appointment NÃO encontrado');
-        console.log('   IDs disponíveis:', appointments.map((a) => a.id).join(', '));
+        console.warn('?? Appointment N�O encontrado');
+        console.log('   IDs dispon�veis:', appointments.map((a) => a.id).join(', '));
       }
     }
   }, [modeParam, appointmentIdFinal, appointmentDateFinal, date, appointments, modalNovoOpen]);
 
-  // ============ FUNÇÃO PARA RECARREGAR APPOINTMENTS ============
-  // ✅ Extraída em função separada para poder ser reutilizada no onCreated
+  // ============ FUN��O PARA RECARREGAR APPOINTMENTS ============
+  // ? Extra�da em fun��o separada para poder ser reutilizada no onCreated
   const loadAppointments = useCallback(async () => {
     console.log(
-      '%c 🚀 [AgendaIndex] loadAppointments INICIANDO!',
+      '%c ?? [AgendaIndex] loadAppointments INICIANDO!',
       'background: #ff0000; color: white; font-size: 14px; font-weight: bold;'
     );
     console.log(' [loadAppointments] INICIANDO', { viewMode, clinicId });
 
     if (!clinicId) {
-      console.error(' [loadAppointments] CRÍTICO: clinicId é', clinicId, '- não posso continuar!');
+      console.error(' [loadAppointments] CR�TICO: clinicId �', clinicId, '- n�o posso continuar!');
       console.error(' [loadAppointments] loadingClinic:', loadingClinic);
       console.error(' [loadAppointments] clinic:', clinic);
-      setLoading(false);  // 🔧 FIX: Ensure loading is always false when returning early
+      setLoading(false);  // ?? FIX: Ensure loading is always false when returning early
       return;
     }
 
     setLoading(true);
     try {
-      // ✅ CORRIGIDO: Calcular range baseado no viewMode
+      // ? CORRIGIDO: Calcular range baseado no viewMode
       const [year, month, day] = date.split('-').map(Number);
       let startUTC, endUTC;
 
       if (viewMode === 'mes') {
-        // Carregar TODO o mês
-        console.log(' [loadAppointments] Modo MÊS - carregando mês inteiro');
-        startUTC = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0)); // Primeiro dia do mês
-        endUTC = new Date(Date.UTC(year, month, 0, 23, 59, 59)); // Último dia do mês
+        // Carregar TODO o m�s
+        console.log(' [loadAppointments] Modo M�S - carregando m�s inteiro');
+        startUTC = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0)); // Primeiro dia do m�s
+        endUTC = new Date(Date.UTC(year, month, 0, 23, 59, 59)); // �ltimo dia do m�s
       } else if (viewMode === 'semana') {
         // Carregar TODA a semana (seg-dom)
         console.log(' [loadAppointments] Modo SEMANA - carregando semana inteira');
         const dateObj = new Date(Date.UTC(year, month - 1, day));
         const dayOfWeek = dateObj.getUTCDay(); // 0 = Sunday, 1 = Monday
-        const mondayDiff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Calcular dias até segunda
+        const mondayDiff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Calcular dias at� segunda
         const monday = new Date(dateObj);
         monday.setUTCDate(dateObj.getUTCDate() + mondayDiff);
         startUTC = new Date(
@@ -481,7 +481,7 @@ export default function AgendaIndex() {
         clinicId,
       });
 
-      //  Se for profissional, buscar o professional_id do usuário
+      //  Se for profissional, buscar o professional_id do usu�rio
       let userProfessionalId = null;
       const currentRole = auth?.currentRole;
       if (currentRole?.toLowerCase?.() === 'profissional' && auth?.user?.email) {
@@ -494,15 +494,15 @@ export default function AgendaIndex() {
 
         if (profData?.id) {
           userProfessionalId = profData.id;
-          console.log(`✅ [RBAC] Profissional encontrado: ${userProfessionalId}`);
+          console.log(`? [RBAC] Profissional encontrado: ${userProfessionalId}`);
         }
       }
 
-      // ✅ CHAMAR API REAL
+      // ? CHAMAR API REAL
       console.log(' [loadAppointments] Chamando APIs com clinicId:', clinicId);
 
-      // 🔧 FIX: Add timeout to prevent Promise.all from hanging indefinitely
-      const apiTimeout = new Promise((_, reject) => 
+      // ?? FIX: Add timeout to prevent Promise.all from hanging indefinitely
+      const apiTimeout = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('API timeout - taking too long to load')), 60000)
       );
 
@@ -514,24 +514,27 @@ export default function AgendaIndex() {
             end: endUTC.toISOString(),
             userRole: currentRole,
             userProfessionalId: userProfessionalId,
+          }).catch((err) => {
+            console.error('? Erro em listAppointments:', err);
+            return [];
           }),
           listProfessionals(clinicId).catch((err) => {
-            console.error('❌ Erro em listProfessionals:', err);
+            console.error('? Erro em listProfessionals:', err);
             return [];
           }),
           listServices(clinicId).catch((err) => {
-            console.error('❌ Erro em listServices:', err);
+            console.error('? Erro em listServices:', err);
             return [];
           }),
           listPayers(clinicId).catch((err) => {
-            console.error('❌ Erro em listPayers:', err);
+            console.error('? Erro em listPayers:', err);
             return [];
           }),
         ]),
         apiTimeout,
       ]);
 
-      console.log('� [loadAppointments] Dados recebidos da API:', {
+      console.log('? [loadAppointments] Dados recebidos da API:', {
         apptsCount: appts?.length,
         profsCount: profs?.length,
         svcsCount: svcs?.length,
@@ -548,13 +551,13 @@ export default function AgendaIndex() {
           );
           if (apt.patient_name?.includes('Marcia') || apt.patient?.name?.includes('Marcia')) {
             console.log(
-              `     ✅ MARCIA ENCONTRADA! Data: ${apt.scheduled_date}, Hora: ${apt.scheduled_time}`,
+              `     ? MARCIA ENCONTRADA! Data: ${apt.scheduled_date}, Hora: ${apt.scheduled_time}`,
             );
           }
         });
       }
 
-      // ✅ NORMALIZAR STATUS: converter status antigos para novos
+      // ? NORMALIZAR STATUS: converter status antigos para novos
       const normalizedAppts = (appts || []).map((apt) => ({
         ...apt,
         status: migrateStatus(apt.status), // scheduled, confirmed, in_service, attended, no_show, canceled
@@ -587,12 +590,12 @@ export default function AgendaIndex() {
       setServices(svcs || []);
       setPayers(pays || []);
       console.log(
-        '✅ [loadAppointments] Estado React atualizado com',
+        '? [loadAppointments] Estado React atualizado com',
         (normalizedAppts || []).length,
         'agendamentos',
       );
     } catch (error) {
-      console.error('❌ [loadAppointments] Erro ao carregar dados:', error);
+      console.error('? [loadAppointments] Erro ao carregar dados:', error);
       setAppointments([]);
       setProfessionals([]);
       setServices([]);
@@ -608,10 +611,10 @@ export default function AgendaIndex() {
     loadAppointments();
   }, [loadAppointments]);
 
-  // ============ GERAR AGENDA SUMMARY (para calendário) ============
+  // ============ GERAR AGENDA SUMMARY (para calend�rio) ============
 
   useEffect(() => {
-    // Gera um resumo da agenda para os próximos 30 dias
+    // Gera um resumo da agenda para os pr�ximos 30 dias
     const summary = {};
 
     for (let i = 0; i < 30; i++) {
@@ -660,7 +663,7 @@ export default function AgendaIndex() {
     // Filtro por profissional
     if (filters.professional_id && filters.professional_id !== '') {
       filtered = filtered.filter((apt) => apt.professional_id === filters.professional_id);
-      console.log(`\u200d⚕️ [Filtro] Profissional: ${filtered.length} resultados`);
+      console.log(`\u200d?? [Filtro] Profissional: ${filtered.length} resultados`);
     }
 
     // Filtro por sala
@@ -672,22 +675,22 @@ export default function AgendaIndex() {
     // Filtro por status
     if (filters.status && filters.status !== '') {
       filtered = filtered.filter((apt) => apt.status === filters.status);
-      console.log(`️ [Filtro] Status "${filters.status}": ${filtered.length} resultados`);
+      console.log(`? [Filtro] Status "${filters.status}": ${filtered.length} resultados`);
     }
 
-    // Filtro por convênio
+    // Filtro por conv�nio
     if (filters.payer_id && filters.payer_id !== '') {
       filtered = filtered.filter((apt) => apt.payer_id === filters.payer_id);
-      console.log(` [Filtro] Convênio: ${filtered.length} resultados`);
+      console.log(` [Filtro] Conv�nio: ${filtered.length} resultados`);
     }
 
-    // Filtro por serviço
+    // Filtro por servi�o
     if (filters.service_id && filters.service_id !== '') {
       filtered = filtered.filter((apt) => apt.service_id === filters.service_id);
-      console.log(` [Filtro] Serviço: ${filtered.length} resultados`);
+      console.log(` [Filtro] Servi�o: ${filtered.length} resultados`);
     }
 
-    console.log(`✅ [Filtros Aplicados] Total: ${appointments.length} → ${filtered.length}`, {
+    console.log(`? [Filtros Aplicados] Total: ${appointments.length} ? ${filtered.length}`, {
       filters,
     });
     return filtered;
@@ -711,7 +714,7 @@ export default function AgendaIndex() {
   const handlePreviousDay = useCallback(() => {
     setDate((prev) => {
       const parsedDate = parseISO(prev);
-      // Se estiver em dia, voltar 1 dia; se em semana, voltar 7 dias; se em mês, voltar 1 mês
+      // Se estiver em dia, voltar 1 dia; se em semana, voltar 7 dias; se em m�s, voltar 1 m�s
       let newDate;
       if (viewMode === 'dia') {
         newDate = subDays(parsedDate, 1);
@@ -727,7 +730,7 @@ export default function AgendaIndex() {
   const handleNextDay = useCallback(() => {
     setDate((prev) => {
       const parsedDate = parseISO(prev);
-      // Se estiver em dia, avançar 1 dia; se em semana, avançar 7 dias; se em mês, avançar 1 mês
+      // Se estiver em dia, avan�ar 1 dia; se em semana, avan�ar 7 dias; se em m�s, avan�ar 1 m�s
       let newDate;
       if (viewMode === 'dia') {
         newDate = addDays(parsedDate, 1);
@@ -748,9 +751,9 @@ export default function AgendaIndex() {
     (mode) => {
       //  Validar se o perfil tem acesso a essa aba
       if (!accessibleTabs.includes(mode)) {
-        console.warn(`⚠️ Acesso negado: perfil "${currentRole}" não pode acessar a aba "${mode}"`);
-        console.log('   Abas disponíveis:', accessibleTabs);
-        return; // Bloquear mudança
+        console.warn(`?? Acesso negado: perfil "${currentRole}" n�o pode acessar a aba "${mode}"`);
+        console.log('   Abas dispon�veis:', accessibleTabs);
+        return; // Bloquear mudan�a
       }
       setViewMode(mode);
     },
@@ -780,59 +783,59 @@ export default function AgendaIndex() {
   }, []);
 
   const handleNewAppointment = useCallback(async () => {
-    console.log('🔵 [TRACE] handleNewAppointment called - date:', date);
-    console.log('🔵 [TRACE] date state:', date);
-    console.log('🔵 [TRACE] viewMode state:', viewMode);
-    console.log('🔵 [TRACE] clinic state:', clinic);
+    console.log('?? [TRACE] handleNewAppointment called - date:', date);
+    console.log('?? [TRACE] date state:', date);
+    console.log('?? [TRACE] viewMode state:', viewMode);
+    console.log('?? [TRACE] clinic state:', clinic);
 
     try {
-      // Verificar se a data é um feriado bloqueado
+      // Verificar se a data � um feriado bloqueado
       const clinicId = clinic?.id || null;
-      console.log('🔵 [TRACE] clinicId extracted:', clinicId);
-      
-      // 🔧 FIX: Add timeout to prevent infinite hanging
+      console.log('?? [TRACE] clinicId extracted:', clinicId);
+
+      // ?? FIX: Add timeout to prevent infinite hanging
       let result;
       try {
-        console.log('🔵 [TRACE] About to call checkMultipleDates...');
+        console.log('?? [TRACE] About to call checkMultipleDates...');
         result = await Promise.race([
           checkMultipleDates([date], clinicId),
           new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout checking holidays')), 3000))
         ]);
-        console.log('🔵 [TRACE] checkMultipleDates result:', result);
+        console.log('?? [TRACE] checkMultipleDates result:', result);
       } catch (timeoutError) {
-        console.warn('⚠️ Timeout ao verificar feriados, abrindo modal mesmo assim');
+        console.warn('?? Timeout ao verificar feriados, abrindo modal mesmo assim');
         result = {};
       }
-      
+
       const holiday = result[date];
-      console.log('🔵 [TRACE] holiday for date:', holiday);
+      console.log('?? [TRACE] holiday for date:', holiday);
 
       if (holiday && holiday.is_blocked && !holiday.has_override) {
-        // Feriado bloqueado - não permitir agendamento
-        console.warn(`❌ Data ${date} é feriado bloqueado: ${holiday.name}`);
+        // Feriado bloqueado - n�o permitir agendamento
+        console.warn(`? Data ${date} � feriado bloqueado: ${holiday.name}`);
         alert(
-          `⛔ Não é possível agendar em ${date}\n\n ${holiday.name} - FERIADO NACIONAL\n\n❌ A agenda está bloqueada neste dia.\n\nPara desbloquear, utilize a opção de override manual.`,
+          `? N�o � poss�vel agendar em ${date}\n\n ${holiday.name} - FERIADO NACIONAL\n\n? A agenda est� bloqueada neste dia.\n\nPara desbloquear, utilize a op��o de override manual.`,
         );
         return;
       }
 
       if (holiday && holiday.has_override) {
-        console.log(`⚠️ Data ${date} é feriado COM override: ${holiday.name}`);
+        console.log(`?? Data ${date} � feriado COM override: ${holiday.name}`);
       }
 
       // Permitir agendamento
-      console.log('🔵 [TRACE] About to set modal state to true');
+      console.log('?? [TRACE] About to set modal state to true');
       setNovoAgendamentoInfo({
         date: date,
         viewMode: viewMode,
       });
-      // 🔧 FIX: Zerar appointmentIdToEdit para garantir que abre em modo 'new'
+      // ?? FIX: Zerar appointmentIdToEdit para garantir que abre em modo 'new'
       setAppointmentIdToEdit(null);
-      console.log('🔵 [TRACE] Calling setModalNovoOpen(true)...');
+      console.log('?? [TRACE] Calling setModalNovoOpen(true)...');
       setModalNovoOpen(true);
-      console.log('✅ Abrindo modal de novo agendamento para:', date);
+      console.log('? Abrindo modal de novo agendamento para:', date);
     } catch (error) {
-      console.error('❌ Erro ao verificar feriado:', error);
+      console.error('? Erro ao verificar feriado:', error);
       // Em caso de erro, permitir agendamento mesmo assim
       setNovoAgendamentoInfo({
         date: date,
@@ -844,7 +847,7 @@ export default function AgendaIndex() {
 
   const handleSlotClick = useCallback(
     (slot) => {
-      // ✅ Passar dados completos do slot: data, hora, profissional, sala
+      // ? Passar dados completos do slot: data, hora, profissional, sala
       console.log(' [handleSlotClick] Slot recebido:');
       console.log('   slot completo:', slot);
       console.log('   Keys em slot:', Object.keys(slot));
@@ -858,7 +861,7 @@ export default function AgendaIndex() {
         roomId: slot.room_id || slot.roomId || slot.room?.id,
         duration: slot.duration || 30,
       };
-      console.log('✅ [handleSlotClick] newInfo preparado:', newInfo);
+      console.log('? [handleSlotClick] newInfo preparado:', newInfo);
       console.log('   >> professionalId no newInfo:', newInfo.professionalId);
       setNovoAgendamentoInfo(newInfo);
       setModalNovoOpen(true);
@@ -868,19 +871,19 @@ export default function AgendaIndex() {
 
   const handleEditAppointment = useCallback(
     (appointmentId) => {
-      console.log('✏️ [AgendaIndex] Editando agendamento:', appointmentId);
+      console.log('?? [AgendaIndex] Editando agendamento:', appointmentId);
       console.log('   typeof appointmentId:', typeof appointmentId);
 
-      // 🔍 ENCONTRAR O AGENDAMENTO COMPLETO NA LISTA
+      // ?? ENCONTRAR O AGENDAMENTO COMPLETO NA LISTA
       const foundAppointment = appointments.find((apt) => apt.id === appointmentId);
 
       if (!foundAppointment) {
-        console.error('❌ [AgendaIndex] Agendamento não encontrado:', appointmentId);
-        console.log('   Disponíveis:', appointments.map((a) => a.id).join(', '));
+        console.error('? [AgendaIndex] Agendamento n�o encontrado:', appointmentId);
+        console.log('   Dispon�veis:', appointments.map((a) => a.id).join(', '));
         return;
       }
 
-      console.log('✅ [AgendaIndex] Agendamento encontrado:', {
+      console.log('? [AgendaIndex] Agendamento encontrado:', {
         id: foundAppointment.id,
         mode: 'edit',
         patient: foundAppointment.patient_id,
@@ -888,7 +891,7 @@ export default function AgendaIndex() {
         professional: foundAppointment.professional_id,
       });
 
-      // ✅ PASSAR O AGENDAMENTO COMPLETO PARA ABRIR EM MODO EDIT
+      // ? PASSAR O AGENDAMENTO COMPLETO PARA ABRIR EM MODO EDIT
       setAppointmentIdToEdit(appointmentId);
       setNovoAgendamentoInfo(foundAppointment);
       setModalNovoOpen(true);
@@ -898,12 +901,12 @@ export default function AgendaIndex() {
 
   const handleCancelAppointment = useCallback((appointment) => {
     console.log('Cancelar agendamento:', appointment.id);
-    // Abrir diálogo de confirmação
+    // Abrir di�logo de confirma��o
   }, []);
 
   const handleViewDetails = useCallback(
     (appointmentId) => {
-      console.log('️ Ver detalhes:', appointmentId);
+      console.log('? Ver detalhes:', appointmentId);
       // Encontrar o agendamento nos dados carregados
       const appointment = appointments.find((apt) => apt.id === appointmentId);
       if (appointment) {
@@ -916,7 +919,7 @@ export default function AgendaIndex() {
 
   //  Context Menu Handler - para Week/Month views
   const handleContextMenu = useCallback((e, apt) => {
-    console.log('️ [AgendaIndex] handleContextMenu CHAMADO!');
+    console.log('? [AgendaIndex] handleContextMenu CHAMADO!');
     e.preventDefault();
     setContextMenu({
       x: e.clientX,
@@ -925,15 +928,15 @@ export default function AgendaIndex() {
     });
   }, []);
 
-  //  Handler para abrir Prontuário do paciente
+  //  Handler para abrir Prontu�rio do paciente
   const handleOpenPatientRecord = useCallback(
     (patientId, appointment) => {
       if (!patientId) {
-        console.error('❌ [AgendaIndex] Sem patientId para abrir prontuário');
+        console.error('? [AgendaIndex] Sem patientId para abrir prontu�rio');
         return;
       }
 
-      console.log(' [AgendaIndex] Abrindo prontuário do paciente:', patientId);
+      console.log(' [AgendaIndex] Abrindo prontu�rio do paciente:', patientId);
       navigate(`/clinica/pacientes/${patientId}`, {
         state: {
           appointmentId: appointment?.id,
@@ -956,7 +959,7 @@ export default function AgendaIndex() {
   //  WhatsApp Confirmations Handler
   const handleSendWhatsAppConfirmations = useCallback(async () => {
     if (
-      !window.confirm('Enviar confirmações de WhatsApp para pacientes com agendamentos de amanhã?')
+      !window.confirm('Enviar confirma��es de WhatsApp para pacientes com agendamentos de amanh�?')
     ) {
       return;
     }
@@ -972,42 +975,42 @@ export default function AgendaIndex() {
       // Auto-hide success message after 5 seconds
       setTimeout(() => setWhatsappResult(null), 5000);
     } catch (error) {
-      console.error('❌ Erro ao enviar confirmações:', error);
-      setWhatsappError(error.message || 'Erro ao enviar confirmações');
+      console.error('? Erro ao enviar confirma��es:', error);
+      setWhatsappError(error.message || 'Erro ao enviar confirma��es');
     } finally {
       setWhatsappLoading(false);
     }
   }, [clinicId]);
 
-  // 🧪 UNIFIED MODE HANDLERS
+  // ?? UNIFIED MODE HANDLERS
   const handleOpenAtendimentoUnificado = useCallback((appointment) => {
-    console.log('🧪 Abrindo AtendimentoUnificado com appointment:', appointment.id);
+    console.log('?? Abrindo AtendimentoUnificado com appointment:', appointment.id);
     setSelectedAppointmentForUnified(appointment);
     setAtendimentoUnificadoOpen(true);
   }, []);
 
   const handleCloseAtendimentoUnificado = useCallback(() => {
-    console.log('🧪 Fechando AtendimentoUnificado');
+    console.log('?? Fechando AtendimentoUnificado');
     setAtendimentoUnificadoOpen(false);
     setSelectedAppointmentForUnified(null);
-    // Recarregar appointments após fechar
+    // Recarregar appointments ap�s fechar
     loadAppointments();
   }, [loadAppointments]);
 
   // ============ RENDER ============
 
-  console.log('╔═══════════════════════════════════════════════════════════════╗');
-  console.log('║                [AgendaIndex] RENDER - FINAL STATE          ║');
-  console.log('╠═══════════════════════════════════════════════════════════════╣');
-  console.log('║ ⭐ DATA QUE SERÁ USADO PARA AGENDA:', date);
-  console.log('║ Veio de appointmentDateFinal?:', appointmentDateFinal === date);
-  console.log('║ viewMode:', viewMode);
-  console.log('║ clinicId:', clinicId);
-  console.log('╚═══════════════════════════════════════════════════════════════╝');
+  console.log('+---------------------------------------------------------------+');
+  console.log('�                [AgendaIndex] RENDER - FINAL STATE          �');
+  console.log('�---------------------------------------------------------------�');
+  console.log('� ? DATA QUE SER� USADO PARA AGENDA:', date);
+  console.log('� Veio de appointmentDateFinal?:', appointmentDateFinal === date);
+  console.log('� viewMode:', viewMode);
+  console.log('� clinicId:', clinicId);
+  console.log('+---------------------------------------------------------------+');
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 overflow-hidden">
-      {/* ✅ WhatsApp Notifications Section - Overlay Fixed */}
+      {/* ? WhatsApp Notifications Section - Overlay Fixed */}
       {whatsappResult && (
         <div
           style={{
@@ -1034,7 +1037,7 @@ export default function AgendaIndex() {
             }
           `}</style>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '20px' }}>✅</span>
+            <span style={{ fontSize: '20px' }}>?</span>
             <div>
               <strong style={{ display: 'block', marginBottom: '4px' }}>Sucesso!</strong>
               <div style={{ fontSize: '13px' }}>
@@ -1044,7 +1047,7 @@ export default function AgendaIndex() {
                 </span>
                 {whatsappResult.failed > 0 && (
                   <div style={{ marginTop: '4px', color: '#D97706' }}>
-                    ⚠️ {whatsappResult.failed} falharam
+                    ?? {whatsappResult.failed} falharam
                   </div>
                 )}
               </div>
@@ -1053,7 +1056,7 @@ export default function AgendaIndex() {
         </div>
       )}
 
-      {/* ❌ WhatsApp Error - Overlay Fixed */}
+      {/* ? WhatsApp Error - Overlay Fixed */}
       {whatsappError && (
         <div
           style={{
@@ -1074,7 +1077,7 @@ export default function AgendaIndex() {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '20px' }}>❌</span>
+            <span style={{ fontSize: '20px' }}>?</span>
             <div>
               <strong style={{ display: 'block', marginBottom: '4px' }}>Erro!</strong>
               <div style={{ fontSize: '13px' }}>{whatsappError}</div>
@@ -1151,7 +1154,7 @@ export default function AgendaIndex() {
           {/* Separator */}
           <div className="w-px h-7 bg-gray-200" />
 
-          {/* Stat: Ocupação */}
+          {/* Stat: Ocupa��o */}
           <div className="flex flex-col items-center">
             <span className="text-lg font-bold text-purple-600">
               {filteredAppointments.length > 0
@@ -1159,7 +1162,7 @@ export default function AgendaIndex() {
                 : 0}
               %
             </span>
-            <span className="text-xs text-gray-600 mt-0.5">Ocupação</span>
+            <span className="text-xs text-gray-600 mt-0.5">Ocupa��o</span>
           </div>
         </div>
 
@@ -1171,8 +1174,8 @@ export default function AgendaIndex() {
             disabled={whatsappLoading}
             title={
               whatsappLoading
-                ? 'Enviando confirmações...'
-                : 'Enviar confirmações de agendamentos para amanhã via WhatsApp'
+                ? 'Enviando confirma��es...'
+                : 'Enviar confirma��es de agendamentos para amanh� via WhatsApp'
             }
             className={`px-2.5 py-1 text-xs font-medium text-white rounded transition-all flex items-center gap-1 ${
               whatsappLoading
@@ -1188,7 +1191,7 @@ export default function AgendaIndex() {
               minHeight: '32px',
             }}
           >
-            <span style={{ fontSize: '14px' }}>{whatsappLoading ? '⏳' : ''}</span>
+            <span style={{ fontSize: '14px' }}>{whatsappLoading ? '?' : ''}</span>
             <span className="hidden sm:inline">
               {whatsappLoading ? 'Enviando...' : 'Confirmar'}
             </span>
@@ -1199,7 +1202,7 @@ export default function AgendaIndex() {
       {/* Grid/Content - Renderizar baseado em agendaMode e viewMode */}
 
       {agendaMode === 'profissional' ? (
-        // MODO PROFISSIONAL - Horários disponíveis por profissional (Dia/Semana/Mês)
+        // MODO PROFISSIONAL - Hor�rios dispon�veis por profissional (Dia/Semana/M�s)
         <div className="flex-1 mt-4 bg-white border border-gray-200 rounded-lg overflow-hidden">
           {(() => {
             console.log('\n [index.jsx] Passando dados para AgendaPorProfissional:');
@@ -1218,7 +1221,7 @@ export default function AgendaIndex() {
           />
         </div>
       ) : agendaMode === 'sala' ? (
-        // MODO SALA - Horários disponíveis por sala
+        // MODO SALA - Hor�rios dispon�veis por sala
         <div className="flex-1 mt-4 bg-white border border-gray-200 rounded-lg overflow-hidden">
           <AgendaSalaPlaceholder />
         </div>
@@ -1257,11 +1260,11 @@ export default function AgendaIndex() {
           />
         </div>
       ) : (
-        // DAY VIEW (padrão)
+        // DAY VIEW (padr�o)
         <div className="flex-1 mt-4 bg-white border border-gray-200 rounded-lg overflow-hidden">
           {console.log(
             ' [RENDER AgendaIndex] Renderizando AgendaDayView com onEditAppointment:',
-            typeof handleEditAppointment === 'function' ? '✅ FUNCTION' : '❌ NÃO É FUNÇÃO',
+            typeof handleEditAppointment === 'function' ? '? FUNCTION' : '? N�O � FUN��O',
           )}
           <AgendaDayView
             appointments={filteredAppointments}
@@ -1302,7 +1305,7 @@ export default function AgendaIndex() {
             Editar (ou duplo clique)
           </button>
 
-          {/*  Abrir Prontuário - Para profissionais */}
+          {/*  Abrir Prontu�rio - Para profissionais */}
           {auth?.currentRole === 'profissional' && (
             <button
               onClick={() => {
@@ -1313,7 +1316,7 @@ export default function AgendaIndex() {
               }}
               className="w-full text-left px-3 py-2 text-sm text-green-600 hover:bg-green-50 transition-colors flex items-center gap-2 border-t border-gray-100"
             >
-              Abrir Prontuário
+              Abrir Prontu�rio
             </button>
           )}
 
@@ -1333,7 +1336,7 @@ export default function AgendaIndex() {
         </div>
       )}
 
-      {/* MODAL NOVO/EDIÇÃO DE AGENDAMENTO */}
+      {/* MODAL NOVO/EDI��O DE AGENDAMENTO */}
       <ModalCriarAgendamento
         open={modalNovoOpen}
         onOpenChange={(newOpen) => {
@@ -1345,38 +1348,38 @@ export default function AgendaIndex() {
 
           // Limpar estado ao fechar
           if (!newOpen) {
-            console.log('   ➡️ Fechando modal');
+            console.log('   ?? Fechando modal');
             console.log(
-              '   ✅ NÃO limpando appointmentIdToEdit - será zerado apenas ao abrir novo',
+              '   ? N�O limpando appointmentIdToEdit - ser� zerado apenas ao abrir novo',
             );
-            // 🔧 FIX: Não zerar appointmentIdToEdit aqui para evitar race condition
-            // Será zerado apenas quando abrir um novo agendamento
+            // ?? FIX: N�o zerar appointmentIdToEdit aqui para evitar race condition
+            // Ser� zerado apenas quando abrir um novo agendamento
             setNovoAgendamentoInfo(null);
 
-            // 🚩 CRÍTICO: Marcar que o modal foi fechado intencionalmente
+            // ?? CR�TICO: Marcar que o modal foi fechado intencionalmente
             // Isso previne que o useEffect reabra a modal
             hasModalBeenClosedRef.current = true;
-            console.log('   ✅ hasModalBeenClosedRef.current = true - não vai reabrir');
+            console.log('   ? hasModalBeenClosedRef.current = true - n�o vai reabrir');
 
-            // Limpar a URL de parâmetros de auto-open
+            // Limpar a URL de par�metros de auto-open
             if (modeParam === 'edit' && appointmentIdFinal) {
-              console.log('   🔗 Limpando parâmetros de URL (mode=edit, appointmentId)');
+              console.log('   ?? Limpando par�metros de URL (mode=edit, appointmentId)');
               navigate('/clinica/agenda', { replace: true });
             }
           } else {
-            console.log('   ➡️ Abrindo modal');
-            // 🔧 FIX: Se abrindo SEM appointmentIdToEdit, isso é novo agendamento
+            console.log('   ?? Abrindo modal');
+            // ?? FIX: Se abrindo SEM appointmentIdToEdit, isso � novo agendamento
             if (!appointmentIdToEdit) {
               console.log(
-                '   ✅ Novo agendamento detectado, modalNovoOpen=true, appointmentIdToEdit é null',
+                '   ? Novo agendamento detectado, modalNovoOpen=true, appointmentIdToEdit � null',
               );
             } else {
               console.log(
-                '   ✅ Abrindo em modo EDIT com appointmentIdToEdit:',
+                '   ? Abrindo em modo EDIT com appointmentIdToEdit:',
                 appointmentIdToEdit,
               );
             }
-            // Resetar a flag ao abrir (se o usuário abrir um novo agendamento)
+            // Resetar a flag ao abrir (se o usu�rio abrir um novo agendamento)
             hasModalBeenClosedRef.current = false;
           }
         }}
@@ -1392,7 +1395,7 @@ export default function AgendaIndex() {
           console.log(' Current date state:', date);
 
           if (!appointmentData) {
-            console.log('⚠️ appointmentData é null/undefined');
+            console.log('?? appointmentData � null/undefined');
             setModalNovoOpen(false);
             setAppointmentIdToEdit(null);
             setNovoAgendamentoInfo(null);
@@ -1400,41 +1403,41 @@ export default function AgendaIndex() {
             return;
           }
 
-          // Detectar mudança de data (comparar data nova com original)
+          // Detectar mudan�a de data (comparar data nova com original)
           const originalDate = appointmentData.originalDate;
           const newDate = appointmentData.date;
 
           if (newDate) {
-            console.log(' Comparação de datas:');
+            console.log(' Compara��o de datas:');
             console.log(`   Data original (originalDate): "${originalDate}"`);
             console.log(`   Data nova (appointmentData.date): "${newDate}"`);
             console.log(`   Data atual view (date): "${date}"`);
 
-            // Se originalDate está definida, usar para comparação (em modo edição)
-            // Senão, comparar com a data atual (em modo criação)
+            // Se originalDate est� definida, usar para compara��o (em modo edi��o)
+            // Sen�o, comparar com a data atual (em modo cria��o)
             const compareDate = originalDate || date;
             console.log(`   Comparando contra: "${compareDate}"`);
             console.log(`   Mudou? ${newDate !== compareDate}`);
 
             if (newDate !== compareDate) {
-              console.log(` ✅ DATA MUDOU! Navegando para ${newDate}`);
+              console.log(` ? DATA MUDOU! Navegando para ${newDate}`);
               setDate(newDate);
             } else {
-              console.log(' ℹ️ Mesma data');
+              console.log(' ?? Mesma data');
             }
           } else {
-            console.log('⚠️ appointmentData.date não definido');
+            console.log('?? appointmentData.date n�o definido');
           }
 
           setModalNovoOpen(false);
           setAppointmentIdToEdit(null);
           setNovoAgendamentoInfo(null);
-          // ✅ RECARREGAR AGENDAMENTOS DO SERVIDOR após salvar/editar
+          // ? RECARREGAR AGENDAMENTOS DO SERVIDOR ap�s salvar/editar
           await loadAppointments();
         }}
       />
 
-      {/* 🧪 UNIFIED MODE MODAL */}
+      {/* ?? UNIFIED MODE MODAL */}
       {selectedAppointmentForUnified && atendimentoUnificadoOpen && (
         <React.Suspense fallback={<div>Carregando...</div>}>
           <AtendimentoUnificado
@@ -1463,7 +1466,7 @@ export default function AgendaIndex() {
                 onClick={() => setDetailsDrawerOpen(false)}
                 className="text-white hover:bg-white/20 p-2 rounded transition-colors"
               >
-                ✕
+                ?
               </button>
             </div>
 
@@ -1477,7 +1480,7 @@ export default function AgendaIndex() {
                 <p className="text-lg font-bold text-gray-900 mt-1">
                   {selectedAppointmentDetails.patients?.name ||
                     selectedAppointmentDetails.lead_name ||
-                    '—'}
+                    '�'}
                 </p>
                 {selectedAppointmentDetails.patients?.document_id && (
                   <p className="text-sm text-gray-600 mt-1">
@@ -1486,7 +1489,7 @@ export default function AgendaIndex() {
                 )}
                 {selectedAppointmentDetails.patients?.prontuario_numero && (
                   <p className="text-sm text-gray-600">
-                    Prontuário: {selectedAppointmentDetails.patients.prontuario_numero}
+                    Prontu�rio: {selectedAppointmentDetails.patients.prontuario_numero}
                   </p>
                 )}
               </div>
@@ -1502,26 +1505,26 @@ export default function AgendaIndex() {
                       ? new Date(selectedAppointmentDetails.scheduled_date).toLocaleDateString(
                           'pt-BR',
                         )
-                      : '—'}
+                      : '�'}
                   </p>
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                    Horário
+                    Hor�rio
                   </h3>
                   <p className="text-base font-semibold text-gray-900 mt-1">
-                    {selectedAppointmentDetails.scheduled_time || '—'}
+                    {selectedAppointmentDetails.scheduled_time || '�'}
                   </p>
                 </div>
               </div>
 
-              {/* Serviço */}
+              {/* Servi�o */}
               <div>
                 <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                  Serviço
+                  Servi�o
                 </h3>
                 <p className="text-base text-gray-900 mt-1">
-                  {selectedAppointmentDetails.services?.name || '—'}
+                  {selectedAppointmentDetails.services?.name || '�'}
                 </p>
               </div>
 
@@ -1531,7 +1534,7 @@ export default function AgendaIndex() {
                   Profissional
                 </h3>
                 <p className="text-base text-gray-900 mt-1">
-                  {selectedAppointmentDetails.professionals?.name || '—'}
+                  {selectedAppointmentDetails.professionals?.name || '�'}
                 </p>
               </div>
 
@@ -1541,18 +1544,18 @@ export default function AgendaIndex() {
                   Sala
                 </h3>
                 <p className="text-base text-gray-900 mt-1">
-                  {selectedAppointmentDetails.rooms?.name || '—'}
+                  {selectedAppointmentDetails.rooms?.name || '�'}
                 </p>
               </div>
 
-              {/* Convênio */}
+              {/* Conv�nio */}
               <div>
                 <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                  Convênio
+                  Conv�nio
                 </h3>
                 <p className="text-base text-gray-900 mt-1">
                   {selectedAppointmentDetails.payers?.active === false
-                    ? '—'
+                    ? '�'
                     : selectedAppointmentDetails.payers?.name || 'Particular'}
                 </p>
               </div>
@@ -1563,11 +1566,11 @@ export default function AgendaIndex() {
                   Plano
                 </h3>
                 <p className="text-base text-gray-900 mt-1">
-                  {selectedAppointmentDetails.plans?.name || '—'}
+                  {selectedAppointmentDetails.plans?.name || '�'}
                 </p>
                 {selectedAppointmentDetails.plans?.code && (
                   <p className="text-sm text-gray-600 mt-1">
-                    Código: {selectedAppointmentDetails.plans.code}
+                    C�digo: {selectedAppointmentDetails.plans.code}
                   </p>
                 )}
               </div>
@@ -1616,16 +1619,16 @@ export default function AgendaIndex() {
                 )}
                 {selectedAppointmentDetails.patients?.phone && (
                   <p className="text-sm text-gray-900">
-                    ☎️ {selectedAppointmentDetails.patients.phone}
+                    ?? {selectedAppointmentDetails.patients.phone}
                   </p>
                 )}
               </div>
 
-              {/* Observações */}
+              {/* Observa��es */}
               {selectedAppointmentDetails.notes && (
                 <div>
                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                    Observações
+                    Observa��es
                   </h3>
                   <p className="text-sm text-gray-700 mt-1 p-3 bg-gray-50 rounded border border-gray-200">
                     {selectedAppointmentDetails.notes}

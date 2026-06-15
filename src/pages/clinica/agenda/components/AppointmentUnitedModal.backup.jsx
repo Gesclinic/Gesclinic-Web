@@ -1897,7 +1897,7 @@ export default function AppointmentUnitedModal({
   };
 
   // 🎁 Registrar desconto (se houver)
-  const registerDiscountIfNeeded = async (appointmentId, accountsReceivableId) => {
+  const registerDiscountIfNeeded = async (appointmentId) => {
     const discount = parseFloat(pagamentoData.discount || 0);
     if (discount <= 0 || !pagamentoData.discount_reason) {
       return null;
@@ -1913,7 +1913,7 @@ export default function AppointmentUnitedModal({
             clinic_id: clinicId,
             appointment_id: appointmentId,
             patient_id: agendamentoData.patientId || null,
-            accounts_receivable_id: accountsReceivableId || null,
+            accounts_receivable_id: null,
             discount_amount: discount,
             discount_reason: pagamentoData.discount_reason,
             discount_observation: pagamentoData.discount_observation || '',
@@ -2217,7 +2217,7 @@ export default function AppointmentUnitedModal({
                 // 🎁 Registrar desconto (se houver)
                 if (discountAmount > 0) {
                   try {
-                    await registerDiscountIfNeeded(appointmentId, paymentResult.receivableId);
+                    await registerDiscountIfNeeded(appointmentId);
                   } catch (discountErr) {
                     console.error('⚠️ Desconto não foi registrado:', discountErr);
                   }

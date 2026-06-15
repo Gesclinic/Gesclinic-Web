@@ -45,6 +45,8 @@ export default function CategoryDialog({
   onSubmit,
   initialData = null,
   entityName = 'Categoria',
+  presentation = 'dialog',
+  onCancel = null,
 }) {
   const [formData, setFormData] = useState({
     name: '',
@@ -106,11 +108,18 @@ export default function CategoryDialog({
     onSubmit(payload);
   };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="app-dialog-shell app-dialog-shell--content app-dialog-shell--wide">
+  const handleCancel = () => {
+    if (onCancel) {
+      onCancel();
+      return;
+    }
+    onOpenChange?.(false);
+  };
+
+  const content = (
+    <div className={presentation === 'page' ? 'bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden' : 'app-dialog-shell app-dialog-shell--content app-dialog-shell--wide'}>
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6 sticky top-0 z-20 flex items-center justify-between">
+        {presentation !== 'page' && <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6 sticky top-0 z-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-3xl">🏷️</span>
             <div>
@@ -121,12 +130,12 @@ export default function CategoryDialog({
             </div>
           </div>
           <button
-            onClick={() => onOpenChange(false)}
+            onClick={handleCancel}
             className="p-1 hover:bg-blue-700 rounded transition"
           >
             <X className="w-5 h-5" />
           </button>
-        </div>
+        </div>}
 
         {/* Content */}
         <form
@@ -311,7 +320,7 @@ export default function CategoryDialog({
           <Button
             type="button"
             variant="outline"
-            onClick={() => onOpenChange(false)}
+            onClick={handleCancel}
             className="px-4 py-2"
           >
             ✕ Cancelar
@@ -324,6 +333,17 @@ export default function CategoryDialog({
             {initialData ? '✓ Salvar' : '✓ Criar'}
           </Button>
         </div>
+      </div>
+  );
+
+  if (presentation === 'page') {
+    return content;
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-none w-auto">
+        {content}
       </DialogContent>
     </Dialog>
   );

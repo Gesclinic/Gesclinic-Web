@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -17,6 +17,59 @@ export const PaymentSplitFields = ({ method, formData, onFieldChange }) => {
   const handleChange = (field, value) => {
     onFieldChange(field, value);
   };
+
+  // ✨ AUTO-FILL: Quando 1ª parcela ou número de parcelas muda, preencher automaticamente
+  useEffect(() => {
+    if (method === 'CARTAO' && formData.payment_due_date && formData.installments) {
+      const numInstallments = parseInt(formData.installments || 1);
+
+      // Sempre regenerar as datas ao mudar a data da 1ª parcela ou quantidade de parcelas
+      const baseDate = new Date(formData.payment_due_date);
+      const newDates = [];
+
+      for (let i = 0; i < numInstallments; i++) {
+        const nextDate = new Date(baseDate);
+        // Adicionar 30 dias por parcela, mas começando pela 1ª (i=0)
+        nextDate.setDate(baseDate.getDate() + (i * 30));
+        const dateString = nextDate.toISOString().split('T')[0];
+        newDates.push(dateString);
+      }
+
+      // Verificar se precisa atualizar (evitar loops infinitos)
+      const currentDates = (formData.card_installment_dates || '').split('|').filter(d => d);
+      const hasChanged =
+        currentDates.length !== numInstallments ||
+        currentDates.some((d, idx) => d !== newDates[idx]);
+
+      if (hasChanged) {
+        onFieldChange('card_installment_dates', newDates.join('|'));
+        console.log('✨ [AUTO-FILL] Parcelas preenchidas automaticamente:', {
+          baseDate: formData.payment_due_date,
+          installments: numInstallments,
+          generatedDates: newDates,
+        });
+      }
+    }
+  }, [method, formData.payment_due_date, formData.installments]);
+
+  // ✨ AUTO-FILL VENCIMENTO: Quando validade do cartão é preenchida, usar para o vencimento
+  useEffect(() => {
+    if (method === 'CARTAO' && formData.card_expiry && !formData.payment_due_date) {
+      // card_expiry tem formato MM/YY
+      const [month, year] = formData.card_expiry.split('/');
+      if (month && year) {
+        // Converter YY para YYYY (assumindo 20XX)
+        const fullYear = `20${year}`;
+        // Usar o primeiro dia do mês de expiração como vencimento
+        const dueDateString = `${fullYear}-${month}-01`;
+        handleChange('payment_due_date', dueDateString);
+        console.log('✨ [AUTO-FILL VENCIMENTO] Vencimento preenchido da validade do cartão:', {
+          card_expiry: formData.card_expiry,
+          payment_due_date: dueDateString,
+        });
+      }
+    }
+  }, [method, formData.card_expiry]);
 
   return (
     <div className="space-y-3 bg-gray-50 p-3 rounded-lg border border-gray-200">

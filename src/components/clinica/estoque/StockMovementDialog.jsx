@@ -22,6 +22,8 @@ export default function StockMovementDialog({
   clinicId = null,
   initialMovement = null,
   initialForm = null,
+  presentation = 'dialog',
+  onCancel = null,
 }) {
   const clinicContext = useClinicContext();
   const currentUser = clinicContext?.user;
@@ -460,11 +462,18 @@ export default function StockMovementDialog({
     return 'Registre novas entradas de estoque';
   };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="app-dialog-shell app-dialog-shell--content app-dialog-shell--wide">
+  const handleCancel = () => {
+    if (onCancel) {
+      onCancel();
+      return;
+    }
+    onOpenChange?.(false);
+  };
+
+  const content = (
+    <div className={presentation === 'page' ? 'bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden' : 'app-dialog-shell app-dialog-shell--content app-dialog-shell--wide'}>
         {/* Header */}
-        <div
+        {presentation !== 'page' && <div
           className={`bg-gradient-to-r ${getHeaderColor()} text-white p-6 sticky top-0 z-20 flex items-center justify-between`}
         >
           <div className="flex items-center gap-3">
@@ -491,7 +500,7 @@ export default function StockMovementDialog({
             </div>
           </div>
           <button
-            onClick={() => onOpenChange(false)}
+            onClick={handleCancel}
             className={`p-1 rounded transition text-white ${
               type === 'transfer'
                 ? 'hover:bg-purple-700'
@@ -502,7 +511,7 @@ export default function StockMovementDialog({
           >
             <X className="w-5 h-5" />
           </button>
-        </div>
+        </div>}
 
         {/* Content */}
         <form
@@ -1229,7 +1238,7 @@ export default function StockMovementDialog({
           <Button
             type="button"
             variant="outline"
-            onClick={() => onOpenChange(false)}
+            onClick={handleCancel}
             className="px-4 py-2"
           >
             ✕ Cancelar
@@ -1248,6 +1257,17 @@ export default function StockMovementDialog({
             ✓ Salvar {label}
           </Button>
         </div>
+      </div>
+  );
+
+  if (presentation === 'page') {
+    return content;
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-none w-auto">
+        {content}
       </DialogContent>
     </Dialog>
   );

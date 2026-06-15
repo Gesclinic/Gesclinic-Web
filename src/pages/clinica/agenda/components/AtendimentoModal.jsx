@@ -766,14 +766,14 @@ export default function AtendimentoModal({
       // 🔥 Buscar o valor correto baseado em convênio + plano + serviço
       let estimatedValue = appointment.value || '0';
 
-      if (appointment.payer_id && appointment.service_id) {
+      if (appointment.payerId && appointment.serviceId) {
         try {
           // Buscar preço específico do serviço para este convênio
           const { data: priceData, error: priceError } = await supabase
             .from('service_prices')
             .select('price')
-            .eq('payer_id', appointment.payer_id)
-            .eq('service_id', appointment.service_id)
+            .eq('payer_id', appointment.payerId)
+            .eq('service_id', appointment.serviceId)
             .maybeSingle();
 
           if (!priceError && priceData && priceData.price) {
@@ -783,7 +783,7 @@ export default function AtendimentoModal({
             const { data: serviceData, error: serviceError } = await supabase
               .from('services')
               .select('default_price, default_duration_minutes')
-              .eq('id', appointment.service_id)
+              .eq('id', appointment.serviceId)
               .maybeSingle();
 
             if (!serviceError && serviceData && serviceData.default_price) {
@@ -1057,19 +1057,19 @@ export default function AtendimentoModal({
   };
 
   // 🎯 Detectar tipo de convênio/pagamento
-  // "Particular" = sem convênio nenhum (payer_id = null)
+  // "Particular" = sem convênio nenhum (payerId = null)
   // "Convênio Particular" = é um tipo de convênio que não precisa de guia TISS
   // "Convênio Faturado" = convênio que precisa de guia TISS, autorização
-  const isParticular = appointment ? !appointment.payer_id : false; // ✅ Verdadeiro PARTICULAR
+  const isParticular = appointment ? !appointment.payerId : false; // ✅ Verdadeiro PARTICULAR
 
   // ✅ Detectar se é convênio "Particular" ou qualquer nome que contenha "Particular" (case-insensitive)
   const payerName = appointment?.payers?.name?.toLowerCase() || '';
   const isConvenioParticular =
-    appointment && appointment.payer_id && payerName.includes('particular');
+    appointment && appointment.payerId && payerName.includes('particular');
 
   // ✅ Convênio que precisa de guia TISS (não é Particular)
   const isConvenioFaturado =
-    appointment && appointment.payer_id && !payerName.includes('particular');
+    appointment && appointment.payerId && !payerName.includes('particular');
   const normalizedAppointmentStatus = migrateStatus(appointment?.status);
   const isReleasedForProfessional =
     normalizedAppointmentStatus === SERVICE_STATUSES.AWAITING_PROFESSIONAL;
@@ -1759,7 +1759,7 @@ export default function AtendimentoModal({
               await logAppointmentFinancialAudit({
                 appointmentId: appointment.id,
                 financialEventType: FINANCIAL_EVENT_TYPES.RECEIVABLE_CREATED,
-                relatedEntity: 'accounts_receivable',
+                relatedEntity: 'ar_invoices',
                 relatedEntityId: arId || 'multiple-payments',
                 amount: arValue,
                 context: {
@@ -1824,7 +1824,7 @@ export default function AtendimentoModal({
               await logAppointmentFinancialAudit({
                 appointmentId: appointment.id,
                 financialEventType: FINANCIAL_EVENT_TYPES.RECEIVABLE_CREATED,
-                relatedEntity: 'accounts_receivable',
+                relatedEntity: 'ar_invoices',
                 relatedEntityId: arId,
                 amount: arValue,
                 context: {
@@ -4919,7 +4919,7 @@ export default function AtendimentoModal({
                             <p className="font-semibold text-gray-900">
                               {pagamentoData.payment_method
                                 ? formatPaymentMethod(pagamentoData.payment_method)
-                                : appointment.payer_id
+                                : appointment.payerId
                                   ? 'Convênio'
                                   : 'Não definida'}
                             </p>

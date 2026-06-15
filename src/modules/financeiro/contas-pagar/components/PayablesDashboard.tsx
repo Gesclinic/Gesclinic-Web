@@ -6,7 +6,7 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertCircle, TrendingUp, TrendingDown, Calendar, DollarSign } from 'lucide-react';
-import { formatCurrency } from '@/modules/financeiro/utils/calculations';
+import { formatCurrency } from '@/utils/formatters';
 import { PayablesSummary } from '../types';
 import { cn } from '@/lib/utils';
 
@@ -18,7 +18,9 @@ interface PayablesDashboardProps {
 
 export const PayablesDashboard = React.memo<PayablesDashboardProps>(
   ({ summary, isLoading, className }) => {
-    if (isLoading || !summary) {
+    // Show skeleton loaders only if actively loading AND no summary data
+    // Once loaded (even if null), show actual cards or empty state
+    if (isLoading && !summary) {
       return (
         <div className={cn('grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4', className)}>
           {[...Array(4)].map((_, i) => (
@@ -29,6 +31,25 @@ export const PayablesDashboard = React.memo<PayablesDashboardProps>(
               <CardContent>
                 <div className="h-8 bg-gray-200 rounded w-1/2" />
               </CardContent>
+            </Card>
+          ))}
+        </div>
+      );
+    }
+
+    // If no summary data (after loading), show empty/zero state
+    if (!summary) {
+      return (
+        <div className={cn('grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4', className)}>
+          {[
+            { title: 'Total em Aberto', value: 0 },
+            { title: 'Total Vencido', value: 0 },
+            { title: 'Total Pago', value: 0 },
+            { title: 'Próximos 7 Dias', value: 0 },
+          ].map((card, i) => (
+            <Card key={i} className="p-4">
+              <div className="text-sm text-gray-600">{card.title}</div>
+              <div className="text-2xl font-bold text-gray-900 mt-2">R$ 0,00</div>
             </Card>
           ))}
         </div>
@@ -120,7 +141,8 @@ interface PayablesExtendedDashboardProps {
 
 export const PayablesExtendedDashboard = React.memo<PayablesExtendedDashboardProps>(
   ({ summary, isLoading, className }) => {
-    if (isLoading || !summary) {
+    // Show skeleton loaders only if actively loading AND no summary data
+    if (isLoading && !summary) {
       return (
         <div className={cn('space-y-6', className)}>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -132,6 +154,27 @@ export const PayablesExtendedDashboard = React.memo<PayablesExtendedDashboardPro
                 <CardContent>
                   <div className="h-8 bg-gray-200 rounded w-1/2" />
                 </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // If no summary data (after loading), show empty/zero state
+    if (!summary) {
+      return (
+        <div className={cn('space-y-6', className)}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { title: 'Total em Aberto', value: 0 },
+              { title: 'Total Vencido', value: 0 },
+              { title: 'Total Pago', value: 0 },
+              { title: 'Próximos 7 Dias', value: 0 },
+            ].map((card, i) => (
+              <Card key={i} className="p-4">
+                <div className="text-sm text-gray-600">{card.title}</div>
+                <div className="text-2xl font-bold text-gray-900 mt-2">R$ 0,00</div>
               </Card>
             ))}
           </div>

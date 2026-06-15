@@ -36,6 +36,7 @@ import ExportReportingPanel from '@/components/financeiro/ExportReportingPanel';
 import {
   loadDashboardDataWithCache,
   calculateDashboardMetrics,
+  getOpenPayableBalance,
 } from '@/services/dashboardDataService';
 
 // Legacy APIs (fallback - kept for reference)
@@ -96,9 +97,12 @@ export default function FluxoCaixaPage() {
   const receivables = dashboardData?.receivables?.items || [];
   const payables = dashboardData?.apBills || [];
 
-  // Dados de 30 dias derivados
-  const receivable30d = dashboardData?.receivables?.windows?.['30d']?.value || 0;
-  const payable30d = payables.reduce((sum, bill) => sum + (bill.valor || 0), 0);
+  // Dados a vencer nos próximos 30 dias, sem misturar valores já vencidos.
+  const receivableWindows = dashboardData?.receivables?.windows || {};
+  const receivable30d = Number(receivableWindows.today?.value || 0)
+    + Number(receivableWindows['7d']?.value || 0)
+    + Number(receivableWindows['30d']?.value || 0);
+  const payable30d = payables.reduce((sum, bill) => sum + getOpenPayableBalance(bill), 0);
   const projectedBalance = projection?.[0]?.saldo_projetado || 0;
 
   // Health scores (calculados do dashboardDataService)

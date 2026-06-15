@@ -17,6 +17,7 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { calculateItemTaxes } from '@/lib/taxCalculationApi';
 import { logReceivableCreated, logPaymentReceived } from '@/lib/auditFinancialIntegration';
 import { logAppointmentFinancialAudit, FINANCIAL_EVENT_TYPES } from '@/lib/auditFinancialApi';
+import { createReceivable, registerReceivablePayment } from '@/lib/receivablesApi.js';
 
 // ============================================================
 // ⚙️ CONSTANTES E HELPERS
@@ -63,6 +64,33 @@ function normalizeInvoiceStatus(status) {
  */
 function roundMoney(value) {
   return Math.round(parseFloat(value) * 100) / 100;
+}
+
+function dateOnly(value = new Date()) {
+  return new Date(value).toISOString().split('T')[0];
+}
+
+async function findReceivableByInvoice(invoice) {
+  const { data, error } = await supabase
+    .from('ar_invoices')
+    .select('*')
+    .eq('clinic_id', invoice.clinic_id)
+    .filter('metadata->>invoice_id', 'eq', invoice.id)
+    .limit(1);
+
+  if (!error && data?.[0]) {
+    return data[0];
+  }
+
+  const fallback = await supabase
+    .from('ar_invoices')
+    .select('*')
+    .eq('clinic_id', invoice.clinic_id)
+    .eq('appointment_id', invoice.appointment_id)
+    .ilike('description', `%${invoice.invoice_number}%`)
+    .limit(1);
+
+  return fallback.data?.[0] || null;
 }
 
 // ============================================================
@@ -348,29 +376,29 @@ export async function issueInvoiceAndCreateReceivable(invoiceId, options = {}) {
     // 2️⃣ Emitir invoice
     const issued = await issueInvoice(invoiceId);
 
-    // 3️⃣ Criar Conta a Receber
-    const { data: receivable, error: arError } = await supabase
-      .from('ar_receivables')
-      .insert({
-        clinic_id: invoice.clinic_id,
-        appointment_id: invoice.appointment_id,
-        patient_id: invoice.patient_id,
-        payer_id: invoice.payer_id,
-        payer_type: invoice.payer_type,
+    // 3️⃣ Criar Conta a Receber canonica em ar_invoices
+    const receivable = await createReceivable(invoice.clinic_id, {
+      appointment_id: invoice.appointment_id,
+      patient_id: invoice.patient_id,
+      payer_id: invoice.payer_id,
+      payer_type: invoice.payer_type,
+      amount: invoice.net_amount,
+      net_value: invoice.net_amount,
+      gross_amount: invoice.gross_amount,
+      taxes_value: invoice.total_taxes,
+      description: `Invoice ${invoice.invoice_number}`,
+      invoice_date: invoice.issue_date?.split('T')[0] || dateOnly(),
+      due_date: invoice.due_date || options.due_date || null,
+      status: 'open',
+      origem: 'Invoice',
+      metadata: {
+        ...(options.metadata || {}),
+        source: 'invoice_service',
         invoice_id: invoice.id,
-        amount: invoice.net_amount,
-        descricao: `Invoice ${invoice.invoice_number}`,
-        data_emissao: invoice.issue_date?.split('T')[0] || new Date().toISOString().split('T')[0],
-        data_vencimento: invoice.due_date,
-        status: 'open',
-        ...options,
-      })
-      .select()
-      .single();
-
-    if (arError) {
-      throw new Error(`Erro ao criar AR: ${arError.message}`);
-    }
+        invoice_number: invoice.invoice_number,
+      },
+      ...options,
+    });
 
     console.log('✅ AR criada:', {
       id: receivable.id,
@@ -535,19 +563,20 @@ export async function recordInvoicePayment(
       throw new Error('Invoice não encontrada');
     }
 
-    // 2️⃣ Atualizar AR para 'received'
-    const { data: receivable, error: arError } = await supabase
-      .from('ar_receivables')
-      .update({
-        status: 'received',
-        data_recebimento: paymentDate.toISOString().split('T')[0],
-      })
-      .eq('invoice_id', invoiceId)
-      .select()
-      .single();
-
-    if (arError) {
-      console.warn('⚠️ AR não atualizada:', arError.message);
+    // 2️⃣ Baixar AR canonico em ar_invoices
+    let receivable = await findReceivableByInvoice(invoice);
+    if (receivable) {
+      receivable = await registerReceivablePayment({
+        clinicId: invoice.clinic_id,
+        receivableId: receivable.id,
+        amount: roundMoney(amount),
+        payments: [{ method: paymentMethod, amount: roundMoney(amount) }],
+        paymentDate: dateOnly(paymentDate),
+        notes: `Pagamento de ${invoice.invoice_number}`,
+        createdBy: 'invoice_service',
+      });
+    } else {
+      console.warn('⚠️ Recebivel canonico nao encontrado para invoice:', invoiceId);
     }
 
     // 3️⃣ Registrar movimento de caixa

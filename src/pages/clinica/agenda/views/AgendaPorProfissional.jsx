@@ -496,7 +496,7 @@ export default function AgendaPorProfissional({
                   >
                     {horario}
                   </td>
-                  {profissionaisFiltrados.map((prof) => {
+                  {professionaisFiltrados.map((prof) => {
                     const apt = agendamentosFiltrados.find((a) => {
                       // 🚨 FIX: Use scheduled_date directly without fallback to startTime (startTime is string "HH:MM:SS", not Date)
                       const aptDate = a.scheduled_date || null;
@@ -531,6 +531,9 @@ export default function AgendaPorProfissional({
                     const currentDate = parseISO(date);
                     const dayOfWeek = getDay(currentDate);
                     const isAvailable = isTimeSlotAvailable(prof.id, dayOfWeek, horario, schedules);
+
+                    // ✅ GUARDAR prof.id PARA USAR NO onClick
+                    const professionalId = prof.id;
 
                     let cellBg = '#fafaf9'; // Cinza/branco muito suave para disponível
                     let displayText = 'Clique para agendar';
@@ -1055,11 +1058,21 @@ export default function AgendaPorProfissional({
                         setSelectedSlot(apt);
                       } else if (isAvailable || isProfissional) {
                         // Se está disponível (ou é profissional), abrir novo agendamento
+                        const profesional = profissionais.find((p) => p.id === professionalId);
                         console.log('   → Abrindo novo agendamento com:', {
                           horario,
                           date: dayStr,
+                          professionalId,
+                          professional: profesional?.name,
                         });
-                        setNovoAgendamento({ horario, date: dayStr });
+                        const novoAg = { horario, date: dayStr, professionalId, professional: profesional };
+                        console.log('   🔍 DEBUG: novoAg object completo:', JSON.stringify({
+                          horario: novoAg.horario,
+                          date: novoAg.date,
+                          professionalId: novoAg.professionalId,
+                          professionalName: novoAg.professional?.name,
+                        }));
+                        setNovoAgendamento(novoAg);
                       } else {
                         console.log('   → Slot não disponível');
                       }
@@ -1159,6 +1172,11 @@ export default function AgendaPorProfissional({
               );
               const status = getDayStatus(dayAppointments);
 
+              // 🔑 Determinar qual profissional usar baseado em profissionaisFiltrados
+              // Se há 1 profissional filtrado, usar esse; senão (múltiplos ou geral) usar undefined
+              const targetProfIdForDay =
+                profissionaisFiltrados.length === 1 ? profissionaisFiltrados[0]?.id : undefined;
+
               // Verificar disponibilidade dos profissionais neste dia da semana
               // Se há filtro por profissional específico, validar só esse; senão, validar todos
               let isDayAvailable = false;
@@ -1189,7 +1207,8 @@ export default function AgendaPorProfissional({
                       return;
                     }
                     if (isDayAvailable) {
-                      setNovoAgendamento({ horario: null, date: dayStr });
+                      const profesional = profissionais.find((p) => p.id === targetProfIdForDay);
+                      setNovoAgendamento({ horario: null, date: dayStr, professionalId: targetProfIdForDay, professional: profesional });
                     }
                   }}
                   className={`
@@ -1417,17 +1436,24 @@ export default function AgendaPorProfissional({
 
       {/* MODAL PARA NOVO AGENDAMENTO */}
       {novoAgendamento && (
-        <ModalCriarAgendamento
-          open={!!novoAgendamento}
-          onOpenChange={(open) => !open && setNovoAgendamento(null)}
-          clinicId={clinic?.id || clinicId}
-          data={{
+        <>
+          {console.log('🚀 [AgendaPorProfissional] Renderizando ModalCriarAgendamento com novoAgendamento:', {
+            horario: novoAgendamento.horario,
             date: novoAgendamento.date,
-            time: novoAgendamento.horario,
-            professional: novoAgendamento.professional,
             professionalId: novoAgendamento.professionalId,
-          }}
-          professionals={profissionais.filter((p) => p.id && String(p.id).trim() !== '')}
+            professionalName: novoAgendamento.professional?.name,
+          })}
+          <ModalCriarAgendamento
+            open={!!novoAgendamento}
+            onOpenChange={(open) => !open && setNovoAgendamento(null)}
+            clinicId={clinic?.id || clinicId}
+            data={{
+              date: novoAgendamento.date,
+              time: novoAgendamento.horario,
+              professional: novoAgendamento.professional,
+              professionalId: novoAgendamento.professionalId,
+            }}
+            professionals={profissionais.filter((p) => p.id && String(p.id).trim() !== '')}
           services={services}
           payers={payers}
           onCreated={() => {
@@ -1439,6 +1465,7 @@ export default function AgendaPorProfissional({
             });
           }}
         />
+        </>
       )}
 
       {/* MODAL PARA EDITAR AGENDAMENTO EXISTENTE */}

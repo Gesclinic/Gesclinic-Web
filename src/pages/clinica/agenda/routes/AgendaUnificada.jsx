@@ -132,7 +132,7 @@ export default function ModalCriarAgendamento({ open, onOpenChange, data, onSubm
 
           <div>
             <Label>Serviço</Label>
-            <Select value={form.servico || ''} onValueChange={(v) => updateField('servico', v)}>
+            <Select value={form.servico || undefined} onValueChange={(v) => updateField('servico', v)}>
               <SelectTrigger>
                 <SelectValue placeholder="Consulta / Exame" />
               </SelectTrigger>
@@ -160,7 +160,7 @@ export default function ModalCriarAgendamento({ open, onOpenChange, data, onSubm
 
           <div>
             <Label>Plano</Label>
-            <Select value={form.plano || ''} onValueChange={(v) => updateField('plano', v)}>
+            <Select value={form.plano || undefined} onValueChange={(v) => updateField('plano', v)}>
               <SelectTrigger>
                 <SelectValue placeholder="Opcional" />
               </SelectTrigger>

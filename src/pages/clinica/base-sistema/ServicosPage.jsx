@@ -49,6 +49,7 @@ export function ServicosPage() {
     active: true,
     service_category: 'consultation',
     is_billable: true,
+    is_hospital_service: false,
     // ===== NOVOS CAMPOS TISS =====
     tuss_code: '',
     type_service: '',
@@ -320,6 +321,7 @@ export function ServicosPage() {
       active: true,
       service_category: 'consultation',
       is_billable: true,
+      is_hospital_service: false,
       // ===== NOVOS CAMPOS TISS =====
       tuss_code: '',
       type_service: '',
@@ -346,6 +348,7 @@ export function ServicosPage() {
       active: service.active !== false,
       service_category: service.service_category || 'consultation',
       is_billable: service.is_billable !== false,
+      is_hospital_service: service.is_hospital_service || false,
       // ===== NOVOS CAMPOS TISS =====
       tuss_code: service.code || service.tuss_code || '', // Tentar 'code' primeiro, depois 'tuss_code'
       type_service: service.type_service || '',
@@ -450,6 +453,7 @@ export function ServicosPage() {
         active: formData.active,
         service_category: formData.service_category || 'consultation',
         is_billable: formData.is_billable !== false,
+        is_hospital_service: formData.is_hospital_service || false,
         // ===== NOVOS CAMPOS TISS =====
         tuss_code: formData.tuss_code.trim() || null,
         type_service: formData.type_service || null,
@@ -989,6 +993,31 @@ export function ServicosPage() {
                         Será necessário aprovação prévia
                       </span>
                     </label>
+                  </div>
+
+                  {/* Equiparação Hospitalar */}
+                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border border-green-300">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        id="is_hospital_service"
+                        checked={formData.is_hospital_service}
+                        onChange={(e) =>
+                          setFormData({ ...formData, is_hospital_service: e.target.checked })
+                        }
+                        className="w-5 h-5 rounded border border-gray-300 cursor-pointer accent-green-600"
+                        disabled={submitting}
+                      />
+                      <span className="text-sm font-semibold text-gray-800 flex-1">
+                        🏥 Equiparação Hospitalar
+                      </span>
+                      <span className="text-xs text-gray-600">
+                        Redução IRPJ/CSLL (Lei 13.985/2020)
+                      </span>
+                    </label>
+                    <p className="text-xs text-green-700 mt-2 ml-8">
+                      ✓ Aplica quando: clínica tem equipação certificada + regime Lucro Presumido/Real
+                    </p>
                   </div>
 
                   {/* Status */}

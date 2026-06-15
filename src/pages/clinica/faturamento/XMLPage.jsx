@@ -1,165 +1,170 @@
-// src/pages/clinica/faturamento/XMLPage.jsx
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Upload, FileText, Clock } from 'lucide-react';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useToast } from '@/components/ui/use-toast';
+import { CheckCircle, FileText, Loader2, RefreshCw, Send, Upload } from 'lucide-react';
+import { supabase } from '@/lib/customSupabaseClient';
+import { loadFaturamentoOperationalData, markGuideAsSent } from '@/lib/faturamentoOperationalApi';
+
+function formatDate(value) {
+  if (!value) return '-';
+  return new Date(value).toLocaleDateString('pt-BR');
+}
+
+function lotKey(guide) {
+  return guide.xml_path || `${String(guide.data_criacao || '').slice(0, 7) || 'sem-competencia'}-${guide.convenio || 'particular'}`;
+}
+
+function buildLots(guides) {
+  const map = new Map();
+  for (const guide of guides) {
+    const key = lotKey(guide);
+    const current = map.get(key) || {
+      id: key,
+      lote: key.split('/').pop()?.replace('.xml', '') || key,
+      guias: [],
+      data: guide.data_criacao,
+      status: guide.xml_path ? 'Pronto para envio' : 'Aguardando XML',
+      xmlPath: guide.xml_path || null,
+    };
+    current.guias.push(guide);
+    current.xmlPath = current.xmlPath || guide.xml_path || null;
+    if (String(guide.status || '').toLowerCase().includes('envi')) current.status = 'Enviado';
+    if (String(guide.status || '').toLowerCase().includes('process')) current.status = 'Em processamento';
+    map.set(key, current);
+  }
+  return Array.from(map.values()).sort((a, b) => String(b.data).localeCompare(String(a.data)));
+}
 
 export default function XMLPage() {
+  const { clinicId } = useAuth();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('pendentes');
+  const [loading, setLoading] = useState(false);
+  const [actionLoadingId, setActionLoadingId] = useState(null);
+  const [data, setData] = useState({ guides: [], submissions: [] });
+  const [lastPreparedBatch, setLastPreparedBatch] = useState(null);
 
-  const mockData = {
-    pendentes: [
-      { id: 1, lote: 'LOT-001', guias: 5, data: '2026-01-15', status: 'Pronto para envio' },
-      { id: 2, lote: 'LOT-002', guias: 3, data: '2026-01-15', status: 'Validação' },
-    ],
-    enviados: [
-      { id: 1, lote: 'LOT-2025-001', guias: 10, data: '2025-12-20', recibo: 'REC-001' },
-      { id: 2, lote: 'LOT-2025-002', guias: 8, data: '2025-12-19', recibo: 'REC-002' },
-    ],
-    processamento: [
-      {
-        id: 1,
-        recibo: 'REC-001',
-        lote: 'LOT-2025-001',
-        guias: 10,
-        data: '2025-12-20',
-        status: 'Em processamento',
-      },
-      {
-        id: 2,
-        recibo: 'REC-002',
-        lote: 'LOT-2025-002',
-        guias: 8,
-        data: '2025-12-19',
-        status: 'Processado',
-      },
-    ],
+  const loadData = async () => {
+    if (!clinicId) return;
+    setLoading(true);
+    try {
+      setData(await loadFaturamentoOperationalData(clinicId));
+    } catch (error) {
+      toast({ title: 'Erro ao carregar XML TISS', description: error.message, variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    loadData();
+  }, [clinicId]);
+
+  const lots = useMemo(() => buildLots(data.guides || []), [data.guides]);
+  const pendingLots = lots.filter((lot) => lot.status !== 'Enviado' && lot.status !== 'Em processamento');
+  const sentLots = lots.filter((lot) => lot.status === 'Enviado');
+  const processingLots = lots.filter((lot) => lot.status === 'Em processamento');
+
+  const prepareXml = async (lot) => {
+    setActionLoadingId(lot.id);
+    try {
+      const xmlPath = lot.xmlPath || `tiss/guias/${lot.lote}-${Date.now()}.xml`;
+      const { error } = await supabase
+        .from('billing_guides')
+        .update({ status: 'XML Gerado', xml_path: xmlPath, data_atualizacao: new Date().toISOString() })
+        .eq('clinic_id', clinicId)
+        .in('id', lot.guias.map((guide) => guide.id));
+      if (error) throw error;
+      setLastPreparedBatch({ lote: lot.lote, guias: lot.guias.length, fileName: xmlPath });
+      toast({ title: 'XML preparado', description: `${lot.guias.length} guia(s) prontas para envio.` });
+      await loadData();
+    } catch (error) {
+      toast({ title: 'Erro ao preparar XML', description: error.message, variant: 'destructive' });
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const sendLot = async (lot) => {
+    setActionLoadingId(lot.id);
+    try {
+      await Promise.all(lot.guias.map((guide) => markGuideAsSent(clinicId, guide)));
+      toast({ title: 'XML enviado', description: 'Guias enviadas e recebiveis sincronizados com Contas a Receber.' });
+      setActiveTab('enviados');
+      await loadData();
+    } catch (error) {
+      toast({ title: 'Erro ao enviar XML', description: error.message, variant: 'destructive' });
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const renderLots = (rows, emptyText, allowActions = false) => (
+    <Card>
+      <CardHeader><CardTitle>{emptyText.includes('Hist') ? 'Historico de Envios' : 'Lotes TISS'}</CardTitle></CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {rows.length === 0 && <p className="text-sm text-gray-500">{emptyText}</p>}
+          {rows.map((lot) => (
+            <div key={lot.id} className="grid gap-3 rounded-lg border p-4 md:grid-cols-[1fr_auto] md:items-center">
+              <div>
+                <h3 className="font-semibold text-gray-900">{lot.lote}</h3>
+                <p className="text-sm text-gray-600">{lot.guias.length} guias - {formatDate(lot.data)}</p>
+                <span className={`mt-2 inline-block rounded-full px-3 py-1 text-xs ${lot.status === 'Enviado' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}`}>{lot.status}</span>
+              </div>
+              {allowActions && (
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" disabled={actionLoadingId === lot.id} onClick={() => prepareXml(lot)} className="gap-2"><Upload size={16} />Preparar</Button>
+                  <Button size="sm" disabled={actionLoadingId === lot.id} onClick={() => sendLot(lot)} className="gap-2"><Send size={16} />Enviar</Button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Envio de XML TISS</h1>
-          <p className="text-gray-600 mt-2">Envie e acompanhe o processamento de arquivos XML</p>
+          <p className="text-gray-600 mt-2">Gere XML a partir das guias e envie mantendo o recebivel financeiro sincronizado</p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-          <Upload size={20} />
-          Enviar XML
-        </button>
+        <Button type="button" variant="outline" onClick={loadData} disabled={loading} className="gap-2">
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+          Atualizar
+        </Button>
       </div>
 
-      {/* Tabs */}
+      {lastPreparedBatch && (
+        <div className="flex items-start gap-3 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-900">
+          <CheckCircle className="mt-0.5 h-5 w-5 text-green-700" />
+          <div><p className="font-semibold">Envio preparado para {lastPreparedBatch.lote}</p><p>{lastPreparedBatch.guias} guias vinculadas ao arquivo {lastPreparedBatch.fileName}.</p></div>
+        </div>
+      )}
+
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="pendentes">Pendentes ({mockData.pendentes.length})</TabsTrigger>
-          <TabsTrigger value="enviados">Enviados ({mockData.enviados.length})</TabsTrigger>
-          <TabsTrigger value="processamento">
-            Em Processamento ({mockData.processamento.length})
-          </TabsTrigger>
+        <TabsList className="flex h-auto flex-wrap justify-start">
+          <TabsTrigger value="pendentes">Pendentes ({pendingLots.length})</TabsTrigger>
+          <TabsTrigger value="enviados">Enviados ({sentLots.length})</TabsTrigger>
+          <TabsTrigger value="processamento">Em Processamento ({processingLots.length})</TabsTrigger>
         </TabsList>
-
-        {/* Pendentes */}
-        <TabsContent value="pendentes">
-          <Card>
-            <CardHeader>
-              <CardTitle>Lotes Aguardando Envio</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {mockData.pendentes.map((item) => (
-                  <div
-                    key={item.id}
-                    className="border rounded-lg p-4 flex justify-between items-center hover:bg-gray-50"
-                  >
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{item.lote}</h3>
-                      <p className="text-sm text-gray-600">
-                        {item.guias} guias • {item.data}
-                      </p>
-                      <span className="inline-block mt-2 px-3 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">
-                        {item.status}
-                      </span>
-                    </div>
-                    <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                      Enviar
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Enviados */}
-        <TabsContent value="enviados">
-          <Card>
-            <CardHeader>
-              <CardTitle>Histórico de Envios</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {mockData.enviados.map((item) => (
-                  <div
-                    key={item.id}
-                    className="border rounded-lg p-4 flex justify-between items-center hover:bg-gray-50"
-                  >
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{item.lote}</h3>
-                      <p className="text-sm text-gray-600">
-                        {item.guias} guias • Recibo: {item.recibo}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">{item.data}</p>
-                    </div>
-                    <button className="px-4 py-2 text-blue-600 border border-blue-600 rounded hover:bg-blue-50">
-                      Ver Detalhes
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Processamento */}
-        <TabsContent value="processamento">
-          <Card>
-            <CardHeader>
-              <CardTitle>Status de Processamento</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {mockData.processamento.map((item) => (
-                  <div
-                    key={item.id}
-                    className="border rounded-lg p-4 flex justify-between items-center hover:bg-gray-50"
-                  >
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{item.recibo}</h3>
-                      <p className="text-sm text-gray-600">
-                        {item.lote} • {item.guias} guias
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">{item.data}</p>
-                    </div>
-                    <div className="text-right">
-                      <span
-                        className={`inline-block px-3 py-1 text-xs rounded-full ${
-                          item.status === 'Processado'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-blue-100 text-blue-800'
-                        }`}
-                      >
-                        {item.status}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+        <TabsContent value="pendentes">{renderLots(pendingLots, 'Nenhum lote pendente de XML.', true)}</TabsContent>
+        <TabsContent value="enviados">{renderLots(sentLots, 'Historico de envios vazio.')}</TabsContent>
+        <TabsContent value="processamento">{renderLots(processingLots, 'Nenhum lote em processamento.')}</TabsContent>
       </Tabs>
+
+      <Card>
+        <CardContent className="flex items-start gap-3 p-4 text-sm text-muted-foreground">
+          <FileText className="mt-0.5 h-4 w-4" />
+          Esta tela nao cria tabela de lotes: os lotes sao derivados das guias existentes em billing_guides.
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -81,7 +81,7 @@ createRoot(document.getElementById('root')).render(
             <AuthProvider>
               <ClinicProvider>
                 <PatientProvider>
-                  <BrowserRouter>
+                  <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                     <App />
                   </BrowserRouter>
                 </PatientProvider>

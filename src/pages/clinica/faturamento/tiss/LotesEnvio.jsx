@@ -1,543 +1,95 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/components/ui/use-toast';
-import {
-  Package,
-  Plus,
-  Download,
-  FileCode,
-  Calendar,
-  DollarSign,
-  Lock,
-  Unlock,
-  RefreshCw,
-  AlertCircle,
-  CheckCircle,
-} from 'lucide-react';
+import { Archive, CheckCircle, Download, FileText, Loader2, Package, RefreshCw, RotateCcw, Search, Send, XCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { getOperationalLots, updateOperationalLot } from '@/lib/faturamentoReportsApi';
 
-/**
- * Componente para Lotes de Envio TISS
- * Agrupamento de guias por convênio/período para envio
- */
+function formatDate(value) {
+  if (!value) return '-';
+  return new Date(String(value).slice(0, 10)).toLocaleDateString('pt-BR');
+}
+
+function statusBadge(status) {
+  const variants = { Aberto: 'secondary', Fechado: 'outline', 'XML Gerado': 'default', Enviado: 'default', Processado: 'default', Rejeitado: 'destructive', Glosado: 'destructive', Pago: 'default' };
+  return <Badge variant={variants[status] || 'outline'}>{status || 'Aberto'}</Badge>;
+}
+
 export default function LotesEnvio() {
-  const { toast } = useToast();
   const { clinicId } = useAuth();
+  const { toast } = useToast();
   const [lotes, setLotes] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [updatingKey, setUpdatingKey] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  // Form state para criação de novo lote
-  const [formData, setFormData] = useState({
-    convenio_id: '',
-    competencia: new Date().toISOString().slice(0, 7), // YYYY-MM
-    observacoes: '',
-  });
-
-  // Mock data para demonstração
-  const mockLotes = [
-    {
-      id: 'LT001',
-      numero_lote: 'LT001-2025-10',
-      convenio: 'Unimed',
-      competencia: '2025-10',
-      data_criacao: '2025-10-30',
-      data_fechamento: null,
-      total_guias: 15,
-      total_valor: 2250.0,
-      status: 'Aberto',
-      xml_path: null,
-      observacoes: 'Lote em construção',
-    },
-    {
-      id: 'LT002',
-      numero_lote: 'LT002-2025-10',
-      convenio: 'Bradesco Saúde',
-      competencia: '2025-10',
-      data_criacao: '2025-10-28',
-      data_fechamento: '2025-10-30',
-      total_guias: 8,
-      total_valor: 1200.0,
-      status: 'Fechado',
-      xml_path: '/xml/lote_002.xml',
-      observacoes: 'Lote enviado para o convênio',
-    },
-    {
-      id: 'LT003',
-      numero_lote: 'LT003-2025-09',
-      convenio: 'SulAmérica',
-      competencia: '2025-09',
-      data_criacao: '2025-09-25',
-      data_fechamento: '2025-09-30',
-      total_guias: 22,
-      total_valor: 3300.0,
-      status: 'Enviado',
-      xml_path: '/xml/lote_003.xml',
-      observacoes: 'Aguardando retorno',
-    },
-  ];
-
-  // Mock convenios
-  const mockConvenios = [
-    { id: '1', nome: 'Unimed' },
-    { id: '2', nome: 'Bradesco Saúde' },
-    { id: '3', nome: 'SulAmérica' },
-    { id: '4', nome: 'Amil' },
-    { id: '5', nome: 'NotreDame Intermédica' },
-  ];
-
-  useEffect(() => {
-    fetchLotes();
-  }, [clinicId]);
-
-  const fetchLotes = async () => {
+  const loadLotes = async () => {
     setLoading(true);
     try {
-      // Simular busca no banco
-      // const { data, error } = await supabase
-      //   .from('billing_batches')
-      //   .select('*')
-      //   .eq('clinic_id', clinicId)
-      //   .order('created_at', { ascending: false });
-
-      setLotes(mockLotes);
+      const rows = await getOperationalLots({ clinicId });
+      setLotes(rows);
     } catch (error) {
-      console.error('Erro ao buscar lotes:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível carregar os lotes.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Erro', description: error.message || 'Nao foi possivel carregar os lotes.', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      console.log('Criando novo lote:', formData);
+  useEffect(() => { loadLotes(); }, [clinicId]);
 
-      toast({
-        title: 'Lote criado',
-        description: 'Novo lote criado com sucesso.',
-      });
-
-      setIsDialogOpen(false);
-      resetForm();
-      fetchLotes();
-    } catch (error) {
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível criar o lote.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      convenio_id: '',
-      competencia: new Date().toISOString().slice(0, 7),
-      observacoes: '',
-    });
-  };
-
-  const handleGerarXMLLote = async (lote) => {
-    try {
-      console.log('Gerando XML do lote:', lote.id);
-
-      toast({
-        title: 'XML do Lote Gerado',
-        description: `XML do lote ${lote.numero_lote} gerado com sucesso.`,
-      });
-
-      // Atualizar status do lote
-      fetchLotes();
-    } catch (error) {
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível gerar o XML do lote.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleFecharLote = async (lote) => {
-    try {
-      console.log('Fechando lote:', lote.id);
-
-      toast({
-        title: 'Lote fechado',
-        description: `Lote ${lote.numero_lote} fechado com sucesso.`,
-      });
-
-      fetchLotes();
-    } catch (error) {
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível fechar o lote.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleReabrirLote = async (lote) => {
-    try {
-      console.log('Reabrindo lote:', lote.id);
-
-      toast({
-        title: 'Lote reaberto',
-        description: `Lote ${lote.numero_lote} reaberto com sucesso.`,
-      });
-
-      fetchLotes();
-    } catch (error) {
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível reabrir o lote.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleBaixarXML = (lote) => {
-    if (lote.xml_path) {
-      console.log('Baixando XML:', lote.xml_path);
-      toast({
-        title: 'Download iniciado',
-        description: `Baixando XML do lote ${lote.numero_lote}.`,
-      });
-    }
-  };
-
-  const getStatusBadge = (status) => {
-    const statusConfig = {
-      Aberto: { variant: 'outline', color: 'text-blue-600', icon: Unlock },
-      Fechado: { variant: 'secondary', color: 'text-gray-600', icon: Lock },
-      Enviado: { variant: 'default', color: 'text-green-600', icon: CheckCircle },
-      Erro: { variant: 'destructive', color: 'text-red-600', icon: AlertCircle },
-    };
-
-    const config = statusConfig[status] || {
-      variant: 'outline',
-      color: 'text-gray-600',
-      icon: AlertCircle,
-    };
-    const Icon = config.icon;
-
-    return (
-      <Badge variant={config.variant} className={`${config.color} gap-1`}>
-        <Icon className="w-3 h-3" />
-        {status}
-      </Badge>
-    );
-  };
-
-  const filteredLotes = lotes.filter((lote) => {
-    const matchesSearch =
-      lote.numero_lote.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lote.convenio.toLowerCase().includes(searchTerm.toLowerCase());
-
+  const filteredLotes = useMemo(() => lotes.filter((lote) => {
     const matchesStatus = statusFilter === 'all' || lote.status === statusFilter;
+    const haystack = `${lote.numero_lote} ${lote.convenio_nome}`.toLowerCase();
+    return matchesStatus && haystack.includes(searchTerm.toLowerCase());
+  }), [lotes, statusFilter, searchTerm]);
 
-    return matchesSearch && matchesStatus;
-  });
+  const totais = useMemo(() => lotes.reduce((acc, lote) => ({ total_guias: acc.total_guias + lote.total_guias, valor_total: acc.valor_total + lote.valor_total, abertos: acc.abertos + (lote.status === 'Aberto' ? 1 : 0), enviados: acc.enviados + (lote.status === 'Enviado' ? 1 : 0), processados: acc.processados + (lote.status === 'Processado' ? 1 : 0) }), { total_guias: 0, valor_total: 0, abertos: 0, enviados: 0, processados: 0 }), [lotes]);
+
+  const updateLot = async (lote, status, xml = false) => {
+    const key = lote.lote_id || lote.numero_lote;
+    setUpdatingKey(key);
+    try {
+      await updateOperationalLot({ clinicId, lote, status, xml });
+      toast({ title: 'Lote atualizado', description: `${lote.numero_lote} atualizado para ${status}.` });
+      await loadLotes();
+    } catch (error) {
+      toast({ title: 'Erro', description: error.message || 'Nao foi possivel atualizar o lote.', variant: 'destructive' });
+    } finally {
+      setUpdatingKey(null);
+    }
+  };
+
+  const baixarXml = (lote) => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?><loteTISS numero="${lote.numero_lote}" guias="${lote.total_guias}" valor="${lote.valor_total.toFixed(2)}" />`;
+    const blob = new Blob([xml], { type: 'application/xml;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${lote.numero_lote}.xml`;
+    link.click();
+  };
+
+  const ActionButton = ({ lote, status, xml, icon: Icon, children, variant = 'outline' }) => {
+    const key = lote.lote_id || lote.numero_lote;
+    return <Button size="sm" variant={variant} disabled={updatingKey === key} onClick={() => updateLot(lote, status, xml)}>{updatingKey === key ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Icon className="w-3 h-3 mr-1" />}{children}</Button>;
+  };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Package className="w-6 h-6 text-blue-600" />
-            Lotes de Envio
-          </h1>
-          <p className="text-muted-foreground">
-            Agrupamento de guias por convênio e período para envio aos convênios
-          </p>
-        </div>
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between"><div><h1 className="text-2xl font-bold flex items-center gap-2"><Package className="w-6 h-6 text-blue-600" />Lotes de Envio TISS</h1><p className="text-muted-foreground">Lotes operacionais derivados de `billing_guides` e atualizados diretamente nas guias.</p></div><div className="flex gap-2"><Button variant="outline" onClick={loadLotes} disabled={loading}><RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />Atualizar</Button><Dialog><DialogTrigger asChild><Button><Archive className="w-4 h-4 mr-2" />Origem dos Lotes</Button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>Lotes derivados</DialogTitle><DialogDescription>Esta tela nao cria linhas em `billing_batches`. Cada lote aparece quando existem guias em `billing_guides` com a mesma competencia, convenio e lote/numero operacional.</DialogDescription></DialogHeader><DialogFooter><Button onClick={loadLotes}>Recarregar guias</Button></DialogFooter></DialogContent></Dialog></div></div>
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <Plus className="w-4 h-4" />
-              Novo Lote
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="app-dialog-shell app-dialog-shell--content app-dialog-shell--wide">
-            <DialogHeader>
-              <DialogTitle>Criar Novo Lote</DialogTitle>
-            </DialogHeader>
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4"><Card><CardContent className="pt-6"><div className="text-2xl font-bold">{lotes.length}</div><p className="text-sm text-muted-foreground">Lotes derivados</p></CardContent></Card><Card><CardContent className="pt-6"><div className="text-2xl font-bold">{totais.total_guias}</div><p className="text-sm text-muted-foreground">Guias</p></CardContent></Card><Card><CardContent className="pt-6"><div className="text-2xl font-bold text-blue-600">R$ {totais.valor_total.toFixed(2)}</div><p className="text-sm text-muted-foreground">Valor total</p></CardContent></Card><Card><CardContent className="pt-6"><div className="text-2xl font-bold text-orange-600">{totais.abertos}</div><p className="text-sm text-muted-foreground">Abertos</p></CardContent></Card><Card><CardContent className="pt-6"><div className="text-2xl font-bold text-green-600">{totais.processados}</div><p className="text-sm text-muted-foreground">Processados</p></CardContent></Card></div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="convenio">Convênio</Label>
-                <Select
-                  value={formData.convenio_id}
-                  onValueChange={(value) => setFormData({ ...formData, convenio_id: value })}
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um convênio" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {mockConvenios.map((convenio) => (
-                      <SelectItem key={convenio.id} value={convenio.id}>
-                        {convenio.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+      <Card><CardContent className="pt-6"><div className="flex flex-wrap gap-4 items-end"><div className="flex-1 min-w-64"><Label>Buscar</Label><div className="relative"><Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><Input className="pl-9" placeholder="Numero do lote ou convenio" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div></div><div><Label>Status</Label><Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger className="w-48"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem><SelectItem value="Aberto">Aberto</SelectItem><SelectItem value="Fechado">Fechado</SelectItem><SelectItem value="XML Gerado">XML Gerado</SelectItem><SelectItem value="Enviado">Enviado</SelectItem><SelectItem value="Processado">Processado</SelectItem><SelectItem value="Rejeitado">Rejeitado</SelectItem><SelectItem value="Glosado">Glosado</SelectItem><SelectItem value="Pago">Pago</SelectItem></SelectContent></Select></div></div></CardContent></Card>
 
-              <div>
-                <Label htmlFor="competencia">Competência (Ano-Mês)</Label>
-                <Input
-                  id="competencia"
-                  type="month"
-                  value={formData.competencia}
-                  onChange={(e) => setFormData({ ...formData, competencia: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="observacoes">Observações</Label>
-                <Input
-                  id="observacoes"
-                  value={formData.observacoes}
-                  onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
-                  placeholder="Observações sobre o lote..."
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setIsDialogOpen(false);
-                    resetForm();
-                  }}
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit">Criar Lote</Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {/* Filtros */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex gap-4 items-end">
-            <div className="flex-1">
-              <Label htmlFor="search">Buscar</Label>
-              <Input
-                id="search"
-                placeholder="Buscar por número do lote ou convênio..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <Label>Status</Label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os Status</SelectItem>
-                  <SelectItem value="Aberto">Aberto</SelectItem>
-                  <SelectItem value="Fechado">Fechado</SelectItem>
-                  <SelectItem value="Enviado">Enviado</SelectItem>
-                  <SelectItem value="Erro">Erro</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Button variant="outline" onClick={fetchLotes}>
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Atualizar
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold">{lotes.length}</div>
-            <p className="text-sm text-muted-foreground">Total de Lotes</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-blue-600">
-              {lotes.filter((l) => l.status === 'Aberto').length}
-            </div>
-            <p className="text-sm text-muted-foreground">Lotes Abertos</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-green-600">
-              {lotes.filter((l) => l.status === 'Enviado').length}
-            </div>
-            <p className="text-sm text-muted-foreground">Lotes Enviados</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-green-600">
-              R$ {lotes.reduce((sum, l) => sum + l.total_valor, 0).toFixed(2)}
-            </div>
-            <p className="text-sm text-muted-foreground">Valor Total</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Tabela de Lotes */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Lotes Registrados ({filteredLotes.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Número do Lote</TableHead>
-                <TableHead>Convênio</TableHead>
-                <TableHead>Competência</TableHead>
-                <TableHead>Data Criação</TableHead>
-                <TableHead>Guias</TableHead>
-                <TableHead>Valor Total</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredLotes.map((lote) => (
-                <TableRow key={lote.id}>
-                  <TableCell className="font-mono text-sm">{lote.numero_lote}</TableCell>
-                  <TableCell>{lote.convenio}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-muted-foreground" />
-                      {lote.competencia}
-                    </div>
-                  </TableCell>
-                  <TableCell>{lote.data_criacao}</TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{lote.total_guias} guias</Badge>
-                  </TableCell>
-                  <TableCell className="text-right font-semibold">
-                    <div className="flex items-center justify-end gap-2">
-                      <DollarSign className="w-4 h-4 text-green-600" />
-                      R$ {lote.total_valor.toFixed(2)}
-                    </div>
-                  </TableCell>
-                  <TableCell>{getStatusBadge(lote.status)}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      {lote.status === 'Aberto' && (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleGerarXMLLote(lote)}
-                          >
-                            <FileCode className="w-3 h-3 mr-1" />
-                            Gerar XML
-                          </Button>
-                          <Button size="sm" onClick={() => handleFecharLote(lote)}>
-                            <Lock className="w-3 h-3 mr-1" />
-                            Fechar
-                          </Button>
-                        </>
-                      )}
-
-                      {lote.status === 'Fechado' && (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => handleBaixarXML(lote)}
-                          >
-                            <Download className="w-3 h-3 mr-1" />
-                            Baixar XML
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleReabrirLote(lote)}
-                          >
-                            <Unlock className="w-3 h-3 mr-1" />
-                            Reabrir
-                          </Button>
-                        </>
-                      )}
-
-                      {lote.status === 'Enviado' && (
-                        <Button size="sm" variant="secondary" onClick={() => handleBaixarXML(lote)}>
-                          <Download className="w-3 h-3 mr-1" />
-                          Baixar XML
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-
-              {filteredLotes.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    {searchTerm || statusFilter !== 'all'
-                      ? 'Nenhum lote encontrado com os filtros aplicados.'
-                      : 'Nenhum lote criado ainda.'}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <Card><CardHeader><CardTitle>Lotes ({filteredLotes.length})</CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead>Lote</TableHead><TableHead>Convenio</TableHead><TableHead>Competencia</TableHead><TableHead className="text-center">Status</TableHead><TableHead className="text-center">Guias</TableHead><TableHead className="text-right">Valor</TableHead><TableHead>Atualizacao</TableHead><TableHead className="text-right">Acoes</TableHead></TableRow></TableHeader><TableBody>{filteredLotes.map((lote) => <TableRow key={lote.lote_id}><TableCell><div className="font-mono font-semibold">{lote.numero_lote}</div><div className="text-xs text-muted-foreground">{lote.lote_id}</div></TableCell><TableCell>{lote.convenio_nome}</TableCell><TableCell>{lote.competencia}</TableCell><TableCell className="text-center">{statusBadge(lote.status)}</TableCell><TableCell className="text-center"><div className="font-semibold">{lote.total_guias}</div><div className="text-xs text-muted-foreground">{lote.guia_ids.length} guia(s)</div></TableCell><TableCell className="text-right font-semibold text-green-600">R$ {lote.valor_total.toFixed(2)}</TableCell><TableCell><div className="text-sm">{formatDate(lote.updated_at || lote.data_criacao)}</div><div className="text-xs text-muted-foreground">Criado: {formatDate(lote.data_criacao)}</div></TableCell><TableCell className="text-right"><div className="flex flex-wrap justify-end gap-2">{lote.status === 'Aberto' && <ActionButton lote={lote} status="Fechado" icon={CheckCircle}>Fechar</ActionButton>}{['Aberto', 'Fechado'].includes(lote.status) && <ActionButton lote={lote} status="XML Gerado" xml icon={FileText}>XML</ActionButton>}{['XML Gerado', 'Fechado'].includes(lote.status) && <ActionButton lote={lote} status="Enviado" icon={Send}>Enviado</ActionButton>}{lote.status !== 'Aberto' && <ActionButton lote={lote} status="Aberto" icon={RotateCcw}>Reabrir</ActionButton>}{lote.status === 'XML Gerado' && <Button size="sm" variant="outline" onClick={() => baixarXml(lote)}><Download className="w-3 h-3 mr-1" />Baixar</Button>}{lote.status === 'Rejeitado' && <Badge variant="destructive" className="gap-1"><XCircle className="w-3 h-3" />Revisar</Badge>}</div></TableCell></TableRow>)}{filteredLotes.length === 0 && <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhum lote derivado encontrado. Crie ou fature guias em `billing_guides` para que aparecam aqui.</TableCell></TableRow>}</TableBody></Table></CardContent></Card>
     </div>
   );
 }

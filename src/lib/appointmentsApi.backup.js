@@ -745,17 +745,17 @@ export async function deleteAppointment(id) {
     // ðŸš€ BLOCKER 4 FIX: Cascade delete financial records first
     console.log('ðŸ”„ [DELETE] Limpando registros financeiros associados...');
 
-    // Delete ar_receivables (cascade FK will delete medical_production â†’ medical_repasse)
+    // Delete current receivables
     const { error: arError } = await supabase
-      .from('ar_receivables')
+      .from('ar_invoices')
       .delete()
       .eq('appointment_id', id);
 
     if (arError && arError.code !== 'PGRST116') {
       // PGRST116 = no rows deleted
-      console.warn('âš ï¸ Erro ao deletar AR:', arError);
+      console.warn('âš ï¸ Erro ao deletar recebiveis:', arError);
     } else {
-      console.log('âœ… AR e registros financeiros deletados (cascade)');
+      console.log('âœ… Recebiveis atuais deletados');
     }
 
     // Delete billing_guides (cascade FK added 2026-04-09)

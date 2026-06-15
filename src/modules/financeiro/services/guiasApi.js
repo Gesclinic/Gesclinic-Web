@@ -183,11 +183,17 @@ export async function criarGuia(payload) {
       tipoGuia: payload?.tipo_guia,
     });
 
+    const payloadWithClinic = {
+      ...payload,
+      clinic_id: clinicId,
+      numero_guia: payload.numero_guia || (await gerarNumeroGuia()),
+    };
+
     // Passo 2: Validar payload
-    validateGuiaPayload(payload);
+    validateGuiaPayload(payloadWithClinic);
 
     // Passo 3: Sanitizar
-    const sanitized = sanitizePayload(payload);
+    const sanitized = sanitizePayload(payloadWithClinic);
 
     // Passo 4: Mapear para DB
     const dbPayload = mapGuiaToDatabase(sanitized);
@@ -248,11 +254,16 @@ export async function atualizarGuia(guiaId, payload) {
       updateDataKeys: Object.keys(payload),
     });
 
+    const payloadWithClinic = {
+      ...payload,
+      clinic_id: clinicId,
+    };
+
     // Passo 2: Validar payload
-    validateGuiaPayload(payload);
+    validateGuiaPayload(payloadWithClinic);
 
     // Passo 3: Sanitizar
-    const sanitized = sanitizePayload(payload);
+    const sanitized = sanitizePayload(payloadWithClinic);
 
     // Passo 4: Mapear para DB
     const dbPayload = mapGuiaToDatabase(sanitized);

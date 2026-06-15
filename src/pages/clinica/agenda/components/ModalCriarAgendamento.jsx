@@ -41,7 +41,10 @@ export default function ModalCriarAgendamento({
     console.log('   ✅ props.data completo:', JSON.stringify(data));
     console.log('   props.data.professionalId:', data.professionalId);
     console.log('   props.data.professional_id:', data.professional_id);
+    console.log('   props.data.professional:', data.professional);
     console.log('   data keys:', Object.keys(data));
+  } else {
+    console.log('   ⚠️ props.data é NULL/undefined!!!');
   }
 
   // Estado para carregar rooms
@@ -69,7 +72,23 @@ export default function ModalCriarAgendamento({
       return loadedAppointment || appointment;
     }
     // Em modo NEW, priorizar data prop
-    return data || loadedAppointment || appointment;
+    const result = data || loadedAppointment || appointment;
+
+    // 🔍 DEBUG CRÍTICO
+    if (!appointmentIdToEdit) {
+      console.log('🚀 [ModalCriarAgendamento] finalAppointment CONSOLIDADO:', {
+        fonte: data ? '🔵 data prop' : loadedAppointment ? '🟢 loadedAppointment' : appointment ? '🟡 appointment' : '❌ nenhuma',
+        finalAppointmentId: result?.id,
+        finalAppointmentProfessionalId: result?.professionalId,
+        finalAppointmentProfessional: result?.professional?.name || '❌ no professional object',
+        dataValues: {
+          data_professionalId: data?.professionalId,
+          data_professional: data?.professional?.name,
+        },
+      });
+    }
+
+    return result;
   }, [appointmentIdToEdit, data, loadedAppointment, appointment]);
 
   // 🔍 DEBUG: QUAL SOURCE ESTÁ SENDO USADO?
@@ -78,6 +97,8 @@ export default function ModalCriarAgendamento({
     temLoadedAppointment: !!loadedAppointment,
     temAppointment: !!appointment,
     final: finalAppointment ? '✅' : '❌',
+    finalAppointmentProfessionalId: finalAppointment?.professionalId,
+    finalAppointmentProfessional: finalAppointment?.professional?.name || 'SEM PROFESSIONAL OBJECT',
     modo: appointmentIdToEdit ? 'EDIT' : 'NEW',
   });
 

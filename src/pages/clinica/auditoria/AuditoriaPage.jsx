@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, useMemo, useCallback } from 'react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useClinicContext } from '@/contexts/ClinicContext';
 import { listAuditLogs, getAuditSummary, AUDIT_ACTION_TYPES, AUDIT_ACTION_LABELS, AUDIT_ROLE_LABELS } from '@/lib/auditApi';
@@ -10,6 +10,25 @@ import { AlertsCenter, AlertBadge } from './components/AlertsCenter';
 import { ComparisonPanel } from './components/ComparisonPanel';
 import { UserAuditPanel, logUserEvent } from './components/UserAuditPanel';
 import { runAllAlertChecks, saveAlertsToStorage } from './components/AlertEngine';
+import { AlertSettingsPanel } from './components/AlertSettingsPanel';
+import { AdvancedExportPanel } from './components/AdvancedExportPanel';
+import { useAuditRealtimeSync } from './hooks/useAuditRealtimeSync';
+import { AuditMigrationManager } from './components/AuditMigrationManager';
+
+// Lazy load heavy components for performance
+const LazyReportsPanel = React.lazy(() => import('./components/ReportsPanel').then(m => ({ default: m.ReportsPanel })));
+const LazyAlertsCenter = React.lazy(() => import('./components/AlertsCenter').then(m => ({ default: m.AlertsCenter })));
+const LazyComparisonPanel = React.lazy(() => import('./components/ComparisonPanel').then(m => ({ default: m.ComparisonPanel })));
+const LazyUserAuditPanel = React.lazy(() => import('./components/UserAuditPanel').then(m => ({ default: m.UserAuditPanel })));
+const LazyAdvancedExportPanel = React.lazy(() => import('./components/AdvancedExportPanel').then(m => ({ default: m.AdvancedExportPanel })));
+const LazyAlertSettingsPanel = React.lazy(() => import('./components/AlertSettingsPanel').then(m => ({ default: m.AlertSettingsPanel })));
+
+// Loading fallback component
+const TabLoadingFallback = () => (
+  <div className="flex items-center justify-center py-12">
+    <div className="text-gray-500">Carregando...</div>
+  </div>
+);
 import PageLayout from '@/components/ui/PageLayout';
 import { Card } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
@@ -28,10 +47,11 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/customSupabaseClient';
 
 export default function AuditoriaPage() {
-  const { clinicId, currentRole } = useAuth();
+  const { clinicId, currentRole, user } = useAuth();
   const { clinic } = useClinicContext();
   const navigate = useNavigate();
-  
+  const { subscribeToAllAuditData } = useAuditRealtimeSync(clinicId);
+
   const [logs, setLogs] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -79,7 +99,7 @@ export default function AuditoriaPage() {
         // Calculate date range
         const now = new Date();
         let startDate;
-        
+
         switch (dateRange) {
           case '24h':
             startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -124,10 +144,10 @@ export default function AuditoriaPage() {
   const filteredLogs = logs.filter(log => {
     // Filter by action type
     if (actionFilter && log.action_type !== actionFilter) return false;
-    
+
     // Filter by clinic
     if (filtroClinica !== 'todas' && log.clinic_id !== filtroClinica) return false;
-    
+
     // Filter by search term
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
@@ -156,7 +176,7 @@ export default function AuditoriaPage() {
       const role = latestDeleted.performed_by_role || 'system';
       analytics.deletionsByRole[role] = (analytics.deletionsByRole[role] || 0) + 1;
       localStorage.setItem('audit_analytics', JSON.stringify(analytics));
-      
+
       // Show toast notification
       showToast(`⚠️ Deletado: ${latestDeleted.patient?.name || 'Agendamento'}`, 'danger');
     }
@@ -165,7 +185,7 @@ export default function AuditoriaPage() {
   // Realtime sync for critical deletions
   useEffect(() => {
     if (!clinicId) return;
-    
+
     // Subscribe to realtime changes using new Supabase API
     const channel = supabase.channel('audit_deletions')
       .on(
@@ -193,19 +213,127 @@ export default function AuditoriaPage() {
   // Wave 3: Alert Engine
   useEffect(() => {
     if (logs.length === 0) return;
-    
+
     const generatedAlerts = runAllAlertChecks(logs);
     setAlerts(generatedAlerts);
     saveAlertsToStorage(generatedAlerts);
   }, [logs.length]);
 
-  // Pagination
-  const totalPages = Math.ceil(filteredLogs.length / ITEMS_PER_PAGE);
-  const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedLogs = filteredLogs.slice(startIdx, startIdx + ITEMS_PER_PAGE);
-  
-  // Calculate filtered percentage
-  const filteredPercentage = logs.length > 0 ? Math.round((filteredLogs.length / logs.length) * 100) : 100;
+  // Option 5: Setup realtime sync for audit data
+  useEffect(() => {
+    if (!clinicId || !user?.id) return;
+
+    const unsubscribe = subscribeToAllAuditData({
+      onNewAlert: (alert) => {
+        console.log('📢 New alert received via Realtime:', alert);
+        // Alerts will be loaded from Supabase on next refresh
+      },
+      onAlertDeleted: (alertId) => {
+        console.log('🗑️ Alert deleted via Realtime:', alertId);
+      },
+      onNewEvent: (event) => {
+        console.log('👤 New user event via Realtime:', event);
+      },
+      onNewReport: (report) => {
+        console.log('📊 New report via Realtime:', report);
+      },
+      onReportUpdated: (report) => {
+        console.log('🔄 Report updated via Realtime:', report);
+      },
+    });
+
+    return unsubscribe;
+  }, [clinicId, user?.id, subscribeToAllAuditData]);
+
+  // Option 5: Silent migration of localStorage data to Supabase (automatic, no UI)
+  useEffect(() => {
+    // Check if already migrated in this session
+    const migrationCompleted = localStorage.getItem('audit_migration_completed');
+    if (migrationCompleted === 'true') {
+      console.log('✅ [useEffect] Migration already completed in this session');
+      return;
+    }
+
+    console.log('🔍 [useEffect] Check trigger - clinicId:', clinicId);
+
+    if (!clinicId) {
+      console.log('⏭️ [useEffect] clinicId not available yet, will retry');
+      return; // Will retry when clinicId updates
+    }
+
+    // Run migration silently in background
+    const runSilentMigration = async () => {
+      try {
+        // Tentar usar user.id, ou fallback para localStorage session data
+        let userId = user?.id;
+        if (!userId) {
+          const savedSession = localStorage.getItem('gesclinic_session');
+          if (savedSession) {
+            try {
+              const sessionData = JSON.parse(savedSession);
+              userId = sessionData.user_id;
+              console.log('ℹ️ [Background] Using user_id from localStorage:', userId);
+            } catch (e) {
+              console.warn('⚠️ [Background] Could not parse localStorage session');
+            }
+          }
+        }
+
+        if (!userId) {
+          console.warn('❌ [Background] Cannot run migration - no user_id available');
+          return;
+        }
+
+        console.log('🔄 [Background] Starting silent audit data migration... clinicId:', clinicId, 'userId:', userId);
+        const result = await AuditMigrationManager.runAllMigrations(clinicId, userId);
+
+        if (result.success) {
+          console.log(`✅ [Background] Migration successful! Migrated ${result.totalMigrated} items`);
+          localStorage.setItem('audit_migration_completed', 'true');
+        } else {
+          console.warn('⚠️ [Background] Migration failed or tables not ready yet. Will retry on next page load.');
+        }
+      } catch (err) {
+        console.error('❌ [Background] Migration error:', err);
+        // Don't set flag - allow retry on next load
+      }
+    };
+
+    // Delay migration by 2 seconds to let page load first
+    const timer = setTimeout(runSilentMigration, 2000);
+    return () => clearTimeout(timer);
+  }, [clinicId]);
+
+  // Pagination with memoization for performance
+  const totalPages = useMemo(() => Math.ceil(filteredLogs.length / ITEMS_PER_PAGE), [filteredLogs.length]);
+
+  const paginatedLogs = useMemo(() => {
+    const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredLogs.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+  }, [filteredLogs, currentPage]);
+
+  // Calculate filtered percentage (memoized)
+  const filteredPercentage = useMemo(() =>
+    logs.length > 0 ? Math.round((filteredLogs.length / logs.length) * 100) : 100,
+    [logs.length, filteredLogs.length]
+  );
+
+  // Calculate page numbers to display (memoized)
+  const displayPageNumbers = useMemo(() => {
+    const maxPages = 5;
+    if (totalPages <= maxPages) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    const half = Math.floor(maxPages / 2);
+    const start = Math.max(1, currentPage - half);
+    const end = Math.min(totalPages, start + maxPages - 1);
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+  }, [totalPages, currentPage]);
+
+  // Memoized callback for page change
+  const goToPage = useCallback((page) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  }, [totalPages]);
 
   const breadcrumbs = [
     { label: clinic?.name || 'Clínica', href: '/clinica/dashboard' },
@@ -214,10 +342,10 @@ export default function AuditoriaPage() {
 
   return (
     <PageLayout title="Auditoria de Agendamentos" breadcrumbs={breadcrumbs}>
-      <div className="space-y-6">
-        {/* Summary Cards */}
+      <div className="space-y-6 px-2 md:px-0">
+        {/* Summary Cards - Responsive */}
         {summary && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
             <Card className="p-4">
               <div className="text-sm text-gray-600">Total de Ações</div>
               <div className="text-2xl font-bold">{summary.totalActions}</div>
@@ -281,8 +409,8 @@ export default function AuditoriaPage() {
         <Card className="p-4">
           <div className="space-y-4">
             <h3 className="text-sm font-semibold">Filtros</h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
               <div>
                 <label className="text-xs font-medium text-gray-700 mb-2 block">
                   Período
@@ -322,7 +450,7 @@ export default function AuditoriaPage() {
                   <label className="text-xs font-medium text-gray-700 mb-2 block">
                     Clínica
                   </label>
-                  <Select value={filtroClinica || ''} onValueChange={setFiltroClinica}>
+                  <Select value={String(filtroClinica || clinicId)} onValueChange={setFiltroClinica}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione clínica" />
                     </SelectTrigger>
@@ -333,7 +461,7 @@ export default function AuditoriaPage() {
                   </Select>
                 </div>
               )}
-              
+
               <div>
                 <label className="text-xs font-medium text-gray-700 mb-2 block">
                   Buscar (Paciente/Profissional)
@@ -342,7 +470,7 @@ export default function AuditoriaPage() {
                   placeholder="Digite para buscar..."
                   value={searchTerm}
                   onChange={(e) => {setSearchTerm(e.target.value); setCurrentPage(1);}}
-                  className="w-full"
+                  className="w-full text-sm"
                 />
               </div>
             </div>
@@ -352,7 +480,7 @@ export default function AuditoriaPage() {
         {/* Logs Table */}
         <Card className="p-4">
           <h3 className="text-sm font-semibold mb-4">Histórico de Alterações</h3>
-          
+
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-gray-500">Carregando...</div>
@@ -366,80 +494,82 @@ export default function AuditoriaPage() {
               <div className="text-gray-500">Nenhum registro encontrado</div>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead></TableHead>
-                    <TableHead>Data/Hora</TableHead>
-                    <TableHead>Ação</TableHead>
-                    <TableHead>Paciente</TableHead>
-                    <TableHead>Profissional</TableHead>
-                    <TableHead>Realizado por</TableHead>
-                    <TableHead>Role</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedLogs.map((log) => (
-                    <TableRow key={log.id} className={`hover:bg-gray-50 ${log.action_type === 'DELETED' ? 'bg-red-50' : ''}`}>
-                      <TableCell className="text-center">
-                        <button
-                          onClick={() => {
-                            setSelectedLog(log);
-                            setDetailsModalOpen(true);
-                          }}
-                          className="text-blue-600 hover:text-blue-800 font-semibold cursor-pointer"
-                          title="Ver detalhes"
-                        >
-                          ➜
-                        </button>
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {format(new Date(log.created_at), 'dd/MM/yyyy HH:mm:ss', { locale: ptBR })}
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                            log.action_type === 'CREATED'
-                              ? 'bg-green-100 text-green-800'
-                              : log.action_type === 'UPDATED'
-                              ? 'bg-blue-100 text-blue-800'
-                              : log.action_type === 'DELETED'
-                              ? 'bg-red-100 text-red-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}
-                        >
-                          {AUDIT_ACTION_LABELS[log.action_type] || log.action_type}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {log.appointment_id ? (
-                          <button
-                            onClick={() => navigate(`/clinica/agenda?appointmentId=${log.appointment_id}`)}
-                            className="text-blue-600 hover:text-blue-800 hover:underline font-medium cursor-pointer"
-                            title="Ver agendamento"
-                          >
-                            {log.patient?.name || '-'}
-                          </button>
-                        ) : (
-                          log.patient?.name || '-'
-                        )}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {log.professional?.name || '-'}
-                      </TableCell>
-                      <TableCell className="text-sm text-gray-500">
-                        {log.performed_by ? log.performed_by.substring(0, 8) : 'Sistema'}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        <span className="bg-gray-100 px-2 py-1 rounded text-xs">
-                          {AUDIT_ROLE_LABELS[log.performed_by_role] || AUDIT_ROLE_LABELS[log.performed_by_role?.toLowerCase()] || log.performed_by_role || 'Sistema'}
-                        </span>
-                      </TableCell>
+            <div className="overflow-x-auto -mx-4 md:mx-0">
+              <div className="inline-block min-w-full px-4 md:px-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12"></TableHead>
+                      <TableHead className="hidden md:table-cell whitespace-nowrap">Data/Hora</TableHead>
+                      <TableHead className="whitespace-nowrap">Ação</TableHead>
+                      <TableHead className="hidden sm:table-cell whitespace-nowrap">Paciente</TableHead>
+                      <TableHead className="hidden lg:table-cell whitespace-nowrap">Profissional</TableHead>
+                      <TableHead className="hidden lg:table-cell text-xs">Por</TableHead>
+                      <TableHead className="hidden md:table-cell text-xs">Role</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedLogs.map((log) => (
+                      <TableRow key={log.id} className={`hover:bg-gray-50 text-xs md:text-sm ${log.action_type === 'DELETED' ? 'bg-red-50' : ''}`}>
+                        <TableCell className="text-center">
+                          <button
+                            onClick={() => {
+                              setSelectedLog(log);
+                              setDetailsModalOpen(true);
+                            }}
+                            className="text-blue-600 hover:text-blue-800 font-semibold cursor-pointer"
+                            title="Ver detalhes"
+                          >
+                            ➜
+                          </button>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell whitespace-nowrap text-xs">
+                          {format(new Date(log.created_at), 'dd/MM HH:mm', { locale: ptBR })}
+                        </TableCell>
+                        <TableCell>
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-semibold inline-block ${
+                              log.action_type === 'CREATED'
+                                ? 'bg-green-100 text-green-800'
+                                : log.action_type === 'UPDATED'
+                                ? 'bg-blue-100 text-blue-800'
+                                : log.action_type === 'DELETED'
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}
+                          >
+                            {AUDIT_ACTION_LABELS[log.action_type] || log.action_type}
+                          </span>
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell text-xs">
+                          {log.appointment_id ? (
+                            <button
+                              onClick={() => navigate(`/clinica/agenda?appointmentId=${log.appointment_id}`)}
+                              className="text-blue-600 hover:text-blue-800 hover:underline font-medium cursor-pointer truncate max-w-[100px] md:max-w-none"
+                              title="Ver agendamento"
+                            >
+                              {log.patient?.name || '-'}
+                            </button>
+                          ) : (
+                            <span className="truncate max-w-[100px] md:max-w-none">{log.patient?.name || '-'}</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell text-xs">
+                          {log.professional?.name || '-'}
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell text-xs text-gray-500">
+                          {log.performed_by ? log.performed_by.substring(0, 6) : 'Sist'}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell text-xs">
+                          <span className="bg-gray-100 px-2 py-1 rounded text-xs inline-block">
+                            {AUDIT_ROLE_LABELS[log.performed_by_role]?.substring(0, 4) || AUDIT_ROLE_LABELS[log.performed_by_role?.toLowerCase()]?.substring(0, 4) || log.performed_by_role?.substring(0, 4) || 'Sist'}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           )}
 
@@ -452,41 +582,65 @@ export default function AuditoriaPage() {
                 </span>
               )}
             </div>
-            
+
             {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  onClick={() => goToPage(currentPage - 1)}
                   disabled={currentPage === 1}
+                  className="w-full sm:w-auto text-xs md:text-sm"
                 >
                   ← Anterior
                 </Button>
-                
-                <div className="flex gap-1">
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    const page = i + 1;
-                    return (
+
+                <div className="flex gap-1 flex-wrap justify-center">
+                  {currentPage > 3 && totalPages > 5 && (
+                    <>
                       <Button
-                        key={page}
-                        variant={currentPage === page ? 'default' : 'outline'}
+                        variant="outline"
                         size="sm"
-                        onClick={() => setCurrentPage(page)}
-                        className="w-8"
+                        onClick={() => goToPage(1)}
+                        className="w-8 h-8 p-0 text-xs"
                       >
-                        {page}
+                        1
                       </Button>
-                    );
-                  })}
-                  {totalPages > 5 && <span className="text-xs text-gray-500">... até {totalPages}</span>}
+                      <span className="text-xs text-gray-500 flex items-center">...</span>
+                    </>
+                  )}
+                  {displayPageNumbers.map((page) => (
+                    <Button
+                      key={page}
+                      variant={currentPage === page ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => goToPage(page)}
+                      className="w-8 h-8 p-0 text-xs"
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                  {currentPage < totalPages - 2 && totalPages > 5 && (
+                    <>
+                      <span className="text-xs text-gray-500 flex items-center">...</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => goToPage(totalPages)}
+                        className="w-8 h-8 p-0 text-xs"
+                      >
+                        {totalPages}
+                      </Button>
+                    </>
+                  )}
                 </div>
-                
+
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  onClick={() => goToPage(currentPage + 1)}
                   disabled={currentPage === totalPages}
+                  className="w-full sm:w-auto text-xs md:text-sm"
                 >
                   Próximo →
                 </Button>
@@ -504,7 +658,7 @@ export default function AuditoriaPage() {
 
         {/* Wave 3 Features Tabs */}
         <div className="mt-8 space-y-4">
-          <div className="flex gap-2 border-b border-gray-200">
+          <div className="flex gap-2 border-b border-gray-200 flex-wrap">
             <button
               onClick={() => setActiveTab('logs')}
               className={`px-4 py-2 font-semibold border-b-2 ${
@@ -560,13 +714,59 @@ export default function AuditoriaPage() {
             >
               👥 Usuários
             </button>
+            <button
+              onClick={() => setActiveTab('export')}
+              className={`px-4 py-2 font-semibold border-b-2 ${
+                activeTab === 'export'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              📥 Exportação
+            </button>
+            <button
+              onClick={() => setActiveTab('settings')}
+              className={`px-4 py-2 font-semibold border-b-2 ${
+                activeTab === 'settings'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              ⚙️ Configurações
+            </button>
           </div>
 
-          {/* Tab Content */}
-          {activeTab === 'reports' && <ReportsPanel logs={filteredLogs} />}
-          {activeTab === 'alerts' && <AlertsCenter logs={filteredLogs} onAlertsChange={setAlerts} />}
-          {activeTab === 'comparison' && <ComparisonPanel logs={logs} />}
-          {activeTab === 'useraudit' && <UserAuditPanel />}
+          {/* Tab Content - Lazy Loaded */}
+          {activeTab === 'reports' && (
+            <Suspense fallback={<TabLoadingFallback />}>
+              <LazyReportsPanel logs={filteredLogs} />
+            </Suspense>
+          )}
+          {activeTab === 'alerts' && (
+            <Suspense fallback={<TabLoadingFallback />}>
+              <LazyAlertsCenter logs={filteredLogs} onAlertsChange={setAlerts} />
+            </Suspense>
+          )}
+          {activeTab === 'comparison' && (
+            <Suspense fallback={<TabLoadingFallback />}>
+              <LazyComparisonPanel logs={logs} />
+            </Suspense>
+          )}
+          {activeTab === 'useraudit' && (
+            <Suspense fallback={<TabLoadingFallback />}>
+              <LazyUserAuditPanel />
+            </Suspense>
+          )}
+          {activeTab === 'export' && (
+            <Suspense fallback={<TabLoadingFallback />}>
+              <LazyAdvancedExportPanel logs={filteredLogs} />
+            </Suspense>
+          )}
+          {activeTab === 'settings' && (
+            <Suspense fallback={<TabLoadingFallback />}>
+              <LazyAlertSettingsPanel />
+            </Suspense>
+          )}
         </div>
 
         {/* Toast Notifications */}

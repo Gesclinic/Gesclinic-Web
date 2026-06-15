@@ -1,7 +1,6 @@
 /**
- * ServiceListItem.jsx
- * Componente para gerenciar múltiplos serviços em um agendamento
- * Com ESTILOS INLINE para compatibilidade com modais
+ * ServiceListItem.jsx - Versão Simplificada
+ * Campo único e integrado para inclusão de serviços
  */
 
 import React, { useState, useEffect } from 'react';
@@ -16,69 +15,44 @@ const formatCurrency = (value) => {
   }).format(numValue);
 };
 
-const BILLING_TYPES = {
-  per_consultation: { label: 'Por Consulta', icon: '📋' },
-  per_hour: { label: 'Por Hora', icon: '⏰' },
-  per_session: { label: 'Por Sessão', icon: '📅' },
-  per_package: { label: 'Por Pacote', icon: '📦' },
-  per_unit: { label: 'Por Unidade', icon: '🔢' },
-};
-
 function ServiceListItem({
-  services = [], // Lista de serviços disponíveis
-  appointmentServices = [], // Serviços já adicionados
+  services = [],
+  appointmentServices = [],
   onServicesChange = () => {},
   onError = () => {},
-  professionalId = null, // ID do profissional (para buscar valores)
-  payerId = null, // ID do convênio (para buscar valores)
-  clinicId = null, // ID da clínica
+  professionalId = null,
+  payerId = null,
+  payerName = null,
+  clinicId = null,
 }) {
-  const [expandedIndex, setExpandedIndex] = useState(null);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newService, setNewService] = useState({
-    service_id: '',
-    value: 0,
-    discount: 0,
-    billing_type: 'per_consultation',
-    quantity: 1,
-  });
+  const [selectedServiceId, setSelectedServiceId] = useState('');
+  const [selectedValue, setSelectedValue] = useState('');
   const [totalValue, setTotalValue] = useState(0);
+  const [loading, setLoading] = useState(false);
 
   // Calcular valor total
   useEffect(() => {
     const total = appointmentServices.reduce((sum, item) => {
       const value = parseFloat(item.value || 0);
       const discount = parseFloat(item.discount || 0);
-      const qty = parseInt(item.quantity || 1);
-      return sum + (value * qty - discount * qty);
+      return sum + (value - discount);
     }, 0);
     setTotalValue(total);
   }, [appointmentServices]);
 
-  // 💰 Buscar valor do serviço: Profissional → Convênio → Padrão
+  // 💰 Buscar valor do serviço
   const fetchServicePrice = async (serviceId) => {
     if (!serviceId || !clinicId) {
       return null;
     }
 
     try {
-      console.log(
-        '💰 [ServiceListItem] Buscando preço - serviceId:',
-        serviceId,
-        'profissionalId:',
-        professionalId,
-        'payerId:',
-        payerId,
-      );
-
       const price = await getServicePrice({
         serviceId,
         professionalId: professionalId || undefined,
         payerId: payerId || undefined,
         clinicId,
       });
-
-      console.log('💰 [ServiceListItem] Preço encontrado:', price);
       return price || 0;
     } catch (err) {
       console.error('❌ [ServiceListItem] Erro ao buscar preço:', err);
@@ -88,54 +62,42 @@ function ServiceListItem({
 
   // Adicionar serviço
   const handleAddService = async () => {
-    if (!newService.service_id) {
+    if (!selectedServiceId) {
       onError('Selecione um serviço');
       return;
     }
 
-    const serviceInfo = services.find((s) => s.id === newService.service_id);
+    setLoading(true);
 
-    // 💰 Se valor não foi definido manualmente, buscar automaticamente
-    let serviceValue = newService.value;
+    const serviceInfo = services.find((s) => s.id === selectedServiceId);
+
+    let serviceValue = parseFloat(selectedValue || 0);
     if (serviceValue <= 0) {
-      console.log('💰 [ServiceListItem] Valor não definido, buscando automaticamente...');
-      serviceValue = await fetchServicePrice(newService.service_id);
+      serviceValue = await fetchServicePrice(selectedServiceId);
 
       if (serviceValue <= 0) {
         onError('Não foi possível definir o valor do serviço. Preencha manualmente.');
+        setLoading(false);
         return;
       }
     }
 
     const serviceItem = {
-      id: `new-${Date.now()}`, // Temp ID
-      service_id: newService.service_id,
+      id: `new-${Date.now()}`,
+      service_id: selectedServiceId,
+      service_code: serviceInfo?.tuss_code || serviceInfo?.code || '',
       service_name: serviceInfo?.name || '',
       value: parseFloat(serviceValue),
-      discount: parseFloat(newService.discount || 0),
-      billing_type: newService.billing_type,
-      quantity: parseInt(newService.quantity) || 1,
-      sessions_completed: 0,
+      discount: 0,
+      quantity: 1,
       status: 'pending',
-      sequence_order: appointmentServices.length,
     };
 
     const updatedArray = [...appointmentServices, serviceItem];
-    console.log('✅ [ServiceListItem] Serviço adicionado!', {
-      serviceItem,
-      totalServices: updatedArray.length,
-      allServices: updatedArray,
-    });
-
     onServicesChange(updatedArray);
-    setNewService({
-      service_id: '',
-      value: 0,
-      discount: 0,
-      billing_type: 'per_consultation',
-      quantity: 1,
-    });
-    setShowAddForm(false);
+    setSelectedServiceId('');
+    setSelectedValue('');
+    setLoading(false);
   };
 
   // Remover serviço
@@ -144,514 +106,87 @@ function ServiceListItem({
     onServicesChange(updated);
   };
 
-  // Atualizar serviço
-  const handleUpdateService = (index, field, value) => {
+  // Atualizar valor
+  const handleUpdateValue = (index, newValue) => {
     const updated = [...appointmentServices];
-    updated[index] = {
-      ...updated[index],
-      [field]: field === 'value' || field === 'discount' ? parseFloat(value) : value,
-    };
+    updated[index] = { ...updated[index], value: parseFloat(newValue) };
     onServicesChange(updated);
   };
 
-  // Renderizar campos específicos por tipo de cobrança
-  const renderBillingTypeFields = (service, index) => {
-    const labelStyle = {
-      fontSize: 12,
-      fontWeight: 600,
-      marginBottom: 6,
-      display: 'block',
-      color: '#333',
-    };
-
-    const inputStyle = {
-      width: '100%',
-      padding: '8px 12px',
-      border: '1px solid #ddd',
-      borderRadius: 4,
-      fontSize: 13,
-      fontFamily: 'inherit',
-    };
-
-    const type = service.billing_type;
-
-    switch (type) {
-      case 'per_hour':
-      case 'per_session':
-      case 'per_package':
-      case 'per_unit':
-        return (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
-            <div>
-              <label style={labelStyle}>Valor (R$)</label>
-              <input
-                type="number"
-                step="0.01"
-                value={service.value}
-                onChange={(e) => handleUpdateService(index, 'value', e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>Quantidade</label>
-              <input
-                type="number"
-                min="1"
-                value={service.quantity}
-                onChange={(e) => handleUpdateService(index, 'quantity', e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-          </div>
-        );
-
-      default: // per_consultation
-        return (
-          <div style={{ marginTop: 12 }}>
-            <label style={labelStyle}>Valor (R$)</label>
-            <input
-              type="number"
-              step="0.01"
-              value={service.value}
-              onChange={(e) => handleUpdateService(index, 'value', e.target.value)}
-              style={inputStyle}
-            />
-          </div>
-        );
-    }
+  // Atualizar desconto
+  const handleUpdateDiscount = (index, newDiscount) => {
+    const updated = [...appointmentServices];
+    updated[index] = { ...updated[index], discount: parseFloat(newDiscount) };
+    onServicesChange(updated);
   };
 
   return (
-    <div style={{ border: '1px solid #ddd', borderRadius: 6, padding: 16, background: '#fafafa' }}>
-      {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          marginBottom: 16,
-        }}
-      >
-        <div>
-          <h3 style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>📋 Múltiplos Serviços</h3>
-          <p style={{ fontSize: 12, color: '#666' }}>
-            {appointmentServices.length} serviço(s) adicionado(s)
-          </p>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <p style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>Valor Total</p>
-          <p style={{ fontSize: 16, fontWeight: 700, color: '#2e7d32' }}>
-            {formatCurrency(totalValue)}
-          </p>
-        </div>
-      </div>
-
-      {/* 📅 Guia de Sessões e Pacotes */}
-      {appointmentServices.some((s) => ['per_session', 'per_package'].includes(s.billing_type)) && (
-        <div
+    <div style={{ padding: 0, background: 'transparent' }}>
+      {/* 🎯 Campo Único de Inclusão */}
+      <div style={{ marginBottom: 16 }}>
+        <label
           style={{
-            padding: 12,
-            background: '#fff8e1',
-            border: '1px solid #fbc02d',
-            borderRadius: 4,
-            marginBottom: 12,
-            fontSize: 12,
-            color: '#856404',
+            fontSize: 13,
+            fontWeight: 600,
+            marginBottom: 8,
+            display: 'block',
+            color: '#333',
           }}
         >
-          <p style={{ fontWeight: 600, marginBottom: 6 }}>💡 Rastreamento de Sessões/Pacotes:</p>
-          <ul style={{ margin: 0, paddingLeft: 20 }}>
-            <li>
-              Cada vez que o paciente comparece, clique em <strong>➕ Adicionar</strong> para marcar
-              uma sessão realizada
-            </li>
-            <li>
-              Exemplo: Pacote com 10 sessões → Após 1ª consulta: <strong>1 de 10</strong> → Após 2ª:{' '}
-              <strong>2 de 10</strong>
-            </li>
-            <li>
-              Quando atingir o total, o sistema marca como <strong>✅ Completo</strong>
-            </li>
-            <li>
-              Use <strong>➖ Remover</strong> para corrigir erros de marcação
-            </li>
-          </ul>
-        </div>
-      )}
+          🔧 Serviço
+        </label>
 
-      {/* Aviso se não há serviços disponíveis */}
-      {services.length === 0 && (
         <div
           style={{
-            padding: 12,
-            background: '#fff3cd',
-            border: '1px solid #ffc107',
-            borderRadius: 4,
-            marginBottom: 12,
-            fontSize: 12,
-            color: '#856404',
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr auto',
+            gap: 8,
+            alignItems: 'flex-end',
           }}
         >
-          ⚠️ Nenhum serviço disponível. Selecione um profissional acima para carregar serviços.
-        </div>
-      )}
+          {/* Seleção de Serviço */}
+          <select
+            value={selectedServiceId}
+            onChange={(e) => {
+              const serviceId = e.target.value;
+              setSelectedServiceId(serviceId);
 
-      {/* Lista de Serviços */}
-      <div style={{ marginBottom: 12 }}>
-        {appointmentServices.map((service, index) => (
-          <div
-            key={service.id}
+              if (serviceId) {
+                fetchServicePrice(serviceId).then((price) => {
+                  setSelectedValue(price || '');
+                });
+              }
+            }}
             style={{
-              background: '#fff',
-              border: '1px solid #e0e0e0',
+              width: '100%',
+              padding: '8px 12px',
+              border: '1px solid #ddd',
               borderRadius: 4,
-              marginBottom: 8,
-              overflow: 'hidden',
+              fontSize: 13,
+              fontFamily: 'inherit',
+              background: '#fff',
             }}
           >
-            {/* Item Header */}
-            <button
-              type="button"
-              onClick={() => setExpandedIndex(expandedIndex === index ? null : index)}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: 12,
-                background: '#fff',
-                border: 'none',
-                cursor: 'pointer',
-                transition: 'background 0.2s',
-              }}
-              onMouseEnter={(e) => (e.target.style.background = '#f5f5f5')}
-              onMouseLeave={(e) => (e.target.style.background = '#fff')}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', flex: 1, gap: 12 }}>
-                <span style={{ fontSize: 18 }}>{BILLING_TYPES[service.billing_type]?.icon}</span>
-                <div style={{ textAlign: 'left' }}>
-                  <p style={{ fontWeight: 600, fontSize: 13 }}>{service.service_name}</p>
-                  <p style={{ fontSize: 11, color: '#666' }}>
-                    {BILLING_TYPES[service.billing_type]?.label}
-                    {service.quantity > 1 && ` • Qtd: ${service.quantity}`}
-                    {['per_session', 'per_package'].includes(service.billing_type) &&
-                      ` • 📅 ${service.sessions_completed || 0}/${service.quantity}`}
-                  </p>
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ textAlign: 'right' }}>
-                  <p style={{ fontWeight: 700, fontSize: 13 }}>
-                    {formatCurrency(
-                      service.value * service.quantity - service.discount * service.quantity,
-                    )}
-                  </p>
-                  {service.discount > 0 && (
-                    <p style={{ fontSize: 11, color: '#d32f2f' }}>
-                      -{formatCurrency(service.discount * service.quantity)}
-                    </p>
-                  )}
-                </div>
-                <span
-                  style={{
-                    fontSize: 18,
-                    color: '#999',
-                    transition: 'transform 0.2s',
-                    transform: expandedIndex === index ? 'rotate(180deg)' : 'rotate(0deg)',
-                  }}
-                >
-                  ▼
-                </span>
-              </div>
-            </button>
-
-            {/* Detalhes Expandidos */}
-            {expandedIndex === index && (
-              <div style={{ borderTop: '1px solid #e0e0e0', padding: 12, background: '#fafafa' }}>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: 12,
-                    marginBottom: 12,
-                  }}
-                >
-                  {/* Tipo de Cobrança */}
-                  <div>
-                    <label
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 600,
-                        marginBottom: 6,
-                        display: 'block',
-                        color: '#333',
-                      }}
-                    >
-                      Tipo de Cobrança
-                    </label>
-                    <select
-                      value={service.billing_type}
-                      onChange={(e) => handleUpdateService(index, 'billing_type', e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '8px 12px',
-                        border: '1px solid #ddd',
-                        borderRadius: 4,
-                        fontSize: 13,
-                        fontFamily: 'inherit',
-                      }}
-                    >
-                      {Object.entries(BILLING_TYPES).map(([key, { label }]) => (
-                        <option key={key} value={key}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Campos específicos por tipo */}
-                {renderBillingTypeFields(service, index)}
-
-                {/* Desconto */}
-                <div style={{ marginTop: 12 }}>
-                  <label
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 600,
-                      marginBottom: 6,
-                      display: 'block',
-                      color: '#333',
-                    }}
-                  >
-                    Desconto (R$)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={service.discount}
-                    onChange={(e) => handleUpdateService(index, 'discount', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      border: '1px solid #ddd',
-                      borderRadius: 4,
-                      fontSize: 13,
-                      fontFamily: 'inherit',
-                    }}
-                  />
-                </div>
-
-                {/* Valor Líquido */}
-                <div style={{ paddingTop: 12, marginTop: 12, borderTop: '1px solid #e0e0e0' }}>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: '#1976d2' }}>
-                    Valor Líquido:{' '}
-                    {formatCurrency(
-                      service.value * service.quantity - service.discount * service.quantity,
-                    )}
-                  </p>
-                </div>
-
-                {/* 📅 RASTREAMENTO DE SESSÕES - Para pacotes e sessões */}
-                {['per_session', 'per_package'].includes(service.billing_type) && (
-                  <div
-                    style={{
-                      marginTop: 12,
-                      padding: 12,
-                      background: '#f0f7ff',
-                      border: '1px solid #90caf9',
-                      borderRadius: 4,
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        marginBottom: 12,
-                      }}
-                    >
-                      <label style={{ fontSize: 12, fontWeight: 600, color: '#1565c0' }}>
-                        📅 Progresso de Sessões
-                      </label>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: '#1565c0' }}>
-                        {service.sessions_completed || 0} de {service.quantity}
-                      </span>
-                    </div>
-
-                    {/* Barra de Progresso */}
-                    <div
-                      style={{
-                        width: '100%',
-                        height: 24,
-                        background: '#e3f2fd',
-                        border: '1px solid #90caf9',
-                        borderRadius: 4,
-                        overflow: 'hidden',
-                        marginBottom: 12,
-                      }}
-                    >
-                      <div
-                        style={{
-                          height: '100%',
-                          background: 'linear-gradient(90deg, #64b5f6, #1976d2)',
-                          width: `${service.quantity > 0 ? ((service.sessions_completed || 0) / service.quantity) * 100 : 0}%`,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'white',
-                          fontSize: 11,
-                          fontWeight: 600,
-                          transition: 'width 0.3s ease',
-                        }}
-                      >
-                        {service.quantity > 0 &&
-                          `${Math.round(((service.sessions_completed || 0) / service.quantity) * 100)}%`}
-                      </div>
-                    </div>
-
-                    {/* Botões de Controle */}
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const current = service.sessions_completed || 0;
-                          if (current > 0) {
-                            handleUpdateService(index, 'sessions_completed', current - 1);
-                          }
-                        }}
-                        disabled={(service.sessions_completed || 0) <= 0}
-                        style={{
-                          flex: 1,
-                          padding: '8px 12px',
-                          background:
-                            (service.sessions_completed || 0) <= 0 ? '#e0e0e0' : '#ef5350',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: 4,
-                          fontWeight: 600,
-                          fontSize: 12,
-                          cursor:
-                            (service.sessions_completed || 0) <= 0 ? 'not-allowed' : 'pointer',
-                          opacity: (service.sessions_completed || 0) <= 0 ? 0.5 : 1,
-                        }}
-                      >
-                        ➖ Remover
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const current = service.sessions_completed || 0;
-                          if (current < service.quantity) {
-                            handleUpdateService(index, 'sessions_completed', current + 1);
-                          }
-                        }}
-                        disabled={(service.sessions_completed || 0) >= service.quantity}
-                        style={{
-                          flex: 1,
-                          padding: '8px 12px',
-                          background:
-                            (service.sessions_completed || 0) >= service.quantity
-                              ? '#e0e0e0'
-                              : '#66bb6a',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: 4,
-                          fontWeight: 600,
-                          fontSize: 12,
-                          cursor:
-                            (service.sessions_completed || 0) >= service.quantity
-                              ? 'not-allowed'
-                              : 'pointer',
-                          opacity: (service.sessions_completed || 0) >= service.quantity ? 0.5 : 1,
-                        }}
-                      >
-                        ➕ Adicionar
-                      </button>
-                    </div>
-
-                    {(service.sessions_completed || 0) >= service.quantity && (
-                      <div
-                        style={{
-                          marginTop: 8,
-                          padding: 8,
-                          background: '#c8e6c9',
-                          border: '1px solid #81c784',
-                          borderRadius: 4,
-                          fontSize: 12,
-                          color: '#2e7d32',
-                          fontWeight: 600,
-                          textAlign: 'center',
-                        }}
-                      >
-                        ✅ Todas as sessões foram completadas!
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Remover */}
-                <button
-                  type="button"
-                  onClick={() => handleRemoveService(index)}
-                  style={{
-                    width: '100%',
-                    marginTop: 12,
-                    padding: '8px 12px',
-                    background: '#d32f2f',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: 4,
-                    fontWeight: 600,
-                    fontSize: 13,
-                    cursor: 'pointer',
-                  }}
-                >
-                  🗑️ Remover Serviço
-                </button>
-              </div>
+            <option value="">+ Adicionar serviço</option>
+            {services.length === 0 ? (
+              <option disabled>Nenhum serviço disponível</option>
+            ) : (
+              services.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name} {s.duration ? `(${s.duration} min)` : ''}
+                </option>
+              ))
             )}
-          </div>
-        ))}
-      </div>
+          </select>
 
-      {/* Formulário de Adição */}
-      {showAddForm ? (
-        <div
-          style={{ background: '#fff', border: '1px solid #e0e0e0', borderRadius: 4, padding: 12 }}
-        >
-          <div style={{ marginBottom: 12 }}>
-            <label
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                marginBottom: 6,
-                display: 'block',
-                color: '#333',
-              }}
-            >
-              Serviço *
-            </label>
-            <select
-              value={newService.service_id}
-              onChange={(e) => {
-                const serviceId = e.target.value;
-                setNewService({ ...newService, service_id: serviceId });
-
-                // 💰 Auto-buscar preço quando serviço é selecionado
-                if (serviceId) {
-                  fetchServicePrice(serviceId).then((price) => {
-                    console.log('💰 [Formulário] Preço auto-buscado:', price);
-                    setNewService((prev) => ({
-                      ...prev,
-                      service_id: serviceId,
-                      value: price || 0, // Pre-preencher com o preço encontrado
-                    }));
-                  });
-                }
-              }}
+          {/* Valor */}
+          {selectedServiceId && (
+            <input
+              type="number"
+              step="0.01"
+              value={selectedValue}
+              onChange={(e) => setSelectedValue(e.target.value)}
+              placeholder="R$ 0,00"
               style={{
                 width: '100%',
                 padding: '8px 12px',
@@ -660,204 +195,193 @@ function ServiceListItem({
                 fontSize: 13,
                 fontFamily: 'inherit',
               }}
-            >
-              <option value="">Selecione um serviço</option>
-              {services.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name} {s.duration ? `(${s.duration} min)` : ''}
-                </option>
-              ))}
-            </select>
-          </div>
+            />
+          )}
 
-          <div
-            style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}
-          >
-            <div>
-              <label
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  marginBottom: 6,
-                  display: 'block',
-                  color: '#333',
-                }}
-              >
-                Tipo de Cobrança
-              </label>
-              <select
-                value={newService.billing_type}
-                onChange={(e) => setNewService({ ...newService, billing_type: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  border: '1px solid #ddd',
-                  borderRadius: 4,
-                  fontSize: 13,
-                  fontFamily: 'inherit',
-                }}
-              >
-                {Object.entries(BILLING_TYPES).map(([key, { label }]) => (
-                  <option key={key} value={key}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  marginBottom: 6,
-                  display: 'block',
-                  color: '#333',
-                }}
-              >
-                Valor (R$)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                value={newService.value}
-                onChange={(e) => setNewService({ ...newService, value: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  border: '1px solid #ddd',
-                  borderRadius: 4,
-                  fontSize: 13,
-                  fontFamily: 'inherit',
-                }}
-              />
-            </div>
-          </div>
-
-          <div
-            style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}
-          >
-            <div>
-              <label
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  marginBottom: 6,
-                  display: 'block',
-                  color: '#333',
-                }}
-              >
-                Quantidade
-              </label>
-              <input
-                type="number"
-                min="1"
-                value={newService.quantity}
-                onChange={(e) => setNewService({ ...newService, quantity: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  border: '1px solid #ddd',
-                  borderRadius: 4,
-                  fontSize: 13,
-                  fontFamily: 'inherit',
-                }}
-              />
-            </div>
-
-            <div>
-              <label
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  marginBottom: 6,
-                  display: 'block',
-                  color: '#333',
-                }}
-              >
-                Desconto (R$)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={newService.discount}
-                onChange={(e) => setNewService({ ...newService, discount: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  border: '1px solid #ddd',
-                  borderRadius: 4,
-                  fontSize: 13,
-                  fontFamily: 'inherit',
-                }}
-              />
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: 12 }}>
-            <button
-              type="button"
-              onClick={() => {
-                setShowAddForm(false);
-                setNewService({
-                  service_id: '',
-                  value: 0,
-                  discount: 0,
-                  billing_type: 'per_consultation',
-                  quantity: 1,
-                });
-              }}
-              style={{
-                flex: 1,
-                padding: '8px 12px',
-                background: '#e0e0e0',
-                border: 'none',
-                borderRadius: 4,
-                fontWeight: 600,
-                fontSize: 13,
-                cursor: 'pointer',
-              }}
-            >
-              Cancelar
-            </button>
+          {/* Botão Adicionar */}
+          {selectedServiceId && (
             <button
               type="button"
               onClick={handleAddService}
+              disabled={loading}
               style={{
-                flex: 1,
-                padding: '8px 12px',
+                padding: '8px 16px',
                 background: '#1976d2',
                 color: '#fff',
                 border: 'none',
                 borderRadius: 4,
                 fontWeight: 600,
-                fontSize: 13,
-                cursor: 'pointer',
+                fontSize: 12,
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.7 : 1,
+                whiteSpace: 'nowrap',
               }}
             >
-              ✅ Adicionar
+              {loading ? '⏳...' : '✅ Adicionar'}
             </button>
+          )}
+        </div>
+
+        {/* Aviso */}
+        {services.length === 0 && (
+          <p style={{ fontSize: 12, color: '#d32f2f', marginTop: 6 }}>
+            ⚠️ Selecione um profissional para carregar serviços
+          </p>
+        )}
+      </div>
+
+      {/* 📋 Lista de Serviços Adicionados */}
+      {appointmentServices.length > 0 && (
+        <div>
+          {/* Cabeçalho */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '100px 2fr 1.2fr 1fr 60px',
+              gap: 12,
+              alignItems: 'center',
+              marginBottom: 12,
+              paddingBottom: 12,
+              paddingTop: 4,
+              borderBottom: '3px solid #1976d2',
+            }}
+          >
+            <h4 style={{ fontSize: 12, fontWeight: 700, color: '#1976d2', margin: 0 }}>
+              Código
+            </h4>
+            <h4 style={{ fontSize: 12, fontWeight: 700, color: '#1976d2', margin: 0 }}>
+              Serviço
+            </h4>
+            <h4 style={{ fontSize: 12, fontWeight: 700, color: '#1976d2', margin: 0 }}>
+              Convênio
+            </h4>
+            <h4 style={{ fontSize: 12, fontWeight: 700, color: '#1976d2', margin: 0 }}>
+              Valor
+            </h4>
+            <h4 style={{ fontSize: 12, fontWeight: 700, color: '#1976d2', margin: 0 }}></h4>
+          </div>
+
+          {/* Lista de Serviços - Uma linha por serviço */}
+          <div style={{ marginBottom: 16 }}>
+            {appointmentServices.map((service, index) => (
+              <div
+                key={service.id}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '100px 2fr 1.2fr 1fr 60px',
+                  gap: 12,
+                  alignItems: 'center',
+                  padding: '10px 12px',
+                  background: index % 2 === 0 ? '#f8f9fa' : '#fff',
+                  border: '1px solid #e0e0e0',
+                  borderRadius: 4,
+                  marginBottom: 6,
+                }}
+              >
+                {/* Código do Serviço */}
+                <p
+                  style={{
+                    fontWeight: 600,
+                    fontSize: 12,
+                    margin: 0,
+                    color: '#666',
+                    fontFamily: 'monospace',
+                  }}
+                >
+                  {service.service_code || service.service_id || '-'}
+                </p>
+
+                {/* Serviço */}
+                <p
+                  style={{
+                    fontWeight: 500,
+                    fontSize: 13,
+                    margin: 0,
+                    color: '#333',
+                  }}
+                >
+                  {service.service_name}
+                </p>
+
+                {/* Convênio */}
+                <p
+                  style={{
+                    fontWeight: 500,
+                    fontSize: 13,
+                    margin: 0,
+                    color: payerName ? '#333' : '#999',
+                  }}
+                  title={payerName || 'Sem convênio selecionado'}
+                >
+                  {payerName || '-'}
+                </p>
+
+                {/* Valor */}
+                <input
+                  type="number"
+                  step="0.01"
+                  value={service.value}
+                  onChange={(e) => handleUpdateValue(index, e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '6px 8px',
+                    border: '1px solid #ddd',
+                    borderRadius: 3,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    background: '#fff',
+                  }}
+                />
+
+                {/* Remover */}
+                <button
+                  type="button"
+                  onClick={() => handleRemoveService(index)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#d32f2f',
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    padding: 0,
+                    textAlign: 'center',
+                  }}
+                  title="Remover serviço"
+                >
+                  🗑️
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* VALOR TOTAL */}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              alignItems: 'center',
+              padding: '12px 16px',
+              background: '#e3f2fd',
+              border: '2px solid #1976d2',
+              borderRadius: 4,
+              marginTop: 4,
+            }}
+          >
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#555', marginRight: 20 }}>
+              Valor Total:
+            </span>
+            <span
+              style={{
+                fontSize: 16,
+                fontWeight: 700,
+                color: '#1976d2',
+              }}
+            >
+              {formatCurrency(totalValue)}
+            </span>
           </div>
         </div>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setShowAddForm(true)}
-          style={{
-            width: '100%',
-            padding: '12px',
-            background: '#1976d2',
-            color: '#fff',
-            border: 'none',
-            borderRadius: 4,
-            fontWeight: 600,
-            fontSize: 13,
-            cursor: 'pointer',
-          }}
-        >
-          ➕ Adicionar Serviço
-        </button>
       )}
     </div>
   );

@@ -490,3 +490,94 @@ export const enrichAppointmentsWithPrices = async (appointments = []) => {
         : priceMap[`${apt.payer_id}-${apt.service_id}`] || 0,
   }));
 };
+
+/**
+ * Cascata de preços com 4 níveis (COMPLETA)
+ * 1. Preço específico por Profissional + Convênio + Plano
+ * 2. Preço por Convênio + Plano
+ * 3. Preço por Convênio (genérico)
+ * 4. Preço Base (particular/NULL)
+ * @param {string} serviceId - ID do serviço
+ * @param {string} payerId - ID do convênio (null = particular)
+ * @param {string} professionalId - ID do profissional (opcional)
+ * @param {string} clinicId - ID da clínica
+ * @returns {Promise<Object>} { price, level, source }
+ */
+export const getServicePriceWithCascade = async (
+  serviceId,
+  payerId,
+  clinicId,
+  professionalId = null,
+) => {
+  if (!serviceId || !clinicId) {
+    console.warn('❌ serviceId ou clinicId ausentes');
+    return { price: 0, level: 'error', source: 'invalid_params' };
+  }
+
+  try {
+    // Nível 1: Preço específico por Profissional + Convênio + Plano
+    if (professionalId && payerId) {
+      const { data: prof_conv } = await customSupabaseClient
+        .from('service_prices')
+        .select('price')
+        .eq('service_id', serviceId)
+        .eq('payer_id', payerId)
+        .eq('professional_id', professionalId)
+        .eq('clinic_id', clinicId)
+        .single();
+
+      if (prof_conv?.price) {
+        console.log(
+          `✅ [Cascata] Nível 1: Prof+Conv = R$ ${prof_conv.price} (prof: ${professionalId}, payer: ${payerId})`,
+        );
+        return {
+          price: prof_conv.price,
+          level: 1,
+          source: 'professional_payer_specific',
+        };
+      }
+    }
+
+    // Nível 2: Preço por Convênio + Plano (genérico para convênio)
+    if (payerId) {
+      const { data: conv } = await customSupabaseClient
+        .from('service_prices')
+        .select('price')
+        .eq('service_id', serviceId)
+        .eq('payer_id', payerId)
+        .is('professional_id', null) // Genérico, não específico de prof
+        .eq('clinic_id', clinicId)
+        .single();
+
+      if (conv?.price) {
+        console.log(`✅ [Cascata] Nível 2: Conv = R$ ${conv.price} (payer: ${payerId})`);
+        return { price: conv.price, level: 2, source: 'payer_generic' };
+      }
+    }
+
+    // Nível 3: Preço base da tabela (particular = payerId NULL)
+    const { data: base } = await customSupabaseClient
+      .from('services')
+      .select('value')
+      .eq('id', serviceId)
+      .eq('clinic_id', clinicId)
+      .single();
+
+    if (base?.value) {
+      console.log(
+        `✅ [Cascata] Nível 4: Base = R$ ${base.value} (service base value, payerId: ${payerId || 'NULL/Particular'})`,
+      );
+      return { price: base.value, level: 4, source: 'service_base_value' };
+    }
+
+    // Nenhuma configuração encontrada
+    console.warn(`⚠️ [Cascata] Nenhum preço encontrado para service: ${serviceId}, payer: ${payerId}`);
+    return { price: 0, level: 'not_found', source: 'no_price_configured' };
+  } catch (error) {
+    console.error(
+      `❌ [Cascata] Erro ao buscar preço: service=${serviceId}, payer=${payerId}, prof=${professionalId}`,
+      error,
+    );
+    return { price: 0, level: 'error', source: error.message };
+  }
+};

@@ -25,10 +25,15 @@ import {
 } from 'lucide-react';
 import { APPOINTMENT_STATUS, getValidStatusTransitions } from '@/lib/appointmentStatusEnums';
 import { logMarkedNoShow, logAppointmentRescheduled, logCheckinStarted } from '@/lib/auditApi';
+import { createLancamentoFromAppointmentRelease } from '@/lib/lancamentoHelpers';
+import { useClinicContext } from '@/contexts/ClinicContext';
 
 export default function CheckinAcoes({ appointment, onUpdateStatus, loading, onRefresh }) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
+  const [financialCreating, setFinancialCreating] = useState(false);
+  const [financialError, setFinancialError] = useState(null);
+  const { clinicId } = useClinicContext();
 
   // ============================================
   // VALIDAÇÃO DO CHECKLIST
@@ -126,18 +131,63 @@ export default function CheckinAcoes({ appointment, onUpdateStatus, loading, onR
   };
 
   const handleConfirmRelease = async () => {
-    await onUpdateStatus(appointment.id, APPOINTMENT_STATUS.LIBERADO_PARA_ATENDIMENTO, {
-      liberado_em: new Date().toISOString(),
-      liberado_por: 'current_user_id', // Em produção, usar user.id
-    });
-    // Log de auditoria
-    logCheckinStarted(appointment.id, {
-      status_anterior: appointment.status,
-      liberado_para: APPOINTMENT_STATUS.LIBERADO_PARA_ATENDIMENTO,
-    }).catch((err) => console.warn('Erro ao logar auditoria:', err));
-    setShowConfirm(false);
-    setConfirmAction(null);
-    onRefresh?.();
+    try {
+      setFinancialError(null);
+
+      // 1️⃣ Atualizar status do appointment para LIBERADO_PARA_ATENDIMENTO
+      console.log('💾 [1/3] Atualizando status para LIBERADO_PARA_ATENDIMENTO...');
+      await onUpdateStatus(appointment.id, APPOINTMENT_STATUS.LIBERADO_PARA_ATENDIMENTO, {
+        liberado_em: new Date().toISOString(),
+        liberado_por: 'current_user_id', // Em produção, usar user.id
+      });
+
+      console.log('✅ Status LIBERADO_PARA_ATENDIMENTO concluído');
+
+      // 2️⃣ Criar lançamento financeiro automático (FASE 1)
+      console.log('💰 [2/3] Criando lançamento financeiro automático...');
+      setFinancialCreating(true);
+
+      const financialResult = await createLancamentoFromAppointmentRelease(
+        appointment,
+        clinicId,
+      );
+
+      if (financialResult.success) {
+        console.log('✅ Lançamento criado automaticamente!', financialResult);
+      } else {
+        console.warn('⚠️ Falha ao criar lançamento:', financialResult.reason, financialResult.message);
+        setFinancialError(
+          financialResult.message ||
+            'Atenção: Status foi atualizado, mas o lançamento não pôde ser criado.',
+        );
+      }
+
+      // 3️⃣ Mudar automaticamente para EM_ATENDIMENTO (Aguardando Profissional)
+      console.log('🟢 [3/3] Transitando para EM_ATENDIMENTO (Aguardando Profissional)...');
+      await onUpdateStatus(appointment.id, APPOINTMENT_STATUS.EM_ATENDIMENTO, {
+        transicionado_em: new Date().toISOString(),
+        fase: 'aguardando_profissional',
+      });
+
+      console.log('✅ Status EM_ATENDIMENTO concluído');
+
+      // Log de auditoria de status completo
+      logCheckinStarted(appointment.id, {
+        status_anterior: appointment.status,
+        status_intermediario: APPOINTMENT_STATUS.LIBERADO_PARA_ATENDIMENTO,
+        status_final: APPOINTMENT_STATUS.EM_ATENDIMENTO,
+        transicao_automatica: true,
+      }).catch((err) => console.warn('Erro ao logar auditoria:', err));
+
+      setFinancialCreating(false);
+      setShowConfirm(false);
+      setConfirmAction(null);
+      onRefresh?.();
+    } catch (error) {
+      console.error('❌ Erro ao confirmar liberação:', error);
+      setFinancialError(`Erro: ${error.message}`);
+      setFinancialCreating(false);
+    }
   };
 
   const handleMarkNoShow = async () => {
@@ -334,26 +384,92 @@ export default function CheckinAcoes({ appointment, onUpdateStatus, loading, onR
             <h3 className="text-xl font-bold text-gray-900 mb-4">Confirmar Liberação</h3>
 
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-              <p className="text-blue-900">
-                Paciente <strong>{appointment.patient_name}</strong> será liberado para{' '}
-                <strong>{appointment.professional_name}</strong>.
+              <p className="text-blue-900 font-semibold">
+                Paciente <strong>{appointment.patient_name}</strong>
               </p>
-              <p className="text-sm text-blue-800 mt-2">Essa ação é irreversível. Confirma?</p>
+              <p className="text-sm text-blue-800 mt-2">
+                Será liberado para <strong>{appointment.professional_name}</strong>
+              </p>
+              <p className="text-sm text-blue-800 mt-3 bg-blue-100 rounded p-2">
+                ✅ Lançamento financeiro criado automaticamente
+                <br />✅ Status muda para: <strong>Aguardando Profissional</strong>
+              </p>
             </div>
+
+            {/* Fluxo de 3 Etapas */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4 text-sm space-y-2">
+              <div className="flex items-center gap-2">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-white ${
+                  financialCreating ? 'bg-yellow-500 animate-pulse' : 'bg-green-600'
+                }`}>
+                  1
+                </div>
+                <span className="text-gray-700">Atualizar status → LIBERADO_PARA_ATENDIMENTO</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-white ${
+                  financialCreating ? 'bg-yellow-500 animate-pulse' : 'bg-green-600'
+                }`}>
+                  2
+                </div>
+                <span className="text-gray-700">Criar lançamento financeiro</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-white ${
+                  financialCreating ? 'bg-yellow-500 animate-pulse' : 'bg-gray-300'
+                }`}>
+                  3
+                </div>
+                <span className={financialCreating ? 'text-gray-500' : 'text-gray-700'}>
+                  Transicionar para EM_ATENDIMENTO (Aguardando Profissional)
+                </span>
+              </div>
+            </div>
+
+            {/* Status de Criação do Financeiro */}
+            {financialCreating && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4 flex items-start gap-3">
+                <Clock className="text-yellow-600 flex-shrink-0 mt-1 animate-spin" size={20} />
+                <div>
+                  <p className="text-sm font-semibold text-yellow-900">Processando...</p>
+                  <p className="text-xs text-yellow-800">
+                    Etapas 1 e 2 em andamento
+                    <br />Etapa 3 será executada em seguida
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Erro no Financeiro */}
+            {financialError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                <p className="text-sm font-semibold text-red-900">⚠️ Aviso</p>
+                <p className="text-sm text-red-800">{financialError}</p>
+              </div>
+            )}
 
             <div className="flex gap-3">
               <button
                 onClick={() => setShowConfirm(false)}
-                className="flex-1 py-2 border border-gray-300 rounded-lg font-semibold text-gray-900 hover:bg-gray-50"
+                disabled={loading || financialCreating}
+                className="flex-1 py-2 border border-gray-300 rounded-lg font-semibold text-gray-900 hover:bg-gray-50 disabled:bg-gray-100"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleConfirmRelease}
-                disabled={loading}
-                className="flex-1 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-300"
+                disabled={loading || financialCreating}
+                className="flex-1 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-300 flex items-center justify-center gap-2"
               >
-                {loading ? '⏳' : '✅'} Confirmar
+                {financialCreating ? (
+                  <>
+                    <Clock size={16} className="animate-spin" /> Processando...
+                  </>
+                ) : (
+                  <>
+                    {loading ? '⏳' : '✅'} Confirmar
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -366,9 +482,10 @@ export default function CheckinAcoes({ appointment, onUpdateStatus, loading, onR
         <div>
           <p className="font-semibold text-yellow-900">Garantia de Qualidade</p>
           <ul className="text-sm text-yellow-800 mt-2 space-y-1">
-            <li>✅ Liberar = Profissional PODE começar o atendimento imediatamente</li>
-            <li>✅ Sem liberação = Profissional NÃO vê o paciente na agenda</li>
-            <li>✅ Registra automaticamente data/hora/usuário da liberação</li>
+            <li>✅ Liberar = Muda para LIBERADO_PARA_ATENDIMENTO + Cria lançamento + Transiciona para EM_ATENDIMENTO</li>
+            <li>✅ Profissional PODE começar imediatamente (status: Aguardando Profissional)</li>
+            <li>✅ Cancelamento com autorização pode reverter tudo (com rastreabilidade)</li>
+            <li>✅ Registra automaticamente data/hora/usuário de todas as ações</li>
           </ul>
         </div>
       </div>

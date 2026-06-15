@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { supabase } from '@/lib/customSupabaseClient';
+import { getFinancialConsolidation } from '@/lib/financialConsolidationApi';
 
 const CockpitPremium = () => {
   // Get clinic ID from auth
@@ -68,6 +69,33 @@ const CockpitPremium = () => {
   // ========== CARREGAMENTO DE DADOS ==========
   const loadKPIs = async () => {
     try {
+      const today = new Date();
+      const startDate = period === 'year'
+        ? new Date(today.getFullYear(), 0, 1).toISOString().split('T')[0]
+        : period === 'quarter'
+          ? new Date(today.getFullYear(), Math.floor(today.getMonth() / 3) * 3, 1).toISOString().split('T')[0]
+          : new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+      const endDate = period === 'year'
+        ? new Date(today.getFullYear(), 11, 31).toISOString().split('T')[0]
+        : period === 'quarter'
+          ? new Date(today.getFullYear(), Math.floor(today.getMonth() / 3) * 3 + 3, 0).toISOString().split('T')[0]
+          : new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+      const consolidated = await getFinancialConsolidation(clinicId, startDate, endDate);
+      setKpis({
+        faturamento_bruto: consolidated.revenue.grossRevenue,
+        receita_liquida: consolidated.revenue.netRevenue,
+        descontos: consolidated.revenue.discounts,
+        taxas_cartao: consolidated.revenue.cardFees,
+        despesas_operacionais: consolidated.expenses.operational,
+        despesas_administrativas: consolidated.expenses.administrative,
+        despesas_financeiras: consolidated.expenses.financial,
+        total_appointments: consolidated.revenue.receivableCount,
+        completed_appointments: consolidated.revenue.receivedCount,
+        overdue_30_count: consolidated.receivables.filter((row) => row.due_date && row.due_date < today.toISOString().split('T')[0] && !['received', 'paid'].includes(String(row.status || '').toLowerCase())).length,
+        repasses_pendentes: 0,
+        repasses_pagos_mes: 0,
+      });
+
       const { data, error } = await supabase
         .from('v_kpi_mensais')
         .select('*')
@@ -75,7 +103,7 @@ const CockpitPremium = () => {
         .single();
 
       if (error) throw error;
-      setKpis(data);
+      setKpis((current) => ({ ...(data || {}), ...(current || {}) }));
     } catch (error) {
       console.error('Erro ao carregar KPIs:', error);
     }
@@ -262,10 +290,22 @@ const CockpitPremium = () => {
                 color="blue"
               />
               <KPICard
+                title="Taxas de Cartão"
+                value={`R$ ${(kpis.taxas_cartao || 0).toFixed(2)}`}
+                icon={TrendingDown}
+                color="red"
+              />
+              <KPICard
                 title="Taxa de Coleta"
                 value={`${((kpis.receita_liquida / (kpis.faturamento_bruto || 1)) * 100).toFixed(1)}%`}
                 icon={Percent}
                 color="purple"
+              />
+              <KPICard
+                title="Despesas Financeiras"
+                value={`R$ ${(kpis.despesas_financeiras || 0).toFixed(2)}`}
+                icon={DollarSign}
+                color="pink"
               />
               <KPICard
                 title="Total Agendamentos"

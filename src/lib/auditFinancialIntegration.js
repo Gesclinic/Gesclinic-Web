@@ -30,7 +30,7 @@ export async function logReceivableCreated(appointmentId, receivableId, amount, 
   return logAppointmentFinancialAudit({
     appointmentId,
     financialEventType: FINANCIAL_EVENT_TYPES.RECEIVABLE_CREATED,
-    relatedEntity: RELATED_ENTITY_TYPES.ACCOUNTS_RECEIVABLE,
+    relatedEntity: RELATED_ENTITY_TYPES.AR_INVOICE,
     relatedEntityId: receivableId,
     amount,
     status: 'open',
@@ -62,7 +62,7 @@ export async function logPaymentReceived(
   return logAppointmentFinancialAudit({
     appointmentId,
     financialEventType: FINANCIAL_EVENT_TYPES.PAYMENT_RECEIVED,
-    relatedEntity: RELATED_ENTITY_TYPES.ACCOUNTS_RECEIVABLE,
+    relatedEntity: RELATED_ENTITY_TYPES.AR_INVOICE,
     relatedEntityId: receivableId,
     amount,
     previousAmount,

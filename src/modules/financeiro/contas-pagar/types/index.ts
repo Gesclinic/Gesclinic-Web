@@ -9,11 +9,23 @@
 
 export enum PayableStatus {
   OPEN = 'OPEN',
+  APPROVING = 'APPROVING',
+  APPROVED = 'APPROVED',
   OVERDUE = 'OVERDUE',
   PARTIAL = 'PARTIAL',
   PAID = 'PAID',
+  BLOCKED = 'BLOCKED',
   CANCELED = 'CANCELED',
   NEGOTIATED = 'NEGOTIATED',
+  REVERSED = 'REVERSED',
+}
+
+export enum ApprovalStage {
+  LAUNCHED = 'LAUNCHED',
+  REVIEWED = 'REVIEWED',
+  APPROVED = 'APPROVED',
+  RELEASED = 'RELEASED',
+  PAID = 'PAID',
 }
 
 export enum PayableType {
@@ -38,6 +50,15 @@ export enum PaymentMethodType {
   OTHER = 'OTHER',
 }
 
+export enum DreClassification {
+  OPERATIONAL = 'OPERATIONAL',
+  ADMINISTRATIVE = 'ADMINISTRATIVE',
+  ASSISTENTIAL = 'ASSISTENTIAL',
+  FINANCIAL = 'FINANCIAL',
+  TAX = 'TAX',
+  MEDICAL_REPASS = 'MEDICAL_REPASS',
+}
+
 export enum RecurrenceType {
   DAILY = 'DAILY',
   WEEKLY = 'WEEKLY',
@@ -56,6 +77,15 @@ export enum AttachmentType {
   OTHER = 'other',
 }
 
+export enum PayableApprovalAction {
+  SEND_TO_APPROVAL = 'SEND_TO_APPROVAL',
+  CHECK = 'CHECK',
+  APPROVE = 'APPROVE',
+  RELEASE = 'RELEASE',
+  BLOCK = 'BLOCK',
+  REVERSE = 'REVERSE',
+}
+
 // ============================================================
 // CORE TYPES
 // ============================================================
@@ -67,6 +97,7 @@ export interface Payable {
   // Supplier info
   supplier_id?: string;
   supplier_name: string;
+  supplier_document?: string;
   
   // Document info
   document_number?: string;
@@ -80,12 +111,16 @@ export interface Payable {
   // Classification
   type: PayableType;
   category?: string;
+  subcategory?: string;
+  unit_id?: string;
+  unit_name?: string;
   
   // Dates
   issue_date?: string;
   competency_date?: string;
   due_date: string;
   payment_date?: string;
+  paid_at?: string;
   
   // Amounts
   amount: number;
@@ -115,21 +150,43 @@ export interface Payable {
   invoice_xml_url?: string;
   invoice_pdf_url?: string;
   attachment_url?: string;
+  document_taxes?: Record<string, number>;
+  document_items?: Array<Record<string, any>>;
+  medication_traceability?: Array<Record<string, any>>;
   
   // Payment details
   payment_method?: PaymentMethodType;
   payment_bank?: string;
+  payment_reference?: string;
   
   // Accounting
   chart_account_id?: string;
   cost_center_id?: string;
+  financial_account_id?: string;
+  dre_classification?: DreClassification;
+  cost_allocations?: Array<{
+    cost_center_id: string;
+    cost_center_name?: string;
+    percentage: number;
+    amount?: number;
+  }>;
   
   // Approval
   approved_by?: string;
   approved_at?: string;
+  approval_stage?: ApprovalStage;
+  approval_reason?: string;
+  checked_by?: string;
+  checked_at?: string;
+  released_by?: string;
+  released_at?: string;
   
   // Payment
   paid_by?: string;
+  reversed_by?: string;
+  reversed_at?: string;
+  canceled_by?: string;
+  canceled_at?: string;
   
   // Flags
   is_forecast: boolean;
@@ -197,15 +254,47 @@ export interface PayableAudit {
   metadata?: Record<string, any>;
 }
 
+export interface PayableReconciliationMatch {
+  payable_id: string;
+  bank_transaction_id: string;
+  transaction_date: string;
+  amount: number;
+  description: string;
+  match_type: 'auto_exact' | 'auto_fuzzy' | 'auto_partial' | 'manual';
+  confidence: number;
+  status: 'matched' | 'review' | 'unmatched';
+  score_reason: string;
+}
+
+export interface PayableReconciliationSummary {
+  total_candidates: number;
+  matched: number;
+  review: number;
+  unmatched: number;
+  matches: PayableReconciliationMatch[];
+}
+
 export interface PayablesSummary {
   clinic_id: string;
   total_payables: number;
   open_amount: number;
+  approving_amount?: number;
+  approved_amount?: number;
   overdue_amount: number;
   paid_amount: number;
   partial_amount: number;
+  due_today_amount?: number;
+  due_next_7_days_amount?: number;
+  due_next_30_days_amount?: number;
+  operational_amount?: number;
+  administrative_amount?: number;
+  assistential_amount?: number;
+  forecast_outflow_amount?: number;
+  realized_outflow_amount?: number;
+  blocked_amount?: number;
   overdue_count: number;
   due_today_count: number;
+  due_next_7_days_count?: number;
   due_next_30_days_count: number;
 }
 
@@ -216,6 +305,7 @@ export interface PayablesSummary {
 export interface PayableCreateInput {
   supplier_name: string;
   supplier_id?: string;
+  supplier_document?: string;
   
   document_number?: string;
   invoice_number?: string;
@@ -226,6 +316,9 @@ export interface PayableCreateInput {
   
   type: PayableType;
   category?: string;
+  subcategory?: string;
+  unit_id?: string;
+  unit_name?: string;
   
   issue_date?: string;
   competency_date?: string;
@@ -238,9 +331,13 @@ export interface PayableCreateInput {
   
   payment_method?: PaymentMethodType;
   payment_bank?: string;
+  payment_reference?: string;
   
   chart_account_id?: string;
   cost_center_id?: string;
+  financial_account_id?: string;
+  dre_classification?: DreClassification;
+  cost_allocations?: Payable['cost_allocations'];
   
   is_recurring?: boolean;
   recurrence_type?: RecurrenceType;
@@ -248,10 +345,17 @@ export interface PayableCreateInput {
   recurrence_end_date?: string;
   
   installments?: number;
+  installment_number?: number;
+  installment_total?: number;
+  parent_payable_id?: string;
   
   has_invoice?: boolean;
   invoice_xml_url?: string;
   invoice_pdf_url?: string;
+  attachment_url?: string;
+  document_taxes?: Record<string, number>;
+  document_items?: Array<Record<string, any>>;
+  medication_traceability?: Array<Record<string, any>>;
   
   is_forecast?: boolean;
   is_manual?: boolean;
@@ -267,6 +371,16 @@ export interface PayableUpdateInput extends Partial<PayableCreateInput> {
   payment_date?: string;
   approved_by?: string;
   approved_at?: string;
+  approval_stage?: ApprovalStage;
+  approval_reason?: string;
+  checked_by?: string;
+  checked_at?: string;
+  released_by?: string;
+  released_at?: string;
+  reversed_by?: string;
+  reversed_at?: string;
+  canceled_by?: string;
+  canceled_at?: string;
 }
 
 export interface PayableFilterParams {
@@ -277,9 +391,19 @@ export interface PayableFilterParams {
   supplier_name?: string;
   chart_account_id?: string;
   cost_center_id?: string;
+  financial_account_id?: string;
+  category?: string;
+  subcategory?: string;
+  payment_method?: PaymentMethodType[];
+  unit_id?: string;
+  competency_date_start?: string;
+  competency_date_end?: string;
   
   due_date_start?: string;
   due_date_end?: string;
+
+  issue_date_start?: string;
+  issue_date_end?: string;
   
   payment_date_start?: string;
   payment_date_end?: string;

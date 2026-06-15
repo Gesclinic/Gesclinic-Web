@@ -13,6 +13,11 @@ import {
   getIndicators,
   listBankAccounts,
   getStatementHistory,
+  runPayableReconciliationMatching,
+  listPayableReconciliationReviews,
+  listPayableReconciliationReviewCounts,
+  approvePayableReconciliationMatch,
+  rejectPayableReconciliationMatch,
 } from '@/lib/conciliationApi';
 import {
   CONCILIATION_STATUS,
@@ -50,6 +55,9 @@ export function useConciliation(clinicId) {
   const [bankAccounts, setBankAccounts] = useState([]);
   const [suggestions, setSuggestions] = useState({});
   const [selectedStatement, setSelectedStatement] = useState(null);
+  const [payableReviews, setPayableReviews] = useState([]);
+  const [payableReviewCounts, setPayableReviewCounts] = useState({ review: 0, matched: 0, rejected: 0, all: 0 });
+  const [payableReviewStatus, setPayableReviewStatus] = useState('review');
 
   /**
    * Carregar extratos
@@ -94,6 +102,46 @@ export function useConciliation(clinicId) {
     }
   }, [clinicId]);
 
+  const loadPayableReviewCounts = useCallback(async () => {
+    if (!clinicId) {
+      const emptyCounts = { review: 0, matched: 0, rejected: 0, all: 0 };
+      setPayableReviewCounts(emptyCounts);
+      return emptyCounts;
+    }
+
+    try {
+      const counts = await listPayableReconciliationReviewCounts(clinicId);
+      setPayableReviewCounts(counts);
+      return counts;
+    } catch (err) {
+      console.error('Error loading payable reconciliation review counts:', err);
+      setError(err.message);
+      return { review: 0, matched: 0, rejected: 0, all: 0 };
+    }
+  }, [clinicId]);
+
+  const loadPayableReviews = useCallback(
+    async (status = payableReviewStatus) => {
+      if (!clinicId) {
+        setPayableReviews([]);
+        setPayableReviewCounts({ review: 0, matched: 0, rejected: 0, all: 0 });
+        return [];
+      }
+
+      try {
+        const reviews = await listPayableReconciliationReviews(clinicId, status);
+        setPayableReviews(reviews);
+        await loadPayableReviewCounts();
+        return reviews;
+      } catch (err) {
+        console.error('Error loading payable reconciliation reviews:', err);
+        setError(err.message);
+        return [];
+      }
+    },
+    [clinicId, loadPayableReviewCounts, payableReviewStatus],
+  );
+
   /**
    * Carregar indicadores
    */
@@ -110,6 +158,61 @@ export function useConciliation(clinicId) {
       console.error('Error loading indicators:', err);
     }
   }, [clinicId, filters.accountId, filters.startDate, filters.endDate]);
+
+  const runPayableMatching = useCallback(async (nextStatus = 'review') => {
+    try {
+      setLoading(true);
+      setError(null);
+      const matches = await runPayableReconciliationMatching(clinicId);
+      setPayableReviewStatus(nextStatus);
+      await loadPayableReviews(nextStatus);
+      return matches;
+    } catch (err) {
+      console.error('Error running payable matching:', err);
+      setError(err.message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [clinicId, loadPayableReviews]);
+
+  const approvePayableMatch = useCallback(
+    async (transactionId, payableId) => {
+      try {
+        setLoading(true);
+        setError(null);
+        await approvePayableReconciliationMatch(transactionId, payableId);
+        await loadPayableReviews(payableReviewStatus);
+        await loadIndicators();
+      } catch (err) {
+        console.error('Error approving payable match:', err);
+        setError(err.message);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [loadIndicators, loadPayableReviews, payableReviewStatus],
+  );
+
+  const rejectPayableMatch = useCallback(
+    async (transactionId, payableId, reason) => {
+      try {
+        setLoading(true);
+        setError(null);
+        await rejectPayableReconciliationMatch(transactionId, payableId, reason);
+        await loadPayableReviews(payableReviewStatus);
+        await loadIndicators();
+      } catch (err) {
+        console.error('Error rejecting payable match:', err);
+        setError(err.message);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [loadIndicators, loadPayableReviews, payableReviewStatus],
+  );
 
   /**
    * Importar extrato (função wrapper)
@@ -350,8 +453,9 @@ export function useConciliation(clinicId) {
       loadStatements();
       loadIndicators();
       loadBankAccounts();
+      loadPayableReviews();
     }
-  }, [clinicId, filters, loadStatements, loadIndicators, loadBankAccounts]);
+  }, [clinicId, filters, loadStatements, loadIndicators, loadBankAccounts, loadPayableReviews]);
 
   return {
     // Estado
@@ -362,6 +466,9 @@ export function useConciliation(clinicId) {
     bankAccounts,
     suggestions,
     selectedStatement,
+    payableReviews,
+    payableReviewCounts,
+    payableReviewStatus,
     filters,
 
     // Ações
@@ -372,7 +479,11 @@ export function useConciliation(clinicId) {
     handleMarkDivergent,
     handleIgnore,
     handleBulkConciliate,
+    runPayableMatching,
+    approvePayableMatch,
+    rejectPayableMatch,
     setSelectedStatement,
+    setPayableReviewStatus,
     updateFilters,
     clearFilters,
     getHistory,
@@ -381,6 +492,8 @@ export function useConciliation(clinicId) {
     loadStatements,
     loadIndicators,
     loadBankAccounts,
+    loadPayableReviews,
+    loadPayableReviewCounts,
   };
 }
 

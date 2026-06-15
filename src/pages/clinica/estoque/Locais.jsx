@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import { stockLocationsApi } from '@/lib/stockApi';
-import StockLocationDialog from '@/components/clinica/estoque/StockLocationDialog';
 import ConfirmationDialog from '@/components/clinica/ConfirmationDialog';
 
 const ENTITY_NAME = 'Local';
@@ -14,11 +14,10 @@ const PLURAL_ENTITY_NAME = 'Locais';
 
 export default function EstoqueLocais() {
   const { clinicId } = useAuth();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState(null);
   const [deleteAlertOpen, setDeleteAlertOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
 
@@ -44,31 +43,6 @@ export default function EstoqueLocais() {
   useEffect(() => {
     fetchItems();
   }, [fetchItems]);
-
-  const handleOpenDialog = (item = null) => {
-    setSelectedItem(item);
-    setDialogOpen(true);
-  };
-
-  const handleSubmit = async (payload) => {
-    try {
-      if (payload.id) {
-        await stockLocationsApi.update(payload.id, payload);
-        toast({ title: `${ENTITY_NAME} atualizado com sucesso!` });
-      } else {
-        await stockLocationsApi.create(clinicId, payload);
-        toast({ title: `${ENTITY_NAME} criado com sucesso!` });
-      }
-      fetchItems();
-      setDialogOpen(false);
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: `Erro ao salvar ${ENTITY_NAME.toLowerCase()}`,
-        description: error.message,
-      });
-    }
-  };
 
   const openDeleteAlert = (item) => {
     setItemToDelete(item);
@@ -99,7 +73,7 @@ export default function EstoqueLocais() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">{PLURAL_ENTITY_NAME} de Estoque</h1>
-        <Button onClick={() => handleOpenDialog()}>
+        <Button onClick={() => navigate('/clinica/estoque/locais/novo')}>
           <PlusCircle className="mr-2 h-4 w-4" />
           Novo {ENTITY_NAME}
         </Button>
@@ -134,7 +108,7 @@ export default function EstoqueLocais() {
                         {item.is_default && <Badge variant="default">Padrão</Badge>}
                       </td>
                       <td className="p-3 flex justify-end gap-2">
-                        <Button variant="outline" size="sm" onClick={() => handleOpenDialog(item)}>
+                        <Button variant="outline" size="sm" onClick={() => navigate(`/clinica/estoque/locais/editar/${item.id}`)}>
                           <Edit className="h-4 w-4" />
                         </Button>
                         <Button
@@ -158,15 +132,6 @@ export default function EstoqueLocais() {
           </div>
         </CardContent>
       </Card>
-
-      {dialogOpen && (
-        <StockLocationDialog
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          onSubmit={handleSubmit}
-          initialData={selectedItem}
-        />
-      )}
 
       <ConfirmationDialog
         open={deleteAlertOpen}

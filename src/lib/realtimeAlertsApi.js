@@ -41,31 +41,36 @@ export const subscribeToPayments = (clinicId, onAlert) => {
     .on(
       'postgres_changes',
       {
-        event: 'UPDATE',
+        event: 'INSERT',
         schema: 'public',
-        table: 'ar_payments',
+        table: 'receivable_payments',
         filter: `clinic_id=eq.${clinicId}`
       },
       (payload) => {
         const payment = payload.new;
 
         // Alert on payment received
-        if (payload.old.status === 'pending' && payment.status === 'settled') {
+        if (payment.status === 'completed') {
+          const amount = Number(payment.amount_paid || 0);
+          const method = payment.payment_method_text || payment.payment_method || 'payment';
+
           onAlert({
             type: ALERT_TYPES.PAYMENT_RECEIVED,
             title: 'Payment Received',
-            message: `R$ ${payment.payment_amount.toFixed(2)} received via ${payment.payment_method}`,
+            message: `R$ ${amount.toFixed(2)} received via ${method}`,
             severity: 'success',
             timestamp: new Date()
           });
         }
 
         // Alert on payment failed
-        if (payload.old.status === 'pending' && payment.status === 'failed') {
+        if (payment.status === 'failed') {
+          const amount = Number(payment.amount_paid || 0);
+
           onAlert({
             type: ALERT_TYPES.PAYMENT_FAILED,
             title: 'Payment Failed',
-            message: `Payment of R$ ${payment.payment_amount.toFixed(2)} failed`,
+            message: `Payment of R$ ${amount.toFixed(2)} failed`,
             severity: 'error',
             timestamp: new Date()
           });

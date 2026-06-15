@@ -20,7 +20,7 @@ const DOCUMENT_TYPES = [
   { id: 'other', label: 'Outro', requiresExpiry: false },
 ];
 
-export default function StockSupplierDialog({ open, onOpenChange, onSubmit, initialData = null }) {
+export default function StockSupplierDialog({ open, onOpenChange, onSubmit, initialData = null, presentation = 'dialog', onCancel = null }) {
   const [formData, setFormData] = useState({
     name: '',
     tax_id: '',
@@ -124,11 +124,18 @@ export default function StockSupplierDialog({ open, onOpenChange, onSubmit, init
     });
   };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="app-dialog-shell app-dialog-shell--content app-dialog-shell--wide">
+  const handleCancel = () => {
+    if (onCancel) {
+      onCancel();
+      return;
+    }
+    onOpenChange?.(false);
+  };
+
+  const content = (
+    <div className={presentation === 'page' ? 'bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden' : 'app-dialog-shell app-dialog-shell--content app-dialog-shell--wide'}>
         {/* Header */}
-        <div className="bg-gradient-to-r from-orange-600 to-orange-800 text-white p-6 sticky top-0 z-20 flex items-center justify-between">
+        {presentation !== 'page' && <div className="bg-gradient-to-r from-orange-600 to-orange-800 text-white p-6 sticky top-0 z-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-3xl">🏢</span>
             <div>
@@ -141,12 +148,12 @@ export default function StockSupplierDialog({ open, onOpenChange, onSubmit, init
             </div>
           </div>
           <button
-            onClick={() => onOpenChange(false)}
+            onClick={handleCancel}
             className="p-1 hover:bg-orange-700 rounded transition"
           >
             <X className="w-5 h-5" />
           </button>
-        </div>
+        </div>}
 
         {/* Content */}
         <form
@@ -440,7 +447,7 @@ export default function StockSupplierDialog({ open, onOpenChange, onSubmit, init
           <Button
             type="button"
             variant="outline"
-            onClick={() => onOpenChange(false)}
+            onClick={handleCancel}
             className="px-4 py-2"
           >
             ✕ Cancelar
@@ -453,6 +460,17 @@ export default function StockSupplierDialog({ open, onOpenChange, onSubmit, init
             {initialData ? '✓ Salvar' : '✓ Criar'}
           </Button>
         </div>
+      </div>
+  );
+
+  if (presentation === 'page') {
+    return content;
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-none w-auto">
+        {content}
       </DialogContent>
     </Dialog>
   );

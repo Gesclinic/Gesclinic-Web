@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -34,7 +33,6 @@ export default function PatientSearchOrCreate({
   const [loading, setLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const debounceTimerRef = useRef(null);  // ✅ MUDADO: useState → useRef para evitar closure problems
-  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
   const containerRef = useRef(null);
 
   // 🔍 Buscar pacientes (com debounce)
@@ -94,29 +92,21 @@ export default function PatientSearchOrCreate({
     debounceTimerRef.current = timer;  // ✅ MUDADO: setDebounceTimer → useRef.current
   };
 
-  // Fechar dropdown ao clicar fora
+  // Fechar dropdown ao clicar fora (COM DELAY para não interferir com clicks internos)
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (containerRef.current && !containerRef.current.contains(e.target)) {
-        setShowResults(false);
+        // ✅ Usar setTimeout para não fechar durante mousedown/click processing
+        setTimeout(() => {
+          setShowResults(false);
+        }, 50);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    // ✅ Usar mouseup ao invés de mousedown (permite que onClick processe primeiro)
+    document.addEventListener('mouseup', handleClickOutside);
+    return () => document.removeEventListener('mouseup', handleClickOutside);
   }, []);
-
-  // ✅ ATUALIZAR POSIÇÃO DO DROPDOWN
-  useEffect(() => {
-    if (showResults && containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      setDropdownPos({
-        top: rect.bottom + window.scrollY,
-        left: rect.left + window.scrollX,
-        width: rect.width,
-      });
-    }
-  }, [showResults, searchResults]);
 
   // ✅ Determinar modo baseado em selectedPatient
   useEffect(() => {
@@ -233,47 +223,33 @@ export default function PatientSearchOrCreate({
             )}
           </div>
 
-          {/* ✅ DROPDOWN COM PORTAL - Renderiza fora da modal */}
-          {showResults && searchResults.length > 0 &&
-            createPortal(
-              <div
-                style={{
-                  position: 'fixed',
-                  top: `${dropdownPos.top}px`,
-                  left: `${dropdownPos.left}px`,
-                  width: `${dropdownPos.width}px`,
-                  minWidth: '300px',
-                  maxWidth: '100vw',
-                  backgroundColor: '#ffffff',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  boxShadow: '0 20px 25px -5px rgba(0,0,0,0.15)',
-                  zIndex: 999999,
-                  pointerEvents: 'auto',
-                  opacity: 1,
-                }}
-              >
-                <div className="max-h-48 overflow-y-auto">
-                  {searchResults.map((patient) => (
-                    <button
-                      key={patient.id}
-                      type="button"
-                      onClick={() => {
-                        handleSelectPatient(patient);
-                        setShowResults(false);
-                      }}
-                      className="w-full text-left p-3 hover:bg-blue-50 border-b last:border-b-0 transition"
-                    >
-                      <div className="font-semibold text-sm">{patient.name}</div>
-                      <div className="text-xs text-gray-600">
-                        {patient.phone} • {patient.document_id}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>,
-              document.body
-            )}
+          {/* ✅ DROPDOWN INLINE - Renderiza dentro da modal */}
+          {showResults && searchResults.length > 0 && (
+            <div className="border border-gray-300 rounded-lg bg-white shadow-lg z-50 relative">
+              <div className="max-h-48 overflow-y-auto">
+                {searchResults.map((patient) => (
+                  <button
+                    key={patient.id}
+                    type="button"
+                    onMouseDown={(e) => {
+                      // ✅ Usar onMouseDown para garantir que processa ANTES do handleClickOutside
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('✅ [DROPDOWN] onMouseDown em patient:', patient.name);
+                      handleSelectPatient(patient);
+                      setShowResults(false);
+                    }}
+                    className="w-full text-left p-3 hover:bg-blue-50 border-b last:border-b-0 transition hover:cursor-pointer"
+                  >
+                    <div className="font-semibold text-sm text-gray-900">{patient.name}</div>
+                    <div className="text-xs text-gray-600">
+                      {patient.phone} • {patient.document_id}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Mensagem quando nenhum resultado */}
           {showResults && searchResults.length === 0 && searchTerm.length >= 2 && !loading && (

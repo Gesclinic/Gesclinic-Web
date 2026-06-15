@@ -58,7 +58,12 @@ import {
  * Componente para Guias de Consulta SP/SADT
  * Permite criação, edição e visualização de guias vinculadas a atendimentos
  */
-export default function GuiasConsulta() {
+export default function GuiasConsulta({
+  tipoGuia = 'SP',
+  titulo = 'Guias de Consulta',
+  descricao = 'Criação, edição e visualização de guias vinculadas a atendimentos',
+  allowTipoChange = false,
+}) {
   const { toast } = useToast();
   const { clinicId } = useAuth();
   const [guias, setGuias] = useState([]);
@@ -70,8 +75,8 @@ export default function GuiasConsulta() {
   const [xmlValidationErrors, setXmlValidationErrors] = useState([]);
 
   // Form state
-  const [formData, setFormData] = useState({
-    tipo_guia: 'SP',
+  const buildInitialForm = () => ({
+    tipo_guia: tipoGuia,
     paciente_nome: '',
     convenio: '',
     plano: '',
@@ -82,51 +87,18 @@ export default function GuiasConsulta() {
     observacoes: '',
   });
 
-  // Mock data para demonstração
-  const mockGuias = [
-    {
-      id: '001',
-      numero_guia: 'GC001-2025-001',
-      tipo: 'SP',
-      data_criacao: '2025-10-30',
-      paciente_nome: 'Maria Silva Santos',
-      convenio: 'Unimed',
-      plano: 'Empresarial',
-      numero_carteirinha: '123456789',
-      profissional: 'Dr. João Cardiologia',
-      codigo_cbhpm: '40101012',
-      descricao_procedimento: 'Consulta em Cardiologia',
-      valor: 150.0,
-      status: 'Aguardando XML',
-      xml_path: null,
-    },
-    {
-      id: '002',
-      numero_guia: 'GC002-2025-001',
-      tipo: 'SADT',
-      data_criacao: '2025-10-30',
-      paciente_nome: 'Pedro Santos Lima',
-      convenio: 'Bradesco Saúde',
-      plano: 'Individual',
-      numero_carteirinha: '987654321',
-      profissional: 'Dra. Ana Pediatria',
-      codigo_cbhpm: '40301010',
-      descricao_procedimento: 'Exame de Eletrocardiograma',
-      valor: 80.0,
-      status: 'XML Gerado',
-      xml_path: '/xml/guia_002.xml',
-    },
-  ];
+  const [formData, setFormData] = useState(buildInitialForm);
 
   useEffect(() => {
+    resetForm();
     fetchGuias();
-  }, [clinicId]);
+  }, [clinicId, tipoGuia]);
 
   const fetchGuias = async () => {
     setLoading(true);
     try {
       const data = await listarGuias();
-      setGuias(data);
+      setGuias((data || []).filter((guia) => (guia.tipo_guia || guia.tipo) === tipoGuia));
     } catch (error) {
       console.error('❌ Erro ao buscar guias:', error);
       toast({
@@ -134,8 +106,7 @@ export default function GuiasConsulta() {
         description: 'Não foi possível carregar as guias.',
         variant: 'destructive',
       });
-      // Fallback: mostrar dados mock
-      setGuias(mockGuias);
+      setGuias([]);
     } finally {
       setLoading(false);
     }
@@ -166,7 +137,7 @@ export default function GuiasConsulta() {
       if (editingGuia) {
         // Atualizar guia existente
         console.log('📝 Atualizando guia:', editingGuia.id, formData);
-        await atualizarGuia(editingGuia.id, formData);
+        await atualizarGuia(editingGuia.id, { ...formData, tipo_guia: allowTipoChange ? formData.tipo_guia : tipoGuia });
         toast({
           title: '✅ Guia atualizada',
           description: 'Guia atualizada com sucesso.',
@@ -174,7 +145,7 @@ export default function GuiasConsulta() {
       } else {
         // Criar nova guia
         console.log('➕ Criando nova guia:', formData);
-        const novaGuia = await criarGuia(formData);
+        const novaGuia = await criarGuia({ ...formData, tipo_guia: allowTipoChange ? formData.tipo_guia : tipoGuia });
         console.log('✅ Guia criada:', novaGuia);
         toast({
           title: '✅ Guia criada',
@@ -197,30 +168,20 @@ export default function GuiasConsulta() {
   };
 
   const resetForm = () => {
-    setFormData({
-      tipo_guia: 'SP',
-      paciente_nome: '',
-      convenio: '',
-      plano: '',
-      numero_carteirinha: '',
-      profissional: '',
-      codigo_cbhpm: '',
-      valor: '',
-      observacoes: '',
-    });
+    setFormData(buildInitialForm());
   };
 
   const handleEdit = (guia) => {
     setEditingGuia(guia);
     setFormData({
-      tipo_guia: guia.tipo,
+      tipo_guia: guia.tipo_guia || guia.tipo || tipoGuia,
       paciente_nome: guia.paciente_nome,
       convenio: guia.convenio,
       plano: guia.plano,
       numero_carteirinha: guia.numero_carteirinha,
       profissional: guia.profissional,
       codigo_cbhpm: guia.codigo_cbhpm,
-      valor: guia.valor.toString(),
+      valor: String(guia.valor || ''),
       observacoes: guia.observacoes || '',
     });
     setIsDialogOpen(true);
@@ -235,8 +196,8 @@ export default function GuiasConsulta() {
       const guideData = {
         service: {
           tuss_code: guia.codigo_cbhpm || '', // Usando código CBHPM como TUSS
-          type_service: guia.tipo === 'SP' ? 'Consulta' : 'Exame',
-          guide_type: guia.tipo === 'SP' ? 'Guia de Consulta' : 'SADT',
+          type_service: (guia.tipo_guia || guia.tipo) === 'SP' ? 'Consulta' : 'Exame',
+          guide_type: (guia.tipo_guia || guia.tipo) === 'SP' ? 'Guia de Consulta' : guia.tipo_guia || guia.tipo,
           unit_measure: 'Unidade',
           cost_value: parseFloat(guia.valor) || 0,
         },
@@ -305,9 +266,9 @@ export default function GuiasConsulta() {
 
   const filteredGuias = guias.filter((guia) => {
     const matchesSearch =
-      guia.paciente_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      guia.numero_guia.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      guia.convenio.toLowerCase().includes(searchTerm.toLowerCase());
+      String(guia.paciente_nome || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      String(guia.numero_guia || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      String(guia.convenio || '').toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus = statusFilter === 'all' || guia.status === statusFilter;
 
@@ -321,11 +282,9 @@ export default function GuiasConsulta() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <FileCode className="w-6 h-6 text-blue-600" />
-            Guias de Consulta (SP/SADT)
+            {titulo}
           </h1>
-          <p className="text-muted-foreground">
-            Criação, edição e visualização de guias vinculadas a atendimentos
-          </p>
+          <p className="text-muted-foreground">{descricao}</p>
         </div>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -337,7 +296,7 @@ export default function GuiasConsulta() {
           </DialogTrigger>
           <DialogContent className="app-dialog-shell app-dialog-shell--content app-dialog-shell--wide">
             <DialogHeader>
-              <DialogTitle>{editingGuia ? 'Editar Guia' : 'Nova Guia de Consulta'}</DialogTitle>
+              <DialogTitle>{editingGuia ? 'Editar Guia' : `Nova ${titulo}`}</DialogTitle>
             </DialogHeader>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -346,6 +305,7 @@ export default function GuiasConsulta() {
                   <Label htmlFor="tipo_guia">Tipo de Guia</Label>
                   <Select
                     value={formData.tipo_guia}
+                    disabled={!allowTipoChange}
                     onValueChange={(value) => setFormData({ ...formData, tipo_guia: value })}
                   >
                     <SelectTrigger>
@@ -354,6 +314,7 @@ export default function GuiasConsulta() {
                     <SelectContent>
                       <SelectItem value="SP">SP - Serviço Profissional</SelectItem>
                       <SelectItem value="SADT">SADT - Serviços Auxiliares Diagnósticos</SelectItem>
+                      <SelectItem value="Internação">Internação</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -561,13 +522,15 @@ export default function GuiasConsulta() {
                 <TableRow key={guia.id}>
                   <TableCell className="font-mono text-sm">{guia.numero_guia}</TableCell>
                   <TableCell>
-                    <Badge variant="outline">{guia.tipo}</Badge>
+                    <Badge variant="outline">{guia.tipo_guia || guia.tipo}</Badge>
                   </TableCell>
                   <TableCell>{guia.data_criacao}</TableCell>
                   <TableCell>{guia.paciente_nome}</TableCell>
                   <TableCell>{guia.convenio}</TableCell>
                   <TableCell>{guia.profissional}</TableCell>
-                  <TableCell className="text-right">R$ {guia.valor.toFixed(2)}</TableCell>
+                  <TableCell className="text-right">
+                    {Number(guia.valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </TableCell>
                   <TableCell>{getStatusBadge(guia.status)}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">

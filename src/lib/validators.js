@@ -122,14 +122,24 @@ export function validateGuiaPayload(payload) {
     throw new Error('Tipo de guia é obrigatório');
   }
 
-  const validTypes = ['RPS', 'NFS', 'NOTA_FISCAL', 'GUIA_SERVICO'];
+  const validTypes = ['SP', 'SADT', 'Internação', 'Internacao'];
   if (!validTypes.includes(payload.tipo_guia)) {
     throw new Error(`Tipo de guia inválido. Use: ${validTypes.join(', ')}`);
   }
 
-  // Descrição obrigatória
-  if (!payload.descricao || typeof payload.descricao !== 'string') {
-    throw new Error('Descrição é obrigatória');
+  if (!payload.paciente_nome || typeof payload.paciente_nome !== 'string') {
+    throw new Error('Nome do paciente é obrigatório');
+  }
+
+  if (!payload.numero_carteirinha || typeof payload.numero_carteirinha !== 'string') {
+    throw new Error('Número da carteirinha é obrigatório');
+  }
+
+  if (payload.valor !== undefined && payload.valor !== null && payload.valor !== '') {
+    const numericValue = Number(payload.valor);
+    if (Number.isNaN(numericValue) || numericValue < 0) {
+      throw new Error('Valor da guia deve ser numérico e não negativo');
+    }
   }
 
   return true;

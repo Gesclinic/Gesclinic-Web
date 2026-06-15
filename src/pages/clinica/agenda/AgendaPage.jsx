@@ -21,6 +21,7 @@ import AgendaProfessionalView from './components/AgendaProfessionalView';
 import AgendaProfessionalFilters from './components/AgendaProfessionalFilters';
 import CheckinDrawer from './components/CheckinDrawer';
 import AtendimentoModal from './components/AtendimentoModal';
+import AtendimentoUnificado from './components/AtendimentoUnificado';
 import AuditTrail, { AuditIndicator, ChangeNotification } from '@/modules/agenda/components/AuditTrail';
 import { useRealtimeAppointmentChanges } from '@/modules/agenda/hooks/useRealtimeAppointmentChanges';
 import { suggestEncaixes } from '@/modules/agenda/utils/suggestEncaixe';
@@ -53,6 +54,7 @@ import {
   listProfessionalsForService,
 } from '@/lib/agendaIntegrationApi';
 import { seedNationalHolidays } from '@/lib/holidaysApi';
+import { getAvailableProfessionalsForDay } from '@/lib/agendaUtils';
 
 import { sendBatchConfirmations } from '@/lib/whatsappConfirmationApi';
 
@@ -177,6 +179,10 @@ export default function AgendaPage() {
   // �👤 Estado para paciente pré-selecionado
   const [preSelectedPatient, setPreSelectedPatient] = useState(null);
 
+  // 🎯 NOVO: Estado para AtendimentoUnificado (Tela Unificada de Atendimento)
+const [atendimentoUnificadoOpen, setAtendimentoUnificadoOpen] = useState(false);
+    const [selectedAppointmentForUnified, setSelectedAppointmentForUnified] = useState(null);
+
   // ============================================================
   // CACHE: Dados de Agenda (Metadata) - Com TTL de 10 minutos
   // ============================================================
@@ -184,6 +190,9 @@ export default function AgendaPage() {
   const [metadataFromCache, setMetadataFromCache] = useState(null);
   const metadataLoading = false;
   const refreshMetadata = () => {}; // dummy
+
+  // ✅ NOVO: Profissionais filtrados por disponibilidade no dia selecionado
+  const [filteredProfessionals, setFilteredProfessionals] = useState(null);
 
   // Carregar metadata diretamente
   useEffect(() => {
@@ -309,6 +318,77 @@ export default function AgendaPage() {
     }
   }, [patientIdFromUrl, agenda]);
 
+  // ✅ NOVO: Filtrar profissionais por disponibilidade quando a modal abre
+  useEffect(() => {
+    if (!agenda.selectedSlot || !agenda.metadata?.professionals) {
+      console.log('⏭️ [FilteredProfessionals] Ignorando - selectedSlot ou metadata vazio');
+      setFilteredProfessionals(null);
+      return;
+    }
+
+    const filterAvailableProfessionals = async () => {
+      try {
+        const slotDate = agenda.selectedSlot.date;
+        const slotType = agenda.selectedSlot.type;
+
+        console.log('🔍 [FilteredProfessionals] INICIOU COM:', {
+          date: slotDate,
+          type: slotType,
+          clinicId: clinicId,
+          allProfs: agenda.metadata.professionals.map(p => ({ id: p.id, name: p.name }))
+        });
+
+        if (!slotDate) {
+          console.warn('⚠️ [FilteredProfessionals] Sem data no selectedSlot');
+          setFilteredProfessionals(agenda.metadata.professionals);
+          return;
+        }
+
+        // Chamar função que retorna profissionais disponíveis para o dia
+        const availableProfs = await getAvailableProfessionalsForDay(slotDate, clinicId);
+
+        console.log('✅ [FilteredProfessionals] Retorno da função getAvailableProfessionalsForDay:', {
+          count: availableProfs?.length || 0,
+          profs: availableProfs?.map(p => ({ id: p.id, name: p.name })) || [],
+          availableIds: availableProfs?.map(p => p.id) || []
+        });
+
+        // Filtrar metadata.professionals para deixar apenas os disponíveis
+        if (availableProfs && availableProfs.length > 0) {
+          const availableProfIds = availableProfs.map(p => p.id);
+          console.log('📊 [FilteredProfessionals] IDs disponíveis para filtro:', availableProfIds);
+
+          const filtered = agenda.metadata.professionals.filter(p =>
+            availableProfIds.includes(p.id)
+          );
+          console.log('📊 [FilteredProfessionals] Resultado final após filtro:', {
+            de: agenda.metadata.professionals.length,
+            para: filtered.length,
+            filtrados: filtered.map(p => ({ id: p.id, name: p.name }))
+          });
+
+          // ⚠️ IMPORTANTE: Ordenar filtrados mantendo a ordem original de metadata
+          // Isso garante consistência com o auto-select
+          const sortedFiltered = filtered.sort((a, b) => {
+            const aIdx = agenda.metadata.professionals.findIndex(p => p.id === a.id);
+            const bIdx = agenda.metadata.professionals.findIndex(p => p.id === b.id);
+            return aIdx - bIdx;
+          });
+
+          setFilteredProfessionals(sortedFiltered);
+        } else {
+          console.warn('⚠️ [FilteredProfessionals] Nenhum profissional disponível para', slotDate);
+          setFilteredProfessionals([]);
+        }
+      } catch (error) {
+        console.error('❌ [FilteredProfessionals] Erro ao filtrar:', error);
+        setFilteredProfessionals(agenda.metadata.professionals);
+      }
+    };
+
+    filterAvailableProfessionals();
+  }, [agenda.selectedSlot, agenda.metadata?.professionals, clinicId]);
+
   // Calcular métricas Agenda × Financeiro
   const metrics = useMemo(() => {
     return useAgendaFinanceMetrics(
@@ -355,6 +435,7 @@ export default function AgendaPage() {
    * Carrega os agendamentos para a data selecionada
    */
   const loadAgendaData = async () => {
+    console.log('[loadAgendaData] ⏭️ INICIADO - clinicId:', clinicId);
     if (!clinicId) {
       console.log('⏸️ Aguardando clinicId... atual:', clinicId);
       return;
@@ -453,9 +534,9 @@ export default function AgendaPage() {
         userProfessionalId: userProfId,
       });
 
-      console.log('📦 Resultado da busca:', appointments);
+      console.log('[AgendaPage] Agendamentos carregados:', appointments?.length, appointments);
       agenda.setAppointments(appointments || []);
-      console.log('✅ Estado atualizado. Verificar renderização...');
+      console.log('[AgendaPage] State atualizado com', agenda.appointments?.length, 'agendamentos');
     } catch (err) {
       console.error('❌ Erro ao carregar agenda:', err);
       agenda.setError('Erro ao carregar agendamentos. Tente novamente.');
@@ -527,13 +608,19 @@ export default function AgendaPage() {
    * Handlers para ações do agendamento
    */
   const handleNewAppointment = (slot) => {
+    console.log('🔍 [handleNewAppointment] Slot clicado:', slot);
+    console.log('🔍 [handleNewAppointment] agenda.selectedSlot ANTERIOR:', agenda.selectedSlot);
+
     // Gerar sugestões inteligentes quando abrir modal de novo agendamento
     generateEncaixeSuggestions(30);
 
     // ✅ Formatar data e hora para exibição em português
     const displayDate = slot.date || agenda.date;
     const displayTime = slot.time || '09:00';
-    const profesionalName = 'Profissional a definir';
+
+    // ✅ PROCURAR PROFISSIONAL NA LISTA
+    const professional = metadataFromCache?.professionals?.find((p) => p.id === slot.professionalId);
+    const profesionalName = professional?.name || 'Profissional a definir';
 
     // Converter data YYYY-MM-DD para DD/MM/YYYY
     const dateParts = displayDate ? displayDate.split('-') : ['2026', '01', '01'];
@@ -554,13 +641,20 @@ export default function AgendaPage() {
     }
 
     // ✅ Ser explícito: usar apenas os dados necessários para novo agendamento
-    agenda.selectSlot({
+    // 🔥 IMPORTANTE: NÃO incluir 'id' para novo agendamento
+    const newSlotData = {
       type: 'new',
       date: slot.date || agenda.date,
       time: slot.time || '09:00',
       professional_id: slot.professional_id || undefined,
       room_id: slot.room_id || undefined,
-    });
+      // Garantir que NÃO temos 'id' de um agendamento anterior
+      id: undefined,
+    };
+
+    console.log('✅ [handleNewAppointment] Novo slot data a ser setado:', newSlotData);
+    console.log('   ➡️  professional_id:', newSlotData.professional_id, 'tipo:', typeof newSlotData.professional_id);
+    agenda.selectSlot(newSlotData);
   };
 
   /**
@@ -627,6 +721,29 @@ export default function AgendaPage() {
     setAtendimentoModalOpen(false);
     setAtendimentoModalAppointment(null);
     // Recarregar agendamentos após mudança de status
+    loadAgendaData();
+  };
+
+  /**
+   * 🎯 Abrir AtendimentoUnificado (Tela Unificada)
+   */
+  const handleOpenAtendimentoUnificado = (appointment) => {
+    console.log(
+      '🎯 [AgendaPage.handleOpenAtendimentoUnificado] Abrindo nova tela unificada para:',
+      appointment?.id,
+    );
+    setSelectedAppointmentForUnified(appointment);
+    setAtendimentoUnificadoOpen(true);
+  };
+
+  /**
+   * 🎯 Fechar AtendimentoUnificado
+   */
+  const handleCloseAtendimentoUnificado = () => {
+    console.log('🎯 [AgendaPage.handleCloseAtendimentoUnificado] Fechando...');
+    setAtendimentoUnificadoOpen(false);
+    setSelectedAppointmentForUnified(null);
+    // Recarregar agenda ao fechar
     loadAgendaData();
   };
 
@@ -878,7 +995,28 @@ export default function AgendaPage() {
     agenda.selectSlot,
   ]);
 
+  // 🎯 NOVO: Abrir AtendimentoUnificado quando mode=unified
+  // 🎯 NOVO: Abrir AtendimentoUnificado quando mode=unified
+  useEffect(() => {
+    // Se há URL parameters mode=unified, abrir o modal
+    if (modeParam === 'unified' && appointmentIdFromUrl && agenda.appointments?.length > 0) {
+      const foundAppointment = agenda.appointments.find(a => a.id === appointmentIdFromUrl);
+      if (foundAppointment && !atendimentoUnificadoOpen) {
+        console.log('✅ Abrindo AtendimentoUnificado para appointment:', foundAppointment.id);
+        handleOpenAtendimentoUnificado(foundAppointment);
+      }
+    }
+  }, [modeParam, appointmentIdFromUrl, agenda.appointments, atendimentoUnificadoOpen, handleOpenAtendimentoUnificado]);
+
   const handleSlotClick = (slot) => {
+    console.log('🔵 [handleSlotClick] Slot clicado:', {
+      type: slot.type,
+      id: slot.id,
+      appointment_id: slot.appointment_id,
+      keys: Object.keys(slot),
+      slotFull: slot,
+    });
+
     if (slot.type === 'new') {
       handleNewAppointment(slot);
     } else if (slot.type === 'bloquear') {
@@ -889,9 +1027,11 @@ export default function AgendaPage() {
       handleDeleteAppointment(slot.id);
     } else if (slot.type === 'start-attendance') {
       handleStartAttendance(slot.id);
-    } else if (slot.type === 'edit') {
-      agenda.selectSlot(slot);
     } else {
+      console.log('🟢 [handleSlotClick] Modo EDIT - chamando agenda.selectSlot:', {
+        type: slot.type,
+        id: slot.id,
+      });
       agenda.selectSlot(slot);
     }
   };
@@ -1045,7 +1185,7 @@ export default function AgendaPage() {
       if (appointmentCalculations.endTime) {
         // Use timezone utility: formatTime converts HH:MM:SS → HH:MM
         endTimeFormatted = formatTime(appointmentCalculations.endTime);
-        
+
         // Fallback para lógica manual se timezone utility retornar null
         if (!endTimeFormatted) {
           if (appointmentCalculations.endTime instanceof Date) {
@@ -1505,9 +1645,11 @@ export default function AgendaPage() {
           </div>
 
           {/* 🟢 Tabs de modo de visualização (sem mudar URL) */}
-          <div className="mb-6">
-            <h3 className="text-sm font-semibold text-gray-700 mb-2">Modo de Visualização:</h3>
-            <AgendaTabs viewMode={agenda.viewMode} onViewModeChange={agenda.setViewMode} />
+          <div className="mb-6 flex gap-4 items-end">
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-gray-700 mb-2">Modo de Visualização:</h3>
+              <AgendaTabs viewMode={agenda.viewMode} onViewModeChange={agenda.setViewMode} />
+            </div>
           </div>
 
           {/* 🔐 Toggle de Modo (Recepção / Profissional / Gestor) */}
@@ -1732,17 +1874,38 @@ export default function AgendaPage() {
       )}
 
       {/* Modal de agendamento */}
+      {agenda.selectedSlot && (
+        <>
+          {console.log('📋 [AgendaPage RENDER] AppointmentModal vai abrir com:', {
+            'selectedSlot': agenda.selectedSlot,
+            'selectedSlot.id': agenda.selectedSlot?.id,
+            'selectedSlot.type': agenda.selectedSlot?.type,
+            'mode': agenda.selectedSlot?.id && agenda.selectedSlot?.type !== 'new' ? 'edit' : 'new',
+            'appointment': agenda.selectedSlot,
+            'appointmentIdToEdit': agenda.selectedSlot?.id && agenda.selectedSlot?.type !== 'new' ? agenda.selectedSlot?.id : null,
+          })}
+        </>
+      )}
       <AppointmentModal
         isOpen={!!agenda.selectedSlot}
         onClose={() => {
           console.log('🔒 Modal fechado intencionalmente - marcando hasModalBeenClosed como true');
           hasModalBeenClosed.current = true;
+          setFilteredProfessionals(null);
           agenda.deselectSlot();
         }}
-        mode={agenda.selectedSlot?.id ? 'edit' : 'new'}
-        appointment={agenda.selectedSlot?.id ? agenda.selectedSlot : null}
-        appointmentIdToEdit={agenda.selectedSlot?.id}
-        professionals={agenda.metadata.professionals || []}
+        mode={agenda.selectedSlot?.id && agenda.selectedSlot?.type !== 'new' ? 'edit' : 'new'}
+        appointment={agenda.selectedSlot}
+        appointmentIdToEdit={agenda.selectedSlot?.id && agenda.selectedSlot?.type !== 'new' ? agenda.selectedSlot?.id : null}
+        professionals={(() => {
+          const result = filteredProfessionals !== null ? filteredProfessionals : agenda.metadata.professionals || [];
+          console.log('📊 [AgendaPage RENDER] Passando professionals para modal:', {
+            filtered: filteredProfessionals !== null,
+            count: result.length,
+            names: result.map(p => p.name)
+          });
+          return result;
+        })()}
         services={agenda.metadata.services || []}
         payers={agenda.metadata.payers || []}
         rooms={agenda.metadata.rooms || []}
@@ -1765,6 +1928,24 @@ export default function AgendaPage() {
         arrivals={[]}
         onArrivalsUpdate={handleCloseAtendimento}
       />
+
+      {/* 🎯 AtendimentoUnificado - Nova Tela Unificada de Atendimento */}
+      {selectedAppointmentForUnified && (
+        <AtendimentoUnificado
+          isOpen={atendimentoUnificadoOpen}
+          onClose={handleCloseAtendimentoUnificado}
+          appointment={selectedAppointmentForUnified}
+          clinicId={clinicId}
+          onSaved={() => {
+            console.log('✅ [AgendaPage] AtendimentoUnificado salvo com sucesso');
+            // Invalidar cache de agendamentos
+            if (agenda.loadAppointments) {
+              agenda.loadAppointments(clinicId);
+            }
+            handleCloseAtendimentoUnificado();
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { ConciliaoIndicadores } from '@/components/financeiro/conciliacao/Concil
 import { ConciliacaoImportacao } from '@/components/financeiro/conciliacao/ConciliacaoImportacao';
 import { ConciliacaoLista } from '@/components/financeiro/conciliacao/ConciliacaoLista';
 import { ConciliacaoPainel } from '@/components/financeiro/conciliacao/ConciliacaoPainel';
+import { ConciliacaoPayablesReview } from '@/components/financeiro/conciliacao/ConciliacaoPayablesReview';
 import { Card } from '@/components/ui/card';
 
 export default function ConciliacaoBancaria() {
@@ -21,6 +22,9 @@ export default function ConciliacaoBancaria() {
     indicators,
     bankAccounts,
     suggestions,
+    payableReviews,
+    payableReviewCounts,
+    payableReviewStatus,
     selectedStatement,
     filters,
     importExtract,
@@ -30,11 +34,16 @@ export default function ConciliacaoBancaria() {
     handleMarkDivergent,
     handleIgnore,
     handleBulkConciliate,
+    runPayableMatching,
+    approvePayableMatch,
+    rejectPayableMatch,
     setSelectedStatement,
+    setPayableReviewStatus,
     updateFilters,
     clearFilters,
     loadStatements,
     loadIndicators,
+    loadPayableReviews,
   } = useConciliation(clinicId);
 
   const handleToggleSelect = (statementId) => {
@@ -111,6 +120,23 @@ export default function ConciliacaoBancaria() {
         onImportSuccess={async (statements, accountId) => {
           await importExtract(statements, accountId);
         }}
+      />
+
+      <ConciliacaoPayablesReview
+        reviews={payableReviews}
+        reviewCounts={payableReviewCounts}
+        status={payableReviewStatus}
+        loading={loading}
+        onStatusChange={async (status) => {
+          setPayableReviewStatus(status);
+          await loadPayableReviews(status);
+        }}
+        onRunMatching={async () => {
+          const matches = await runPayableMatching('review');
+          alert(`${matches.length} correspondência(s) de Contas a Pagar encontrada(s) para revisão.`);
+        }}
+        onApprove={approvePayableMatch}
+        onReject={rejectPayableMatch}
       />
 
       {/* Conteúdo Principal */}

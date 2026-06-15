@@ -19,9 +19,11 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useClinicContext } from '@/contexts/ClinicContext';
 import {
-  APPOINTMENT_STATUS,
-  getStatusLabel,
-  getStatusColor,
+  BOOKING_STATUSES,
+  SERVICE_STATUSES,
+  STATUS_CONFIG,
+} from '@/lib/appointmentStatusConstants';
+import {
   canPerformAction,
 } from '@/lib/appointmentStatusEnums';
 import { updateAppointment, listAppointments } from '@/lib/appointmentsApi';
@@ -34,15 +36,62 @@ export default function CheckinRecepacao() {
   const { user, currentRole, loading: authLoading } = useAuth();
   const { clinicId, loadingClinic } = useClinicContext();
 
+  // ============================================
+  // HELPER FUNCTIONS
+  // ============================================
+
+  const getStatusColor = (status) => {
+    const colorMap = {
+      [BOOKING_STATUSES.SCHEDULED]: 'bg-blue-100 text-blue-800',
+      [BOOKING_STATUSES.CONFIRMED]: 'bg-green-100 text-green-800',
+      [BOOKING_STATUSES.CONFIRMED_PHONE]: 'bg-green-100 text-green-800',
+      [BOOKING_STATUSES.CONFIRMED_WHATSAPP]: 'bg-green-100 text-green-800',
+      [BOOKING_STATUSES.AT_RECEPTION]: 'bg-yellow-100 text-yellow-800',
+      [BOOKING_STATUSES.AT_CHECKOUT]: 'bg-orange-100 text-orange-800',
+      [SERVICE_STATUSES.AWAITING_PROFESSIONAL]: 'bg-purple-100 text-purple-800',
+      [SERVICE_STATUSES.IN_SERVICE]: 'bg-cyan-100 text-cyan-800',
+      [SERVICE_STATUSES.ATTENDED]: 'bg-green-100 text-green-800',
+    };
+    return colorMap[status] || 'bg-gray-100 text-gray-800';
+  };
+
+  const getStatusLabel = (status) => {
+    const labelMap = {
+      [BOOKING_STATUSES.SCHEDULED]: '🗓️ Agendado',
+      [BOOKING_STATUSES.CONFIRMED]: '✅ Confirmado',
+      [BOOKING_STATUSES.CONFIRMED_PHONE]: '☎️ Confirmado (Telefone)',
+      [BOOKING_STATUSES.CONFIRMED_WHATSAPP]: '💬 Confirmado (WhatsApp)',
+      [BOOKING_STATUSES.AT_RECEPTION]: '📍 Na Recepção',
+      [BOOKING_STATUSES.AT_CHECKOUT]: '🪟 No Guichê',
+      [SERVICE_STATUSES.AWAITING_PROFESSIONAL]: '👨‍⚕️ Aguardando Profissional',
+      [SERVICE_STATUSES.IN_SERVICE]: '⏳ Em Atendimento',
+      [SERVICE_STATUSES.ATTENDED]: '✔️ Atendido',
+    };
+    return labelMap[status] || status;
+  };
+
   // Estado
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedAptId, setSelectedAptId] = useState(null);
   const [activeTab, setActiveTab] = useState('checklist'); // checklist, financeiro, acoes
   const [loadingAction, setLoadingAction] = useState(null);
+  const [debugInfo, setDebugInfo] = useState('');
 
   // Validação de permissão
   const canAccessCheckin = canPerformAction(currentRole, 'canMarkArrival');
+
+  // DEBUG: Log de contexto no montaje
+  React.useEffect(() => {
+    console.log('🎯 [CheckinRecepacao] Render:', {
+      clinicId,
+      loadingClinic,
+      authLoading,
+      user: user?.email,
+      currentRole,
+      canAccessCheckin
+    });
+  }, [clinicId, loadingClinic, authLoading, user, currentRole, canAccessCheckin]);
 
   // ============================================
   // CARREGAMENTO DE DADOS
@@ -57,9 +106,14 @@ export default function CheckinRecepacao() {
         return;
       }
 
-      // Carrega agendamentos de hoje que precisam de check-in
+      // Carrega agendamentos dos próximos 7 dias que precisam de check-in
       const today = new Date().toISOString().split('T')[0];
-      const tomorrow = new Date(new Date().getTime() + 86400000).toISOString().split('T')[0];
+      const sevenDaysLater = new Date(new Date().getTime() + 7 * 86400000).toISOString().split('T')[0];
+
+      console.log('🔍 [CheckinRecepacao] Iniciando carregamento de agendamentos');
+      console.log('📅 Data de hoje:', today);
+      console.log('📅 Data até:', sevenDaysLater);
+      console.log('🏥 Clínica ID:', clinicId);
 
       // 🔒 RBAC: Se for profissional, buscar seu professional_id
       let userProfessionalId = null;
@@ -80,20 +134,23 @@ export default function CheckinRecepacao() {
       const data = await listAppointments({
         clinicId,
         start: today,
-        end: tomorrow,
+        end: sevenDaysLater,
         userRole: currentRole,
         userProfessionalId: userProfessionalId,
       });
 
-      // Filtra apenas status que estão na recepção
+      console.log('📋 [CheckinRecepacao] Dados retornados da API:', data);
+
+      // Filtra apenas status que estão na recepção (novo sistema)
       const checkInAppointments = data.filter((apt) =>
         [
-          APPOINTMENT_STATUS.CONFIRMADO,
-          APPOINTMENT_STATUS.AGENDADO,
-          APPOINTMENT_STATUS.AGUARDANDO,
-          APPOINTMENT_STATUS.PENDENTE,
-          APPOINTMENT_STATUS.FINANCEIRO_PENDENTE,
-          APPOINTMENT_STATUS.LIBERADO_PARA_ATENDIMENTO,
+          BOOKING_STATUSES.SCHEDULED,
+          BOOKING_STATUSES.CONFIRMED,
+          BOOKING_STATUSES.CONFIRMED_PHONE,
+          BOOKING_STATUSES.CONFIRMED_WHATSAPP,
+          BOOKING_STATUSES.AT_RECEPTION,
+          BOOKING_STATUSES.AT_CHECKOUT,
+          SERVICE_STATUSES.AWAITING_PROFESSIONAL,
         ].includes(apt.status),
       );
 
@@ -104,7 +161,13 @@ export default function CheckinRecepacao() {
         setSelectedAptId(checkInAppointments[0].id);
       }
     } catch (error) {
-      console.error('Erro ao carregar agendamentos:', error);
+      console.error('❌ [CheckinRecepacao] ERRO ao carregar agendamentos:', error);
+      console.error('📍 Error details:', {
+        message: error?.message,
+        code: error?.code,
+        status: error?.status,
+        stack: error?.stack?.substring(0, 200)
+      });
     } finally {
       setLoading(false);
     }
@@ -112,8 +175,12 @@ export default function CheckinRecepacao() {
 
   // Carrega no mount
   React.useEffect(() => {
+    console.log('✅ useEffect triggered - authLoading:', authLoading, 'loadingClinic:', loadingClinic);
     if (!authLoading && !loadingClinic) {
+      console.log('🚀 Calling loadAppointments');
       loadAppointments();
+    } else {
+      setDebugInfo(`Loading... authLoading=${authLoading}, loadingClinic=${loadingClinic}`);
     }
   }, [authLoading, loadingClinic, loadAppointments]);
 
@@ -200,6 +267,13 @@ export default function CheckinRecepacao() {
 
   return (
     <div className="flex h-screen bg-gray-50">
+      {/* DEBUG INFO */}
+      {debugInfo && (
+        <div className="fixed top-4 right-4 bg-blue-100 border border-blue-400 text-blue-800 px-4 py-2 rounded-lg text-xs z-50">
+          {debugInfo}
+        </div>
+      )}
+
       {/* SIDEBAR — Lista de Pacientes */}
       <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
         {/* Header */}
@@ -230,14 +304,7 @@ export default function CheckinRecepacao() {
                     }
                   `}
                   style={{
-                    borderLeftColor:
-                      apt.status === APPOINTMENT_STATUS.LIBERADO_PARA_ATENDIMENTO
-                        ? '#10b981'
-                        : apt.status === APPOINTMENT_STATUS.PENDENTE
-                          ? '#f97316'
-                          : apt.status === APPOINTMENT_STATUS.FINANCEIRO_PENDENTE
-                            ? '#e11d48'
-                            : '#eab308',
+                    borderLeftColor: '#eab308',
                   }}
                 >
                   <div className="flex items-start justify-between mb-1">
@@ -308,39 +375,6 @@ export default function CheckinRecepacao() {
                   </span>
                 </div>
               </div>
-
-              {/* Alertas Contextuais */}
-              {selectedAppointment.status === APPOINTMENT_STATUS.PENDENTE && (
-                <div className="mt-4 bg-orange-50 border border-orange-200 rounded-lg p-3 flex items-start gap-2">
-                  <AlertTriangle className="text-orange-600 flex-shrink-0 mt-0.5" size={20} />
-                  <div>
-                    <p className="font-semibold text-orange-900">Pendência!</p>
-                    <p className="text-sm text-orange-800">
-                      Conferir dados cadastrais e documentação
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {selectedAppointment.status === APPOINTMENT_STATUS.FINANCEIRO_PENDENTE && (
-                <div className="mt-4 bg-rose-50 border border-rose-200 rounded-lg p-3 flex items-start gap-2">
-                  <AlertTriangle className="text-rose-600 flex-shrink-0 mt-0.5" size={20} />
-                  <div>
-                    <p className="font-semibold text-rose-900">Financeiro Pendente!</p>
-                    <p className="text-sm text-rose-800">Gerar guia ou registrar pagamento</p>
-                  </div>
-                </div>
-              )}
-
-              {selectedAppointment.status === APPOINTMENT_STATUS.LIBERADO_PARA_ATENDIMENTO && (
-                <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-3 flex items-start gap-2">
-                  <CheckCircle2 className="text-green-600 flex-shrink-0 mt-0.5" size={20} />
-                  <div>
-                    <p className="font-semibold text-green-900">Pronto para Atendimento! ✅</p>
-                    <p className="text-sm text-green-800">Paciente está validado e liberado</p>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Tabs */}

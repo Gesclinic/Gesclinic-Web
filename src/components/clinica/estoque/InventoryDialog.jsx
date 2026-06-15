@@ -6,7 +6,7 @@ import LocationSelect from './LocationSelect';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { X } from 'lucide-react';
 
-export default function InventoryDialog({ open, onOpenChange, onSubmit, clinicId }) {
+export default function InventoryDialog({ open, onOpenChange, onSubmit, clinicId, presentation = 'dialog', onCancel = null }) {
   const { user } = useAuth();
   const [form, setForm] = useState({
     date: '',
@@ -53,11 +53,18 @@ export default function InventoryDialog({ open, onOpenChange, onSubmit, clinicId
     onSubmit(form);
   };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="app-dialog-shell app-dialog-shell--content app-dialog-shell--wide">
+  const handleCancel = () => {
+    if (onCancel) {
+      onCancel();
+      return;
+    }
+    onOpenChange?.(false);
+  };
+
+  const content = (
+    <div className={presentation === 'page' ? 'bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden' : 'app-dialog-shell app-dialog-shell--content app-dialog-shell--wide'}>
         {/* Header */}
-        <div className="bg-gradient-to-r from-purple-600 to-purple-800 text-white p-6 sticky top-0 z-20 flex items-center justify-between">
+        {presentation !== 'page' && <div className="bg-gradient-to-r from-purple-600 to-purple-800 text-white p-6 sticky top-0 z-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-3xl">📊</span>
             <div>
@@ -68,12 +75,12 @@ export default function InventoryDialog({ open, onOpenChange, onSubmit, clinicId
             </div>
           </div>
           <button
-            onClick={() => onOpenChange(false)}
+            onClick={handleCancel}
             className="p-1 hover:bg-purple-700 rounded transition"
           >
             <X className="w-5 h-5" />
           </button>
-        </div>
+        </div>}
 
         {/* CONTENT */}
         <form
@@ -266,7 +273,7 @@ export default function InventoryDialog({ open, onOpenChange, onSubmit, clinicId
           <Button
             type="button"
             variant="outline"
-            onClick={() => onOpenChange(false)}
+            onClick={handleCancel}
             className="px-6"
           >
             ✕ Cancelar
@@ -279,6 +286,17 @@ export default function InventoryDialog({ open, onOpenChange, onSubmit, clinicId
             ✓ Iniciar Inventário
           </Button>
         </div>
+      </div>
+  );
+
+  if (presentation === 'page') {
+    return content;
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-none w-auto">
+        {content}
       </DialogContent>
     </Dialog>
   );

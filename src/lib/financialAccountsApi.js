@@ -186,7 +186,8 @@ export const financialAccountsApi = {
     }
 
     if (filters.startDate && filters.endDate) {
-      query = query.gte('created_at', filters.startDate).lte('created_at', filters.endDate);
+      const dateField = filters.dateField || 'created_at';
+      query = query.gte(dateField, filters.startDate).lte(dateField, filters.endDate);
     }
 
     if (filters.accountId) {
@@ -240,7 +241,8 @@ export const financialAccountsApi = {
     const transactions = await this.listTransactions(clinicId, {
       startDate,
       endDate,
-      status: ['processed', 'paid'],
+      status: ['pending', 'scheduled', 'processed', 'paid'],
+      dateField: 'competency_date',
     });
 
     const dre = {

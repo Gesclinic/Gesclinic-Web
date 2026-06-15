@@ -59,7 +59,7 @@ export default function FinancialIntegrationStatus() {
         setAppointments(filtered);
 
         // Calculate summary
-        const withAR = filtered.filter((apt) => apt.ar_receivables?.length > 0).length;
+        const withAR = filtered.filter((apt) => apt.ar_invoices?.length > 0).length;
         const withGuide = filtered.filter((apt) => apt.billing_guides?.length > 0).length;
         const completed = filtered.filter(
           (apt) =>
@@ -240,7 +240,7 @@ export default function FinancialIntegrationStatus() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {apt.ar_receivables?.length > 0 && (
+                  {apt.ar_invoices?.length > 0 && (
                     <Badge
                       variant="outline"
                       className="text-xs bg-green-50 text-green-700 border-green-200"

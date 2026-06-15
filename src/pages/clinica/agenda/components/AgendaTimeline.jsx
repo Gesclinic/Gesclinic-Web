@@ -72,7 +72,7 @@ function TimelineColumnas({
                 {Object.entries(groups).map(([key, group]) => {
                   const slotAppointments = group.appointments.filter(
                     (apt) =>
-                      (apt.scheduled_time?.substring(0, 5) || apt.start_time?.substring(0, 5)) ===
+                      (apt.time || apt.startTime || apt.scheduled_time?.substring(0, 5) || apt.start_time?.substring(0, 5)) ===
                       time,
                   );
 
@@ -160,6 +160,7 @@ function TimelineColumnas({
                                   },
                                 );
                               }
+                              console.log('🔥 [TimelineColumnas] Passando slot LIMPO para onSlotClick:', slotData);
                               onSlotClick(slotData);
                             }}
                             onMouseDown={(e) => {
@@ -210,6 +211,34 @@ export default function AgendaTimeline({
   slotDuration = 30,
   filteredProfessionalId = null,
 }) {
+  console.log('🔍 [AgendaTimeline] Renderizando com:', {
+    viewMode,
+    appointmentsCount: appointments.length,
+    date,
+    firstAppointment: appointments[0] ? {
+      id: appointments[0].id,
+      time: appointments[0].scheduled_time || appointments[0].time,
+      patientName: appointments[0].patientName || appointments[0].patient_name,
+      fields: Object.keys(appointments[0]).slice(0, 10)
+    } : null,
+  });
+
+  if (appointments.length === 0 && viewMode === 'geral') {
+    return (
+      <div style={{
+        padding: '20px',
+        backgroundColor: '#fff3cd',
+        border: '1px solid #ffc107',
+        borderRadius: '4px',
+        margin: '20px',
+        fontSize: '16px',
+        fontWeight: 'bold',
+        color: '#856404'
+      }}>
+        🔍 DEBUG: AgendaTimeline renderizado mas sem appointments. viewMode={viewMode}
+      </div>
+    );
+  }
   // Gerar slots de horários (ex: 08:00, 08:30, 09:00, etc.)
   const timeSlots = useMemo(() => {
     const slots = [];
@@ -242,7 +271,7 @@ export default function AgendaTimeline({
           if (apt.professional_id && !uniqueProfessionals[apt.professional_id]) {
             uniqueProfessionals[apt.professional_id] = {
               id: apt.professional_id,
-              name: apt.professional_name || `Profissional ${apt.professional_id.substring(0, 8)}`,
+              name: apt.professionalName || apt.professional_name || `Profissional ${apt.professional_id.substring(0, 8)}`,
             };
           }
         });
@@ -380,8 +409,10 @@ function TimelineGeral({
 
   const appointmentsByTime = React.useMemo(() => {
     const map = {};
+
     appointments.forEach((apt) => {
-      const time = apt.scheduled_time?.substring(0, 5) || apt.start_time?.substring(0, 5);
+      // Corrigir: mapFromDatabase cria 'time' ou 'startTime', não 'scheduled_time'
+      const time = apt.time || apt.startTime || apt.scheduled_time?.substring(0, 5) || apt.start_time?.substring(0, 5);
       if (!time) {
         console.warn('⚠️ Agendamento sem horário:', apt.id, apt);
         return;
@@ -528,10 +559,10 @@ function TimelineGeral({
                   ) : (
                     <td></td>
                   )}
-                  <td className="px-4 py-3 text-sm font-bold text-gray-900">{apt.patient_name}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{apt.professional_name}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{apt.service_name}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{apt.room_name}</td>
+                  <td className="px-4 py-3 text-sm font-bold text-gray-900">{apt.patientName || apt.patient_name}</td>
+                  <td className="px-4 py-3 text-sm text-gray-700">{apt.professionalName || apt.professional_name}</td>
+                  <td className="px-4 py-3 text-sm text-gray-700">{apt.serviceName || apt.service_name}</td>
+                  <td className="px-4 py-3 text-sm text-gray-700">{apt.roomName || apt.room_name}</td>
                   <td className="px-4 py-3">
                     <span
                       className={`inline-block px-2 py-1 text-xs font-bold rounded ${getStatusBadgeColor(apt.status)}`}

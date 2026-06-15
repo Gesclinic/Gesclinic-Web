@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PageLayout from '@/components/ui/PageLayout';
 import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 import { Card } from '@/components/ui/card';
@@ -7,7 +8,6 @@ import { ClipboardCheck, Filter, Download, MoreVertical } from 'lucide-react';
 import { useClinicContext } from '@/contexts/useClinicContext';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useToast } from '@/components/ui/use-toast';
-import InventoryDialog from '@/components/clinica/estoque/InventoryDialog';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -23,10 +23,10 @@ export default function Inventario() {
   ]);
 
   const { clinicId } = useClinicContext();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
@@ -61,21 +61,6 @@ export default function Inventario() {
     }
   };
 
-  const handleSubmit = async (form) => {
-    try {
-      // TODO: Implement API call to create inventory
-      toast({ title: 'Inventário iniciado' });
-      setDialogOpen(false);
-      await loadInventories();
-    } catch (err) {
-      toast({
-        variant: 'destructive',
-        title: 'Erro ao criar inventário',
-        description: err.message,
-      });
-    }
-  };
-
   const setPeriod = (days) => {
     const today = new Date();
     const end = new Date(today);
@@ -95,7 +80,7 @@ export default function Inventario() {
         <div className="flex gap-2">
           <Button
             className="bg-purple-600 text-white hover:bg-purple-700 flex items-center"
-            onClick={() => setDialogOpen(true)}
+            onClick={() => navigate('/clinica/estoque/inventario/novo')}
           >
             <ClipboardCheck className="mr-2 w-4 h-4" /> Novo Inventário
           </Button>
@@ -214,7 +199,7 @@ export default function Inventario() {
             </p>
             <Button
               className="bg-purple-600 text-white hover:bg-purple-700"
-              onClick={() => setDialogOpen(true)}
+              onClick={() => navigate('/clinica/estoque/inventario/novo')}
             >
               <ClipboardCheck className="mr-2 w-4 h-4" /> Iniciar Inventário
             </Button>
@@ -281,13 +266,6 @@ export default function Inventario() {
         )}
       </Card>
 
-      {/* DIALOG */}
-      <InventoryDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        onSubmit={handleSubmit}
-        clinicId={clinicId}
-      />
     </PageLayout>
   );
 }

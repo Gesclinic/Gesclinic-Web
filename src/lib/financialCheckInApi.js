@@ -11,6 +11,17 @@ import {
   FINANCIAL_EVENT_TYPES,
   RELATED_ENTITY_TYPES,
 } from './auditFinancialApi';
+import { createReceivable, listReceivables } from './receivablesApi.js';
+
+function dateOnly(value = new Date()) {
+  return new Date(value).toISOString().split('T')[0];
+}
+
+function addDays(date, days) {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
 
 /**
  * Salva dados financeiros do check-in e gera documento apropriado
@@ -150,12 +161,8 @@ const createAccountsReceivable = async (appointmentId, appointment, financialDat
       const { data: service } = await supabase
         .from('services')
         .select('price, name')
-        .eq('id', appointment.service_id);
-
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
+        .eq('id', appointment.service_id)
+        .single();
 
       if (service?.price) {
         finalValue = parseFloat(service.price);
@@ -174,51 +181,40 @@ const createAccountsReceivable = async (appointmentId, appointment, financialDat
       `   Valores: Bruto=${finalValue}, Desconto=${discount}, Copagamento=${copayment}, Líquido=${netValue}`,
     );
 
-    // 2️⃣ Inserir Conta a Receber na tabela correta (ar_receivables)
-    const { data: receivable, error: receivableError } = await supabase
-      .from('ar_receivables')
-      .insert([
-        {
-          clinic_id: appointment.clinic_id,
-          appointment_id: appointmentId,
-          paciente_id: appointment.patient_id,
-          payer_name: financialData.patient_name || 'Paciente Particular',
-          descricao: financialData.patient_name
-            ? `Atendimento de ${financialData.patient_name} - ${new Date(appointment.appointment_date).toLocaleDateString('pt-BR')}`
-            : `Atendimento - ${new Date(appointment.appointment_date).toLocaleDateString('pt-BR')}`,
-          valor_bruto: finalValue,
-          descontos: discount,
-          data_emissao: new Date().toISOString().split('T')[0],
-          data_vencimento: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000)
-            .toISOString()
-            .split('T')[0],
-          status: 'open',
-          forma_prevista: financialData.payment_method || null,
-          origem: 'Agenda',
-          profissional_id: appointment.professional_id,
-          servico_id: appointment.service_id,
-          parcelado: false,
-        },
-      ])
-      .select();
+    const receivable = await createReceivable(appointment.clinic_id, {
+      appointment_id: appointmentId,
+      patient_id: appointment.patient_id,
+      patient_name: financialData.patient_name || 'Paciente Particular',
+      payer_name: financialData.patient_name || 'Paciente Particular',
+      description: financialData.patient_name
+        ? `Atendimento de ${financialData.patient_name} - ${new Date(appointment.appointment_date).toLocaleDateString('pt-BR')}`
+        : `Atendimento - ${new Date(appointment.appointment_date).toLocaleDateString('pt-BR')}`,
+      amount: finalValue,
+      discount_value: discount,
+      net_value: netValue,
+      invoice_date: dateOnly(),
+      due_date: dateOnly(addDays(new Date(), 5)),
+      status: 'open',
+      payment_method: financialData.payment_method || null,
+      origem: 'Agenda',
+      professional_id: appointment.professional_id,
+      procedure_id: appointment.service_id,
+      payer_type: 'PARTICULAR',
+      metadata: {
+        source: 'financial_check_in',
+        copayment,
+        discount,
+      },
+    });
 
-    if (receivableError) {
-      console.error('❌ Erro ao criar Conta a Receber:', receivableError.message);
-      return {
-        type: 'none',
-        data: null,
-        error: receivableError.message,
-      };
-    }
-
-    console.log('✅ Conta a Receber criada:', receivable[0]?.id);
+    console.log('✅ Conta a Receber criada:', receivable?.id);
 
     // Registrar auditoria
     await logAppointmentFinancialAudit({
       appointmentId: appointmentId,
       financialEventType: FINANCIAL_EVENT_TYPES.RECEIVABLE_CREATED,
-      relatedEntity: RELATED_ENTITY_TYPES.ACCOUNTS_RECEIVABLE,
-      relatedEntityId: receivable[0]?.id,
+      relatedEntity: RELATED_ENTITY_TYPES.AR_INVOICE,
+      relatedEntityId: receivable?.id,
       amount: netValue,
       status: 'open',
       context: {
@@ -231,7 +227,7 @@ const createAccountsReceivable = async (appointmentId, appointment, financialDat
     return {
       type: 'receivable',
       data: {
-        receivable_id: receivable[0]?.id,
+        receivable_id: receivable?.id,
         amount: netValue,
       },
     };
@@ -259,12 +255,8 @@ const createBillingGuide = async (appointmentId, appointment, financialData) => 
       const { data: service } = await supabase
         .from('services')
         .select('price')
-        .eq('id', appointment.service_id);
-
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
+        .eq('id', appointment.service_id)
+        .single();
 
       finalValue = service?.price || 0;
     }
@@ -367,17 +359,14 @@ const createBillingGuide = async (appointmentId, appointment, financialData) => 
  */
 export const listPendingReceivables = async (clinicId) => {
   try {
-    const { data, error } = await supabase
-      .from('ar_receivables')
-      .select('*')
-      .eq('clinic_id', clinicId)
-      .eq('status', 'open')
-      .order('data_vencimento', { ascending: true });
+    const rows = await listReceivables({
+      clinicId,
+      statusList: ['open', 'pending'],
+      origin: 'Agenda',
+      limit: 5000,
+    });
 
-    if (error) {
-      throw error;
-    }
-    return data || [];
+    return (rows || []).sort((left, right) => String(left.due_date || '').localeCompare(String(right.due_date || '')));
   } catch (err) {
     console.error('❌ Erro ao listar Contas a Receber:', err);
     return [];

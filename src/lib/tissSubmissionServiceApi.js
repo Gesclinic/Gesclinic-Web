@@ -19,6 +19,52 @@ import {
   retryTISSSubmission,
 } from '@/lib/tissApi';
 
+function firstRelated(value) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+async function getOrCreateTISSSubmission(guideId, clinicId) {
+  const { data: submissions, error: fetchError } = await supabase
+    .from('tiss_submissions')
+    .select('id, xml_content')
+    .eq('guide_id', guideId)
+    .eq('clinic_id', clinicId)
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  if (fetchError) {
+    throw fetchError;
+  }
+
+  if (submissions?.[0]?.xml_content) {
+    return submissions[0];
+  }
+
+  const guideData = await fetchCompleteGuideData(guideId, clinicId);
+  const xmlContent = generateTISSXML(guideData);
+  const submissionId = `TISS-${guideId}-${Date.now()}`;
+
+  const { data: created, error: insertError } = await supabase
+    .from('tiss_submissions')
+    .insert({
+      id: submissionId,
+      clinic_id: clinicId,
+      guide_id: guideId,
+      xml_content: xmlContent,
+      status: 'pending',
+      attempt_count: 1,
+      last_attempt_at: new Date().toISOString(),
+    })
+    .select('id, xml_content')
+    .single();
+
+  if (insertError) {
+    throw insertError;
+  }
+
+  return created;
+}
+
 /**
  * ============================================================
  * 1. SUBMISSÃO CENTRALIZADA COM ROTEAMENTO POR OPERADORA
@@ -124,43 +170,7 @@ export async function submitGuideWithOperatorRouting(guideId, clinicId) {
  */
 async function submitViaHTTPAPI(guideId, clinicId, payer) {
   try {
-    // 1. Preparar XML
-    const { data: xmlData, error: xmlError } = await supabase
-      .from('tiss_submissions')
-      .select('xml_content')
-      .eq('guide_id', guideId)
-      .eq('clinic_id', clinicId)
-      .order('created_at', { ascending: false })
-      .limit(1);
-
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
-
-    if (xmlError || !xmlData) {
-      // Gerar XML se ainda não existir
-      const guideData = await fetchCompleteGuideData(guideId, clinicId);
-      const xmlContent = generateTISSXML(guideData);
-
-      // Salvar na DB
-      await supabase.from('tiss_submissions').insert({
-        id: `TISS-${guideId}-${Date.now()}`,
-        clinic_id: clinicId,
-        guide_id: guideId,
-        xml_content: xmlContent,
-        status: 'pending',
-        attempt_count: 1,
-        last_attempt_at: new Date().toISOString(),
-      });
-
-      return {
-        success: true,
-        method: 'http',
-        message: 'XML preparado para envio. Aguardando transmissão...',
-        xmlGenerated: true,
-      };
-    }
+    const submission = await getOrCreateTISSSubmission(guideId, clinicId);
 
     // 2. Preparar request HTTP (simulado - em produção integrar com SDK de cada operadora)
     const response = await fetch(payer.tiss_endpoint, {
@@ -169,7 +179,7 @@ async function submitViaHTTPAPI(guideId, clinicId, payer) {
         'Content-Type': 'application/xml',
         Authorization: `Bearer ${btoa(`${payer.tiss_username}:${payer.tiss_password}`)}`,
       },
-      body: xmlData.xml_content,
+      body: submission.xml_content,
     });
 
     if (!response.ok) {
@@ -193,7 +203,7 @@ async function submitViaHTTPAPI(guideId, clinicId, payer) {
       success: true,
       method: 'http',
       message: 'Guia enviada via HTTP API',
-      submissionId: responseData.submissionId || 'http-sent',
+      submissionId: responseData.submissionId || submission.id,
     };
   } catch (error) {
     console.error('[submitViaHTTPAPI]', error);
@@ -217,22 +227,13 @@ async function submitViaHTTPSFTP(guideId, clinicId, payer) {
   // 2. Ou usar webDAV como alternativa
   // Por agora, retornar instrução manual
 
-  const xmlData = await supabase
-    .from('tiss_submissions')
-    .select('xml_content')
-    .eq('guide_id', guideId)
-    .eq('clinic_id', clinicId)
-    .limit(1);
-
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
+  const submission = await getOrCreateTISSSubmission(guideId, clinicId);
 
   return {
     success: true,
     method: 'sftp',
     message: `Guia preparada para envio SFTP. Arquivo: TISS-${guideId}.xml`,
+    submissionId: submission.id,
     manualStep: true,
     instructions: `
       1. Conectar ao SFTP: ${payer.tiss_endpoint}
@@ -252,22 +253,13 @@ async function submitViaHTTPSFTP(guideId, clinicId, payer) {
  */
 async function generateForPortalSubmission(guideId, clinicId, payer) {
   try {
-    const xmlData = await supabase
-      .from('tiss_submissions')
-      .select('xml_content')
-      .eq('guide_id', guideId)
-      .eq('clinic_id', clinicId)
-      .limit(1);
-
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
+    const submission = await getOrCreateTISSSubmission(guideId, clinicId);
 
     return {
       success: true,
       method: 'portal',
       message: `Guia preparada para envio manual via portal ${payer.name}`,
+      submissionId: submission.id,
       manualStep: true,
       portalUrl: payer.tiss_endpoint,
       xmlFileName: `TISS-${guideId}.xml`,
@@ -474,22 +466,26 @@ async function fetchCompleteGuideData(guideId, clinicId) {
     `,
     )
     .eq('id', guideId)
-    .eq('clinic_id', clinicId);
-
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
+    .eq('clinic_id', clinicId)
+    .single();
 
   if (error) {
     throw error;
   }
 
-  const appoData = guide.appointments[0];
+  if (!guide) {
+    throw new Error('Guia não encontrada para geração TISS');
+  }
+
+  const appoData = firstRelated(guide.appointments);
+  if (!appoData) {
+    throw new Error('Guia sem atendimento vinculado para geração TISS');
+  }
+
   return {
-    patient: appoData.patients[0],
-    professional: appoData.professionals[0],
-    service: appoData.services[0],
+    patient: firstRelated(appoData.patients),
+    professional: firstRelated(appoData.professionals),
+    service: firstRelated(appoData.services),
     payer: guide.health_insurances,
     appointment: appoData,
   };

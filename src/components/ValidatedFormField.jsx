@@ -78,14 +78,17 @@ export function ValidatedFormField({
   // Renderizar input baseado no type
   const renderInput = () => {
     if (type === 'select' && options) {
+      // Ensure value is never an empty string - use undefined instead for unselected state
+      const selectValue = (value && String(value).trim()) || undefined;
+
       return (
-        <Select value={value || ''} onValueChange={handleChange} disabled={disabled}>
+        <Select value={selectValue} onValueChange={handleChange} disabled={disabled}>
           <SelectTrigger className={baseInputClass}>
             <SelectValue placeholder={placeholder || 'Selecione...'} />
           </SelectTrigger>
           <SelectContent>
             {options.map((option) => (
-              <SelectItem key={option.value} value={option.value} disabled={option.disabled}>
+              <SelectItem key={option.value} value={String(option.value)} disabled={option.disabled}>
                 {option.label}
               </SelectItem>
             ))}

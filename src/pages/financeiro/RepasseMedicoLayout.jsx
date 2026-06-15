@@ -5,10 +5,12 @@ import RepasseMedicoPage from './RepasseMedicoPage';
 import RepasseRegrasPage from './RepasseRegrasPage';
 import RepasseDashboardAnalyticsPage from './RepasseDashboardAnalyticsPage';
 import RepasseAutomacaoPage from './RepasseAutomacaoPage';
+import BankAccountsManager from '@/pages/clinica/configuracoes/BankAccountsManager';
 
 export default function RepasseMedicoLayout() {
   const [searchParams, setSearchParams] = useSearchParams();
   const currentTab = searchParams.get('tab') || 'visao-geral';
+  const [subTab, setSubTab] = useState('regras');
 
   const handleTabChange = (tab) => {
     setSearchParams({ tab });
@@ -63,7 +65,35 @@ export default function RepasseMedicoLayout() {
             </TabsContent>
 
             <TabsContent value="regras-avancadas" className="mt-0">
-              <RepasseRegrasPage />
+              {/* Sub-abas dentro de Regras Avançadas */}
+              <div className="bg-white rounded-lg border border-gray-200">
+                <Tabs value={subTab} onValueChange={setSubTab} className="w-full">
+                  <div className="border-b border-gray-200 px-6">
+                    <TabsList className="w-full justify-start bg-transparent border-b-0">
+                      <TabsTrigger
+                        value="regras"
+                        className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 rounded-none border-b-2 border-transparent"
+                      >
+                        🔥 Regras de Repasse
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="contas"
+                        className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 rounded-none border-b-2 border-transparent"
+                      >
+                        💳 Contas Bancárias
+                      </TabsTrigger>
+                    </TabsList>
+                  </div>
+                  <div className="p-6">
+                    <TabsContent value="regras" className="mt-0">
+                      <RepasseRegrasPage />
+                    </TabsContent>
+                    <TabsContent value="contas" className="mt-0">
+                      <BankAccountsManager />
+                    </TabsContent>
+                  </div>
+                </Tabs>
+              </div>
             </TabsContent>
 
             <TabsContent value="analytics" className="mt-0">

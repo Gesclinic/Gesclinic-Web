@@ -111,6 +111,7 @@ export const PLANS_FEATURES = {
       // Financeiro - INCLUÍDO
       financeiro: {
         dashboard: true,
+        lancamentos: true,
         contasPagar: true,
         contasReceber: true,
         fluxoCaixa: true,
@@ -201,6 +202,7 @@ export const PLANS_FEATURES = {
       // Financeiro - COMPLETO + MULTIUNIDADES
       financeiro: {
         dashboard: true,
+        lancamentos: true,
         contasPagar: true,
         contasReceber: true,
         fluxoCaixa: true,

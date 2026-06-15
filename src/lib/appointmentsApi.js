@@ -828,7 +828,7 @@ export async function updateAppointment(id, payload) {
 
   console.log('\n✅ [updateAppointment] UPDATE enviado com sucesso!');
   console.log('   Result length:', result?.length);
-  
+
   if (result && result.length > 0) {
     console.log('\n✅ [SUCESSO COM SELECT] Dados retornados do Supabase:');
     console.log('   Dados críticos:', {
@@ -904,9 +904,9 @@ export async function deleteAppointment(id) {
     // 🚀 BLOCKER 4 FIX: Cascade delete financial records first
     console.log('🔄 [DELETE] Limpando registros financeiros associados...');
 
-    // Delete ar_receivables (cascade FK will delete medical_production → medical_repasse)
+    // Delete current operational receivables first.
     const { error: arError } = await supabase
-      .from('ar_receivables')
+      .from('ar_invoices')
       .delete()
       .eq('appointment_id', id);
 
@@ -914,7 +914,7 @@ export async function deleteAppointment(id) {
       // PGRST116 = no rows deleted
       console.warn('⚠️ Erro ao deletar AR:', arError);
     } else {
-      console.log('✅ AR e registros financeiros deletados (cascade)');
+      console.log('✅ Recebíveis atuais deletados');
     }
 
     // Delete billing_guides (cascade FK added 2026-04-09)
@@ -948,7 +948,7 @@ export async function deleteAppointment(id) {
 /**
  * 🔍 FUNÇÃO DE VALIDAÇÃO: Verificar se UPDATE foi realmente salvo no banco
  * Útil para debug de RLS ou problemas de persistência
- * 
+ *
  * @param {string} appointmentId - ID do agendamento
  * @param {Object} expectedFields - Campos que deveriam ter sido atualizados
  * @returns {Object} Dados atuais do banco com comparação
@@ -956,12 +956,12 @@ export async function deleteAppointment(id) {
 export async function validateAppointmentSaved(appointmentId, expectedFields) {
   console.log('\n🔍 [VALIDAÇÃO] Verificando se UPDATE foi realmente salvo...');
   console.log('   Verificando appointment:', appointmentId);
-  
+
   try {
     const { data, error } = await supabase
       .from('appointments')
       .select(`
-        id, room_id, payer_id, scheduled_date, scheduled_time, 
+        id, room_id, payer_id, scheduled_date, scheduled_time,
         professional_id, service_id, duration, value,
         rooms (id, name),
         payers (id, name),
@@ -970,12 +970,12 @@ export async function validateAppointmentSaved(appointmentId, expectedFields) {
       `)
       .eq('id', appointmentId)
       .single();
-    
+
     if (error) {
       console.error('❌ [VALIDAÇÃO] Erro ao buscar dados:', error);
       return { valid: false, error: error.message, data: null };
     }
-    
+
     console.log('📊 [VALIDAÇÃO] Dados atuais no banco:');
     const validation = {
       id: data.id,
@@ -1211,13 +1211,16 @@ export async function updateAppointmentWithServices(
         clinic_id: payload.clinicId || payload.clinic_id,
         appointment_id: appointmentId,
         service_id: service.service_id,
-        value: parseFloat(service.value || 0),
+        value: parseFloat(service.value ?? service.unit_price ?? service.price ?? 0),
         discount: parseFloat(service.discount || 0),
         billing_type: service.billing_type || 'per_consultation',
         quantity: parseInt(service.quantity || 1),
         sessions_completed: parseInt(service.sessions_completed || 0),
         status: service.status || 'pending',
         sequence_order: index,
+        professional_percentage: parseFloat(service.professional_percentage || 0),
+        professional_discount: parseFloat(service.professional_discount || service.professional_value || 0),
+        professional_repay_type: service.professional_repay_type || service.repay_type || 'percentage',
       }));
 
     const { data: servicesResult, error: servicesError } = await supabase
@@ -1265,7 +1268,7 @@ export async function getAppointmentServices(appointmentId) {
       .select(
         `
         *,
-        services (id, name, tuss_code)
+        services (id, name, code, tuss_code)
       `,
       )
       .eq('appointment_id', appointmentId)
@@ -1276,10 +1279,11 @@ export async function getAppointmentServices(appointmentId) {
       throw error;
     }
 
-    // 🔄 Mapear dados para incluir service_name
+    // 🔄 Mapear dados para incluir service_name e service_code (usando tuss_code do cadastro)
     const mappedData = (data || []).map((s) => ({
       ...s,
       service_name: s.services?.name || '',
+      service_code: s.services?.tuss_code || s.services?.code || '',
     }));
 
     console.log('📖 [getAppointmentServices] Resultado:', {
@@ -1289,6 +1293,7 @@ export async function getAppointmentServices(appointmentId) {
         mappedData?.map((s) => ({
           id: s.id,
           service_id: s.service_id,
+          service_code: s.service_code,
           service_name: s.service_name,
           value: s.value,
           quantity: s.quantity,
@@ -1355,11 +1360,6 @@ export async function syncAppointmentServices(appointmentId, appointmentServices
       throw new Error('appointmentId é obrigatório');
     }
 
-    if (!appointmentServices || appointmentServices.length === 0) {
-      console.log('ℹ️ [syncAppointmentServices] Array vazio - nada para sincronizar');
-      return [];
-    }
-
     // 0. Buscar clinic_id do agendamento
     const { data: appointment, error: fetchError } = await supabase
       .from('appointments')
@@ -1374,9 +1374,23 @@ export async function syncAppointmentServices(appointmentId, appointmentServices
     const clinicId = appointment.clinic_id;
     console.log('🔍 [syncAppointmentServices] clinic_id:', clinicId);
 
+    if (!appointmentServices || appointmentServices.length === 0) {
+      const { error: deleteAllError } = await supabase
+        .from('appointment_services')
+        .delete()
+        .eq('appointment_id', appointmentId);
+
+      if (deleteAllError) {
+        throw deleteAllError;
+      }
+
+      console.log('ℹ️ [syncAppointmentServices] Todos os serviços foram removidos');
+      return [];
+    }
+
     // 1. Deletar serviços antigos (onde ID começa com 'new-' são novos, outros são do DB)
     const oldServiceIds = appointmentServices
-      .filter((s) => !s.id?.startsWith('new-'))
+      .filter((s) => s.id && !String(s.id).startsWith('new-') && !String(s.id).startsWith('temp-'))
       .map((s) => s.id);
 
     if (oldServiceIds.length > 0) {
@@ -1405,7 +1419,7 @@ export async function syncAppointmentServices(appointmentId, appointmentServices
         value: parseFloat(service.value || 0),
         discount: parseFloat(service.discount || 0),
         billing_type: service.billing_type || 'per_consultation',
-        quantity: parseInt(service.quantity || 1),
+        quantity: parseFloat(service.quantity || 1),
         sessions_completed: parseInt(service.sessions_completed || 0),
         status: service.status || 'pending',
         sequence_order: index,
@@ -1471,5 +1485,364 @@ export async function updateAppointmentServiceSessions(appointmentServiceId, com
   } catch (error) {
     console.error('❌ Erro ao atualizar sessões:', error);
     throw error;
+  }
+}
+
+// ============================================================
+// FASE 6-8: PREPARACIÓN ARQUITECTURAL
+// Convênios, Repasse Médico, Produção Médica
+// ============================================================
+
+/**
+ * FASE 6: Sincronizar informações de convênio para serviço
+ * @param {string} serviceId - ID do appointment_service
+ * @param {string} planId - ID do plano/convênio
+ * @returns {Promise<boolean>} Sucesso da operação
+ */
+export async function syncPlanInfoToService(serviceId, planId) {
+  try {
+    console.log('🔄 [FASE 6] Sincronizando informações de convênio:', serviceId, '→', planId);
+
+    const result = await supabase.rpc('sync_plan_info_to_service', {
+      p_service_id: serviceId,
+      p_plan_id: planId,
+    });
+
+    if (result.error) throw result.error;
+    console.log('✅ [FASE 6] Informações de convênio sincronizadas');
+    return true;
+  } catch (err) {
+    console.error('❌ [FASE 6] Erro ao sincronizar informações de convênio:', err);
+    throw err;
+  }
+}
+
+/**
+ * FASE 6: Atualizar número de autorização
+ * @param {string} serviceId - ID do appointment_service
+ * @param {string} authorizationNumber - Número de autorização
+ * @returns {Promise<Object>} Serviço atualizado
+ */
+export async function updateAuthorizationNumber(serviceId, authorizationNumber) {
+  try {
+    console.log('🔐 [FASE 6] Atualizando autorização:', serviceId);
+
+    const { data, error } = await supabase
+      .from('appointment_services')
+      .update({
+        authorization_number: authorizationNumber,
+        authorization_verified_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', serviceId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    console.log('✅ [FASE 6] Autorização atualizada');
+    return data;
+  } catch (err) {
+    console.error('❌ [FASE 6] Erro ao atualizar autorização:', err);
+    throw err;
+  }
+}
+
+/**
+ * FASE 6: Buscar preço de serviço por convênio
+ * @param {string} serviceId - ID do serviço
+ * @param {string} planId - ID do plano
+ * @returns {Promise<Object|null>} Preço do serviço ou null
+ */
+export async function getServicePriceByPlan(serviceId, planId) {
+  try {
+    if (!planId) {
+      console.log('⚠️ [FASE 6] planId não fornecido, retornando null');
+      return null;
+    }
+
+    const { data, error } = await supabase
+      .from('service_prices')
+      .select('id, service_id, plan_id, price, active')
+      .eq('service_id', serviceId)
+      .eq('plan_id', planId)
+      .eq('active', true)
+      .single();
+
+    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+      throw error;
+    }
+
+    console.log('💰 [FASE 6] Preço de serviço encontrado:', data?.price || 'Não encontrado');
+    return data || null;
+  } catch (err) {
+    console.error('❌ [FASE 6] Erro ao buscar preço de convênio:', err);
+    return null;
+  }
+}
+
+/**
+ * FASE 7: Atualizar informações de repasse médico
+ * @param {string} serviceId - ID do appointment_service
+ * @param {Object} repayInfo - {percentage, discount, repayType}
+ * @returns {Promise<Object>} Serviço atualizado
+ */
+export async function updateProfessionalRepay(serviceId, repayInfo) {
+  try {
+    const { percentage = 0, discount = 0, repayType = 'percentage' } = repayInfo;
+
+    console.log('👨‍⚕️ [FASE 7] Atualizando repasse médico:', serviceId, '→', repayType);
+
+    const { data, error } = await supabase
+      .from('appointment_services')
+      .update({
+        professional_percentage: percentage,
+        professional_discount: discount,
+        professional_repay_type: repayType,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', serviceId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    console.log('✅ [FASE 7] Repasse médico atualizado');
+    return data;
+  } catch (err) {
+    console.error('❌ [FASE 7] Erro ao atualizar repasse médico:', err);
+    throw err;
+  }
+}
+
+/**
+ * FASE 7: Calcular valor de repasse médico via RPC
+ * @param {number} value - Valor do serviço
+ * @param {number} percentage - Percentual (FASE 7)
+ * @param {number} discount - Desconto fixo (FASE 7)
+ * @param {string} repayType - Tipo: 'percentage' ou 'fixed'
+ * @returns {Promise<number>} Valor do repasse calculado
+ */
+export async function calculateProfessionalRepay(value, percentage, discount, repayType) {
+  try {
+    console.log('🧮 [FASE 7] Calculando repasse médico');
+
+    const { data, error } = await supabase.rpc('calculate_professional_repay', {
+      p_value: value,
+      p_percentage: percentage,
+      p_discount: discount,
+      p_repay_type: repayType,
+    });
+
+    if (error) throw error;
+    console.log('✅ [FASE 7] Repasse calculado:', data);
+    return data || 0;
+  } catch (err) {
+    console.error('❌ [FASE 7] Erro ao calcular repasse médico:', err);
+    return 0;
+  }
+}
+
+/**
+ * FASE 8: Atualizar status do serviço
+ * @param {string} serviceId - ID do appointment_service
+ * @param {string} status - Status: 'pending', 'partial', 'completed', 'cancelled'
+ * @returns {Promise<Object>} Serviço atualizado
+ */
+export async function updateServiceStatus(serviceId, status) {
+  try {
+    console.log('📊 [FASE 8] Atualizando status de serviço:', serviceId, '→', status);
+
+    const validStatuses = ['pending', 'partial', 'completed', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      throw new Error(`Status inválido: ${status}`);
+    }
+
+    const { data, error } = await supabase
+      .from('appointment_services')
+      .update({
+        status,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', serviceId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    console.log('✅ [FASE 8] Status do serviço atualizado');
+    return data;
+  } catch (err) {
+    console.error('❌ [FASE 8] Erro ao atualizar status de serviço:', err);
+    throw err;
+  }
+}
+
+/**
+ * FASE 8: Atualizar link com produção médica
+ * @param {string} serviceId - ID do appointment_service
+ * @param {string} medicalProductionId - ID do registro de produção médica
+ * @returns {Promise<Object>} Serviço atualizado
+ */
+export async function linkMedicalProduction(serviceId, medicalProductionId) {
+  try {
+    console.log('🏥 [FASE 8] Vinculando produção médica:', serviceId, '→', medicalProductionId);
+
+    const { data, error } = await supabase
+      .from('appointment_services')
+      .update({
+        medical_production_id: medicalProductionId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', serviceId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    console.log('✅ [FASE 8] Produção médica vinculada');
+    return data;
+  } catch (err) {
+    console.error('❌ [FASE 8] Erro ao vincular produção médica:', err);
+    throw err;
+  }
+}
+
+/**
+ * FASE 9: Finalizar appointment e gerar receivable
+ * @param {string} appointmentId - ID do appointment
+ * @returns {Promise<Object>} Appointment atualizado
+ */
+export async function finalizeAppointmentWithReceivable(appointmentId) {
+  try {
+    console.log('💰 [FASE 9] Finalizando appointment e gerando receivable:', appointmentId);
+
+    const { data: appointment, error: updateError } = await supabase
+      .from('appointments')
+      .update({ status: 'attended', updated_at: new Date().toISOString() })
+      .eq('id', appointmentId)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
+    console.log('✅ [FASE 9] Appointment finalizado, receivable criado automaticamente');
+    return appointment;
+  } catch (err) {
+    console.error('❌ [FASE 9] Erro ao finalizar appointment:', err);
+    throw err;
+  }
+}
+
+/**
+ * FASE 10: Sincronizar fluxo de caixa para receivable
+ * @param {string} receivableId - ID do receivable
+ * @param {string} paymentMethod - Método de pagamento (cash, check, transfer, etc)
+ * @returns {Promise<Object>} Receivable marcado como pago
+ */
+export async function markReceivableAsPaid(receivableId, paymentMethod = 'cash') {
+  try {
+    console.log('💳 [FASE 10] Marcando receivable como pago:', receivableId);
+
+    const { data: receivable, error: error } = await supabase
+      .from('ar_invoices')
+      .update({
+        status: 'received',
+        payment_method: paymentMethod,
+        received_date: new Date().toISOString().split('T')[0],
+        received_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', receivableId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    console.log('✅ [FASE 10] Receivable marcado como pago, fluxo de caixa sincronizado');
+    return receivable;
+  } catch (err) {
+    console.error('❌ [FASE 10] Erro ao marcar receivable como pago:', err);
+    throw err;
+  }
+}
+
+/**
+ * FASE 11: Obter relatório de produção
+ * @param {string} clinicId - ID da clínica
+ * @param {string} startDate - Data inicial (ISO)
+ * @param {string} endDate - Data final (ISO)
+ * @returns {Promise<Array>} Dados de produção por profissional
+ */
+export async function getProductionReport(clinicId, startDate, endDate) {
+  try {
+    console.log('📊 [FASE 11] Obtendo relatório de produção');
+
+    const { data, error } = await supabase
+      .from('vw_production_report')
+      .select('*')
+      .eq('clinic_id', clinicId)
+      .gte('last_appointment_date', startDate)
+      .lte('last_appointment_date', endDate)
+      .order('total_revenue', { ascending: false });
+
+    if (error) throw error;
+    console.log('✅ [FASE 11] Relatório de produção gerado');
+    return data || [];
+  } catch (err) {
+    console.error('❌ [FASE 11] Erro ao gerar relatório de produção:', err);
+    return [];
+  }
+}
+
+/**
+ * FASE 11: Obter relatório de faturamento
+ * @param {string} clinicId - ID da clínica
+ * @param {string} startDate - Data inicial (ISO)
+ * @param {string} endDate - Data final (ISO)
+ * @returns {Promise<Array>} Dados de faturamento por convênio
+ */
+export async function getBillingReport(clinicId, startDate, endDate) {
+  try {
+    console.log('📊 [FASE 11] Obtendo relatório de faturamento');
+
+    const { data, error } = await supabase
+      .from('vw_billing_report')
+      .select('*')
+      .eq('clinic_id', clinicId)
+      .gte('billing_date', startDate)
+      .lte('billing_date', endDate)
+      .order('net_amount', { ascending: false });
+
+    if (error) throw error;
+    console.log('✅ [FASE 11] Relatório de faturamento gerado');
+    return data || [];
+  } catch (err) {
+    console.error('❌ [FASE 11] Erro ao gerar relatório de faturamento:', err);
+    return [];
+  }
+}
+
+/**
+ * FASE 11: Obter relatório de recebíveis
+ * @param {string} clinicId - ID da clínica
+ * @param {string} status - Filtro por status (opcional)
+ * @returns {Promise<Array>} Dados de recebíveis com status
+ */
+export async function getReceivablesReport(clinicId, status = null) {
+  try {
+    console.log('📊 [FASE 11] Obtendo relatório de recebíveis');
+
+    let query = supabase
+      .from('vw_receivables_report')
+      .select('*')
+      .eq('clinic_id', clinicId);
+
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    const { data, error } = await query.order('due_date', { ascending: true });
+
+    if (error) throw error;
+    console.log('✅ [FASE 11] Relatório de recebíveis gerado');
+    return data || [];
+  } catch (err) {
+    console.error('❌ [FASE 11] Erro ao gerar relatório de recebíveis:', err);
+    return [];
   }
 }

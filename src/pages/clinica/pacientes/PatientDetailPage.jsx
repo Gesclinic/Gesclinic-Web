@@ -26,7 +26,7 @@
  * - Performance otimizada (fetch uma vez)
  */
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { getPatientById } from '@/lib/patientsApi';
@@ -57,7 +57,16 @@ import {
   ArrowLeft,
   Calendar,
   Stethoscope,
+  LogOut,
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 // Import dos componentes de aba
 import DadosCadastraisTab from '@/components/pacientes/tabs/DadosCadastraisTab';
@@ -172,6 +181,11 @@ export default function PatientDetailPage() {
     incompleteRegistration: false,
     overdue: false,
   });
+
+  // ✅ Modal para finalizar atendimento ao fechar prontuário
+  const [showFinishModal, setShowFinishModal] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState(null);
+  const navigationBlockedRef = useRef(false);
 
   // Função para carregar paciente
   const loadPatient = useCallback(async (id) => {
@@ -353,6 +367,23 @@ export default function PatientDetailPage() {
     };
   }, []);
 
+  // ✅ Calcular se atendimento está em progresso (antes de useEffect)
+  const canStartAppointment = appointmentFlow.status === SERVICE_STATUSES.AWAITING_PROFESSIONAL;
+  const isAppointmentInProgress = appointmentFlow.status === SERVICE_STATUSES.IN_SERVICE;
+
+  // ✅ Interceptar navegação se há atendimento em progresso
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (isAppointmentInProgress && navigationBlockedRef.current) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isAppointmentInProgress]);
+
   // Calcular idade
   function calculateAge(birthDate) {
     if (!birthDate) {
@@ -369,8 +400,6 @@ export default function PatientDetailPage() {
   }
 
   const age = patientData ? calculateAge(patientData.birthdate || patientData.birth_date) : null;
-  const canStartAppointment = appointmentFlow.status === SERVICE_STATUSES.AWAITING_PROFESSIONAL;
-  const isAppointmentInProgress = appointmentFlow.status === SERVICE_STATUSES.IN_SERVICE;
 
   const handleStartAppointmentFromPatient = async () => {
     if (!appointmentFlow.appointmentId) {
@@ -418,7 +447,82 @@ export default function PatientDetailPage() {
     }
   };
 
-  // ✅ Finalizar atendimento (muda status para FINISHED)
+  // ✅ Função para gerenciar navegação com confirmação
+  const navigateWithConfirmation = (destination) => {
+    if (isAppointmentInProgress) {
+      // Bloquear navegação e mostrar modal
+      navigationBlockedRef.current = true;
+      setPendingNavigation(destination);
+      setShowFinishModal(true);
+    } else {
+      // Navegar direto se não há atendimento
+      navigate(destination, { replace: true });
+    }
+  };
+
+  // ✅ Finalizar atendimento e depois navegar
+  const handleFinishAndNavigate = async () => {
+    try {
+      setStartingAppointment(true);
+
+      console.log('🏁 Finalizando atendimento...');
+      await updateAppointment(appointmentFlow.appointmentId, {
+        status: SERVICE_STATUSES.ATTENDED,
+        finished_at: new Date().toISOString(),
+      });
+
+      setAppointmentFlow((prev) => ({
+        ...prev,
+        status: SERVICE_STATUSES.ATTENDED,
+      }));
+
+      toast({
+        title: 'Atendimento encerrado',
+        description: 'O status foi alterado para Atendido.',
+      });
+
+      // ✅ Sincronizar faturamento
+      console.log('💳 Sincronizando faturamento do appointment:', appointmentFlow.appointmentId);
+      const billingResult = await syncAppointmentBilling(appointmentFlow.appointmentId);
+
+      if (billingResult.success) {
+        console.log('✅ Faturamento sincronizado com sucesso');
+      }
+
+      // Fechar modal e navegar
+      setShowFinishModal(false);
+      navigationBlockedRef.current = false;
+
+      setTimeout(() => {
+        if (pendingNavigation) {
+          navigate(pendingNavigation, { replace: true });
+          setPendingNavigation(null);
+        }
+      }, 500);
+    } catch (error) {
+      console.error('Erro ao finalizar atendimento:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível finalizar o atendimento.',
+        variant: 'destructive',
+      });
+    } finally {
+      setStartingAppointment(false);
+    }
+  };
+
+  // ✅ Apenas navegar sem finalizar
+  const handleJustNavigate = () => {
+    setShowFinishModal(false);
+    navigationBlockedRef.current = false;
+
+    if (pendingNavigation) {
+      navigate(pendingNavigation, { replace: true });
+      setPendingNavigation(null);
+    }
+  };
+
+  // ✅ Finalizar atendimento (muda status para ATTENDED)
   const handleFinishAppointmentFromPatient = async () => {
     if (!appointmentFlow.appointmentId) {
       return;
@@ -428,13 +532,13 @@ export default function PatientDetailPage() {
       setStartingAppointment(true); // Reusar loading state
 
       await updateAppointment(appointmentFlow.appointmentId, {
-        status: SERVICE_STATUSES.FINISHED,
+        status: SERVICE_STATUSES.ATTENDED,
         finished_at: new Date().toISOString(),
       });
 
       setAppointmentFlow((prev) => ({
         ...prev,
-        status: SERVICE_STATUSES.FINISHED,
+        status: SERVICE_STATUSES.ATTENDED,
       }));
 
       toast({
@@ -748,9 +852,9 @@ export default function PatientDetailPage() {
                           // Navegar para a agenda no dia ou período do agendamento
                           const startDate = new Date(appointmentDate);
                           const formattedDate = startDate.toISOString().split('T')[0];
-                          navigate(`/clinica/agenda?date=${formattedDate}`, { replace: true });
+                          navigateWithConfirmation(`/clinica/agenda?date=${formattedDate}`);
                         } else {
-                          navigate('/clinica/agenda', { replace: true });
+                          navigateWithConfirmation('/clinica/agenda');
                         }
                       }}
                       className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap"
@@ -764,7 +868,7 @@ export default function PatientDetailPage() {
                       onClick={() => {
                         // Limpar dados de checkin e voltar à agenda
                         localStorage.removeItem('checkinReturnData');
-                        navigate(
+                        navigateWithConfirmation(
                           `/clinica/agenda?checkinComplete=dados_cadastrais&appointmentId=${checkinData?.appointmentId}`,
                         );
                       }}
@@ -777,7 +881,7 @@ export default function PatientDetailPage() {
                   {/* ✅ Botão "Agendar Atendimento" - Aparecer APENAS quando não há atendimento em progresso */}
                   {!canStartAppointment && !isAppointmentInProgress && (
                     <Button
-                      onClick={() => navigate(`/clinica/agenda?patientId=${patientId}`)}
+                      onClick={() => navigateWithConfirmation(`/clinica/agenda?patientId=${patientId}`)}
                       className="bg-green-600 hover:bg-green-700 text-white whitespace-nowrap"
                     >
                       <Calendar size={18} className="mr-2" />
@@ -939,6 +1043,44 @@ export default function PatientDetailPage() {
         >
           {renderTabContent()}
         </motion.div>
+
+        {/* ✅ Modal para confirmar finalização de atendimento */}
+        <Dialog open={showFinishModal} onOpenChange={setShowFinishModal}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <LogOut className="w-5 h-5 text-orange-600" />
+                Encerrar Atendimento?
+              </DialogTitle>
+              <DialogDescription>
+                Você está prestes a sair do prontuário. Deseja encerrar o atendimento e mudar o status para "Atendido"?
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 my-4">
+              <p className="text-sm text-amber-900">
+                <strong>⚠️ Atenção:</strong> Ao confirmar, o status do atendimento será alterado para "Atendido" e o faturamento será sincronizado.
+              </p>
+            </div>
+
+            <DialogFooter className="gap-3">
+              <Button
+                variant="outline"
+                onClick={handleJustNavigate}
+                disabled={startingAppointment}
+              >
+                Sair sem encerrar
+              </Button>
+              <Button
+                onClick={handleFinishAndNavigate}
+                disabled={startingAppointment}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                {startingAppointment ? 'Encerrando...' : 'Encerrar atendimento'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </PageLayout>
     </>
   );

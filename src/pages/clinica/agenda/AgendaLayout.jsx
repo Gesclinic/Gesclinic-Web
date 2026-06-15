@@ -284,7 +284,11 @@ export default function AgendaLayout({ children }) {
             hour: '2-digit',
             minute: '2-digit',
           });
-          const professionalName = 'Profissional a definir';
+
+          // ✅ PROCURAR PROFISSIONAL NA LISTA
+          const professionalId = info.resourceId || info.professionalId;
+          const professional = professionals?.find((p) => p.id === professionalId);
+          const professionalName = professional?.name || 'Profissional a definir';
 
           console.log('📋 Valores extraídos:', { formattedDate, displayTime, professionalName });
 
@@ -302,7 +306,7 @@ export default function AgendaLayout({ children }) {
 
           setNovoAgendamentoInfo(info);
           setModalNovoOpen(true);
-        }}
+        }}}
       />
     );
   }, [viewMode, appointments, professionals, loading, calendarView, filters]);

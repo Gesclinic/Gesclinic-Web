@@ -2,6 +2,13 @@ import { supabase } from '@/lib/customSupabaseClient.js';
 import { asUuidOrNull, asStringOrNull, asNumberOrNull } from '@/lib/selectUtils';
 import { logReceivableCreated, logPaymentReceived } from '@/lib/auditFinancialIntegration.js';
 
+function invalidateFinanceCaches(clinicId) {
+  if (!clinicId) return;
+  import('@/services/dashboardDataService')
+    .then(({ invalidateDashboardDataCache }) => invalidateDashboardDataCache(clinicId))
+    .catch(() => {});
+}
+
 /** Normaliza status vindos da UI para o enum do banco */
 function normalizeApStatus(s) {
   if (!s) {
@@ -9,20 +16,23 @@ function normalizeApStatus(s) {
   }
   const v = String(s).toLowerCase();
   if (['open', 'em aberto', 'pendente', 'aberto'].includes(v)) {
-    return 'open';
+    return 'OPEN';
   }
   if (['paid', 'pago', 'quitado'].includes(v)) {
-    return 'paid';
+    return 'PAID';
   }
   if (['canceled', 'cancelado', 'cancelada'].includes(v)) {
-    return 'canceled';
+    return 'CANCELED';
   }
   if (['partial', 'parcial', 'parcialmente pago'].includes(v)) {
-    return 'partial';
+    return 'PARTIAL';
   }
-  if (['scheduled', 'agendada', 'agendado', 'programada'].includes(v)) {
-    return 'scheduled';
+  if (['scheduled', 'agendada', 'agendado', 'programada', 'approved', 'aprovado'].includes(v)) {
+    return 'APPROVED';
   }
+  if (['overdue', 'vencido', 'vencida'].includes(v)) return 'OVERDUE';
+  if (['blocked', 'bloqueado', 'bloqueada'].includes(v)) return 'BLOCKED';
+  if (['reversed', 'estornado', 'estornada'].includes(v)) return 'REVERSED';
   return null; // desconhecido -> não manda
 }
 
@@ -224,6 +234,7 @@ export async function createAP(clinicId, payload) {
         throw new Error(error2.message);
       }
       console.log('AP criada com fallback:', data2);
+      invalidateFinanceCaches(clinicId);
       return data2;
     }
 
@@ -260,6 +271,7 @@ export async function createAP(clinicId, payload) {
   } catch (e) {
     console.warn('Erro ao criar ap_items:', e?.message || e);
   }
+  invalidateFinanceCaches(clinicId);
   return data;
 }
 
@@ -313,6 +325,7 @@ export async function updateAP(id, patch) {
   if (!data || data.length === 0) {
     throw new Error('Record not found');
   }
+  invalidateFinanceCaches(data[0].clinic_id);
   return data[0];
 
   if (!error) {
@@ -398,11 +411,19 @@ export async function updateAP(id, patch) {
 }
 
 export async function deleteAP(id) {
+  const { data: existing } = await supabase.from('ap_bills').select('clinic_id').eq('id', id).maybeSingle();
+  await supabase
+    .from('financial_transactions')
+    .delete()
+    .in('origin_module', ['accounts_payable', 'contas_pagar', 'ap_bills'])
+    .eq('origin_id', id);
+
   const { error } = await supabase.from('ap_bills').delete().eq('id', id);
   if (error) {
     console.error('deleteAP error:', error);
     throw new Error(error.message);
   }
+  invalidateFinanceCaches(existing?.clinic_id);
 }
 
 // Atualização em lote por IDs
@@ -439,11 +460,19 @@ export async function deleteAPBulk(ids) {
   if (!Array.isArray(ids) || ids.length === 0) {
     return { deleted: 0 };
   }
+  const { data: existing } = await supabase.from('ap_bills').select('clinic_id').in('id', ids).limit(1);
+  await supabase
+    .from('financial_transactions')
+    .delete()
+    .in('origin_module', ['accounts_payable', 'contas_pagar', 'ap_bills'])
+    .in('origin_id', ids);
+
   const { error, count } = await supabase.from('ap_bills').delete({ count: 'exact' }).in('id', ids);
   if (error) {
     console.error('deleteAPBulk error:', error);
     throw new Error(error.message);
   }
+  invalidateFinanceCaches(existing?.[0]?.clinic_id);
   return { deleted: count ?? ids.length };
 }
 
@@ -477,14 +506,57 @@ export async function listAccountPlans(clinicId) {
   return data || [];
 }
 
+function isRevenueAccount(account) {
+  const rawType = String(account?.type || account?.account_type || '').toLowerCase();
+  return ['revenue', 'income', 'receita', 'receitas', 'entrada', 'inflow'].includes(rawType);
+}
+
+function isPostableAccount(account) {
+  if ('active' in account && account.active === false) {
+    return false;
+  }
+  if ('is_active' in account && account.is_active === false) {
+    return false;
+  }
+  if ('parent_id' in account) {
+    return !!account.parent_id;
+  }
+  return true;
+}
+
+export async function listRevenueAccountPlans(clinicId) {
+  try {
+    const plans = await listAccountPlans(clinicId);
+    const revenuePlans = (plans || []).filter((account) => isRevenueAccount(account) && isPostableAccount(account));
+    if (revenuePlans.length > 0) {
+      return revenuePlans;
+    }
+  } catch (error) {
+    console.warn('listRevenueAccountPlans account_plans fallback:', error?.message || error);
+  }
+
+  const { data, error } = await supabase
+    .from('chart_of_accounts')
+    .select('*')
+    .eq('clinic_id', clinicId)
+    .order('name', { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data || []).filter((account) => isRevenueAccount(account) && isPostableAccount(account));
+}
+
 // Optional helpers: Cost Centers and Finance Accounts (gracefully no-op if tables don't exist)
 export async function listCostCenters(clinicId) {
   try {
     const { data, error } = await supabase
-      .from('cost_centers')
+      .from('financial_cost_centers')
       .select('*')
       .eq('clinic_id', clinicId)
-      .order('name');
+      .eq('is_active', true)
+      .order('code', { ascending: true });
     if (error) {
       throw error;
     }
@@ -904,6 +976,7 @@ export async function createCashFlowManual(clinicId, row) {
   if (!data || data.length === 0) {
     throw new Error('Record not found');
   }
+  invalidateFinanceCaches(clinicId);
   return data[0];
   if (error) {
     throw new Error(error.message);

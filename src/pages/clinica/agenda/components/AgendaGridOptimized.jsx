@@ -105,7 +105,7 @@ export default function AgendaGridOptimized({
       <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
         {sortedTimes.map((time) =>
           groupedByTime[time].map((appt, idx) => {
-            const isOccupied = appt.paciente || appt.patient;
+            const isOccupied = appt.patientName || appt.patient_name || appt.paciente || appt.patient;
             const status = appt.status || 'disponivel';
             const statusLabel = appt.status || 'confirmado';
             const isCurrentTime = time === currentTimeStr;

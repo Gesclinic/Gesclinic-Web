@@ -43,6 +43,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import * as XLSX from 'xlsx';
+import RelatoriosToolbar from '@/components/financeiro/RelatoriosToolbar';
 
 export default function RepasseMedico() {
   const navigate = useNavigate();
@@ -97,8 +98,8 @@ export default function RepasseMedico() {
 
   // Calculate total amounts for summary cards
   const summaryRepasse = useMemo(() => {
-    const totalBruto = commissions.reduce((sum, c) => sum + (Number(c.total_bruto) || 0), 0);
-    const totalRepasse = commissions.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+    const totalBruto = commissions.reduce((sum, c) => sum + (Number(c.gross_amount) || 0), 0);
+    const totalRepasse = commissions.reduce((sum, c) => sum + (Number(c.net_amount) || 0), 0);
     const totalLiquido = commissions.reduce((sum, c) => sum + (Number(c.net_amount) || 0), 0);
     const paidCount = commissions.filter((c) => (c.status || '').toLowerCase() === 'paid').length;
     const pendingCount = commissions.filter(
@@ -153,11 +154,16 @@ export default function RepasseMedico() {
 
   const handlePay = async (commissionId) => {
     setLoading(true);
-    const { error } = await supabase.rpc('record_commission_payment', {
-      p_commission_id: commissionId,
-      p_payment_method: 'PIX',
-      p_notes: 'Pagamento via painel',
-    });
+    const { error } = await supabase
+      .from('doctor_commissions')
+      .update({
+        status: 'paid',
+        payment_method: 'PIX',
+        paid_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', commissionId)
+      .eq('clinic_id', clinicId);
     setLoading(false);
     if (error) {
       toast({
@@ -334,6 +340,34 @@ export default function RepasseMedico() {
         </Card>
       </div>
 
+      {/* RELATÓRIOS TOOLBAR */}
+      <RelatoriosToolbar
+        title="Repasses Médicos"
+        data={commissions.map(item => ({
+          profissional: item.professional?.name || item.professional_name,
+          periodo: `${month}/${year}`,
+          servicos: item.total_services,
+          valor_bruto: item.gross_amount,
+          valor_recebido: item.total_paid,
+          valor_pendente: item.total_pending,
+          percentual: item.commission_percent,
+          comissao_liquida: item.net_amount,
+          status: item.status
+        }))}
+        columns={[
+          { key: 'profissional', label: 'Profissional', width: 20 },
+          { key: 'periodo', label: 'Período', width: 12 },
+          { key: 'servicos', label: 'Serviços', width: 12 },
+          { key: 'valor_bruto', label: 'Valor Bruto', width: 18, format: 'currency' },
+          { key: 'valor_recebido', label: 'Recebido', width: 18, format: 'currency' },
+          { key: 'valor_pendente', label: 'Pendente', width: 18, format: 'currency' },
+          { key: 'percentual', label: '% Repasse', width: 12, format: 'percent' },
+          { key: 'comissao_liquida', label: 'Comissão Líquida', width: 18, format: 'currency' },
+          { key: 'status', label: 'Status', width: 12 }
+        ]}
+        templateFileName="repasses_medicos"
+      />
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-blue-700 flex items-center gap-2">
@@ -448,12 +482,12 @@ export default function RepasseMedico() {
                       R$ {Number(r.net_amount).toFixed(2)}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={r.status === 'pago' ? 'success' : 'outline'}>
+                      <Badge variant={r.status === 'paid' ? 'success' : 'outline'}>
                         {r.status}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      {r.status !== 'pago' && (
+                      {r.status !== 'paid' && (
                         <Button size="sm" onClick={() => handlePay(r.id)} disabled={loading}>
                           Pagar
                         </Button>

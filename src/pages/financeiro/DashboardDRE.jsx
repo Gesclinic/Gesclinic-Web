@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useClinicContext } from '../../contexts/useClinicContext';
 import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { supabase } from '../../lib/customSupabaseClient';
+import { getFinancialConsolidation } from '../../lib/financialConsolidationApi';
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell
@@ -27,6 +28,7 @@ export function DashboardDRE() {
   const [professionals, setProfessionals] = useState([]);
   const [repayments, setRepayments] = useState(null);
   const [alerts, setAlerts] = useState(null);
+  const [dynamicDre, setDynamicDre] = useState(null);
 
   useEffect(() => {
     if (clinicId) {
@@ -39,6 +41,42 @@ export function DashboardDRE() {
       setLoading(true);
 
       // 1. KPIs Executivos
+      const today = new Date();
+      const startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+      const endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+
+      const consolidated = await getFinancialConsolidation(clinicId, startDate, endDate);
+      setDynamicDre({
+        revenue: {
+          gross_revenue: consolidated.revenue.grossRevenue,
+          revenue_deductions: consolidated.revenue.discounts + consolidated.revenue.taxes,
+          card_fees: consolidated.revenue.cardFees,
+          net_revenue: consolidated.revenue.netRevenue,
+        },
+        expenses: {
+          admin_expense: consolidated.expenses.administrative,
+          clinic_expense: consolidated.expenses.operational,
+          financial_expense: consolidated.expenses.financial,
+          total_operating_expense: consolidated.expenses.totalWithCardFees,
+        },
+        result: {
+          ebitda: consolidated.result.ebitda,
+          net_income: consolidated.result.netIncome,
+        },
+      });
+      setKpis({
+        'Contas a Receber': { value: consolidated.revenue.openReceivables },
+        'Contas Pagas': { value: consolidated.expenses.paid },
+        'Taxa de Recebimento %': {
+          value: consolidated.revenue.netRevenue > 0
+            ? (consolidated.revenue.receivedRevenue / consolidated.revenue.netRevenue) * 100
+            : 0,
+        },
+        'Repasses Pendentes': { value: 0 },
+        'Repasses Pagos': { value: 0 },
+        'Taxas de Cartão': { value: consolidated.revenue.cardFees },
+      });
+
       const { data: kpiData, error: kpiError } = await supabase
         .from('v_executive_kpis')
         .select('*')
@@ -47,12 +85,13 @@ export function DashboardDRE() {
       if (!kpiError) {
         const kpiMap = {};
         kpiData?.forEach(item => {
-          kpiMap[item.metric_name] = {
+          const metricName = item.metric_name || item.metric;
+          kpiMap[metricName] = {
             value: item.value,
-            label: item.label
+            label: item.label || item.metric
           };
         });
-        setKpis(kpiMap);
+        setKpis((current) => ({ ...kpiMap, ...current }));
       }
 
       // 2. Resumo Diário
@@ -60,11 +99,14 @@ export function DashboardDRE() {
         .from('v_daily_financial_summary')
         .select('*')
         .eq('clinic_id', clinicId)
-        .order('data_sumario', { ascending: false })
+        .order('data', { ascending: false })
         .limit(30);
 
       if (!dailyError) {
-        setDailyData(dailyData?.reverse() || []);
+        setDailyData((dailyData || []).map(item => ({
+          ...item,
+          data_sumario: item.data_sumario || item.data,
+        })).reverse());
       }
 
       // 3. Resumo Mensal
@@ -76,7 +118,11 @@ export function DashboardDRE() {
         .limit(12);
 
       if (!monthlyError) {
-        setMonthlyData(monthlyData?.reverse() || []);
+        setMonthlyData((monthlyData || []).map(item => ({
+          ...item,
+          total_amount: item.total_amount ?? item.total_faturado,
+          total_received: item.total_received ?? item.total_recebido,
+        })).reverse());
       }
 
       // 4. Análise de Inadimplência
@@ -124,7 +170,7 @@ export function DashboardDRE() {
         .from('v_alerts_summary_by_clinic')
         .select('*')
         .eq('clinic_id', clinicId)
-        .single();
+        .maybeSingle();
 
       if (!alertError) {
         setAlerts(alertData);
@@ -154,6 +200,52 @@ export function DashboardDRE() {
         <h1 className="text-4xl font-bold text-slate-900">📊 DRE Dinâmica</h1>
         <p className="text-slate-600 mt-2">Dashboard financeiro em tempo real</p>
       </div>
+
+      {/* DRE Dinâmica - Motor financeiro real */}
+      {dynamicDre && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="bg-white border-l-4 border-green-500">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-slate-600">Receita Líquida</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-slate-900">
+                R$ {Number(dynamicDre.revenue?.net_revenue || 0).toFixed(2)}
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-l-4 border-red-500">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-slate-600">Despesas Operacionais</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-slate-900">
+                R$ {Number(dynamicDre.expenses?.total_operating_expense || 0).toFixed(2)}
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-l-4 border-blue-500">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-slate-600">EBITDA</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-slate-900">
+                R$ {Number(dynamicDre.result?.ebitda || 0).toFixed(2)}
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-l-4 border-purple-500">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium text-slate-600">Lucro Líquido</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold text-slate-900">
+                R$ {Number(dynamicDre.result?.net_income || 0).toFixed(2)}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* ALERTAS */}
       {alerts && (alerts.total_alerts > 0) && (
@@ -234,6 +326,22 @@ export function DashboardDRE() {
               {kpis?.['Taxa de Recebimento %']?.value?.toFixed(1) || '0'}%
             </p>
             <p className="text-xs text-slate-500 mt-2">Percentual recebido</p>
+          </CardContent>
+        </Card>
+
+        {/* Taxas de Cartão */}
+        <Card className="bg-white border-l-4 border-red-500">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-slate-600 flex items-center gap-2">
+              <TrendingDown className="w-4 h-4 text-red-500" />
+              Taxas de Cartão
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-slate-900">
+              R$ {kpis?.['Taxas de Cartão']?.value?.toFixed(2) || '0.00'}
+            </p>
+            <p className="text-xs text-slate-500 mt-2">Despesa financeira do período</p>
           </CardContent>
         </Card>
 

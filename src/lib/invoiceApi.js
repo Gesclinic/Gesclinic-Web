@@ -13,6 +13,37 @@
 import { supabase } from '@/lib/customSupabaseClient';
 import { createReceivable } from '@/lib/receivablesApi';
 
+async function cancelReceivablesForInvoice(invoice) {
+  const basePatch = {
+    status: 'canceled',
+    enterprise_status: 'CANCELADO',
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data, error } = await supabase
+    .from('ar_invoices')
+    .update(basePatch)
+    .eq('clinic_id', invoice.clinic_id)
+    .filter('metadata->>invoice_id', 'eq', invoice.id)
+    .select('id');
+
+  if (error) {
+    return { error };
+  }
+
+  if (data?.length) {
+    return { data };
+  }
+
+  return supabase
+    .from('ar_invoices')
+    .update(basePatch)
+    .eq('clinic_id', invoice.clinic_id)
+    .eq('appointment_id', invoice.appointment_id)
+    .ilike('description', `%${invoice.invoice_number}%`)
+    .select('id');
+}
+
 // ============================================================
 // NORMALIZAÇÃO: Status e Estados
 // ============================================================
@@ -246,21 +277,27 @@ export async function emitInvoiceAndCreateAR(invoiceId, options = {}) {
     }
 
     // 3️⃣ Criar AR automaticamente
-    const receivable = await createReceivable({
-      clinicId: fullInvoice.clinic_id,
-      patientId: fullInvoice.patient_id,
+    const receivable = await createReceivable(fullInvoice.clinic_id, {
+      patient_id: fullInvoice.patient_id,
       description: `NF ${fullInvoice.invoice_number}: ${fullInvoice.description}`,
       amount: fullInvoice.net_amount,
-      payerId: fullInvoice.payer_id,
-      payerType: fullInvoice.payer_type,
-      appointmentId: fullInvoice.appointment_id,
-      dueDate: fullInvoice.due_date,
-      emissionDate: fullInvoice.emission_date,
-      invoiceId: invoiceId,
+      net_value: fullInvoice.net_amount,
+      gross_amount: fullInvoice.gross_amount,
+      payer_id: fullInvoice.payer_id,
+      payer_type: fullInvoice.payer_type,
+      appointment_id: fullInvoice.appointment_id,
+      due_date: fullInvoice.due_date,
+      invoice_date: fullInvoice.emission_date,
       origem: 'nf',
-      professionalId: fullInvoice.professional_id,
-      serviceId: fullInvoice.service_id,
+      professional_id: fullInvoice.professional_id,
+      procedure_id: fullInvoice.service_id,
       status: 'open',
+      metadata: {
+        ...(options.metadata || {}),
+        source: 'invoice_api',
+        invoice_id: invoiceId,
+        invoice_number: fullInvoice.invoice_number,
+      },
       ...options,
     });
 
@@ -485,11 +522,8 @@ export async function cancelInvoice(invoiceId, cancellationReason = '') {
       throw new Error(`Erro ao cancelar NF: ${updateError.message}`);
     }
 
-    // 2️⃣ Cancelar AR relacionado (se houver)
-    const { error: arError } = await supabase
-      .from('ar_receivables')
-      .update({ status: 'canceled' })
-      .eq('invoice_id', invoiceId);
+    // 2️⃣ Cancelar AR canonico relacionado (se houver)
+    const { error: arError } = await cancelReceivablesForInvoice(invoice);
 
     if (arError) {
       console.warn('⚠️ Erro ao cancelar AR relacionado:', arError.message);

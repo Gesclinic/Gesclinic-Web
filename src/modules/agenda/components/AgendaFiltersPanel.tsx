@@ -15,12 +15,12 @@ interface AgendaFiltersPanelProps {
   filters: AgendaFilters;
   onFiltersChange: (filters: Partial<AgendaFilters>) => void;
   onReset?: () => void;
-  
+
   // Dados para selects
   professionals?: Array<{ id: string; name: string }>;
   rooms?: Array<{ id: string; name: string }>;
   payers?: Array<{ id: string; name: string }>;
-  
+
   // Opções de UI
   compact?: boolean;
   className?: string;
@@ -113,6 +113,9 @@ export const AgendaFiltersPanel = memo(
             </label>
             <input
               type="date"
+              lang="pt-BR"
+              aria-label="Data inicial"
+              title="Data inicial"
               value={filters.dateFrom || ''}
               onChange={e => handleDateFromChange(e.target.value)}
               className={inputClass}
@@ -126,6 +129,9 @@ export const AgendaFiltersPanel = memo(
             </label>
             <input
               type="date"
+              lang="pt-BR"
+              aria-label="Data final"
+              title="Data final"
               value={filters.dateTo || ''}
               onChange={e => handleDateToChange(e.target.value)}
               className={inputClass}
@@ -139,6 +145,8 @@ export const AgendaFiltersPanel = memo(
                 Profissional
               </label>
               <select
+                aria-label="Filtrar por profissional"
+                title="Filtrar por profissional"
                 value={filters.professionalId || ''}
                 onChange={e => handleProfessionalChange(e.target.value)}
                 className={inputClass}
@@ -160,6 +168,8 @@ export const AgendaFiltersPanel = memo(
                 Sala
               </label>
               <select
+                aria-label="Filtrar por sala"
+                title="Filtrar por sala"
                 value={filters.roomId || ''}
                 onChange={e => handleRoomChange(e.target.value)}
                 className={inputClass}
@@ -181,6 +191,8 @@ export const AgendaFiltersPanel = memo(
                 Convênio
               </label>
               <select
+                aria-label="Filtrar por convênio"
+                title="Filtrar por convênio"
                 value={filters.payerId || ''}
                 onChange={e => handlePayerChange(e.target.value)}
                 className={inputClass}

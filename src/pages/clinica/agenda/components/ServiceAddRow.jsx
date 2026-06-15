@@ -1,9 +1,9 @@
 /**
  * ServiceAddRow.jsx - Linha Compacta de Adição de Serviços
- * 
+ *
  * Layout:
  * CÓDIGO | SERVIÇO | CONVENIO | VALOR | [+ ADICIONAR]
- * 
+ *
  * Integrado com AppointmentItemsManager para uma experiência única
  */
 
@@ -38,12 +38,27 @@ export default function ServiceAddRow({
   onError = () => {},
   professionalId = null,
   clinicId = null,
+  lastAddedService = null, // 🆕 Serviço/payer do último item adicionado
 }) {
   const [selectedServiceId, setSelectedServiceId] = useState('');
   const [selectedServiceCode, setSelectedServiceCode] = useState('');
   const [selectedPayerId, setSelectedPayerId] = useState(payerId || '');
   const [selectedValue, setSelectedValue] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // 🆕 Sincronizar com o último serviço adicionado (para pré-popular dropdowns)
+  useEffect(() => {
+    if (lastAddedService?.service_id) {
+      console.log('🔄 [ServiceAddRow] Pré-populando com último serviço adicionado:', {
+        service_id: lastAddedService.service_id,
+        payer_id: lastAddedService.payer_id,
+      });
+      setSelectedServiceId(lastAddedService.service_id);
+      if (lastAddedService.payer_id) {
+        setSelectedPayerId(lastAddedService.payer_id);
+      }
+    }
+  }, [lastAddedService?.service_id]);
 
   // 💰 Buscar valor do serviço (considera profissional, convênio e tabela geral)
   const fetchServicePrice = async (serviceId, paiderId = null) => {
@@ -82,7 +97,7 @@ export default function ServiceAddRow({
     if (selectedServiceId) {
       const service = services.find((s) => s.id === selectedServiceId);
       setSelectedServiceCode(service?.tuss_code || service?.code || '');
-      
+
       // Buscar com o convênio atual
       console.log('🔄 [ServiceAddRow] useEffect DISPARO: serviceId=', selectedServiceId, 'payerId=', selectedPayerId);
       fetchServicePrice(selectedServiceId, selectedPayerId).then((price) => {
@@ -95,7 +110,7 @@ export default function ServiceAddRow({
   // Adicionar serviço
   const handleAddService = async (e) => {
     e.preventDefault();
-    
+
     if (!selectedServiceId) {
       onError('Selecione um serviço');
       return;
@@ -200,7 +215,7 @@ export default function ServiceAddRow({
         </Select>
 
         {/* CONVENIO (dropdown Radix) */}
-        <Select value={selectedPayerId || ''} onValueChange={setSelectedPayerId}>
+        <Select value={selectedPayerId || undefined} onValueChange={setSelectedPayerId}>
           <SelectTrigger
             style={{
               width: '100%',

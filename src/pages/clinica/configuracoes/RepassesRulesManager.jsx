@@ -4,22 +4,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import RepassConfigurationModal from '@/pages/clinica/configuracoes/RepassConfigurationModal';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -106,6 +91,16 @@ export default function RepassesRulesManager() {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // ISS Rate - derivado de clinic settings
+  // Normaliza para decimal se vier em % (ex: 3 -> 0.03, 0.05 -> 0.05)
+  const normalizeIssRate = (rate) => {
+    if (!rate && rate !== 0) return 0.05; // Default 5%
+    const num = parseFloat(rate);
+    // Se for > 1, assume que é percentual (ex: 3, 5, 10) e converte
+    return num > 1 ? num / 100 : num;
+  };
+  const issRate = normalizeIssRate(clinic?.iss_rate);
+
   // Form states
   const [showDialog, setShowDialog] = useState(false);
   const [editingRuleId, setEditingRuleId] = useState(null);
@@ -144,18 +139,28 @@ export default function RepassesRulesManager() {
   const loadAllData = async () => {
     setLoading(true);
     try {
-      const [rulesRes, profsRes, servicesRes] = await Promise.all([
+      // Carregar de ambas as tabelas para manter compatibilidade
+      const [revenueRes, repasseRes, profsRes, servicesRes] = await Promise.all([
+        supabase
+          .from('revenue_rules')
+          .select('*')
+          .eq('clinic_id', clinicId)
+          .order('created_at', { ascending: false }),
         supabase
           .from('repasse_config')
-          .select('*')
+          .select('id, clinic_id, professional_id, service_id, tipo_base, percentual, ativo, regime_code, iss_customizado, created_at')
           .eq('clinic_id', clinicId)
           .order('created_at', { ascending: false }),
         supabase.from('professionals').select('id, name').eq('clinic_id', clinicId).order('name'),
         supabase.from('services').select('id, name').eq('clinic_id', clinicId).order('name'),
       ]);
 
-      if (rulesRes.error) {
-        console.error('Erro ao carregar regras:', rulesRes.error);
+      // Log de erro se houver
+      if (revenueRes.error) {
+        console.error('Erro ao carregar regras (revenue_rules):', revenueRes.error);
+      }
+      if (repasseRes.error) {
+        console.error('Erro ao carregar regras (repasse_config):', repasseRes.error);
       }
       if (profsRes.error) {
         console.error('Erro ao carregar profissionais:', profsRes.error);
@@ -164,7 +169,24 @@ export default function RepassesRulesManager() {
         console.error('Erro ao carregar serviços:', servicesRes.error);
       }
 
-      setRules(rulesRes.data || []);
+      // Combinar regras de ambas as tabelas (evitar duplicatas)
+      const revenueRules = revenueRes.data || [];
+      const repasseRules = (repasseRes.data || []).map((rule) => ({
+        ...rule,
+        // Normalizar campos de revenue_rules se necessário
+      }));
+
+      // Mesclar arrays (usar revenue_rules como base, adicionar repasse_config se não duplicarem)
+      const allRules = [
+        ...revenueRules,
+        ...repasseRules.filter((r) => !revenueRules.find((rv) => rv.id === r.id)),
+      ];
+
+      console.log('Regras carregadas - revenue_rules:', revenueRules.length);
+      console.log('Regras carregadas - repasse_config:', repasseRules.length);
+      console.log('Total de regras:', allRules.length);
+
+      setRules(allRules);
       setProfessionals(profsRes.data || []);
       setServices(servicesRes.data || []);
     } catch (error) {
@@ -227,53 +249,24 @@ export default function RepassesRulesManager() {
     });
   };
 
-  const handleSaveRule = async () => {
-    if (!formData.professional_id) {
-      toast({
-        title: 'Campo obrigatório',
-        description: 'Selecione o profissional',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    // Validar: deve ter service_id (individual) OU service_type (grupo)
-    if (!formData.service_id && !formData.service_type) {
-      toast({
-        title: 'Campo obrigatório',
-        description: 'Selecione um serviço ou um grupo de serviços',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (formData.percentual < 0 || formData.percentual > 100) {
-      toast({
-        title: 'Valor inválido',
-        description: 'O percentual deve estar entre 0 e 100',
-        variant: 'destructive',
-      });
-      return;
-    }
-
+  const handleSaveRule = async (formDataToSave, ruleId) => {
     const payload = {
       clinic_id: clinicId,
-      professional_id: formData.professional_id,
-      service_id: formData.rule_type === 'individual' ? formData.service_id : null,
-      service_type: formData.rule_type === 'group' ? formData.service_type : null,
-      tipo_base: formData.tipo_base,
-      percentual: formData.percentual,
-      ativo: formData.ativo,
-      regime_code: formData.regime_code,
-      iss_customizado: formData.iss_customizado,
+      professional_id: formDataToSave.professional_id,
+      service_id: formDataToSave.rule_type === 'individual' ? formDataToSave.service_id : null,
+      tipo_base: formDataToSave.tipo_base,
+      percentual: formDataToSave.percentual,
+      ativo: formDataToSave.ativo,
+      regime_code: formDataToSave.regime_code,
+      iss_customizado: formDataToSave.iss_customizado,
     };
 
     try {
-      if (editingRuleId) {
+      if (ruleId) {
         const { error } = await supabase
           .from('repasse_config')
           .update(payload)
-          .eq('id', editingRuleId);
+          .eq('id', ruleId);
 
         if (error) {
           throw error;
@@ -294,7 +287,6 @@ export default function RepassesRulesManager() {
         });
       }
 
-      handleCloseDialog();
       loadAllData();
     } catch (error) {
       console.error('Erro ao salvar regra:', error);
@@ -596,7 +588,22 @@ export default function RepassesRulesManager() {
           </div>
         )}
 
-        {/* Dialog */}
+        {/* Configuration Modal with Tabs */}
+        <RepassConfigurationModal
+          open={showDialog}
+          onOpenChange={setShowDialog}
+          editingRuleId={editingRuleId}
+          rule={rules.find((r) => r.id === editingRuleId) || null}
+          professionals={professionals}
+          services={services}
+          issRate={issRate}
+          regimesTaxRates={regimesTaxRates}
+          onSaveRule={handleSaveRule}
+          getProfessionalName={getProfessionalName}
+          getServiceName={getServiceName}
+        />
+        {/* OLD DIALOG - TO BE REMOVED */}
+        {false && (
         <Dialog open={showDialog} onOpenChange={setShowDialog}>
           <DialogContent className="w-[90vw] h-[90vh] max-w-none p-0 flex flex-col gap-0">
             {/* Header com gradiente - STICKY COM ALTO Z-INDEX */}
@@ -1092,6 +1099,8 @@ export default function RepassesRulesManager() {
             </div>
           </DialogContent>
         </Dialog>
+        )}
+        {/* END OLD DIALOG */}
 
         {/* Delete Alert */}
         <AlertDialog open={showDeleteAlert} onOpenChange={setShowDeleteAlert}>
