@@ -204,33 +204,29 @@ const RepasseMedicoPage = () => {
   // DASHBOARD: Visão geral de produção
   // ============================================
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Cabeçalho */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Repasse Médico</h1>
-          <p className="text-gray-600 mt-2">
-            Visão geral de produção e valores a serem pagos aos profissionais
-          </p>
+    <div className="w-full space-y-6">
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900">Visão geral</h2>
+          <p className="mt-1 text-sm text-gray-600">Produção, repasses e geração de contas a pagar por profissional.</p>
         </div>
 
         {/* Alertas */}
         {erro && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-            ❌ {erro}
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            {erro}
           </div>
         )}
 
         {/* Cabeçalho com filtros */}
-        <div className="bg-white p-6 rounded-lg shadow mb-6">
-          <div className="flex items-end justify-between gap-4">
-            <div className="flex gap-4">
+        <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+            <div className="flex flex-wrap items-end gap-3">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Mês</label>
                 <select
                   value={mes}
                   onChange={(e) => setMes(Number(e.target.value))}
-                  className="border border-gray-300 rounded px-3 py-2"
+                  className="h-10 rounded-md border border-gray-300 bg-white px-3 text-sm"
                 >
                   {[...Array(12)].map((_, i) => (
                     <option key={i + 1} value={i + 1}>
@@ -245,29 +241,29 @@ const RepasseMedicoPage = () => {
                   type="number"
                   value={ano}
                   onChange={(e) => setAno(Number(e.target.value))}
-                  className="border border-gray-300 rounded px-3 py-2 w-24"
+                  className="h-10 w-24 rounded-md border border-gray-300 px-3 text-sm"
                 />
               </div>
-              <div className="flex items-end">
+              <div className="flex flex-wrap items-end gap-2">
                 <button
                   onClick={() => carregarDados()}
                   disabled={loading}
-                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+                  className="h-10 rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
                 >
                   {loading ? 'Carregando...' : 'Atualizar'}
                 </button>
                 <button
                   onClick={handleGerarRepasse}
                   disabled={loading}
-                  className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50 ml-2"
+                  className="h-10 rounded-md bg-green-600 px-4 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
                   title="Gera/recalcula comissões para o período selecionado"
                 >
-                  {loading ? 'Gerando...' : '⚡ Gerar Repasse'}
+                  {loading ? 'Gerando...' : 'Gerar Repasse'}
                 </button>
                 <button
                   onClick={handleLiberarAPLote}
                   disabled={loading || pendingApCount === 0}
-                  className="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 disabled:opacity-50 ml-2"
+                  className="h-10 rounded-md bg-orange-600 px-4 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-50"
                   title="Gera contas a pagar para todos os repasses pendentes do período"
                 >
                   {loading ? 'Processando...' : `Gerar AP em lote (${pendingApCount})`}
@@ -279,26 +275,26 @@ const RepasseMedicoPage = () => {
 
         {/* Cards de resumo */}
         {dashboard && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-lg shadow">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-lg border border-blue-100 bg-blue-50 p-5 shadow-sm">
               <p className="text-sm text-gray-600 font-medium">Total Faturado</p>
               <p className="text-2xl font-bold text-blue-700 mt-2">
                 {formatarMoeda(dashboard.totais?.totalBruto || 0)}
               </p>
             </div>
-            <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-lg shadow">
+            <div className="rounded-lg border border-green-100 bg-green-50 p-5 shadow-sm">
               <p className="text-sm text-gray-600 font-medium">Total Líquido</p>
               <p className="text-2xl font-bold text-green-700 mt-2">
                 {formatarMoeda(dashboard.totais?.totalLiquido || 0)}
               </p>
             </div>
-            <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-lg shadow">
+            <div className="rounded-lg border border-orange-100 bg-orange-50 p-5 shadow-sm">
               <p className="text-sm text-gray-600 font-medium">Repasse Médico</p>
               <p className="text-2xl font-bold text-orange-700 mt-2">
                 {formatarMoeda(dashboard.totais?.totalProfissional || 0)}
               </p>
             </div>
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-lg shadow">
+            <div className="rounded-lg border border-purple-100 bg-purple-50 p-5 shadow-sm">
               <p className="text-sm text-gray-600 font-medium">Lucro da Clínica</p>
               <p className="text-2xl font-bold text-purple-700 mt-2">
                 {formatarMoeda(dashboard.totais?.totalClinica || 0)}
@@ -308,37 +304,37 @@ const RepasseMedicoPage = () => {
         )}
 
         {/* Tabela por profissional */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
           <div className="p-6 border-b border-gray-200">
-            <h2 className="text-xl font-bold">Repasse por Profissional</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Repasse por Profissional</h2>
           </div>
           {loading ? (
             <div className="p-6 text-center text-gray-600">Carregando dados...</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
+            <div className="max-h-[62vh] overflow-auto">
+              <table className="w-full min-w-[1080px] table-fixed text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">
+                    <th className="w-[260px] px-6 py-3 text-left font-medium text-gray-700">
                       Profissional
                     </th>
-                    <th className="px-6 py-3 text-right text-sm font-medium text-gray-700">
+                    <th className="w-[150px] px-6 py-3 text-right font-medium text-gray-700">
                       Faturado (Bruto)
                     </th>
-                    <th className="px-6 py-3 text-right text-sm font-medium text-gray-700">
+                    <th className="w-[150px] px-6 py-3 text-right font-medium text-gray-700">
                       Faturado (Líquido)
                     </th>
-                    <th className="px-6 py-3 text-right text-sm font-medium text-gray-700">
+                    <th className="w-[150px] px-6 py-3 text-right font-medium text-gray-700">
                       Repasse Médico
                     </th>
-                    <th className="px-6 py-3 text-right text-sm font-medium text-gray-700">
+                    <th className="w-[150px] px-6 py-3 text-right font-medium text-gray-700">
                       Lucro Clínica
                     </th>
-                    <th className="px-6 py-3 text-right text-sm font-medium text-gray-700">%</th>
-                    <th className="px-6 py-3 text-center text-sm font-medium text-gray-700">
+                    <th className="w-[90px] px-6 py-3 text-right font-medium text-gray-700">%</th>
+                    <th className="w-[130px] px-6 py-3 text-center font-medium text-gray-700">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-center text-sm font-medium text-gray-700">
+                    <th className="w-[180px] px-6 py-3 text-center font-medium text-gray-700">
                       Ações
                     </th>
                   </tr>
@@ -356,25 +352,25 @@ const RepasseMedicoPage = () => {
                         key={prof.professional_id}
                         className="border-b border-gray-100 hover:bg-gray-50"
                       >
-                        <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                        <td className="px-6 py-4 font-medium text-gray-900">
                           {prof.profissional || 'N/A'}
                         </td>
-                        <td className="px-6 py-4 text-right text-sm text-gray-600">
+                        <td className="px-6 py-4 text-right text-gray-600">
                           {formatarMoeda(prof.totalBruto)}
                         </td>
-                        <td className="px-6 py-4 text-right text-sm text-gray-600">
+                        <td className="px-6 py-4 text-right text-gray-600">
                           {formatarMoeda(prof.totalLiquido)}
                         </td>
-                        <td className="px-6 py-4 text-right text-sm font-semibold text-orange-600">
+                        <td className="px-6 py-4 text-right font-semibold text-orange-600">
                           {formatarMoeda(prof.totalRepasse)}
                         </td>
-                        <td className="px-6 py-4 text-right text-sm font-semibold text-purple-600">
+                        <td className="px-6 py-4 text-right font-semibold text-purple-600">
                           {formatarMoeda(prof.totalClinica)}
                         </td>
-                        <td className="px-6 py-4 text-right text-sm text-gray-600">
+                        <td className="px-6 py-4 text-right text-gray-600">
                           {formatarPercentual(prof.percentualProfissional)}
                         </td>
-                        <td className="px-6 py-4 text-center text-sm text-gray-600">
+                        <td className="px-6 py-4 text-center text-gray-600">
                           {prof.status === 'scheduled' || prof.paymentMethod === 'AP'
                             ? 'AP gerado'
                             : prof.status || 'pendente'}
@@ -407,7 +403,6 @@ const RepasseMedicoPage = () => {
             </div>
           )}
         </div>
-      </div>
     </div>
   );
 };

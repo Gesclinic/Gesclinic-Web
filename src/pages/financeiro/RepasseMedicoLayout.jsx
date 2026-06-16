@@ -17,70 +17,70 @@ export default function RepasseMedicoLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="max-w-7xl mx-auto">
+    <div className="w-full space-y-6 bg-slate-50">
+      <div className="w-full">
         {/* Cabeçalho */}
-        <div className="bg-white border-b border-gray-200 px-6 py-6">
-          <h1 className="text-3xl font-bold text-gray-900">Repasse Médico</h1>
-          <p className="text-gray-600 mt-2">
+        <div className="rounded-lg border border-slate-200 bg-white px-6 py-5 shadow-sm">
+          <h1 className="text-2xl font-bold text-gray-900">Repasse Médico</h1>
+          <p className="mt-1 text-sm text-gray-600">
             Gestão completa de repassos com análise avançada e automação
           </p>
         </div>
 
         {/* Abas */}
-        <Tabs value={currentTab} onValueChange={handleTabChange} className="w-full">
-          <div className="bg-white border-b border-gray-200 px-6">
-            <TabsList className="w-full justify-start bg-transparent border-b-0">
+        <Tabs value={currentTab} onValueChange={handleTabChange} className="mt-4 w-full">
+          <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white px-4 shadow-sm">
+            <TabsList className="h-auto w-max min-w-full justify-start gap-1 bg-transparent p-0">
               <TabsTrigger
                 value="visao-geral"
-                className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 rounded-none border-b-2 border-transparent"
+                className="min-h-10 rounded-none border-b-2 border-transparent px-4 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600"
               >
-                📊 Visão Geral
+                Visão Geral
               </TabsTrigger>
               <TabsTrigger
                 value="regras-avancadas"
-                className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 rounded-none border-b-2 border-transparent"
+                className="min-h-10 rounded-none border-b-2 border-transparent px-4 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600"
               >
-                🔥 Regras Avançadas
+                Regras Avançadas
               </TabsTrigger>
               <TabsTrigger
                 value="analytics"
-                className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 rounded-none border-b-2 border-transparent"
+                className="min-h-10 rounded-none border-b-2 border-transparent px-4 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600"
               >
-                📈 Analytics
+                Analytics
               </TabsTrigger>
               <TabsTrigger
                 value="automacao"
-                className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 rounded-none border-b-2 border-transparent"
+                className="min-h-10 rounded-none border-b-2 border-transparent px-4 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600"
               >
-                🤖 Automação
+                Automação
               </TabsTrigger>
             </TabsList>
           </div>
 
           {/* Conteúdo das abas */}
-          <div className="p-6">
+          <div className="mt-4">
             <TabsContent value="visao-geral" className="mt-0">
               <RepasseMedicoPage />
             </TabsContent>
 
             <TabsContent value="regras-avancadas" className="mt-0">
               {/* Sub-abas dentro de Regras Avançadas */}
-              <div className="bg-white rounded-lg border border-gray-200">
+              <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
                 <Tabs value={subTab} onValueChange={setSubTab} className="w-full">
-                  <div className="border-b border-gray-200 px-6">
-                    <TabsList className="w-full justify-start bg-transparent border-b-0">
+                  <div className="overflow-x-auto border-b border-gray-200 px-4">
+                    <TabsList className="h-auto w-max min-w-full justify-start bg-transparent p-0">
                       <TabsTrigger
                         value="regras"
-                        className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 rounded-none border-b-2 border-transparent"
+                        className="min-h-10 rounded-none border-b-2 border-transparent px-4 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600"
                       >
-                        🔥 Regras de Repasse
+                        Regras de Repasse
                       </TabsTrigger>
                       <TabsTrigger
                         value="contas"
-                        className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600 rounded-none border-b-2 border-transparent"
+                        className="min-h-10 rounded-none border-b-2 border-transparent px-4 data-[state=active]:border-blue-600 data-[state=active]:text-blue-600"
                       >
-                        💳 Contas Bancárias
+                        Contas Bancárias
                       </TabsTrigger>
                     </TabsList>
                   </div>
