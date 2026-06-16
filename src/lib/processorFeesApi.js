@@ -283,6 +283,36 @@ export async function deleteProcessorFee(feeId, options = {}) {
 }
 
 /**
+ * Delete many processor fees at once (soft delete).
+ * Keeps individual deleteProcessorFee available for audited single-record actions.
+ * @param {string[]} feeIds - Fee IDs to deactivate
+ * @returns {Promise<Array>} Deactivated fee rows
+ */
+export async function deleteProcessorFeesBulk(feeIds = []) {
+  try {
+    const ids = [...new Set((feeIds || []).filter(Boolean))];
+    if (!ids.length) return [];
+
+    const { data, error } = await supabase
+      .from('card_processor_fees')
+      .update({
+        is_active: false,
+        updated_at: new Date().toISOString(),
+      })
+      .in('id', ids)
+      .select('id');
+
+    if (error) {
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
  * Get fee for a specific combination
  * @param {string} clinicId - Clinic ID
  * @param {string} processorId - Processor ID

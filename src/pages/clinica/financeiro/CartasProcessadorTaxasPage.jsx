@@ -7,6 +7,7 @@ import {
   createProcessorFee,
   updateProcessorFee,
   deleteProcessorFee,
+  deleteProcessorFeesBulk,
 } from '@/lib/processorFeesApi';
 import {
   Select,
@@ -255,12 +256,7 @@ export default function CartasProcessadorTaxasPage() {
       setSuccess('');
       setBulkDeletingFees(true);
 
-      for (const fee of selectedFees) {
-        await deleteProcessorFee(fee.id, {
-          clinicId,
-          userId: user?.id,
-        });
-      }
+      await deleteProcessorFeesBulk(selectedFees.map((fee) => fee.id));
 
       resetForm();
       setSelectedFeeIds(new Set());
