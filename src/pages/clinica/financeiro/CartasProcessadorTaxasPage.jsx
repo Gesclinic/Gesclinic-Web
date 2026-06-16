@@ -51,6 +51,7 @@ export default function CartasProcessadorTaxasPage() {
   const [loadingProcessors, setLoadingProcessors] = useState(true);
   const [loadingFees, setLoadingFees] = useState(true);
   const [bulkDeletingFees, setBulkDeletingFees] = useState(false);
+  const [selectedFeeIds, setSelectedFeeIds] = useState(new Set());
 
   // Form state
   const [processorId, setProcessorId] = useState('');
@@ -78,6 +79,10 @@ export default function CartasProcessadorTaxasPage() {
     }
     loadFees();
   }, [isAuthenticated, clinicId]);
+
+  useEffect(() => {
+    setSelectedFeeIds((current) => new Set([...current].filter((id) => fees.some((fee) => fee.id === id))));
+  }, [fees]);
 
   const loadProcessors = async () => {
     try {
@@ -214,14 +219,34 @@ export default function CartasProcessadorTaxasPage() {
     }
   };
 
-  const handleDeleteListedFees = async () => {
-    if (!fees.length || bulkDeletingFees) return;
+  const selectedFees = fees.filter((fee) => selectedFeeIds.has(fee.id));
+  const allFeesSelected = fees.length > 0 && fees.every((fee) => selectedFeeIds.has(fee.id));
 
-    const scope = processorId
-      ? `as ${fees.length} taxa(s) listada(s) para esta operadora`
-      : `todas as ${fees.length} taxa(s) listada(s)`;
+  const toggleFeeSelection = (feeId) => {
+    setSelectedFeeIds((current) => {
+      const next = new Set(current);
+      if (next.has(feeId)) {
+        next.delete(feeId);
+      } else {
+        next.add(feeId);
+      }
+      return next;
+    });
+  };
 
-    if (!confirm(`Excluir ${scope}?\n\nEsta ação remove as taxas configuradas da listagem, mas mantém as operadoras e as funcionalidades da tela ativas.`)) {
+  const toggleAllFeeSelection = () => {
+    setSelectedFeeIds((current) => {
+      if (allFeesSelected) return new Set();
+      const next = new Set(current);
+      fees.forEach((fee) => next.add(fee.id));
+      return next;
+    });
+  };
+
+  const handleDeleteSelectedFees = async () => {
+    if (!selectedFees.length || bulkDeletingFees) return;
+
+    if (!confirm(`Excluir ${selectedFees.length} taxa(s) selecionada(s)?\n\nEsta ação remove somente as taxas marcadas, mas mantém as operadoras e as funcionalidades da tela ativas.`)) {
       return;
     }
 
@@ -230,7 +255,7 @@ export default function CartasProcessadorTaxasPage() {
       setSuccess('');
       setBulkDeletingFees(true);
 
-      for (const fee of fees) {
+      for (const fee of selectedFees) {
         await deleteProcessorFee(fee.id, {
           clinicId,
           userId: user?.id,
@@ -238,11 +263,12 @@ export default function CartasProcessadorTaxasPage() {
       }
 
       resetForm();
-      setSuccess(`✅ ${fees.length} taxa(s) excluída(s) com sucesso. Funcionalidades permanecem ativas para novas configurações.`);
+      setSelectedFeeIds(new Set());
+      setSuccess(`✅ ${selectedFees.length} taxa(s) selecionada(s) excluída(s) com sucesso. Funcionalidades permanecem ativas para novas configurações.`);
       await loadFees();
     } catch (err) {
       console.error('Erro ao excluir taxas em massa:', err);
-      setError('Erro ao excluir taxas listadas: ' + (err.message || 'Tente novamente'));
+      setError('Erro ao excluir taxas selecionadas: ' + (err.message || 'Tente novamente'));
     } finally {
       setBulkDeletingFees(false);
     }
@@ -418,25 +444,43 @@ export default function CartasProcessadorTaxasPage() {
           {/* Lista de Taxas */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow-lg p-6">
-              <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <h2 className="text-xl font-semibold text-slate-900">
-                  📋 Taxas Configuradas{' '}
-                  <span className="text-sm font-normal text-slate-500">
-                    ({fees.length})
-                  </span>
-                </h2>
-                {fees.length > 0 && (
+              <div className="mb-6 space-y-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <h2 className="text-xl font-semibold text-slate-900">
+                    📋 Taxas Configuradas{' '}
+                    <span className="text-sm font-normal text-slate-500">
+                      ({fees.length})
+                    </span>
+                  </h2>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={handleDeleteListedFees}
-                    disabled={bulkDeletingFees}
+                    onClick={handleDeleteSelectedFees}
+                    disabled={!selectedFees.length || bulkDeletingFees}
                     className="gap-2 border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
                   >
                     <Trash className="h-4 w-4" />
-                    {bulkDeletingFees ? 'Excluindo...' : 'Excluir taxas listadas'}
+                    {bulkDeletingFees ? 'Excluindo...' : `Excluir selecionadas (${selectedFees.length})`}
                   </Button>
+                </div>
+
+                {fees.length > 0 && (
+                  <div className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 sm:flex-row sm:items-center sm:justify-between">
+                    <label className="inline-flex items-center gap-2 font-medium">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-slate-300"
+                        checked={allFeesSelected}
+                        onChange={toggleAllFeeSelection}
+                        disabled={bulkDeletingFees}
+                      />
+                      Selecionar todas visíveis
+                    </label>
+                    <span className="text-slate-500">
+                      {selectedFees.length} selecionada{selectedFees.length === 1 ? '' : 's'}
+                    </span>
+                  </div>
                 )}
               </div>
 
@@ -451,9 +495,20 @@ export default function CartasProcessadorTaxasPage() {
                   {fees.map((fee) => (
                     <div
                       key={fee.id}
-                      className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50 transition"
+                      className={`border rounded-lg p-4 transition ${selectedFeeIds.has(fee.id) ? 'border-blue-300 bg-blue-50' : 'border-slate-200 hover:bg-slate-50'}`}
                     >
-                      <div className="flex items-start justify-between">
+                      <div className="flex items-start justify-between gap-3">
+                        <label className="mt-1 inline-flex items-center" title="Selecionar taxa">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-slate-300"
+                            checked={selectedFeeIds.has(fee.id)}
+                            onChange={() => toggleFeeSelection(fee.id)}
+                            disabled={bulkDeletingFees}
+                            aria-label={`Selecionar taxa ${fee.card_brand} ${fee.settlement_type}`}
+                          />
+                        </label>
+
                         <div className="flex-1">
                           <div className="flex gap-2 items-center mb-2">
                             <span className="font-semibold text-slate-900">
