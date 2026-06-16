@@ -135,6 +135,46 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
     window.localStorage.setItem(transactionColumnStorageKey, JSON.stringify({ visibleColumns, columnOrder }));
   }, [columnOrder, visibleColumns]);
 
+  const orderedColumnDefinitions = React.useMemo(() => {
+    const definitionMap = new Map(transactionColumnDefinitions.map((column) => [column.key, column]));
+    return columnOrder.map((key) => definitionMap.get(key)).filter(Boolean) as TransactionColumnDefinition[];
+  }, [columnOrder]);
+
+  const activeColumns = React.useMemo(
+    () => orderedColumnDefinitions.filter((column) => visibleColumns[column.key] !== false),
+    [orderedColumnDefinitions, visibleColumns],
+  );
+
+  const resetColumnLayout = () => {
+    setVisibleColumns(defaultTransactionVisibleColumns);
+    setColumnOrder(defaultTransactionColumnOrder);
+  };
+
+  const moveColumn = (key: TransactionColumnKey, direction: -1 | 1) => {
+    setColumnOrder((current) => {
+      const index = current.indexOf(key);
+      const nextIndex = index + direction;
+      if (index < 0 || nextIndex < 0 || nextIndex >= current.length) return current;
+      const next = [...current];
+      [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+      return next;
+    });
+  };
+
+  const moveColumnToPosition = (sourceKey: string, targetKey: TransactionColumnKey, insertAfter: boolean) => {
+    if (!sourceKey || sourceKey === targetKey) return;
+    setColumnOrder((current) => {
+      if (!current.includes(sourceKey as TransactionColumnKey)) return current;
+      const withoutSource = current.filter((key) => key !== sourceKey);
+      const targetIndex = withoutSource.indexOf(targetKey);
+      if (targetIndex < 0) return current;
+      const insertIndex = insertAfter ? targetIndex + 1 : targetIndex;
+      const next = [...withoutSource];
+      next.splice(insertIndex, 0, sourceKey as TransactionColumnKey);
+      return next;
+    });
+  };
+
   if (loading) {
     return (
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-8 text-center">
@@ -334,46 +374,6 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
 
     setBulkAction('');
     setSelectedIds(new Set());
-  };
-
-  const orderedColumnDefinitions = React.useMemo(() => {
-    const definitionMap = new Map(transactionColumnDefinitions.map((column) => [column.key, column]));
-    return columnOrder.map((key) => definitionMap.get(key)).filter(Boolean) as TransactionColumnDefinition[];
-  }, [columnOrder]);
-
-  const activeColumns = React.useMemo(
-    () => orderedColumnDefinitions.filter((column) => visibleColumns[column.key] !== false),
-    [orderedColumnDefinitions, visibleColumns],
-  );
-
-  const resetColumnLayout = () => {
-    setVisibleColumns(defaultTransactionVisibleColumns);
-    setColumnOrder(defaultTransactionColumnOrder);
-  };
-
-  const moveColumn = (key: TransactionColumnKey, direction: -1 | 1) => {
-    setColumnOrder((current) => {
-      const index = current.indexOf(key);
-      const nextIndex = index + direction;
-      if (index < 0 || nextIndex < 0 || nextIndex >= current.length) return current;
-      const next = [...current];
-      [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
-      return next;
-    });
-  };
-
-  const moveColumnToPosition = (sourceKey: string, targetKey: TransactionColumnKey, insertAfter: boolean) => {
-    if (!sourceKey || sourceKey === targetKey) return;
-    setColumnOrder((current) => {
-      if (!current.includes(sourceKey as TransactionColumnKey)) return current;
-      const withoutSource = current.filter((key) => key !== sourceKey);
-      const targetIndex = withoutSource.indexOf(targetKey);
-      if (targetIndex < 0) return current;
-      const insertIndex = insertAfter ? targetIndex + 1 : targetIndex;
-      const next = [...withoutSource];
-      next.splice(insertIndex, 0, sourceKey as TransactionColumnKey);
-      return next;
-    });
   };
 
   return (
