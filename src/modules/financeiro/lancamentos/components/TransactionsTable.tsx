@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Pencil, Trash2, RotateCcw, CheckCircle, AlertCircle } from 'lucide-react';
+import { Pencil, Trash2, RotateCcw, CheckCircle, AlertCircle, ArrowDown, ArrowUp, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -47,6 +47,67 @@ interface TransactionsTableProps {
   deletingId?: string | null;
 }
 
+type TransactionColumnKey = 'date' | 'description' | 'type' | 'amount' | 'status' | 'reconciled' | 'origin';
+
+type TransactionColumnDefinition = {
+  key: TransactionColumnKey;
+  label: string;
+  width: string;
+  align: 'text-left' | 'text-center' | 'text-right';
+};
+
+const transactionColumnDefinitions: TransactionColumnDefinition[] = [
+  { key: 'date', label: 'Data', width: 'w-[96px]', align: 'text-left' },
+  { key: 'description', label: 'Descrição', width: 'w-[320px]', align: 'text-left' },
+  { key: 'type', label: 'Tipo', width: 'w-[86px]', align: 'text-left' },
+  { key: 'amount', label: 'Valor', width: 'w-[116px]', align: 'text-right' },
+  { key: 'status', label: 'Status', width: 'w-[112px]', align: 'text-center' },
+  { key: 'reconciled', label: 'Conciliação', width: 'w-[112px]', align: 'text-center' },
+  { key: 'origin', label: 'Origem', width: 'w-[128px]', align: 'text-left' },
+];
+
+const defaultTransactionColumnOrder = transactionColumnDefinitions.map((column) => column.key);
+const defaultTransactionVisibleColumns: Record<TransactionColumnKey, boolean> = transactionColumnDefinitions.reduce(
+  (acc, column) => ({ ...acc, [column.key]: column.key !== 'origin' }),
+  {} as Record<TransactionColumnKey, boolean>,
+);
+const transactionColumnStorageKey = 'lancamentos_visible_columns_v1';
+
+function normalizeTransactionColumnOrder(order?: string[]) {
+  const validKeys = new Set(defaultTransactionColumnOrder);
+  const uniqueOrder = (order || []).filter((key): key is TransactionColumnKey => validKeys.has(key as TransactionColumnKey));
+  return [...uniqueOrder, ...defaultTransactionColumnOrder.filter((key) => !uniqueOrder.includes(key))];
+}
+
+function loadTransactionColumnSettings() {
+  if (typeof window === 'undefined') {
+    return {
+      visibleColumns: defaultTransactionVisibleColumns,
+      columnOrder: defaultTransactionColumnOrder,
+    };
+  }
+
+  try {
+    const raw = window.localStorage.getItem(transactionColumnStorageKey);
+    if (!raw) {
+      return {
+        visibleColumns: defaultTransactionVisibleColumns,
+        columnOrder: defaultTransactionColumnOrder,
+      };
+    }
+    const parsed = JSON.parse(raw);
+    return {
+      visibleColumns: { ...defaultTransactionVisibleColumns, ...(parsed.visibleColumns || {}) },
+      columnOrder: normalizeTransactionColumnOrder(parsed.columnOrder),
+    };
+  } catch {
+    return {
+      visibleColumns: defaultTransactionVisibleColumns,
+      columnOrder: defaultTransactionColumnOrder,
+    };
+  }
+}
+
 export const TransactionsTable = React.memo<TransactionsTableProps>(({
   transactions,
   loading = false,
@@ -60,19 +121,19 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
   const [revertConfirm, setRevertConfirm] = React.useState<FinancialTransaction | null>(null);
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
   const [bulkAction, setBulkAction] = React.useState('');
-  const [visibleColumns, setVisibleColumns] = React.useState<Record<string, boolean>>({
-    date: true,
-    description: true,
-    type: true,
-    amount: true,
-    status: true,
-    reconciled: true,
-    origin: false,
-  });
+  const initialColumnSettings = React.useMemo(() => loadTransactionColumnSettings(), []);
+  const [visibleColumns, setVisibleColumns] = React.useState<Record<TransactionColumnKey, boolean>>(initialColumnSettings.visibleColumns);
+  const [columnOrder, setColumnOrder] = React.useState<TransactionColumnKey[]>(initialColumnSettings.columnOrder);
+  const [draggingColumnKey, setDraggingColumnKey] = React.useState<TransactionColumnKey | null>(null);
 
   React.useEffect(() => {
     setSelectedIds((current) => new Set([...current].filter((id) => transactions.some((item) => item.id === id))));
   }, [transactions]);
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(transactionColumnStorageKey, JSON.stringify({ visibleColumns, columnOrder }));
+  }, [columnOrder, visibleColumns]);
 
   if (loading) {
     return (
@@ -275,17 +336,45 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
     setSelectedIds(new Set());
   };
 
-  const columnDefinitions = [
-    { key: 'date', label: 'Data', width: 'w-[96px]', align: 'text-left' },
-    { key: 'description', label: 'Descrição', width: 'w-[340px]', align: 'text-left' },
-    { key: 'type', label: 'Tipo', width: 'w-[96px]', align: 'text-left' },
-    { key: 'amount', label: 'Valor', width: 'w-[128px]', align: 'text-right' },
-    { key: 'status', label: 'Status', width: 'w-[116px]', align: 'text-center' },
-    { key: 'reconciled', label: 'Conc.', width: 'w-[78px]', align: 'text-center' },
-    { key: 'origin', label: 'Origem', width: 'w-[128px]', align: 'text-left' },
-  ];
+  const orderedColumnDefinitions = React.useMemo(() => {
+    const definitionMap = new Map(transactionColumnDefinitions.map((column) => [column.key, column]));
+    return columnOrder.map((key) => definitionMap.get(key)).filter(Boolean) as TransactionColumnDefinition[];
+  }, [columnOrder]);
 
-  const activeColumns = columnDefinitions.filter((column) => visibleColumns[column.key] !== false);
+  const activeColumns = React.useMemo(
+    () => orderedColumnDefinitions.filter((column) => visibleColumns[column.key] !== false),
+    [orderedColumnDefinitions, visibleColumns],
+  );
+
+  const resetColumnLayout = () => {
+    setVisibleColumns(defaultTransactionVisibleColumns);
+    setColumnOrder(defaultTransactionColumnOrder);
+  };
+
+  const moveColumn = (key: TransactionColumnKey, direction: -1 | 1) => {
+    setColumnOrder((current) => {
+      const index = current.indexOf(key);
+      const nextIndex = index + direction;
+      if (index < 0 || nextIndex < 0 || nextIndex >= current.length) return current;
+      const next = [...current];
+      [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+      return next;
+    });
+  };
+
+  const moveColumnToPosition = (sourceKey: string, targetKey: TransactionColumnKey, insertAfter: boolean) => {
+    if (!sourceKey || sourceKey === targetKey) return;
+    setColumnOrder((current) => {
+      if (!current.includes(sourceKey as TransactionColumnKey)) return current;
+      const withoutSource = current.filter((key) => key !== sourceKey);
+      const targetIndex = withoutSource.indexOf(targetKey);
+      if (targetIndex < 0) return current;
+      const insertIndex = insertAfter ? targetIndex + 1 : targetIndex;
+      const next = [...withoutSource];
+      next.splice(insertIndex, 0, sourceKey as TransactionColumnKey);
+      return next;
+    });
+  };
 
   return (
     <>
@@ -318,25 +407,78 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
               <DropdownMenuTrigger asChild>
                 <Button type="button" size="sm" variant="outline">Colunas</Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-60">
-                <DropdownMenuLabel>Colunas visíveis</DropdownMenuLabel>
+              <DropdownMenuContent align="end" className="max-h-96 w-80 overflow-auto">
+                <DropdownMenuLabel>Colunas visíveis e ordem</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={(event) => {
                   event.preventDefault();
-                  setVisibleColumns({ date: true, description: true, type: true, amount: true, status: true, reconciled: true, origin: false });
+                  resetColumnLayout();
                 }}>
                   Restaurar padrão
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                {columnDefinitions.map((column) => (
-                  <DropdownMenuCheckboxItem
+                {orderedColumnDefinitions.map((column, index) => (
+                  <div
                     key={column.key}
-                    checked={visibleColumns[column.key] !== false}
-                    onCheckedChange={(checked) => setVisibleColumns((current) => ({ ...current, [column.key]: Boolean(checked) }))}
-                    onSelect={(event) => event.preventDefault()}
+                    draggable
+                    onDragStart={(event) => {
+                      setDraggingColumnKey(column.key);
+                      event.dataTransfer.effectAllowed = 'move';
+                      event.dataTransfer.setData('text/plain', column.key);
+                    }}
+                    onDragEnd={() => setDraggingColumnKey(null)}
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                      event.dataTransfer.dropEffect = 'move';
+                    }}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      const sourceKey = draggingColumnKey || event.dataTransfer.getData('text/plain');
+                      const rect = event.currentTarget.getBoundingClientRect();
+                      const insertAfter = event.clientY > rect.top + rect.height / 2;
+                      moveColumnToPosition(sourceKey, column.key, insertAfter);
+                      setDraggingColumnKey(null);
+                    }}
+                    className={`flex cursor-grab items-center gap-1 px-1 py-0.5 active:cursor-grabbing ${draggingColumnKey === column.key ? 'opacity-50' : ''}`}
                   >
-                    {column.label}
-                  </DropdownMenuCheckboxItem>
+                    <GripVertical className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+                    <DropdownMenuCheckboxItem
+                      checked={visibleColumns[column.key] !== false}
+                      onCheckedChange={(checked) => setVisibleColumns((current) => ({ ...current, [column.key]: Boolean(checked) }))}
+                      onSelect={(event) => event.preventDefault()}
+                      className="min-w-0 flex-1"
+                    >
+                      {column.label}
+                    </DropdownMenuCheckboxItem>
+                    <button
+                      type="button"
+                      className="inline-flex h-7 w-7 items-center justify-center rounded border text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        moveColumn(column.key, -1);
+                      }}
+                      disabled={index === 0}
+                      title="Mover para cima"
+                      aria-label={`Mover ${column.label} para cima`}
+                    >
+                      <ArrowUp className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      className="inline-flex h-7 w-7 items-center justify-center rounded border text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        moveColumn(column.key, 1);
+                      }}
+                      disabled={index === orderedColumnDefinitions.length - 1}
+                      title="Mover para baixo"
+                      aria-label={`Mover ${column.label} para baixo`}
+                    >
+                      <ArrowDown className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
@@ -361,7 +503,7 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
         </div>
 
         <div className="max-h-[70vh] overflow-auto">
-          <table className="w-full min-w-[1040px] table-fixed text-sm">
+          <table className="w-full min-w-[1030px] table-fixed text-sm">
             <thead className="sticky top-0 z-20 border-b border-slate-200 bg-slate-50">
               <tr>
                 <th className="w-10 px-3 py-3 text-left font-semibold text-slate-700">
@@ -379,7 +521,7 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
                     {column.label}
                   </th>
                 ))}
-                <th className="w-[136px] border-l border-slate-200 bg-slate-50 px-2 py-3 text-right font-semibold text-slate-700">Ações</th>
+                <th className="w-[136px] border-l border-slate-200 bg-slate-50 px-2 py-3 text-center font-semibold text-slate-700">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -427,7 +569,7 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
                 },
               ];
 
-              const renderColumn = (key: string) => {
+              const renderColumn = (key: TransactionColumnKey) => {
                 if (key === 'date') {
                   return <span className="font-mono text-xs text-slate-700">{formatDate(getTransactionDate(transaction))}</span>;
                 }
@@ -488,8 +630,8 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
                     {renderColumn(column.key)}
                   </td>
                 ))}
-                <td className="border-l border-slate-100 bg-inherit px-2 py-3 align-middle">
-                  <div className="flex w-[120px] items-center justify-end gap-0.5 whitespace-nowrap">
+                <td className="border-l border-slate-100 bg-inherit px-2 py-3 align-middle text-center">
+                  <div className="mx-auto flex w-[120px] items-center justify-center gap-0.5 whitespace-nowrap">
                     <TooltipProvider>
                       {rowActions.map((action) => {
                         const Icon = action.icon;

@@ -49,7 +49,7 @@ export const TransactionFilters = React.memo<TransactionFiltersProps>(({
   accounts,
   categories,
 }) => {
-  const [filtersOpen, setFiltersOpen] = useState(true);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [accountId, setAccountId] = useState('');
   const [type, setType] = useState('');
