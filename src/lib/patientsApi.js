@@ -1,25 +1,106 @@
 import { supabase } from '@/lib/customSupabaseClient';
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const DEFAULT_LIST_LIMIT = 40;
+const MAX_LIST_LIMIT = 500;
+
+function isValidUuid(value) {
+  return UUID_REGEX.test(String(value || ''));
+}
+
+function normalizeSearchTerm(value) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function escapeSupabasePattern(value) {
+  return value.replace(/[%_]/g, '\\$&').replace(/,/g, ' ');
+}
+
+function normalizePatientRecord(patient) {
+  if (!patient) {
+    return patient;
+  }
+
+  return {
+    ...patient,
+    full_name: patient.full_name || patient.name || '',
+    cpf: patient.cpf || patient.document_id || '',
+    birth_date: patient.birth_date || patient.birthdate || null,
+  };
+}
+
+function sanitizePatientPayload(patientData = {}) {
+  const source = { ...patientData };
+
+  if (source.full_name !== undefined && source.name === undefined) {
+    source.name = source.full_name;
+  }
+  if (source.cpf !== undefined && source.document_id === undefined) {
+    source.document_id = source.cpf;
+  }
+  if (source.birth_date !== undefined && source.birthdate === undefined) {
+    source.birthdate = source.birth_date;
+  }
+  if (source.street_number !== undefined && source.number === undefined) {
+    source.number = source.street_number;
+  }
+  if (source.postal_code !== undefined && source.zip_code === undefined) {
+    source.zip_code = source.postal_code;
+  }
+
+  const allowedFields = [
+    'name',
+    'document_id',
+    'birthdate',
+    'gender',
+    'cell_phone',
+    'phone',
+    'email',
+    'street',
+    'number',
+    'neighborhood',
+    'city',
+    'address',
+    'state',
+    'zip_code',
+    'prontuario_numero',
+    'payer_id',
+    'plan_id',
+    'insurance_id_number',
+    'responsible_name',
+    'responsible_relationship',
+    'record_number',
+    'photo_url',
+    'active',
+  ];
+
+  const payload = {};
+  for (const key of allowedFields) {
+    if (source[key] !== undefined) {
+      payload[key] = typeof source[key] === 'string' ? source[key].trim() || null : source[key];
+    }
+  }
+
+  return payload;
+}
+
 /**
  * ======================================================
  *  🔍 LISTA PACIENTES + FILTRO POR NOME/CPF + GÊNERO
  * ======================================================
  */
 export async function listPatients(clinicId, filters = {}) {
-  console.log('📌 listPatients():', { clinicId, filters });
-
   if (!clinicId) {
     return [];
   }
 
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-  if (!uuidRegex.test(clinicId)) {
+  if (!isValidUuid(clinicId)) {
     console.error('❌ ClinicId inválido:', clinicId);
     return [];
   }
 
-  // ✅ Construir query base
+  const limit = Math.min(Math.max(Number(filters.limit) || DEFAULT_LIST_LIMIT, 1), MAX_LIST_LIMIT);
+
   let query = supabase
     .from('patients')
     .select(
@@ -40,55 +121,59 @@ export async function listPatients(clinicId, filters = {}) {
       address,
       state,
       zip_code,
-      photo_url
+      photo_url,
+      active,
+      created_at,
+      updated_at
     `,
     )
     .eq('clinic_id', clinicId);
 
-  // ✅ APLICAR FILTRO DE BUSCA (com debugging)
-  if (filters.q && filters.q.trim().length >= 2) {
-    const searchTerm = filters.q.trim();
-    console.log('🔍 Aplicando filtro de busca:', searchTerm);
-    console.log('🔍 Usando .or() com termo:', `name.ilike.%${searchTerm}%,document_id.ilike.%${searchTerm}%`);
-    
-    // Usar OR para buscar em nome OU documento
-    const orCondition = `name.ilike.%${searchTerm}%,document_id.ilike.%${searchTerm}%`;
-    console.log('🔍 Condicao OR:', orCondition);
+  const searchTerm = normalizeSearchTerm(filters.q);
+  if (searchTerm.length >= 2) {
+    const safeSearchTerm = escapeSupabasePattern(searchTerm);
+    const numericSearchTerm = searchTerm.replace(/\D/g, '');
+    const searchColumns = [
+      `name.ilike.%${safeSearchTerm}%`,
+      `document_id.ilike.%${safeSearchTerm}%`,
+      `email.ilike.%${safeSearchTerm}%`,
+      `phone.ilike.%${safeSearchTerm}%`,
+      `cell_phone.ilike.%${safeSearchTerm}%`,
+    ];
+
+    if (numericSearchTerm && numericSearchTerm !== safeSearchTerm) {
+      searchColumns.push(`document_id.ilike.%${numericSearchTerm}%`);
+      searchColumns.push(`phone.ilike.%${numericSearchTerm}%`);
+      searchColumns.push(`cell_phone.ilike.%${numericSearchTerm}%`);
+    }
+
+    const orCondition = searchColumns.join(',');
     query = query.or(orCondition);
-    console.log('🔍 Query modificada com .or()');
   }
 
-  // ✅ FILTRO POR GÊNERO (se especificado)
   if (filters.gender && filters.gender !== 'Todos') {
     query = query.eq('gender', filters.gender);
   }
 
-  // ✅ ORDENAR E LIMITAR
-  query = query.order('name', { ascending: true }).limit(40);
+  if (filters.active === true) {
+    query = query.neq('active', false);
+  } else if (filters.active === false) {
+    query = query.eq('active', false);
+  }
 
-  console.log('🔍 Executando query...');
-  console.log('🔍 Query object tipo:', typeof query);
+  query = query.order('name', { ascending: true }).limit(limit);
   
   try {
-    const result = await query;
-    console.log('✅ Query retornou (await concluído)');
-    const { data, error } = result;
-    console.log('✅ Desestruturando: data=', data?.length || 0, ', error=', error);
+    const { data, error } = await query;
 
     if (error) {
       console.error('❌ Erro ao buscar pacientes:', error);
-      console.error('❌ Erro completo:', JSON.stringify(error));
       return [];
     }
 
-    console.log('✅ Query retornou:', data?.length || 0, 'pacientes');
-    // Garantir ID válido
-    const filtered = (data || []).filter((p) => uuidRegex.test(p.id));
-    console.log('✅ Após filtro de UUID:', filtered.length, 'pacientes');
-    return filtered;
+    return (data || []).filter((patient) => isValidUuid(patient.id)).map(normalizePatientRecord);
   } catch (err) {
-    console.error('❌ CATCH error:', err.message);
-    console.error('❌ CATCH error stack:', err.stack);
+    console.error('❌ Erro inesperado ao buscar pacientes:', err);
     return [];
   }
 }
@@ -103,9 +188,7 @@ export async function getPatientById(patientId) {
     return null;
   }
 
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-  if (!uuidRegex.test(patientId)) {
+  if (!isValidUuid(patientId)) {
     console.error('❌ patientId inválido:', patientId);
     throw new Error('ID inválido');
   }
@@ -151,7 +234,7 @@ export async function getPatientById(patientId) {
     throw error;
   }
 
-  return data || null;
+  return normalizePatientRecord(data) || null;
 }
 
 /**
@@ -235,7 +318,7 @@ export async function updatePatientPhoto(patientId, photoUrl) {
     throw error;
   }
 
-  return data;
+  return normalizePatientRecord(data);
 }
 
 /**
@@ -248,36 +331,7 @@ export async function createPatientWithPhoto(clinicId, patientData, photoDataUrl
     throw new Error('Clínica não informada!');
   }
 
-  // Lista de colunas válidas na tabela 'patients'
-  const allowedFields = [
-    'name',
-    'document_id',
-    'birthdate',
-    'gender',
-    'cell_phone',
-    'phone',
-    'email',
-    'city',
-    'address',
-    'state',
-    'zip_code',
-    'prontuario_numero',
-    'payer_id',
-    'plan_id',
-    'insurance_id_number',
-    'responsible_name',
-    'responsible_relationship',
-    'record_number',
-    'photo_url',
-  ];
-
-  // Monta o payload apenas com campos permitidos
-  const payload = { clinic_id: clinicId };
-  for (const key of allowedFields) {
-    if (patientData[key] !== undefined) {
-      payload[key] = patientData[key];
-    }
-  }
+  const payload = { clinic_id: clinicId, ...sanitizePatientPayload(patientData) };
 
   const { data, error } = await supabase.from('patients').insert(payload).select().maybeSingle();
 
@@ -291,14 +345,14 @@ export async function createPatientWithPhoto(clinicId, patientData, photoDataUrl
     try {
       const photoUrl = await uploadPatientPhoto(clinicId, data.id, photoDataUrl);
       const updated = await updatePatientPhoto(data.id, photoUrl);
-      return updated || data;
+      return normalizePatientRecord(updated || data);
     } catch (photoError) {
       console.warn('⚠️ Paciente criado, mas erro ao salvar foto:', photoError);
-      return data; // Retornar paciente mesmo se foto falhar
+      return normalizePatientRecord(data); // Retornar paciente mesmo se foto falhar
     }
   }
 
-  return data;
+  return normalizePatientRecord(data);
 }
 
 /**
@@ -311,36 +365,7 @@ export async function createPatient(clinicId, patientData) {
     throw new Error('Clínica não informada!');
   }
 
-  // Lista de colunas válidas na tabela 'patients'
-  const allowedFields = [
-    'name',
-    'document_id',
-    'birthdate',
-    'gender',
-    'cell_phone',
-    'phone',
-    'email',
-    'city',
-    'address',
-    'state',
-    'zip_code',
-    'prontuario_numero',
-    'payer_id',
-    'plan_id',
-    'insurance_id_number',
-    'responsible_name',
-    'responsible_relationship',
-    'record_number',
-    'photo_url',
-  ];
-
-  // Monta o payload apenas com campos permitidos
-  const payload = { clinic_id: clinicId };
-  for (const key of allowedFields) {
-    if (patientData[key] !== undefined) {
-      payload[key] = patientData[key];
-    }
-  }
+  const payload = { clinic_id: clinicId, ...sanitizePatientPayload(patientData) };
 
   const { data, error } = await supabase.from('patients').insert(payload).select().maybeSingle();
 
@@ -349,7 +374,7 @@ export async function createPatient(clinicId, patientData) {
     throw error;
   }
 
-  return data;
+  return normalizePatientRecord(data);
 }
 
 /**
@@ -362,14 +387,11 @@ export async function updatePatient(patientId, patientData) {
     return null;
   }
 
-  // Remover campo address se existir
-  if ('address' in patientData) {
-    delete patientData.address;
-  }
+  const payload = sanitizePatientPayload(patientData);
 
   const { data, error } = await supabase
     .from('patients')
-    .update(patientData)
+    .update(payload)
     .eq('id', patientId)
     .select()
     .maybeSingle();
@@ -379,7 +401,7 @@ export async function updatePatient(patientId, patientData) {
     throw error;
   }
 
-  return data;
+  return normalizePatientRecord(data);
 }
 
 /**
@@ -451,16 +473,26 @@ export async function fetchPlansForSelect(clinicId) {
  *  🔎 VERIFICA DUPLICIDADE (CPF)
  * ======================================================
  */
-export async function checkPatientExists({ clinicId, cpf }) {
-  if (!clinicId || !cpf) {
+export async function checkPatientExists({ clinicId, cpf, documentId }) {
+  const rawDocument = String(documentId || cpf || '').trim();
+  const documentDigits = rawDocument.replace(/\D/g, '');
+
+  if (!clinicId || !rawDocument) {
     return false;
   }
+
+  const formattedDocument =
+    documentDigits.length === 11
+      ? `${documentDigits.slice(0, 3)}.${documentDigits.slice(3, 6)}.${documentDigits.slice(6, 9)}-${documentDigits.slice(9, 11)}`
+      : rawDocument;
+
+  const variants = [...new Set([rawDocument, documentDigits, formattedDocument].filter(Boolean))];
 
   const { data, error } = await supabase
     .from('patients')
     .select('id')
     .eq('clinic_id', clinicId)
-    .eq('cpf', cpf)
+    .in('document_id', variants)
     .limit(1)
     .maybeSingle();
 

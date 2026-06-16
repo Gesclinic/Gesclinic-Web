@@ -22,7 +22,6 @@ import {
   fetchPayersForSelect,
   fetchPlansForSelect,
   checkPatientExists,
-  uploadPatientPhoto,
 } from '@/lib/patientsApi';
 import { useToast } from '@/components/ui/use-toast';
 import { NONE } from '@/lib/selectUtils';
@@ -48,6 +47,14 @@ const toDateInput = (v) => {
 
 const onlyDigits = (v) => (typeof v === 'string' ? v.replace(/\D+/g, '') : '');
 const normalizeEmail = (v) => (typeof v === 'string' && v.trim() ? v.trim().toLowerCase() : '');
+
+const fileToDataUrl = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 
 const formatCpfView = (raw) => {
   const v = onlyDigits(raw).slice(0, 11);
@@ -166,9 +173,9 @@ export default function PatientDialog({
     }
 
     if (initialData) {
-      setFullName(initialData?.full_name || initialData?.full_name || '');
-      setCpfView(formatCpfView(initialData?.cpf || ''));
-      setBirthdate(toDateInput(initialData?.birth_date));
+      setFullName(initialData?.full_name || initialData?.name || '');
+      setCpfView(formatCpfView(initialData?.cpf || initialData?.document_id || ''));
+      setBirthdate(toDateInput(initialData?.birth_date || initialData?.birthdate));
 
       setEmail(initialData?.email ?? '');
       setPhone(initialData?.phone ?? '');
@@ -269,22 +276,11 @@ export default function PatientDialog({
     try {
       const cpf = onlyDigits(cpfView);
 
-      let finalPhotoUrl = photoUrl;
-
-      // Se houver arquivo novo, faz upload
-      if (photoFile) {
-        try {
-          finalPhotoUrl = await uploadPatientPhoto(photoFile);
-        } catch (err) {
-          console.error('Erro no upload da foto:', err);
-          toast({
-            variant: 'destructive',
-            title: 'Erro ao salvar foto',
-            description: 'A foto não pôde ser salva, mas tentaremos salvar os dados.',
-          });
-          // Não impede o salvamento dos dados, apenas avisa
-        }
-      }
+      const photoDataUrl = photoFile
+        ? photoUrl?.startsWith('data:')
+          ? photoUrl
+          : await fileToDataUrl(photoFile)
+        : null;
 
       if (!isEdit) {
         const exists = await checkPatientExists({ clinicId, cpf });
@@ -324,8 +320,13 @@ export default function PatientDialog({
 
         record_number: recordNumber,
         clinic_id: clinicId,
-        photo_url: finalPhotoUrl,
       };
+
+      if (photoDataUrl) {
+        payload.photo_data_url = photoDataUrl;
+      } else if (photoUrl) {
+        payload.photo_url = photoUrl;
+      }
 
       await onSubmit?.(payload);
     } finally {

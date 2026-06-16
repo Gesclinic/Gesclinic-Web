@@ -15,7 +15,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/SupabaseAuthContext.jsx';
 import { Label } from '@/components/ui/label';
 import { attachDisplayNames } from '@/lib/appointmentsColumns';
-import { getPatientById, listPatients } from '@/lib/patientsApi';
+import { createPatientWithPhoto, getPatientById, listPatients } from '@/lib/patientsApi';
 import { formatPhone } from '@/utils/formatters/formatPhone';
 import {
   Dialog,
@@ -584,8 +584,12 @@ export default function AppointmentDialog(props) {
           onOpenChange={setPatientDlgOpen}
           clinicId={clinicId}
           onSubmit={async (newPatient) => {
-            setSelectedPatient(newPatient);
-            setPatientSearchText(newPatient?.full_name || newPatient?.full_name || '');
+            const { photo_data_url: photoDataUrl, ...patientPayload } = newPatient;
+            const createdPatient = await createPatientWithPhoto(clinicId, patientPayload, photoDataUrl);
+            setSelectedPatient(createdPatient);
+            setPatientSearchText(createdPatient?.full_name || createdPatient?.name || '');
+            setPatientManualName('');
+            setPhone(createdPatient?.cell_phone || createdPatient?.phone || phone);
             setPatientDlgOpen(false);
             toast({ variant: 'success', title: 'Paciente incluído!' });
           }}

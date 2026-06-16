@@ -134,10 +134,10 @@ const PatientCard = React.memo(
                   </div>
 
                   {/* Telefone */}
-                  {patient.phone && (
+                  {(patient.cell_phone || patient.phone) && (
                     <div className="flex items-center gap-1.5 text-sm">
                       <Phone size={14} className="text-gray-400 flex-shrink-0" />
-                      <span className="text-gray-600">{patient.phone}</span>
+                      <span className="text-gray-600">{patient.cell_phone || patient.phone}</span>
                     </div>
                   )}
 
@@ -258,7 +258,7 @@ export default function PatientListPage() {
     }
     setLoading(true);
     try {
-      const data = await listPatients(clinicId);
+      const data = await listPatients(clinicId, { limit: 500 });
       setPatients(data || []);
     } catch (error) {
       console.error('Erro ao carregar pacientes:', error);
@@ -293,7 +293,7 @@ export default function PatientListPage() {
       p.prontuario_numero || '—',
       p.name,
       p.document_id || '—',
-      p.phone || '—',
+      p.cell_phone || p.phone || '—',
       p.email || '—',
       p.city || '—',
       p.state || '—',
@@ -366,7 +366,8 @@ export default function PatientListPage() {
           p.name?.toLowerCase().includes(term) ||
           p.document_id?.includes(term) ||
           p.email?.toLowerCase().includes(term) ||
-          p.phone?.includes(term),
+            p.phone?.includes(term) ||
+            p.cell_phone?.includes(term),
       );
     }
 
@@ -376,7 +377,7 @@ export default function PatientListPage() {
   // Pagination: 50 patients per page
   const {
     items: paginatedPatients,
-    pageNum,
+    page,
     totalPages,
     nextPage,
     prevPage,
@@ -705,7 +706,7 @@ export default function PatientListPage() {
                 <motion.div variants={itemVariants} className="mt-6">
                   <div className="flex items-center justify-between bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
                     <div className="text-sm text-gray-600">
-                      Página <span className="font-semibold">{pageNum + 1}</span> de{' '}
+                      Página <span className="font-semibold">{page}</span> de{' '}
                       <span className="font-semibold">{totalPages}</span> ({filteredPatients.length}{' '}
                       pacientes)
                     </div>
@@ -714,26 +715,26 @@ export default function PatientListPage() {
                         variant="outline"
                         size="sm"
                         onClick={prevPage}
-                        disabled={pageNum === 0}
+                        disabled={page <= 1}
                       >
                         ← Anterior
                       </Button>
                       <div className="flex gap-1">
                         {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                          const start = Math.max(0, pageNum - 2);
+                          const start = Math.max(1, page - 2);
                           const pageNumber = start + i;
-                          if (pageNumber >= totalPages) {
+                          if (pageNumber > totalPages) {
                             return null;
                           }
                           return (
                             <Button
                               key={pageNumber}
-                              variant={pageNum === pageNumber ? 'default' : 'outline'}
+                              variant={page === pageNumber ? 'default' : 'outline'}
                               size="sm"
                               onClick={() => goToPage(pageNumber)}
                               className="w-8 h-8 p-0"
                             >
-                              {pageNumber + 1}
+                              {pageNumber}
                             </Button>
                           );
                         })}
@@ -742,7 +743,7 @@ export default function PatientListPage() {
                         variant="outline"
                         size="sm"
                         onClick={nextPage}
-                        disabled={pageNum >= totalPages - 1}
+                        disabled={page >= totalPages}
                       >
                         Próximo →
                       </Button>

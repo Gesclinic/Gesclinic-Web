@@ -9,7 +9,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
-import { createPatientWithPhoto } from '@/lib/patientsApi';
+import { checkPatientExists, createPatientWithPhoto } from '@/lib/patientsApi';
 import { useToast } from '@/components/ui/use-toast';
 import PageLayout from '@/components/ui/PageLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -98,12 +98,15 @@ export default function PatientCadastroPage() {
 
   function validateForm() {
     const newErrors = {};
+    const cpfDigits = formData.document_id.replace(/\D/g, '');
 
     if (!formData.name?.trim()) {
       newErrors.name = 'Nome é obrigatório';
     }
     if (!formData.document_id?.trim()) {
       newErrors.document_id = 'CPF é obrigatório';
+    } else if (cpfDigits.length !== 11) {
+      newErrors.document_id = 'CPF deve ter 11 dígitos';
     }
     if (!formData.birthdate) {
       newErrors.birthdate = 'Data de nascimento é obrigatória';
@@ -111,11 +114,8 @@ export default function PatientCadastroPage() {
     if (!formData.gender) {
       newErrors.gender = 'Sexo é obrigatório';
     }
-    if (!formData.cell_phone?.trim()) {
-      newErrors.cell_phone = 'Celular é obrigatório';
-    }
-    if (!formData.phone?.trim()) {
-      newErrors.phone = 'Telefone é obrigatório';
+    if (!formData.cell_phone?.trim() && !formData.phone?.trim()) {
+      newErrors.cell_phone = 'Informe ao menos um telefone de contato';
     }
 
     setErrors(newErrors);
@@ -135,6 +135,17 @@ export default function PatientCadastroPage() {
     setLoading(true);
 
     try {
+      const exists = await checkPatientExists({ clinicId, documentId: formData.document_id });
+      if (exists) {
+        setErrors((prev) => ({ ...prev, document_id: 'CPF já cadastrado nesta clínica' }));
+        toast({
+          title: 'CPF já cadastrado',
+          description: 'Localize o paciente existente pela lista antes de criar um novo cadastro.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       const patient = await createPatientWithPhoto(
         clinicId,
         {
@@ -155,12 +166,12 @@ export default function PatientCadastroPage() {
           email: formData.email || null,
           // Address Fields
           street: formData.street || null,
-          street_number: formData.street_number || null,
+          number: formData.street_number || null,
           complement: formData.complement || null,
           neighborhood: formData.neighborhood || null,
           city: formData.city || null,
           state: formData.state || null,
-          postal_code: formData.postal_code || null,
+          zip_code: formData.postal_code || null,
         },
         formData.photo,
       );
@@ -170,7 +181,7 @@ export default function PatientCadastroPage() {
         description: 'Paciente criado com sucesso!',
       });
 
-      navigate('/clinica/agenda/checkin');
+      navigate(goToComplete && patient?.id ? `/clinica/pacientes/${patient.id}` : '/clinica/pacientes');
       return;
     } catch (error) {
       console.error('Erro ao criar paciente:', error);
@@ -406,7 +417,7 @@ export default function PatientCadastroPage() {
 
                   <div>
                     <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
-                      Telefone <span className="text-red-500">*</span>
+                      Telefone <span className="text-gray-400 text-xs">(opcional)</span>
                     </Label>
                     <Input
                       id="phone"

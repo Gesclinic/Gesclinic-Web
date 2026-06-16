@@ -15,7 +15,14 @@ import {
   fetchPlansForSelect,
 } from '@/lib/appointmentsApi';
 
-import { getPatientById, listPatients, createPatient, updatePatient } from '@/lib/patientsApi';
+import {
+  getPatientById,
+  listPatients,
+  createPatientWithPhoto,
+  updatePatient,
+  uploadPatientPhoto,
+  updatePatientPhoto,
+} from '@/lib/patientsApi';
 
 import { useToast } from '@/components/ui/use-toast';
 import { NONE, asUuidOrNull } from '@/lib/selectUtils';
@@ -216,11 +223,17 @@ export default function AppointmentDialog({ open, onOpenChange, initialData, onS
   // ===========================================================
   const handlePatientSubmit = async (payload) => {
     const isUpdating = !!editingPatient?.id;
+    const { photo_data_url: photoDataUrl, ...patientPayload } = payload;
 
     try {
-      const result = isUpdating
-        ? await updatePatient(editingPatient.id, payload)
-        : await createPatient(clinicId, payload);
+      let result = isUpdating
+        ? await updatePatient(editingPatient.id, patientPayload)
+        : await createPatientWithPhoto(clinicId, patientPayload, photoDataUrl);
+
+      if (isUpdating && photoDataUrl) {
+        const photoUrl = await uploadPatientPhoto(clinicId, editingPatient.id, photoDataUrl);
+        result = await updatePatientPhoto(editingPatient.id, photoUrl);
+      }
 
       chooseExistingPatient(result);
       setPatientDlgOpen(false);
