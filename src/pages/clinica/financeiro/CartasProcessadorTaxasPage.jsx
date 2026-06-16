@@ -18,7 +18,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { CreditCard, Percent, AlertCircle, Edit2, Trash2, History } from 'lucide-react';
+import { CreditCard, Percent, AlertCircle, Edit2, Trash2, History, Trash } from 'lucide-react';
 import {
   validateProcessorFee,
   checkDuplicateFee,
@@ -50,6 +50,7 @@ export default function CartasProcessadorTaxasPage() {
   const [fees, setFees] = useState([]);
   const [loadingProcessors, setLoadingProcessors] = useState(true);
   const [loadingFees, setLoadingFees] = useState(true);
+  const [bulkDeletingFees, setBulkDeletingFees] = useState(false);
 
   // Form state
   const [processorId, setProcessorId] = useState('');
@@ -210,6 +211,40 @@ export default function CartasProcessadorTaxasPage() {
     } catch (err) {
       console.error('Erro ao deletar taxa:', err);
       setError('Erro ao deletar taxa');
+    }
+  };
+
+  const handleDeleteListedFees = async () => {
+    if (!fees.length || bulkDeletingFees) return;
+
+    const scope = processorId
+      ? `as ${fees.length} taxa(s) listada(s) para esta operadora`
+      : `todas as ${fees.length} taxa(s) listada(s)`;
+
+    if (!confirm(`Excluir ${scope}?\n\nEsta ação remove as taxas configuradas da listagem, mas mantém as operadoras e as funcionalidades da tela ativas.`)) {
+      return;
+    }
+
+    try {
+      setError('');
+      setSuccess('');
+      setBulkDeletingFees(true);
+
+      for (const fee of fees) {
+        await deleteProcessorFee(fee.id, {
+          clinicId,
+          userId: user?.id,
+        });
+      }
+
+      resetForm();
+      setSuccess(`✅ ${fees.length} taxa(s) excluída(s) com sucesso. Funcionalidades permanecem ativas para novas configurações.`);
+      await loadFees();
+    } catch (err) {
+      console.error('Erro ao excluir taxas em massa:', err);
+      setError('Erro ao excluir taxas listadas: ' + (err.message || 'Tente novamente'));
+    } finally {
+      setBulkDeletingFees(false);
     }
   };
 
@@ -383,12 +418,27 @@ export default function CartasProcessadorTaxasPage() {
           {/* Lista de Taxas */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-xl font-semibold text-slate-900 mb-6">
-                📋 Taxas Configuradas{' '}
-                <span className="text-sm font-normal text-slate-500">
-                  ({fees.length})
-                </span>
-              </h2>
+              <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <h2 className="text-xl font-semibold text-slate-900">
+                  📋 Taxas Configuradas{' '}
+                  <span className="text-sm font-normal text-slate-500">
+                    ({fees.length})
+                  </span>
+                </h2>
+                {fees.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDeleteListedFees}
+                    disabled={bulkDeletingFees || loadingFees}
+                    className="gap-2 border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+                  >
+                    <Trash className="h-4 w-4" />
+                    {bulkDeletingFees ? 'Excluindo...' : 'Excluir taxas listadas'}
+                  </Button>
+                )}
+              </div>
 
               {loadingFees ? (
                 <p className="text-slate-500 text-center py-8">Carregando...</p>
