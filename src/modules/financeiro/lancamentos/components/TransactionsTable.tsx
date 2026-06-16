@@ -263,10 +263,11 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
     if (bulkAction === 'revert' && !window.confirm(`Estornar ${selectedRows.length} lançamento(s) selecionado(s)?`)) return;
 
     for (const transaction of selectedRows) {
-      const derived = isDerivedTransaction(transaction);
       const reconciled = isReconciledTransaction(transaction);
-      if (bulkAction === 'reconcile' && onReconcile && !derived && !reconciled) await onReconcile(transaction);
-      if (bulkAction === 'revert' && onRevert && !derived) await onRevert(transaction);
+      const status = String(transaction.status || '').toLowerCase();
+      const closed = ['canceled', 'cancelado', 'reversed', 'estornado'].includes(status);
+      if (bulkAction === 'reconcile' && onReconcile && !reconciled && !closed) await onReconcile(transaction);
+      if (bulkAction === 'revert' && onRevert && !closed) await onRevert(transaction);
       if (bulkAction === 'delete' && onDelete) await onDelete(transaction);
     }
 
@@ -275,13 +276,13 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
   };
 
   const columnDefinitions = [
-    { key: 'date', label: 'Data', width: 'w-[120px]', align: 'text-left' },
-    { key: 'description', label: 'Descrição', width: 'w-[430px]', align: 'text-left' },
-    { key: 'type', label: 'Tipo', width: 'w-[120px]', align: 'text-left' },
-    { key: 'amount', label: 'Valor', width: 'w-[150px]', align: 'text-right' },
-    { key: 'status', label: 'Status', width: 'w-[140px]', align: 'text-center' },
-    { key: 'reconciled', label: 'Conciliado', width: 'w-[120px]', align: 'text-center' },
-    { key: 'origin', label: 'Origem', width: 'w-[160px]', align: 'text-left' },
+    { key: 'date', label: 'Data', width: 'w-[96px]', align: 'text-left' },
+    { key: 'description', label: 'Descrição', width: 'w-[340px]', align: 'text-left' },
+    { key: 'type', label: 'Tipo', width: 'w-[96px]', align: 'text-left' },
+    { key: 'amount', label: 'Valor', width: 'w-[128px]', align: 'text-right' },
+    { key: 'status', label: 'Status', width: 'w-[116px]', align: 'text-center' },
+    { key: 'reconciled', label: 'Conc.', width: 'w-[78px]', align: 'text-center' },
+    { key: 'origin', label: 'Origem', width: 'w-[128px]', align: 'text-left' },
   ];
 
   const activeColumns = columnDefinitions.filter((column) => visibleColumns[column.key] !== false);
@@ -360,10 +361,10 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
         </div>
 
         <div className="max-h-[70vh] overflow-auto">
-          <table className="w-full min-w-[1240px] table-fixed text-sm">
+          <table className="w-full min-w-[1040px] table-fixed text-sm">
             <thead className="sticky top-0 z-20 border-b border-slate-200 bg-slate-50">
               <tr>
-                <th className="w-12 px-4 py-3 text-left font-semibold text-slate-700">
+                <th className="w-10 px-3 py-3 text-left font-semibold text-slate-700">
                   <input
                     type="checkbox"
                     className="h-4 w-4 rounded border-slate-300"
@@ -374,11 +375,11 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
                   />
                 </th>
                 {activeColumns.map((column) => (
-                  <th key={column.key} className={`${column.width} px-4 py-3 font-semibold text-slate-700 ${column.align}`}>
+                  <th key={column.key} className={`${column.width} px-3 py-3 font-semibold text-slate-700 ${column.align}`}>
                     {column.label}
                   </th>
                 ))}
-                <th className="sticky right-0 z-30 w-[190px] border-l border-slate-200 bg-slate-50 px-3 py-3 text-right font-semibold text-slate-700">Ações</th>
+                <th className="w-[136px] border-l border-slate-200 bg-slate-50 px-2 py-3 text-right font-semibold text-slate-700">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -428,7 +429,7 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
 
               const renderColumn = (key: string) => {
                 if (key === 'date') {
-                  return <span className="font-mono text-sm text-slate-700">{formatDate(getTransactionDate(transaction))}</span>;
+                  return <span className="font-mono text-xs text-slate-700">{formatDate(getTransactionDate(transaction))}</span>;
                 }
                 if (key === 'description') {
                   return (
@@ -443,7 +444,7 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
                   );
                 }
                 if (key === 'type') {
-                  return <span className={`text-sm font-semibold ${getTypeColor(transaction.transaction_type || transaction.type)}`}>{getTypeLabel(transaction)}</span>;
+                  return <span className={`block truncate text-sm font-semibold ${getTypeColor(transaction.transaction_type || transaction.type)}`} title={getTypeLabel(transaction)}>{getTypeLabel(transaction)}</span>;
                 }
                 if (key === 'amount') {
                   return (
@@ -453,7 +454,7 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
                   );
                 }
                 if (key === 'status') {
-                  return <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(transaction.status)}`}>{getStatusLabel(transaction.status)}</span>;
+                  return <span className={`inline-flex max-w-full rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(transaction.status)}`} title={getStatusLabel(transaction.status)}><span className="truncate">{getStatusLabel(transaction.status)}</span></span>;
                 }
                 if (key === 'reconciled') {
                   return isReconciledTransaction(transaction)
@@ -473,7 +474,7 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
                   idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'
                 } hover:bg-blue-50/50`}
               >
-                <td className="w-12 px-4 py-3 align-middle">
+                <td className="w-10 px-3 py-3 align-middle">
                   <input
                     type="checkbox"
                     className="h-4 w-4 rounded border-slate-300"
@@ -483,12 +484,12 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
                   />
                 </td>
                 {activeColumns.map((column) => (
-                  <td key={column.key} className={`${column.width} px-4 py-3 align-middle ${column.align}`}>
+                  <td key={column.key} className={`${column.width} px-3 py-3 align-middle ${column.align}`}>
                     {renderColumn(column.key)}
                   </td>
                 ))}
-                <td className="sticky right-0 z-10 border-l border-slate-100 bg-inherit px-3 py-3 align-middle">
-                  <div className="flex min-w-[152px] items-center justify-end gap-1 whitespace-nowrap">
+                <td className="border-l border-slate-100 bg-inherit px-2 py-3 align-middle">
+                  <div className="flex w-[120px] items-center justify-end gap-0.5 whitespace-nowrap">
                     <TooltipProvider>
                       {rowActions.map((action) => {
                         const Icon = action.icon;
@@ -501,10 +502,10 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
                               size="sm"
                               onClick={action.onClick}
                               disabled={action.disabled}
-                              className={`h-8 w-8 p-0 ${action.className}`}
+                              className={`h-7 w-7 p-0 ${action.className}`}
                               aria-label={action.label}
                             >
-                              <Icon className="w-4 h-4" />
+                              <Icon className="h-3.5 w-3.5" />
                             </Button>
                             </span>
                           </TooltipTrigger>

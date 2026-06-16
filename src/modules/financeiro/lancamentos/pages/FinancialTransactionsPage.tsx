@@ -15,7 +15,6 @@ import {
   TransactionsTable,
   TransactionFilters,
   FinancialDashboard,
-  TransactionExportImport,
 } from '../components';
 import { useFinancialTransactions } from '../hooks';
 import {
@@ -57,7 +56,6 @@ export const FinancialTransactionsPage: React.FC = () => {
     cancelTransaction,
     revertTransaction,
     reconcileTransaction,
-    importTransactions,
     setFilters,
     setPage,
   } = useFinancialTransactions({ pageSize });
@@ -188,34 +186,16 @@ export const FinancialTransactionsPage: React.FC = () => {
     fetchTransactions(filters, { page: 1, limit: nextPageSize });
   };
 
-  const handleImport = async (data: any[]) => {
-    try {
-      const result = await importTransactions(data);
-      alert(
-        `Importação concluída!\n✓ ${result.success} transações criadas\n✗ ${result.failed} erros\n${
-          result.errors.length > 0 ? '\nErros:\n' + result.errors.slice(0, 5).join('\n') : ''
-        }`
-      );
-    } catch (err) {
-      console.error('Erro ao importar:', err);
-      alert('Erro ao processar importação');
-    }
-  };
-
   return (
     <div className="space-y-6 pb-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Lançamentos Financeiros</h1>
           <p className="text-gray-600 mt-1">Motor financeiro central - gestão integrada de movimentações</p>
         </div>
-        <div className="flex gap-2">
-          <TransactionExportImport
-            transactions={transactions}
-            onImport={handleImport}
-          />
-          <Button onClick={handleNewTransaction} className="gap-2">
+        <div className="flex shrink-0 gap-2">
+          <Button onClick={handleNewTransaction} className="gap-2 whitespace-nowrap">
             <Plus className="w-4 h-4" />
             Novo Lançamento
           </Button>
