@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import PageLayout from '@/components/ui/PageLayout';
 import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 import { Card } from '@/components/ui/card';
@@ -34,31 +34,33 @@ export default function DashboardFinanceiro() {
     return { start: iso(start), end: iso(end) };
   });
 
+  const loadFinancialKpi = useCallback(async () => {
+    try {
+      const consolidation = await getFinancialConsolidation(clinicId, period.start, period.end);
+      const entradas = consolidation.revenue.grossRevenue;
+      const saidas = consolidation.expenses.totalWithCardFees;
+      const resultado_liquido = consolidation.result.netIncome;
+      const saldo_final = resultado_liquido;
+      const recentes = buildDerivedFinancialTransactions(consolidation)
+        .sort((a, b) => String(b.transaction_date || b.created_at || '').localeCompare(String(a.transaction_date || a.created_at || '')))
+        .slice(0, 5);
+
+      return {
+        entradas: Number(entradas || 0),
+        saidas: Number(saidas || 0),
+        resultado_liquido: Number(resultado_liquido || 0),
+        saldo_final: Number(saldo_final || 0),
+        recentes,
+      };
+    } catch (error) {
+      console.error('Error fetching KPI:', error);
+      return { entradas: 0, saidas: 0, resultado_liquido: 0, saldo_final: 0, recentes: [] };
+    }
+  }, [clinicId, period.end, period.start]);
+
   const { data: cachedKpi, loading } = useDataCache({
     key: `dashboard_financeiro_kpi_v4_${clinicId}_${period.start}_${period.end}`,
-    fetcher: async () => {
-      try {
-        const consolidation = await getFinancialConsolidation(clinicId, period.start, period.end);
-        const entradas = consolidation.revenue.grossRevenue;
-        const saidas = consolidation.expenses.totalWithCardFees;
-        const resultado_liquido = consolidation.result.netIncome;
-        const saldo_final = resultado_liquido;
-        const recentes = buildDerivedFinancialTransactions(consolidation)
-          .sort((a, b) => String(b.transaction_date || b.created_at || '').localeCompare(String(a.transaction_date || a.created_at || '')))
-          .slice(0, 5);
-
-        return {
-          entradas: Number(entradas || 0),
-          saidas: Number(saidas || 0),
-          resultado_liquido: Number(resultado_liquido || 0),
-          saldo_final: Number(saldo_final || 0),
-          recentes,
-        };
-      } catch (error) {
-        console.error('Error fetching KPI:', error);
-        return { entradas: 0, saidas: 0, resultado_liquido: 0, saldo_final: 0, recentes: [] };
-      }
-    },
+    fetcher: loadFinancialKpi,
     ttl: 5 * 60 * 1000,
     enabled: !!clinicId,
   });
@@ -71,7 +73,9 @@ export default function DashboardFinanceiro() {
 
   const formatCurrency = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   const formatDate = (value) => {
-    if (!value) return '-';
+    if (!value) {
+      return '-';
+    }
     const [year, month, day] = String(value).split('T')[0].split('-');
     return year && month && day ? `${day}/${month}/${year}` : value;
   };

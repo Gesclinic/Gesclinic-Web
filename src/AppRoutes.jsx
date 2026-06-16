@@ -510,6 +510,10 @@ export default function AppRoutes() {
             path="financeiro/plano-contas"
             element={<ChartOfAccountsPage />}
           />
+          <Route
+            path="financeiro/estrutura"
+            element={<Navigate to="/clinica/financeiro/contas-financeiras" replace />}
+          />
           <Route path="financeiro/conciliacao-bancaria" element={<FinanceConciliacaoBancaria />} />
           <Route
             path="financeiro/conciliacao"
@@ -521,6 +525,7 @@ export default function AppRoutes() {
             path="financeiro/automacoes"
             element={<Navigate to="/clinica/financeiro/automacao" replace />}
           />
+          <Route path="financeiro/alerts" element={<AlertCenter />} />
           <Route
             path="financeiro/cartoes"
             element={<CartasPage />}
