@@ -250,6 +250,7 @@ export const useFinancialTransactions = (options: UseFinancialTransactionsOption
 
   // State
   const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
+  const [metricTransactions, setMetricTransactions] = useState<FinancialTransaction[]>([]);
   const [categories, setCategories] = useState<FinancialCategory[]>([]);
   const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
   const [loading, setLoading] = useState(false);
@@ -397,6 +398,7 @@ export const useFinancialTransactions = (options: UseFinancialTransactionsOption
 
         const filteredMergedTransactions = allMergedTransactions.filter((item: any) => matchesClientFilters(item, finalFilters));
 
+        setMetricTransactions(filteredMergedTransactions);
         setTransactions(filteredMergedTransactions.slice(offset, offset + limit));
         setTotalCount(filteredMergedTransactions.length || count || 0);
         setPage(currentPage);
@@ -783,7 +785,9 @@ export const useFinancialTransactions = (options: UseFinancialTransactionsOption
       const isPredictedStatus = (transaction: any) => !isRealizedStatus(transaction);
       const isReconciledTransaction = (transaction: any) => transaction.is_reconciled === true || isRealizedStatus(transaction);
 
-      const income = transactions
+      const sourceTransactions = metricTransactions;
+
+      const income = sourceTransactions
         .filter((t: any) => {
           // OLD schema: t.type === 'revenue'
           // NEW schema: t.transaction_type === 'INCOME'
@@ -792,7 +796,7 @@ export const useFinancialTransactions = (options: UseFinancialTransactionsOption
         })
         .reduce((sum, t) => sum + (t.amount || 0), 0);
 
-      const expense = transactions
+      const expense = sourceTransactions
         .filter((t: any) => {
           // OLD schema: t.type === 'expense' (and other expense types like cost)
           // NEW schema: t.transaction_type === 'EXPENSE'
@@ -805,7 +809,7 @@ export const useFinancialTransactions = (options: UseFinancialTransactionsOption
 
       // Realizadas = receitas - despesas (para OLD schema, tudo é realizado)
       // Se tem movement_type, filtra por REALIZED, senão assume tudo como realizado
-      const realized = transactions
+      const realized = sourceTransactions
         .filter((t: any) => isRealizedStatus(t))
         .reduce((sum, t) => {
           const isIncome = t.type === 'revenue' || t.transaction_type === 'INCOME';
@@ -814,7 +818,7 @@ export const useFinancialTransactions = (options: UseFinancialTransactionsOption
         }, 0);
 
       // Previstas = filtra por movement_type='PREDICTED' (não existe em OLD schema, então 0)
-      const predicted = transactions
+      const predicted = sourceTransactions
         .filter((t: any) => isPredictedStatus(t))
         .reduce((sum, t) => {
           const isIncome = t.type === 'revenue' || t.transaction_type === 'INCOME';
@@ -836,16 +840,12 @@ export const useFinancialTransactions = (options: UseFinancialTransactionsOption
         total_realized: realized,
         total_predicted: predicted,
         net_balance: realized + predicted,
-        pending_count: transactions.filter((t: any) => 
-          normalizeStatus(t.status) === 'pending'
-        ).length,
-        paid_count: transactions.filter((t: any) => 
-          normalizeStatus(t.status) === 'paid'
-        ).length,
-        income_paid_count: transactions.filter((t: any) => isIncomeTransaction(t) && isRealizedStatus(t)).length,
-        expense_paid_count: transactions.filter((t: any) => isExpenseTransaction(t) && isRealizedStatus(t)).length,
-        reconciled_count: transactions.filter((t: any) => isReconciledTransaction(t)).length,
-        unreconciled_count: transactions.filter((t: any) => !isReconciledTransaction(t)).length,
+        pending_count: sourceTransactions.filter((t: any) => isPredictedStatus(t)).length,
+        paid_count: sourceTransactions.filter((t: any) => isRealizedStatus(t)).length,
+        income_paid_count: sourceTransactions.filter((t: any) => isIncomeTransaction(t) && isRealizedStatus(t)).length,
+        expense_paid_count: sourceTransactions.filter((t: any) => isExpenseTransaction(t) && isRealizedStatus(t)).length,
+        reconciled_count: sourceTransactions.filter((t: any) => isReconciledTransaction(t)).length,
+        unreconciled_count: sourceTransactions.filter((t: any) => !isReconciledTransaction(t)).length,
       };
 
       console.log('💰 Financial Metrics Updated:', {
@@ -853,7 +853,7 @@ export const useFinancialTransactions = (options: UseFinancialTransactionsOption
         total_expense: expense,
         total_realized: realized,
         total_predicted: predicted,
-        transaction_count: transactions.length,
+        transaction_count: sourceTransactions.length,
         metrics
       });
 
@@ -861,7 +861,7 @@ export const useFinancialTransactions = (options: UseFinancialTransactionsOption
     } catch (err) {
       console.error('fetchMetrics error:', err);
     }
-  }, [clinicId, transactions]);
+  }, [clinicId, metricTransactions]);
 
   // =====================================================
   // EFEITOS
@@ -883,7 +883,7 @@ export const useFinancialTransactions = (options: UseFinancialTransactionsOption
 
   useEffect(() => {
     fetchMetrics();
-  }, [transactions, fetchMetrics]);
+  }, [metricTransactions, fetchMetrics]);
 
   // =====================================================
   // RETORNO
