@@ -49,6 +49,7 @@ export const TransactionFilters = React.memo<TransactionFiltersProps>(({
   accounts,
   categories,
 }) => {
+  const [filtersView, setFiltersView] = useState<'expanded' | 'collapsed'>('expanded');
   const [search, setSearch] = useState('');
   const [accountId, setAccountId] = useState('');
   const [type, setType] = useState('');
@@ -149,23 +150,56 @@ export const TransactionFilters = React.memo<TransactionFiltersProps>(({
   return (
     <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4 space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <Filter className="w-5 h-5 text-gray-600" />
           <h3 className="text-sm font-semibold text-gray-900">Filtros Avançados</h3>
         </div>
-        {hasActiveFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleReset}
-            className="text-xs"
-          >
-            <X className="w-4 h-4 mr-1" />
-            Limpar
-          </Button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={filtersView} onValueChange={(value) => setFiltersView(value as 'expanded' | 'collapsed')}>
+            <SelectTrigger className="h-9 w-[170px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="expanded">Filtros abertos</SelectItem>
+              <SelectItem value="collapsed">Filtros recolhidos</SelectItem>
+            </SelectContent>
+          </Select>
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleReset}
+              className="text-xs"
+            >
+              <X className="w-4 h-4 mr-1" />
+              Limpar
+            </Button>
+          )}
+        </div>
       </div>
+
+      {filtersView === 'collapsed' && (
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Input
+              placeholder="Buscar por descrição ou documento..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleApplyFilters()}
+              className="pl-10"
+            />
+          </div>
+          <Button onClick={handleApplyFilters} disabled={loading}>
+            <Filter className="w-4 h-4 mr-2" />
+            Filtrar
+          </Button>
+        </div>
+      )}
+
+      {filtersView === 'expanded' && (
+        <>
 
       {/* Row 1: Busca e Conta */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -376,6 +410,8 @@ export const TransactionFilters = React.memo<TransactionFiltersProps>(({
         existingNames={savedFilters.map((f) => f.name)}
         loading={loading}
       />
+        </>
+      )}
     </div>
   );
 });

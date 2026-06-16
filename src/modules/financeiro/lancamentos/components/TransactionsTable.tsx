@@ -4,16 +4,17 @@
  */
 
 import React from 'react';
-import { Pencil, Trash2, RotateCcw, CheckCircle, AlertCircle } from 'lucide-react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Pencil, Trash2, RotateCcw, CheckCircle, AlertCircle, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,6 +58,21 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
 }) => {
   const [deleteConfirm, setDeleteConfirm] = React.useState<FinancialTransaction | null>(null);
   const [revertConfirm, setRevertConfirm] = React.useState<FinancialTransaction | null>(null);
+  const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
+  const [bulkAction, setBulkAction] = React.useState('');
+  const [visibleColumns, setVisibleColumns] = React.useState<Record<string, boolean>>({
+    date: true,
+    description: true,
+    type: true,
+    amount: true,
+    status: true,
+    reconciled: true,
+    origin: false,
+  });
+
+  React.useEffect(() => {
+    setSelectedIds((current) => new Set([...current].filter((id) => transactions.some((item) => item.id === id))));
+  }, [transactions]);
 
   if (loading) {
     return (
@@ -156,6 +172,12 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
     return new Date(date).toLocaleDateString('pt-BR');
   };
 
+  const sanitizeText = (value: unknown) => String(value || '-')
+    .replace(/OP�+O/gi, 'OPÇÃO')
+    .replace(/�+/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
   const getTransactionDate = (transaction: FinancialTransaction) => (
     transaction.transaction_date || transaction.competency_date || transaction.scheduled_date || transaction.due_date || transaction.created_at || ''
   );
@@ -170,158 +192,301 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
     return transaction.is_reconciled === true || ['paid', 'received', 'processed', 'pago', 'recebido', 'quitado'].includes(status);
   };
 
+  const isIncomeTransaction = (transaction: FinancialTransaction) => (
+    transaction.transaction_type === 'INCOME' || transaction.type === 'revenue'
+  );
+
+  const getOriginLabel = (transaction: FinancialTransaction) => {
+    const origin = String(transaction.origin_module || '').toLowerCase();
+    if (origin === 'accounts_receivable') return 'Contas a Receber';
+    if (origin === 'accounts_payable') return 'Contas a Pagar';
+    return origin || 'Manual';
+  };
+
+  const selectedRows = transactions.filter((transaction) => selectedIds.has(transaction.id));
+  const selectedTotal = selectedRows.reduce((sum, transaction) => {
+    const amount = Number(transaction.amount || 0);
+    return isIncomeTransaction(transaction) ? sum + amount : sum - amount;
+  }, 0);
+  const allVisibleSelected = transactions.length > 0 && transactions.every((transaction) => selectedIds.has(transaction.id));
+
+  const toggleAllVisibleSelection = () => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (allVisibleSelected) {
+        transactions.forEach((transaction) => next.delete(transaction.id));
+      } else {
+        transactions.forEach((transaction) => next.add(transaction.id));
+      }
+      return next;
+    });
+  };
+
+  const toggleSelection = (id: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const exportSelectedCsv = () => {
+    const rows = selectedRows.length ? selectedRows : transactions;
+    const headers = ['Data', 'Descrição', 'Tipo', 'Valor', 'Status', 'Origem'];
+    const body = rows.map((transaction) => [
+      formatDate(getTransactionDate(transaction)),
+      sanitizeText(transaction.description),
+      getTypeLabel(transaction),
+      String(transaction.amount || 0).replace('.', ','),
+      getStatusLabel(String(transaction.status || '')),
+      getOriginLabel(transaction),
+    ].map((value) => `"${String(value).replace(/"/g, '""')}"`).join(','));
+    const blob = new Blob([[headers.join(','), ...body].join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `lancamentos_${Date.now()}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const applyBulkAction = async () => {
+    if (!bulkAction) return;
+    if (bulkAction === 'export') {
+      exportSelectedCsv();
+      return;
+    }
+    if (!selectedRows.length) return;
+
+    if (bulkAction === 'delete' && !window.confirm(`Excluir ${selectedRows.length} lançamento(s) selecionado(s)?`)) return;
+    if (bulkAction === 'revert' && !window.confirm(`Estornar ${selectedRows.length} lançamento(s) selecionado(s)?`)) return;
+
+    for (const transaction of selectedRows) {
+      const derived = isDerivedTransaction(transaction);
+      const reconciled = isReconciledTransaction(transaction);
+      if (bulkAction === 'reconcile' && onReconcile && !derived && !reconciled) await onReconcile(transaction);
+      if (bulkAction === 'revert' && onRevert && !derived) await onRevert(transaction);
+      if (bulkAction === 'delete' && onDelete) await onDelete(transaction);
+    }
+
+    setBulkAction('');
+    setSelectedIds(new Set());
+  };
+
+  const columnDefinitions = [
+    { key: 'date', label: 'Data', width: 'w-[120px]', align: 'text-left' },
+    { key: 'description', label: 'Descrição', width: 'w-[430px]', align: 'text-left' },
+    { key: 'type', label: 'Tipo', width: 'w-[120px]', align: 'text-left' },
+    { key: 'amount', label: 'Valor', width: 'w-[150px]', align: 'text-right' },
+    { key: 'status', label: 'Status', width: 'w-[140px]', align: 'text-center' },
+    { key: 'reconciled', label: 'Conciliado', width: 'w-[120px]', align: 'text-center' },
+    { key: 'origin', label: 'Origem', width: 'w-[160px]', align: 'text-left' },
+  ];
+
+  const activeColumns = columnDefinitions.filter((column) => visibleColumns[column.key] !== false);
+
   return (
     <>
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-slate-50 border-b border-slate-200 hover:bg-slate-50">
-              <TableHead className="text-gray-700 font-semibold">Data</TableHead>
-              <TableHead className="text-gray-700 font-semibold">Descrição</TableHead>
-              <TableHead className="text-gray-700 font-semibold">Tipo</TableHead>
-              <TableHead className="text-right text-gray-700 font-semibold">Valor</TableHead>
-              <TableHead className="text-center text-gray-700 font-semibold">Status</TableHead>
-              <TableHead className="text-center text-gray-700 font-semibold">Conciliado</TableHead>
-              <TableHead className="text-right text-gray-700 font-semibold">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3">
+          <div className="flex flex-wrap items-center gap-3 text-sm text-slate-700">
+            <label className="inline-flex items-center gap-2 font-medium">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-slate-300"
+                checked={allVisibleSelected}
+                onChange={toggleAllVisibleSelection}
+                disabled={!transactions.length}
+              />
+              Marcar todos visíveis
+            </label>
+            <span className="text-slate-500">
+              {selectedRows.length} selecionado{selectedRows.length === 1 ? '' : 's'}
+              {selectedRows.length ? ` · ${formatCurrency(selectedTotal)}` : ''}
+            </span>
+            {selectedRows.length > 0 && (
+              <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
+                Desmarcar
+              </Button>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" size="sm" variant="outline">Colunas</Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-60">
+                <DropdownMenuLabel>Colunas visíveis</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={(event) => {
+                  event.preventDefault();
+                  setVisibleColumns({ date: true, description: true, type: true, amount: true, status: true, reconciled: true, origin: false });
+                }}>
+                  Restaurar padrão
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {columnDefinitions.map((column) => (
+                  <DropdownMenuCheckboxItem
+                    key={column.key}
+                    checked={visibleColumns[column.key] !== false}
+                    onCheckedChange={(checked) => setVisibleColumns((current) => ({ ...current, [column.key]: Boolean(checked) }))}
+                    onSelect={(event) => event.preventDefault()}
+                  >
+                    {column.label}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <select
+              className="h-9 min-w-[190px] rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700"
+              value={bulkAction}
+              onChange={(event) => setBulkAction(event.target.value)}
+              aria-label="Ação selecionada para lançamentos"
+              title="Ação selecionada"
+            >
+              <option value="">Ação selecionada</option>
+              <option value="reconcile" disabled={!selectedRows.length}>Conciliar selecionados</option>
+              <option value="revert" disabled={!selectedRows.length}>Estornar selecionados</option>
+              <option value="delete" disabled={!selectedRows.length}>Excluir selecionados</option>
+              <option value="export">Exportar visíveis/selecionados</option>
+            </select>
+            <Button type="button" size="sm" onClick={applyBulkAction} disabled={!bulkAction || (bulkAction !== 'export' && !selectedRows.length)}>
+              Aplicar
+            </Button>
+          </div>
+        </div>
+
+        <div className="max-h-[70vh] overflow-auto">
+          <table className="w-full min-w-[1180px] table-fixed text-sm">
+            <thead className="sticky top-0 z-20 border-b border-slate-200 bg-slate-50">
+              <tr>
+                <th className="w-12 px-4 py-3 text-left font-semibold text-slate-700">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-slate-300"
+                    checked={allVisibleSelected}
+                    onChange={toggleAllVisibleSelection}
+                    disabled={!transactions.length}
+                    aria-label="Selecionar todos os lançamentos visíveis"
+                  />
+                </th>
+                {activeColumns.map((column) => (
+                  <th key={column.key} className={`${column.width} px-4 py-3 font-semibold text-slate-700 ${column.align}`}>
+                    {column.label}
+                  </th>
+                ))}
+                <th className="sticky right-0 z-30 w-[130px] border-l border-slate-200 bg-slate-50 px-4 py-3 text-right font-semibold text-slate-700">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
             {transactions.map((transaction, idx) => {
               const isDerived = isDerivedTransaction(transaction);
               const status = String(transaction.status || '').toLowerCase();
               const canEdit = !isDerived && status === 'pending';
               const canDelete = Boolean(onDelete);
+              const rowActions = [
+                { key: 'edit', label: 'Editar', icon: Pencil, show: canEdit && Boolean(onEdit), onClick: () => onEdit?.(transaction), className: 'text-blue-600 hover:text-blue-700 hover:bg-blue-50' },
+                { key: 'revert', label: 'Estornar', icon: RotateCcw, show: !isDerived && Boolean(onRevert), onClick: () => setRevertConfirm(transaction), className: 'text-orange-600 hover:text-orange-700 hover:bg-orange-50' },
+                { key: 'reconcile', label: 'Conciliar', icon: CheckCircle, show: !isDerived && !isReconciledTransaction(transaction) && Boolean(onReconcile), onClick: () => onReconcile?.(transaction), className: 'text-green-600 hover:text-green-700 hover:bg-green-50' },
+                { key: 'delete', label: 'Excluir', icon: Trash2, show: canDelete && Boolean(onDelete), onClick: () => setDeleteConfirm(transaction), className: 'text-red-600 hover:text-red-700 hover:bg-red-50' },
+              ].filter((action) => action.show);
+
+              const renderColumn = (key: string) => {
+                if (key === 'date') {
+                  return <span className="font-mono text-sm text-slate-700">{formatDate(getTransactionDate(transaction))}</span>;
+                }
+                if (key === 'description') {
+                  return (
+                    <div className="min-w-0">
+                      <p className="line-clamp-2 font-medium leading-5 text-slate-950" title={sanitizeText(transaction.description)}>
+                        {sanitizeText(transaction.description)}
+                      </p>
+                      {(transaction.document_number || transaction.reference_document) && (
+                        <p className="mt-1 truncate text-xs text-slate-500">{sanitizeText(transaction.document_number || transaction.reference_document)}</p>
+                      )}
+                    </div>
+                  );
+                }
+                if (key === 'type') {
+                  return <span className={`text-sm font-semibold ${getTypeColor(transaction.transaction_type || transaction.type)}`}>{getTypeLabel(transaction)}</span>;
+                }
+                if (key === 'amount') {
+                  return (
+                    <span className={`whitespace-nowrap font-semibold ${isIncomeTransaction(transaction) ? 'text-green-600' : 'text-red-600'}`}>
+                      {isIncomeTransaction(transaction) ? '+' : '-'}{formatCurrency(transaction.amount)}
+                    </span>
+                  );
+                }
+                if (key === 'status') {
+                  return <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(transaction.status)}`}>{getStatusLabel(transaction.status)}</span>;
+                }
+                if (key === 'reconciled') {
+                  return isReconciledTransaction(transaction)
+                    ? <CheckCircle className="mx-auto h-5 w-5 text-green-600" />
+                    : <AlertCircle className="mx-auto h-5 w-5 text-yellow-600" />;
+                }
+                if (key === 'origin') {
+                  return <span className="block truncate text-sm text-slate-600" title={getOriginLabel(transaction)}>{getOriginLabel(transaction)}</span>;
+                }
+                return null;
+              };
+
               return (
-              <TableRow
+              <tr
                 key={transaction.id}
                 className={`border-b border-slate-100 transition-colors ${
                   idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'
                 } hover:bg-blue-50/50`}
               >
-                {/* Data */}
-                <TableCell className="font-mono text-sm">
-                  {formatDate(getTransactionDate(transaction))}
-                </TableCell>
-
-                {/* Descrição */}
-                <TableCell>
-                  <div>
-                    <p className="font-medium text-gray-900">{transaction.description}</p>
-                    {transaction.document_number && (
-                      <p className="text-xs text-gray-500">{transaction.document_number}</p>
-                    )}
-                  </div>
-                </TableCell>
-
-                {/* Tipo */}
-                <TableCell>
-                  <span className={`text-sm font-medium ${getTypeColor(transaction.transaction_type || transaction.type)}`}>
-                    {getTypeLabel(transaction)}
-                  </span>
-                </TableCell>
-
-                {/* Valor */}
-                <TableCell className="text-right">
-                  <span className={`font-semibold ${
-                    transaction.transaction_type === 'INCOME' || transaction.type === 'revenue' ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {transaction.transaction_type === 'INCOME' || transaction.type === 'revenue' ? '+' : '-'}
-                    {formatCurrency(transaction.amount)}
-                  </span>
-                </TableCell>
-
-                {/* Status */}
-                <TableCell className="text-center">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(transaction.status)}`}>
-                    {getStatusLabel(transaction.status)}
-                  </span>
-                </TableCell>
-
-                {/* Conciliado */}
-                <TableCell className="text-center">
-                  {isReconciledTransaction(transaction) ? (
-                    <CheckCircle className="w-5 h-5 text-green-600 mx-auto" />
-                  ) : (
-                    <AlertCircle className="w-5 h-5 text-yellow-600 mx-auto" />
-                  )}
-                </TableCell>
-
-                {/* Ações */}
-                <TableCell>
-                  <div className="flex items-center justify-end gap-1">
+                <td className="w-12 px-4 py-3 align-middle">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-slate-300"
+                    checked={selectedIds.has(transaction.id)}
+                    onChange={() => toggleSelection(transaction.id)}
+                    aria-label={`Selecionar ${sanitizeText(transaction.description)}`}
+                  />
+                </td>
+                {activeColumns.map((column) => (
+                  <td key={column.key} className={`${column.width} px-4 py-3 align-middle ${column.align}`}>
+                    {renderColumn(column.key)}
+                  </td>
+                ))}
+                <td className="sticky right-0 z-10 border-l border-slate-100 bg-inherit px-4 py-3 align-middle">
+                  <div className="flex items-center justify-end gap-1 whitespace-nowrap">
                     <TooltipProvider>
-                      {canEdit && onEdit && (
+                      {rowActions.map((action) => {
+                        const Icon = action.icon;
+                        return (
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
+                              key={action.key}
                               variant="ghost"
                               size="sm"
-                              onClick={() => onEdit(transaction)}
-                              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              onClick={action.onClick}
+                              disabled={deletingId === transaction.id && action.key === 'delete'}
+                              className={action.className}
                             >
-                              <Pencil className="w-4 h-4" />
+                              <Icon className="w-4 h-4" />
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent>Editar</TooltipContent>
+                          <TooltipContent>{action.label}</TooltipContent>
                         </Tooltip>
-                      )}
-
-                      {!isDerived && onRevert && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setRevertConfirm(transaction)}
-                              className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                            >
-                              <RotateCcw className="w-4 h-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Estornar</TooltipContent>
-                        </Tooltip>
-                      )}
-
-                      {!isDerived && !isReconciledTransaction(transaction) && onReconcile && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => onReconcile(transaction)}
-                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                            >
-                              <CheckCircle className="w-4 h-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Conciliar</TooltipContent>
-                        </Tooltip>
-                      )}
-
-                      {canDelete && onDelete && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setDeleteConfirm(transaction)}
-                              disabled={deletingId === transaction.id}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Deletar</TooltipContent>
-                        </Tooltip>
-                      )}
+                        );
+                      })}
                     </TooltipProvider>
                   </div>
-                </TableCell>
-              </TableRow>
+                </td>
+              </tr>
               );
             })}
-          </TableBody>
-        </Table>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Delete Confirmation */}
