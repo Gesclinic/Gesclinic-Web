@@ -62,7 +62,7 @@ import FinancePlanoContas from '@/pages/clinica/financeiro/PlanoContas';
 import FinanceConciliacaoBancaria from '@/pages/clinica/financeiro/ConciliacaoBancaria';
 import ChartOfAccountsPage from '@/modules/financeiro/plano-contas/pages/ChartOfAccountsPage';
 import CostCenterPage from '@/modules/financeiro/centro-custo/pages/CostCenterPage';
-import { FinancialAccountsPage } from '@/modules/financeiro/contas-financeiras';
+import { FinancialAccountsPage, FinancialAccountFormPage } from '@/modules/financeiro/contas-financeiras';
 // Contas a Pagar Module
 import ContasApagarPage from '@/modules/financeiro/contas-pagar/pages';
 import NovaContaPagarPage from '@/modules/financeiro/contas-pagar/pages/NovaContaPagarPage';
@@ -577,6 +577,8 @@ export default function AppRoutes() {
             element={<Navigate to="/clinica/financeiro/repasse/?tab=visao-geral" replace />}
           />
           <Route path="financeiro/centro-custos" element={<CostCenterPage />} />
+          <Route path="financeiro/contas-financeiras/nova" element={<FinancialAccountFormPage />} />
+          <Route path="financeiro/contas-financeiras/:accountId/editar" element={<FinancialAccountFormPage />} />
           <Route path="financeiro/contas-financeiras" element={<FinancialAccountsPage />} />
           <Route path="financeiro/lancamentos" element={<FinancialTransactionsPage />} />
 

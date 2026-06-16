@@ -1,5 +1,5 @@
 // Export pages
-export { FinancialAccountsPage } from './pages';
+export { FinancialAccountsPage, FinancialAccountFormPage } from './pages';
 
 // Export components
 export {

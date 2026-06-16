@@ -5,10 +5,10 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { Plus, AlertCircle, Inbox, TrendingUp, Zap } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import {
-  FinancialAccountForm,
   FinancialAccountsTable,
   FinancialBalanceSummary,
   FinancialAccountFilters,
@@ -27,6 +27,7 @@ import { FinancialAccount, FinancialAccountCreateInput, FinancialAccountUpdateIn
 export const FinancialAccountsPage: React.FC = () => {
   // ✅ All context hooks at the top (MUST be in consistent order)
   const { user } = useAuth();
+  const navigate = useNavigate();
   
   // ✅ All custom hooks after context hooks
   const {
@@ -47,7 +48,6 @@ export const FinancialAccountsPage: React.FC = () => {
     refetchMetrics,
     refetchReconciliations,
     create,
-    update,
     deactivate,
     setDefault,
     addMovement,
@@ -57,10 +57,7 @@ export const FinancialAccountsPage: React.FC = () => {
   } = useFinancialAccounts();
   
   // ✅ All state hooks after custom hooks
-  const [formOpen, setFormOpen] = useState(false);
-  const [editingAccount, setEditingAccount] = useState<FinancialAccount | null>(null);
   const [formSubmitting, setFormSubmitting] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
   const [deactivatingId, setDeactivatingId] = useState<string | null>(null);
   const [selectedAccountForReconciliation, setSelectedAccountForReconciliation] = useState<string | null>(null);
   const [showCardView, setShowCardView] = useState(false);
@@ -70,48 +67,13 @@ export const FinancialAccountsPage: React.FC = () => {
 
   // ✅ All callbacks after state hooks
   const handleNewAccount = useCallback(() => {
-    setEditingAccount(null);
-    setFormError(null);
-    setFormOpen(true);
-  }, []);
-
-  // Handle form close
-  const handleFormClose = useCallback((open: boolean) => {
-    setFormOpen(open);
-    if (!open) {
-      setEditingAccount(null);
-      setFormError(null);
-    }
-  }, []);
+    navigate('/clinica/financeiro/contas-financeiras/nova');
+  }, [navigate]);
 
   // Handle edit
   const handleEdit = useCallback((account: FinancialAccount) => {
-    setEditingAccount(account);
-    setFormError(null);
-    setFormOpen(true);
-  }, []);
-
-  // Handle form submit
-  const handleFormSubmit = async (
-    data: FinancialAccountCreateInput | FinancialAccountUpdateInput
-  ) => {
-    try {
-      setFormSubmitting(true);
-      setFormError(null);
-
-      if (editingAccount) {
-        await update(editingAccount.id, data as FinancialAccountUpdateInput);
-      } else {
-        await create(data as FinancialAccountCreateInput);
-      }
-
-      handleFormClose(false);
-    } catch (err: any) {
-      setFormError(err?.message || 'Erro ao salvar conta financeira');
-    } finally {
-      setFormSubmitting(false);
-    }
-  };
+    navigate(`/clinica/financeiro/contas-financeiras/${account.id}/editar`);
+  }, [navigate]);
 
   // Handle deactivate
   const handleDeactivate = async (account: FinancialAccount) => {
@@ -367,16 +329,6 @@ export const FinancialAccountsPage: React.FC = () => {
           />
         </div>
       )}
-
-      {/* Form Dialog */}
-      <FinancialAccountForm
-        open={formOpen}
-        onOpenChange={handleFormClose}
-        account={editingAccount || undefined}
-        onSubmit={handleFormSubmit}
-        loading={formSubmitting}
-        error={formError}
-      />
     </div>
   );
 };

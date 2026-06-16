@@ -32,12 +32,14 @@ import {
 } from '../types';
 
 interface FinancialAccountFormProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   account?: FinancialAccount;
   onSubmit: (data: FinancialAccountCreateInput | FinancialAccountUpdateInput) => Promise<void>;
   loading?: boolean;
   error?: string | null;
+  variant?: 'dialog' | 'page';
+  onCancel?: () => void;
 }
 
 export const FinancialAccountForm = React.memo<FinancialAccountFormProps>(({
@@ -47,6 +49,8 @@ export const FinancialAccountForm = React.memo<FinancialAccountFormProps>(({
   onSubmit,
   loading = false,
   error = null,
+  variant = 'dialog',
+  onCancel,
 }) => {
   const isEdit = !!account;
 
@@ -193,25 +197,14 @@ export const FinancialAccountForm = React.memo<FinancialAccountFormProps>(({
           };
 
       await onSubmit(submitData);
-      onOpenChange(false);
+      onOpenChange?.(false);
     } catch (err: any) {
       setLocalError(err?.message || 'Erro ao salvar conta financeira');
     }
   };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? 'Editar Conta' : 'Nova Conta Financeira'}</DialogTitle>
-          <DialogDescription>
-            {isEdit
-              ? 'Atualize os dados da conta financeira'
-              : 'Crie uma nova conta financeira (banco, caixa, carteira digital, etc.)'}
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
+  const formContent = (
+        <form onSubmit={handleSubmit} className="space-y-5">
           {/* Error Alert */}
           {(localError || error) && (
             <div className="flex items-start gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
@@ -546,7 +539,7 @@ export const FinancialAccountForm = React.memo<FinancialAccountFormProps>(({
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={() => (onCancel ? onCancel() : onOpenChange?.(false))}
               disabled={loading}
             >
               Cancelar
@@ -557,6 +550,25 @@ export const FinancialAccountForm = React.memo<FinancialAccountFormProps>(({
             </Button>
           </div>
         </form>
+  );
+
+  if (variant === 'page') {
+    return formContent;
+  }
+
+  return (
+    <Dialog open={Boolean(open)} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{isEdit ? 'Editar Conta' : 'Nova Conta Financeira'}</DialogTitle>
+          <DialogDescription>
+            {isEdit
+              ? 'Atualize os dados da conta financeira'
+              : 'Crie uma nova conta financeira (banco, caixa, carteira digital, etc.)'}
+          </DialogDescription>
+        </DialogHeader>
+
+        {formContent}
       </DialogContent>
     </Dialog>
   );
