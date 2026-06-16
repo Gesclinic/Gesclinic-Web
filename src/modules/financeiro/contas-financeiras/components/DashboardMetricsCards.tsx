@@ -112,11 +112,11 @@ export const DashboardMetricsCards = React.memo<DashboardMetricsCardsProps>(
 
     const memoizedCards = useMemo(() => [
       {
-        title: 'Saldo Total',
+        title: 'Saldo em Contas',
         value: formatCurrency(metrics.total_balance),
         icon: <PieChart className="w-6 h-6" />,
         color: 'blue' as const,
-        subtitle: 'Todas as contas',
+        subtitle: 'Contas financeiras ativas',
       },
       {
         title: 'Saldo Conciliado',
@@ -144,7 +144,7 @@ export const DashboardMetricsCards = React.memo<DashboardMetricsCardsProps>(
         value: formatCurrency(metrics.forecast_7_days),
         icon: <Clock className="w-6 h-6" />,
         color: 'orange' as const,
-        subtitle: 'Movimentações agendadas',
+        subtitle: 'Movimentações de contas',
       },
       {
         title: 'Saldo Projetado',

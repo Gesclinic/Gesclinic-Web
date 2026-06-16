@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Pencil, Trash2, Check, Star, Eye, FileText } from 'lucide-react';
+import { Pencil, Trash2, Star, FileText } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -52,6 +52,20 @@ export const FinancialAccountsTable = React.memo<FinancialAccountsTableProps>(({
 }) => {
   const [deleteConfirm, setDeleteConfirm] = React.useState<FinancialAccount | null>(null);
 
+  const formatCurrency = (value: number | null | undefined, currency = 'BRL') => (
+    new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency,
+    }).format(Number(value || 0))
+  );
+
+  const formatDate = (value?: string | null) => {
+    if (!value) return '—';
+    const dateValue = String(value).split('T')[0];
+    const [year, month, day] = dateValue.split('-');
+    return year && month && day ? `${day}/${month}/${year}` : '—';
+  };
+
   const handleDeactivateClick = (account: FinancialAccount) => {
     setDeleteConfirm(account);
   };
@@ -88,19 +102,25 @@ export const FinancialAccountsTable = React.memo<FinancialAccountsTableProps>(({
   return (
     <>
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <Table>
+        <div className="max-h-[70vh] overflow-auto">
+        <Table className="min-w-[1540px] table-fixed">
           <TableHeader>
-            <TableRow className="bg-slate-50 border-b border-slate-200 hover:bg-slate-50">
-              <TableHead className="text-center text-gray-700 font-semibold w-16">Código</TableHead>
-              <TableHead className="text-gray-700 font-semibold">Banco</TableHead>
-              <TableHead className="text-gray-700 font-semibold">Conta</TableHead>
-              <TableHead className="text-gray-700 font-semibold">Tipo</TableHead>
-              <TableHead className="text-right text-gray-700 font-semibold">Saldo Atual</TableHead>
-              <TableHead className="text-right text-gray-700 font-semibold">Saldo Previsto</TableHead>
-              <TableHead className="text-center text-gray-700 font-semibold">Conciliação</TableHead>
-              <TableHead className="text-center text-gray-700 font-semibold">Status</TableHead>
-              <TableHead className="text-center text-gray-700 font-semibold">Padrão</TableHead>
-              <TableHead className="text-right text-gray-700 font-semibold">Ações</TableHead>
+            <TableRow className="sticky top-0 z-20 bg-slate-50 border-b border-slate-200 hover:bg-slate-50">
+              <TableHead className="w-[90px] text-center text-gray-700 font-semibold">Código</TableHead>
+              <TableHead className="w-[190px] text-gray-700 font-semibold">Banco</TableHead>
+              <TableHead className="w-[240px] text-gray-700 font-semibold">Conta</TableHead>
+              <TableHead className="w-[170px] text-gray-700 font-semibold">Tipo</TableHead>
+              <TableHead className="w-[150px] text-right text-gray-700 font-semibold">Saldo Inicial</TableHead>
+              <TableHead className="w-[150px] text-right text-gray-700 font-semibold">Saldo Atual</TableHead>
+              <TableHead className="w-[160px] text-right text-gray-700 font-semibold">Saldo Conciliado</TableHead>
+              <TableHead className="w-[150px] text-right text-gray-700 font-semibold">Saldo Pendente</TableHead>
+              <TableHead className="w-[140px] text-center text-gray-700 font-semibold">Última Mov.</TableHead>
+              <TableHead className="w-[150px] text-center text-gray-700 font-semibold">Última Concil.</TableHead>
+              <TableHead className="w-[150px] text-center text-gray-700 font-semibold">Conciliação</TableHead>
+              <TableHead className="w-[110px] text-center text-gray-700 font-semibold">Fluxo</TableHead>
+              <TableHead className="w-[120px] text-center text-gray-700 font-semibold">Status</TableHead>
+              <TableHead className="w-[90px] text-center text-gray-700 font-semibold">Padrão</TableHead>
+              <TableHead className="sticky right-0 z-30 w-[130px] border-l border-slate-200 bg-slate-50 text-right text-gray-700 font-semibold">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -118,17 +138,19 @@ export const FinancialAccountsTable = React.memo<FinancialAccountsTableProps>(({
 
                 {/* Bank Info */}
                 <TableCell>
-                  <p className="font-medium text-gray-900">{account.bank_name}</p>
+                  <p className="truncate font-medium text-gray-900" title={account.bank_name}>{account.bank_name}</p>
+                  <p className="text-xs text-gray-500">Moeda: {account.currency || 'BRL'}</p>
                 </TableCell>
 
                 {/* Account Info */}
                 <TableCell>
-                  <div>
-                    <p className="font-medium text-gray-900">{account.account_name}</p>
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-gray-900" title={account.account_name}>{account.account_name}</p>
                     <p className="text-xs text-gray-500">
                       {account.agency && `Ag: ${account.agency} `}
-                      | CC: {account.account_number?.slice(-4) || 'N/A'}
+                      | Conta: {account.account_number || 'N/A'}
                     </p>
+                    {account.pix_key && <p className="truncate text-xs text-gray-500" title={account.pix_key}>Pix: {account.pix_key}</p>}
                   </div>
                 </TableCell>
 
@@ -140,29 +162,55 @@ export const FinancialAccountsTable = React.memo<FinancialAccountsTableProps>(({
                   </span>
                 </TableCell>
 
+                {/* Initial Balance */}
+                <TableCell className="text-right">
+                  <p className="font-semibold text-slate-700">
+                    {formatCurrency(account.initial_balance, account.currency)}
+                  </p>
+                  <p className="text-xs text-gray-500">Base: {formatDate(account.balance_date)}</p>
+                </TableCell>
+
                 {/* Current Balance */}
                 <TableCell className="text-right">
-                  <p className="font-semibold text-gray-900">
-                    {new Intl.NumberFormat('pt-BR', {
-                      style: 'currency',
-                      currency: account.currency,
-                    }).format(account.current_balance)}
+                  <p className={`font-semibold ${Number(account.current_balance || 0) < 0 ? 'text-red-600' : 'text-gray-900'}`}>
+                    {formatCurrency(account.current_balance, account.currency)}
                   </p>
                 </TableCell>
 
-                {/* Forecast Balance */}
+                {/* Reconciled Balance */}
+                <TableCell className="text-right">
+                  <p className="font-semibold text-green-700">
+                    {formatCurrency(account.balance_reconciled, account.currency)}
+                  </p>
+                </TableCell>
+
+                {/* Pending Balance */}
                 <TableCell className="text-right">
                   <p className="font-semibold text-cyan-600">
-                    {new Intl.NumberFormat('pt-BR', {
-                      style: 'currency',
-                      currency: account.currency,
-                    }).format(account.balance_pending || 0)}
+                    {formatCurrency(account.balance_pending, account.currency)}
                   </p>
+                </TableCell>
+
+                {/* Last Movement */}
+                <TableCell className="text-center text-sm text-gray-700">
+                  {formatDate(account.last_movement_at)}
+                </TableCell>
+
+                {/* Last Reconciliation */}
+                <TableCell className="text-center text-sm text-gray-700">
+                  {formatDate(account.last_reconciliation_at)}
                 </TableCell>
 
                 {/* Reconciliation Status */}
                 <TableCell className="text-center">
                   <ReconciliationBadge status={account.reconciliation_status as 'conciliado' | 'pendente' | 'divergente' | null} />
+                </TableCell>
+
+                {/* Cashflow */}
+                <TableCell className="text-center">
+                  <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${account.participates_cashflow === false ? 'bg-slate-100 text-slate-600' : 'bg-blue-50 text-blue-700'}`}>
+                    {account.participates_cashflow === false ? 'Não' : 'Sim'}
+                  </span>
                 </TableCell>
 
                 {/* Active Status */}
@@ -180,7 +228,7 @@ export const FinancialAccountsTable = React.memo<FinancialAccountsTableProps>(({
                 </TableCell>
 
                 {/* Actions */}
-                <TableCell>
+                <TableCell className="sticky right-0 z-10 border-l border-slate-100 bg-inherit">
                   <div className="flex items-center justify-end gap-1">
                     <TooltipProvider>
                       {!account.is_default && onSetDefault && (
@@ -239,6 +287,7 @@ export const FinancialAccountsTable = React.memo<FinancialAccountsTableProps>(({
             ))}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       {/* Deactivate Confirmation Dialog */}

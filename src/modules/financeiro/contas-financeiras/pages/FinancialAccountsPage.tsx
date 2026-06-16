@@ -192,7 +192,8 @@ export const FinancialAccountsPage: React.FC = () => {
   // ✅ Load metrics and movements on mount
   useEffect(() => {
     refetchMetrics();
-  }, [refetchMetrics]);
+    refetchMovements();
+  }, [refetchMetrics, refetchMovements]);
 
   return (
     <div className="space-y-6">

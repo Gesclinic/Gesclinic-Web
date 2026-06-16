@@ -57,6 +57,17 @@ export interface FinancialAccount {
   currency: string;
   is_default: boolean;
   is_active: boolean;
+  account_chart_code?: string;
+  default_cost_center?: string;
+  participates_cashflow?: boolean;
+  allows_reconciliation?: boolean;
+  balance_date?: string;
+  credit_limit?: number;
+  reconciliation_status?: ReconciliationStatus;
+  last_reconciliation_at?: string;
+  last_movement_at?: string;
+  balance_reconciled?: number;
+  balance_pending?: number;
   created_by: string;
   created_at: string;
   updated_at: string;

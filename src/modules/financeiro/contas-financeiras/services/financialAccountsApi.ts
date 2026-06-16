@@ -535,57 +535,66 @@ export async function getDashboardMetrics(clinicId: string) {
   }
 
   try {
-    // 🔄 PRIMARY SOURCE: Get financial transactions (real data)
-    const { data: transactions, error: transError } = await supabase
-      .from('financial_transactions')
-      .select('*')
-      .eq('clinic_id', clinicId);
+    const toNumber = (value: unknown) => Number(value || 0);
 
-    if (transError) throw transError;
-
-    // Calculate totals from transactions
-    const totalRevenue = (transactions || [])
-      .filter((t: any) => t.type === 'revenue')
-      .reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
-
-    const totalExpense = (transactions || [])
-      .filter((t: any) => t.type === 'expense')
-      .reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
-
-    const totalBalance = totalRevenue - totalExpense;
-
-    // Get today's transactions for "today" metrics
-    const today = new Date().toISOString().split('T')[0];
-    const todayTransactions = (transactions || [])
-      .filter((t: any) => {
-        const tDate = t.created_at ? t.created_at.split('T')[0] : '';
-        return tDate === today;
-      });
-
-    const entriesTotal = todayTransactions
-      .filter((t: any) => t.type === 'revenue')
-      .reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
-
-    const exitsTotal = todayTransactions
-      .filter((t: any) => t.type === 'expense')
-      .reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
-
-    // FALLBACK: Also check financial_accounts for reconciliation data
     const { data: accounts, error: accountsError } = await supabase
       .from('financial_accounts')
-      .select('current_balance, balance_reconciled')
+      .select('current_balance, balance_reconciled, balance_pending')
       .eq('clinic_id', clinicId)
       .eq('is_active', true);
 
-    const reconciledBalance = (accounts || []).reduce((sum, acc: any) => sum + (acc.balance_reconciled || 0), 0);
+    if (accountsError) throw accountsError;
+
+    const totalBalance = (accounts || []).reduce(
+      (sum: number, account: any) => sum + toNumber(account.current_balance),
+      0
+    );
+    const reconciledBalance = (accounts || []).reduce(
+      (sum: number, account: any) => sum + toNumber(account.balance_reconciled),
+      0
+    );
+    const pendingBalance = (accounts || []).reduce(
+      (sum: number, account: any) => sum + toNumber(account.balance_pending),
+      0
+    );
+
+    const today = new Date().toISOString().split('T')[0];
+    const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    const { data: movements, error: movementsError } = await supabase
+      .from('account_movements')
+      .select('movement_date, amount, movement_type')
+      .eq('clinic_id', clinicId)
+      .gte('movement_date', today)
+      .lte('movement_date', sevenDaysFromNow);
+
+    if (movementsError) {
+      console.warn('Account movements unavailable for dashboard metrics:', movementsError);
+    }
+
+    const accountMovements = movementsError ? [] : movements || [];
+    const todayMovements = accountMovements.filter((movement: any) => movement.movement_date === today);
+
+    const entriesTotal = todayMovements
+      .filter((movement: any) => movement.movement_type === 'entrada')
+      .reduce((sum: number, movement: any) => sum + toNumber(movement.amount), 0);
+
+    const exitsTotal = todayMovements
+      .filter((movement: any) => movement.movement_type === 'saida')
+      .reduce((sum: number, movement: any) => sum + toNumber(movement.amount), 0);
+
+    const forecast7Days = accountMovements.reduce((sum: number, movement: any) => {
+      const amount = toNumber(movement.amount);
+      return movement.movement_type === 'entrada' ? sum + amount : sum - amount;
+    }, 0);
 
     return {
       total_balance: totalBalance,
       reconciled_balance: reconciledBalance,
       entries_today: entriesTotal,
       exits_today: exitsTotal,
-      forecast_7_days: 0, // Would require scheduled transactions table
-      projected_balance: totalBalance + entriesTotal - exitsTotal,
+      forecast_7_days: forecast7Days || pendingBalance,
+      projected_balance: totalBalance + (forecast7Days || pendingBalance),
     };
   } catch (error) {
     console.error('Error getting dashboard metrics:', error);
