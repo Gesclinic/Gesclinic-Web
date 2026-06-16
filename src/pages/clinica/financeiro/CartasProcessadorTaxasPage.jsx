@@ -71,13 +71,13 @@ export default function CartasProcessadorTaxasPage() {
     loadProcessors();
   }, [isAuthenticated, clinicId]);
 
-  // Load fees when processor changes
+  // Load all fees independently from the form selection.
   useEffect(() => {
     if (!isAuthenticated || !clinicId) {
       return;
     }
     loadFees();
-  }, [isAuthenticated, clinicId, processorId]);
+  }, [isAuthenticated, clinicId]);
 
   const loadProcessors = async () => {
     try {
@@ -95,7 +95,7 @@ export default function CartasProcessadorTaxasPage() {
   const loadFees = async () => {
     try {
       setLoadingFees(true);
-      const data = await listProcessorFees(clinicId, processorId || undefined);
+      const data = await listProcessorFees(clinicId);
       setFees(data || []);
     } catch (err) {
       console.error('Erro ao carregar taxas:', err);
@@ -431,7 +431,7 @@ export default function CartasProcessadorTaxasPage() {
                     variant="outline"
                     size="sm"
                     onClick={handleDeleteListedFees}
-                    disabled={bulkDeletingFees || loadingFees}
+                    disabled={bulkDeletingFees}
                     className="gap-2 border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
                   >
                     <Trash className="h-4 w-4" />
@@ -444,11 +444,7 @@ export default function CartasProcessadorTaxasPage() {
                 <p className="text-slate-500 text-center py-8">Carregando...</p>
               ) : fees.length === 0 ? (
                 <div className="text-center py-12">
-                  <p className="text-slate-500 mb-4">
-                    {processorId
-                      ? 'Nenhuma taxa configurada para esta operadora'
-                      : 'Selecione uma operadora para ver as taxas'}
-                  </p>
+                  <p className="text-slate-500 mb-4">Nenhuma taxa configurada.</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -518,10 +514,10 @@ export default function CartasProcessadorTaxasPage() {
               )}
 
               {/* Summary */}
-              {processorId && fees.length > 0 && (
+              {fees.length > 0 && (
                 <div className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-lg">
                   <p className="text-sm font-medium text-slate-700 mb-3">
-                    📊 Resumo: {selectedProcessor?.name}
+                    📊 Resumo geral
                   </p>
                   <div className="grid grid-cols-2 gap-2 text-xs text-slate-600">
                     <div>
