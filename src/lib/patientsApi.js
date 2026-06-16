@@ -47,6 +47,9 @@ function sanitizePatientPayload(patientData = {}) {
   if (source.postal_code !== undefined && source.zip_code === undefined) {
     source.zip_code = source.postal_code;
   }
+  if (source.profession !== undefined && source.professional_occupation === undefined) {
+    source.professional_occupation = source.profession;
+  }
 
   const allowedFields = [
     'name',
@@ -63,6 +66,14 @@ function sanitizePatientPayload(patientData = {}) {
     'address',
     'state',
     'zip_code',
+    'complement',
+    'mother_name',
+    'rg_number',
+    'nationality',
+    'state_birth',
+    'marital_status',
+    'professional_occupation',
+    'ethnicity',
     'prontuario_numero',
     'payer_id',
     'plan_id',
@@ -82,6 +93,23 @@ function sanitizePatientPayload(patientData = {}) {
   }
 
   return payload;
+}
+
+function removeTissComplementaryFields(payload = {}) {
+  const sanitized = { ...payload };
+  for (const key of [
+    'complement',
+    'mother_name',
+    'rg_number',
+    'nationality',
+    'state_birth',
+    'marital_status',
+    'professional_occupation',
+    'ethnicity',
+  ]) {
+    delete sanitized[key];
+  }
+  return sanitized;
 }
 
 /**
@@ -162,7 +190,7 @@ export async function listPatients(clinicId, filters = {}) {
   }
 
   query = query.order('name', { ascending: true }).limit(limit);
-  
+
   try {
     const { data, error } = await query;
 
@@ -193,10 +221,7 @@ export async function getPatientById(patientId) {
     throw new Error('ID inválido');
   }
 
-  const { data, error } = await supabase
-    .from('patients')
-    .select(
-      `
+  const baseSelect = `
       id,
       prontuario_numero,
       name,
@@ -224,10 +249,35 @@ export async function getPatientById(patientId) {
       clinic_id,
       record_number,
       photo_url
-    `,
-    )
+    `;
+
+  const tissSelect = `
+      ${baseSelect},
+      complement,
+      mother_name,
+      rg_number,
+      nationality,
+      state_birth,
+      marital_status,
+      professional_occupation,
+      ethnicity
+    `;
+
+  let { data, error } = await supabase
+    .from('patients')
+    .select(tissSelect)
     .eq('id', patientId)
     .maybeSingle();
+
+  if (error && error.code === '42703') {
+    const fallback = await supabase
+      .from('patients')
+      .select(baseSelect)
+      .eq('id', patientId)
+      .maybeSingle();
+    data = fallback.data;
+    error = fallback.error;
+  }
 
   if (error) {
     console.error('❌ Erro ao buscar paciente:', error);
@@ -333,7 +383,17 @@ export async function createPatientWithPhoto(clinicId, patientData, photoDataUrl
 
   const payload = { clinic_id: clinicId, ...sanitizePatientPayload(patientData) };
 
-  const { data, error } = await supabase.from('patients').insert(payload).select().maybeSingle();
+  let { data, error } = await supabase.from('patients').insert(payload).select().maybeSingle();
+
+  if (error?.code === '42703') {
+    const fallback = await supabase
+      .from('patients')
+      .insert(removeTissComplementaryFields(payload))
+      .select()
+      .maybeSingle();
+    data = fallback.data;
+    error = fallback.error;
+  }
 
   if (error) {
     console.error('❌ Erro ao criar paciente:', error);
@@ -367,7 +427,17 @@ export async function createPatient(clinicId, patientData) {
 
   const payload = { clinic_id: clinicId, ...sanitizePatientPayload(patientData) };
 
-  const { data, error } = await supabase.from('patients').insert(payload).select().maybeSingle();
+  let { data, error } = await supabase.from('patients').insert(payload).select().maybeSingle();
+
+  if (error?.code === '42703') {
+    const fallback = await supabase
+      .from('patients')
+      .insert(removeTissComplementaryFields(payload))
+      .select()
+      .maybeSingle();
+    data = fallback.data;
+    error = fallback.error;
+  }
 
   if (error) {
     console.error('❌ Erro ao criar paciente:', error);
@@ -389,12 +459,23 @@ export async function updatePatient(patientId, patientData) {
 
   const payload = sanitizePatientPayload(patientData);
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('patients')
     .update(payload)
     .eq('id', patientId)
     .select()
     .maybeSingle();
+
+  if (error?.code === '42703') {
+    const fallback = await supabase
+      .from('patients')
+      .update(removeTissComplementaryFields(payload))
+      .eq('id', patientId)
+      .select()
+      .maybeSingle();
+    data = fallback.data;
+    error = fallback.error;
+  }
 
   if (error && error.code !== 'PGRST116') {
     console.error('❌ Erro ao atualizar paciente:', error);
@@ -544,17 +625,16 @@ export async function generateProntuarioForPatient(patientId, clinicCode) {
       .eq('id', patientId)
       .select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
-
     if (updateError) {
       throw updateError;
     }
 
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+
     console.log('✅ Prontuário gerado:', newProntuario);
-    return data;
+    return data[0];
   } catch (error) {
     console.error('❌ Erro ao gerar prontuário:', error);
     throw error;

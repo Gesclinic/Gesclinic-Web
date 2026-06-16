@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion } from 'framer-motion';
-import { Save, User, Phone, MapPin } from 'lucide-react';
+import { Save, User, Phone, MapPin, FileText } from 'lucide-react';
 
 export default function DadosCadastraisTab({ patientId, patientData, updatePatientData }) {
   const { toast } = useToast();
@@ -51,6 +51,42 @@ export default function DadosCadastraisTab({ patientId, patientData, updatePatie
     return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`;
   }
 
+  function formatCEP(value) {
+    const cleaned = value.replace(/\D/g, '');
+    if (cleaned.length <= 5) {
+      return cleaned;
+    }
+    return `${cleaned.slice(0, 5)}-${cleaned.slice(5, 8)}`;
+  }
+
+  function validateForSave() {
+    const missingFields = [];
+    const cpfDigits = formData.document_id.replace(/\D/g, '');
+
+    if (!formData.name.trim()) {
+      missingFields.push('Nome completo');
+    }
+    if (!formData.document_id.trim()) {
+      missingFields.push('CPF');
+    } else if (cpfDigits.length !== 11) {
+      missingFields.push('CPF com 11 dígitos');
+    }
+    if (!formData.birthdate) {
+      missingFields.push('Data de nascimento');
+    }
+    if (!formData.gender) {
+      missingFields.push('Sexo');
+    }
+    if (!formData.cell_phone.trim() && !formData.phone.trim()) {
+      missingFields.push('Celular ou telefone');
+    }
+    if (!formData.mother_name.trim()) {
+      missingFields.push('Nome da mãe');
+    }
+
+    return missingFields;
+  }
+
   const [formData, setFormData] = useState({
     name: '',
     document_id: '',
@@ -65,6 +101,14 @@ export default function DadosCadastraisTab({ patientId, patientData, updatePatie
     state: '',
     zip_code: '',
     cell_phone: '',
+    mother_name: '',
+    rg_number: '',
+    nationality: 'BR',
+    state_birth: '',
+    marital_status: '',
+    professional_occupation: '',
+    ethnicity: '',
+    complement: '',
   });
 
   // Inicializar form com dados do paciente
@@ -84,6 +128,14 @@ export default function DadosCadastraisTab({ patientId, patientData, updatePatie
         state: patientData.state || '',
         zip_code: patientData.zip_code || '',
         cell_phone: patientData.cell_phone || '',
+        mother_name: patientData.mother_name || '',
+        rg_number: patientData.rg_number || '',
+        nationality: patientData.nationality || 'BR',
+        state_birth: patientData.state_birth || '',
+        marital_status: patientData.marital_status || '',
+        professional_occupation: patientData.professional_occupation || '',
+        ethnicity: patientData.ethnicity || '',
+        complement: patientData.complement || '',
       });
     }
   }, [patientData]);
@@ -91,6 +143,16 @@ export default function DadosCadastraisTab({ patientId, patientData, updatePatie
   async function handleSave() {
     if (!patientId) {
       toast({ title: 'Erro', description: 'ID do paciente inválido' });
+      return;
+    }
+
+    const missingFields = validateForSave();
+    if (missingFields.length > 0) {
+      toast({
+        title: 'Cadastro incompleto',
+        description: `Preencha: ${missingFields.join(', ')}.`,
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -191,7 +253,7 @@ export default function DadosCadastraisTab({ patientId, patientData, updatePatie
 
               <div>
                 <Label htmlFor="birthdate" className="text-sm font-medium text-gray-700">
-                  Data de Nascimento
+                  Data de Nascimento <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="birthdate"
@@ -204,7 +266,7 @@ export default function DadosCadastraisTab({ patientId, patientData, updatePatie
 
               <div>
                 <Label htmlFor="gender" className="text-sm font-medium text-gray-700">
-                  Gênero
+                  Sexo <span className="text-red-500">*</span>
                 </Label>
                 <select
                   id="gender"
@@ -258,7 +320,7 @@ export default function DadosCadastraisTab({ patientId, patientData, updatePatie
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="cell_phone" className="text-sm font-medium text-gray-700">
-                  Celular
+                  Celular <span className="text-gray-400 text-xs">(celular ou telefone)</span>
                 </Label>
                 <Input
                   id="cell_phone"
@@ -298,6 +360,144 @@ export default function DadosCadastraisTab({ patientId, patientData, updatePatie
         </Card>
       </motion.div>
 
+      {/* Seção: Dados Complementares TISS */}
+      <motion.div variants={cardVariants}>
+        <Card className="border-0 shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden">
+          <CardHeader className="border-b border-gray-100 bg-gradient-to-r from-amber-50 to-amber-25">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-amber-100 rounded-lg">
+                <FileText className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <CardTitle className="text-lg font-semibold text-gray-900">
+                  Dados Complementares (TISS)
+                </CardTitle>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  Dados usados na geração de guias e faturamento XML
+                </p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-6 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="mother_name" className="text-sm font-medium text-gray-700">
+                  Nome da Mãe <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="mother_name"
+                  placeholder="Ex: Maria da Silva"
+                  value={formData.mother_name}
+                  onChange={(e) => setFormData({ ...formData, mother_name: e.target.value })}
+                  className="border-gray-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 bg-white"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="rg_number" className="text-sm font-medium text-gray-700">
+                  RG / Registro de Identidade
+                </Label>
+                <Input
+                  id="rg_number"
+                  placeholder="Ex: 12345678-9"
+                  value={formData.rg_number}
+                  onChange={(e) => setFormData({ ...formData, rg_number: e.target.value })}
+                  className="border-gray-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 bg-white"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="state_birth" className="text-sm font-medium text-gray-700">
+                  Naturalidade (UF)
+                </Label>
+                <Input
+                  id="state_birth"
+                  placeholder="Ex: PR"
+                  maxLength="2"
+                  value={formData.state_birth}
+                  onChange={(e) =>
+                    setFormData({ ...formData, state_birth: e.target.value.toUpperCase() })
+                  }
+                  className="border-gray-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 bg-white uppercase"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="marital_status" className="text-sm font-medium text-gray-700">
+                  Estado Civil
+                </Label>
+                <select
+                  id="marital_status"
+                  value={formData.marital_status}
+                  onChange={(e) => setFormData({ ...formData, marital_status: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200 bg-white text-gray-700"
+                >
+                  <option value="">Selecione...</option>
+                  <option value="single">Solteiro(a)</option>
+                  <option value="married">Casado(a)</option>
+                  <option value="divorced">Divorciado(a)</option>
+                  <option value="widowed">Viúvo(a)</option>
+                  <option value="stable_union">União Estável</option>
+                </select>
+              </div>
+
+              <div>
+                <Label htmlFor="ethnicity" className="text-sm font-medium text-gray-700">
+                  Raça/Etnia
+                </Label>
+                <select
+                  id="ethnicity"
+                  value={formData.ethnicity}
+                  onChange={(e) => setFormData({ ...formData, ethnicity: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200 bg-white text-gray-700"
+                >
+                  <option value="">Selecione...</option>
+                  <option value="brown">Pardo</option>
+                  <option value="white">Branco</option>
+                  <option value="black">Preto</option>
+                  <option value="asian">Asiático</option>
+                  <option value="indigenous">Indígena</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="professional_occupation" className="text-sm font-medium text-gray-700">
+                  Profissão
+                </Label>
+                <Input
+                  id="professional_occupation"
+                  placeholder="Ex: Médico, Professor..."
+                  value={formData.professional_occupation}
+                  onChange={(e) =>
+                    setFormData({ ...formData, professional_occupation: e.target.value })
+                  }
+                  className="border-gray-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 bg-white"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="nationality" className="text-sm font-medium text-gray-700">
+                  Nacionalidade
+                </Label>
+                <select
+                  id="nationality"
+                  value={formData.nationality}
+                  onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all duration-200 bg-white text-gray-700"
+                >
+                  <option value="BR">Brasileiro(a)</option>
+                  <option value="other">Estrangeiro(a)</option>
+                </select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
       {/* Seção: Endereço */}
       <motion.div variants={cardVariants}>
         <Card className="border-0 shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden">
@@ -324,6 +524,19 @@ export default function DadosCadastraisTab({ patientId, patientData, updatePatie
                   onChange={(e) => setFormData({ ...formData, street: e.target.value })}
                   className="border-gray-200 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 bg-white"
                   placeholder="Endereço da rua"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="complement" className="text-sm font-medium text-gray-700">
+                  Complemento
+                </Label>
+                <Input
+                  id="complement"
+                  value={formData.complement}
+                  onChange={(e) => setFormData({ ...formData, complement: e.target.value })}
+                  className="border-gray-200 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 bg-white"
+                  placeholder="Apartamento, sala, bloco..."
                 />
               </div>
 
@@ -361,7 +574,7 @@ export default function DadosCadastraisTab({ patientId, patientData, updatePatie
                   <Input
                     id="zip_code"
                     value={formData.zip_code}
-                    onChange={(e) => setFormData({ ...formData, zip_code: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, zip_code: formatCEP(e.target.value) })}
                     className="border-gray-200 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 bg-white"
                     placeholder="00000-000"
                   />

@@ -117,6 +117,9 @@ export default function PatientCadastroPage() {
     if (!formData.cell_phone?.trim() && !formData.phone?.trim()) {
       newErrors.cell_phone = 'Informe ao menos um telefone de contato';
     }
+    if (!formData.mother_name?.trim()) {
+      newErrors.mother_name = 'Nome da mãe é obrigatório para faturamento XML';
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -471,7 +474,7 @@ export default function PatientCadastroPage() {
                       Dados Complementares (TISS)
                     </CardTitle>
                     <p className="text-sm text-gray-500 mt-0.5">
-                      Informações adicionais - todos os campos são opcionais
+                      Informações para guias e faturamento XML
                     </p>
                   </div>
                 </div>
@@ -481,15 +484,20 @@ export default function PatientCadastroPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="mother_name" className="text-sm font-medium text-gray-700">
-                      Nome da Mãe <span className="text-gray-400 text-xs">(opcional)</span>
+                      Nome da Mãe <span className="text-red-500">*</span>
                     </Label>
                     <Input
                       id="mother_name"
                       placeholder="Ex: Maria da Silva"
                       value={formData.mother_name}
                       onChange={(e) => setFormData({ ...formData, mother_name: e.target.value })}
-                      className="border-gray-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 bg-white mt-1.5"
+                      className={`border-gray-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 bg-white mt-1.5 ${errors.mother_name ? 'border-red-500' : ''}`}
                     />
+                    {errors.mother_name && (
+                      <p className="text-red-600 text-sm mt-2 flex items-center gap-1">
+                        ⚠️ {errors.mother_name}
+                      </p>
+                    )}
                   </div>
 
                   <div>

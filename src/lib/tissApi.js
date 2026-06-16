@@ -32,7 +32,8 @@ export function validateTISSDataCompleteness(guideData) {
   if (!guideData.patient) {
     errors.push('Paciente não encontrado');
   } else {
-    if (!guideData.patient.cpf || guideData.patient.cpf.trim() === '') {
+    const patientCpf = guideData.patient.cpf || guideData.patient.document_id;
+    if (!patientCpf || patientCpf.trim() === '') {
       errors.push('CPF do paciente é obrigatório');
     }
     if (!guideData.patient.name || guideData.patient.name.trim() === '') {
@@ -120,6 +121,7 @@ export function generateTISSXML(guideData) {
   }
 
   const { patient, professional, service, payer, appointment } = guideData;
+  const patientCpf = patient.cpf || patient.document_id || '';
 
   // Formatadores helpers
   const formatDate = (date) => {
@@ -169,7 +171,7 @@ export function generateTISSXML(guideData) {
   <!-- ======== DADOS DO SEGURADO/PACIENTE ======== -->
   <Subscriber>
     <SubscriberNumber>${appointment.subscriber_number || '000000000001'}</SubscriberNumber>
-    <CPF>${formatCPF(patient.cpf)}</CPF>
+    <CPF>${formatCPF(patientCpf)}</CPF>
     <Name>${escapeXML(patient.name)}</Name>
     <Gender>${patient.gender?.toUpperCase() === 'M' ? 'M' : 'F'}</Gender>
     <BirthDate>${formatDate(patient.birthdate)}</BirthDate>
@@ -224,7 +226,7 @@ export function generateTISSXML(guideData) {
 
   <!-- ======== AUTENTICAÇÃO ======== -->
   <Authentication>
-    <TransmissionKey>${generateTransmissionKey(patient.cpf, guideNumber)}</TransmissionKey>
+    <TransmissionKey>${generateTransmissionKey(patientCpf, guideNumber)}</TransmissionKey>
     <DigitalSignature>${generateDigitalSignature(guideNumber)}</DigitalSignature>
   </Authentication>
 </TISSGuide>`;
@@ -330,7 +332,7 @@ export async function submitTISSGuide(guideId, clinicId) {
           service_id, professional_id, authorization_number, subscriber_number, requires_authorization,
           services(id, name, tuss_code, guide_type, unit_measure, cost_value),
           professionals(id, name, cbo_code, council_number, council_state, cpf),
-          patients(id, name, cpf, birthdate, gender, mother_name)
+          patients(id, name, document_id, birthdate, gender, mother_name)
         ),
         health_insurances(id, name, registration_ans)
       `,
@@ -437,16 +439,11 @@ export async function getTISSSubmissionStatus(guideId, clinicId) {
       .order('created_at', { ascending: false })
       .limit(1);
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
-
     if (error && error.code !== 'PGRST116') {
       throw error;
     }
 
-    return data || { status: 'not_submitted' };
+    return data?.[0] || { status: 'not_submitted' };
   } catch (error) {
     console.error('[getTISSSubmissionStatus]', error);
     return { status: 'error', message: error.message };
@@ -466,12 +463,8 @@ export async function retryTISSSubmission(submissionId, clinicId) {
       .from('tiss_submissions')
       .select('id, guide_id, status, attempt_count, xml_content')
       .eq('id', submissionId)
-      .eq('clinic_id', clinicId);
-
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
+      .eq('clinic_id', clinicId)
+      .maybeSingle();
 
     if (fetchError || !submission) {
       throw new Error('Submissão não encontrada');
@@ -605,7 +598,7 @@ export async function listPendingTISSGuides(clinicId) {
       .select(
         `
         id, guide_number, status, created_at,
-        appointments(patient_id, patients(name, cpf)),
+        appointments(patient_id, patients(name, document_id)),
         health_insurances(name, registration_ans)
       `,
       )

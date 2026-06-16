@@ -458,7 +458,7 @@ async function fetchCompleteGuideData(guideId, clinicId) {
       appointments(
         id, patient_id, scheduled_date, scheduled_time, total_value, service_id, 
         professional_id, authorization_number, subscriber_number, quantity, notes,
-        patients(id, name, cpf, birthdate, gender, mother_name),
+        patients(id, name, document_id, birthdate, gender, mother_name),
         professionals(id, name, cbo_code, council_number, council_state, cpf),
         services(id, name, tuss_code, guide_type, unit_measure, cost_value)
       ),
