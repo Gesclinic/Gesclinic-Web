@@ -204,12 +204,12 @@ async function setupTestDataMarch2026() {
         description: 'Consulta Particular 05/03 (débito)',
         amount: 80.00,
         due_date: '2026-03-20',
-        status: 'pending'
+        status: 'open'
       }
     ]
 
     const { data: arData, error: arError } = await supabase
-      .from('ar_receivables')
+      .from('ar_invoices')
       .insert(receivablesData)
       .select()
 

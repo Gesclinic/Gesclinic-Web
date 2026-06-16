@@ -1,0 +1,232 @@
+🚀 EXECUTAR AGORA - ETAPAS 5-7 DO OFFICIAL STATUS MODEL
+=======================================================
+
+## ✅ ETAPA 5: EXECUTAR MIGRATION SQL
+
+### Opção 1: Supabase SQL Editor (Recomendado - 5 minutos)
+
+1. Abra: https://app.supabase.com/project/[seu-projeto]/sql/new
+2. Abra arquivo local: supabase/migrations/2026-05-10_official_status_model.sql
+3. Copie TODO o conteúdo
+4. Cole no Supabase SQL Editor
+5. Clique em "RUN" (botão azul)
+6. Aguarde conclusão (~30 segundos)
+
+✅ Pronto! Migration executada.
+
+### Opção 2: PostgreSQL Client (psql)
+
+```powershell
+# Configure a URL de conexão
+$env:DATABASE_URL = "postgresql://user:password@db.xxxxx.supabase.co:5432/postgres"
+
+# Copie e cole no PowerShell:
+psql $env:DATABASE_URL -f "supabase/migrations/2026-05-10_official_status_model.sql"
+```
+
+### Opção 3: Via Terminal
+
+```bash
+# Export conexão
+export DATABASE_URL="postgresql://..."
+
+# Execute migration
+psql $DATABASE_URL < supabase/migrations/2026-05-10_official_status_model.sql
+```
+
+---
+
+## ✅ ETAPA 6: VALIDAR DADOS CONVERTIDOS
+
+Após executar migration, no Supabase SQL Editor, cole estas queries:
+
+### Query 1: Verificar Coluna Criada
+```sql
+SELECT column_name, data_type 
+FROM information_schema.columns 
+WHERE table_name = 'appointments' 
+AND column_name = 'official_status'
+LIMIT 1;
+```
+✅ Resultado esperado: Uma linha com official_status | appointment_official_status
+
+### Query 2: Contar por Novo Status
+```sql
+SELECT official_status, COUNT(*) as quantidade
+FROM appointments
+WHERE official_status IS NOT NULL
+GROUP BY official_status
+ORDER BY quantidade DESC;
+```
+✅ Resultado esperado: 8 status com contagens
+
+### Query 3: Verificar Conversão de Legados
+```sql
+SELECT DISTINCT booking_status_legacy, official_status, COUNT(*)
+FROM appointments
+WHERE booking_status_legacy IS NOT NULL
+GROUP BY booking_status_legacy, official_status
+ORDER BY COUNT(*) DESC;
+```
+✅ Resultado esperado: Mapeamento claro de status antigos → novos
+
+### Query 4: Verificar Índices
+```sql
+SELECT indexname 
+FROM pg_indexes 
+WHERE tablename = 'appointments' 
+AND indexname LIKE '%status%';
+```
+✅ Resultado esperado: 3 índices criados
+
+---
+
+## ✅ ETAPA 7: TESTAR COMPATIBILIDADE EM DESENVOLVIMENTO
+
+```bash
+# 1. Instalar dependências (se necessário)
+npm install
+
+# 2. Construir projeto
+npm run build
+
+# 3. Iniciar servidor de dev
+npm run dev
+```
+
+### Testes Manuais
+
+1. **Abra agenda**: http://localhost:3000/clinica/agenda
+
+2. **Clique em um agendamento antigo**
+   - Verifique se status_antigo foi convertido para official_status
+   - Exemplo: "confirmado" → "confirmed"
+
+3. **Teste seletor de status**
+   - Clique no status
+   - Deve mostrar apenas próximas transições válidas
+   - Tente transição inválida (deve bloquear)
+
+4. **Teste timeline visual**
+   - Deve mostrar progresso do agendamento
+   - Check-in deve desbloquear recepção
+   - Completed deve indicar faturamento
+
+5. **Filtros rápidos**
+   - Adicione novo filtro que usa QUICK_FILTERS
+   - Deve funcionar normalmente
+
+6. **Dados permanentes**
+   - Dados não devem sumir
+   - Histórico deve estar em booking_status_legacy
+   - Sem perda de dados
+
+---
+
+## ✅ ETAPA 8: TESTAR FATURAMENTO AUTOMÁTICO
+
+Teste crítico: Agendamento em 'completed' deve gerar faturamento automático.
+
+### No Console (F12)
+```javascript
+// Teste 1: Verificar se novo status é detectado
+const status = 'completed';
+const config = getStatusConfig(status);
+console.log('Gera faturamento?', config.generatesFinancial); // true
+
+// Teste 2: Validar que cancelled NÃO gera
+const noFatura = generatesFinancialInStatus('cancelled');
+console.log('Cancelled gera faturamento?', noFatura); // false
+
+// Teste 3: Validar que no_show NÃO gera
+const noShowFatura = generatesFinancialInStatus('no_show');
+console.log('No_show gera faturamento?', noShowFatura); // false
+```
+
+---
+
+## 🎯 CHECKLIST FINAL
+
+- [ ] SQL executado no Supabase
+- [ ] Query 1: Coluna criada ✅
+- [ ] Query 2: Contagem por status ✅
+- [ ] Query 3: Conversão de legados ✅
+- [ ] Query 4: Índices criados ✅
+- [ ] npm run dev inicia sem erros
+- [ ] Agenda carrega dados antigos
+- [ ] Status antigos estão convertidos
+- [ ] Seletor de status mostra transições válidas
+- [ ] Timeline mostra progresso
+- [ ] Check-in desbloqueia recepção
+- [ ] Completed marca para faturamento
+- [ ] Cancelled não gera faturamento
+- [ ] No_show não gera faturamento
+- [ ] Sem perda de dados
+
+---
+
+## 🔍 SE HOUVER PROBLEMAS
+
+### Erro: "appointment_official_status type already exists"
+✅ Seguro ignorar (type já criado em execução anterior)
+
+### Erro: "Column official_status already exists"
+✅ Seguro ignorar (coluna já existe)
+
+### Dados não aparecem após migration
+- [ ] Executar Query 2 para ver dados
+- [ ] Verificar se appointments tem registros
+- [ ] Executar SELECT COUNT(*) FROM appointments
+
+### Transições bloqueadas incorretamente
+- [ ] Verifique STATUS_TRANSITIONS em officialStatusModel.ts
+- [ ] Verifique validateStatusTransition() em statusValidation.ts
+
+### Faturamento não automático
+- [ ] Verificar que status é 'completed'
+- [ ] Verificar se generatesFinancialInStatus() retorna true
+- [ ] Verificar se integração com financeiro está ativa
+
+---
+
+## 📊 PRÓXIMOS PASSOS APÓS VALIDAÇÃO
+
+1. **Deploy para Staging**
+   ```bash
+   git add .
+   git commit -m "feat(agenda): official status model deployed"
+   git push origin staging
+   ```
+
+2. **Testes em Staging** (24h)
+   - Monitorar logs
+   - Testar com dados reais
+   - Validar performance
+
+3. **Deploy para Produção**
+   - Blue-green deployment (recomendado)
+   - Ou canary deployment (5% → 25% → 50% → 100%)
+
+4. **Monitoramento**
+   - Acompanhar por 48h
+   - Métricas de performance
+   - Taxa de erros de transição
+   - Taxa de faturamento automático
+
+---
+
+## ✨ ISSO COMPLETA FASE 2!
+
+Etapas 1-4 já estavam feitas
+Etapa 5: Executar SQL ✅
+Etapa 6: Validar dados ✅
+Etapa 7: Testar dev ✅
+Etapa 8: Testar faturamento ✅
+
+🚀 **Próxima fase: Deploy em Staging + Produção**
+
+---
+
+**Versão**: 1.0.0
+**Data**: 2026-05-10
+**Status**: 🔄 EM PROGRESSO

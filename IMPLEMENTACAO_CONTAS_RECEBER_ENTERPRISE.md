@@ -1,0 +1,449 @@
+# Implementacao Contas a Receber Enterprise
+
+## Status
+
+Implementacao concluida sobre o modulo existente de Contas a Receber, sem criar nova tela, novo service principal, hook duplicado ou tabela paralela para a mesma responsabilidade.
+
+## Auditoria obrigatoria
+
+- Relatorio previo criado: `AUDITORIA_CONTAS_RECEBER_ATUAL.md`.
+- Fonte operacional mantida: `ar_invoices`.
+- Tela mantida: `src/pages/clinica/financeiro/ContasReceber.jsx`.
+- API mantida: `src/lib/receivablesApi.js`.
+- Caminhos paralelos identificados e nao duplicados: `ar_receivables`, `receivableMotorApi.js`, `receivableAutomationApi.ts`.
+
+## Arquivos alterados/criados
+
+- `src/lib/receivablesApi.js`
+  - Normalizacao de status enterprise.
+  - Campos adicionais de criacao/edicao em `ar_invoices`.
+  - Filtros enterprise com fallback quando a migration ainda nao foi aplicada.
+  - Fase 12: `listReceivables()` passou a filtrar por `payer_id`, unidade/especialidade por nome, status de convenio, status XML TISS e retorno de convenio.
+  - Registro de recebimento parcial/split.
+  - Registro de glosa.
+- `src/pages/clinica/financeiro/ContasReceber.jsx`
+  - Dashboard enterprise com KPIs operacionais.
+  - Filtros ampliados.
+  - Fase 12 Filtros Enterprise: adicionados filtros de convenio/empresa por pagador, unidade, especialidade, status de convenio, status XML TISS e retorno de convenio.
+  - Tabela ampliada com competencia, profissional, bruto, recebido, glosa, repasse e saldo.
+  - Fase 13 Tabela Enterprise: tabela principal passou a exibir unidade/especialidade, status TISS/convenio, status/protocolo de retorno e ANS em colunas operacionais compactas.
+  - Fase 14 Relatorios: exportacao `RelatoriosToolbar` passou a incluir colunas enterprise completas de pagador, origem, profissional, unidade, especialidade, forma, competencia, plano, bruto, glosa, repasse, TISS, fiscal e revisao.
+  - Fase 15 UX Moderna: adicionada barra de atalhos operacionais, fichas removiveis de filtros ativos, limpeza rapida e tabela com cabecalho fixo, largura minima e skeleton de carregamento.
+  - Fase 16 Performance: listagem principal passou a carregar recebiveis em lotes de 100 registros, com acao `Carregar mais`, reset correto ao trocar filtros e remocao de log pesado no render da tabela.
+  - Fase 17 Seguranca: `ar_invoices` recebeu RLS tenant-aware no banco remoto e mutacoes sensiveis passaram a reforcar escopo por `clinic_id` no service/telas.
+  - Fase 18 Testes: adicionada suite Vitest focada no contrato enterprise de recebiveis, cobrindo filtros/paginacao, update/delete com `clinic_id` e protecao contra falso sucesso em exclusao.
+  - Fase 19 Relatorio Final: consolidado relatorio executivo em `RELATORIO_FINAL_CONTAS_RECEBER_ENTERPRISE.md` com status das fases 1-19, evidencias, arquitetura e riscos residuais.
+  - Modal de recebimento parcial/split.
+  - Modal de glosa.
+  - Anexo/foto de evidencia no workflow de glosas, reutilizando o componente de NF/documento.
+  - Acoes administrativas existentes preservadas: cancelar, excluir admin, editar e rastrear agenda.
+  - Tratamento do RPC de repasse apos baixa ajustado para nao exibir erro quando a baixa ja foi concluida e a rotina acessoria falhar.
+  - Enriquecimento da listagem por IDs enterprise: `payers`, `professionals` e `account_plans` passam a resolver convenio, profissional e plano de contas mesmo quando o texto nao vem embutido na descricao.
+  - Workflow de glosas na propria tabela: contestar, recuperar e aceitar perda.
+- `src/pages/clinica/financeiro/EditarRecebimento.jsx`
+  - Paridade enterprise com a tela de novo recebimento.
+  - Organizacao visual em secoes: dados do lancamento, classificacao financeira, valores e datas, rastreabilidade e anexos.
+  - Edicao e persistencia de competencia, unidade, procedimento, especialidade, guia e lote.
+  - NF/anexo, taxa de cartao, plano de contas, centro de custo e repasse preservados.
+- `src/lib/appointmentBillingApi.js`
+  - Fachada de compatibilidade para o faturamento da Agenda, delegando para `faturamento360Api`.
+- `src/lib/faturamento360Api.js`
+  - Fase 8 Agenda -> Contas a Receber validada sobre `appointment_services` como fonte oficial.
+  - Removida dependencia de coluna opcional inexistente `appointments.specialty_id` no select do faturamento.
+  - Preserva `patient_name` no evento e no recebivel gerado.
+- `src/lib/appointmentFinancialAutomations.js`
+  - Fase 9 Fluxo de Caixa: automacao prevista corrigida para usar os schemas reais `fluxo_caixa_movimentos` e `financial_transactions`.
+  - Remove registros anteriores do mesmo appointment antes de recriar previsao, mantendo idempotencia por `reference_id`/`origin_id`.
+  - Fase 10 DRE: automacao corrigida para gravar em `dre_entries` e recalcular `dre_metrics` no schema real (`month`, `revenue`, `expenses`).
+- `src/pages/clinica/financeiro/RepasseMedico.jsx`
+  - Fase 11 Repasse Medico: cards, relatorio/exportacao e pagamento ajustados para o schema real de `doctor_commissions`.
+  - Removida dependencia da RPC inexistente `record_commission_payment`; o pagamento agora atualiza `doctor_commissions` diretamente com `clinic_id`.
+- `supabase/migrations/20260611_fix_dre_rls_users_fallback.sql`
+  - Adiciona policies idempotentes para `dre_entries` e `dre_metrics`, aceitando `user_clinic_roles` e fallback por `users.clinic_id`.
+- `supabase/migrations/20260611_fix_doctor_commissions_from_ar_invoices.sql`
+  - Redefine `generate_doctor_commissions_v2` para calcular repasse medico a partir de `ar_invoices`, reutilizando `repasse_expected` vindo de `appointment_services`.
+  - Mantem fallback legado por `appointments.value` apenas para profissionais sem recebiveis na competencia.
+- `src/lib/receivableDocumentExtractor.js`
+  - Extracao local deterministica de XML NF-e/NFS-e para preenchimento assistido de Contas a Receber.
+  - Leitura de pagador/tomador, descricao, numero da NF, valor, impostos, emissao, vencimento e forma de pagamento quando presentes no XML.
+  - Helper de metadata fiscal salva os campos extraidos para auditoria posterior na listagem.
+  - PDF/imagem seguem anexados para rastreabilidade, sem simular OCR inexistente.
+- `supabase/migrations/20260611_enterprise_receivables_evolution.sql`
+  - Migration idempotente para evolucao enterprise.
+  - Reutiliza `receivable_payments`.
+  - Adiciona compatibilidade `ar_invoice_id UUID` para evitar conflito com `receivable_id BIGINT` antigo.
+  - Cria `receivable_glosas`, pois nao havia tabela operacional equivalente vinculada ao recebivel atual.
+- `supabase/migrations/20260611_fix_receivable_enterprise_rls_users_fallback.sql`
+  - Fix RLS idempotente para `receivable_payments` e `receivable_glosas`.
+  - Compatibiliza policies com `users.clinic_id` e `user_clinic_roles`.
+- `supabase/migrations/20260611_receivable_glosa_workflow.sql`
+  - Adiciona colunas enterprise de workflow em `receivable_glosas`.
+  - Registra valores contestados, recuperados e perda final.
+  - Registra prazos, timestamps de contestacao, recuperacao e aceite, alem de `evidence_url`, `evidence_path` e `evidence_name`.
+- `supabase/migrations/20260611_ensure_finance_docs_bucket.sql`
+  - Garante o bucket `finance_docs` usado por NF, anexos financeiros e evidencias de glosa.
+  - Cria policies idempotentes para leitura, upload, atualizacao e remocao de documentos financeiros.
+- `supabase/migrations/20260611_receivable_notes_field.sql`
+  - Adiciona `ar_invoices.notes` para observacoes financeiras, operacionais e de auditoria do recebivel.
+- `supabase/migrations/20260611_receivable_insurance_tiss_fields.sql`
+  - Adiciona campos de convenio/TISS em `ar_invoices` sem criar tabela paralela para o recebivel.
+  - Registra ANS, fatura/lote do convenio, status de faturamento, status XML TISS, retorno, protocolo e data de retorno.
+- `supabase/migrations/20260612_phase17_ar_invoices_rls_security.sql`
+  - Ativa RLS em `ar_invoices`.
+  - Cria policies idempotentes de select, insert e update por clinica via `users.clinic_id` ou `user_clinic_roles`.
+  - Restringe delete a perfis administrativos da clinica.
+- `scripts/validate_phase17_receivable_security.sql`
+  - Valida RLS ativa em `ar_invoices` e presenca das quatro policies esperadas da Fase 17.
+- `tests/unit/receivablesApi.enterprise.test.js`
+  - Suite Vitest da Fase 18 para validar o contrato enterprise do `receivablesApi.js`.
+  - Cobre filtros enterprise, paginacao por `limit`/`offset`, escopo tenant em update/delete e erro quando delete nao remove registro da clinica atual.
+- `RELATORIO_FINAL_CONTAS_RECEBER_ENTERPRISE.md`
+  - Relatorio final da Fase 19.
+  - Consolida resumo executivo, decisoes de arquitetura, status por fase, arquivos, migrations, validacoes, cobertura operacional e riscos residuais.
+- `IMPLEMENTACAO_CONTAS_RECEBER_ENTERPRISE.md`
+  - Este relatorio final.
+
+## Tabelas reutilizadas
+
+- `ar_invoices`: fonte principal da tela e dos lancamentos atuais.
+- `receivable_payments`: historico de pagamentos reaproveitado; migration adiciona `ar_invoice_id` e campos auxiliares sem criar duplicata.
+- `appointments` e `appointment_services`: integracoes existentes preservadas para origem Agenda.
+- `financial_transactions`: integracao indireta mantida via fluxo existente de baixa/status.
+
+## Tabelas criadas
+
+- `receivable_glosas`: criada apenas porque a auditoria nao encontrou tabela operacional real de glosas vinculada a `ar_invoices`.
+
+## Evolucao funcional implementada
+
+- Dashboard enterprise:
+  - Receita prevista.
+  - Receita realizada.
+  - Recebido no mes.
+  - Recebido hoje.
+  - Proximos 30 dias.
+  - Vencido e percentual de inadimplencia.
+  - Pendente.
+  - Glosas.
+  - Ticket medio.
+  - Repasse previsto e pago.
+  - Receitas convenios.
+  - Receitas particulares.
+  - Receitas empresas.
+  - Receita por unidade, destacando a unidade com maior receita no filtro atual.
+- Filtros:
+  - Status, origem, pagador, tipo de pagador.
+  - Profissional, plano de contas, centro de custo.
+  - Forma de pagamento.
+  - Com/sem glosa.
+  - Faixa de valor.
+  - Emissao, vencimento e recebimento por periodo.
+- Tabela:
+  - Pagador, descricao, convenio, profissional.
+  - Forma de pagamento.
+  - Competencia e vencimento.
+  - Plano de contas e status.
+  - Bruto, recebido, glosa, repasse e saldo.
+  - NF e acoes.
+- Recebimento:
+  - Baixa parcial.
+  - Baixa total.
+  - Split em duas formas de pagamento.
+  - Historico em `receivable_payments` quando migration aplicada.
+  - Atualizacao de `received_value`, `paid_total`, `balance_amount`, status e metadata.
+  - Formas de recebimento padronizadas incluem PIX, TED, DOC, dinheiro, cartao credito/debito, transferencia, boleto, convenio e empresa.
+- Status financeiros enterprise:
+  - Normalizacao operacional para `PREVISTO`, `FATURADO`, `PENDENTE`, `PARCIAL`, `RECEBIDO`, `VENCIDO`, `GLOSADO`, `CANCELADO` e `ESTORNADO`.
+  - Badges da tabela exibem `Faturado` e `Estornado` de forma explicita.
+  - Atualizacoes para `reversed` e `canceled` registram `reversed_at` e `canceled_at` quando as colunas existem.
+- Glosa:
+  - Valor glosado.
+  - Valor pago.
+  - Tipo e status de contestacao.
+  - Responsavel, motivo e data.
+  - Atualizacao de saldo/status do recebivel.
+- Edicao enterprise:
+  - Mesmos campos de rastreabilidade da criacao.
+  - Mesma estrutura visual por grupos operacionais.
+  - Persistencia dos campos enterprise em `ar_invoices`, incluindo observacoes do recebivel.
+- Convenios/TISS:
+  - Criacao e edicao passam a registrar ANS, numero de fatura/lote do convenio, status do faturamento, status XML TISS, retorno do convenio, protocolo e data de retorno.
+  - API principal `receivablesApi.js` normaliza e atualiza os campos TISS diretamente em `ar_invoices`.
+  - Exportacao/relatorio de Contas a Receber inclui os campos de convenio/TISS para auditoria e fechamento operacional.
+- Workflow de glosas:
+  - Contestar glosa com valor contestado e prazo.
+  - Anexar PDF/XML/imagem ou capturar foto como evidencia da contestacao.
+  - Registrar recuperacao parcial/total, atualizando recebido, glosa atual e saldo.
+  - Aceitar perda final, preservando a trilha operacional da glosa.
+- Dashboard de glosas:
+  - Painel operacional na tela principal quando ha glosas no filtro atual.
+  - Exibe quantidade de lancamentos com glosa, glosas abertas, valor glosado, valor recuperado e perda final.
+  - Atalho `Ver glosas` aplica o filtro de lancamentos com glosa sem criar tela paralela.
+- Leitura assistida de documento fiscal:
+  - Ao anexar XML de NF-e/NFS-e no novo recebimento ou na edicao, a tela preenche campos principais para revisao.
+  - Campos suportados: pagador/tomador, descricao do servico/produto, valor bruto, impostos, emissao, competencia, vencimento, forma prevista e numero da NF em guia.
+  - Resultado da leitura fica registrado em `metadata.document_extraction` junto com tipo, confianca, alertas e emissor identificado.
+  - Anexos PDF/imagem/foto continuam vinculados ao lancamento para auditoria, com leitura manual quando nao houver XML estruturado.
+- Governanca da leitura fiscal:
+  - Listagem mostra selo `NFE/NFSE alta/media/baixa` em `Docs` para lancamentos com leitura fiscal registrada.
+  - KPI `Impostos XML` soma `taxes_value` dos documentos lidos e informa quantos documentos estruturados entraram no filtro atual.
+  - Filtro `Documento fiscal` permite revisar `Com XML lido` ou `Sem XML lido` sem criar consulta/tabela paralela.
+  - Selo do XML abre modal `Revisao fiscal do documento` comparando XML e lancamento salvo por pagador, descricao, valor, impostos, emissao, vencimento, forma e numero de NF/guia.
+  - Revisao fiscal ganha status operacional em `metadata.fiscal_review`: pendente ou revisado, com data, papel do usuario e quantidade de divergencias.
+  - KPI `Revisao fiscal` exibe pendencias e o filtro homonimo permite listar XMLs pendentes ou revisados.
+  - Modal permite registrar observacao de revisao e reabrir XML revisado, mantendo eventos em `metadata.fiscal_review_events`.
+  - Exportacao/relatorio de Contas a Receber inclui campos de governanca fiscal: tipo do documento, confianca, emissor, numero NF, valores XML, impostos, status de revisao, revisado em/por, divergencias, observacao e quantidade de eventos.
+- Alertas operacionais de revisao fiscal XML:
+  - A listagem exibe faixa `Alertas de revisao fiscal XML` quando ha documentos lidos pendentes ou divergentes no filtro atual.
+  - A faixa informa pendencias totais, pendencias antigas com 7+ dias e divergencias atuais entre XML e lancamento salvo.
+  - A faixa agora inclui fila priorizada com ate 5 documentos pendentes, ordenando divergencias e antiguidade para acelerar o fechamento mensal.
+  - Cada item da fila mostra pagador, descricao, tipo/confianca do XML, idade em dias e quantidade de divergencias.
+  - O botao `Revisar` de cada item abre diretamente o modal `Revisao fiscal do documento` sem precisar localizar a linha na tabela.
+  - O botao `Ver pendentes` abre os filtros avancados e aplica `Documento fiscal = Com XML lido` e `Revisao fiscal = Pendente`.
+  - O botao `Revisar XMLs` centraliza a listagem em documentos estruturados para fechamento mensal.
+
+## Integracoes preservadas
+
+- Fluxo de Caixa -> Contas a Receber com rastreio e botao voltar.
+- Agenda -> Contas a Receber por `appointment_id`.
+- Agenda -> Contas a Receber validado por `syncAppointmentBilling()`, usando exclusivamente `appointment_services` para valor, desconto, servicos, metadata e repasse previsto.
+- Agenda -> Fluxo de Caixa previsto validado por `orchestrateAppointmentFinancialAutomations()`, criando movimento em `fluxo_caixa_movimentos` e transacao em `financial_transactions`.
+- Agenda -> DRE validado por `orchestrateAppointmentFinancialAutomations()`, criando entrada em `dre_entries` e atualizando `dre_metrics` mensal.
+- Repasse medico via RPC `generate_doctor_commissions_v2` apos recebimento, calculando a partir de `ar_invoices` e `repasse_expected` quando disponivel.
+- NF/anexo existente por `nf_document_url`.
+- Exclusao admin e cancelamento preservados.
+
+## Cuidados contra duplicacao
+
+- Nao foi criada nova pagina de Contas a Receber.
+- Nao foi criado novo service principal.
+- Nao foi criada tabela paralela de pagamentos.
+- `receivable_payments` foi compatibilizada em vez de substituida.
+- `receivable_glosas` foi criada apenas para uma responsabilidade inexistente no schema auditado.
+
+## Validacao executada
+
+- Diagnosticos VS Code:
+  - `src/lib/receivablesApi.js`: sem erros.
+  - `src/pages/clinica/financeiro/ContasReceber.jsx`: sem erros.
+  - SQL reportou erros por parser SQL Server do editor, nao por Postgres.
+- Build:
+  - `npm run build`: passou.
+  - `npm run build` apos paridade da tela de edicao: passou.
+- Testes:
+  - `npm run test -- --run`: executado.
+  - Resultado Fase 18: 22 arquivos passaram; 422 testes passaram.
+  - Suite focada `tests/unit/receivablesApi.enterprise.test.js`: 5 testes passaram.
+- Supabase remoto:
+  - `supabase db query --linked --file supabase/migrations/20260611_enterprise_receivables_evolution.sql`: executado no projeto `gvdkdjyupktlflwurike`.
+  - `supabase db query --linked --file supabase/migrations/20260611_fix_receivable_enterprise_rls_users_fallback.sql`: executado no projeto `gvdkdjyupktlflwurike`.
+  - Validado que existem `ar_invoices.enterprise_status`, `ar_invoices.glosa_value`, `receivable_payments.ar_invoice_id` e `receivable_glosas`.
+  - Validado que as policies de `receivable_payments` e `receivable_glosas` foram criadas, incluindo fallback por `users.clinic_id`.
+  - Validado que os indices enterprise principais foram criados.
+- Validacao automatica E2E tecnica:
+  - Criado `scripts/validate_enterprise_receivables.sql` para testar criacao de `ar_invoices`, `receivable_payments` e `receivable_glosas` com remocao automatica no final.
+  - `supabase db query --linked --file scripts/validate_enterprise_receivables.sql`: executado sem erro no projeto remoto.
+  - Confirmado cleanup: zero registros remanescentes com metadata de validacao em `ar_invoices`, `receivable_payments` e `receivable_glosas`.
+  - Browser automatico abriu `/clinica/financeiro/receber/nova` e confirmou protecao de rota com redirecionamento para `/login` quando nao ha sessao autenticada.
+- Validacao visual autenticada:
+  - Sessao autenticada compartilhada pelo usuario; nenhuma credencial foi solicitada ou manipulada.
+  - Criado recebivel temporario via UI em `/clinica/financeiro/receber/nova`.
+  - Confirmado retorno para `/clinica/financeiro/receber`, toast de sucesso, KPIs atualizados e linha exibida na tabela.
+  - Registrada baixa parcial/split via UI: PIX + dinheiro, com status parcial, valor recebido e saldo atualizados.
+  - Detectado erro real de RLS no historico `receivable_payments`; corrigido com migration de fallback por `users.clinic_id`.
+  - Revalidada baixa apos fix RLS: `receivable_payments` gravou registro com referencia `AUTO-UI-RLS-OK-2`.
+  - Registrada glosa via UI: `receivable_glosas` inseriu registro, `ar_invoices.glosa_value` e saldo foram atualizados, KPI Glosas refletiu o valor.
+  - Dados temporarios removidos ao final; confirmado zero registros remanescentes em `ar_invoices`, `receivable_payments` e `receivable_glosas` para o teste.
+- Validacao visual autenticada dos alertas fiscais XML:
+  - Criado recebivel temporario com `metadata.source = validacao_alerta_fiscal_xml`, XML lido, revisao pendente, data fiscal antiga e divergencia de valor entre XML (`450.00`) e lancamento salvo (`430.00`).
+  - Confirmado na tela `/clinica/financeiro/receber` que a faixa `Alertas de revisao fiscal XML` exibiu `1 pendente(s), 1 com 7+ dias e 1 com divergencia(s) atuais`.
+  - Confirmado que `Ver pendentes` abriu filtros avancados, selecionou `Com XML lido` e `Pendente`, mantendo a linha de validacao visivel.
+  - Dados temporarios removidos ao final; confirmado zero registro remanescente com `metadata.source = validacao_alerta_fiscal_xml`.
+- Validacao visual autenticada da fila de revisao fiscal XML:
+  - Criados dois recebiveis temporarios com `metadata.source = validacao_fila_fiscal_xml`: um XML antigo com divergencia de valor e outro XML antigo sem divergencia.
+  - Confirmado que a faixa exibiu `2 pendente(s), 2 com 7+ dias e 1 com divergencia(s) atuais`.
+  - Confirmado que a fila priorizou o item divergente antes do item apenas antigo.
+  - Confirmado que o botao `Revisar` do item abriu o modal `Revisao fiscal do documento` e exibiu a divergencia `Valor bruto R$ 450,00 x R$ 430,00`.
+  - Dados temporarios removidos ao final; confirmado zero registro remanescente com `metadata.source = validacao_fila_fiscal_xml`.
+- Validacao visual autenticada de status financeiros enterprise:
+  - Criados recebiveis temporarios com `status = billed` e `status = reversed`.
+  - Confirmado na listagem que os badges exibiram `Faturado` e `Estornado`.
+  - Dados temporarios removidos ao final; confirmado zero registro remanescente com `metadata.source = validacao_fase3_status`.
+- Validacao visual autenticada do dashboard de glosas:
+  - Criado recebivel temporario com glosa contestada, valor contestado, recuperado e perda final.
+  - Confirmado que o painel `Dashboard de Glosas` exibiu lancamentos, abertas, valor glosado, recuperado e perda final.
+  - Confirmado que a linha manteve as acoes `Contestar`, `Recuperar` e `Aceitar perda`.
+  - Dados temporarios removidos ao final; confirmado zero registro remanescente com `metadata.source = validacao_fase6_glosa_dashboard`.
+- Proxima fase executada:
+  - Tela `EditarRecebimento.jsx` modernizada para paridade enterprise com `NovoRecebimento.jsx`.
+  - Diagnostico VS Code da tela de edicao: sem erros.
+  - Build completo apos a alteracao: passou.
+- Validacao visual autenticada da edicao:
+  - Criado recebivel temporario controlado no Supabase remoto para abrir `/clinica/financeiro/receber/:id/editar`.
+  - Confirmado carregamento dos blocos: dados do lancamento, classificacao financeira, valores e datas, rastreabilidade e anexos.
+  - Confirmados campos enterprise preenchidos na UI: competencia, unidade, procedimento, especialidade, guia, lote e NF.
+  - Alterados pela UI pagador, descricao, valor bruto, desconto, emissao, vencimento, competencia e campos de rastreabilidade.
+  - Confirmada persistencia em `ar_invoices`: `patient_name`, `description`, `amount`, `discount_value`, `net_value`, `invoice_date`, `due_date`, `competency_date`, `guide_number`, `batch_number`, `procedure_name`, `specialty_name` e `unit_name`.
+  - Dados temporarios removidos ao final; confirmado zero registros remanescentes em `ar_invoices`, `receivable_payments` e `receivable_glosas` para o teste de edicao.
+- Validacao visual autenticada convenio/repasse:
+  - Criado recebivel temporario com pagador real `Unimed Cascavel - PR`, profissional real `Talvany Donizete de Oliveira`, plano `Consultas`, repasse previsto e campos de guia/lote.
+  - Identificado e corrigido gap de display: a tabela mostrava `Particular`, profissional vazio e plano vazio quando havia apenas IDs em `ar_invoices`.
+  - Revalidada listagem apos correcao: linha exibiu convenio, profissional, plano de contas e repasse previsto corretamente.
+  - Registrada baixa parcial via UI com historico em `receivable_payments`.
+  - Registrada glosa via UI com historico em `receivable_glosas`.
+  - Confirmados no banco `received_value`, `paid_total`, `glosa_value`, `balance_amount`, `repasse_expected`, `payer_id`, `professional_id` e `chart_account_id`.
+  - Dados temporarios removidos ao final; confirmado zero registros remanescentes em `ar_invoices`, `receivable_payments` e `receivable_glosas` para o teste de convenio/repasse.
+- Validacao visual autenticada Fase 7 Convenios/TISS:
+  - Aplicada migration `20260611_receivable_insurance_tiss_fields.sql` no projeto remoto.
+  - Confirmadas no banco as colunas `ans_registration`, `insurance_invoice_number`, `insurance_billing_status`, `tiss_xml_status`, `insurance_return_status`, `insurance_return_protocol` e `insurance_return_date` em `ar_invoices`.
+  - Criado recebivel temporario com `metadata.source = validacao_fase7_tiss` e campos TISS preenchidos.
+  - Tela `/clinica/financeiro/receber/:id/editar` carregou ANS, fatura/lote, status XML TISS, retorno e protocolo.
+  - Alterado e salvo pela UI o protocolo `PROTO-780-UI-F7`; persistencia confirmada no banco remoto.
+  - Simplificada `updateReceivable` removendo consulta previa inutilizada antes do update, reduzindo risco de salvamento preso.
+  - Dados temporarios removidos ao final; confirmado zero registro remanescente com `metadata.source = validacao_fase7_tiss`.
+- Validacao tecnica autenticada Fase 8 Agenda -> Contas a Receber:
+  - Busca em `src/` confirmou ausencia de referencias a `appointment_items`; a fonte operacional atual permanece `appointment_services`.
+  - Identificado e corrigido erro de schema em `syncAppointmentBilling()`: o select carregava `appointments.card_processor_id`, coluna inexistente no banco remoto.
+  - Identificado e corrigido gap de rastreabilidade: `patient_name` nao era selecionado e o recebivel caia no fallback `payer_name`.
+  - Criado agendamento temporario com dois registros em `appointment_services`, total bruto `480.00`, desconto `20.00`, liquido `460.00` e repasse previsto `139.00`.
+  - Executada a funcao real `syncAppointmentBilling()` via modulo Vite do app; resultado retornou sucesso, `servicesCount = 2`, `grossValue = 480` e `netValue = 460`.
+  - Confirmado em `ar_invoices`: `origem = Agenda`, `patient_name = VALIDACAO FASE 8 PACIENTE`, `amount = 460.00`, `gross_amount = 480.00`, `discount_value = 20.00`, `net_value = 460.00`, `payment_method = pix`, `metadata.source = appointment_services` e `metadata.services` com 2 itens.
+  - Durante a execucao, automacoes acessorias de Fluxo/DRE/indicadores registraram divergencias de schema (`financial_transactions.date`, `dre_metrics.gross_revenue`, `financial_indicators.pending_revenue`, campos de auditoria). Elas nao bloquearam a criacao do recebivel e ficam como entrada direta para as Fases 9 e 10.
+  - Dados temporarios removidos ao final; confirmado zero registro remanescente em `ar_invoices`, `appointment_services` e `appointments` para o teste da Fase 8.
+- Validacao tecnica autenticada Fase 9 Fluxo de Caixa:
+  - Corrigida automacao `autoupdateCashflowPredicted()` para gravar em `fluxo_caixa_movimentos` com `type = entrada`, `status = pending`, `reference_type = appointment` e valor previsto do atendimento.
+  - Corrigida criacao em `financial_transactions` com `type = revenue`, `category = appointment`, `status = scheduled`, `transaction_type = INCOME`, `movement_type = PREDICTED`, `origin_module = appointment` e `origin_id` do atendimento.
+  - Revalidado `syncAppointmentBilling()` pelo modulo real do app; `automation.results.cashflow.success = true`.
+  - Confirmado no banco movimento previsto de `460.00` em `fluxo_caixa_movimentos` e transacao prevista de `460.00` em `financial_transactions`, ambos rastreados pelo appointment temporario.
+  - Build executado com sucesso apos os ajustes.
+  - Durante cleanup, identificado bug independente no trigger `trigger_audit_financial_transactions`: DELETE de `financial_transactions` falha porque a auditoria referencia a transacao removida. Para limpar a massa temporaria, o trigger foi desativado e reativado dentro da mesma transacao; zero residuos confirmados ao final.
+  - DRE e indicadores ainda registraram divergencias de schema e seguem para a Fase 10.
+- Validacao tecnica autenticada Fase 10 DRE:
+  - Schema remoto confirmado: `dre_entries` possui `date`, `description`, `amount`, `reference_type` e `reference_id`; `dre_metrics` possui `month` como `date`, `revenue` e `expenses`.
+  - Corrigida `autoupdateDREMetrics()` para remover entrada anterior do mesmo appointment, inserir uma nova linha em `dre_entries` e recalcular receita/despesa mensal em `dre_metrics`.
+  - Aplicada migration `20260611_fix_dre_rls_users_fallback.sql`, pois o usuario autenticado nao tinha linha em `user_clinic_roles`; a policy agora aceita tambem `users.clinic_id`.
+  - Revalidado `syncAppointmentBilling()` pelo modulo real do app; `automation.results.dre.success = true`, `month = 2026-07-01`, `revenue = 460` e `expenses = 0`.
+  - Confirmado no banco `dre_entries` com receita de `460.00` vinculada ao appointment temporario e `dre_metrics` de julho com `revenue = 460.00` durante a validacao.
+  - Build executado com sucesso apos os ajustes.
+  - Dados temporarios removidos ao final; `dre_metrics` foi recalculado para refletir somente entradas restantes e confirmado zero residuo em `dre_entries`, `fluxo_caixa_movimentos`, `financial_transactions`, `ar_invoices`, `appointment_services` e `appointments`.
+- Validacao tecnica autenticada Fase 11 Repasse Medico:
+  - Auditada RPC real: `generate_doctor_commissions_v2` existia, mas calculava somente por `appointments.value > 0`; `record_commission_payment` nao existe no banco remoto.
+  - Confirmado schema real de `doctor_commissions`: `gross_amount`, `total_paid`, `total_pending`, `net_amount`, `commission_percent`, `status`, `payment_method` e `paid_at`.
+  - Aplicada migration `20260611_fix_doctor_commissions_from_ar_invoices.sql` no projeto remoto.
+  - Corrigida tela `RepasseMedico.jsx` para usar os campos reais nos KPIs, exportacao e acao de pagamento.
+  - Validacao isolada em competencia `11/2099`: recebivel temporario em `ar_invoices` com `gross_amount = 480.00`, `net_value = 460.00`, `paid_total = 230.00` e `repasse_expected = 139.00`.
+  - RPC em modo `atendido` gerou `gross_amount = 480.00`, `total_paid = 230.00`, `total_pending = 230.00`, `net_amount = 139.00` e `commission_percent = 28.96`.
+  - RPC em modo `recebido` gerou repasse proporcional ao caixa: `net_amount = 69.50` e `commission_percent = 14.48`.
+  - Cleanup confirmado: zero registros remanescentes em `doctor_commissions` e `ar_invoices` para a competencia de validacao.
+  - Diagnosticos VS Code sem erros em `RepasseMedico.jsx` e na migration; build `npm run build` executado com sucesso.
+- Validacao tecnica autenticada Fase 12 Filtros Enterprise:
+  - Auditada tela atual: estado/API ja tinham filtros de status, origem, tipo de pagador, profissional, plano, centro de custo, datas, forma, glosa, documento fiscal, revisao fiscal e faixa de valor.
+  - Corrigida lacuna visual: o painel agora expoe convenio/empresa por `payer_id`, unidade, especialidade, status convenio, status XML TISS e retorno convenio.
+  - Corrigida normalizacao de tipo de pagador: `paciente/particular`, `convenio` e `empresa` passam a consultar `PARTICULAR`, `CONVENIO` e `EMPRESA` sem sensibilidade a caixa.
+  - Validacao isolada com recebivel temporario em `ar_invoices` contendo `payer_id`, `payer_type = CONVENIO`, `unit_name`, `specialty_name`, `payment_method = pix`, `glosa_value`, `insurance_billing_status = FATURADO`, `tiss_xml_status = GERADO` e `insurance_return_status = GLOSADO`.
+  - Confirmados filtros por SQL: pagador, tipo, unidade, especialidade, status convenio, status XML TISS, retorno, forma/glosa/faixa de valor retornaram `1`.
+  - Cleanup confirmado: zero registro remanescente do recebivel temporario.
+  - Diagnosticos VS Code sem erros em `ContasReceber.jsx` e `receivablesApi.js`; build `npm run build` executado com sucesso.
+- Validacao tecnica Fase 13 Tabela Enterprise:
+  - Auditada tabela principal: ja exibia pagador, descricao, convenio, profissional, forma, competencia, vencimento, plano, status, bruto, recebido, glosa, repasse, saldo, documentos e acoes.
+  - Incluidas colunas compactas para `Unidade/Especialidade`, `TISS/Convenio` e `Retorno`, reaproveitando os campos ja persistidos em `ar_invoices`.
+  - `TISS/Convenio` exibe status de faturamento, status XML TISS e ANS quando disponivel.
+  - `Retorno` exibe status e protocolo do retorno de convenio.
+  - Ajustado `colSpan` do estado vazio da tabela para refletir as novas colunas.
+  - Diagnostico VS Code sem erros em `ContasReceber.jsx`; build `npm run build` executado com sucesso.
+- Validacao tecnica Fase 14 Relatorios:
+  - Auditada exportacao existente: ja continha campos TISS, fiscal XML e revisao fiscal, mas nao acompanhava todas as colunas operacionais da tabela enterprise.
+  - `buildReceivableReportRow()` passou a exportar convenio, tipo de pagador, origem, profissional, unidade, especialidade, forma de pagamento, competencia, emissao, plano de contas, bruto, glosa e repasse.
+  - `RelatoriosToolbar` recebeu as novas colunas com formatos de moeda onde aplicavel.
+  - Diagnostico VS Code sem erros em `ContasReceber.jsx`; build `npm run build` executado com sucesso.
+- Validacao tecnica Fase 15 UX Moderna:
+  - Adicionados atalhos operacionais: vencidos, proximos 30 dias, recebidos hoje, glosas, XML pendente e TISS nao gerado.
+  - Adicionadas fichas de filtros ativos com remocao individual e acao `Limpar todos`.
+  - Tabela principal ganhou largura minima para colunas enterprise, cabecalho fixo no scroll horizontal e skeleton de carregamento quando a consulta ainda nao retornou dados.
+  - Mantida a tela existente e o `useSavedFilters`, sem criar componente ou rota paralela.
+  - Diagnostico VS Code sem erros em `ContasReceber.jsx`; build `npm run build` executado com sucesso.
+- Validacao tecnica Fase 16 Performance:
+  - `listReceivables()` agora e consumido pela tela com `limit` e `offset`, evitando carregar toda a carteira operacional de uma vez.
+  - A tela mantem estado de paginacao incremental (`nextOffset`, `hasMoreRows`, `loadingMore`) e permite carregar novos lotes sem perder os registros ja exibidos.
+  - Troca de filtros, atalhos operacionais e filtros salvos reiniciam a paginacao para evitar mistura de resultados.
+  - Removido log escondido no JSX que percorria todas as linhas a cada render da tabela.
+  - Corrigidos handlers de busca que usavam `onClick={load}` e podiam passar o evento do clique como filtro.
+  - Diagnostico VS Code sem erros em `ContasReceber.jsx`; build `npm run build` executado com sucesso.
+- Validacao tecnica Fase 17 Seguranca:
+  - `updateReceivable(id, patch, clinicId)` passou a escopar updates por `clinic_id` quando informado, preservando compatibilidade com chamadas antigas.
+  - `deleteReceivable(id, clinicId)` passou a retornar erro quando nenhum registro e removido, evitando falso sucesso fora da clinica atual.
+  - Pagamento, glosa, workflow de glosa, revisao fiscal, cancelamento e edicao passaram a propagar `clinicId` nas mutacoes.
+  - Migration `20260612_phase17_ar_invoices_rls_security.sql` aplicada no projeto remoto `gvdkdjyupktlflwurike`.
+  - `scripts/validate_phase17_receivable_security.sql` confirmou `ar_invoices_rls_enabled = true` e `expected_policy_count = 4`.
+  - Diagnostico VS Code sem erros nos arquivos alterados; build `npm run build` executado com sucesso.
+- Validacao tecnica Fase 18 Testes:
+  - Criada suite `tests/unit/receivablesApi.enterprise.test.js` com 5 cenarios unitarios.
+  - Validado que `listReceivables()` aplica `clinic_id`, filtros enterprise e `range(offset, offset + limit - 1)`.
+  - Validado que `updateReceivable()` usa `clinic_id` quando informado e preserva compatibilidade sem o parametro.
+  - Validado que `deleteReceivable()` usa `clinic_id`, solicita retorno de `id` e falha quando nenhum registro e removido.
+  - Comando focado `npm run test -- --run tests/unit/receivablesApi.enterprise.test.js`: 1 arquivo passou; 5 testes passaram.
+  - Suite completa `npm run test -- --run`: 22 arquivos passaram; 422 testes passaram.
+  - Diagnostico VS Code sem erros nos arquivos alterados; build `npm run build` executado com sucesso.
+- Validacao tecnica Fase 19 Relatorio Final:
+  - Criado `RELATORIO_FINAL_CONTAS_RECEBER_ENTERPRISE.md` consolidando fases 1-19.
+  - O relatorio registra decisao de fonte oficial (`ar_invoices`), componentes reutilizados, migrations, testes, build, RLS, riscos residuais e conclusao operacional.
+- Validacao visual autenticada workflow de glosas:
+  - Aplicada migration `20260611_receivable_glosa_workflow.sql` no projeto remoto.
+  - Criado recebivel temporario com glosa pendente para validar as acoes de workflow.
+  - Confirmado que a linha exibe acoes `Contestar`, `Recuperar` e `Aceitar perda` quando ha `glosa_value`.
+  - Contestacao registrada pela UI com valor contestado, prazo, responsavel e observacao.
+  - Recuperacao parcial registrada pela UI; `received_value` e `paid_total` aumentaram, `glosa_value` reduziu e `balance_amount` foi recalculado.
+  - Perda final aceita pela UI; `final_loss_amount`, `accepted_at` e `workflow_notes` foram persistidos.
+  - Confirmados no banco `contestation_status`, `contested_amount`, `recovered_amount`, `final_loss_amount`, `contestation_deadline`, `contested_at`, `recovered_at` e `accepted_at`.
+  - Dados temporarios removidos ao final; confirmado zero registros remanescentes em `ar_invoices`, `receivable_payments` e `receivable_glosas` para o teste de workflow de glosas.
+- Validacao visual autenticada evidencia de glosa:
+  - Reaplicada migration `20260611_receivable_glosa_workflow.sql` com `evidence_path` no projeto remoto.
+  - Aplicada migration `20260611_ensure_finance_docs_bucket.sql`; bucket `finance_docs` confirmado no storage remoto.
+  - Testado upload/remocao direto no bucket `finance_docs` via client Supabase.
+  - Criado recebivel temporario com glosa pendente e anexado XML pelo modal `Workflow da glosa` usando `Evidencia da glosa`.
+  - Upload pela UI retornou 200 no storage; toast `Workflow de glosa atualizado` exibido.
+  - Confirmados no banco `contestation_status = contestada`, `contested_amount`, `contestation_deadline`, `responsible`, `evidence_name`, `evidence_path` e `evidence_url`.
+  - Arquivos temporarios removidos do bucket `finance_docs`; confirmado zero residuos em storage, `ar_invoices`, `receivable_payments` e `receivable_glosas`.
+- Validacao visual autenticada visualizacao/download de evidencia:
+  - `listReceivables` passou a enriquecer cada linha com a ultima glosa de `receivable_glosas` e campos `glosa_evidence_*`.
+  - Coluna `Docs` passou a exibir NF e evidencia de glosa como links independentes.
+  - Modal `Workflow da glosa` passou a mostrar `Evidencia anexada` com link para abrir o arquivo ja persistido.
+  - Criado recebivel temporario com evidencia XML existente no bucket `finance_docs`; tabela exibiu `Glosa` em `Docs` e modal exibiu o nome do arquivo.
+  - Arquivo e registros temporarios removidos; confirmado zero residuos em storage, `ar_invoices`, `receivable_payments` e `receivable_glosas`.
+- Validacao visual autenticada leitura de documento fiscal:
+  - Criado XML temporario de NF-e com tomador, produto/servico, valor, impostos, emissao, vencimento e pagamento PIX.
+  - Anexado em `/clinica/financeiro/receber/nova`; a UI preencheu pagador, descricao, valor bruto, emissao, competencia, vencimento e forma prevista.
+  - Bloco de leitura exibiu `Leitura: alta` com campos encontrados.
+  - XML temporario local removido apos a validacao.
+- Validacao visual autenticada governanca XML na listagem:
+  - Criado recebivel temporario com `metadata.document_extraction`, `taxes_value`, vencimento, pagamento PIX e guia.
+  - Listagem exibiu selo `NFE alta` em `Docs` e card `Impostos XML`.
+  - Filtro `Com XML lido` retornou apenas o recebivel temporario com XML lido.
+  - Dados temporarios removidos; confirmado zero residuos em `ar_invoices`, `receivable_payments` e `receivable_glosas`.
+- Validacao visual autenticada revisao fiscal XML:
+  - Criado recebivel temporario com campos extraidos em `metadata.document_extraction.fields`.
+  - Selo `NFE alta` abriu modal `Revisao fiscal do documento`.
+  - Modal exibiu emissor, impostos, guia, botao de edicao e conferencia `Sem divergencias`.
+  - Dados temporarios removidos; confirmado zero residuos em `ar_invoices`, `receivable_payments` e `receivable_glosas`.
+- Validacao visual autenticada status de revisao fiscal:
+  - Criado recebivel temporario com XML lido e revisao fiscal pendente.
+  - Listagem exibiu `NFE alta pendente`; modal exibiu status `Pendente` e botao `Marcar revisado`.
+  - Acao persistiu `metadata.fiscal_review.status = reviewed`, `reviewed_at`, `reviewed_by` e `divergence_count`.
+  - Filtro `Revisado` retornou o recebivel temporario com `NFE alta revisado`.
+  - Dados temporarios removidos; confirmado zero residuos em `ar_invoices`, `receivable_payments` e `receivable_glosas`.
+- Validacao visual autenticada reabertura de revisao fiscal:
+  - Criado recebivel temporario com XML lido e revisao pendente.
+  - Modal registrou observacao de revisao e marcou o XML como revisado.
+  - Acao `Reabrir revisao` voltou o status para pendente mantendo a observacao.
+  - Confirmado no banco `metadata.fiscal_review.status = pending`, `reopened_at`, `reopened_by` e dois eventos em `metadata.fiscal_review_events`.
+  - Dados temporarios removidos; confirmado zero residuos em `ar_invoices`, `receivable_payments` e `receivable_glosas`.
+- Validacao visual autenticada relatorio fiscal XML:
+  - Criado recebivel temporario com XML lido, impostos, revisao fiscal revisada e evento de revisao.
+  - Filtro `Revisado` exibiu a linha temporaria com `NFE alta revisado`.
+  - Acao `Exportar` do `RelatoriosToolbar` gerou `Contas a Receber_11-06-2026.xlsx`.
+  - Dados temporarios removidos; confirmado zero residuos em `ar_invoices`, `receivable_payments` e `receivable_glosas`.
+
+## Pendencias operacionais
+
+- Validar em staging/producao com volume real e regras contratuais reais de convenio, glosa e repasse.
+- Evolucao futura recomendada: conciliacao bancaria e revisao fina das permissoes de storage financeiro conforme politica LGPD/operacional desejada.

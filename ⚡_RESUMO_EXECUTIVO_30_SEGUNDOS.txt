@@ -1,0 +1,50 @@
+## ⚡ REFATORAÇÃO SERVIÇOS - RESUMO EXECUTIVO
+
+### O que foi feito?
+✅ Refatoração da lista de serviços em **AppointmentUnitedModal** para exibir em **1 linha por serviço** (antes: 2 linhas)
+
+### Resultado Visual
+
+```
+CÓDIGO        | SERVIÇO              | CONVÊNIO       | VALOR    | 🗑️
+CONS-INI-001  | Consulta Inicial     | Particular     | 150.00   | 🗑️
+TEST-COG-003  | Teste Cognitivo      | Bradesco Saúde | 350.00   | 🗑️
+                                         Valor Total: R$ 500,00
+```
+
+### 5 Requisitos ✅ Atendidos
+
+1. ✅ Serviço + Convênio + Valor **mesma linha**
+2. ✅ **Valor Total abaixo** em box destacado
+3. ✅ **Coluna Código** adicionada
+4. ✅ **Duplicidades eliminadas** (linha vazia removida)
+5. ✅ **Código busca do cadastro** (CONS-INI-001, não UUID)
+
+### Arquivos Modificados
+
+| Arquivo | Mudanças |
+|---------|----------|
+| **ServiceListItem.jsx** | Grid 1-linha, service_code adicionado |
+| **AppointmentUnitedModal.jsx** | Auto-select removido, payerName adicionado |
+| **appointmentsApi.js** | Query inclui `code`, mapeado para `service_code` |
+
+### Status
+
+✅ **IMPLEMENTADO E TESTADO**
+- Sem erros de compilação
+- HMR funcionando
+- Validação visual completa
+- 2 serviços exibem com códigos corretos
+
+### Como Validar
+
+1. Abra: `localhost:3000/clinica/agenda`
+2. Clique em um agendamento
+3. Veja coluna "Código" com valores como `CONS-INI-001`
+4. Adicione serviço → exibe em 1 linha
+5. Remova → Total recalcula
+
+---
+
+**Status:** ✅ PRONTO  
+**Data:** Janeiro 2026

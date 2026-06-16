@@ -60,6 +60,13 @@ export const MENU_STRUCTURE = [
         roles: ["admin", "gestor", "recepcao"],
       },
       {
+        id: "agenda.recepcao",
+        label: "Recepção",
+        icon: "DoorOpen",
+        path: "/clinica/agenda/recepcao",
+        roles: ["admin", "gestor", "recepcao"],
+      },
+      {
         id: "agenda.indicadores",
         label: "Indicadores",
         icon: "BarChart3",
@@ -226,6 +233,13 @@ export const MENU_STRUCTURE = [
         roles: ["admin", "gestor", "financeiro"],
       },
       {
+        id: "financeiro.lancamentos",
+        label: "Lançamentos",
+        icon: "Book",
+        path: "/clinica/financeiro/lancamentos",
+        roles: ["admin", "gestor", "financeiro"],
+      },
+      {
         id: "financeiro.receber",
         label: "Contas a Receber",
         icon: "TrendingUp",
@@ -236,7 +250,7 @@ export const MENU_STRUCTURE = [
         id: "financeiro.pagar",
         label: "Contas a Pagar",
         icon: "TrendingDown",
-        path: "/clinica/financeiro/pagar",
+        path: "/clinica/financeiro/contas-pagar",
         roles: ["admin", "gestor", "financeiro"],
       },
       {

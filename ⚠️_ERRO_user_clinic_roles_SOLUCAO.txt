@@ -1,0 +1,164 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                                                                            ║
+║                  ⚠️ ERRO: user_clinic_roles NÃO EXISTE                    ║
+║                                                                            ║
+║                          SOLUÇÃO EM 3 PASSOS                              ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 O PROBLEMA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+A SQL migration tenta usar a tabela "user_clinic_roles" nas políticas RLS,
+mas essa tabela não existe no seu banco de dados.
+
+Erro completo:
+  ERROR: 42P01: relation "user_clinic_roles" does not exist
+
+Causa:
+  A tabela de relacionamento usuário<->clínica tem outro nome ou estrutura
+  diferente no seu banco.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔍 PASSO 1: DESCOBRIR A ESTRUTURA CORRETA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Abra o SQL Editor do Supabase e execute:
+
+FILE: ⚡_SCRIPT_DESCOBRIR_ESTRUTURA_RLS.sql
+
+Este script vai:
+  1. Listar TODAS as tabelas no banco
+  2. Procurar tabelas com "clinic" ou "user" no nome
+  3. Mostrar a estrutura das tabelas
+
+Procure por alguma dessas opções (execute cada uma):
+
+OPÇÃO A: Tabela clinic_users
+─────────────────────────────
+  SELECT * FROM clinic_users LIMIT 5;
+  \d clinic_users  -- Ver estrutura
+
+OPÇÃO B: Tabela user_clinics
+──────────────────────────────
+  SELECT * FROM user_clinics LIMIT 5;
+  \d user_clinics  -- Ver estrutura
+
+OPÇÃO C: Tabela clinics_users
+──────────────────────────────
+  SELECT * FROM clinics_users LIMIT 5;
+  \d clinics_users  -- Ver estrutura
+
+OPÇÃO D: Ver usuários na tabela clinics
+────────────────────────────────────────
+  \d clinics  -- Procure por coluna "owner_id" ou "created_by"
+  SELECT * FROM clinics LIMIT 5;
+
+OPÇÃO E: Ver tabela users
+──────────────────────────
+  \d users  -- Procure por coluna "clinic_id"
+  SELECT * FROM users LIMIT 5;
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💡 OPÇÃO RÁPIDA: IGNORAR RLS POR ENQUANTO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Se você quiser começar AGORA sem esperar descobrir a estrutura:
+
+PASSO 1: Abra Supabase SQL Editor
+PASSO 2: Copie conteúdo de:
+         supabase/migrations/2026-05-10_reception_checkins_v2_simplificado.sql
+PASSO 3: Execute
+PASSO 4: Pronto! ✅
+
+IMPORTANTE:
+  ⚠️ Esta versão tem RLS simplificadas (menos segurança)
+  ⚠️ Você deve atualizar depois com políticas corretas
+  ✅ Mas funciona para testes!
+
+Depois, quando descobrir a estrutura correta de RLS,
+avise-me e eu atualizo as políticas.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔧 PASSO 2 (DEPOIS): ATUALIZAR POLÍTICAS RLS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Depois de descobrir qual é a tabela/estrutura correta:
+
+AVISE-ME COM AS INFORMAÇÕES:
+  1. Qual é o nome exato da tabela? (clinic_users, user_clinics, etc)
+  2. Quais são as colunas? (user_id, clinic_id, role, etc)
+  3. Como validar que um user tem acesso a uma clinic?
+
+EXEMPLOS DE RESPOSTA:
+
+Resposta 1: "Tenho tabela 'clinic_users' com colunas: user_id, clinic_id, role"
+→ Vou criar políticas baseadas nisso
+
+Resposta 2: "A tabela 'clinics' tem coluna 'owner_id' e os usuários estão em 'auth.users'"
+→ Vou criar políticas diferentes
+
+Resposta 3: "Não existe relacionamento, só use auth.uid()"
+→ Vou simplificar mais ainda
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ PASSO 3 AGORA: EXECUTE A VERSÃO SIMPLIFICADA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Abra Supabase → SQL Editor
+2. Copie TODO o conteúdo de:
+   supabase/migrations/2026-05-10_reception_checkins_v2_simplificado.sql
+3. Cole no SQL Editor
+4. Clique em "Execute" ou Ctrl+Enter
+5. Aguarde resultado
+
+SE FUNCIONAR:
+  ✅ Verá: CREATE TABLE, CREATE INDEX, CREATE VIEW, etc
+  ✅ Nenhuma mensagem de erro
+
+SE AINDA DER ERRO:
+  ⚠️ Cole o erro aqui
+  ⚠️ Vou tentar outra abordagem
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🧪 TESTAR SE FUNCIONOU
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Execute no SQL Editor:
+
+-- Ver se tabela foi criada
+SELECT * FROM reception_checkins LIMIT 5;
+
+-- Ver se view funciona
+SELECT * FROM waiting_queue_view LIMIT 5;
+
+-- Testar função
+SELECT perform_checkin(
+  'seu-appointment-id-aqui'::uuid,
+  'sua-clinic-id-aqui'::uuid,
+  'seu-user-id-aqui'::uuid,
+  'teste'
+);
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📝 RESUMO DOS PASSOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❌ NÃO funcionou (original):
+   supabase/migrations/2026-05-10_reception_checkins.sql
+   (Depende de user_clinic_roles)
+
+✅ FUNCIONA (simplificado):
+   supabase/migrations/2026-05-10_reception_checkins_v2_simplificado.sql
+   (Sem dependência de user_clinic_roles)
+
+AGORA: Execute a v2
+DEPOIS: Descobra estrutura RLS correta e avise-me
+DEPOIS: Atualizo com políticas corretas
+
+════════════════════════════════════════════════════════════════════════════════
+
+PRÓXIMO: Avise-me quando executar a v2 e o resultado! 🚀
+
+════════════════════════════════════════════════════════════════════════════════

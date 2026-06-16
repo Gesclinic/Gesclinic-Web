@@ -1,5 +1,5 @@
 /**
- * SCRIPT DE DIAGNÓSTICO - Verificar appointment_id em ar_receivables
+ * SCRIPT DE DIAGNÓSTICO - Verificar appointment_id em ar_invoices
  * Copie a saída e compartilhe o resultado
  */
 
@@ -14,12 +14,12 @@ const supabase = createClient(
 );
 
 async function diagnostico() {
-  console.log('🔍 DIAGNÓSTICO: Verificando appointment_id em ar_receivables...\n');
+  console.log('🔍 DIAGNÓSTICO: Verificando appointment_id em ar_invoices...\n');
   
   try {
     const { data, error } = await supabase
-      .from('ar_receivables')
-      .select('id, appointment_id, payer_name, valor_bruto')
+      .from('ar_invoices')
+      .select('id, appointment_id, patient_name, amount')
       .limit(5);
     
     if (error) {
@@ -28,7 +28,7 @@ async function diagnostico() {
     }
     
     if (!data || data.length === 0) {
-      console.log('⚠️ Nenhum registro encontrado em ar_receivables');
+      console.log('⚠️ Nenhum registro encontrado em ar_invoices');
       return;
     }
     
@@ -39,8 +39,8 @@ async function diagnostico() {
       console.log(`\n📋 REGISTRO #${idx + 1}:`);
       console.log(`   ID da Conta:     ${row.id}`);
       console.log(`   Appointment ID:  ${row.appointment_id || '❌ NULL (PROBLEMA!)'}`);
-      console.log(`   Nome Pagador:    ${row.payer_name}`);
-      console.log(`   Valor:           R$ ${row.valor_bruto}`);
+      console.log(`   Nome Pagador:    ${row.patient_name}`);
+      console.log(`   Valor:           R$ ${row.amount}`);
     });
     
     console.log('\n═══════════════════════════════════════════════════════════');

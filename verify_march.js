@@ -114,7 +114,7 @@ async function main() {
   console.log('-'.repeat(90))
   try {
     const { data, error } = await supabase
-      .from('ar_receivables')
+      .from('ar_invoices')
       .select('id, amount, status, due_date')
       .gte('due_date', '2026-03-01')
       .lt('due_date', '2026-04-01')

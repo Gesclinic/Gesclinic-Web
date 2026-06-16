@@ -1,0 +1,418 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                                                                            ║
+║                    💻 SNIPPETS - COPIAR E COLAR                           ║
+║                                                                            ║
+║              Código pronto para integrar no seu projeto                   ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SNIPPET 1: Página Recepção Completa
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+```tsx
+// pages/Reception/ReceptionPage.tsx
+
+import React from 'react';
+import { useClinicContext } from '@/contexts/ClinicContext';
+import { OperationalDashboard, WaitingQueuePanel } from '@/modules/agenda/reception';
+
+export function ReceptionPage() {
+  const { clinicId } = useClinicContext();
+
+  if (!clinicId) {
+    return <div className="p-6 text-center">Carregando clínica...</div>;
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-6">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">📋 Recepção</h1>
+        <p className="text-gray-600">Gerenciamento de check-in e fila de espera</p>
+      </div>
+
+      {/* Main Dashboard */}
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+        {/* Dashboard Principal (2/3) */}
+        <div className="lg:col-span-2">
+          <OperationalDashboard clinic_id={clinicId} />
+        </div>
+
+        {/* Fila Rápida (1/3) */}
+        <div>
+          <WaitingQueuePanel
+            clinic_id={clinicId}
+            maxItems={10}
+            showSearch={false}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default ReceptionPage;
+```
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SNIPPET 2: Integrar CheckIn em Agenda
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+```tsx
+// components/AppointmentCard.tsx
+
+import React from 'react';
+import { CheckInButton } from '@/modules/agenda/reception';
+import { Appointment } from '@/types/agenda';
+
+interface AppointmentCardProps {
+  appointment: Appointment;
+  clinic_id: string;
+}
+
+export function AppointmentCard({
+  appointment,
+  clinic_id,
+}: AppointmentCardProps) {
+  const handleCheckInSuccess = () => {
+    // Atualizar UI ou navegar
+    console.log('Check-in realizado para:', appointment.patient_name);
+  };
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm hover:shadow-md transition">
+      {/* Header */}
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">
+            {appointment.patient_name}
+          </h3>
+          <p className="text-sm text-gray-600">
+            {new Date(appointment.scheduled_date).toLocaleString('pt-BR')}
+          </p>
+        </div>
+        <span className={`text-xs font-semibold px-2 py-1 rounded ${
+          appointment.official_status === 'confirmed'
+            ? 'bg-green-100 text-green-800'
+            : 'bg-blue-100 text-blue-800'
+        }`}>
+          {appointment.official_status}
+        </span>
+      </div>
+
+      {/* Details */}
+      <div className="space-y-2 mb-4">
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-600">Profissional:</span>
+          <span className="font-medium">{appointment.professional_name}</span>
+        </div>
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-600">Serviço:</span>
+          <span className="font-medium">{appointment.service_name}</span>
+        </div>
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-600">Sala:</span>
+          <span className="font-medium">{appointment.room_name || '-'}</span>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-2">
+        <CheckInButton
+          appointment_id={appointment.id}
+          clinic_id={clinic_id}
+          status={appointment.official_status}
+          patient_name={appointment.patient_name}
+          scheduled_time={new Date(appointment.scheduled_date).toLocaleTimeString(
+            'pt-BR',
+            { hour: '2-digit', minute: '2-digit' }
+          )}
+          onSuccess={handleCheckInSuccess}
+          size="sm"
+        />
+      </div>
+    </div>
+  );
+}
+```
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SNIPPET 3: Widget de Estatísticas
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+```tsx
+// components/ReceptionStats.tsx
+
+import React from 'react';
+import { useWaitingQueue } from '@/modules/agenda/reception';
+
+interface ReceptionStatsProps {
+  clinic_id: string;
+}
+
+export function ReceptionStats({ clinic_id }: ReceptionStatsProps) {
+  const { queue, stats, is_live, loading } = useWaitingQueue(clinic_id);
+
+  if (loading) {
+    return <div className="animate-pulse">Carregando...</div>;
+  }
+
+  return (
+    <div className="grid grid-cols-4 gap-4">
+      {/* Total */}
+      <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-100">
+        <div className="text-2xl font-bold text-purple-600">{queue.length}</div>
+        <p className="text-sm text-gray-600 mt-1">Pacientes na fila</p>
+      </div>
+
+      {/* Tempo Médio */}
+      <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-100">
+        <div className="text-2xl font-bold text-blue-600">
+          {stats.average_wait_time_minutes}
+        </div>
+        <p className="text-sm text-gray-600 mt-1">Tempo médio (min)</p>
+      </div>
+
+      {/* Tempo Máximo */}
+      <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-100">
+        <div className="text-2xl font-bold text-orange-600">
+          {stats.max_wait_time_minutes}
+        </div>
+        <p className="text-sm text-gray-600 mt-1">Tempo máximo (min)</p>
+      </div>
+
+      {/* Críticos */}
+      <div className="rounded-lg bg-white p-6 shadow-sm border border-gray-100">
+        <div className={`text-2xl font-bold ${
+          stats.critical_count > 0 ? 'text-red-600' : 'text-green-600'
+        }`}>
+          {stats.critical_count}
+        </div>
+        <p className="text-sm text-gray-600 mt-1">
+          {stats.critical_count > 0 ? 'Em crítico' : 'Nenhum crítico'}
+        </p>
+        {is_live && <span className="text-xs text-green-600 mt-2">● AO VIVO</span>}
+      </div>
+    </div>
+  );
+}
+```
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SNIPPET 4: Monitor de Sincronização
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+```tsx
+// components/SyncStatus.tsx
+
+import React, { useEffect } from 'react';
+import { useReceptionRealtimeSync } from '@/modules/agenda/reception';
+
+interface SyncStatusProps {
+  clinic_id: string;
+}
+
+export function SyncStatus({ clinic_id }: SyncStatusProps) {
+  const { sync_state, on_event, off_event } = useReceptionRealtimeSync(clinic_id);
+
+  useEffect(() => {
+    const handler = (event: any) => {
+      console.log('Evento recebido:', event);
+    };
+
+    on_event(handler);
+    return () => off_event(handler);
+  }, [on_event, off_event]);
+
+  return (
+    <div className="flex items-center gap-3 text-sm">
+      {/* Status */}
+      <div className="flex items-center gap-2">
+        <div
+          className={`h-2 w-2 rounded-full ${
+            sync_state.is_connected ? 'bg-green-500' : 'bg-red-500'
+          }`}
+        />
+        <span className="text-gray-600">
+          {sync_state.is_connected ? 'Conectado' : 'Desconectado'}
+        </span>
+      </div>
+
+      {/* Pendentes */}
+      {sync_state.pending_updates > 0 && (
+        <div className="flex items-center gap-2 text-yellow-600">
+          <span>⏳ {sync_state.pending_updates} pendentes</span>
+        </div>
+      )}
+
+      {/* Erro */}
+      {sync_state.error && (
+        <div className="flex items-center gap-2 text-red-600">
+          <span>⚠️ {sync_state.error}</span>
+        </div>
+      )}
+
+      {/* Último sync */}
+      <span className="text-xs text-gray-500">
+        Última atualização: {new Date(sync_state.last_sync).toLocaleTimeString('pt-BR')}
+      </span>
+    </div>
+  );
+}
+```
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SNIPPET 5: Hook Customizado
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+```tsx
+// hooks/useReceptionNotifications.ts
+
+import { useEffect } from 'react';
+import { useWaitingQueue } from '@/modules/agenda/reception';
+
+export function useReceptionNotifications(clinic_id: string) {
+  const { queue, stats } = useWaitingQueue(clinic_id);
+
+  useEffect(() => {
+    // Notificar quando crítico aumenta
+    if (stats.critical_count > 0) {
+      const message = `⚠️ ${stats.critical_count} paciente(s) aguardando > 30min`;
+      
+      // Usar Notification API
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('Recepção - Alerta', {
+          body: message,
+          icon: '/favicon.ico',
+        });
+      }
+    }
+  }, [stats.critical_count]);
+
+  return {
+    has_critical: stats.critical_count > 0,
+    critical_count: stats.critical_count,
+    warning_count: stats.warning_count,
+  };
+}
+```
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SNIPPET 6: Rota no AppRoutes.jsx
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+```jsx
+// AppRoutes.jsx
+
+import { lazy } from 'react';
+
+const ReceptionPage = lazy(() => 
+  import('@/pages/Reception/ReceptionPage').then(m => ({
+    default: m.ReceptionPage
+  }))
+);
+
+// Dentro do ProtectedRoute /clinica/agenda:
+
+<Route path="recepcao" element={<ReceptionPage />} />
+```
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SNIPPET 7: Integrar com Agenda
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+```tsx
+// pages/Agenda/AgendaPage.tsx
+
+import { useMemo } from 'react';
+import { CheckInButton } from '@/modules/agenda/reception';
+import { useAppointments } from '@/hooks/useAppointments';
+import { useClinicContext } from '@/contexts/ClinicContext';
+
+export function AgendaPage() {
+  const { clinicId } = useClinicContext();
+  const { appointments } = useAppointments(clinicId);
+
+  // Filtrar apenas "confirmed" para mostrar CheckIn
+  const confirmedAppointments = useMemo(
+    () => appointments.filter(apt => apt.official_status === 'confirmed'),
+    [appointments]
+  );
+
+  return (
+    <div className="space-y-4">
+      {confirmedAppointments.map(apt => (
+        <div key={apt.id} className="flex items-center justify-between p-4 border rounded">
+          <div>
+            <h4 className="font-semibold">{apt.patient_name}</h4>
+            <p className="text-sm text-gray-600">
+              {new Date(apt.scheduled_date).toLocaleString('pt-BR')}
+            </p>
+          </div>
+
+          <CheckInButton
+            appointment_id={apt.id}
+            clinic_id={clinicId}
+            status={apt.official_status}
+            patient_name={apt.patient_name}
+            onSuccess={() => {
+              // Refetch appointments
+            }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SNIPPET 8: Teste de API (Console)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Copie e cole no console do navegador (F12):
+
+```javascript
+// Teste 1: Buscar fila
+import { getWaitingQueue } from '@/modules/agenda/reception';
+
+const { queue } = await getWaitingQueue({
+  clinic_id: 'seu-clinic-id',
+  limit: 10
+});
+
+console.log('Fila:', queue);
+
+// Teste 2: Fazer check-in
+import { performCheckIn } from '@/modules/agenda/reception';
+
+const result = await performCheckIn({
+  appointment_id: 'apt-id',
+  clinic_id: 'clinic-id',
+  checked_in_by: 'user-id',
+  notes: 'Teste'
+});
+
+console.log('Check-in:', result);
+
+// Teste 3: Estadísticas
+import { getWaitingQueueStats } from '@/modules/agenda/reception';
+
+const stats = await getWaitingQueueStats('clinic-id');
+console.log('Stats:', stats);
+```
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+✨ Copie, cole e customize conforme necessário! 🚀
+
+═══════════════════════════════════════════════════════════════════════════════

@@ -1,0 +1,168 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                                                                            ║
+║                    🚀 PRÓXIMAS FASES - ROADMAP COMPLETO                   ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+FASE 1 ✅ COMPLETA
+═══════════════════════════════════════════════════════════════════════════
+
+✅ Database:
+   • Tabela reception_checkins (com constraints, índices, RLS)
+   • View waiting_queue_view (fila em tempo real)
+   • Função perform_checkin (lógica de backend)
+   • Trigger updated_at
+   • Realtime habilitado
+
+✅ React:
+   • Types: ReceptionCheckIn, WaitingQueueAppointment, etc
+   • API: receptionApi.ts com 9 funções
+   • Hook: useCheckIn
+   • Componentes: CheckInButton, CheckInDialog
+   • Barrel export
+
+
+FASE 2 🔄 AGORA (Hooks + Componentes Avançados)
+═══════════════════════════════════════════════════════════════════════════
+
+[ ] PASSO 1: useWaitingQueue Hook
+    └─ Funcionalidade:
+       • Buscar fila de espera
+       • Realtime updates
+       • Cache com React Query
+       • Auto-refresh a cada 5s
+    
+    └─ Código (approx 150 linhas)
+       • Estado: queue, stats, loading, is_live
+       • Funções: refetch, subscribe/unsubscribe
+       • Memoizado com useMemo
+
+[ ] PASSO 2: useReceptionRealtimeSync Hook
+    └─ Funcionalidade:
+       • Sync de múltiplas abas
+       • Deduplicação de eventos
+       • Reconexão automática
+       • Logging de eventos
+    
+    └─ Código (approx 200 linhas)
+       • Estado: is_connected, last_sync, pending_updates
+       • Broadcast Channel API
+       • Exponential backoff retry
+
+[ ] PASSO 3: WaitingQueuePanel Component
+    └─ Funcionalidade:
+       • Mostra lista de pacientes na fila
+       • Ordena por tempo de espera
+       • Atualização em tempo real
+       • Search/filter por nome
+    
+    └─ Features:
+       • Virtual scrolling para >100 itens
+       • React.memo memoizado
+       • Skeleton loading
+       • Virtualizer desde react-window
+
+[ ] PASSO 4: QueueStatusBadge Component
+    └─ Funcionalidade:
+       • Mostra status visual (normal, warning, critical)
+       • Código de cor
+       • Ícone com animação
+       • Tooltip com tempo exato
+    
+    └─ Props:
+       • tempo_espera_minutos
+       • wait_priority: normal | warning | critical
+       • showTime: boolean
+
+[ ] PASSO 5: OperationalDashboard Component
+    └─ Funcionalidade:
+       • 4 seções: Próximo, Em Atendimento, Finalizados, Aguardando
+       • Cards com pacientes
+       • Estatísticas em tempo real
+       • Integração com realtime
+    
+    └─ Seções:
+       • [Próximo Paciente] - 1 card grande
+       • [Em Atendimento] - Lista com 3-5 pacientes
+       • [Finalizados Hoje] - Contador + últimas 5
+       • [Aguardando Confirmação] - Lista com filtro
+
+
+FASE 3 🎯 INTEGRAÇÃO (Teste + Documentação)
+═══════════════════════════════════════════════════════════════════════════
+
+[ ] PASSO 1: Criar página Reception
+    └─ Rota: /clinica/agenda/recepcao
+    └─ Layout: AppLayout com OperationalDashboard principal
+    └─ Features: Ao vivo com realtime
+
+[ ] PASSO 2: Integrar CheckInButton na página de Agenda
+    └─ Local: Card de cada agendamento
+    └─ Comportamento: Ao clicar → CheckInDialog
+    └─ Sucesso: Atualiza status + remove do "próximos"
+
+[ ] PASSO 3: Criar tests
+    └─ Unit tests para hooks
+    └─ Component tests
+    └─ Integration tests
+
+[ ] PASSO 4: Documentação
+    └─ README do módulo reception
+    └─ Exemplos de uso
+    └─ Troubleshooting
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⏱️ ESTIMATIVA DE TEMPO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FASE 1: 2h (Database + React setup)      ✅ COMPLETO
+FASE 2: 3-4h (Hooks + Componentes)        🔄 PRÓXIMA
+FASE 3: 2-3h (Integração + Testes)        ⏳ DEPOIS
+
+Total: ~7-9 horas de trabalho
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 QUAL OPÇÃO VOCÊ PREFERE?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+OPÇÃO A: Começar Fase 2 AGORA
+   → Criar todos os hooks da Fase 2
+   → Implementar componentes WaitingQueuePanel, Dashboard
+   → Tempo: 3-4 horas
+
+OPÇÃO B: Começar a usar no React HOJE
+   → Integrar CheckInButton nas páginas existentes
+   → Testar fluxo básico
+   → Depois evolui com Fase 2
+   → Tempo: 30 min agora + 3h depois
+
+OPÇÃO C: Otimização antes de mais features
+   → Melhorar RLS policies (descobrir estrutura correta)
+   → Adicionar testes
+   → Documentação extensiva
+   → Depois Fase 2
+   → Tempo: 2h + 3h
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📦 O QUE JÁ TEMOS PRONTO PARA USAR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Arquivo: src/modules/agenda/reception/index.ts
+
+Exports prontos:
+  • performCheckIn(params)
+  • getWaitingQueue(params)
+  • getWaitingQueueStats(clinic_id)
+  • getReceptionOperationalData(clinic_id)
+  • useCheckIn(clinic_id)
+  • CheckInButton component
+  • CheckInDialog component
+  • Todos os types
+
+Uso:
+  import { CheckInButton, useCheckIn, performCheckIn } from '@/modules/agenda/reception';
+
+═══════════════════════════════════════════════════════════════════════════════
+
+Avise qual opção você quer! 🚀

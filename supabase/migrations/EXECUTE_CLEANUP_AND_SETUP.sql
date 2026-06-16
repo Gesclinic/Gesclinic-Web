@@ -12,9 +12,9 @@ DROP TABLE IF EXISTS financial_transactions CASCADE;
 DROP TYPE IF EXISTS transaction_type CASCADE;
 DROP TYPE IF EXISTS transaction_status CASCADE;
 DROP TYPE IF EXISTS transaction_category CASCADE;
-
--- Verificar se financial_accounts existe, se não criar
-DROP TABLE IF EXISTS financial_accounts CASCADE;
+ounts existe, se não criar
+DROP TABLE IF EXISTS fi
+-- Verificar se financial_accnancial_accounts CASCADE;
 DROP TYPE IF EXISTS account_type CASCADE;
 
 -- ============================================
@@ -82,7 +82,7 @@ DECLARE
     v_outras_receitas UUID;
     v_impostos UUID;
     v_glosas UUID;
-    
+
 BEGIN
 
 SELECT id INTO v_clinic_id FROM clinics LIMIT 1;

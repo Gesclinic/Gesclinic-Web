@@ -1,0 +1,54 @@
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                                                                               ║
+║                 🎯 CARTÃO DE AÇÃO - EXECUTE OS 3 SQLs AGORA                  ║
+║                                                                               ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+
+📍 ARQUIVO PARA LER AGORA:
+
+👉 📖_SQL_MANUAL_PASSO_A_PASSO.md
+
+
+⏱️ TEMPO:
+
+Ler arquivo:    1 minuto
+Executar SQL 1: 30 segundos  
+Executar SQL 2: 30 segundos
+Executar SQL 3: 30 segundos
+─────────────────────────
+TOTAL:          3 MINUTOS
+
+
+✅ O QUE FARÁ:
+
+1. Lê o arquivo 📖_SQL_MANUAL_PASSO_A_PASSO.md
+2. Copia SQL 1 → Cola em Supabase → Run
+3. Copia SQL 2 → Cola em Supabase → Run
+4. Copia SQL 3 → Cola em Supabase → Run
+5. Pronto! Sistema 100% funcional
+
+
+🎉 RESULTADO:
+
+- ✅ Tabela card_processors criada
+- ✅ Coluna processor_id adicionada
+- ✅ 6 operadoras inseridas (STONE, PAGBANK, etc)
+- ✅ Sistema pronto para usar
+
+
+📋 CHECKLIST:
+
+[ ] Abrir arquivo 📖_SQL_MANUAL_PASSO_A_PASSO.md
+[ ] Executar PASSO 1 (CREATE TABLE)
+[ ] Executar PASSO 2 (ADD COLUMN)
+[ ] Executar PASSO 3 (INSERT dados)
+[ ] Testar em http://localhost:3000/clinica/financeiro/cartoes-operadoras
+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+🚀 VÁ!
+
+Próximo arquivo:
+👉 📖_SQL_MANUAL_PASSO_A_PASSO.md

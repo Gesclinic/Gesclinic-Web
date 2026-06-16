@@ -1,0 +1,37 @@
+🔴 AÇÃO NECESSÁRIA: Corrigir Função forecast_revenue
+
+📍 PASSO 1: Abra o Supabase SQL Editor
+   Link: https://app.supabase.com/project/gvdkdjyupktlflwurike/sql/new
+
+📍 PASSO 2: Limpe a área de SQL (se houver algo)
+   Ctrl+A, Delete
+
+📍 PASSO 3: Cole o SQL abaixo:
+   (arquivo FIX_FORECAST_REVENUE.sql pronto para copiar)
+
+📍 PASSO 4: Clique no botão "Run" (ou Ctrl+Enter)
+
+📍 PASSO 5: Refresh no navegador:
+   http://localhost:3000/clinica/financeiro/cockpit-premium
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ O QUE ESTÁ CORRETO:
+   ✅ CockpitPremium carrega OK
+   ✅ 8 KPIs aparecem com dados reais
+   ✅ Conciliador carrega OK
+   ✅ Dados das views estão todos OK
+
+❌ O QUE PRECISA CONSERTAR:
+   ❌ Função forecast_revenue tem erro SQL
+   ❌ Isso bloqueia a renderização dos gráficos
+
+📊 APÓS A CORREÇÃO, VOCÊ VERÁ:
+   1. Gráfico: Evolução Mensal (12 meses)
+   2. Gráfico: Análise de Inadimplência
+   3. Gráfico: Top 10 Profissionais por Faturamento
+   4. Gráfico: Previsão de Receita (30 dias)
+   5. Cards: Metas e Objetivos (se houver)
+
+⏱️  Tempo estimado: 2 minutos
+

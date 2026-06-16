@@ -188,7 +188,7 @@ async function insertTestDataWithRLS() {
     for (const ar of receivablesData) {
       try {
         const { data, error } = await supabase
-          .from('ar_receivables')
+          .from('ar_invoices')
           .insert([ar])
           .select()
 

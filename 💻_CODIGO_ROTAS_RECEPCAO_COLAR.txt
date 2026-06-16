@@ -1,0 +1,214 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                                                                            ║
+║              ⚡ CÓDIGO EXATO PARA COPIAR E COLAR                          ║
+║                                                                            ║
+║           Adicione as rotas da Recepção em AppRoutes.jsx                  ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+
+═════════════════════════════════════════════════════════════════════════════
+PASSO 1: IMPORTS (Adicione no topo do arquivo)
+═════════════════════════════════════════════════════════════════════════════
+
+Localize a seção de imports em src/AppRoutes.jsx
+
+Adicione estas 2 linhas com os outros imports:
+
+```jsx
+import { ReceptionPage } from '@/pages/Reception/ReceptionPage';
+import { ReceptionTestPage } from '@/pages/Reception/ReceptionTestPage';
+```
+
+
+EXEMPLO COMPLETO (com outros imports):
+
+```jsx
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Suspense, lazy } from 'react';
+
+// Layouts
+import AppLayout from '@/components/layout/AppLayout';
+
+// Páginas
+import HomePage from '@/pages/HomePage';
+import AgendaPage from '@/pages/Agenda/AgendaPage';
+
+// ADICIONE AQUI:
+import { ReceptionPage } from '@/pages/Reception/ReceptionPage';
+import { ReceptionTestPage } from '@/pages/Reception/ReceptionTestPage';
+
+// ... resto dos imports
+```
+
+
+═════════════════════════════════════════════════════════════════════════════
+PASSO 2: ADICIONAR ROTAS
+═════════════════════════════════════════════════════════════════════════════
+
+Localize a seção de rotas aninhadas de AGENDA em src/AppRoutes.jsx
+
+Procure por algo como:
+
+```jsx
+<Route path="/clinica/agenda/*" element={<AgendaLayout />}>
+  {/* ... outras rotas de agenda ... */}
+</Route>
+```
+
+ADICIONE estas 2 rotas DENTRO desse bloco:
+
+```jsx
+<Route path="recepcao" element={<ReceptionPage />} />
+<Route path="recepcao/test" element={<ReceptionTestPage />} />
+```
+
+
+EXEMPLO COMPLETO (estrutura inteira):
+
+```jsx
+<Routes>
+  {/* Rotas públicas */}
+  <Route path="/" element={<HomePage />} />
+  <Route path="/login" element={<LoginPage />} />
+
+  {/* Rotas protegidas */}
+  <Route path="/clinica" element={<AppLayout />}>
+    
+    {/* Agenda */}
+    <Route path="agenda/*" element={<AgendaLayout />}>
+      {/* Rotas de agenda... */}
+      
+      {/* ===== ADICIONE AQUI ===== */}
+      <Route path="recepcao" element={<ReceptionPage />} />
+      <Route path="recepcao/test" element={<ReceptionTestPage />} />
+      {/* ======================== */}
+      
+    </Route>
+
+    {/* Estoque */}
+    <Route path="estoque/*" element={<EstoqueLayout />}>
+      {/* ... */}
+    </Route>
+
+    {/* Financeiro */}
+    <Route path="financeiro/*" element={<FinanceiroLayout />}>
+      {/* ... */}
+    </Route>
+  </Route>
+</Routes>
+```
+
+
+═════════════════════════════════════════════════════════════════════════════
+PASSO 3: TESTAR
+═════════════════════════════════════════════════════════════════════════════
+
+1. Salve o arquivo (Ctrl+S)
+2. Vá para o navegador
+3. Acesse: http://localhost:3000/clinica/agenda/recepcao
+
+ESPERADO:
+✅ Dashboard com 4 seções: Próximo, Em Atendimento, Finalizados, Aguardando
+
+
+═════════════════════════════════════════════════════════════════════════════
+SE USAR LAZY LOADING (opcional, para otimizar bundle)
+═════════════════════════════════════════════════════════════════════════════
+
+Se preferir lazy load (carrega página apenas quando acessar):
+
+```jsx
+const ReceptionPage = lazy(() =>
+  import('@/pages/Reception/ReceptionPage').then((m) => ({
+    default: m.ReceptionPage,
+  }))
+);
+
+const ReceptionTestPage = lazy(() =>
+  import('@/pages/Reception/ReceptionTestPage').then((m) => ({
+    default: m.ReceptionTestPage,
+  }))
+);
+```
+
+Depois nas rotas:
+
+```jsx
+<Route 
+  path="recepcao" 
+  element={
+    <Suspense fallback={<div>Carregando...</div>}>
+      <ReceptionPage />
+    </Suspense>
+  } 
+/>
+<Route 
+  path="recepcao/test" 
+  element={
+    <Suspense fallback={<div>Carregando...</div>}>
+      <ReceptionTestPage />
+    </Suspense>
+  } 
+/>
+```
+
+
+═════════════════════════════════════════════════════════════════════════════
+ROTAS GERADAS
+═════════════════════════════════════════════════════════════════════════════
+
+Depois de adicionar, estas URLs funcionarão:
+
+✅ http://localhost:3000/clinica/agenda/recepcao
+   → Dashboard operacional principal
+
+✅ http://localhost:3000/clinica/agenda/recepcao/test
+   → Página de testes com componentes e mock data
+
+
+═════════════════════════════════════════════════════════════════════════════
+TROUBLESHOOTING
+═════════════════════════════════════════════════════════════════════════════
+
+❌ "Cannot find module '@/pages/Reception/ReceptionPage'"
+
+Solução:
+  1. Verifique se o arquivo existe em: src/pages/Reception/ReceptionPage.tsx
+  2. Verifique o alias @ em vite.config.js (deve apontar para ./src)
+  3. Revise o path: deve ser @/pages/Reception/ReceptionPage (sem .tsx)
+
+
+❌ "ReceptionPage is not exported"
+
+Solução:
+  1. Abra: src/pages/Reception/ReceptionPage.tsx
+  2. Verifique se tem: export function ReceptionPage() { ... }
+  3. Se não tem, adicione export
+
+
+❌ Página não carrega, mostra branco
+
+Solução:
+  1. Abra console (F12)
+  2. Procure por erros em vermelho
+  3. Verifique se ReceptionPage.tsx tem erro de sintaxe
+  4. Tente fazer hard refresh (Ctrl+Shift+R)
+
+
+❌ "Cannot find clinic context"
+
+Solução:
+  1. ReceptionPage precisa estar dentro de AppLayout (que tem ClinicProvider)
+  2. Verifique se route está aninhada corretamente em /clinica
+
+
+═════════════════════════════════════════════════════════════════════════════
+✅ PRONTO!
+═════════════════════════════════════════════════════════════════════════════
+
+Copie os imports e rotas acima, adicione em src/AppRoutes.jsx, e teste!
+
+Tempo total: 5 minutos ⏱️
+
+Dúvidas? Veja: 🚀_FASE3_GUIA_INTEGRACAO.txt

@@ -122,7 +122,23 @@ describe('useCashFlow', () => {
 
     expect(realtimeMock.channel).toHaveBeenCalledWith('cash_flow_clinic-123');
     expect(realtimeMock.channel).toHaveBeenCalledWith('ap_bills_paid_clinic-123');
-    expect(realtimeMock.channel).toHaveBeenCalledWith('ar_receivables_paid_clinic-123');
+    expect(realtimeMock.channel).toHaveBeenCalledWith('ar_invoices_paid_clinic-123');
+    expect(realtimeMock.channel).not.toHaveBeenCalledWith('ar_receivables_paid_clinic-123');
+    expect(realtimeMock.on).toHaveBeenCalledWith(
+      'postgres_changes',
+      expect.objectContaining({
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'ar_invoices',
+        filter: 'clinic_id=eq.clinic-123',
+      }),
+      expect.any(Function)
+    );
+    expect(realtimeMock.on).not.toHaveBeenCalledWith(
+      'postgres_changes',
+      expect.objectContaining({ table: 'ar_receivables' }),
+      expect.any(Function)
+    );
 
     unmount();
 

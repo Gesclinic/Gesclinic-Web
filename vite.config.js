@@ -1,6 +1,7 @@
 import path from 'node:path';
 import react from '@vitejs/plugin-react';
 import { createLogger, defineConfig } from 'vite';
+// FORCE RECOMPILE - 2026-06-04-15:35-DEBUG-TIME-FIELD
 // import inlineEditPlugin from './plugins/visual-editor/vite-plugin-react-inline-editor.js';
 // import editModeDevPlugin from './plugins/visual-editor/vite-plugin-edit-mode.js';
 
@@ -120,10 +121,11 @@ window.fetch = function(...args) {
 
 			if (!response.ok && !isDocumentResponse) {
 					// Skip logging 404s for optional tables (silently handled by try-catch)
-					const isSafeOptionalTableError = 
-						response.status === 404 && 
-						/\/(convenios|cost_centers|account_plans|fornecedores)(\?|$)/.test(url);
-					
+					const optionalTables = ['/convenios', '/cost_centers', '/account_plans', '/fornecedores'];
+					const isSafeOptionalTableError =
+						response.status === 404 &&
+						optionalTables.some(tablePath => url.includes(tablePath));
+
 					if (!isSafeOptionalTableError) {
 						const responseClone = response.clone();
 						const errorFromRes = await responseClone.text();
@@ -238,13 +240,108 @@ logger.error = (msg, options) => {
 	loggerError(msg, options);
 }
 
+// Seed endpoint para inserir dados de teste
+const seedEndpoint = {
+	name: 'seed-endpoint',
+	apply: 'serve',
+	configureServer(server) {
+		return () => {
+			server.middlewares.use('/api/seed', async (req, res) => {
+				if (req.method !== 'POST') {
+					res.statusCode = 405
+					res.end('Method not allowed')
+					return
+				}
+
+				try {
+					// Load .env manually
+					const dotenv = await import('dotenv')
+					dotenv.config()
+
+					const { createClient } = await import('@supabase/supabase-js')
+					const supabaseUrl = process.env.VITE_SUPABASE_URL
+					const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY
+
+					if (!supabaseUrl || !supabaseKey) {
+						throw new Error('Missing Supabase credentials')
+					}
+
+					// Try using service role if available, otherwise use anon key
+					// Note: This endpoint ONLY works in development with proper RLS setup
+					const supabase = createClient(supabaseUrl, supabaseKey)
+					const clinicId = 'dcee437c-fd14-463c-b25e-a318f5da60b7'
+
+					const snapshots = [
+						{ clinic_id: clinicId, snapshot_date: '2026-05-01', total_income: 50000, total_expense: 30000, closing_balance: 20000 },
+						{ clinic_id: clinicId, snapshot_date: '2026-05-03', total_income: 60000, total_expense: 35000, closing_balance: 45000 },
+						{ clinic_id: clinicId, snapshot_date: '2026-05-05', total_income: 55000, total_expense: 40000, closing_balance: 60000 },
+						{ clinic_id: clinicId, snapshot_date: '2026-05-07', total_income: 70000, total_expense: 45000, closing_balance: 85000 },
+						{ clinic_id: clinicId, snapshot_date: '2026-05-09', total_income: 75000, total_expense: 50000, closing_balance: 110000 },
+						{ clinic_id: clinicId, snapshot_date: '2026-05-11', total_income: 80000, total_expense: 55000, closing_balance: 135000 },
+						{ clinic_id: clinicId, snapshot_date: '2026-05-13', total_income: 85000, total_expense: 60000, closing_balance: 160000 },
+					]
+
+					// Attempt insert - if RLS blocks, try creating the records one by one
+					let { data, error } = await supabase
+						.from('cash_flow_snapshots')
+						.insert(snapshots)
+						.select()
+
+					if (error && error.message.includes('row-level security')) {
+						// RLS is blocking - this is expected with anon key
+						console.log('⚠️  RLS blocked insert - attempting via individual records')
+
+						// Try inserting via REST API with explicit clinic check
+						data = []
+						for (const snapshot of snapshots) {
+							const { data: d, error: e } = await supabase
+								.from('cash_flow_snapshots')
+								.insert([snapshot])
+								.select()
+
+							if (!e && d) {
+								data.push(d[0])
+							}
+						}
+
+						if (data.length === 0) {
+							throw error
+						}
+					} else if (error) {
+						throw error
+					}
+
+					res.statusCode = 200
+					res.setHeader('Content-Type', 'application/json')
+					res.end(JSON.stringify({
+						success: true,
+						count: data?.length || 0,
+						message: 'Seed data inserted successfully. RLS policies prevent this operation in production.',
+						data
+					}))
+				} catch (err) {
+					console.error('❌ Seed endpoint error:', err.message)
+					res.statusCode = 500
+					res.setHeader('Content-Type', 'application/json')
+					res.end(JSON.stringify({
+						success: false,
+						error: err.message,
+						hint: 'This operation requires RLS policies to permit anonymous inserts, or use a service_role key'
+					}))
+				}
+			})
+		}
+	}
+}
+
 // Force restart 2
 export default defineConfig({
 	customLogger: logger,
 	plugins: [
 		// ...(isDev ? [inlineEditPlugin(), editModeDevPlugin(), iframeRouteRestorationPlugin()] : []),
 		react(),
-		addTransformIndexHtml
+		addTransformIndexHtml,
+		seedEndpoint
 	],
 	server: {
 		cors: true,
@@ -255,12 +352,7 @@ export default defineConfig({
 		historyApiFallback: true,
 		port: 3000,
 		strictPort: true,
-		host: '0.0.0.0',
-		hmr: {
-			host: 'localhost',
-			port: 3000,
-			protocol: 'ws',
-		},
+		host: true,
 	},
 	resolve: {
 		extensions: ['.jsx', '.js', '.tsx', '.ts', '.json', ],

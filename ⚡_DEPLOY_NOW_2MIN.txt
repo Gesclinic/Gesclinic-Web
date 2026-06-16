@@ -1,0 +1,67 @@
+⚡ **DEPLOYMENT QUICKSTART - 2 MINUTOS**
+
+═══════════════════════════════════════════════════════════════════════
+
+🎯 **3 PASSOS PARA VERCEL PRODUCTION:**
+
+### 1️⃣ LOGIN NO VERCEL
+```bash
+vercel login
+```
+
+### 2️⃣ LINK AO PROJETO (primeira vez)
+```bash
+vercel link
+```
+
+### 3️⃣ DEPLOY PARA PRODUÇÃO
+```bash
+vercel --prod
+```
+
+═══════════════════════════════════════════════════════════════════════
+
+⏱️ **TEMPO ESTIMADO:** 2-3 minutos
+
+✅ **RESULTADO:**
+- URL: https://gesclinic-web.vercel.app
+- SSL automático ✅
+- CDN global ✅
+- Auto-scaling ✅
+- Rollback em 1 hora ✅
+
+═══════════════════════════════════════════════════════════════════════
+
+📋 **CHECKLIST PÓS-DEPLOYMENT (5 min)**
+
+```
+□ Abrir URL no navegador
+□ Verificar que carrega sem erros (F12)
+□ Fazer login
+□ Testar dashboard
+□ Verificar notificações (toast)
+□ Confirmar API conectado
+```
+
+═══════════════════════════════════════════════════════════════════════
+
+❌ **SE ALGO DER ERRADO:**
+
+1. Rollback rápido:
+   ```
+   Vercel Dashboard → Deployments → Previous → Promote
+   ```
+
+2. Verificar logs:
+   ```
+   Vercel Dashboard → Deployments → Your Deployment → Logs
+   ```
+
+3. Verificar erros:
+   ```
+   Sentry Dashboard → Issues
+   ```
+
+═══════════════════════════════════════════════════════════════════════
+
+✨ **TÁ TUDO PRONTO! EXECUTE: vercel --prod** ✨

@@ -1,0 +1,124 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                                                                            ║
+║                    ✅ SQL MIGRATION - SCHEMA ISSUE FIXED ✅               ║
+║                                                                            ║
+║           The original migration failed because the column names           ║
+║            in your database don't match the ones in the script.           ║
+║                                                                            ║
+║                          HERE'S WHAT TO DO NOW:                           ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+OPÇÃO 1: USAR A VERSÃO SIMPLIFICADA (RECOMENDADO) ⭐
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Esta é a maneira mais fácil e funciona independente da estrutura exata.
+
+PASSO 1: Abra o arquivo
+   SQL_EXECUTE_SIMPLIFIED.sql
+
+PASSO 2: Copie TODO o conteúdo
+
+PASSO 3: Abra Supabase SQL Editor
+   https://app.supabase.com/project/[seu-projeto]/sql/new
+
+PASSO 4: Cole e execute
+   Cole o conteúdo
+   Clique em RUN
+   Aguarde ~10 segundos
+
+PASSO 5: ✅ Pronto!
+   A migration foi executada com sucesso!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+OPÇÃO 2: DESCOBRIR SUA ESTRUTURA E CUSTOMIZAR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Se você quer entender melhor o que está acontecendo:
+
+PASSO 1: Execute a query de descoberta
+   Abra: STEP0_DISCOVER_SCHEMA.sql
+   Execute a primeira query para ver suas colunas
+
+PASSO 2: Identifique sua coluna de status
+   Procure por: booking_status, status, appointment_status, etc.
+   Anote o nome exato
+
+PASSO 3: Customize a migration
+   Abra: SQL_EXECUTE_SIMPLIFIED.sql
+   Atualize se necessário (normalmente não precisa!)
+
+PASSO 4: Execute a migration
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+QUAL ESCOLHER?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ RECOMENDAÇÃO: Use SQL_EXECUTE_SIMPLIFIED.sql
+   
+   Razão: É segura, funciona e não precisa de customização
+
+❌ EVITE: SQL_EXECUTE_NO_SUPABASE.sql (aquele original)
+   
+   Razão: Tem dependências de colunasque não existem no seu schema
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PRÓXIMOS PASSOS APÓS EXECUTAR A MIGRATION:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1️⃣ Validar que funcionou:
+   
+   SELECT COUNT(*) as total, 
+          COUNT(official_status) as com_status
+   FROM appointments;
+
+2️⃣ Testar localmente:
+   
+   npm run dev
+   Visite: http://localhost:3000/clinica/agenda
+
+3️⃣ Deploy:
+   
+   git add .
+   git commit -m "feat(agenda): official status model"
+   git push origin staging
+
+4️⃣ Monitorar:
+   
+   Aguarde 24-48h de testes
+   Verifique logs de erros
+   Teste todos os fluxos
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ERROS COMUNS E SOLUÇÕES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❌ "type 'appointment_official_status' already exists"
+✅ Isso é normal! Significa que você já tem o tipo. Pode ignorar.
+
+❌ "column 'official_status' already exists"
+✅ Também normal! A coluna já foi criada antes. Pode ignorar.
+
+❌ "column does not exist"
+✅ Significa que uma coluna específica não existe no seu schema.
+   Use SQL_EXECUTE_SIMPLIFIED.sql que é mais robusta.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+RESUMO FINAL:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+O problema:      A original migration esperava colunas que não existem
+A solução:       Use a versão SIMPLIFICADA
+Tempo:          5 minutos até ter tudo rodando
+Risco:          Mínimo (código é totalmente reversível)
+
+👉 Próximo passo: Abra SQL_EXECUTE_SIMPLIFIED.sql e execute!
+
+════════════════════════════════════════════════════════════════════════════════

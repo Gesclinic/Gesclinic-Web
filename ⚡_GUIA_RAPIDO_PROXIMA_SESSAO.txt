@@ -1,0 +1,190 @@
+⚡ GUIA RÁPIDO PARA PRÓXIMAS SESSÕES
+
+════════════════════════════════════════════════════════════════════════════════
+
+RESUMO DO QUE FOI FEITO NESTA SESSÃO
+────────────────────────────────────
+
+1. ETAPA 6 (Conciliador): ✅ 100% completo e testado
+   - Componente React: 450+ linhas
+   - 5 abas funcionais
+   - SQL migrations executadas
+   - Integrado ao menu e rota
+
+2. ETAPA 7 (CockpitPremium): ✅ 100% completo e testado
+   - Componente React: 650+ linhas
+   - 8 KPIs + 4 gráficos
+   - SQL migrations executadas
+   - Integrado ao menu e rota
+
+3. ERRO CORRIGIDO: forecast_revenue() ✅
+   - Erro: "column reference 'clinic_id' is ambiguous"
+   - Solução: Adicionados aliases de tabela (ai.*)
+   - Resultado: Gráfico "Previsão de Receita" agora renderiza
+
+════════════════════════════════════════════════════════════════════════════════
+
+ACESSAR COMPONENTES
+────────────────────
+
+Conciliador:
+   URL: http://localhost:3000/clinica/financeiro/conciliacao-bancaria
+   Menu: Financeiro → Análise → Conciliação Bancária
+
+CockpitPremium:
+   URL: http://localhost:3000/clinica/financeiro/cockpit-premium
+   Menu: Financeiro → Análise → Cockpit Premium
+
+════════════════════════════════════════════════════════════════════════════════
+
+SE PRECISAR ATUALIZAR OS COMPONENTES
+──────────────────────────────────────
+
+ARQUIVO: src/pages/financeiro/CockpitPremium.jsx
+   - Linhas: 650+
+   - Funções principais:
+     ├─ loadKPIData() - Carrega 8 KPIs
+     ├─ loadEvolutionData() - Gráfico 12 meses
+     ├─ loadDelinquencyData() - Gráfico inadimplência
+     ├─ loadProfessionalData() - Top 10 profissionais
+     └─ loadForecastData() - Previsão de receita (AGORA FUNCIONA!)
+
+ARQUIVO: src/pages/financeiro/Conciliador.jsx
+   - Linhas: 450+
+   - Funções principais:
+     ├─ Tab Upload: handleFileUpload()
+     ├─ Tab Matching: executeBankMatching()
+     ├─ Tab Validação: loadValidationData()
+     ├─ Tab Resumo: loadSummaryData()
+     └─ Tab Histórico: loadHistoricalData()
+
+════════════════════════════════════════════════════════════════════════════════
+
+DADOS DE TESTE
+───────────────
+
+Usuário:
+   ├─ Nome: fernando medeiros
+   ├─ Clínica: GESCL-DEMO-0001
+   ├─ Senha: test123
+   └─ Role: admin/financeiro
+
+Dados Disponíveis:
+   ├─ ar_invoices: 6 registros, R$ 16.800 total
+   ├─ appointments: 4 registros (2 completos)
+   ├─ professional_repayments: 0 (esperado)
+   └─ cockpit_goals: 0 (pode ser preenchido)
+
+════════════════════════════════════════════════════════════════════════════════
+
+ARQUIVOS IMPORTANTES
+─────────────────────
+
+Componentes:
+   src/pages/financeiro/CockpitPremium.jsx
+   src/pages/financeiro/Conciliador.jsx
+
+APIs:
+   src/lib/financeiro/financeApi.js
+   src/lib/financeiro/reconciliationApi.js
+
+Migrations SQL:
+   supabase/migrations/20260524_ETAPA6_CONCILIACAO_INTELIGENTE.sql
+   supabase/migrations/20260525_ETAPA7_COCKPIT_PREMIUM.sql
+
+Configuração:
+   src/AppRoutes.jsx (rotas)
+   src/constants/menu.js (menu)
+
+════════════════════════════════════════════════════════════════════════════════
+
+SE ENCONTRAR ERROS
+───────────────────
+
+Erro de Autenticação?
+   1. Verifique localStorage (DevTools → Application → LocalStorage)
+   2. Certifique-se de estar em /clinica/financeiro/*
+   3. Teste com: fernando medeiros / test123
+
+Gráficos não aparecem?
+   1. Abra DevTools → Console
+   2. Verifique se há erros RPC
+   3. Verifique se as views retornam dados:
+      SELECT * FROM v_kpi_mensais WHERE clinic_id = '...'
+
+Dados faltando?
+   1. Verifique a clínica_id nas queries
+   2. Confira se há RLS (Row Level Security) ativo
+   3. Execute: SELECT current_setting('request.jwt.claims')
+
+════════════════════════════════════════════════════════════════════════════════
+
+PRÓXIMAS MELHORIAS SUGERIDAS
+──────────────────────────────
+
+1. Implementar seletores de período (Trimestral/Anual)
+   Arquivo: src/pages/financeiro/CockpitPremium.jsx
+   Adicionar lógica ao click dos botões
+
+2. Adicionar exportação PDF dos gráficos
+   Lib: jspdf + html2canvas
+   Arquivo: src/pages/financeiro/CockpitPremium.jsx
+
+3. Criar dados de teste mais realistas
+   File: scripts/seed-test-data.mjs
+   Gerar 12 meses de histórico
+
+4. Adicionar cache Redis (opcional)
+   Para melhorar performance de gráficos
+
+5. Implementar notificações de alerta
+   Ex: Inadimplência acima de 20%
+
+════════════════════════════════════════════════════════════════════════════════
+
+COMANDOS ÚTEIS
+───────────────
+
+Dev Server:
+   npm run dev
+
+Build:
+   npm run build
+
+Preview:
+   npm run preview
+
+Test Vite HMR:
+   http://localhost:3000 (com Vite hot reload)
+
+════════════════════════════════════════════════════════════════════════════════
+
+RESUMO DE ARQUIVOS CRIADOS NESTA SESSÃO
+─────────────────────────────────────────
+
+Documentação:
+   ✅_ETAPA6_ETAPA7_TESTES_COMPLETOS.txt
+   📋_ETAPA6_ETAPA7_ENTREGA_FINAL.txt
+   ⚡_GUIA_RAPIDO_PROXIMA_SESSAO.txt (este arquivo)
+
+SQL Fix:
+   FIX_FORECAST_REVENUE.sql
+
+Utilitários:
+   diagnose-cockpit.mjs (testes de diagnóstico)
+   ⚡_ACAO_IMEDIATA_FIX_FORECAST.txt (instruções)
+
+════════════════════════════════════════════════════════════════════════════════
+
+CONTATO E DÚVIDAS
+──────────────────
+
+Se houver problemas:
+1. Verifique os arquivos de documentação criados
+2. Reproduza com usuário teste: fernando medeiros / test123
+3. Verifique console do navegador (DevTools → Console)
+4. Execute diagnose-cockpit.mjs para validar queries
+
+════════════════════════════════════════════════════════════════════════════════
+
+✅ Tudo está pronto. Bom desenvolvimento! 🚀

@@ -80,7 +80,7 @@ describe('Base System - Simple CRUD Components', () => {
         description: 'Test',
       };
       // Validation: validateForm() should fail
-      const isValid = invalidService.name && invalidService.name.trim().length >= 3;
+      const isValid = Boolean(invalidService.name && invalidService.name.trim().length >= 3);
       expect(isValid).toBe(false);
     });
 
@@ -158,7 +158,7 @@ describe('Base System - Simple CRUD Components', () => {
         code: '',
         name: '',
       };
-      const isValid = incomplete.code && incomplete.name;
+      const isValid = Boolean(incomplete.code && incomplete.name);
       expect(isValid).toBe(false);
     });
 
@@ -234,7 +234,7 @@ describe('Base System - Simple CRUD Components', () => {
 
     it('❌ Should require resource name', () => {
       const invalid = { name: '' };
-      const isValid = invalid.name && invalid.name.length >= 3;
+      const isValid = Boolean(invalid.name && invalid.name.length >= 3);
       expect(isValid).toBe(false);
     });
 
@@ -274,7 +274,7 @@ describe('Base System - M:M Relationship Components', () => {
         professional_id: '',
         service_id: 'serv-1',
       };
-      const isValid = incomplete.professional_id && incomplete.service_id;
+      const isValid = Boolean(incomplete.professional_id && incomplete.service_id);
       expect(isValid).toBe(false);
     });
 
@@ -404,6 +404,8 @@ describe('Base System - M:M Relationship Components', () => {
 describe('Base System - Special Components', () => {
   
   describe('AgendaRulesPage', () => {
+    const types = ['default', 'min_interval', 'max_per_day', 'buffer_time', 'blackout'];
+
     it('✅ Should load agenda rules', () => {
       const rule = {
         id: '9',
@@ -420,12 +422,11 @@ describe('Base System - Special Components', () => {
 
     it('❌ Should require rule name', () => {
       const invalid = { rule_name: '' };
-      const isValid = invalid.rule_name && invalid.rule_name.length >= 3;
+      const isValid = Boolean(invalid.rule_name && invalid.rule_name.length >= 3);
       expect(isValid).toBe(false);
     });
 
     it('✅ Should accept various rule types', () => {
-      const types = ['default', 'min_interval', 'max_per_day', 'buffer_time', 'blackout'];
       expect(types).toHaveLength(5);
     });
 

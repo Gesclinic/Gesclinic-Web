@@ -1,0 +1,343 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                                                                            ║
+║              ✅ GUIA DE EXECUÇÃO - MIGRATION OFFICIAL STATUS ✅           ║
+║                                                                            ║
+║                      INSTRUÇÕES EM PORTUGUÊS                              ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚀 COMO EXECUTAR A MIGRATION (5 MINUTOS)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Siga estes passos exatamente nesta ordem:
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ PASSO 1: ABRIR O ARQUIVO SQL                                           │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│ 1. No seu VS Code, abra:                                              │
+│    → SQL_EXECUTE_SIMPLIFIED.sql                                       │
+│                                                                         │
+│ 2. Você vai ver código SQL comentado e limpo                          │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ PASSO 2: SELECIONAR TODO O CÓDIGO                                      │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│ 1. Abra o arquivo SQL_EXECUTE_SIMPLIFIED.sql                         │
+│                                                                         │
+│ 2. Selecione TODO o conteúdo:                                        │
+│    → Pressione: Ctrl+A (em Windows)                                   │
+│    → Ou Command+A (em Mac)                                            │
+│                                                                         │
+│ 3. Copie:                                                             │
+│    → Pressione: Ctrl+C                                               │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ PASSO 3: ABRIR SUPABASE                                                │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│ 1. Abra seu navegador                                                 │
+│                                                                         │
+│ 2. Acesse: https://app.supabase.com                                  │
+│                                                                         │
+│ 3. Faça login com sua conta                                           │
+│                                                                         │
+│ 4. Selecione seu projeto                                              │
+│                                                                         │
+│ 5. No menu esquerdo, vá para: SQL Editor                             │
+│                                                                         │
+│ 6. Clique no botão: "New query" ou "+"                               │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ PASSO 4: COLAR O CÓDIGO                                                │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│ 1. No editor SQL do Supabase, clique na área de texto                │
+│                                                                         │
+│ 2. Cole o código:                                                      │
+│    → Pressione: Ctrl+V                                               │
+│                                                                         │
+│ 3. Você vai ver todo o código SQL aparecendo                         │
+│                                                                         │
+│ 4. Não modifique nada! Deixe como está                              │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ PASSO 5: EXECUTAR                                                      │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│ 1. Procure pelo botão azul "Run" (ou "Execute")                      │
+│    → Fica no canto superior direito do editor                        │
+│    → Ou pressione: Ctrl+Enter                                        │
+│                                                                         │
+│ 2. Clique nele                                                         │
+│                                                                         │
+│ 3. Aguarde:                                                            │
+│    → Você verá um spinner carregando                                 │
+│    → Leva entre 10-30 segundos                                      │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ PASSO 6: VERIFICAR RESULTADO                                           │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│ ✅ SUCESSO! Se você ver:                                              │
+│    → Mensagem: "Query executed successfully"                         │
+│    → Nenhuma mensagem de erro                                        │
+│    → Tudo funcionou! 🎉                                              │
+│                                                                         │
+│ ❌ ERRO? Se você ver:                                                  │
+│    → Mensagem de erro com "ERROR:" ou "syntax error"                 │
+│    → Anote exatamente qual é o erro                                  │
+│    → Vá para a seção "ERROS COMUNS" abaixo                          │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ VALIDAÇÃO (Confirmar que funcionou)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Depois que a migration executou com sucesso, faça estas validações:
+
+VALIDAÇÃO 1: Coluna foi criada?
+─────────────────────────────────
+
+1. No Supabase SQL Editor, clique em "New query"
+
+2. Cole esta query:
+
+   SELECT column_name, data_type 
+   FROM information_schema.columns 
+   WHERE table_name = 'appointments' 
+   AND column_name = 'official_status';
+
+3. Clique em Run
+
+4. Resultado esperado:
+   ✅ Uma linha com:
+      - column_name: official_status
+      - data_type: appointment_official_status
+
+   ❌ Se não aparecer nada, algo deu errado
+
+─────────────────────────────────────────────────────────────────────────────
+
+VALIDAÇÃO 2: Dados foram inicializados?
+─────────────────────────────────────────
+
+1. Copie esta query:
+
+   SELECT official_status, COUNT(*) as total
+   FROM appointments 
+   GROUP BY official_status 
+   ORDER BY total DESC;
+
+2. Cole e execute
+
+3. Resultado esperado:
+   ✅ Você vai ver uma linha com:
+      - official_status: scheduled
+      - total: (número de agendamentos)
+
+   ❌ Se disser "table does not exist" ou erro, a migration falhou
+
+─────────────────────────────────────────────────────────────────────────────
+
+VALIDAÇÃO 3: Índices foram criados?
+────────────────────────────────────
+
+1. Copie esta query:
+
+   SELECT indexname 
+   FROM pg_indexes 
+   WHERE tablename = 'appointments' 
+   AND indexname LIKE '%status%';
+
+2. Execute
+
+3. Resultado esperado:
+   ✅ Você vai ver 3 índices:
+      - idx_appointments_official_status
+      - idx_appointments_clinic_status
+      - idx_appointments_date_status
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❌ ERROS COMUNS E SOLUÇÕES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ERRO 1: "type 'appointment_official_status' already exists"
+───────────────────────────────────────────────────────────
+
+O que significa:
+  → Você já executou a migration antes
+  → O tipo ENUM já existe
+
+O que fazer:
+  ✅ Pode ignorar este erro!
+  ✅ Significa que não precisa criar de novo
+  ✅ Tudo está funcionando
+
+Próximo passo:
+  → Execute as validações acima
+  → Se aparecerem os dados, está tudo bem!
+
+─────────────────────────────────────────────────────────────────────────────
+
+ERRO 2: "column 'official_status' already exists"
+──────────────────────────────────────────────────
+
+O que significa:
+  → A coluna já foi criada antes
+  → Você pode estar executando a migration novamente
+
+O que fazer:
+  ✅ Pode ignorar este erro também!
+  ✅ A coluna já existe, é normal
+
+Próximo passo:
+  → Execute as validações acima
+  → Verifique que os dados estão lá
+
+─────────────────────────────────────────────────────────────────────────────
+
+ERRO 3: "column 'clinic_id' does not exist"
+────────────────────────────────────────────
+
+O que significa:
+  → Sua tabela appointments não tem a coluna clinic_id
+
+O que fazer:
+  1. Vá para a SQL_EXECUTE_SIMPLIFIED.sql
+  2. Encontre a linha que menciona clinic_id
+  3. Você pode:
+     a) Remover a linha com clinic_id se a coluna não existir
+     b) Substituir por outra coluna que existe (se houver)
+  4. Execute novamente
+
+─────────────────────────────────────────────────────────────────────────────
+
+ERRO 4: "table 'appointments' does not exist"
+──────────────────────────────────────────────
+
+O que significa:
+  → Sua tabela de agendamentos tem outro nome
+
+O que fazer:
+  1. Verifique o nome correto da tabela:
+     SELECT table_name FROM information_schema.tables 
+     WHERE table_schema = 'public';
+  
+  2. Edite o arquivo SQL_EXECUTE_SIMPLIFIED.sql
+  3. Substitua "appointments" pelo nome correto em todas as linhas
+  4. Execute novamente
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 RESUMO DOS PASSOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ 1. Abra: SQL_EXECUTE_SIMPLIFIED.sql
+ 2. Copie: Ctrl+A depois Ctrl+C
+ 3. Acesse: https://app.supabase.com
+ 4. Cole: Ctrl+V no SQL Editor
+ 5. Execute: Clique em "Run"
+ 6. Aguarde: 10-30 segundos
+ 7. Valide: Execute as 3 queries de validação
+ 8. Pronto! ✅
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⏱️ QUANTO TEMPO LEVA?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ Abrir arquivo:       30 segundos
+ Copiar código:       15 segundos
+ Ir para Supabase:    30 segundos
+ Colar código:        15 segundos
+ Executar:            15-30 segundos (esperar)
+ Validar:             1-2 minutos (3 queries)
+
+ TOTAL:              ~5 minutos ⏱️
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ PRÓXIMAS AÇÕES (Depois da Migration)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Depois que a migration foi executada com sucesso:
+
+AÇÃO 1: Testar Localmente
+─────────────────────────
+
+1. Abra o Terminal no VS Code
+
+2. Execute:
+   npm run dev
+
+3. Abra: http://localhost:3000/clinica/agenda
+
+4. Verifique:
+   ✅ Página carrega?
+   ✅ Agendamentos aparecem?
+   ✅ Sem erros no console?
+
+─────────────────────────────────────────────────────────────────────────────
+
+AÇÃO 2: Fazer Commit
+────────────────────
+
+1. No terminal:
+   git add .
+
+2. Fazer commit:
+   git commit -m "feat(agenda): official status model migration"
+
+3. Push:
+   git push origin main
+
+─────────────────────────────────────────────────────────────────────────────
+
+AÇÃO 3: Deploy em Staging
+──────────────────────────
+
+1. Depois do push, seu CI/CD pipeline vai executar
+2. Aguarde o build completar
+3. Teste em: https://staging.seu-app.com
+4. Passe 24-48 horas testando
+5. Monitore erros no Sentry/Logs
+
+─────────────────────────────────────────────────────────────────────────────
+
+AÇÃO 4: Deploy em Produção
+───────────────────────────
+
+1. Se tudo passou em staging, pode fazer deploy
+2. Use blue-green deployment se possível
+3. Monitore por 48 horas
+4. Pronto! 🎉
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📞 SUPORTE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Se tiver problema:
+
+1. Leia a seção "ERROS COMUNS" acima
+2. Verifique o arquivo: ⚡_SQL_SCHEMA_FIXED.txt
+3. Procure no arquivo: 📖_MANUAL_EXECUCAO_COMECE_AQUI.txt
+4. Consulte: src/modules/agenda/STATUS_OFFICIAL_MODEL.md
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 COMECE AGORA!
+
+Próximo passo: Abra SQL_EXECUTE_SIMPLIFIED.sql e siga os passos! 🚀
+
+════════════════════════════════════════════════════════════════════════════════

@@ -1,0 +1,216 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                                                                            ║
+║            ⚠️ SERVIDOR NÃO ESTÁ RODANDO - ERR_CONNECTION_REFUSED         ║
+║                                                                            ║
+║              O serviço local não está ativo na porta 3000                ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+O PROBLEMA:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❌ ERR_CONNECTION_REFUSED (-102)
+
+Isso significa:
+  - Nenhum servidor está rodando na porta 3000
+  - npm run dev ainda não foi executado
+  - Ou o servidor foi interrompido
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+SOLUÇÃO: INICIAR O SERVIDOR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PASSO 1: Abra o Terminal
+──────────────────────────
+
+1. No VS Code, pressione:
+   Ctrl + ` (backtick/crase)
+   
+   Ou vá para:
+   → Terminal → New Terminal
+
+2. Um terminal deve abrir na parte inferior
+
+PASSO 2: Verifique que está no diretório correto
+─────────────────────────────────────────────────
+
+O terminal deve mostrar:
+  C:\Users\ferna\Desktop\Projeto Gesclinic Web>
+
+Se não estiver, execute:
+  cd "C:\Users\ferna\Desktop\Projeto Gesclinic Web"
+
+PASSO 3: Inicie o servidor
+──────────────────────────
+
+Execute este comando:
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                                                                         │
+│ npm run dev                                                             │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+
+PASSO 4: Aguarde a mensagem de sucesso
+──────────────────────────────────────
+
+Você deve ver mensagens como:
+
+  VITE v5.0.0 ready in XXX ms
+
+  ➜  Local:     http://localhost:3000/
+  ➜  Network:   use --host to expose
+
+Quando ver isso, o servidor está ONLINE! ✅
+
+PASSO 5: Acesse a URL
+─────────────────────
+
+Agora você pode:
+
+1. Abra seu navegador
+
+2. Vá para: http://localhost:3000/clinica/agenda
+
+3. Ou clique no link que aparece no terminal
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ERROS COMUNS DURANTE npm run dev
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ERRO 1: "npm: command not found"
+────────────────────────────────
+
+Significa: Node.js não está instalado
+
+Solução:
+  1. Instale Node.js: https://nodejs.org/
+  2. Reinicie o VS Code
+  3. Execute: npm run dev
+
+ERRO 2: "ENOENT: no such file or directory"
+──────────────────────────────────────────
+
+Significa: Você não está no diretório correto
+
+Solução:
+  1. Verifique o diretório:
+     pwd (ou cd no terminal)
+  
+  2. Vá para a pasta do projeto:
+     cd "C:\Users\ferna\Desktop\Projeto Gesclinic Web"
+  
+  3. Execute: npm run dev
+
+ERRO 3: "Port 3000 is already in use"
+────────────────────────────────────
+
+Significa: Outra aplicação usa a porta 3000
+
+Solução A: Feche a outra aplicação
+  1. Procure outra aba/janela do navegador ou VS Code
+  2. Feche
+
+Solução B: Use outra porta
+  1. Execute: npm run dev -- --port 3001
+  2. Acesse: http://localhost:3001/clinica/agenda
+
+ERRO 4: "Cannot find module"
+───────────────────────────
+
+Significa: Dependências não foram instaladas
+
+Solução:
+  1. Execute: npm install
+  2. Aguarde terminar (~1-2 minutos)
+  3. Execute: npm run dev
+
+ERRO 5: "VITE_SUPABASE_URL is not defined"
+──────────────────────────────────────────
+
+Significa: Arquivo .env não está configurado
+
+Solução:
+  1. Abra: .env (arquivo oculto na raiz do projeto)
+  2. Adicione suas credenciais Supabase:
+     VITE_SUPABASE_URL=https://seu-projeto.supabase.co
+     VITE_SUPABASE_ANON_KEY=sua-chave-aqui
+  3. Salve o arquivo
+  4. Execute: npm run dev
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+QUANDO O SERVIDOR FICAR ONLINE (✅)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Você vai ver no terminal algo como:
+
+  ➜  Local:     http://localhost:3000/
+
+Agora você pode:
+
+1. Abrir seu navegador
+
+2. Copiar e colar a URL:
+   http://localhost:3000/clinica/agenda
+
+3. Ou pressionar Ctrl+Clique no link do terminal
+
+4. Página deve carregar! ✅
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TESTANDO A MIGRATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Quando o servidor estiver online:
+
+1. Acesse: http://localhost:3000/clinica/agenda
+
+2. Procure por um agendamento (appointment)
+
+3. Clique nele para abrir
+
+4. Verifique:
+   ✅ Há um campo "Status"?
+   ✅ Mostra "scheduled" ou outro status?
+   ✅ Há um seletor de status?
+   ✅ Há uma timeline visual?
+
+5. Se sim, a migration funcionou! 🎉
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CHECKLIST FINAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ ] npm run dev iniciado e rodando?
+[ ] Mensagem "ready in XXX ms" aparece?
+[ ] URL http://localhost:3000 carrega?
+[ ] Página não mostra erros?
+[ ] Consegue navegar para /clinica/agenda?
+[ ] Vê agendamentos (se tabela tiver dados)?
+[ ] Novo status aparece nos agendamentos?
+
+Se todas as respostas são "SIM" → Tudo está funcionando! ✅
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📝 RESUMO
+
+O servidor precisa estar rodando ANTES de acessar a URL.
+
+Próximos passos:
+1. Abra Terminal: Ctrl + `
+2. Execute: npm run dev
+3. Aguarde mensagem de sucesso
+4. Acesse: http://localhost:3000/clinica/agenda
+5. Teste a interface
+
+Se tiver mais erros, consulte a seção "ERROS COMUNS" acima.
+
+════════════════════════════════════════════════════════════════════════════════

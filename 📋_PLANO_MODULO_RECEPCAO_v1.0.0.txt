@@ -1,0 +1,411 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                                                                            ║
+║             📋 PLANO DE IMPLEMENTAÇÃO - MÓDULO RECEPÇÃO v1.0.0            ║
+║                                                                            ║
+║              Integração Operacional de Check-in + Fila de Espera          ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 VISÃO GERAL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FLUXO OPERACIONAL DE RECEPÇÃO:
+
+  1. AGENDADO         → Agendamento criado (status: scheduled)
+  2. CONFIRMADO       → Paciente confirmou (status: confirmed)
+  3. ✅ CHECK-IN      → Paciente chega na recepção (status: checked_in) ⭐ NOVO
+  4. ⏳ AGUARDANDO     → Fila de espera até profissional disponível (status: waiting)
+  5. 🔄 ATENDIMENTO   → Sendo atendido (status: in_progress)
+  6. ✔️ FINALIZADO    → Atendimento concluído (status: completed)
+
+INTEGRAÇÃO COM STATUS OFICIAL MODEL:
+  ✅ Usa status oficial existentes (não cria novos)
+  ✅ Apenas organiza o fluxo operacional
+  ✅ Adiciona data/hora/usuário ao check-in
+  ✅ Realtime para atualização automática
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🏗️ ARQUITETURA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ESTRUTURA DE PASTAS:
+
+src/modules/agenda/
+├── reception/                          ← NOVO MÓDULO
+│   ├── components/
+│   │   ├── CheckInButton.tsx           ← Botão check-in
+│   │   ├── CheckInDialog.tsx           ← Dialog check-in
+│   │   ├── WaitingQueuePanel.tsx       ← Fila de espera
+│   │   ├── OperationalDashboard.tsx    ← Painel operacional
+│   │   ├── QueueStatusBadge.tsx        ← Badge de status
+│   │   └── ReceptionTimeline.tsx       ← Timeline recepção
+│   ├── hooks/
+│   │   ├── useCheckIn.ts               ← Lógica check-in
+│   │   ├── useWaitingQueue.ts          ← Fila em tempo real
+│   │   ├── useReceptionOperations.ts   ← Operações recepção
+│   │   └── useReceptionRealtimeSync.ts ← Sync realtime
+│   ├── services/
+│   │   └── receptionApi.ts             ← API calls
+│   ├── types/
+│   │   └── reception.ts                ← Tipos TypeScript
+│   ├── constants/
+│   │   └── receptionConfig.ts          ← Config/const
+│   ├── utils/
+│   │   ├── queueOrdering.ts            ← Ordenação fila
+│   │   └── timeCalculations.ts         ← Cálculos de tempo
+│   └── index.ts                        ← Barrel export
+└── ... (resto do agenda module)
+
+NOVA TABELA/VIEW NO BANCO:
+  
+  reception_checkins (tabela nova)
+  ├── id (UUID)
+  ├── appointment_id (FK → appointments)
+  ├── clinic_id (FK → clinics)
+  ├── checked_in_at (timestamp)
+  ├── checked_in_by (user_id)
+  ├── updated_at (timestamp)
+  └── Índices: (clinic_id, checked_in_at), (appointment_id)
+
+  waiting_queue (VIEW em tempo real)
+  ├── Mostra agendamentos com status 'checked_in' ou 'waiting'
+  ├── Ordenação: checked_in_at ASC
+  ├── Filtra por clinic_id
+  └── Com cálculo de tempo_espera
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 FUNCIONALIDADES POR FASE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FASE 1: CHECK-IN BÁSICO
+─────────────────────
+
+[ ] Botão "Check-in" no agendamento
+[ ] Dialog de confirmação
+[ ] Registra horário check-in
+[ ] Registra usuário responsável
+[ ] Atualiza status para 'checked_in'
+[ ] Validação: só permite check-in em 'confirmed'
+[ ] Não permite duplicatas
+
+FASE 2: FILA DE ESPERA
+─────────────────────
+
+[ ] View: waiting_queue
+[ ] Lista pacientes aguardando
+[ ] Ordenação por check-in_at
+[ ] Cálculo tempo_espera (NOW - checked_in_at)
+[ ] Filtra por clinic_id
+[ ] Realtime subscription
+[ ] Atualiza a cada novo check-in
+
+FASE 3: PAINEL OPERACIONAL
+──────────────────────────
+
+[ ] Dashboard com 4 seções:
+    └─ Próximos (waiting)
+    └─ Em atendimento (in_progress)
+    └─ Finalizados (completed)
+    └─ Aguardando resposta (confirmados, não check-in)
+
+[ ] Cartões com informações
+[ ] Status visual com cores
+[ ] Atualização realtime
+[ ] Clique para abrir detalhes
+
+FASE 4: STATUS VISUAIS
+──────────────────────
+
+[ ] Cores por status recepção:
+    └─ checked_in: Roxo (#e9d5ff)
+    └─ waiting: Amarelo (#fef08a)
+    └─ in_progress: Ciano (#cffafe)
+
+[ ] Badges com ícones
+[ ] Indicadores de tempo
+[ ] Animações suaves
+
+FASE 5: REALTIME
+────────────────
+
+[ ] Supabase subscriptions
+[ ] Atualiza quando outro usuário faz check-in
+[ ] Sync entre abas do navegador
+[ ] Evita duplicatas com optimistic updates
+[ ] Trata reconexões
+
+FASE 6: PERFORMANCE
+───────────────────
+
+[ ] Memoização de componentes
+[ ] Query invalidation correta
+[ ] Virtualization para listas grandes
+[ ] Debounce de atualizações
+[ ] Lazy loading de dados
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔌 INTEGRAÇÃO COM STATUS OFICIAL MODEL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+NÃO CRIA NOVOS STATUSES!
+
+Usa os 8 status existentes:
+
+  Status Recepção    ← Mapeado para    → Status Oficial
+  ───────────────────────────────────────────────────
+  Check-in registrado                  checked_in
+  Na fila                              waiting
+  Sendo atendido                       in_progress
+  Finalizado                           completed
+
+O QUE ADICIONA:
+
+  Metadata de Recepção:
+  ├─ checked_in_at (hora do check-in)
+  ├─ checked_in_by (quem fez check-in)
+  ├─ waiting_since (hora que entrou na fila)
+  └─ tempo_espera_calculado (em tempo real)
+
+  Tabela: reception_checkins
+  ├─ Armazena check-ins
+  ├─ Histórico de tempo
+  └─ Rastreabilidade
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💾 BANCO DE DADOS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+SQL A EXECUTAR:
+
+-- Tabela de check-ins
+CREATE TABLE reception_checkins (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  appointment_id UUID NOT NULL REFERENCES appointments(id) ON DELETE CASCADE,
+  clinic_id UUID NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
+  checked_in_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  checked_in_by UUID NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  UNIQUE(appointment_id) -- Um check-in por agendamento
+);
+
+CREATE INDEX idx_reception_checkins_clinic_id 
+ON reception_checkins(clinic_id);
+
+CREATE INDEX idx_reception_checkins_appointment_id 
+ON reception_checkins(appointment_id);
+
+CREATE INDEX idx_reception_checkins_checked_in_at 
+ON reception_checkins(clinic_id, checked_in_at DESC);
+
+-- View de fila de espera
+CREATE OR REPLACE VIEW waiting_queue_view AS
+SELECT 
+  a.id,
+  a.appointment_id_original,
+  a.clinic_id,
+  a.patient_id,
+  a.scheduled_date,
+  a.official_status,
+  rc.checked_in_at,
+  rc.checked_in_by,
+  EXTRACT(EPOCH FROM (NOW() - rc.checked_in_at))::INTEGER as tempo_espera_segundos,
+  FLOOR(EXTRACT(EPOCH FROM (NOW() - rc.checked_in_at)) / 60)::INTEGER as tempo_espera_minutos
+FROM appointments a
+LEFT JOIN reception_checkins rc ON a.id = rc.appointment_id
+WHERE a.clinic_id = a.clinic_id
+  AND a.official_status IN ('checked_in', 'waiting')
+ORDER BY rc.checked_in_at ASC NULLS LAST;
+
+-- RLS Policies
+ALTER TABLE reception_checkins ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "usuarios_podem_ver_checkins_sua_clinica" ON reception_checkins
+  FOR SELECT USING (
+    clinic_id IN (
+      SELECT clinic_id FROM user_clinic_roles 
+      WHERE user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "usuarios_podem_criar_checkins" ON reception_checkins
+  FOR INSERT WITH CHECK (
+    clinic_id IN (
+      SELECT clinic_id FROM user_clinic_roles 
+      WHERE user_id = auth.uid()
+    )
+  );
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📦 COMPONENTES DETALHAMENTO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. CheckInButton
+   ├─ Props: appointment, onSuccess
+   ├─ Ativo se: status = 'confirmed'
+   ├─ Disabled se: já fez check-in
+   ├─ Abre CheckInDialog ao clicar
+   └─ Memoizado
+
+2. CheckInDialog
+   ├─ Confirmação visual
+   ├─ Mostra dados do paciente
+   ├─ Confirma horário
+   ├─ POST /reception/checkin
+   ├─ Handled optimistic updates
+   └─ Fecha após sucesso
+
+3. WaitingQueuePanel
+   ├─ Lista todos na fila
+   ├─ Realtime subscription
+   ├─ Ordenação por tempo
+   ├─ Mostra tempo_espera
+   ├─ Cards do paciente
+   └─ Virtualized para performance
+
+4. OperationalDashboard
+   ├─ 4 seções (próximos, atendimento, finalizados, aguardando)
+   ├─ Realtime para cada seção
+   ├─ Cards com drag-drop futuro
+   ├─ Status visual por cor
+   └─ Total count por seção
+
+5. QueueStatusBadge
+   ├─ Mostra tempo_espera
+   ├─ Cor baseada em tempo
+   ├─ Atualiza a cada segundo
+   ├─ Memoizado com useMemo
+   └─ Warning se > 30min
+
+6. ReceptionTimeline
+   ├─ Visual de horários
+   ├─ Entrada + tempo espera
+   ├─ Início atendimento
+   ├─ Fim atendimento
+   └─ Histórico completo
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🪝 HOOKS DETALHAMENTO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. useCheckIn()
+   ├─ Função: performCheckIn(appointmentId)
+   ├─ Valida: status = 'confirmed'
+   ├─ POST: /reception/checkin
+   ├─ Otimista: atualiza UI imediato
+   ├─ Invalidates: waitingQueue query
+   └─ Retorna: { loading, error, success }
+
+2. useWaitingQueue()
+   ├─ Query: SELECT * FROM waiting_queue_view
+   ├─ Realtime: subscriptions.on('*')
+   ├─ Auto-refresh: a cada 5 segundos
+   ├─ Cálculo: tempo_espera_minutos
+   ├─ Filtro: clinic_id
+   └─ Retorna: { queue, loading, isLive }
+
+3. useReceptionOperations()
+   ├─ Query: múltiplas (próximos, atendimento, finalizados)
+   ├─ Realtime: todas as seções
+   ├─ Agregação: totais por status
+   ├─ Cache: 30 segundos
+   └─ Retorna: { operationalData, loading }
+
+4. useReceptionRealtimeSync()
+   ├─ Monitora: receipt_checkins table
+   ├─ Subscriptions: INSERT, UPDATE, DELETE
+   ├─ Broadcast: envia eventos para outras abas
+   ├─ Deduplica: mesma mudança de múltiplas fontes
+   └─ Retorna: { syncStatus, lastUpdate }
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔐 RESTRIÇÕES & VALIDAÇÕES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+NÃO ALTERAR:
+✅ Módulo Financeiro (sem touch)
+✅ Faturamento (sem touch)
+✅ Status Oficial Model (apenas usa)
+✅ API de Agendamentos (apenas estende)
+
+VALIDAÇÕES IMPLANTADAS:
+✅ Check-in só em status 'confirmed'
+✅ Uma entrada por agendamento
+✅ Usuário autenticado obrigatório
+✅ Clinic_id validado em RLS
+✅ Timestamps com timezone
+✅ Soft-delete nunca
+
+COMPATIBILIDADE:
+✅ 100% backward compatible
+✅ Funciona com dados antigos
+✅ Migração automática de dados
+✅ Fallback se tabela não existir
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 MÉTRICAS DE SUCESSO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Performance:
+  ✅ Primeira renderização: < 1s
+  ✅ Tempo espera calculado: < 100ms
+  ✅ Realtime delay: < 500ms
+  ✅ Componentes renderizam: < 16ms
+
+UX:
+  ✅ Check-in: 1 clique
+  ✅ Fila atualiza: tempo real
+  ✅ Dashboard: intuitivo
+  ✅ Sem erros de duplicata
+
+Confiabilidade:
+  ✅ RLS protege dados
+  ✅ Validações no backend
+  ✅ Realtime sincronizado
+  ✅ Recupera de desconexões
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚀 ROADMAP DE IMPLEMENTAÇÃO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+DIA 1: Banco de Dados + Types
+  → SQL migration
+  → Types TypeScript
+
+DIA 2: API Services
+  → receptionApi.ts
+  → Funções CRUD
+  → Validações
+
+DIA 3: Componentes Básicos
+  → CheckInButton
+  → CheckInDialog
+  → QueueStatusBadge
+
+DIA 4: Fila de Espera
+  → WaitingQueuePanel
+  → Realtime queries
+  → Ordenação
+
+DIA 5: Dashboard Operacional
+  → OperationalDashboard
+  → 4 seções
+  → Realtime updates
+
+DIA 6: Realtime & Sync
+  → useReceptionRealtimeSync
+  → Broadcast entre abas
+  → Deduplicação
+
+DIA 7: Performance
+  → Memoization
+  → Query invalidation
+  → Testes
+
+DIA 8: Docs & Deploy
+  → Documentação
+  → Testes automatizados
+  → Review & merge
+
+════════════════════════════════════════════════════════════════════════════════
