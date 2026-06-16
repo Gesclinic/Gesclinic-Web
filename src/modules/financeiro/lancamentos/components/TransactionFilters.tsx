@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { Search, Filter, X, Save, Download, Trash2 } from 'lucide-react';
+import { Search, Filter, X, Save, Download, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -49,7 +49,7 @@ export const TransactionFilters = React.memo<TransactionFiltersProps>(({
   accounts,
   categories,
 }) => {
-  const [filtersView, setFiltersView] = useState<'expanded' | 'collapsed'>('expanded');
+  const [filtersOpen, setFiltersOpen] = useState(true);
   const [search, setSearch] = useState('');
   const [accountId, setAccountId] = useState('');
   const [type, setType] = useState('');
@@ -156,15 +156,16 @@ export const TransactionFilters = React.memo<TransactionFiltersProps>(({
           <h3 className="text-sm font-semibold text-gray-900">Filtros Avançados</h3>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Select value={filtersView} onValueChange={(value) => setFiltersView(value as 'expanded' | 'collapsed')}>
-            <SelectTrigger className="h-9 w-[170px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="expanded">Filtros abertos</SelectItem>
-              <SelectItem value="collapsed">Filtros recolhidos</SelectItem>
-            </SelectContent>
-          </Select>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setFiltersOpen((open) => !open)}
+            aria-expanded={filtersOpen}
+          >
+            {filtersOpen ? <ChevronUp className="mr-2 h-4 w-4" /> : <ChevronDown className="mr-2 h-4 w-4" />}
+            {filtersOpen ? 'Fechar filtros' : 'Abrir filtros'}
+          </Button>
           {hasActiveFilters && (
             <Button
               variant="ghost"
@@ -179,7 +180,7 @@ export const TransactionFilters = React.memo<TransactionFiltersProps>(({
         </div>
       </div>
 
-      {filtersView === 'collapsed' && (
+      {!filtersOpen && (
         <div className="flex flex-col gap-2 sm:flex-row">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -198,7 +199,7 @@ export const TransactionFilters = React.memo<TransactionFiltersProps>(({
         </div>
       )}
 
-      {filtersView === 'expanded' && (
+      {filtersOpen && (
         <>
 
       {/* Row 1: Busca e Conta */}

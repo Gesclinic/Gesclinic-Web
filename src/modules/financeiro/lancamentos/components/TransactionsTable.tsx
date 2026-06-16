@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Pencil, Trash2, RotateCcw, CheckCircle, AlertCircle, FileDown } from 'lucide-react';
+import { Pencil, Trash2, RotateCcw, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -378,7 +378,7 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
                     {column.label}
                   </th>
                 ))}
-                <th className="sticky right-0 z-30 w-[130px] border-l border-slate-200 bg-slate-50 px-4 py-3 text-right font-semibold text-slate-700">Ações</th>
+                <th className="sticky right-0 z-30 w-[180px] border-l border-slate-200 bg-slate-50 px-4 py-3 text-right font-semibold text-slate-700">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -387,12 +387,41 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
               const status = String(transaction.status || '').toLowerCase();
               const canEdit = !isDerived && status === 'pending';
               const canDelete = Boolean(onDelete);
+              const reconciled = isReconciledTransaction(transaction);
               const rowActions = [
-                { key: 'edit', label: 'Editar', icon: Pencil, show: canEdit && Boolean(onEdit), onClick: () => onEdit?.(transaction), className: 'text-blue-600 hover:text-blue-700 hover:bg-blue-50' },
-                { key: 'revert', label: 'Estornar', icon: RotateCcw, show: !isDerived && Boolean(onRevert), onClick: () => setRevertConfirm(transaction), className: 'text-orange-600 hover:text-orange-700 hover:bg-orange-50' },
-                { key: 'reconcile', label: 'Conciliar', icon: CheckCircle, show: !isDerived && !isReconciledTransaction(transaction) && Boolean(onReconcile), onClick: () => onReconcile?.(transaction), className: 'text-green-600 hover:text-green-700 hover:bg-green-50' },
-                { key: 'delete', label: 'Excluir', icon: Trash2, show: canDelete && Boolean(onDelete), onClick: () => setDeleteConfirm(transaction), className: 'text-red-600 hover:text-red-700 hover:bg-red-50' },
-              ].filter((action) => action.show);
+                {
+                  key: 'edit',
+                  label: canEdit ? 'Editar' : isDerived ? 'Editar no módulo de origem' : 'Edição indisponível',
+                  icon: Pencil,
+                  disabled: !canEdit || !onEdit,
+                  onClick: () => onEdit?.(transaction),
+                  className: 'text-blue-600 hover:text-blue-700 hover:bg-blue-50 disabled:text-slate-300',
+                },
+                {
+                  key: 'revert',
+                  label: isDerived ? 'Estorno indisponível para lançamento derivado' : 'Estornar',
+                  icon: RotateCcw,
+                  disabled: isDerived || !onRevert,
+                  onClick: () => setRevertConfirm(transaction),
+                  className: 'text-orange-600 hover:text-orange-700 hover:bg-orange-50 disabled:text-slate-300',
+                },
+                {
+                  key: 'reconcile',
+                  label: reconciled ? 'Já conciliado' : isDerived ? 'Conciliação indisponível para lançamento derivado' : 'Conciliar',
+                  icon: CheckCircle,
+                  disabled: isDerived || reconciled || !onReconcile,
+                  onClick: () => onReconcile?.(transaction),
+                  className: 'text-green-600 hover:text-green-700 hover:bg-green-50 disabled:text-slate-300',
+                },
+                {
+                  key: 'delete',
+                  label: 'Excluir',
+                  icon: Trash2,
+                  disabled: !canDelete || deletingId === transaction.id,
+                  onClick: () => setDeleteConfirm(transaction),
+                  className: 'text-red-600 hover:text-red-700 hover:bg-red-50 disabled:text-slate-300',
+                },
+              ];
 
               const renderColumn = (key: string) => {
                 if (key === 'date') {
@@ -461,18 +490,20 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
                       {rowActions.map((action) => {
                         const Icon = action.icon;
                         return (
-                        <Tooltip>
+                        <Tooltip key={action.key}>
                           <TooltipTrigger asChild>
+                            <span className="inline-flex" title={action.label}>
                             <Button
-                              key={action.key}
                               variant="ghost"
                               size="sm"
                               onClick={action.onClick}
-                              disabled={deletingId === transaction.id && action.key === 'delete'}
+                              disabled={action.disabled}
                               className={action.className}
+                              aria-label={action.label}
                             >
                               <Icon className="w-4 h-4" />
                             </Button>
+                            </span>
                           </TooltipTrigger>
                           <TooltipContent>{action.label}</TooltipContent>
                         </Tooltip>

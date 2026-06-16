@@ -27,6 +27,7 @@ export const FinancialTransactionsPage: React.FC = () => {
   const { user } = useAuth();
   const clinicContext = useClinicContext();
   const { clinicId } = clinicContext || {};
+  const [pageSize, setPageSize] = useState(50);
 
   // Debug
   React.useEffect(() => {
@@ -57,7 +58,7 @@ export const FinancialTransactionsPage: React.FC = () => {
     importTransactions,
     setFilters,
     setPage,
-  } = useFinancialTransactions();
+  } = useFinancialTransactions({ pageSize });
 
   // Fetch financial accounts
   const [accounts, setAccounts] = React.useState<any[]>([]);
@@ -164,6 +165,13 @@ export const FinancialTransactionsPage: React.FC = () => {
     fetchTransactions({}, { page: 1 });
   };
 
+  const handlePageSizeChange = (value: string) => {
+    const nextPageSize = Number(value);
+    setPageSize(nextPageSize);
+    setPage(1);
+    fetchTransactions(filters, { page: 1, limit: nextPageSize });
+  };
+
   const handleImport = async (data: any[]) => {
     try {
       const result = await importTransactions(data);
@@ -247,7 +255,27 @@ export const FinancialTransactionsPage: React.FC = () => {
 
       {/* Tabela */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Transações</h2>
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Transações</h2>
+            <p className="text-sm text-gray-500">Selecione a quantidade exibida para marcar mais lançamentos de uma vez.</p>
+          </div>
+          <label className="flex items-center gap-2 text-sm text-slate-600">
+            Itens por página
+            <select
+              className="h-9 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700"
+              value={pageSize}
+              onChange={(event) => handlePageSizeChange(event.target.value)}
+              aria-label="Itens por página"
+              title="Itens por página"
+            >
+              <option value="20">20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+              <option value="200">200</option>
+            </select>
+          </label>
+        </div>
         <TransactionsTable
           transactions={transactions}
           loading={loading}
@@ -261,7 +289,7 @@ export const FinancialTransactionsPage: React.FC = () => {
 
       {/* Paginação */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex flex-wrap items-center justify-center gap-2">
           <Button
             variant="outline"
             size="sm"
