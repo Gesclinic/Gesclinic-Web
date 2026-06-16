@@ -360,7 +360,7 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
         </div>
 
         <div className="max-h-[70vh] overflow-auto">
-          <table className="w-full min-w-[1180px] table-fixed text-sm">
+          <table className="w-full min-w-[1240px] table-fixed text-sm">
             <thead className="sticky top-0 z-20 border-b border-slate-200 bg-slate-50">
               <tr>
                 <th className="w-12 px-4 py-3 text-left font-semibold text-slate-700">
@@ -378,38 +378,41 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
                     {column.label}
                   </th>
                 ))}
-                <th className="sticky right-0 z-30 w-[180px] border-l border-slate-200 bg-slate-50 px-4 py-3 text-right font-semibold text-slate-700">Ações</th>
+                <th className="sticky right-0 z-30 w-[190px] border-l border-slate-200 bg-slate-50 px-3 py-3 text-right font-semibold text-slate-700">Ações</th>
               </tr>
             </thead>
             <tbody>
             {transactions.map((transaction, idx) => {
               const isDerived = isDerivedTransaction(transaction);
               const status = String(transaction.status || '').toLowerCase();
-              const canEdit = !isDerived && status === 'pending';
+              const isClosed = ['canceled', 'cancelado', 'reversed', 'estornado'].includes(status);
+              const canEdit = Boolean(onEdit) && !isClosed && !['paid', 'received', 'processed', 'pago', 'recebido', 'quitado'].includes(status);
               const canDelete = Boolean(onDelete);
               const reconciled = isReconciledTransaction(transaction);
+              const canRevert = Boolean(onRevert) && !isClosed;
+              const canReconcile = Boolean(onReconcile) && !reconciled && !isClosed;
               const rowActions = [
                 {
                   key: 'edit',
-                  label: canEdit ? 'Editar' : isDerived ? 'Editar no módulo de origem' : 'Edição indisponível',
+                  label: canEdit ? (isDerived ? 'Editar no módulo de origem' : 'Editar') : 'Edição indisponível',
                   icon: Pencil,
-                  disabled: !canEdit || !onEdit,
+                  disabled: !canEdit,
                   onClick: () => onEdit?.(transaction),
                   className: 'text-blue-600 hover:text-blue-700 hover:bg-blue-50 disabled:text-slate-300',
                 },
                 {
                   key: 'revert',
-                  label: isDerived ? 'Estorno indisponível para lançamento derivado' : 'Estornar',
+                  label: canRevert ? 'Estornar' : 'Estorno indisponível',
                   icon: RotateCcw,
-                  disabled: isDerived || !onRevert,
+                  disabled: !canRevert,
                   onClick: () => setRevertConfirm(transaction),
                   className: 'text-orange-600 hover:text-orange-700 hover:bg-orange-50 disabled:text-slate-300',
                 },
                 {
                   key: 'reconcile',
-                  label: reconciled ? 'Já conciliado' : isDerived ? 'Conciliação indisponível para lançamento derivado' : 'Conciliar',
+                  label: reconciled ? 'Já conciliado' : canReconcile ? 'Conciliar' : 'Conciliação indisponível',
                   icon: CheckCircle,
-                  disabled: isDerived || reconciled || !onReconcile,
+                  disabled: !canReconcile,
                   onClick: () => onReconcile?.(transaction),
                   className: 'text-green-600 hover:text-green-700 hover:bg-green-50 disabled:text-slate-300',
                 },
@@ -484,8 +487,8 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
                     {renderColumn(column.key)}
                   </td>
                 ))}
-                <td className="sticky right-0 z-10 border-l border-slate-100 bg-inherit px-4 py-3 align-middle">
-                  <div className="flex items-center justify-end gap-1 whitespace-nowrap">
+                <td className="sticky right-0 z-10 border-l border-slate-100 bg-inherit px-3 py-3 align-middle">
+                  <div className="flex min-w-[152px] items-center justify-end gap-1 whitespace-nowrap">
                     <TooltipProvider>
                       {rowActions.map((action) => {
                         const Icon = action.icon;
@@ -498,7 +501,7 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
                               size="sm"
                               onClick={action.onClick}
                               disabled={action.disabled}
-                              className={action.className}
+                              className={`h-8 w-8 p-0 ${action.className}`}
                               aria-label={action.label}
                             >
                               <Icon className="w-4 h-4" />

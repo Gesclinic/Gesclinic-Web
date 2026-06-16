@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus, AlertCircle, Inbox } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
@@ -24,6 +25,7 @@ import {
 } from '../types';
 
 export const FinancialTransactionsPage: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const clinicContext = useClinicContext();
   const { clinicId } = clinicContext || {};
@@ -100,10 +102,24 @@ export const FinancialTransactionsPage: React.FC = () => {
   }, []);
 
   const handleEdit = useCallback((transaction: FinancialTransaction) => {
+    const origin = String(transaction.origin_module || '').toLowerCase();
+    const id = String(transaction.id || '');
+    const originId = transaction.origin_id || id.replace(/^(ar|ap|ft)-/, '');
+
+    if (origin === 'accounts_receivable' || id.startsWith('ar-')) {
+      navigate(`/clinica/financeiro/receber/${originId}/editar`);
+      return;
+    }
+
+    if (origin === 'accounts_payable' || id.startsWith('ap-')) {
+      navigate(`/clinica/financeiro/contas-pagar/${originId}/editar`);
+      return;
+    }
+
     setEditingTransaction(transaction);
     setFormError(null);
     setFormOpen(true);
-  }, []);
+  }, [navigate]);
 
   const handleFormSubmit = async (
     data: FinancialTransactionCreateInput | FinancialTransactionUpdateInput

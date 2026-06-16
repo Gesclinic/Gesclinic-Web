@@ -8,8 +8,8 @@ import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useClinicContext } from '@/contexts/ClinicContext';
 import { customSupabaseClient } from '@/lib/customSupabaseClient';
 import { buildDerivedFinancialTransactions, getFinancialConsolidation } from '@/lib/financialConsolidationApi';
-import { deleteReceivable } from '@/lib/receivablesApi';
-import { deleteAP } from '@/lib/financeApi';
+import { deleteReceivable, updateReceivable } from '@/lib/receivablesApi';
+import { deleteAP, updateAP } from '@/lib/financeApi';
 import { invalidateDashboardDataCache } from '@/services/dashboardDataService';
 import {
   FinancialTransaction,
@@ -578,6 +578,25 @@ export const useFinancialTransactions = (options: UseFinancialTransactionsOption
         const original = transactions.find(t => t.id === id);
         if (!original) throw new Error('Transação não encontrada');
 
+        const origin = getTransactionOrigin(original);
+        const originId = original.origin_id || getPersistedTransactionId(original);
+        const now = new Date().toLocaleDateString('pt-BR');
+        const notes = `${original.notes || ''} [Estornado em ${now}${reason ? `: ${reason}` : ''}]`.trim();
+
+        if (origin === 'accounts_receivable') {
+          await updateReceivable(originId, { status: 'reversed', notes }, clinicId);
+          invalidateDashboardDataCache(clinicId);
+          await fetchTransactions();
+          return null;
+        }
+
+        if (origin === 'accounts_payable') {
+          await updateAP(originId, { status: 'REVERSED', notes });
+          invalidateDashboardDataCache(clinicId);
+          await fetchTransactions();
+          return null;
+        }
+
         // Criar transação reversa - usar nomes de coluna corretos
         const reversalInput: FinancialTransactionCreateInput = {
           account_id: original.account_id,
@@ -595,7 +614,7 @@ export const useFinancialTransactions = (options: UseFinancialTransactionsOption
         throw err;
       }
     },
-    [clinicId, user?.id, transactions, createTransaction]
+    [clinicId, user?.id, transactions, createTransaction, fetchTransactions]
   );
 
   // =====================================================
@@ -605,7 +624,40 @@ export const useFinancialTransactions = (options: UseFinancialTransactionsOption
   const reconcileTransaction = useCallback(
     async (id: string): Promise<void> => {
       try {
-        // NOTA: is_reconciled não existe na tabela, apenas adicionar uma nota
+        const transaction = transactions.find(t => t.id === id);
+        const today = new Date().toISOString().split('T')[0];
+
+        if (transaction) {
+          const origin = getTransactionOrigin(transaction);
+          const originId = transaction.origin_id || getPersistedTransactionId(transaction);
+          const notes = `${transaction.notes || ''} [Conciliado: ${new Date().toLocaleDateString('pt-BR')}]`.trim();
+
+          if (origin === 'accounts_receivable') {
+            await updateReceivable(originId, {
+              status: 'received',
+              received_date: today,
+              received_at: `${today}T00:00:00`,
+              received_value: Number(transaction.amount || 0),
+              paid_total: Number(transaction.amount || 0),
+              notes,
+            }, clinicId);
+            invalidateDashboardDataCache(clinicId);
+            await fetchTransactions();
+            return;
+          }
+
+          if (origin === 'accounts_payable') {
+            await updateAP(originId, {
+              status: 'PAID',
+              paid_amount: Number(transaction.amount || 0),
+              notes,
+            });
+            invalidateDashboardDataCache(clinicId);
+            await fetchTransactions();
+            return;
+          }
+        }
+
         await updateTransaction(id, {
           notes: 'Conciliado em ' + new Date().toLocaleDateString('pt-BR'),
         });
@@ -613,7 +665,7 @@ export const useFinancialTransactions = (options: UseFinancialTransactionsOption
         throw err;
       }
     },
-    [updateTransaction]
+    [clinicId, transactions, updateTransaction, fetchTransactions]
   );
 
   const reconcileMultiple = useCallback(
