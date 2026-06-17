@@ -28,8 +28,11 @@ import { useCashFormData } from '../hooks/useCashFormData';
 import { useRepasseCalculation } from '../hooks/useRepasseCalculation';
 import { toastService } from '../hooks/useToastManager';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+
+import { FiltersPanel } from './FiltersPanel';
+import { ImportExportPanel } from './ImportExportPanel';
 
 const CaixaIndividualOperador = () => {
   const { user } = useAuth();
@@ -250,6 +253,65 @@ const CaixaIndividualOperador = () => {
     }
   };
 
+  const handleImportMovements = async (importedData) => {
+    if (!drawer?.id || drawer?.status !== 'open' || !clinicId || !user?.id) {
+      toastService.error('Erro', 'Caixa deve estar aberto para importar movimentos');
+      return;
+    }
+
+    try {
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const row of importedData) {
+        try {
+          // Validar dados obrigatórios
+          if (!row['Valor'] || !row['Forma de Pagamento'] || !row['Tipo (entrada/saida)']) {
+            errorCount++;
+            continue;
+          }
+
+          const payload = {
+            drawer_id: drawer.id,
+            clinic_id: clinicId,
+            created_by: user.id,
+            amount: Number(row['Valor']),
+            payment_method: row['Forma de Pagamento'],
+            type: row['Tipo (entrada/saida)'].toLowerCase(),
+            description: row['Descrição'] || '',
+            patient_id: row['Patient ID (opcional)'] || null,
+            professional_id: row['Professional ID (opcional)'] || null,
+          };
+
+          await addMovement(payload);
+          successCount++;
+        } catch (err) {
+          console.error('Erro ao importar linha:', err);
+          errorCount++;
+        }
+      }
+
+      // Recarregar resumo
+      if (drawer?.id) {
+        const summ = await cashDrawerApi.getMovementSummary(drawer.id);
+        setSummary(summ);
+        const paymentMethodData = await cashConsolidationApi.getPaymentMethodSummary(drawer.id);
+        setPaymentMethodSummary(paymentMethodData);
+        await fetchMovements();
+      }
+
+      if (successCount > 0) {
+        toastService.success('Sucesso', `${successCount} movimento(s) importado(s) com sucesso!`);
+      }
+      if (errorCount > 0) {
+        toastService.error('Atenção', `${errorCount} linha(s) não foram importadas. Verifique os dados.`);
+      }
+    } catch (err) {
+      toastService.error('Erro', 'Erro ao processar importação');
+      console.error('Erro na importação:', err);
+    }
+  };
+
   const handleFilterChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
@@ -266,14 +328,15 @@ const CaixaIndividualOperador = () => {
     });
   };
 
-  const saveFilterWithName = () => {
-    if (!filterName.trim()) {
+  const saveFilterWithName = (nameArg) => {
+    const effectiveName = (nameArg || filterName || '').trim();
+    if (!effectiveName) {
       return;
     }
 
     const newFilter = {
       id: Date.now(),
-      name: filterName,
+      name: effectiveName,
       filters: { ...filters },
     };
 
@@ -346,32 +409,12 @@ const CaixaIndividualOperador = () => {
     XLSX.writeFile(wb, `Caixa_Individual_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
-  const exportToPDF = () => {
-    const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text('RELATÓRIO CAIXA INDIVIDUAL', 14, 15);
-
-    doc.setFontSize(10);
-    doc.text(`Data de Geração: ${new Date().toLocaleDateString('pt-BR')}`, 14, 25);
-    doc.text(`Operador: ${operatorName || 'N/A'}`, 14, 32);
-
-    // Seção de Resumo
-    doc.setFontSize(12);
-    doc.text('RESUMO DO DIA', 14, 45);
-    doc.setFontSize(10);
-    doc.text(`Saldo Aberto: ${formatCurrency(drawer?.opening_balance)}`, 14, 55);
-    doc.text(`Saldo Atual: ${formatCurrency(summary?.balance)}`, 14, 62);
-    doc.text(`Total de Entradas: ${formatCurrency(summary?.totalEntrada)}`, 14, 69);
-    doc.text(`Total de Saídas: ${formatCurrency(summary?.totalSaida)}`, 14, 76);
-
-    // Tabela de Movimentos Filtrados
-    if (filteredMovements.length > 0) {
-      const tableData = filteredMovements.map((m) => [
+  const exportToCSV = () => {
+    const lines = [
+      'Hora;Paciente;Servico;Convenio;Tipo;Profissional;Forma_Pagamento;Valor;Status',
+      ...filteredMovements.map((m) => [
         m.created_at
-          ? new Date(m.created_at).toLocaleTimeString('pt-BR', {
-              hour: '2-digit',
-              minute: '2-digit',
-            })
+          ? new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
           : 'N/A',
         m.patient?.name || 'Particular',
         m.service?.name || 'N/A',
@@ -379,61 +422,139 @@ const CaixaIndividualOperador = () => {
         m.type === 'entrada' ? 'Entrada' : 'Saida',
         m.professional?.name || 'N/A',
         m.payment_method || 'N/A',
-        formatCurrency(m.amount),
+        Number(m.amount || 0).toFixed(2),
         m.status ? m.status.charAt(0).toUpperCase() + m.status.slice(1) : 'N/A',
-      ]);
+      ].join(';')),
+    ];
 
-      doc.setFontSize(11);
-      doc.text('MOVIMENTOS FILTRADOS', 14, 85);
+    const blob = new Blob([`\uFEFF${lines.join('\n')}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Caixa_Individual_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
-      doc.autoTable({
-        head: [
-          [
-            'HORA',
-            'PACIENTE',
-            'SERVICO',
-            'CONVENIO',
-            'TIPO',
-            'PROFISSIONAL',
-            'FORMA PGTO',
-            'VALOR',
-            'STATUS',
-          ],
-        ],
-        body: tableData,
-        startY: 92,
-        theme: 'grid',
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [66, 133, 244], textColor: [255, 255, 255], fontStyle: 'bold' },
-        columnStyles: {
-          7: { halign: 'right' }, // Align valor to right
-        },
-      });
-    } else {
+  const exportToPDF = () => {
+    try {
+      const doc = new jsPDF();
+      doc.setFontSize(16);
+      doc.text('RELATÓRIO CAIXA INDIVIDUAL', 14, 15);
+
       doc.setFontSize(10);
-      doc.text('Nenhum movimento registrado com os filtros selecionados.', 14, 90);
-    }
+      doc.text(`Data de Geração: ${new Date().toLocaleDateString('pt-BR')}`, 14, 25);
+      doc.text(`Operador: ${operatorName || 'N/A'}`, 14, 32);
 
-    doc.save(`Caixa_Individual_${new Date().toISOString().split('T')[0]}.pdf`);
+      // Seção de Resumo
+      doc.setFontSize(12);
+      doc.text('RESUMO DO DIA', 14, 45);
+      doc.setFontSize(10);
+      doc.text(`Saldo Aberto: ${formatCurrency(drawer?.opening_balance)}`, 14, 55);
+      doc.text(`Saldo Atual: ${formatCurrency(summary?.balance)}`, 14, 62);
+      doc.text(`Total de Entradas: ${formatCurrency(summary?.totalEntrada)}`, 14, 69);
+      doc.text(`Total de Saídas: ${formatCurrency(summary?.totalSaida)}`, 14, 76);
+
+      // Tabela de Movimentos Filtrados
+      if (filteredMovements.length > 0) {
+        const tableData = filteredMovements.map((m) => [
+          m.created_at
+            ? new Date(m.created_at).toLocaleTimeString('pt-BR', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })
+            : 'N/A',
+          m.patient?.name || 'Particular',
+          m.service?.name || 'N/A',
+          m.payer_type === 'convenio' && m.payer ? m.payer.name : 'Particular',
+          m.type === 'entrada' ? 'Entrada' : 'Saida',
+          m.professional?.name || 'N/A',
+          m.payment_method || 'N/A',
+          formatCurrency(m.amount),
+          m.status ? m.status.charAt(0).toUpperCase() + m.status.slice(1) : 'N/A',
+        ]);
+
+        doc.setFontSize(11);
+        doc.text('MOVIMENTOS FILTRADOS', 14, 85);
+
+        autoTable(doc, {
+          head: [
+            [
+              'HORA',
+              'PACIENTE',
+              'SERVICO',
+              'CONVENIO',
+              'TIPO',
+              'PROFISSIONAL',
+              'FORMA PGTO',
+              'VALOR',
+              'STATUS',
+            ],
+          ],
+          body: tableData,
+          startY: 92,
+          theme: 'grid',
+          styles: { fontSize: 8 },
+          headStyles: { fillColor: [66, 133, 244], textColor: [255, 255, 255], fontStyle: 'bold' },
+          columnStyles: {
+            7: { halign: 'right' },
+          },
+        });
+      } else {
+        doc.setFontSize(10);
+        doc.text('Nenhum movimento registrado com os filtros selecionados.', 14, 90);
+      }
+
+      doc.save(`Caixa_Individual_${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (error) {
+      console.error('Erro ao gerar PDF do caixa individual:', error);
+      toastService.error('Erro', 'Não foi possível gerar o PDF.');
+    }
   };
 
   const handlePrint = () => {
     window.print();
   };
 
+  const parseFilterDate = (value, endOfDay = false) => {
+    if (!value) {
+      return null;
+    }
+
+    let day;
+    let month;
+    let year;
+
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+      [day, month, year] = value.split('/').map(Number);
+    } else if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      [year, month, day] = value.split('-').map(Number);
+    } else {
+      return null;
+    }
+
+    const date = endOfDay
+      ? new Date(year, month - 1, day, 23, 59, 59, 999)
+      : new Date(year, month - 1, day, 0, 0, 0, 0);
+
+    return Number.isNaN(date.getTime()) ? null : date;
+  };
+
   // Aplicar filtros aos movimentos
   const filteredMovements = movements.filter((mov) => {
     if (filters.startDate) {
-      const movDate = new Date(mov.created_at).toDateString();
-      const filterDate = new Date(filters.startDate).toDateString();
-      if (movDate < filterDate) {
+      const movDate = new Date(mov.created_at);
+      const filterDate = parseFilterDate(filters.startDate);
+      if (filterDate && movDate < filterDate) {
         return false;
       }
     }
     if (filters.endDate) {
-      const movDate = new Date(mov.created_at).toDateString();
-      const filterDate = new Date(filters.endDate).toDateString();
-      if (movDate > filterDate) {
+      const movDate = new Date(mov.created_at);
+      const filterDate = parseFilterDate(filters.endDate, true);
+      if (filterDate && movDate > filterDate) {
         return false;
       }
     }
@@ -473,54 +594,77 @@ const CaixaIndividualOperador = () => {
     <div className="min-h-screen bg-slate-50 p-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-800">Caixa Individual / Controle Diário</h1>
-            <p className="text-slate-500 mt-2">
-              Abertura e fechamento diário do caixa com rastreabilidade de movimentações.
-            </p>
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            {hasOpenDrawer ? (
-              <button
-                onClick={() => setShowCloseModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
-              >
-                <AlertCircle size={16} />
-                Fechar Caixa do Dia
-              </button>
-            ) : (
-              <button
-                onClick={() => setShowOpenModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-              >
-                <Wallet size={16} />
-                Abrir Caixa do Dia
-              </button>
-            )}
-            <button
-              onClick={exportToExcel}
-              disabled={!drawer}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-            >
-              <FileSpreadsheet size={16} />
-              Excel
-            </button>
-            <button
-              onClick={exportToPDF}
-              disabled={!drawer}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
-            >
-              <FileText size={16} />
-              PDF
-            </button>
-            <button
-              onClick={handlePrint}
-              className="flex items-center gap-2 px-4 py-2 bg-slate-600 text-white rounded-lg text-sm font-medium hover:bg-slate-700 transition-colors"
-            >
-              <Printer size={16} />
-              Imprimir
-            </button>
+        <div className="mb-8">
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-slate-800">Caixa Individual / Controle Diário</h1>
+              <p className="text-slate-500 mt-2">
+                Abertura e fechamento diário do caixa com rastreabilidade de movimentações.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 items-end shrink-0">
+              {/* Linha 1: Ação principal (abrir/fechar caixa) */}
+              <div className="flex gap-2">
+                {hasOpenDrawer ? (
+                  <button
+                    onClick={() => setShowCloseModal(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+                  >
+                    <AlertCircle size={16} />
+                    Fechar Caixa do Dia
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setShowOpenModal(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    <Wallet size={16} />
+                    Abrir Caixa do Dia
+                  </button>
+                )}
+              </div>
+              {/* Linha 2: Exportação e importação */}
+              <div className="flex gap-2">
+                <button
+                  onClick={exportToExcel}
+                  disabled={!drawer}
+                  className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
+                >
+                  <FileSpreadsheet size={15} />
+                  Excel
+                </button>
+                <button
+                  onClick={exportToCSV}
+                  disabled={!drawer}
+                  className="flex items-center gap-2 px-3 py-2 bg-emerald-700 text-white rounded-lg text-sm font-medium hover:bg-emerald-800 transition-colors disabled:opacity-50"
+                >
+                  <FileText size={15} />
+                  CSV
+                </button>
+                <button
+                  onClick={exportToPDF}
+                  disabled={!drawer}
+                  className="flex items-center gap-2 px-3 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
+                >
+                  <FileText size={15} />
+                  PDF
+                </button>
+                <button
+                  onClick={handlePrint}
+                  className="flex items-center gap-2 px-3 py-2 bg-slate-600 text-white rounded-lg text-sm font-medium hover:bg-slate-700 transition-colors"
+                >
+                  <Printer size={15} />
+                  Imprimir
+                </button>
+                <ImportExportPanel
+                  onImportSuccess={handleImportMovements}
+                  templateColumns={['Forma de Pagamento', 'Tipo (entrada/saida)', 'Valor', 'Descrição', 'Patient ID (opcional)', 'Professional ID (opcional)']}
+                  templateFilename="template_movimentos_caixa.xlsx"
+                  requiredFields={['Forma de Pagamento', 'Tipo (entrada/saida)', 'Valor']}
+                  title="Importar Movimentos"
+                />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -643,6 +787,21 @@ const CaixaIndividualOperador = () => {
             ))}
           </div>
         )}
+
+        <div className="mb-6">
+          <FiltersPanel
+            filters={filters}
+            onFilterChange={handleFilterChange}
+            onClearFilters={clearFilters}
+            onSaveFilter={saveFilterWithName}
+            savedFilters={savedFilters}
+            onLoadFilter={loadSavedFilter}
+            onDeleteFilter={deleteSavedFilter}
+            paymentMethods={uniquePaymentMethods}
+            professionals={professionals}
+            payers={payers}
+          />
+        </div>
 
         {/* 🎯 Tabs Navigation */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-100 mb-6 overflow-hidden">
@@ -793,177 +952,6 @@ const CaixaIndividualOperador = () => {
             {/* Movimentos Tab */}
             {activeTab === 'movimentos' && (
               <div className="space-y-4">
-                {/* Botão para Mostrar/Ocultar Filtros */}
-                <button
-                  onClick={() => setShowFilters(!showFilters)}
-                  className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg font-semibold hover:bg-slate-200 transition-colors mb-2"
-                >
-                  {showFilters ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                  {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
-                </button>
-
-                {/* Filtros Avançados */}
-                {showFilters && (
-                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-4 animate-in fade-in duration-200">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-600 mb-1">
-                          Data Inicial
-                        </label>
-                        <input
-                          type="date"
-                          value={filters.startDate}
-                          onChange={(e) => handleFilterChange('startDate', e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-600 mb-1">
-                          Data Final
-                        </label>
-                        <input
-                          type="date"
-                          value={filters.endDate}
-                          onChange={(e) => handleFilterChange('endDate', e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-600 mb-1">
-                          Tipo
-                        </label>
-                        <select
-                          value={filters.type}
-                          onChange={(e) => handleFilterChange('type', e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">Todos</option>
-                          <option value="entrada">Entrada</option>
-                          <option value="saida">Saída</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-600 mb-1">
-                          Origem
-                        </label>
-                        <select
-                          value={filters.origin}
-                          onChange={(e) => handleFilterChange('origin', e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">Todos</option>
-                          <option value="agenda">Agenda</option>
-                          <option value="manual">Manual</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-600 mb-1">
-                          Profissional
-                        </label>
-                        <select
-                          value={filters.professionalId}
-                          onChange={(e) => handleFilterChange('professionalId', e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">Todos</option>
-                          {uniqueProfessionals.map((prof) => (
-                            <option key={prof} value={prof}>
-                              {prof}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-600 mb-1">
-                          Convênio
-                        </label>
-                        <select
-                          value={filters.payerId}
-                          onChange={(e) => handleFilterChange('payerId', e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">Todos</option>
-                          {uniquePayers.map((payer) => (
-                            <option key={payer} value={payer}>
-                              {payer}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-600 mb-1">
-                          Forma Pgto
-                        </label>
-                        <select
-                          value={filters.paymentMethod}
-                          onChange={(e) => handleFilterChange('paymentMethod', e.target.value)}
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">Todos</option>
-                          {uniquePaymentMethods.map((method) => (
-                            <option key={method} value={method}>
-                              {method}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="flex items-end">
-                        <button
-                          onClick={clearFilters}
-                          className="w-full px-3 py-2 bg-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-300 transition-colors"
-                        >
-                          Limpar
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Botões de Ação de Filtros */}
-                    <div className="flex gap-2 mt-4 flex-wrap">
-                      <button
-                        onClick={() => setShowSaveModal(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
-                      >
-                        <Save size={16} />
-                        Salvar Filtro
-                      </button>
-                      {savedFilters.length > 0 && (
-                        <div className="flex items-center gap-2">
-                          <select
-                            onChange={(e) => {
-                              const filter = savedFilters.find(
-                                (f) => f.id.toString() === e.target.value,
-                              );
-                              if (filter) {
-                                loadSavedFilter(filter);
-                              }
-                            }}
-                            className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                          >
-                            <option value="">Carregar filtro salvo...</option>
-                            {savedFilters.map((f) => (
-                              <option key={f.id} value={f.id}>
-                                {f.name}
-                              </option>
-                            ))}
-                          </select>
-                          <div className="flex gap-1">
-                            {savedFilters.map((f) => (
-                              <button
-                                key={f.id}
-                                onClick={() => deleteSavedFilter(f.id)}
-                                className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
-                                title={`Deletar "${f.name}"`}
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
                 <div className="flex justify-between items-center mb-4">
                   <p className="text-sm text-slate-600">
                     Exibindo <span className="font-semibold">{filteredMovements.length}</span> de{' '}

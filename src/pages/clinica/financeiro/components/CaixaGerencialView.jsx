@@ -29,6 +29,12 @@ import externalBalanceApi from '@/lib/externalBalanceApi';
 import reconciliationApi from '@/lib/reconciliationApi';
 import TransferApprovalModal from './TransferApprovalModal';
 
+import { ImportExportPanel } from './ImportExportPanel';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
+import { formatCurrency } from '@/lib/exportImportUtils';
+
 const CaixaGerencialView = () => {
   const { user } = useAuth();
   const { clinicId } = useClinicContext();
@@ -46,6 +52,18 @@ const CaixaGerencialView = () => {
   const [showTransferForm, setShowTransferForm] = useState(false);
   const [selectedApprovalTransfer, setSelectedApprovalTransfer] = useState(null);
   const [approvalLoading, setApprovalLoading] = useState(false);
+  const [showImportPreviewModal, setShowImportPreviewModal] = useState(false);
+  const [importPreview, setImportPreview] = useState({ validRows: [], validations: [], rawTotal: 0 });
+  const [importExecutionSummary, setImportExecutionSummary] = useState('');
+  const [importProcessing, setImportProcessing] = useState(false);
+  const [ignoreInvalidRowsForPersist, setIgnoreInvalidRowsForPersist] = useState(false);
+  const [filters, setFilters] = useState({
+    startDate: '',
+    endDate: '',
+    status: '',
+    paymentMethod: '',
+    search: '',
+  });
   const [transferData, setTransferData] = useState({
     fromDrawerId: '',
     toAccountId: '',
@@ -123,6 +141,410 @@ const CaixaGerencialView = () => {
     }
   };
 
+  const exportToExcelConsolidation = () => {
+    if (!consolidation) {
+      return;
+    }
+
+    const data = [
+      ['RELATORIO CAIXA GERAL - CONSOLIDACAO'],
+      ['Data Geracao', new Date().toLocaleDateString('pt-BR')],
+      [],
+      ['RESUMO'],
+      ['Dinheiro em Caixas', formatCurrency(consolidation?.summary?.cashInDrawers)],
+      ['Caixa Geral', formatCurrency(consolidation?.summary?.generalCash)],
+      ['Saldos Bancarios', formatCurrency(consolidation?.summary?.bank)],
+      ['Cartoes', formatCurrency(consolidation?.summary?.card)],
+      ['PIX/TED', formatCurrency(consolidation?.summary?.pix)],
+      ['Cheques/Boletos', formatCurrency(consolidation?.summary?.check)],
+      ['Total Consolidado', formatCurrency(consolidation?.summary?.total)],
+      [],
+      ['CAIXAS INDIVIDUAIS'],
+      ['Data', 'Operador', 'Status', 'Saldo Abertura', 'Saldo Esperado', 'Saldo Real'],
+      ...filteredDrawers.map((d) => [
+        new Date(d.date_opened).toLocaleDateString('pt-BR'),
+        d.operator?.name || 'N/A',
+        d.status,
+        Number(d.opening_balance || 0),
+        Number(d.expected_balance || 0),
+        Number(d.closing_balance || 0),
+      ]),
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Caixa Geral');
+    XLSX.writeFile(wb, `Caixa_Geral_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
+  const exportToCSVConsolidation = () => {
+    if (!consolidation) {
+      return;
+    }
+
+    const lines = [
+      'Data;Operador;Status;Saldo_Abertura;Saldo_Esperado;Saldo_Real',
+      ...filteredDrawers.map((d) => [
+        new Date(d.date_opened).toLocaleDateString('pt-BR'),
+        d.operator?.name || 'N/A',
+        d.status,
+        Number(d.opening_balance || 0).toFixed(2),
+        Number(d.expected_balance || 0).toFixed(2),
+        Number(d.closing_balance || 0).toFixed(2),
+      ].join(';')),
+    ];
+
+    const blob = new Blob([`\uFEFF${lines.join('\n')}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Caixa_Geral_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportToPDFConsolidation = () => {
+    if (!consolidation) {
+      return;
+    }
+
+    try {
+      const doc = new jsPDF();
+      doc.setFontSize(14);
+      doc.text('RELATORIO CAIXA GERAL - CONSOLIDACAO', 14, 16);
+      doc.setFontSize(10);
+      doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 24);
+
+      autoTable(doc, {
+        startY: 30,
+        head: [['Indicador', 'Valor']],
+        body: [
+          ['Dinheiro em Caixas', formatCurrency(consolidation?.summary?.cashInDrawers)],
+          ['Caixa Geral', formatCurrency(consolidation?.summary?.generalCash)],
+          ['Saldos Bancarios', formatCurrency(consolidation?.summary?.bank)],
+          ['Cartoes', formatCurrency(consolidation?.summary?.card)],
+          ['PIX/TED', formatCurrency(consolidation?.summary?.pix)],
+          ['Cheques/Boletos', formatCurrency(consolidation?.summary?.check)],
+          ['Total Consolidado', formatCurrency(consolidation?.summary?.total)],
+        ],
+        styles: { fontSize: 9 },
+      });
+
+      const firstTableEndY = doc.lastAutoTable?.finalY || 90;
+      autoTable(doc, {
+        startY: firstTableEndY + 8,
+        head: [['Data', 'Operador', 'Status', 'Saldo Esperado', 'Saldo Real']],
+        body: filteredDrawers.map((d) => [
+          new Date(d.date_opened).toLocaleDateString('pt-BR'),
+          d.operator?.name || 'N/A',
+          d.status,
+          formatCurrency(d.expected_balance || 0),
+          formatCurrency(d.closing_balance || 0),
+        ]),
+        styles: { fontSize: 8 },
+      });
+
+      doc.save(`Caixa_Geral_${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (error) {
+      console.error('Erro ao gerar PDF do caixa geral:', error);
+      alert('Nao foi possivel gerar o PDF. Tente novamente.');
+    }
+  };
+
+  const parseImportedDate = (value) => {
+    if (!value) {
+      return null;
+    }
+
+    const text = String(value).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+      return text;
+    }
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(text)) {
+      const [dd, mm, yyyy] = text.split('/');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+    return null;
+  };
+
+  const normalizeImportedStatus = (value) => {
+    const status = String(value || 'open').trim().toLowerCase();
+    if (['open', 'aberto'].includes(status)) {
+      return 'open';
+    }
+    if (['closed_full', 'fechado_ok', 'fechado ok', 'fechado'].includes(status)) {
+      return 'closed_full';
+    }
+    if (['closed_partial', 'divergencia', 'fechado_divergencia', 'fechado divergencia'].includes(status)) {
+      return 'closed_partial';
+    }
+    return null;
+  };
+
+  const buildImportPreview = (rows) => {
+    const validations = [];
+    const validRows = [];
+
+    rows.forEach((row, index) => {
+      const line = index + 2;
+      const operatorId = String(row['Operador ID'] || '').trim();
+      const dateIso = parseImportedDate(row['Data']);
+      const status = normalizeImportedStatus(row['Status']);
+      const opening = row['Saldo Abertura'] === undefined || row['Saldo Abertura'] === ''
+        ? 0
+        : Number(row['Saldo Abertura']);
+      const closing = row['Saldo Fechamento'] === undefined || row['Saldo Fechamento'] === ''
+        ? null
+        : Number(row['Saldo Fechamento']);
+
+      const errors = [];
+      if (!operatorId) {
+        errors.push('Operador ID obrigatório');
+      }
+      if (!dateIso) {
+        errors.push('Data inválida (use dd/mm/aaaa ou yyyy-mm-dd)');
+      }
+      if (Number.isNaN(opening) || opening < 0) {
+        errors.push('Saldo Abertura inválido');
+      }
+      if (closing !== null && (Number.isNaN(closing) || closing < 0)) {
+        errors.push('Saldo Fechamento inválido');
+      }
+      if (!status) {
+        errors.push('Status inválido (open/closed_full/closed_partial)');
+      }
+      if (status && status !== 'open' && closing === null) {
+        errors.push('Saldo Fechamento obrigatório para caixas fechados');
+      }
+
+      if (errors.length > 0) {
+        validations.push(`Linha ${line}: ${errors.join(' | ')}`);
+      } else {
+        validRows.push({
+          operatorId,
+          dateIso,
+          opening,
+          closing,
+          status,
+          notes: String(row['Notas'] || ''),
+        });
+      }
+    });
+
+    return { validRows, validations, rawTotal: rows.length };
+  };
+
+  const executeDrawerImport = async (simulationMode) => {
+    if (!clinicId || !user?.id) {
+      alert('Clínica/usuário não identificados para importação.');
+      return;
+    }
+
+    if (!importPreview.validRows || importPreview.validRows.length === 0) {
+      alert('Nenhuma linha válida para processar.');
+      return;
+    }
+
+    if (!simulationMode && importPreview.validations.length > 0 && !ignoreInvalidRowsForPersist) {
+      setImportExecutionSummary(
+        'Existem linhas inválidas. Marque a opção "Ignorar inválidas e persistir apenas válidas" para continuar.',
+      );
+      return;
+    }
+
+    setImportProcessing(true);
+    try {
+      const counters = {
+        created: 0,
+        closed: 0,
+        unchanged: 0,
+        failed: 0,
+      };
+      const actionLog = [];
+
+      for (const row of importPreview.validRows) {
+        try {
+          const existing = await cashDrawerApi.getDrawerForDate(clinicId, row.operatorId, row.dateIso);
+
+          if (!existing) {
+            if (simulationMode) {
+              counters.created++;
+              actionLog.push(`Criaria caixa ${row.dateIso} operador ${row.operatorId}`);
+            } else {
+              const created = await cashDrawerApi.openDrawer(clinicId, row.operatorId, row.dateIso, row.opening);
+              counters.created++;
+
+              if (row.status !== 'open') {
+                await cashDrawerApi.closeDrawer(
+                  created.id,
+                  row.closing,
+                  row.status === 'closed_full' ? row.closing : row.opening,
+                  row.notes,
+                );
+                counters.closed++;
+              }
+            }
+            continue;
+          }
+
+          if (row.status !== 'open') {
+            if (simulationMode) {
+              counters.closed++;
+              actionLog.push(`Fecharia caixa existente ${row.dateIso} operador ${row.operatorId}`);
+            } else {
+              await cashDrawerApi.closeDrawer(
+                existing.id,
+                row.closing,
+                row.status === 'closed_full' ? row.closing : row.opening,
+                row.notes,
+              );
+              counters.closed++;
+            }
+          } else {
+            counters.unchanged++;
+          }
+        } catch (error) {
+          counters.failed++;
+          actionLog.push(`Falha ${row.dateIso}/${row.operatorId}: ${error.message}`);
+        }
+      }
+
+      const summary = [
+        simulationMode ? 'SIMULAÇÃO concluída:' : 'IMPORTAÇÃO concluída:',
+        `Criados: ${counters.created}`,
+        `Fechados/atualizados: ${counters.closed}`,
+        `Sem alteração: ${counters.unchanged}`,
+        `Falhas: ${counters.failed}`,
+        importPreview.validations.length > 0 ? `Linhas inválidas: ${importPreview.validations.length}` : null,
+      ]
+        .filter(Boolean)
+        .join('\n');
+
+      if (simulationMode && actionLog.length > 0) {
+        console.table(actionLog.slice(0, 100));
+      }
+
+      setImportExecutionSummary(summary);
+
+      if (!simulationMode) {
+        await loadData();
+      }
+    } finally {
+      setImportProcessing(false);
+    }
+  };
+
+  const handleImportDrawerData = async (rows) => {
+    if (!clinicId || !user?.id) {
+      alert('Clínica/usuário não identificados para importação.');
+      return;
+    }
+
+    if (!rows || rows.length === 0) {
+      alert('Arquivo sem linhas para importar.');
+      return;
+    }
+
+    const preview = buildImportPreview(rows);
+    setImportPreview(preview);
+    setImportExecutionSummary('');
+    setIgnoreInvalidRowsForPersist(false);
+    setShowImportPreviewModal(true);
+
+    if (preview.validRows.length === 0) {
+      setImportExecutionSummary(`Importação bloqueada.\n${preview.validations.slice(0, 10).join('\n')}`);
+      return;
+    }
+  };
+
+  const handlePrintConsolidation = () => {
+    window.print();
+  };
+
+  const normalizeDateInput = (value) => {
+    const digits = (value || '').replace(/\D/g, '').slice(0, 8);
+    if (digits.length <= 2) {
+      return digits;
+    }
+    if (digits.length <= 4) {
+      return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    }
+    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+  };
+
+  const parseFilterDate = (value, endOfDay = false) => {
+    if (!value) {
+      return null;
+    }
+
+    let day;
+    let month;
+    let year;
+
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+      [day, month, year] = value.split('/').map(Number);
+    } else if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      [year, month, day] = value.split('-').map(Number);
+    } else {
+      return null;
+    }
+
+    const date = endOfDay
+      ? new Date(year, month - 1, day, 23, 59, 59, 999)
+      : new Date(year, month - 1, day, 0, 0, 0, 0);
+
+    return Number.isNaN(date.getTime()) ? null : date;
+  };
+
+  const handleDateFilterChange = (key, value) => {
+    setFilters((prev) => ({
+      ...prev,
+      [key]: normalizeDateInput(value),
+    }));
+  };
+
+  const filteredDrawers = drawers.filter((d) => {
+    const opened = new Date(d.date_opened);
+    const start = parseFilterDate(filters.startDate);
+    const end = parseFilterDate(filters.endDate, true);
+
+    if (start && opened < start) {
+      return false;
+    }
+    if (end && opened > end) {
+      return false;
+    }
+    if (filters.status && d.status !== filters.status) {
+      return false;
+    }
+    if (filters.search && !(d.operator?.name || '').toLowerCase().includes(filters.search.toLowerCase())) {
+      return false;
+    }
+    return true;
+  });
+
+  const filteredTransfers = transfers.filter((t) => {
+    const transferDate = new Date(t.transfer_date || t.created_at);
+    const start = parseFilterDate(filters.startDate);
+    const end = parseFilterDate(filters.endDate, true);
+
+    if (start && transferDate < start) {
+      return false;
+    }
+    if (end && transferDate > end) {
+      return false;
+    }
+    if (filters.status && t.status !== filters.status) {
+      return false;
+    }
+    if (filters.paymentMethod && t.payment_method !== filters.paymentMethod) {
+      return false;
+    }
+    return true;
+  });
+
   const selectedDrawer = drawers.find((drawer) => drawer.id === transferData.fromDrawerId);
   const selectedDrawerAvailable = Number(
     selectedDrawer?.expected_balance ?? selectedDrawer?.closing_balance ?? selectedDrawer?.opening_balance ?? 0,
@@ -196,13 +618,141 @@ const CaixaGerencialView = () => {
             pagamento
           </p>
         </div>
-        <button
-          onClick={handleCreateTransfer}
-          className="flex items-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-bold shadow-sm"
-        >
-          <Plus size={18} />
-          Nova Transferência
-        </button>
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={handleCreateTransfer}
+            className="flex items-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-bold shadow-sm"
+          >
+            <Plus size={18} />
+            Nova Transferência
+          </button>
+
+          <button
+            onClick={() => exportToExcelConsolidation()}
+            className="flex items-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all font-bold shadow-sm"
+          >
+            <FileText size={18} />
+            Excel
+          </button>
+
+          <button
+            onClick={() => exportToCSVConsolidation()}
+            className="flex items-center gap-2 px-4 py-3 bg-emerald-700 text-white rounded-lg hover:bg-emerald-800 transition-all font-bold shadow-sm"
+          >
+            <FileText size={18} />
+            CSV
+          </button>
+
+          <button
+            onClick={() => exportToPDFConsolidation()}
+            className="flex items-center gap-2 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all font-bold shadow-sm"
+          >
+            <FileText size={18} />
+            PDF
+          </button>
+
+          <button
+            onClick={handlePrintConsolidation}
+            className="flex items-center gap-2 px-4 py-3 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-all font-bold shadow-sm"
+          >
+            <FileText size={18} />
+            Imprimir
+          </button>
+
+          <ImportExportPanel
+            onImportSuccess={handleImportDrawerData}
+            templateColumns={['Operador ID', 'Data', 'Saldo Abertura', 'Saldo Fechamento', 'Status', 'Notas']}
+            templateFilename="template_caixa_geral.xlsx"
+            requiredFields={['Operador ID', 'Data']}
+            title="Importar Caixa"
+          />
+        </div>
+      </div>
+
+      <div className="mb-6 bg-white rounded-xl border border-slate-200 p-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 items-end">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold text-slate-500">Data Início</label>
+            <input
+              type="text"
+              inputMode="numeric"
+              placeholder="dd/mm/aaaa"
+              maxLength={10}
+              value={filters.startDate}
+              onChange={(e) => handleDateFilterChange('startDate', e.target.value)}
+              className="h-10 px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold text-slate-500">Data Fim</label>
+            <input
+              type="text"
+              inputMode="numeric"
+              placeholder="dd/mm/aaaa"
+              maxLength={10}
+              value={filters.endDate}
+              onChange={(e) => handleDateFilterChange('endDate', e.target.value)}
+              className="h-10 px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold text-slate-500">Status</label>
+            <select
+              value={filters.status}
+              onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value }))}
+              className="h-10 px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            >
+              <option value="">Todos</option>
+              <option value="open">Aberto</option>
+              <option value="closed_full">Fechado OK</option>
+              <option value="closed_partial">Fechado com Divergencia</option>
+              <option value="pending">Pendente</option>
+              <option value="confirmed">Confirmado</option>
+              <option value="canceled">Cancelado</option>
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold text-slate-500">Forma de Pagamento</label>
+            <select
+              value={filters.paymentMethod}
+              onChange={(e) => setFilters((prev) => ({ ...prev, paymentMethod: e.target.value }))}
+              className="h-10 px-3 py-2 border border-slate-300 rounded-lg text-sm"
+            >
+              <option value="">Todas</option>
+              <option value="DINHEIRO">Dinheiro</option>
+              <option value="CARTAO_CREDITO">Cartao Credito</option>
+              <option value="CARTAO_DEBITO">Cartao Debito</option>
+              <option value="PIX">PIX</option>
+              <option value="TED">TED</option>
+              <option value="BOLETO">Boleto</option>
+              <option value="CHEQUE">Cheque</option>
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1 xl:col-span-2">
+            <label className="text-xs font-semibold text-slate-500">Buscar Operador</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Digite o nome do operador..."
+                value={filters.search}
+                onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
+                className="h-10 flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              />
+              <button
+                onClick={() =>
+                  setFilters({ startDate: '', endDate: '', status: '', paymentMethod: '', search: '' })
+                }
+                className="h-10 px-3 py-2 bg-slate-100 rounded-lg text-sm font-semibold hover:bg-slate-200"
+              >
+                Limpar
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Alertas de Divergências */}
@@ -220,7 +770,25 @@ const CaixaGerencialView = () => {
         </div>
       )}
 
-
+      {/* Cards de Consolidação */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
+        {summaryCards.map((card, index) => (
+          <div
+            key={index}
+            className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow"
+          >
+            <div className={`h-1 bg-gradient-to-r ${card.color}`} />
+            <div className="p-4">
+              <div className="p-2 w-fit rounded-lg bg-slate-50 text-slate-600 mb-3">
+                <card.icon size={20} />
+              </div>
+              <p className="text-xs font-medium text-slate-500">{card.title}</p>
+              <h3 className="text-lg font-bold text-slate-800 mt-1">{card.value}</h3>
+              {card.detail && <p className="text-xs text-slate-400 mt-2">{card.detail}</p>}
+            </div>
+          </div>
+        ))}
+      </div>
 
       {/* Tabs Navigation */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
@@ -280,122 +848,6 @@ const CaixaGerencialView = () => {
                       ))}
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Dinheiro em Espécie */}
-                    <div className="p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border-2 border-green-200">
-                      <div className="flex items-center gap-3 mb-4">
-                        <Wallet className="text-green-600" size={24} />
-                        <h3 className="font-bold text-green-800">Dinheiro em Espécie</h3>
-                      </div>
-                      <p className="text-3xl font-bold text-green-900">
-                        R$ {(consolidation?.summary?.cashInDrawers || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </p>
-                      <p className="text-sm text-green-700 mt-2">
-                        Caixas fechados: {drawers.filter((d) => d.status !== 'open').length}
-                      </p>
-                    </div>
-
-                    {/* Caixa Geral */}
-                    <div className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border-2 border-blue-200">
-                      <div className="flex items-center gap-3 mb-4">
-                        <Landmark className="text-blue-600" size={24} />
-                        <h3 className="font-bold text-blue-800">Caixa Geral</h3>
-                      </div>
-                      <p className="text-3xl font-bold text-blue-900">
-                        R$ {(consolidation?.summary?.generalCash || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </p>
-                      <p className="text-sm text-blue-700 mt-2">Transferências confirmadas</p>
-                    </div>
-
-                    {/* Saldos Bancários */}
-                    <div className="p-6 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border-2 border-purple-200">
-                      <div className="flex items-center gap-3 mb-4">
-                        <Landmark className="text-purple-600" size={24} />
-                        <h3 className="font-bold text-purple-800">Saldos Bancários</h3>
-                      </div>
-                      <p className="text-3xl font-bold text-purple-900">
-                        R$ {(consolidation?.summary?.bank || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </p>
-                      <p className="text-sm text-purple-700 mt-2">
-                        {consolidation?.details?.bankAccounts?.length || 0} conta(s) bancária(s)
-                      </p>
-                    </div>
-
-                    {/* Cartões */}
-                    <div className="p-6 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg border-2 border-orange-200">
-                      <div className="flex items-center gap-3 mb-4">
-                        <CreditCard className="text-orange-600" size={24} />
-                        <h3 className="font-bold text-orange-800">Cartões</h3>
-                      </div>
-                      <p className="text-3xl font-bold text-orange-900">
-                        R$ {(consolidation?.summary?.card || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </p>
-                      <p className="text-sm text-orange-700 mt-2">
-                        {consolidation?.details?.cardAccounts?.length || 0} processador(es)
-                      </p>
-                    </div>
-
-                    {/* PIX/TED */}
-                    <div className="p-6 bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-lg border-2 border-cyan-200">
-                      <div className="flex items-center gap-3 mb-4">
-                        <Zap className="text-cyan-600" size={24} />
-                        <h3 className="font-bold text-cyan-800">PIX / TED</h3>
-                      </div>
-                      <p className="text-3xl font-bold text-cyan-900">
-                        R$ {(consolidation?.summary?.pix || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </p>
-                      <p className="text-sm text-cyan-700 mt-2">Transferências eletrônicas</p>
-                    </div>
-
-                    {/* Cheques */}
-                    <div className="p-6 bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg border-2 border-slate-200">
-                      <div className="flex items-center gap-3 mb-4">
-                        <FileText className="text-slate-600" size={24} />
-                        <h3 className="font-bold text-slate-800">Cheques</h3>
-                      </div>
-                      <p className="text-3xl font-bold text-slate-900">
-                        R$ {(consolidation?.summary?.check || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </p>
-                      <p className="text-sm text-slate-700 mt-2">Em processamento</p>
-                    </div>
-                  </div>
-
-                  {/* Resumo Total */}
-                  <div className="p-8 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border-2 border-amber-300">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-semibold text-amber-700">SALDO TOTAL CONSOLIDADO</p>
-                        <p className="text-4xl font-bold text-amber-900 mt-2">
-                          R$ {(consolidation?.summary?.total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </p>
-                      </div>
-                      <TrendingUp className="text-amber-600" size={40} />
-                    </div>
-                  </div>
-
-                  {/* Divergências */}
-                  {discrepancies.length > 0 && (
-                    <div className="bg-red-50 border-2 border-red-200 rounded-lg p-6">
-                      <div className="flex items-center gap-2 mb-4">
-                        <AlertCircle className="text-red-600" size={20} />
-                        <h3 className="font-bold text-red-800">Divergências de Caixas</h3>
-                      </div>
-                      <div className="space-y-2">
-                        {discrepancies.map((disc) => (
-                          <div key={disc.drawerId} className="text-sm text-red-700">
-                            <span className="font-semibold">
-                              {new Date(disc.date).toLocaleDateString('pt-BR')}
-                            </span>
-                            : Diferença de{' '}
-                            <span className="font-bold">
-                              R$ {Math.abs(disc.difference).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                            </span>
-                            ({disc.percentDifference > 0 ? '+' : ''}{disc.percentDifference}%)
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
               {/* Caixas Individuais Tab */}
@@ -415,8 +867,8 @@ const CaixaGerencialView = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
-                        {drawers && drawers.length > 0 ? (
-                          drawers.map((d) => {
+                        {filteredDrawers && filteredDrawers.length > 0 ? (
+                          filteredDrawers.map((d) => {
                             const expected = Number(d.expected_balance || 0);
                             const actual = Number(d.closing_balance || 0);
                             const diff = actual - expected;
@@ -486,8 +938,8 @@ const CaixaGerencialView = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {transfers && transfers.length > 0 ? (
-                      transfers.map((t) => (
+                    {filteredTransfers && filteredTransfers.length > 0 ? (
+                      filteredTransfers.map((t) => (
                         <tr key={t.id} className="hover:bg-slate-50/50 transition-colors">
                           <td className="px-4 py-4 text-slate-500 text-sm">
                             {new Date(t.transfer_date || t.created_at).toLocaleDateString('pt-BR')}
@@ -844,6 +1296,136 @@ const CaixaGerencialView = () => {
         }}
         isLoading={approvalLoading}
       />
+
+      {showImportPreviewModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-slate-50">
+              <div>
+                <h2 className="text-xl font-bold text-slate-800">Prévia da Importação de Caixa</h2>
+                <p className="text-sm text-slate-500 mt-1">
+                  Total: {importPreview.rawTotal} | Válidas: {importPreview.validRows.length} | Inválidas: {importPreview.validations.length}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  if (!importProcessing) {
+                    setShowImportPreviewModal(false);
+                  }
+                }}
+                className="text-slate-400 hover:text-slate-600"
+                disabled={importProcessing}
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 overflow-y-auto max-h-[calc(90vh-130px)]">
+              {importPreview.validRows.length > 0 ? (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <h3 className="text-sm font-bold text-green-800 mb-3">Linhas válidas (prévia)</h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead>
+                        <tr className="text-slate-500 text-xs uppercase">
+                          <th className="py-2 pr-4">Operador ID</th>
+                          <th className="py-2 pr-4">Data</th>
+                          <th className="py-2 pr-4">Status</th>
+                          <th className="py-2 pr-4 text-right">Abertura</th>
+                          <th className="py-2 pr-4 text-right">Fechamento</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {importPreview.validRows.slice(0, 30).map((row, idx) => (
+                          <tr key={`${row.operatorId}-${row.dateIso}-${idx}`} className="border-t border-green-100">
+                            <td className="py-2 pr-4 text-slate-700">{row.operatorId}</td>
+                            <td className="py-2 pr-4 text-slate-700">{row.dateIso}</td>
+                            <td className="py-2 pr-4 text-slate-700">{row.status}</td>
+                            <td className="py-2 pr-4 text-right text-slate-700">{Number(row.opening).toFixed(2)}</td>
+                            <td className="py-2 pr-4 text-right text-slate-700">{row.closing === null ? '-' : Number(row.closing).toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {importPreview.validRows.length > 30 && (
+                    <p className="text-xs text-slate-500 mt-2">
+                      Exibindo 30 de {importPreview.validRows.length} linhas válidas.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <p className="text-sm font-semibold text-red-800">Nenhuma linha válida para processar.</p>
+                </div>
+              )}
+
+              {importPreview.validations.length > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <h3 className="text-sm font-bold text-amber-800 mb-3">Linhas inválidas</h3>
+                  <div className="max-h-40 overflow-y-auto space-y-1">
+                    {importPreview.validations.slice(0, 120).map((msg, idx) => (
+                      <p key={`${msg}-${idx}`} className="text-xs text-amber-900">• {msg}</p>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {importPreview.validations.length > 0 && (
+                <label className="flex items-start gap-2 p-3 rounded-lg border border-amber-200 bg-amber-50">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={ignoreInvalidRowsForPersist}
+                    onChange={(e) => setIgnoreInvalidRowsForPersist(e.target.checked)}
+                    disabled={importProcessing}
+                  />
+                  <span className="text-sm text-amber-900">
+                    Ignorar inválidas e persistir apenas válidas
+                    <span className="block text-xs text-amber-700 mt-1">
+                      Serão persistidas {importPreview.validRows.length} de {importPreview.rawTotal} linhas.
+                    </span>
+                  </span>
+                </label>
+              )}
+
+              {importExecutionSummary && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 whitespace-pre-line text-sm text-blue-900">
+                  {importExecutionSummary}
+                </div>
+              )}
+            </div>
+
+            <div className="p-5 border-t border-slate-100 flex flex-wrap justify-end gap-2 bg-white">
+              <button
+                onClick={() => setShowImportPreviewModal(false)}
+                disabled={importProcessing}
+                className="px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              >
+                Fechar
+              </button>
+              <button
+                onClick={() => executeDrawerImport(true)}
+                disabled={importProcessing || importPreview.validRows.length === 0}
+                className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50"
+              >
+                {importProcessing ? 'Processando...' : 'Simular'}
+              </button>
+              <button
+                onClick={() => executeDrawerImport(false)}
+                disabled={
+                  importProcessing ||
+                  importPreview.validRows.length === 0 ||
+                  (importPreview.validations.length > 0 && !ignoreInvalidRowsForPersist)
+                }
+                className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50"
+              >
+                {importProcessing ? 'Processando...' : 'Persistir no Banco'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
