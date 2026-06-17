@@ -54,7 +54,7 @@ export const KPI_DASHBOARD_GERAL = {
       metrica: 'number',
       periodo: 'month',
       valor: 0,
-      acao: '/clinica/agenda/indicadores',
+      acao: '/clinica/agenda',
       descricao: 'Total de consultas/procedimentos executados',
       tendencia: {
         anterior: 312,
@@ -69,7 +69,7 @@ export const KPI_DASHBOARD_GERAL = {
       periodo: 'month',
       valor: 0,
       meta: 75,
-      acao: '/clinica/agenda/indicadores',
+      acao: '/clinica/agenda',
       descricao: 'Percentual de slots preenchidos vs disponíveis',
       tendencia: {
         anterior: 68,
@@ -129,7 +129,7 @@ export const KPI_AGENDA = {
       metrica: 'percent',
       periodo: 'month',
       valor: 0,
-      acao: '/clinica/agenda/indicadores',
+      acao: '/clinica/agenda',
       descricao: 'Pacientes que faltaram sem cancelar',
       tendencia: {
         anterior: 12,
@@ -143,7 +143,7 @@ export const KPI_AGENDA = {
       metrica: 'duration',
       periodo: 'month',
       valor: 0,
-      acao: '/clinica/agenda/indicadores',
+      acao: '/clinica/agenda',
       descricao: 'Duração média das consultas',
       unidade: 'minutos',
     },

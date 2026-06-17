@@ -64,6 +64,9 @@ export const CashCharts: React.FC<CashChartsProps> = ({
   evolucaoDiaria,
 }) => {
   const formatCurrency = (value: number) => {
+    if (value === null || value === undefined) {
+      return 'R$ 0';
+    }
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',

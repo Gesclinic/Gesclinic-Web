@@ -418,7 +418,7 @@ export default function EditarRecebimento() {
                 </div>
                 <div className="rounded border bg-white px-3 py-2">
                   <p className="text-slate-500">Saldo</p>
-                  <p className="font-semibold text-slate-900">{netValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                  <p className="font-semibold text-slate-900">{(netValue || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                 </div>
               </div>
             </div>
@@ -635,11 +635,11 @@ export default function EditarRecebimento() {
                     </div>
                     <div>
                       <p className="text-xs text-gray-600">Desconto</p>
-                      <p className="text-lg font-bold text-red-600">-{cardFee.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                      <p className="font-semibold text-slate-900">{(cardFee || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-600">Recebimento Líquido</p>
-                      <p className="text-lg font-bold text-green-600">{netValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                      <p className="text-lg font-bold text-green-600">{(netValue || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                     </div>
                   </div>
                 </div>
@@ -650,7 +650,7 @@ export default function EditarRecebimento() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3 rounded border bg-slate-50 p-3 text-sm">
             <div>
               <p className="text-xs text-slate-500">Receita DRE</p>
-              <p className="font-semibold text-slate-900">{amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+              <p className="font-semibold text-slate-900">{(amount || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
             </div>
             <div>
               <p className="text-xs text-slate-500">Descontos e taxas</p>

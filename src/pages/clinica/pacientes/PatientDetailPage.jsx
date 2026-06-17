@@ -267,25 +267,31 @@ export default function PatientDetailPage() {
       setActiveTab(requestedTab);
     }
 
-    // ✅ Carregar profissional do atendimento se veio da agenda
-    const appointmentId = location.state?.appointmentId;
-
     // ✅ Verificar se veio de um atendimento (via localStorage)
     const appointmentModeData = localStorage.getItem('fromAppointmentMode');
+    let storedAppointmentMode = null;
     let fromAppointment = false;
     if (appointmentModeData) {
       try {
         const data = JSON.parse(appointmentModeData);
-        const isRecent = Date.now() - data.timestamp < 5000; // 5 segundos
-        if (isRecent) {
+        const isRecent = Date.now() - data.timestamp < 8 * 60 * 60 * 1000;
+        const isSamePatient = !data.patientId || data.patientId === patientId;
+        if (isRecent && isSamePatient) {
           console.log('👨‍⚕️ Vindo de um atendimento em andamento:', data);
+          storedAppointmentMode = data;
           fromAppointment = true;
           setComingFromAppointment(true);
+          if (data.professionalName) {
+            setDefaultProfessional(String(data.professionalName).trim());
+          }
         }
       } catch (err) {
         console.warn('⚠️ Erro ao parsear fromAppointmentMode:', err);
       }
     }
+
+    // ✅ Carregar profissional do atendimento se veio da agenda
+    const appointmentId = location.state?.appointmentId || storedAppointmentMode?.appointmentId;
 
     if (location.state?.fromAgendaClinicalFlow) {
       fromAppointment = true;
@@ -312,7 +318,8 @@ export default function PatientDetailPage() {
 
           if (data) {
             console.log('📋 Dados do atendimento recebidos:', data);
-            const professionalName = data.professionals?.name || '';
+            const professionalName =
+              data.professionals?.name || location.state?.professionalName || storedAppointmentMode?.professionalName || '';
             const normalizedStatus = migrateStatus(data.status);
             console.log('👤 Nome do profissional extraído:', professionalName);
 
@@ -420,6 +427,7 @@ export default function PatientDetailPage() {
           appointmentId: appointmentFlow.appointmentId,
           patientId,
           appointmentDate: appointmentFlow.scheduledDate,
+          professionalName: defaultProfessional,
           timestamp: Date.now(),
         }),
       );

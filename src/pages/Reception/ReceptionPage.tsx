@@ -1,6 +1,6 @@
 /**
  * Página: Reception
- * Rota: /clinica/agenda/recepcao
+ * Legado: o fluxo operacional de recepção foi consolidado em /clinica/agenda.
  * 
  * Dashboard operacional completo da recepção
  * Mostra fila em tempo real, próximo paciente, estatísticas

@@ -33,10 +33,6 @@ const ROLE_PERMISSIONS = {
     'dashboard',
     'agenda',
     'agenda.agenda',
-    'agenda.confirmacoes',
-    'agenda.espera',
-    'agenda.recepcao',
-    'agenda.indicadores',
     'pacientes.lista',
     'base_sistema.*',
     'financeiro.*',
@@ -54,8 +50,8 @@ const ROLE_PERMISSIONS = {
     'estoque.relatorios',
     'faturamento.*',
   ],
-  medico: ['dashboard', 'agenda', 'agenda.agenda', 'agenda.confirmacoes', 'pacientes.*'],
-  recepcao: ['dashboard', 'agenda.*', 'pacientes.*'],
+  medico: ['dashboard', 'agenda', 'agenda.agenda', 'pacientes.*'],
+  recepcao: ['dashboard', 'agenda.*', 'pacientes.*', 'financeiro.caixa'],
 };
 
 export function getMenuItems(role = 'admin') {
@@ -75,9 +71,7 @@ export function getMenuItems(role = 'admin') {
     // ============================
     // 2️⃣ AGENDA — GESTÃO DE COMPROMISSOS
     // ============================
-    // 🟢 REFATORAÇÃO ETAPA 2: Agenda Única com Tabs Internos
-    // - Agenda Geral, Por Profissional, Por Sala = TABS (não menu items, não mudam URL)
-    // - Confirmações, Lista de Espera, Indicadores = Submenu items com rotas próprias
+    // Agenda única: sem submenus operacionais separados.
     {
       id: 'agenda',
       label: 'Agenda',
@@ -93,38 +87,6 @@ export function getMenuItems(role = 'admin') {
           path: '/clinica/agenda',
           roles: ['admin', 'gestor', 'medico', 'recepcao', 'profissional'],
           featurePath: 'agenda',
-        },
-        {
-          id: 'agenda.confirmacoes',
-          label: 'Confirmações',
-          icon: 'CheckCircle',
-          path: '/clinica/agenda/confirmacoes',
-          roles: ['admin', 'gestor', 'recepcao'],
-          featurePath: 'agenda.confirmacoes',
-        },
-        {
-          id: 'agenda.espera',
-          label: 'Lista de Espera',
-          icon: 'Clock',
-          path: '/clinica/agenda/espera',
-          roles: ['admin', 'gestor', 'recepcao'],
-          featurePath: 'agenda.espera',
-        },
-        {
-          id: 'agenda.recepcao',
-          label: 'Recepção',
-          icon: 'DoorOpen',
-          path: '/clinica/agenda/recepcao',
-          roles: ['admin', 'gestor', 'recepcao'],
-          featurePath: 'agenda.recepcao',
-        },
-        {
-          id: 'agenda.indicadores',
-          label: 'Indicadores',
-          icon: 'BarChart3',
-          path: '/clinica/agenda/indicadores',
-          roles: ['admin', 'gestor'],
-          featurePath: 'agenda.indicadores',
         },
       ],
     },
@@ -229,15 +191,14 @@ export function getMenuItems(role = 'admin') {
     // ============================
     // 5️⃣ FINANCEIRO — CONTROLE ECONÔMICO
     // ============================
-    // 🎯 REORGANIZAÇÃO: Estrutura simplificada com foco em integração Agenda → Lançamentos → DRE
-    // Removido: Caixa Individual, Caixa Gerencial, Autorização Descontos, ETAPA 1
+    // 🎯 REORGANIZAÇÃO: Estrutura simplificada com foco em integração Agenda → Caixa → Lançamentos → DRE
     // Reorganizado em 5 grupos: Dashboard, Movimento, Estrutura, Análise, Especiais
     {
       id: 'financeiro',
       label: 'Financeiro',
       icon: 'Wallet',
       path: '/clinica/financeiro',
-      roles: ['admin', 'gestor', 'financeiro'],
+      roles: ['admin', 'gestor', 'financeiro', 'recepcao'],
       featurePath: 'financeiro',
       children: [
         // 1. DASHBOARD - Entry Point
@@ -248,6 +209,41 @@ export function getMenuItems(role = 'admin') {
           path: '/clinica/financeiro',
           roles: ['admin', 'gestor', 'financeiro'],
           featurePath: 'financeiro.visao_geral',
+        },
+
+        {
+          id: 'financeiro.controle_caixa',
+          label: 'Controle de Caixa',
+          icon: 'Landmark',
+          path: '/clinica/financeiro/caixa-gerencial',
+          roles: ['admin', 'gestor', 'financeiro', 'recepcao'],
+          featurePath: 'financeiro.controle_caixa',
+          children: [
+            {
+              id: 'financeiro.caixa',
+              label: 'Caixa Individual',
+              icon: 'WalletCards',
+              path: '/clinica/financeiro/caixa',
+              roles: ['admin', 'gestor', 'financeiro', 'recepcao'],
+              featurePath: 'financeiro.caixa',
+            },
+            {
+              id: 'financeiro.caixa_geral',
+              label: 'Caixa Geral',
+              icon: 'Landmark',
+              path: '/clinica/financeiro/caixa-gerencial',
+              roles: ['admin', 'gestor', 'financeiro'],
+              featurePath: 'financeiro.caixa_geral',
+            },
+            {
+              id: 'financeiro.divergencias',
+              label: 'Análise de Divergências',
+              icon: 'TrendingDown',
+              path: '/clinica/financeiro/divergencias',
+              roles: ['admin', 'gestor', 'financeiro'],
+              featurePath: 'financeiro.divergencias',
+            },
+          ],
         },
 
         // 2. MOVIMENTO - Core Transactions (Motor Financeiro)

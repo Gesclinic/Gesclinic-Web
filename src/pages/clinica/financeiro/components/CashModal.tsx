@@ -165,7 +165,7 @@ export const CashModal: React.FC<CashModalProps> = ({
 
       toastService.success(
         'Movimento manual registrado',
-        `R$ ${parseFloat(manualForm.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+        `R$ ${Number.parseFloat(manualForm.amount || '0').toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
       );
 
       setManualForm({
@@ -214,7 +214,7 @@ export const CashModal: React.FC<CashModalProps> = ({
 
       toastService.success(
         'Movimento vinculado com sucesso',
-        `${patientName} - R$ ${netAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+        `${patientName} - R$ ${Number(netAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
       );
 
       setLinkedForm({
@@ -400,7 +400,7 @@ export const CashModal: React.FC<CashModalProps> = ({
                     {services.map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.name} - R${' '}
-                        {s.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        {Number(s.price || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </option>
                     ))}
                   </select>
@@ -518,7 +518,7 @@ export const CashModal: React.FC<CashModalProps> = ({
                       <div className="flex justify-between">
                         <span className="text-slate-600">Desconto:</span>
                         <span className="font-semibold text-red-600">
-                          -R$ {discount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          -R$ {Number(discount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </span>
                       </div>
                     )}
@@ -526,7 +526,7 @@ export const CashModal: React.FC<CashModalProps> = ({
                     <div className="border-t border-blue-200 pt-2 flex justify-between">
                       <span className="font-semibold">Valor Caixa:</span>
                       <span className="font-bold text-lg text-green-600">
-                        R$ {netAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        R$ {Number(netAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </span>
                     </div>
 

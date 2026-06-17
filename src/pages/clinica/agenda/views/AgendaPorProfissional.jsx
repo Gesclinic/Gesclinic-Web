@@ -101,7 +101,12 @@ const isTimeSlotAvailable = (professionalId, dayOfWeek, timeString, schedules) =
 
 export default function AgendaPorProfissional({
   initialDate = null,
+  viewMode = null,
   appointments = [],
+  professionals: supportProfessionals = [],
+  services: supportServices = [],
+  payers: supportPayers = [],
+  rooms: supportRooms = [],
   clinicId = null,
   onRefreshAppointments = null,
 }) {
@@ -218,6 +223,27 @@ export default function AgendaPorProfissional({
     }
   }, [initialDate]);
 
+  useEffect(() => {
+    if (supportProfessionals.length > 0) {
+      setProfessionais(supportProfessionals);
+    }
+    if (supportServices.length > 0) {
+      setServices(supportServices);
+    }
+    if (supportPayers.length > 0) {
+      setPayers(supportPayers);
+    }
+    if (supportRooms.length > 0) {
+      setRooms(supportRooms);
+    }
+  }, [supportPayers, supportProfessionals, supportRooms, supportServices]);
+
+  useEffect(() => {
+    if (viewMode && accessibleTabs.includes(viewMode)) {
+      setCurrentViewMode(viewMode);
+    }
+  }, [accessibleTabs, viewMode]);
+
   // ✅ Use appointments prop passed from index.jsx
   useEffect(() => {
     console.log('\n✅ [AgendaPorProfissional useEffect] appointments prop mudou:', {
@@ -242,6 +268,10 @@ export default function AgendaPorProfissional({
   // ✅ Load support data (professionals, services, payers, schedules, rooms)
   useEffect(() => {
     if (!clinic?.id) {
+      setProfessionais(supportProfessionals || []);
+      setServices(supportServices || []);
+      setPayers(supportPayers || []);
+      setRooms(supportRooms || []);
       return;
     }
     setLoading(true);
@@ -496,7 +526,7 @@ export default function AgendaPorProfissional({
                   >
                     {horario}
                   </td>
-                  {professionaisFiltrados.map((prof) => {
+                  {profissionaisFiltrados.map((prof) => {
                     const apt = agendamentosFiltrados.find((a) => {
                       // 🚨 FIX: Use scheduled_date directly without fallback to startTime (startTime is string "HH:MM:SS", not Date)
                       const aptDate = a.scheduled_date || null;
@@ -1333,34 +1363,25 @@ export default function AgendaPorProfissional({
 
   // ============= RENDER FINAL =============
   return (
-    <div style={{ padding: 24 }}>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 24,
-        }}
-      >
-        <h2 style={{ fontSize: 22, fontWeight: 700 }}>Agenda por Profissional</h2>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {/* Botões de abas */}
-          <AgendaViewModeTabs
-            currentViewMode={currentViewMode}
-            onViewModeChange={setCurrentViewMode}
-            accessibleTabs={accessibleTabs}
-          />
+    <div className="p-5">
+      <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900">Agenda por Profissional</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            {profissionaisFiltrados.length} profissional(is), {agendamentosFiltrados.length} atendimento(s) no período selecionado.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-end gap-2">
+          {!viewMode && (
+            <AgendaViewModeTabs
+              currentViewMode={currentViewMode}
+              onViewModeChange={setCurrentViewMode}
+              accessibleTabs={accessibleTabs}
+            />
+          )}
 
           <button
-            style={{
-              padding: '6px 14px',
-              background: '#1976d2',
-              color: '#fff',
-              border: 0,
-              borderRadius: 4,
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
+            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
             onClick={() => {
               // 🎭 Para Profissional, sempre usar seu próprio ID. Para outros, usar o selecionado
               let profId = professionalId;
@@ -1391,25 +1412,40 @@ export default function AgendaPorProfissional({
             Novo Agendamento
           </button>
 
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            style={{ border: '1px solid #ccc', borderRadius: 4, padding: '4px 8px' }}
-          />
+          {!viewMode && (
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
+          )}
 
           {!isProfissional && (
-            <AgendaFilters
-              professionalId={professionalId}
-              setProfessionalId={setProfessionalId}
-              professionals={profissionais}
-              showRoom={false}
-              showStatus={false}
-              showPatient={false}
-            />
+            <div className="min-w-[220px]">
+              <label className="mb-1 block text-xs font-semibold text-slate-600">Profissional</label>
+              <select
+                value={professionalId || ''}
+                onChange={(event) => setProfessionalId(event.target.value || undefined)}
+                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              >
+                <option value="">Todos</option>
+                {profissionais.map((profissional) => (
+                  <option key={profissional.id} value={profissional.id}>
+                    {profissional.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           )}
         </div>
       </div>
+
+      {profissionaisFiltrados.length === 0 && !loading && (
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+          Nenhum profissional disponível para esta clínica ou filtro. Verifique o cadastro do profissional e suas disponibilidades.
+        </div>
+      )}
 
       {/* Renderizar view baseado no modo */}
       {currentViewMode === 'semana'

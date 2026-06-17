@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,7 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useClinicContext } from '@/contexts/ClinicContext';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import Calendar from 'react-calendar';
-import { AlertCircle, CalendarDays, ChevronLeft, ChevronRight, Clock3, Send } from 'lucide-react';
+import { AlertCircle, CalendarDays, ChevronLeft, ChevronRight, Clock3, FileText, PlayCircle, Send } from 'lucide-react';
 import {
   createAppointment,
   updateAppointment,
@@ -330,6 +331,7 @@ export default function AppointmentUnitedModal({
   payers = [],
   rooms = [],
 }) {
+  const navigate = useNavigate();
   const { clinicId } = useClinicContext();
   const { user } = useAuth();
 
@@ -2177,6 +2179,13 @@ export default function AppointmentUnitedModal({
 
   const isParticular = checkIsParticular(agendamentoData.payerId);
   const isConvenioFaturado = !isParticular && !!agendamentoData.payerId;
+  const patientRecordId = agendamentoData.patientId || finalAppointment?.patientId || finalAppointment?.patient_id;
+  const appointmentStatus = agendamentoData.status || finalAppointment?.status || BOOKING_STATUSES.SCHEDULED;
+  const isReleasedForDoctor = [
+    BOOKING_STATUSES.AT_CHECKOUT,
+    SERVICE_STATUSES.AWAITING_PROFESSIONAL,
+    SERVICE_STATUSES.IN_SERVICE,
+  ].includes(appointmentStatus);
 
   useEffect(() => {
     let isMounted = true;
@@ -2427,6 +2436,79 @@ export default function AppointmentUnitedModal({
 
   const updatePagamentoField = (field, value) => {
     setPagamentoData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleOpenPatientRecord = async ({ startAttendance = false } = {}) => {
+    const apt = finalAppointment || appointment;
+    if (!patientRecordId) {
+      alert('Este agendamento ainda não possui paciente vinculado para abrir o prontuário.');
+      return;
+    }
+
+    let nextStatus = appointmentStatus;
+    if (startAttendance && apt?.id) {
+      nextStatus = SERVICE_STATUSES.IN_SERVICE;
+      try {
+        setLoading(true);
+        const startedAt = new Date().toISOString();
+        const { error } = await supabase
+          .from('appointments')
+          .update({
+            status: nextStatus,
+            em_atendimento_em: startedAt,
+            started_at: startedAt,
+            updated_at: startedAt,
+          })
+          .eq('id', apt.id);
+
+        if (error) {
+          throw error;
+        }
+
+        updateAgendamentoField('status', nextStatus);
+        onSuccess?.();
+      } catch (error) {
+        alert(`Erro ao iniciar atendimento: ${error.message}`);
+        console.error('Erro ao iniciar atendimento:', error);
+        return;
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    const professionalName =
+      selectedProfessional?.name ||
+      professionals.find((professional) => professional.id === agendamentoData.professionalId)
+        ?.name ||
+      apt?.professionals?.name ||
+      '';
+
+    localStorage.setItem(
+      'fromAppointmentMode',
+      JSON.stringify({
+        appointmentId: apt?.id || null,
+        patientId: patientRecordId,
+        appointmentDate: agendamentoData.date,
+        appointmentTime: agendamentoData.time,
+        professionalName,
+        status: nextStatus,
+        timestamp: Date.now(),
+      }),
+    );
+
+    navigate(`/clinica/pacientes/${patientRecordId}`, {
+      state: {
+        appointmentId: apt?.id,
+        appointmentDate: agendamentoData.date,
+        appointmentTime: agendamentoData.time,
+        professionalName,
+        fromAgendaClinicalFlow: true,
+        openTab: 'historico',
+        mode: startAttendance ? 'atendimento' : 'visualizacao',
+        status: nextStatus,
+      },
+    });
+    handleCloseModal();
   };
 
   // Handler para mudan�as em campos de pagamento
@@ -3413,9 +3495,9 @@ export default function AppointmentUnitedModal({
           <DialogHeader className="border-b border-gray-200 px-6 pb-4 pt-6 text-left">
             <DialogTitle className="flex items-center gap-3">
               <span>
-                {mode === 'new' && '?? Novo Agendamento'}
-                {mode === 'edit' && '?? Editar Agendamento'}
-                {mode === 'reception' && `?? Atendimento - ${agendamentoData.patientName}`}
+                {mode === 'new' && 'Novo Agendamento'}
+                {mode === 'edit' && 'Editar Agendamento'}
+                {mode === 'reception' && `Atendimento - ${agendamentoData.patientName}`}
               </span>
             </DialogTitle>
           </DialogHeader>
@@ -3430,7 +3512,7 @@ export default function AppointmentUnitedModal({
                     onClick={() => setTabAtivo('dados')}
                     className={tabClass('dados')}
                   >
-                    ?? Dados do Agendamento
+                    Dados do Agendamento
                   </button>
                 )}
 
@@ -3439,7 +3521,7 @@ export default function AppointmentUnitedModal({
                   onClick={() => setTabAtivo('cadastrais')}
                   className={tabClass('cadastrais')}
                 >
-                  ?? Dados Cadastrais
+                  Dados Cadastrais
                 </button>
 
                 {mode === 'reception' && (
@@ -3448,7 +3530,7 @@ export default function AppointmentUnitedModal({
                     onClick={() => setTabAtivo('status')}
                     className={tabClass('status')}
                   >
-                    ?? Status & Libera��o
+                    Status e Liberação
                   </button>
                 )}
 
@@ -3459,7 +3541,7 @@ export default function AppointmentUnitedModal({
                       onClick={() => setTabAtivo('liberacao')}
                       className={tabClass('liberacao')}
                     >
-                      ? Libera��o
+                      Liberação
                     </button>
 
                     <button
@@ -3467,36 +3549,71 @@ export default function AppointmentUnitedModal({
                       onClick={() => setTabAtivo('faturamento')}
                       className={tabClass('faturamento')}
                     >
-                      ?? Faturamento
+                      Faturamento
                     </button>
                   </>
                 )}
 
-                <button
-                  type="button"
-                  onClick={() => setTabAtivo('pagamento')}
-                  className={tabClass('pagamento')}
-                >
-                  ?? Pagamento
-                </button>
+                {isParticular && (
+                  <button
+                    type="button"
+                    onClick={() => setTabAtivo('pagamento')}
+                    className={tabClass('pagamento')}
+                  >
+                    Pagamento
+                  </button>
+                )}
 
                 <button
                   type="button"
                   onClick={() => setTabAtivo('resumo')}
                   className={tabClass('resumo')}
                 >
-                  ? Resumo & NF
+                    Resumo e NF
                 </button>
               </div>
 
               {/* CONTE�DO */}
               <div className="space-y-4">
+                {mode === 'edit' && isReleasedForDoctor && (
+                  <div className="rounded-lg border border-violet-200 bg-violet-50 p-4">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-violet-900">Fluxo médico liberado</p>
+                        <p className="mt-1 text-sm text-violet-700">
+                          O médico pode abrir o prontuário para consulta ou iniciar o atendimento, alterando o status para Em Atendimento.
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => handleOpenPatientRecord({ startAttendance: false })}
+                          className="border-violet-300 text-violet-700 hover:bg-violet-100"
+                        >
+                          <FileText size={16} className="mr-2" />
+                          Ver prontuário
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={() => handleOpenPatientRecord({ startAttendance: true })}
+                          disabled={loading || appointmentStatus === SERVICE_STATUSES.IN_SERVICE}
+                          className="bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-60"
+                        >
+                          <PlayCircle size={16} className="mr-2" />
+                          {appointmentStatus === SERVICE_STATUSES.IN_SERVICE ? 'Em atendimento' : 'Iniciar atendimento'}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* ABA: DADOS AGENDAMENTO */}
                 {tabAtivo === 'dados' && (
                   <div className="space-y-4">
                     <div className="bg-blue-50 border border-blue-300 rounded-lg p-3 mb-4">
                       <p className="text-sm font-semibold text-blue-900">
-                        ?? Preencha os dados do agendamento
+                        Preencha os dados do agendamento
                       </p>
                     </div>
 
@@ -3543,15 +3660,15 @@ export default function AppointmentUnitedModal({
                     {!selectedPatient && (
                       <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
                         <p className="text-sm font-semibold text-blue-900 mb-3">
-                          ? Novo Paciente - Preencha dados b�sicos
+                          Novo Paciente - Preencha os dados básicos
                         </p>
                         <p className="text-xs text-blue-700 mb-4">
-                          Dados completos ser�o preenchidos quando o paciente chegar na recep��o
+                          Dados completos serão preenchidos quando o paciente chegar na recepção
                         </p>
 
                         <div className="grid grid-cols-3 gap-4">
                           <div>
-                            <Label className="text-sm">?? Nome do Paciente *</Label>
+                            <Label className="text-sm">Nome do Paciente *</Label>
                             <Input
                               placeholder="Nome"
                               value={agendamentoData.patientName}
@@ -3562,7 +3679,7 @@ export default function AppointmentUnitedModal({
                             />
                           </div>
                           <div>
-                            <Label className="text-sm">?? Data de Nascimento</Label>
+                            <Label className="text-sm">Data de Nascimento</Label>
                             <Input
                               type="date"
                               value={cadastralData.birthdate || ''}
@@ -3571,7 +3688,7 @@ export default function AppointmentUnitedModal({
                             />
                           </div>
                           <div>
-                            <Label className="text-sm">?? Telefone *</Label>
+                            <Label className="text-sm">Telefone *</Label>
                             <Input
                               placeholder="Telefone"
                               value={agendamentoData.phone}
@@ -3585,7 +3702,7 @@ export default function AppointmentUnitedModal({
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label>?? Data *</Label>
+                        <Label>Data *</Label>
                         <Input
                           type="text"
                           placeholder="DD/MM/YYYY"
@@ -3626,7 +3743,7 @@ export default function AppointmentUnitedModal({
                           )}
                       </div>
                       <div>
-                        <Label>?? Hora * (Atual: {agendamentoData.time})</Label>
+                        <Label>Hora * (Atual: {agendamentoData.time})</Label>
                         <Input
                           type="text"
                           placeholder="HH:MM"
@@ -3648,7 +3765,7 @@ export default function AppointmentUnitedModal({
                         {businessHoursWarning && (
                           <p className="mt-2 text-xs text-amber-700 flex items-center gap-1">
                             <AlertCircle size={14} />
-                            ?? Hor�rio fora do expediente (08:00 - 20:00)
+                            Horário fora do expediente (08:00 - 20:00)
                           </p>
                         )}
                       </div>
@@ -3656,7 +3773,7 @@ export default function AppointmentUnitedModal({
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label>?? Dura��o (min)</Label>
+                        <Label>Duração (min)</Label>
                         <Input
                           type="number"
                           min="5"
@@ -3667,7 +3784,7 @@ export default function AppointmentUnitedModal({
                         />
                       </div>
                       <div>
-                        <Label>?? Sala</Label>
+                        <Label>Sala</Label>
                         <Select
                           value={agendamentoData.roomId || ''}
                           onValueChange={(value) => {
@@ -3703,7 +3820,7 @@ export default function AppointmentUnitedModal({
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label>?? Paciente *</Label>
+                        <Label>Paciente *</Label>
                         <Input
                           placeholder="Nome do paciente"
                           value={agendamentoData.patientName}
@@ -3711,7 +3828,7 @@ export default function AppointmentUnitedModal({
                         />
                       </div>
                       <div>
-                        <Label>?? Telefone</Label>
+                        <Label>Telefone</Label>
                         <Input
                           placeholder="(11) 99999-9999"
                           value={agendamentoData.phone}
@@ -3721,7 +3838,7 @@ export default function AppointmentUnitedModal({
                     </div>
 
                     <div>
-                      <Label>?? Profissional *</Label>
+                      <Label>Profissional *</Label>
                       <Select
                         value={agendamentoData.professionalId || ''}
                         onValueChange={(value) => {
@@ -4032,7 +4149,7 @@ export default function AppointmentUnitedModal({
                     </div>
 
                     <div>
-                      <Label>?? Status *</Label>
+                      <Label>Status *</Label>
                       <Select
                         value={agendamentoData.status || 'scheduled'}
                         onValueChange={(value) => {
@@ -4057,9 +4174,9 @@ export default function AppointmentUnitedModal({
                     </div>
 
                     <div>
-                      <Label>??? Observa��es</Label>
+                      <Label>Observações</Label>
                       <Textarea
-                        placeholder="Observa��es importantes..."
+                        placeholder="Observações importantes..."
                         value={agendamentoData.notes}
                         onChange={(e) => updateAgendamentoField('notes', e.target.value)}
                       />
@@ -4068,7 +4185,7 @@ export default function AppointmentUnitedModal({
                     {/* ?? M�LTIPLOS SERVI�OS - Adicionado na aba DADOS */}
                     <div className="border-t border-gray-200 pt-4 mt-4">
                       <div className="bg-blue-50 border border-blue-300 rounded-lg p-3 mb-4">
-                        <p className="text-sm font-semibold text-blue-900">?? Servi�os do Agendamento</p>
+                        <p className="text-sm font-semibold text-blue-900">Serviços do Agendamento</p>
                         {(() => {
                           const appointmentIdToPass = mode === 'edit' && finalAppointment?.id ? finalAppointment.id : agendamentoData.id || null;
                           console.log('?? [AppointmentUnitedModal] Passando para AppointmentItemsManager:', {
@@ -4089,6 +4206,7 @@ export default function AppointmentUnitedModal({
                         professionalId={agendamentoData.professionalId}
                         payerId={agendamentoData.payerId}
                         payerName={payers?.find((p) => p.id === agendamentoData.payerId)?.name}
+                        onPayerChange={(payerId) => updateAgendamentoField('payerId', payerId)}
                         savedServices={appointmentServices}
                         onItemsChange={(updatedServices) => {
                           console.log('? [AppointmentUnitedModal.onItemsChange] CHAMADO! Recebido:', {
@@ -4516,21 +4634,24 @@ export default function AppointmentUnitedModal({
                   <div className="space-y-4">
                     <div className="bg-purple-50 border border-purple-300 rounded-lg p-3 mb-4">
                       <p className="text-sm font-semibold text-purple-900">
-                        ?? Dados de Faturamento TISS
+                        Faturamento do convênio e dados TISS
+                      </p>
+                      <p className="mt-1 text-xs text-purple-800">
+                        Dados salvos no agendamento para contas a receber, fluxo de caixa, faturamento, envio TISS/XML e execução manual posterior.
                       </p>
                     </div>
 
                     <div>
-                      <Label>?? N� Guia TISS *</Label>
+                      <Label>Número da Guia TISS *</Label>
                       <Input
-                        placeholder="N�mero da guia"
+                        placeholder="Número da guia"
                         value={faturamentoData.guide_number}
                         onChange={(e) => updateFaturamentoField('guide_number', e.target.value)}
                       />
                     </div>
 
                     <div>
-                      <Label>?? Forma de Pagamento</Label>
+                      <Label>Forma de Pagamento</Label>
                       <Select
                         value={pagamentoData.payment_method || 'DINHEIRO'}
                         onValueChange={(value) => updatePagamentoField('payment_method', value)}
@@ -4539,27 +4660,27 @@ export default function AppointmentUnitedModal({
                           <SelectValue placeholder="Selecionar forma de pagamento" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="DINHEIRO">?? Dinheiro</SelectItem>
-                          <SelectItem value="CARTAO">?? Cart�o</SelectItem>
-                          <SelectItem value="PIX">?? PIX</SelectItem>
-                          <SelectItem value="CHEQUE">?? Cheque</SelectItem>
-                          <SelectItem value="BOLETO">?? Boleto</SelectItem>
-                          <SelectItem value="DOC">?? DOC</SelectItem>
-                          <SelectItem value="TED">? TED</SelectItem>
-                          <SelectItem value="DEPOSITO">?? Dep�sito</SelectItem>
+                          <SelectItem value="DINHEIRO">Dinheiro</SelectItem>
+                          <SelectItem value="CARTAO">Cartão</SelectItem>
+                          <SelectItem value="PIX">PIX</SelectItem>
+                          <SelectItem value="CHEQUE">Cheque</SelectItem>
+                          <SelectItem value="BOLETO">Boleto</SelectItem>
+                          <SelectItem value="DOC">DOC</SelectItem>
+                          <SelectItem value="TED">TED</SelectItem>
+                          <SelectItem value="DEPOSITO">Depósito</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label>Tipo de C�digo</Label>
+                        <Label>Tipo de Código</Label>
                         <Select
                           value={faturamentoData.code_type || 'tuss'}
                           onValueChange={(value) => updateFaturamentoField('code_type', value)}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Tipo de c�digo" />
+                            <SelectValue placeholder="Tipo de código" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="tuss">TUSS</SelectItem>
@@ -4569,9 +4690,9 @@ export default function AppointmentUnitedModal({
                         </Select>
                       </div>
                       <div>
-                        <Label>?? C�digo Procedimento</Label>
+                        <Label>Código do Procedimento</Label>
                         <Input
-                          placeholder="C�digo TUSS/CPT"
+                          placeholder="Código TUSS/CPT"
                           value={
                             agendamentoData.serviceCode || faturamentoData.procedure_code || ''
                           }
@@ -4582,7 +4703,7 @@ export default function AppointmentUnitedModal({
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label>?? Valor Estimado (R$)</Label>
+                        <Label>Valor Estimado (R$)</Label>
                         <Input
                           type="number"
                           step="0.01"
@@ -4594,7 +4715,7 @@ export default function AppointmentUnitedModal({
                         />
                       </div>
                       <div>
-                        <Label>? Valor Autorizado (R$)</Label>
+                        <Label>Valor Autorizado (R$)</Label>
                         <Input
                           type="number"
                           step="0.01"
@@ -4608,7 +4729,7 @@ export default function AppointmentUnitedModal({
                     </div>
 
                     <div>
-                      <Label>?? Plano de Contas *</Label>
+                      <Label>Plano de Contas *</Label>
                       <Select
                         value={faturamentoData.plano_contas_id || ''}
                         onValueChange={(value) => updateFaturamentoField('plano_contas_id', value)}
@@ -4629,12 +4750,12 @@ export default function AppointmentUnitedModal({
                     {/* SE��O DE DADOS TISS ADICIONAIS */}
                     <div className="border-t border-purple-200 pt-4 mt-4">
                       <p className="text-sm font-semibold text-purple-900 mb-4">
-                        ?? Dados Adicionais TISS
+                        Dados Adicionais TISS
                       </p>
 
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <Label>?? C�digo CID (Diagn�stico)</Label>
+                          <Label>Código CID (Diagnóstico)</Label>
                           <Input
                             placeholder="Ex: E11 (Diabetes)"
                             value={faturamentoData.diagnosis_code || ''}
@@ -4644,7 +4765,7 @@ export default function AppointmentUnitedModal({
                           />
                         </div>
                         <div>
-                          <Label>?? Quantidade de Procedimentos</Label>
+                          <Label>Quantidade de Procedimentos</Label>
                           <Input
                             type="number"
                             min="1"
@@ -4657,9 +4778,9 @@ export default function AppointmentUnitedModal({
                       </div>
 
                       <div>
-                        <Label className="mt-3">?? N� Benefici�rio (Segurado)</Label>
+                        <Label className="mt-3">Número do Beneficiário (Segurado)</Label>
                         <Input
-                          placeholder="N�mero do benefici�rio principal"
+                          placeholder="Número do beneficiário principal"
                           value={faturamentoData.subscriber_number || ''}
                           onChange={(e) =>
                             updateFaturamentoField('subscriber_number', e.target.value)
@@ -4670,14 +4791,14 @@ export default function AppointmentUnitedModal({
                       {/* DADOS DE DEPENDENTE */}
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
                         <p className="text-sm font-semibold text-blue-900 mb-3">
-                          ???????? Dados do Dependente (se aplic�vel)
+                          Dados do Dependente (se aplicável)
                         </p>
 
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <Label>N� Benefici�rio Dependente</Label>
+                            <Label>Número do Beneficiário Dependente</Label>
                             <Input
-                              placeholder="Matr�cula do dependente"
+                              placeholder="Matrícula do dependente"
                               value={faturamentoData.dependent_number || ''}
                               onChange={(e) =>
                                 updateFaturamentoField('dependent_number', e.target.value)
@@ -4708,7 +4829,7 @@ export default function AppointmentUnitedModal({
                             />
                           </div>
                           <div>
-                            <Label>G�nero Dependente</Label>
+                            <Label>Gênero Dependente</Label>
                             <Select
                               value={faturamentoData.dependent_gender || ''}
                               onValueChange={(value) =>
@@ -4728,9 +4849,9 @@ export default function AppointmentUnitedModal({
                       </div>
 
                       <div className="mt-4">
-                        <Label>?? Observa��es/Notas</Label>
+                        <Label>Observações/Notas</Label>
                         <Textarea
-                          placeholder="Observa��es adicionais para faturamento"
+                          placeholder="Observações adicionais para faturamento"
                           value={faturamentoData.notes || ''}
                           onChange={(e) => updateFaturamentoField('notes', e.target.value)}
                           rows={3}
@@ -4748,7 +4869,7 @@ export default function AppointmentUnitedModal({
                             className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2"
                           >
                             <Send className="mr-2 h-4 w-4" />
-                            ?? Enviar para TISS
+                            Enviar para TISS
                           </Button>
                           <p className="text-xs text-gray-500 mt-2">
                             Enviar dados desta guia para processamento TISS da operadora
@@ -5841,7 +5962,7 @@ export default function AppointmentUnitedModal({
                       disabled={loading}
                       className="bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white"
                     >
-                      {loading ? '? Salvando...' : '?? Salvar Dados'}
+                      {loading ? 'Salvando...' : 'Salvar Dados'}
                     </Button>
                   )}
 
@@ -5855,7 +5976,7 @@ export default function AppointmentUnitedModal({
                     }
                     className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white"
                   >
-                    ? Avan�ar ?
+                    Avançar
                   </Button>
                 </>
               )}
@@ -5864,7 +5985,7 @@ export default function AppointmentUnitedModal({
                 <>
                   {mode !== 'reception' && (
                     <Button variant="outline" onClick={() => setTabAtivo('dados')}>
-                      ? Voltar
+                      Voltar
                     </Button>
                   )}
                   <Button variant="outline" onClick={onClose}>
@@ -5889,11 +6010,11 @@ export default function AppointmentUnitedModal({
                         !agendamentoData.professionalId
                           ? 'Selecione um profissional'
                           : !agendamentoData.payerId
-                            ? 'Selecione um conv�nio'
+                            ? 'Selecione um convênio'
                             : ''
                       }
                     >
-                      {loading ? '? Salvando...' : '?? Salvar Dados'}
+                      {loading ? 'Salvando...' : 'Salvar Dados'}
                     </Button>
                   )}
 
@@ -5916,7 +6037,7 @@ export default function AppointmentUnitedModal({
                           const missingFields = validateReceptionFields();
                           if (missingFields.length > 0) {
                             alert(
-                              `?? Dados obrigat�rios n�o preenchidos:\n\n${missingFields.join('\n')}`,
+                              `Dados obrigatórios não preenchidos:\n\n${missingFields.join('\n')}`,
                             );
                             return;
                           }
@@ -5942,7 +6063,7 @@ export default function AppointmentUnitedModal({
                     disabled={loading}
                     className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white"
                   >
-                    {loading ? '? Salvando...' : '? Avan�ar ?'}
+                    {loading ? 'Salvando...' : 'Avançar'}
                   </Button>
                 </>
               )}
@@ -5950,7 +6071,7 @@ export default function AppointmentUnitedModal({
               {tabAtivo === 'status' && mode === 'reception' && (
                 <>
                   <Button variant="outline" onClick={() => setTabAtivo('cadastrais')}>
-                    ? Voltar
+                    Voltar
                   </Button>
                   <Button variant="outline" onClick={onClose}>
                     Cancelar
@@ -5971,7 +6092,7 @@ export default function AppointmentUnitedModal({
                     disabled={loading}
                     className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white"
                   >
-                    {loading ? '? Salvando...' : '? Atualizar Status'}
+                    {loading ? 'Salvando...' : 'Atualizar Status'}
                   </Button>
                 </>
               )}
@@ -5979,7 +6100,7 @@ export default function AppointmentUnitedModal({
               {tabAtivo === 'liberacao' && (
                 <>
                   <Button variant="outline" onClick={() => setTabAtivo('cadastrais')}>
-                    ? Voltar
+                    Voltar
                   </Button>
 
                   {/* ?? BOT�O SALVAR DADOS - Em modo EDIT, permite salvar sem avan�ar */}
@@ -6000,11 +6121,11 @@ export default function AppointmentUnitedModal({
                         !agendamentoData.professionalId
                           ? 'Selecione um profissional'
                           : !agendamentoData.payerId
-                            ? 'Selecione um conv�nio'
+                            ? 'Selecione um convênio'
                             : ''
                       }
                     >
-                      {loading ? '? Salvando...' : '?? Salvar Dados'}
+                      {loading ? 'Salvando...' : 'Salvar Dados'}
                     </Button>
                   )}
 
@@ -6017,15 +6138,18 @@ export default function AppointmentUnitedModal({
                     disabled={loading}
                     className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white"
                   >
-                    ? Avan�ar ?
+                    Avançar
                   </Button>
                 </>
               )}
 
               {tabAtivo === 'pagamento' && (
                 <>
-                  <Button variant="outline" onClick={() => setTabAtivo('liberacao')}>
-                    ? Voltar
+                  <Button
+                    variant="outline"
+                    onClick={() => setTabAtivo(isConvenioFaturado ? 'liberacao' : 'cadastrais')}
+                  >
+                    Voltar
                   </Button>
 
                   {/* ?? BOT�O SALVAR DADOS - Em modo EDIT, permite salvar sem criar atendimento */}
@@ -6046,11 +6170,11 @@ export default function AppointmentUnitedModal({
                         !agendamentoData.professionalId
                           ? 'Selecione um profissional'
                           : !agendamentoData.payerId
-                            ? 'Selecione um conv�nio'
+                            ? 'Selecione um convênio'
                             : ''
                       }
                     >
-                      {loading ? '? Salvando...' : '?? Salvar Dados'}
+                      {loading ? 'Salvando...' : 'Salvar Dados'}
                     </Button>
                   )}
 
@@ -6091,7 +6215,7 @@ export default function AppointmentUnitedModal({
                       disabled={loading}
                       className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white animate-pulse"
                     >
-                      {loading ? '? Salvando e criando...' : '?? Criar Atendimento'}
+                      {loading ? 'Salvando e criando...' : 'Criar Atendimento'}
                     </Button>
                   )}
 
@@ -6112,7 +6236,7 @@ export default function AppointmentUnitedModal({
                       disabled={loading}
                       className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white"
                     >
-                      {loading ? '? Salvando...' : '? Criar Agendamento'}
+                      {loading ? 'Salvando...' : 'Criar Agendamento'}
                     </Button>
                   )}
                 </>
@@ -6121,7 +6245,7 @@ export default function AppointmentUnitedModal({
               {tabAtivo === 'faturamento' && isConvenioFaturado && (
                 <>
                   <Button variant="outline" onClick={() => setTabAtivo('liberacao')}>
-                    ? Voltar
+                    Voltar
                   </Button>
 
                   {/* ?? BOT�O SALVAR DADOS - Em modo EDIT, permite salvar sem criar atendimento */}
@@ -6142,11 +6266,11 @@ export default function AppointmentUnitedModal({
                         !agendamentoData.professionalId
                           ? 'Selecione um profissional'
                           : !agendamentoData.payerId
-                            ? 'Selecione um conv�nio'
+                            ? 'Selecione um convênio'
                             : ''
                       }
                     >
-                      {loading ? '? Salvando...' : '?? Salvar Dados'}
+                      {loading ? 'Salvando...' : 'Salvar Dados'}
                     </Button>
                   )}
 
@@ -6189,7 +6313,7 @@ export default function AppointmentUnitedModal({
                       disabled={loading}
                       className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white animate-pulse"
                     >
-                      {loading ? '? Salvando e criando...' : '?? Criar Atendimento'}
+                      {loading ? 'Salvando e criando...' : 'Criar Atendimento'}
                     </Button>
                   )}
 
@@ -6210,7 +6334,7 @@ export default function AppointmentUnitedModal({
                       disabled={loading}
                       className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white"
                     >
-                      {loading ? '? Salvando...' : '? Criar Agendamento'}
+                      {loading ? 'Salvando...' : 'Criar Agendamento'}
                     </Button>
                   )}
                 </>
@@ -6219,7 +6343,7 @@ export default function AppointmentUnitedModal({
               {tabAtivo === 'resumo' && (
                 <>
                   <Button variant="outline" onClick={() => setTabAtivo('cadastrais')}>
-                    ? Voltar
+                    Voltar
                   </Button>
                   <Button
                     onClick={() => {

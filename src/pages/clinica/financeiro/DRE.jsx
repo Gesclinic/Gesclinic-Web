@@ -200,7 +200,7 @@ export default function DREPage() {
                 <div className="flex justify-between items-center mb-2">
                   <span className="font-bold text-green-900">RECEITAS TOTAIS</span>
                   <span className="font-bold text-lg text-green-600">
-                    R$ {dre.receitas?.total?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    R$ {(dre.receitas?.total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div className="text-sm text-green-700 space-y-1 ml-4">
@@ -458,7 +458,7 @@ export default function DREPage() {
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(value) => `R$ ${value?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                      formatter={(value) => `R$ ${(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -468,7 +468,7 @@ export default function DREPage() {
                     <div key={idx} className="flex justify-between text-sm">
                       <span className="text-gray-600">{svc.servico}</span>
                       <span className="font-semibold">
-                        R$ {svc.total?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        R$ {(svc.total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </span>
                     </div>
                   ))}
@@ -499,7 +499,7 @@ export default function DREPage() {
                     />
                     <YAxis style={{ fontSize: '12px' }} />
                     <Tooltip
-                      formatter={(value) => `R$ ${value?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                      formatter={(value) => `R$ ${(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
                     />
                     <Bar dataKey="total" fill="#F59E0B" />
                   </BarChart>
@@ -512,7 +512,7 @@ export default function DREPage() {
                         {exp.categoria} ({exp.tipo})
                       </span>
                       <span className="font-semibold">
-                        R$ {exp.total?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        R$ {(exp.total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </span>
                     </div>
                   ))}

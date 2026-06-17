@@ -1304,10 +1304,10 @@ export default function NovoRecebimento() {
                       <PreviewTile label="Emissao" value={fields.invoice_date} />
                       <PreviewTile label="Vencimento" value={fields.due_date} />
                       <PreviewTile label="Pagamento" value={fields.payment_date} />
-                      <PreviewTile label="Bruto" value={gross ? gross.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : ''} />
+                      <PreviewTile label="Bruto" value={gross ? (gross || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : ''} />
                       <PreviewTile label="Impostos" value={Number(fields.taxes_value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} />
-                      <PreviewTile label="Taxa cartao" value={form.is_card_payment && !cardFeeCalc ? 'Selecione operadora' : estimatedCardFee.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} />
-                      <PreviewTile label="Liquido estimado" value={gross ? estimatedNet.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : ''} />
+                      <PreviewTile label="Taxa cartao" value={form.is_card_payment && !cardFeeCalc ? 'Selecione operadora' : (estimatedCardFee || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} />
+                      <PreviewTile label="Liquido estimado" value={gross ? (estimatedNet || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : ''} />
                     </div>
                   );
                 })()}
@@ -1341,7 +1341,7 @@ export default function NovoRecebimento() {
                       const gross = Number(fields.amount || 0);
                       const isCard = isCardPaymentMethod(fields.payment_method);
                       const feePreview = isCard ? (form.processor_id ? 'Calculada ao gerar' : 'Selecione operadora') : 'R$ 0,00';
-                      const netPreview = isCard ? (form.processor_id ? 'Calculado ao gerar' : 'Selecione operadora') : gross.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                      const netPreview = isCard ? (form.processor_id ? 'Calculado ao gerar' : 'Selecione operadora') : (gross || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
                       return (
                         <div key={item.file.name} className="p-3 text-sm">
                           <div className="flex flex-wrap items-start justify-between gap-2">
@@ -1365,7 +1365,7 @@ export default function NovoRecebimento() {
                             <PreviewTile label="Emissao" value={fields.invoice_date} />
                             <PreviewTile label="Vencimento" value={fields.due_date} />
                             <PreviewTile label="Pagamento" value={fields.payment_date} />
-                            <PreviewTile label="Bruto" value={gross ? gross.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : ''} />
+                            <PreviewTile label="Bruto" value={gross ? (gross || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : ''} />
                             <PreviewTile label="Impostos" value={Number(fields.taxes_value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} />
                             <PreviewTile label="Taxa cartao" value={feePreview} />
                             <PreviewTile label="Liquido" value={gross ? netPreview : ''} />
@@ -1471,7 +1471,7 @@ export default function NovoRecebimento() {
                     <div>
                       <p className="text-xs text-gray-600">Desconto</p>
                       <p className="text-lg font-bold text-red-600">
-                        -R$ {cardFeeCalc.feeAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        -R$ {(cardFeeCalc.feeAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
                     </div>
                     <div>

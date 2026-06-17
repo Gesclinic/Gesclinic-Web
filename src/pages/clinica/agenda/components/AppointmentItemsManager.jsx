@@ -64,6 +64,7 @@ function AppointmentItemsManager({
   professionalId,
   payerId,
   payerName,
+  onPayerChange = () => {},
   savedServices = [], // ✨ NEW: Serviços salvos no state do pai para restaurar após remontagem
   onItemsChange = () => {},
   onTotalsUpdate = () => {},
@@ -453,6 +454,7 @@ function AppointmentItemsManager({
           onError={onError}
           professionalId={professionalId}
           payerId={payerId}
+          onPayerChange={onPayerChange}
           clinicId={clinicId}
           lastAddedService={items.length > 0 ? items[0] : null}
         />

@@ -708,10 +708,10 @@ export default function CaixaGerencialDashboard() {
                                 className="px-2 py-3 text-slate-600 sticky bg-white z-10 border-r border-slate-100"
                                 style={{ left: '0px' }}
                               >
-                                {new Date(mov.created_at).toLocaleTimeString('pt-BR', {
+                                {mov.created_at ? new Date(mov.created_at).toLocaleTimeString('pt-BR', {
                                   hour: '2-digit',
                                   minute: '2-digit',
-                                })}
+                                }) : 'N/A'}
                               </td>
                               <td
                                 className="px-2 py-3 text-slate-700 sticky bg-white z-10 border-r border-slate-100"

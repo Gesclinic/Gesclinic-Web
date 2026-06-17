@@ -1,6 +1,6 @@
 /**
  * Página: Reception Test
- * Rota: /clinica/agenda/recepcao/test (ou standalone)
+ * Legado: testes do antigo módulo de recepção separado.
  * 
  * Página de testes para validar componentes Reception
  * Use para desenvolvimento e QA

@@ -502,7 +502,7 @@ function getDocumentExtraction(row) {
     title: [
       `Leitura ${confidence}`,
       extraction.issuerName ? `Emissor: ${extraction.issuerName}` : null,
-      taxes > 0 ? `Impostos: ${taxes.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}` : null,
+      taxes > 0 ? `Impostos: ${(taxes || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}` : null,
       Array.isArray(extraction.warnings) && extraction.warnings[0] ? extraction.warnings[0] : null,
     ].filter(Boolean).join(' | '),
   };
@@ -3014,8 +3014,8 @@ export default function ContasReceber() {
                   <p className="text-xs font-medium text-gray-500">{item.label}</p>
                   <p className={`mt-1 text-lg font-bold ${item.tone}`}>
                     {item.numeric
-                      ? item.value.toLocaleString('pt-BR')
-                      : item.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                      ? (item.value || 0).toLocaleString('pt-BR')
+                      : (item.value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                   </p>
                   <p className="mt-1 text-[11px] text-gray-500 truncate">{item.hint}</p>
                 </div>
@@ -3117,11 +3117,11 @@ export default function ContasReceber() {
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {[
-              { label: 'Lancamentos', value: summary.glosaRows.toLocaleString('pt-BR'), hint: 'Com glosa', tone: 'text-rose-700' },
-              { label: 'Abertas', value: summary.glosaOpenCount.toLocaleString('pt-BR'), hint: 'Pendentes/contestadas', tone: 'text-amber-700' },
-              { label: 'Valor glosado', value: summary.glosas.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), hint: 'Saldo glosado atual', tone: 'text-rose-700' },
-              { label: 'Recuperado', value: summary.glosaRecovered.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), hint: 'Recuperacao registrada', tone: 'text-emerald-700' },
-              { label: 'Perda final', value: summary.glosaFinalLoss.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), hint: 'Aceite de perda', tone: 'text-slate-700' },
+              { label: 'Lancamentos', value: (summary.glosaRows || 0).toLocaleString('pt-BR'), hint: 'Com glosa', tone: 'text-rose-700' },
+              { label: 'Abertas', value: (summary.glosaOpenCount || 0).toLocaleString('pt-BR'), hint: 'Pendentes/contestadas', tone: 'text-amber-700' },
+              { label: 'Valor glosado', value: (summary.glosas || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), hint: 'Saldo glosado atual', tone: 'text-rose-700' },
+              { label: 'Recuperado', value: (summary.glosaRecovered || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), hint: 'Recuperacao registrada', tone: 'text-emerald-700' },
+              { label: 'Perda final', value: (summary.glosaFinalLoss || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), hint: 'Aceite de perda', tone: 'text-slate-700' },
             ].map((item) => (
               <div key={item.label} className="rounded border border-slate-200 bg-slate-50 px-3 py-2">
                 <p className="text-xs font-medium text-slate-500">{item.label}</p>
@@ -3601,7 +3601,7 @@ export default function ContasReceber() {
             </label>
             <span className="text-slate-500">
               {selectedRows.length} selecionado{selectedRows.length === 1 ? '' : 's'}
-              {selectedRows.length ? ` · ${selectedTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}` : ''}
+              {selectedRows.length ? ` · ${(selectedTotal || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}` : ''}
             </span>
             {selectedRows.length > 0 && (
               <Button type="button" variant="ghost" size="sm" onClick={clearSelection}>
@@ -4088,7 +4088,7 @@ export default function ContasReceber() {
             <div className="grid grid-cols-3 gap-3 rounded border bg-gray-50 p-3 text-sm mb-4">
               <div>
                 <span className="text-gray-500">Valor</span>
-                <p className="font-bold text-gray-900">{getDisplayAmount(confirmReceived).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                <p className="font-bold text-gray-900">{(getDisplayAmount(confirmReceived) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
               </div>
               <div>
                 <span className="text-gray-500">Recebido</span>
@@ -4096,7 +4096,7 @@ export default function ContasReceber() {
               </div>
               <div>
                 <span className="text-gray-500">Saldo</span>
-                <p className="font-bold text-blue-700">{getReceivableBalance(confirmReceived).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                <p className="font-bold text-blue-700">{(getReceivableBalance(confirmReceived) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
               </div>
             </div>
             <div className="grid md:grid-cols-3 gap-3 mb-3">
@@ -4218,7 +4218,7 @@ export default function ContasReceber() {
               </div>
               <div>
                 <span className="text-gray-500">Saldo</span>
-                <p className="font-bold text-blue-700">{getReceivableBalance(glosaWorkflowAction).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                <p className="font-bold text-blue-700">{(getReceivableBalance(glosaWorkflowAction) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
               </div>
             </div>
             {(() => {

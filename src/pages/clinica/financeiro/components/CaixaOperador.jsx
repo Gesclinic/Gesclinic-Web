@@ -9,11 +9,14 @@ import {
   FileText,
   FileSpreadsheet,
   Printer,
+  AlertTriangle,
+  AlertCircle,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useClinicContext } from '@/contexts/ClinicContext';
 import { supabase } from '@/lib/customSupabaseClient';
 import cashDrawerApi from '@/lib/cashDrawerApi';
+import cashConsolidationApi from '@/lib/cashConsolidationApi';
 import { CashTable } from './CashTable';
 import { CashModal } from './CashModal';
 import { ToastContainer } from './ToastContainer';
@@ -31,14 +34,17 @@ const CaixaIndividualOperador = () => {
 
   const [drawer, setDrawer] = useState(null);
   const [summary, setSummary] = useState(null);
+  const [paymentMethodSummary, setPaymentMethodSummary] = useState([]);
   const [loading, setLoading] = useState(true);
   const [operatorName, setOperatorName] = useState('');
   const [activeTab, setActiveTab] = useState('resumo');
   const [showCashModal, setShowCashModal] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showCloseModal, setShowCloseModal] = useState(false);
   const [filterName, setFilterName] = useState('');
   const [savedFilters, setSavedFilters] = useState([]);
+  const [closingAmount, setClosingAmount] = useState('');
 
   // Estados dos filtros
   const [filters, setFilters] = useState({
@@ -116,6 +122,10 @@ const CaixaIndividualOperador = () => {
       const summ = await cashDrawerApi.getMovementSummary(d.id);
       setSummary(summ);
 
+      // Carrega resumo por forma de pagamento
+      const paymentMethodData = await cashConsolidationApi.getPaymentMethodSummary(d.id);
+      setPaymentMethodSummary(paymentMethodData);
+
       // Fetch from new hook
       if (d.id) {
         await fetchMovements();
@@ -176,18 +186,31 @@ const CaixaIndividualOperador = () => {
   };
 
   const handleCloseDrawer = async () => {
-    if (!summary) {
+    if (!summary || !closingAmount) {
       return;
     }
-    const closingBalance = prompt('Saldo final do caixa:', summary.balance.toFixed(2));
-    if (closingBalance === null) {
-      return;
+
+    const expected = Number(summary.balance);
+    const actual = Number(closingAmount);
+    const difference = actual - expected;
+
+    if (Math.abs(difference) > 0.01) {
+      const confirmed = window.confirm(
+        `⚠️ ATENÇÃO: Divergência detectada!\n\nEsperado: R$ ${expected.toFixed(2)}\nInformado: R$ ${actual.toFixed(2)}\nDiferença: R$ ${difference.toFixed(2)}\n\nDeseja continuar mesmo assim?`,
+      );
+      if (!confirmed) {
+        return;
+      }
     }
+
     try {
-      await cashDrawerApi.closeDrawer(drawer.id, closingBalance, summary.balance, '');
+      await cashDrawerApi.closeDrawer(drawer.id, closingAmount, summary.balance, '');
+      toastService.success('Sucesso', 'Caixa fechado com sucesso!');
+      setShowCloseModal(false);
+      setClosingAmount('');
       await loadDrawer();
     } catch (err) {
-      alert(`Erro: ${err.message}`);
+      toastService.error('Erro', err.message || 'Erro ao fechar caixa');
     }
   };
 
@@ -269,12 +292,7 @@ const CaixaIndividualOperador = () => {
         'STATUS',
       ],
       ...filteredMovements.map((m) => [
-        m.created_at
-          ? new Date(m.created_at).toLocaleTimeString('pt-BR', {
-              hour: '2-digit',
-              minute: '2-digit',
-            })
-          : 'N/A',
+        m.created_at ? new Date(m.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
         m.patient?.name || 'Particular',
         m.service?.name || 'N/A',
         m.payer_type === 'convenio' && m.payer ? m.payer.name : 'Particular',
@@ -508,22 +526,20 @@ const CaixaIndividualOperador = () => {
               </div>
             </div>
 
-            {Object.entries(summary.byMethod)
-              .slice(0, 3)
-              .map(([method, data]) => (
-                <div
-                  key={method}
-                  className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition"
-                >
-                  <div className="h-1 bg-gradient-to-r from-blue-500 to-blue-600" />
-                  <div className="p-5">
-                    <p className="text-sm font-medium text-slate-500 mb-2">{method}</p>
-                    <p className="text-lg font-bold text-slate-800">
-                      R$ {(data.entrada - data.saida).toFixed(2)}
-                    </p>
-                  </div>
+            {paymentMethodSummary.slice(0, 3).map((method) => (
+              <div
+                key={method.method}
+                className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition"
+              >
+                <div className="h-1 bg-gradient-to-r from-blue-500 to-blue-600" />
+                <div className="p-5">
+                  <p className="text-sm font-medium text-slate-500 mb-2">{method.method}</p>
+                  <p className="text-lg font-bold text-slate-800">
+                    R$ {method.saldo.toFixed(2)}
+                  </p>
                 </div>
-              ))}
+              </div>
+            ))}
           </div>
         )}
 
@@ -552,27 +568,68 @@ const CaixaIndividualOperador = () => {
           <div className="p-6">
             {/* Resumo Tab */}
             {activeTab === 'resumo' && summary && (
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-blue-600" /> Resumo do Dia
+              <div className="space-y-6">
+                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-blue-600" /> Resumo Detalhado do Caixa
                 </h3>
+
+                {/* Breakdown por Forma de Pagamento */}
+                {paymentMethodSummary && paymentMethodSummary.length > 0 ? (
+                  <div className="bg-slate-50 rounded-xl border-2 border-slate-200 p-6">
+                    <h4 className="text-sm font-bold text-slate-700 mb-4 uppercase">Detalhes por Forma de Pagamento</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {paymentMethodSummary.map((method) => (
+                        <div
+                          key={method.method}
+                          className="p-4 bg-white rounded-lg border-2 border-slate-100 hover:border-blue-300 hover:shadow-md transition-all"
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <p className="text-xs font-bold text-slate-700 uppercase">{method.method}</p>
+                            <div className={`w-3 h-3 rounded-full ${method.saldo >= 0 ? 'bg-green-500' : 'bg-red-500'}`} />
+                          </div>
+                          <div className="space-y-1 text-xs">
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">📥 Entrada:</span>
+                              <span className="font-bold text-green-700">R$ {method.entrada.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-600">📤 Saída:</span>
+                              <span className="font-bold text-red-700">R$ {method.saida.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between border-t border-slate-100 pt-2 mt-2">
+                              <span className="font-semibold text-slate-700">Saldo:</span>
+                              <span className={`font-bold ${method.saldo >= 0 ? 'text-green-800' : 'text-red-800'}`}>
+                                R$ {method.saldo.toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-slate-500">
+                    <p>Nenhum movimento registrado ainda</p>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-6">
-                  <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
-                    <p className="text-sm text-green-700 font-semibold mb-2">Total de Entradas</p>
-                    <p className="text-xl font-bold text-green-800">
+                  <div className="p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border-2 border-green-200">
+                    <p className="text-sm text-green-700 font-bold mb-3 uppercase">Total de Entradas</p>
+                    <p className="text-3xl font-bold text-green-900">
                       R$ {summary.totalEntrada.toFixed(2)}
                     </p>
-                    <p className="text-xs text-green-600 mt-2">
-                      +{movements.filter((m) => m.type === 'entrada').length} transações
+                    <p className="text-xs text-green-700 mt-3 font-semibold">
+                      {movements.filter((m) => m.type === 'entrada').length} transações
                     </p>
                   </div>
-                  <div className="p-4 bg-gradient-to-br from-red-50 to-red-100 rounded-lg border border-red-200">
-                    <p className="text-sm text-red-700 font-semibold mb-2">Total de Saídas</p>
-                    <p className="text-xl font-bold text-red-800">
+                  <div className="p-6 bg-gradient-to-br from-red-50 to-red-100 rounded-lg border-2 border-red-200">
+                    <p className="text-sm text-red-700 font-bold mb-3 uppercase">Total de Saídas</p>
+                    <p className="text-3xl font-bold text-red-900">
                       R$ {summary.totalSaida.toFixed(2)}
                     </p>
-                    <p className="text-xs text-red-600 mt-2">
-                      -{movements.filter((m) => m.type === 'saida').length} transações
+                    <p className="text-xs text-red-700 mt-3 font-semibold">
+                      {movements.filter((m) => m.type === 'saida').length} transações
                     </p>
                   </div>
                 </div>
@@ -779,13 +836,99 @@ const CaixaIndividualOperador = () => {
         <div className="flex gap-3 mt-8">
           {drawer.status === 'open' && (
             <button
-              onClick={handleCloseDrawer}
+              onClick={() => setShowCloseModal(true)}
               className="w-full px-4 py-2.5 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition-all shadow-sm"
             >
               🔴 Fechar Caixa
             </button>
           )}
         </div>
+
+        {/* Modal de Fechamento de Caixa */}
+        {showCloseModal && drawer && summary && (
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+              <div className="flex items-center justify-between p-6 border-b border-slate-100">
+                <h2 className="text-xl font-bold text-slate-800">Fechar Caixa</h2>
+                <button
+                  onClick={() => {
+                    setShowCloseModal(false);
+                    setClosingAmount('');
+                  }}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
+                  <p className="text-sm text-blue-700 font-semibold">Saldo Esperado (Sistema)</p>
+                  <p className="text-2xl font-bold text-blue-900 mt-1">
+                    R$ {summary.balance.toFixed(2)}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Saldo Real (Digite o valor que você conferiu)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="w-full border-2 border-slate-300 rounded-lg p-3 text-lg font-bold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                    placeholder="0.00"
+                    value={closingAmount}
+                    onChange={(e) => setClosingAmount(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+
+                {closingAmount && (
+                  <div className="p-4 rounded-lg border-2" >
+                    {Math.abs(Number(closingAmount) - summary.balance) < 0.01 ? (
+                      <div className="bg-green-50 border-green-200">
+                        <p className="text-sm text-green-700 font-semibold">✓ Conferência OK</p>
+                        <p className="text-xs text-green-600 mt-1">Saldo bate perfeitamente com o sistema!</p>
+                      </div>
+                    ) : (
+                      <div className="bg-red-50 border-red-200">
+                        <div className="flex items-start gap-2">
+                          <AlertTriangle className="text-red-600 flex-shrink-0 mt-0.5" size={16} />
+                          <div>
+                            <p className="text-sm text-red-700 font-semibold">⚠️ Divergência Detectada</p>
+                            <p className="text-xs text-red-600 mt-1">
+                              Diferença: R${' '}
+                              {Math.abs(Number(closingAmount) - summary.balance).toFixed(2)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="pt-4 flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowCloseModal(false);
+                      setClosingAmount('');
+                    }}
+                    className="flex-1 px-4 py-2.5 border-2 border-slate-200 rounded-lg font-bold text-slate-600 hover:bg-slate-50 transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleCloseDrawer}
+                    disabled={!closingAmount}
+                    className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Confirmar Fechamento
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Cash Modal */}

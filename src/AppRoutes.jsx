@@ -70,6 +70,7 @@ import FinanceAutomacaoFinanceira from '@/pages/clinica/financeiro/AutomacaoFina
 import AutorizacaoDescontos from '@/pages/clinica/financeiro/AutorizacaoDescontos';
 import CaixaIndividual from '@/pages/clinica/financeiro/CaixaIndividual';
 import CaixaGerencial from '@/pages/clinica/financeiro/CaixaGerencial';
+import DivergenciasAnalytics from '@/pages/clinica/financeiro/DivergenciasAnalytics';
 import CartasPage from '@/pages/clinica/financeiro/CartasPage';
 import CartasOperadorasPage from '@/pages/clinica/financeiro/CartasOperadorasPage';
 import CartasProcessadorTaxasPage from '@/pages/clinica/financeiro/CartasProcessadorTaxasPage';
@@ -129,17 +130,10 @@ import AgendaRelatorios from '@/pages/clinica/agenda/views/AgendaRelatorios';
 import AgendaKpis from '@/pages/clinica/agenda/views/AgendaKpis';
 import AgendaNotificacoes from '@/pages/clinica/agenda/views/AgendaNotificacoes';
 // 🟢 ETAPA 6: Import das páginas placeholder
-import AgendaConfirmacoes from '@/pages/clinica/agenda/AgendaConfirmacoes';
-import AgendaEspera from '@/pages/clinica/agenda/AgendaEspera';
-import AgendaIndicadores from '@/pages/clinica/agenda/AgendaIndicadores';
 import AgendaLogNotificacoes from '@/pages/clinica/agenda/views/AgendaLogNotificacoes';
 
 // ✨ NOVA AGENDA REFATORADA - COMPONENTES
 import AgendaIndexNew from '@/pages/clinica/agenda/components/index';
-
-// 📋 RECEPÇÃO - PHASE 3
-import { ReceptionPage } from '@/pages/Reception/ReceptionPage';
-import { ReceptionTestPage } from '@/pages/Reception/ReceptionTestPage';
 
 // 👨‍⚕️ ATENDIMENTO DO PROFISSIONAL (DESCONTINUADO - Consolidado na Página de Paciente)
 // import AtendimentoProfissionalView from "@/pages/clinica/agenda/views/AtendimentoProfissionalView";
@@ -351,9 +345,9 @@ export default function AppRoutes() {
             element={<AgendaIndexNew />}
           />
 
-          {/* 📋 RECEPÇÃO - PHASE 3 */}
-          <Route path="agenda/recepcao" element={<ReceptionPage />} />
-          <Route path="agenda/recepcao/test" element={<ReceptionTestPage />} />
+          {/* Rotas legadas: recepção e painéis operacionais circulam dentro da Agenda única */}
+          <Route path="agenda/recepcao" element={<Navigate to="/clinica/agenda" replace />} />
+          <Route path="agenda/recepcao/test" element={<Navigate to="/clinica/agenda" replace />} />
 
           {/* ✨ NOVA AGENDA REFATORADA - VERSÃO DE TESTE */}
           <Route
@@ -387,10 +381,10 @@ export default function AppRoutes() {
             />
           */}
 
-          {/* �🟢 ETAPA 6: Sub-rotas com páginas placeholder */}
-          <Route path="agenda/confirmacoes" element={<AgendaConfirmacoes />} />
-          <Route path="agenda/espera" element={<AgendaEspera />} />
-          <Route path="agenda/indicadores" element={<AgendaIndicadores />} />
+          {/* Sub-rotas antigas removidas: sem telas operacionais separadas */}
+          <Route path="agenda/confirmacoes" element={<Navigate to="/clinica/agenda" replace />} />
+          <Route path="agenda/espera" element={<Navigate to="/clinica/agenda" replace />} />
+          <Route path="agenda/indicadores" element={<Navigate to="/clinica/agenda" replace />} />
 
           {/* CONFIGURAÇÕES */}
           <Route path="configuracoes" element={<GeraisConfig />} />
@@ -474,6 +468,7 @@ export default function AppRoutes() {
           <Route path="financeiro/cockpit-premium" element={<CockpitPremium />} />
           <Route path="financeiro/caixa" element={<CaixaIndividual />} />
           <Route path="financeiro/caixa-gerencial" element={<CaixaGerencial />} />
+          <Route path="financeiro/divergencias" element={<DivergenciasAnalytics />} />
           <Route path="financeiro/resultado" element={<DREPage />} />
           <Route path="financeiro/dre" element={<DREPage />} />
           <Route path="financeiro/receber" element={<FinanceContasReceber />} />

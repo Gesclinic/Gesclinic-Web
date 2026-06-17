@@ -9,10 +9,12 @@ import { listAppointments } from '@/lib/appointmentsApi';
 import { listProfessionals } from '@/lib/professionalsApi';
 import { listServices } from '@/lib/servicesApi';
 import { listPayers } from '@/lib/payersApi';
+import { listRooms } from '@/lib/roomsApi';
 import { sendBatchConfirmations } from '@/lib/whatsappConfirmationApi';
 import { supabase } from '@/lib/customSupabaseClient';
+import { getClinicTimeSlots } from '@/lib/agendaUtils';
 
-// ?? Configuração de abas por perfil
+// ?? Configuraï¿½ï¿½o de abas por perfil
 import { getAccessibleAgendaTabs, DEFAULT_AGENDA_TAB_BY_ROLE } from '@/config/agendaTabs.config';
 
 // Componentes novos
@@ -27,7 +29,6 @@ import AgendaDayView from '../views/AgendaDayView';
 import AgendaWeekView from '../views/AgendaWeekView';
 import AgendaMonthView from '../views/AgendaMonthView';
 import AgendaPorProfissional from '../views/AgendaPorProfissional';
-import AgendaSalaPlaceholder from '../views/AgendaSalaPlaceholder';
 
 // Hooks e contextos
 import { useAuth } from '@/contexts/SupabaseAuthContext';
@@ -41,16 +42,16 @@ import {
 } from '@/lib/appointmentStatusConstants';
 
 /**
- * EXEMPLO DE INTEGRAÇÃO COMPLETA
+ * EXEMPLO DE INTEGRAï¿½ï¿½O COMPLETA
  *
  * Este arquivo demonstra como usar todos os novos componentes juntos.
- * Substitua as importações com APIs reais do seu projeto.
+ * Substitua as importaï¿½ï¿½es com APIs reais do seu projeto.
  *
  * Estrutura:
  * 1. Estado central (data, viewMode, filters, agendaMode)
  * 2. Efeitos para carregar dados
- * 3. Lógica de filtragem com useMemo
- * 4. Handlers para navegação, filtragem, ações
+ * 3. Lï¿½gica de filtragem com useMemo
+ * 4. Handlers para navegaï¿½ï¿½o, filtragem, aï¿½ï¿½es
  * 5. Render com todos os componentes
  */
 
@@ -77,7 +78,7 @@ export default function AgendaIndex() {
   const appointmentIdFinal = appointmentIdFromState || appointmentIdFromLocalStorage;
 
   console.log('+---------------------------------------------------------------+');
-  console.log('¦            [AgendaIndex] STARTUP DIAGNOSTICS              ¦');
+  console.log('ï¿½            [AgendaIndex] STARTUP DIAGNOSTICS              ï¿½');
   console.log('+---------------------------------------------------------------+');
   console.log(' appointmentDateFromQuery:', appointmentDateFromQuery);
   console.log(' appointmentDateFromState:', appointmentDateFromState);
@@ -92,24 +93,16 @@ export default function AgendaIndex() {
   console.log('---------------------------------------------------------------');
 
   // ============ CONTEXTOS & AUTH ============
-  let auth, clinicId, clinic, loadingClinic;
-  try {
-    auth = useAuth();
-    const clinicCtx = useClinicContext();
-    clinicId = clinicCtx?.clinicId;
-    clinic = clinicCtx?.clinic;
-    loadingClinic = clinicCtx?.loadingClinic;
-  } catch (e) {
-    console.warn('?? Contextos não disponíveis');
-    auth = { user: { role: 'gestor', id: 'user-demo' } };
-    clinic = { id: 'clinic-123', name: 'Clínica Demo' };
-    clinicId = 'clinic-123';
-    loadingClinic = false;
-  }
+  const auth = useAuth();
+  const clinicCtx = useClinicContext();
+  const clinicId = clinicCtx?.clinicId;
+  const clinic = clinicCtx?.clinic;
+  const loadingClinic = clinicCtx?.loadingClinic;
 
   const currentRole = auth?.currentRole?.toLowerCase() || 'recepcao';
   const accessibleTabs = getAccessibleAgendaTabs(currentRole);
   const defaultViewMode = DEFAULT_AGENDA_TAB_BY_ROLE[currentRole] || 'dia';
+  const canAccessProfessionalMode = ['admin', 'administrador', 'gestor', 'profissional'].includes(currentRole);
 
   // ============ ESTADO CENTRAL ============
 
@@ -118,10 +111,10 @@ export default function AgendaIndex() {
     if (appointmentDateFinal) {
       console.log(' [DATE INIT] ? appointmentDateFinal encontrado:', appointmentDateFinal);
       if (/^\d{4}-\d{2}-\d{2}$/.test(appointmentDateFinal)) {
-        console.log(' [DATE INIT] ? Formato válido! Retornando:', appointmentDateFinal);
+        console.log(' [DATE INIT] ? Formato vï¿½lido! Retornando:', appointmentDateFinal);
         return appointmentDateFinal;
       }
-      console.log(' [DATE INIT] ? Formato inválido! Usando data de hoje');
+      console.log(' [DATE INIT] ? Formato invï¿½lido! Usando data de hoje');
     }
 
     // Fallback: data de hoje
@@ -131,12 +124,12 @@ export default function AgendaIndex() {
     return todayDate;
   });
 
-  // Inicializar com a aba padrão do perfil, se tiver acesso
+  // Inicializar com a aba padrï¿½o do perfil, se tiver acesso
   const [viewMode, setViewMode] = useState(() => {
     if (accessibleTabs.includes(defaultViewMode)) {
       return defaultViewMode;
     }
-    // Fallback: usar primeira aba acessível
+    // Fallback: usar primeira aba acessï¿½vel
     return accessibleTabs[0] || 'dia';
   });
 
@@ -145,6 +138,7 @@ export default function AgendaIndex() {
 
   const [filters, setFilters] = useState({
     search: '',
+    patient_id: '',
     professional_id: '',
     room_id: '',
     status: '',
@@ -164,12 +158,12 @@ export default function AgendaIndex() {
   console.log('  - appointmentDateFinal:', appointmentDateFinal);
   console.log('  - location.search:', location.search);
 
-  //  DEBUG: Verificar se índice está montando
+  //  DEBUG: Verificar se ï¿½ndice estï¿½ montando
   if (!clinicId && !loadingClinic) {
-    console.warn('?? CLINIC ID undefined e loading concluído');
+    console.warn('?? CLINIC ID undefined e loading concluï¿½do');
   }
 
-  // ? EFEITO: Limpar localStorage após usar
+  // ? EFEITO: Limpar localStorage apï¿½s usar
   useEffect(() => {
     if (appointmentDateFinal || appointmentIdFinal) {
       // Already used, so clear after a moment to avoid reuse
@@ -183,7 +177,7 @@ export default function AgendaIndex() {
     }
   }, [appointmentDateFinal, appointmentIdFinal]);
 
-  // ? CRÍTICO: useLayoutEffect roda ANTES do render, forçando date correto SINCRONAMENTE
+  // ? CRï¿½TICO: useLayoutEffect roda ANTES do render, forï¿½ando date correto SINCRONAMENTE
   useLayoutEffect(() => {
     if (!appointmentDateFinal) {
       return;
@@ -194,12 +188,12 @@ export default function AgendaIndex() {
     }
 
     if (date !== appointmentDateFinal) {
-      console.log('? [useLayoutEffect] FORÇANDO UPDATE de date:', date, '?', appointmentDateFinal);
+      console.log('? [useLayoutEffect] FORï¿½ANDO UPDATE de date:', date, '?', appointmentDateFinal);
       setDate(appointmentDateFinal);
     }
   }, [appointmentDateFinal]);
 
-  // ? EFEITO: Monitorar mudanças de appointmentDateFinal e SEMPRE atualizar date
+  // ? EFEITO: Monitorar mudanï¿½as de appointmentDateFinal e SEMPRE atualizar date
   useEffect(() => {
     console.log('-------------------------------------------------------');
     console.log(' [useEffect MONITOR] DISPARADO - Monitorar appointmentDateFinal');
@@ -210,58 +204,58 @@ export default function AgendaIndex() {
     console.log('-------------------------------------------------------');
 
     if (!appointmentDateFinal) {
-      console.log('??  appointmentDateFinal está vazio, ignorando');
+      console.log('??  appointmentDateFinal estï¿½ vazio, ignorando');
       return;
     }
 
     // Validar formato
     if (!/^\d{4}-\d{2}-\d{2}$/.test(appointmentDateFinal)) {
-      console.warn('? appointmentDateFinal com formato inválido:', appointmentDateFinal);
+      console.warn('? appointmentDateFinal com formato invï¿½lido:', appointmentDateFinal);
       return;
     }
 
-    // Se é diferente do state atual, atualizar
+    // Se ï¿½ diferente do state atual, atualizar
     if (date !== appointmentDateFinal) {
       console.log('? Atualizando date de', date, 'para', appointmentDateFinal);
       setDate(appointmentDateFinal);
     } else {
-      console.log('??  Date já está correto, não precisa atualizar');
+      console.log('??  Date jï¿½ estï¿½ correto, nï¿½o precisa atualizar');
     }
   }, [appointmentDateFinal, date, location.search, location.state]);
 
   // ? SEED de feriados - ATIVA AUTOMATICAMENTE
-  // Garante que feriados nacionais existem no banco para múltiplos anos
+  // Garante que feriados nacionais existem no banco para mï¿½ltiplos anos
   useEffect(() => {
     console.log('? [useEffect] Hook disparado - iniciando seed de feriados');
 
     const ensureHolidaysExist = async () => {
       console.log(' [Agenda] Iniciando seed de feriados para 2024-2028');
       console.log(
-        ' [Agenda] Função seedNationalHolidaysMultipleYears:',
+        ' [Agenda] Funï¿½ï¿½o seedNationalHolidaysMultipleYears:',
         typeof seedNationalHolidaysMultipleYears,
       );
 
       try {
-        // Semeia feriados de múltiplos anos (2024, 2025, 2026, 2027, 2028)
+        // Semeia feriados de mï¿½ltiplos anos (2024, 2025, 2026, 2027, 2028)
         console.log(' [Agenda] Chamando seedNationalHolidaysMultipleYears...');
         const seedResult = await seedNationalHolidaysMultipleYears();
         console.log(' [Seed] Resultado:', seedResult);
         if (seedResult) {
-          console.log('? [Seed] SUCESSO - Feriados de múltiplos anos inseridos');
+          console.log('? [Seed] SUCESSO - Feriados de mï¿½ltiplos anos inseridos');
         } else {
           console.error('?? [Seed] FALHOU - Erro ao inserir feriados');
         }
       } catch (error) {
-        console.error('? [Seed] Exceção:', error.message, error);
+        console.error('? [Seed] Exceï¿½ï¿½o:', error.message, error);
       }
     };
 
     try {
       ensureHolidaysExist();
     } catch (err) {
-      console.error('? [Seed] Erro ao chamar função:', err);
+      console.error('? [Seed] Erro ao chamar funï¿½ï¿½o:', err);
     }
-  }, []); // ? Dependência vazia - roda APENAS UMA VEZ ao montar
+  }, []); // ? Dependï¿½ncia vazia - roda APENAS UMA VEZ ao montar
 
   //  RBAC: Carregar ID do profissional logado (se for profissional)
   useEffect(() => {
@@ -272,11 +266,11 @@ export default function AgendaIndex() {
 
       const currentRole = auth?.currentRole;
 
-      //  LÓGICA RBAC:
-      // - Profissional: Vê apenas sua agenda (userProfessionalId = seu ID)
-      // - Recepção/Admin/Gestor: Vê agenda de todos (userProfessionalId = null)
+      //  Lï¿½GICA RBAC:
+      // - Profissional: Vï¿½ apenas sua agenda (userProfessionalId = seu ID)
+      // - Recepï¿½ï¿½o/Admin/Gestor: Vï¿½ agenda de todos (userProfessionalId = null)
       if (currentRole?.toLowerCase?.() !== 'profissional') {
-        console.log(`? [RBAC] Usuário é ${currentRole} ? verá TODOS os profissionais`);
+        console.log(`? [RBAC] Usuï¿½rio ï¿½ ${currentRole} ? verï¿½ TODOS os profissionais`);
         setUserProfessionalId(null);
         return;
       }
@@ -294,9 +288,9 @@ export default function AgendaIndex() {
 
         if (allProfs?.length === 1) {
           setUserProfessionalId(allProfs[0].id);
-          console.log(`? [RBAC] Profissional logado ? verá apenas sua agenda: ${allProfs[0].id}`);
+          console.log(`? [RBAC] Profissional logado ? verï¿½ apenas sua agenda: ${allProfs[0].id}`);
         } else if (allProfs?.length > 1) {
-          console.warn(`?? [RBAC] Múltiplos profissionais para email ${auth.user.email}`);
+          console.warn(`?? [RBAC] Mï¿½ltiplos profissionais para email ${auth.user.email}`);
           // Usar o primeiro
           setUserProfessionalId(allProfs[0].id);
           console.log(`? [RBAC] Usando primeiro profissional: ${allProfs[0].id}`);
@@ -313,14 +307,14 @@ export default function AgendaIndex() {
     loadUserProfessionalId();
   }, [clinicId, auth?.user?.email, auth?.currentRole]);
 
-  // ?? Garantir que viewMode seja sempre acessível para o perfil
+  // ?? Garantir que viewMode seja sempre acessï¿½vel para o perfil
   useEffect(() => {
     if (!accessibleTabs.includes(viewMode)) {
       console.log(
-        `?? [ViewMode] viewMode atual "${viewMode}" não é acessível para "${currentRole}"`,
+        `?? [ViewMode] viewMode atual "${viewMode}" nï¿½o ï¿½ acessï¿½vel para "${currentRole}"`,
       );
       console.log(`   Alternando para: "${accessibleTabs[0] || 'dia'}"`);
-      // Resetar para a primeira aba acessível
+      // Resetar para a primeira aba acessï¿½vel
       setViewMode(accessibleTabs[0] || 'dia');
     }
   }, [accessibleTabs, viewMode, currentRole]);
@@ -331,14 +325,13 @@ export default function AgendaIndex() {
   const [services, setServices] = useState([]);
   const [payers, setPayers] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [agendaSummary, setAgendaSummary] = useState({});
 
   //  WhatsApp Confirmations
   const [whatsappLoading, setWhatsappLoading] = useState(false);
   const [whatsappResult, setWhatsappResult] = useState(null);
   const [whatsappError, setWhatsappError] = useState(null);
 
-  // Modal de novo/edição de agendamento
+  // Modal de novo/ediï¿½ï¿½o de agendamento
   const [modalNovoOpen, setModalNovoOpen] = useState(false);
   const [novoAgendamentoInfo, setNovoAgendamentoInfo] = useState(null);
   const [appointmentIdToEdit, setAppointmentIdToEdit] = useState(null);
@@ -347,8 +340,8 @@ export default function AgendaIndex() {
   const [atendimentoUnificadoOpen, setAtendimentoUnificadoOpen] = useState(false);
   const [selectedAppointmentForUnified, setSelectedAppointmentForUnified] = useState(null);
 
-  // ?? Flag para rastrear se o modal foi fechado intencionalmente pelo usuário
-  // Evita que o useEffect reabra a modal após o usuário clicar no X
+  // ?? Flag para rastrear se o modal foi fechado intencionalmente pelo usuï¿½rio
+  // Evita que o useEffect reabra a modal apï¿½s o usuï¿½rio clicar no X
   const hasModalBeenClosedRef = React.useRef(false);
 
   // Drawer de detalhes do agendamento
@@ -369,34 +362,34 @@ export default function AgendaIndex() {
     console.log('   modalNovoOpen:', modalNovoOpen);
     console.log('   hasModalBeenClosed:', hasModalBeenClosedRef.current);
 
-    // Se o usuário fechou intencionalmente a modal, não reabrir
+    // Se o usuï¿½rio fechou intencionalmente a modal, nï¿½o reabrir
     if (hasModalBeenClosedRef.current) {
-      console.log('?? Modal foi fechada intencionalmente pelo usuário, não reabrindo');
+      console.log('?? Modal foi fechada intencionalmente pelo usuï¿½rio, nï¿½o reabrindo');
       return;
     }
 
-    // Se o modal já está aberto, não tentar abrir novamente
+    // Se o modal jï¿½ estï¿½ aberto, nï¿½o tentar abrir novamente
     if (modalNovoOpen) {
-      console.log('?? Modal já está aberto, saindo');
+      console.log('?? Modal jï¿½ estï¿½ aberto, saindo');
       return;
     }
 
-    // Verificar se temos os parâmetros para auto-open
+    // Verificar se temos os parï¿½metros para auto-open
     if (modeParam === 'edit' && appointmentIdFinal) {
-      console.log('? Parâmetros encontrados: mode=edit + appointmentId');
+      console.log('? Parï¿½metros encontrados: mode=edit + appointmentId');
 
-      // CRÍTICO: Verificar se a data foi navegada corretamente
+      // CRï¿½TICO: Verificar se a data foi navegada corretamente
       if (appointmentDateFinal && date !== appointmentDateFinal) {
-        console.log('? Aguardando navegação para data correta...');
+        console.log('? Aguardando navegaï¿½ï¿½o para data correta...');
         console.log('   Esperada:', appointmentDateFinal);
         console.log('   Atual:', date);
-        return; // Aguardar próxima execução quando date mudar
+        return; // Aguardar prï¿½xima execuï¿½ï¿½o quando date mudar
       }
 
       // Verificar se os appointments foram carregados
       if (!appointments || appointments.length === 0) {
         console.log('? Aguardando carregamento dos appointments...');
-        return; // Aguardar próxima execução quando appointments mudarem
+        return; // Aguardar prï¿½xima execuï¿½ï¿½o quando appointments mudarem
       }
 
       // Procurar pelo appointment na lista
@@ -411,14 +404,14 @@ export default function AgendaIndex() {
         setModalNovoOpen(true);
         console.log('? Modal aberto com appointmentIdToEdit:', appointmentIdFinal);
       } else {
-        console.warn('?? Appointment NÃO encontrado');
-        console.log('   IDs disponíveis:', appointments.map((a) => a.id).join(', '));
+        console.warn('?? Appointment Nï¿½O encontrado');
+        console.log('   IDs disponï¿½veis:', appointments.map((a) => a.id).join(', '));
       }
     }
   }, [modeParam, appointmentIdFinal, appointmentDateFinal, date, appointments, modalNovoOpen]);
 
-  // ============ FUNÇÃO PARA RECARREGAR APPOINTMENTS ============
-  // ? Extraída em função separada para poder ser reutilizada no onCreated
+  // ============ FUNï¿½ï¿½O PARA RECARREGAR APPOINTMENTS ============
+  // ? Extraï¿½da em funï¿½ï¿½o separada para poder ser reutilizada no onCreated
   const loadAppointments = useCallback(async () => {
     console.log(
       '%c ?? [AgendaIndex] loadAppointments INICIANDO!',
@@ -427,7 +420,7 @@ export default function AgendaIndex() {
     console.log(' [loadAppointments] INICIANDO', { viewMode, clinicId });
 
     if (!clinicId) {
-      console.error(' [loadAppointments] CRÍTICO: clinicId é', clinicId, '- não posso continuar!');
+      console.error(' [loadAppointments] CRï¿½TICO: clinicId ï¿½', clinicId, '- nï¿½o posso continuar!');
       console.error(' [loadAppointments] loadingClinic:', loadingClinic);
       console.error(' [loadAppointments] clinic:', clinic);
       setLoading(false);  // ?? FIX: Ensure loading is always false when returning early
@@ -441,16 +434,16 @@ export default function AgendaIndex() {
       let startUTC, endUTC;
 
       if (viewMode === 'mes') {
-        // Carregar TODO o mês
-        console.log(' [loadAppointments] Modo MÊS - carregando mês inteiro');
-        startUTC = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0)); // Primeiro dia do mês
-        endUTC = new Date(Date.UTC(year, month, 0, 23, 59, 59)); // Último dia do mês
+        // Carregar TODO o mï¿½s
+        console.log(' [loadAppointments] Modo Mï¿½S - carregando mï¿½s inteiro');
+        startUTC = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0)); // Primeiro dia do mï¿½s
+        endUTC = new Date(Date.UTC(year, month, 0, 23, 59, 59)); // ï¿½ltimo dia do mï¿½s
       } else if (viewMode === 'semana') {
         // Carregar TODA a semana (seg-dom)
         console.log(' [loadAppointments] Modo SEMANA - carregando semana inteira');
         const dateObj = new Date(Date.UTC(year, month - 1, day));
         const dayOfWeek = dateObj.getUTCDay(); // 0 = Sunday, 1 = Monday
-        const mondayDiff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Calcular dias até segunda
+        const mondayDiff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Calcular dias atï¿½ segunda
         const monday = new Date(dateObj);
         monday.setUTCDate(dateObj.getUTCDate() + mondayDiff);
         startUTC = new Date(
@@ -481,7 +474,7 @@ export default function AgendaIndex() {
         clinicId,
       });
 
-      //  Se for profissional, buscar o professional_id do usuário
+      //  Se for profissional, buscar o professional_id do usuï¿½rio
       let userProfessionalId = null;
       const currentRole = auth?.currentRole;
       if (currentRole?.toLowerCase?.() === 'profissional' && auth?.user?.email) {
@@ -506,7 +499,7 @@ export default function AgendaIndex() {
         setTimeout(() => reject(new Error('API timeout - taking too long to load')), 60000)
       );
 
-      const [appts, profs, svcs, pays] = await Promise.race([
+      const [appts, profs, svcs, pays, rms] = await Promise.race([
         Promise.all([
           listAppointments({
             clinicId,
@@ -530,6 +523,10 @@ export default function AgendaIndex() {
             console.error('? Erro em listPayers:', err);
             return [];
           }),
+          listRooms(clinicId).catch((err) => {
+            console.error('? Erro em listRooms:', err);
+            return [];
+          }),
         ]),
         apiTimeout,
       ]);
@@ -539,6 +536,7 @@ export default function AgendaIndex() {
         profsCount: profs?.length,
         svcsCount: svcs?.length,
         paysCount: pays?.length,
+        roomsCount: rms?.length,
         clinicId: clinicId,
       });
 
@@ -589,6 +587,7 @@ export default function AgendaIndex() {
       setProfessionals(profs || []);
       setServices(svcs || []);
       setPayers(pays || []);
+      setRooms(rms || []);
       console.log(
         '? [loadAppointments] Estado React atualizado com',
         (normalizedAppts || []).length,
@@ -600,6 +599,7 @@ export default function AgendaIndex() {
       setProfessionals([]);
       setServices([]);
       setPayers([]);
+      setRooms([]);
     } finally {
       setLoading(false);
     }
@@ -611,53 +611,56 @@ export default function AgendaIndex() {
     loadAppointments();
   }, [loadAppointments]);
 
-  // ============ GERAR AGENDA SUMMARY (para calendário) ============
-
-  useEffect(() => {
-    // Gera um resumo da agenda para os próximos 30 dias
+  const agendaSummary = useMemo(() => {
     const summary = {};
+    const dailyCapacity = getClinicTimeSlots(clinic).length || 1;
 
-    for (let i = 0; i < 30; i++) {
-      const d = new Date();
-      d.setDate(d.getDate() + i);
-      const dateKey = d.toISOString().split('T')[0];
-
-      // Verificar feriados (simplificado)
-      const month = d.getMonth() + 1;
-      const dayOfMonth = d.getDate();
-
-      if (month === 2 && dayOfMonth === 12) {
-        // Feriado exemplo
-        summary[dateKey] = { status: 'holiday', label: 'Carnaval' };
-      } else {
-        // Simular status baseado no dia
-        const dayNum = parseInt(dateKey.split('-')[2]);
-        if (dayNum % 5 === 0) {
-          summary[dateKey] = { status: 'full' };
-        } else if (dayNum % 3 === 0) {
-          summary[dateKey] = { status: 'partial' };
-        } else {
-          summary[dateKey] = { status: 'free' };
-        }
+    appointments.forEach((appointment) => {
+      const dateKey = appointment.scheduled_date || appointment.date;
+      if (!dateKey) {
+        return;
       }
-    }
+      summary[dateKey] = summary[dateKey] || { count: 0 };
+      summary[dateKey].count += 1;
+    });
 
-    setAgendaSummary(summary);
-  }, []);
+    Object.entries(summary).forEach(([dateKey, item]) => {
+      const occupancy = item.count / dailyCapacity;
+      summary[dateKey] = {
+        status: occupancy >= 1 ? 'full' : occupancy > 0 ? 'partial' : 'free',
+        label: `${item.count} atendimento${item.count === 1 ? '' : 's'}`,
+      };
+    });
+
+    return summary;
+  }, [appointments, clinic]);
 
   // ============ FILTRAGEM ============
 
   const filteredAppointments = useMemo(() => {
     let filtered = [...appointments];
 
-    // Filtro por busca (nome do paciente)
+    // Filtro por busca (paciente, telefone ou serviÃ§o)
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
       filtered = filtered.filter((apt) => {
         const patientName = apt.patient_name || apt.patient?.name || '';
-        return patientName.toLowerCase().includes(searchLower);
+        const phone = apt.patient_phone || apt.phone || apt.patient?.phone || apt.patient?.cell_phone || '';
+        const serviceName = apt.service_name || apt.service?.name || apt.services?.name || '';
+        return [patientName, phone, serviceName]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(searchLower));
       });
       console.log(` [Filtro] Busca por "${filters.search}": ${filtered.length} resultados`);
+    }
+
+    // Filtro por paciente
+    if (filters.patient_id && filters.patient_id !== '') {
+      filtered = filtered.filter((apt) => {
+        const patientId = apt.patient_id || apt.patientId || apt.patient?.id;
+        return patientId === filters.patient_id;
+      });
+      console.log(` [Filtro] Paciente: ${filtered.length} resultados`);
     }
 
     // Filtro por profissional
@@ -678,16 +681,16 @@ export default function AgendaIndex() {
       console.log(`? [Filtro] Status "${filters.status}": ${filtered.length} resultados`);
     }
 
-    // Filtro por convênio
+    // Filtro por convï¿½nio
     if (filters.payer_id && filters.payer_id !== '') {
       filtered = filtered.filter((apt) => apt.payer_id === filters.payer_id);
-      console.log(` [Filtro] Convênio: ${filtered.length} resultados`);
+      console.log(` [Filtro] Convï¿½nio: ${filtered.length} resultados`);
     }
 
-    // Filtro por serviço
+    // Filtro por serviï¿½o
     if (filters.service_id && filters.service_id !== '') {
       filtered = filtered.filter((apt) => apt.service_id === filters.service_id);
-      console.log(` [Filtro] Serviço: ${filtered.length} resultados`);
+      console.log(` [Filtro] Serviï¿½o: ${filtered.length} resultados`);
     }
 
     console.log(`? [Filtros Aplicados] Total: ${appointments.length} ? ${filtered.length}`, {
@@ -699,14 +702,27 @@ export default function AgendaIndex() {
     return Object.values(filters).filter((v) => v && v !== '').length;
   }, [filters]);
 
+  const patientsForFilter = useMemo(() => {
+    const patientMap = new Map();
+    appointments.forEach((appointment) => {
+      const patientId = appointment.patient_id || appointment.patientId || appointment.patient?.id;
+      const patientName = appointment.patient_name || appointment.patient?.name;
+      if (patientId && patientName && !patientMap.has(patientId)) {
+        patientMap.set(patientId, { id: patientId, name: patientName });
+      }
+    });
+    return Array.from(patientMap.values()).sort((left, right) => left.name.localeCompare(right.name, 'pt-BR'));
+  }, [appointments]);
+
   const metadata = useMemo(
     () => ({
       professionals,
+      patients: patientsForFilter,
       rooms,
       services,
       payers,
     }),
-    [professionals, rooms, services, payers],
+    [patientsForFilter, professionals, rooms, services, payers],
   );
 
   // ============ HANDLERS ============
@@ -714,7 +730,7 @@ export default function AgendaIndex() {
   const handlePreviousDay = useCallback(() => {
     setDate((prev) => {
       const parsedDate = parseISO(prev);
-      // Se estiver em dia, voltar 1 dia; se em semana, voltar 7 dias; se em mês, voltar 1 mês
+      // Se estiver em dia, voltar 1 dia; se em semana, voltar 7 dias; se em mï¿½s, voltar 1 mï¿½s
       let newDate;
       if (viewMode === 'dia') {
         newDate = subDays(parsedDate, 1);
@@ -730,7 +746,7 @@ export default function AgendaIndex() {
   const handleNextDay = useCallback(() => {
     setDate((prev) => {
       const parsedDate = parseISO(prev);
-      // Se estiver em dia, avançar 1 dia; se em semana, avançar 7 dias; se em mês, avançar 1 mês
+      // Se estiver em dia, avanï¿½ar 1 dia; se em semana, avanï¿½ar 7 dias; se em mï¿½s, avanï¿½ar 1 mï¿½s
       let newDate;
       if (viewMode === 'dia') {
         newDate = addDays(parsedDate, 1);
@@ -751,18 +767,30 @@ export default function AgendaIndex() {
     (mode) => {
       //  Validar se o perfil tem acesso a essa aba
       if (!accessibleTabs.includes(mode)) {
-        console.warn(`?? Acesso negado: perfil "${currentRole}" não pode acessar a aba "${mode}"`);
-        console.log('   Abas disponíveis:', accessibleTabs);
-        return; // Bloquear mudança
+        console.warn(`?? Acesso negado: perfil "${currentRole}" nï¿½o pode acessar a aba "${mode}"`);
+        console.log('   Abas disponï¿½veis:', accessibleTabs);
+        return; // Bloquear mudanï¿½a
       }
       setViewMode(mode);
     },
     [accessibleTabs, currentRole],
   );
 
-  const handleAgendaModeChange = useCallback((mode) => {
-    setAgendaMode(mode);
-  }, []);
+  const handleAgendaModeChange = useCallback(
+    (mode) => {
+      if (mode === 'profissional' && !canAccessProfessionalMode) {
+        return;
+      }
+      setAgendaMode(['profissional', 'sala'].includes(mode) ? mode : 'geral');
+    },
+    [canAccessProfessionalMode],
+  );
+
+  useEffect(() => {
+    if (!canAccessProfessionalMode && agendaMode === 'profissional') {
+      setAgendaMode('geral');
+    }
+  }, [agendaMode, canAccessProfessionalMode]);
 
   const handleFilterChange = useCallback((key, value) => {
     setFilters((prev) => ({
@@ -774,6 +802,7 @@ export default function AgendaIndex() {
   const handleClearFilters = useCallback(() => {
     setFilters({
       search: '',
+      patient_id: '',
       professional_id: '',
       room_id: '',
       status: '',
@@ -782,6 +811,66 @@ export default function AgendaIndex() {
     });
   }, []);
 
+  const clinicTimeSlots = useMemo(() => getClinicTimeSlots(clinic), [clinic]);
+
+  const agendaCapacity = useMemo(() => {
+    const daySlots = clinicTimeSlots.length || 20;
+    const resourceCount =
+      agendaMode === 'sala'
+        ? Math.max(filters.room_id ? 1 : rooms.length, 1)
+        : Math.max(filters.professional_id ? 1 : professionals.length, 1);
+
+    if (viewMode === 'semana') {
+      return daySlots * 7 * resourceCount;
+    }
+    if (viewMode === 'mes') {
+      const [year, month] = date.split('-').map(Number);
+      return daySlots * new Date(year, month, 0).getDate() * resourceCount;
+    }
+    return daySlots * resourceCount;
+  }, [agendaMode, clinicTimeSlots.length, date, filters.professional_id, filters.room_id, professionals.length, rooms.length, viewMode]);
+
+  const roomModeRooms = useMemo(() => {
+    const registeredRooms = rooms.map((room) => ({
+      id: room.id,
+      name: room.name || room.nome || room.label || `Sala ${room.id?.slice?.(0, 8) || ''}`,
+    }));
+
+    const appointmentRooms = filteredAppointments.reduce((acc, appointment) => {
+      const roomId = appointment.room_id || appointment.roomId || appointment.room?.id;
+      if (!roomId || acc.some((room) => room.id === roomId)) {
+        return acc;
+      }
+      acc.push({
+        id: roomId,
+        name:
+          appointment.room_name ||
+          appointment.room?.name ||
+          appointment.room ||
+          `Sala ${String(roomId).slice(0, 8)}`,
+      });
+      return acc;
+    }, []);
+
+    const sourceRooms = registeredRooms.length > 0 ? registeredRooms : appointmentRooms;
+    return filters.room_id ? sourceRooms.filter((room) => room.id === filters.room_id) : sourceRooms;
+  }, [filteredAppointments, filters.room_id, rooms]);
+
+  const roomModeAppointmentsByRoomAndTime = useMemo(() => {
+    return filteredAppointments.reduce((acc, appointment) => {
+      const roomId = appointment.room_id || appointment.roomId || appointment.room?.id || 'sem-sala';
+      const time = (appointment.scheduled_time || appointment.start_time || appointment.time || '').slice(0, 5);
+      acc[roomId] = acc[roomId] || {};
+      acc[roomId][time] = acc[roomId][time] || [];
+      acc[roomId][time].push(appointment);
+      return acc;
+    }, {});
+  }, [filteredAppointments]);
+
+  const occupiedSlots = filteredAppointments.length;
+  const freeSlots = Math.max(0, agendaCapacity - occupiedSlots);
+  const occupancyPct = agendaCapacity > 0 ? Math.round((occupiedSlots / agendaCapacity) * 100) : 0;
+
   const handleNewAppointment = useCallback(async () => {
     console.log('?? [TRACE] handleNewAppointment called - date:', date);
     console.log('?? [TRACE] date state:', date);
@@ -789,7 +878,7 @@ export default function AgendaIndex() {
     console.log('?? [TRACE] clinic state:', clinic);
 
     try {
-      // Verificar se a data é um feriado bloqueado
+      // Verificar se a data ï¿½ um feriado bloqueado
       const clinicId = clinic?.id || null;
       console.log('?? [TRACE] clinicId extracted:', clinicId);
 
@@ -811,16 +900,16 @@ export default function AgendaIndex() {
       console.log('?? [TRACE] holiday for date:', holiday);
 
       if (holiday && holiday.is_blocked && !holiday.has_override) {
-        // Feriado bloqueado - não permitir agendamento
-        console.warn(`? Data ${date} é feriado bloqueado: ${holiday.name}`);
+        // Feriado bloqueado - nï¿½o permitir agendamento
+        console.warn(`? Data ${date} ï¿½ feriado bloqueado: ${holiday.name}`);
         alert(
-          `? Não é possível agendar em ${date}\n\n ${holiday.name} - FERIADO NACIONAL\n\n? A agenda está bloqueada neste dia.\n\nPara desbloquear, utilize a opção de override manual.`,
+          `? Nï¿½o ï¿½ possï¿½vel agendar em ${date}\n\n ${holiday.name} - FERIADO NACIONAL\n\n? A agenda estï¿½ bloqueada neste dia.\n\nPara desbloquear, utilize a opï¿½ï¿½o de override manual.`,
         );
         return;
       }
 
       if (holiday && holiday.has_override) {
-        console.log(`?? Data ${date} é feriado COM override: ${holiday.name}`);
+        console.log(`?? Data ${date} ï¿½ feriado COM override: ${holiday.name}`);
       }
 
       // Permitir agendamento
@@ -878,8 +967,8 @@ export default function AgendaIndex() {
       const foundAppointment = appointments.find((apt) => apt.id === appointmentId);
 
       if (!foundAppointment) {
-        console.error('? [AgendaIndex] Agendamento não encontrado:', appointmentId);
-        console.log('   Disponíveis:', appointments.map((a) => a.id).join(', '));
+        console.error('? [AgendaIndex] Agendamento nï¿½o encontrado:', appointmentId);
+        console.log('   Disponï¿½veis:', appointments.map((a) => a.id).join(', '));
         return;
       }
 
@@ -901,7 +990,7 @@ export default function AgendaIndex() {
 
   const handleCancelAppointment = useCallback((appointment) => {
     console.log('Cancelar agendamento:', appointment.id);
-    // Abrir diálogo de confirmação
+    // Abrir diï¿½logo de confirmaï¿½ï¿½o
   }, []);
 
   const handleViewDetails = useCallback(
@@ -928,15 +1017,15 @@ export default function AgendaIndex() {
     });
   }, []);
 
-  //  Handler para abrir Prontuário do paciente
+  //  Handler para abrir Prontuï¿½rio do paciente
   const handleOpenPatientRecord = useCallback(
     (patientId, appointment) => {
       if (!patientId) {
-        console.error('? [AgendaIndex] Sem patientId para abrir prontuário');
+        console.error('? [AgendaIndex] Sem patientId para abrir prontuï¿½rio');
         return;
       }
 
-      console.log(' [AgendaIndex] Abrindo prontuário do paciente:', patientId);
+      console.log(' [AgendaIndex] Abrindo prontuï¿½rio do paciente:', patientId);
       navigate(`/clinica/pacientes/${patientId}`, {
         state: {
           appointmentId: appointment?.id,
@@ -959,7 +1048,7 @@ export default function AgendaIndex() {
   //  WhatsApp Confirmations Handler
   const handleSendWhatsAppConfirmations = useCallback(async () => {
     if (
-      !window.confirm('Enviar confirmações de WhatsApp para pacientes com agendamentos de amanhã?')
+      !window.confirm('Enviar confirmaï¿½ï¿½es de WhatsApp para pacientes com agendamentos de amanhï¿½?')
     ) {
       return;
     }
@@ -975,8 +1064,8 @@ export default function AgendaIndex() {
       // Auto-hide success message after 5 seconds
       setTimeout(() => setWhatsappResult(null), 5000);
     } catch (error) {
-      console.error('? Erro ao enviar confirmações:', error);
-      setWhatsappError(error.message || 'Erro ao enviar confirmações');
+      console.error('? Erro ao enviar confirmaï¿½ï¿½es:', error);
+      setWhatsappError(error.message || 'Erro ao enviar confirmaï¿½ï¿½es');
     } finally {
       setWhatsappLoading(false);
     }
@@ -993,19 +1082,19 @@ export default function AgendaIndex() {
     console.log('?? Fechando AtendimentoUnificado');
     setAtendimentoUnificadoOpen(false);
     setSelectedAppointmentForUnified(null);
-    // Recarregar appointments após fechar
+    // Recarregar appointments apï¿½s fechar
     loadAppointments();
   }, [loadAppointments]);
 
   // ============ RENDER ============
 
   console.log('+---------------------------------------------------------------+');
-  console.log('¦                [AgendaIndex] RENDER - FINAL STATE          ¦');
-  console.log('¦---------------------------------------------------------------¦');
-  console.log('¦ ? DATA QUE SERÁ USADO PARA AGENDA:', date);
-  console.log('¦ Veio de appointmentDateFinal?:', appointmentDateFinal === date);
-  console.log('¦ viewMode:', viewMode);
-  console.log('¦ clinicId:', clinicId);
+  console.log('ï¿½                [AgendaIndex] RENDER - FINAL STATE          ï¿½');
+  console.log('ï¿½---------------------------------------------------------------ï¿½');
+  console.log('ï¿½ ? DATA QUE SERï¿½ USADO PARA AGENDA:', date);
+  console.log('ï¿½ Veio de appointmentDateFinal?:', appointmentDateFinal === date);
+  console.log('ï¿½ viewMode:', viewMode);
+  console.log('ï¿½ clinicId:', clinicId);
   console.log('+---------------------------------------------------------------+');
 
   return (
@@ -1104,10 +1193,8 @@ export default function AgendaIndex() {
         viewMode={agendaMode}
         onViewModeChange={handleAgendaModeChange}
         agendaMode={agendaMode}
-        onProfileChange={handleAgendaModeChange}
-        userRole={auth?.currentRole}
-        canAccessProfessionalMode={true}
-        canAccessGestorMode={true}
+        canAccessProfessionalMode={canAccessProfessionalMode}
+        canAccessRoomMode={true}
       />
 
       {/* Filters */}
@@ -1136,7 +1223,7 @@ export default function AgendaIndex() {
 
           {/* Stat: Atendimentos */}
           <div className="flex flex-col items-center">
-            <span className="text-lg font-bold text-blue-600">{filteredAppointments.length}</span>
+            <span className="text-lg font-bold text-blue-600 tabular-nums">{occupiedSlots}</span>
             <span className="text-xs text-gray-600 mt-0.5">Atendimentos</span>
           </div>
 
@@ -1145,24 +1232,17 @@ export default function AgendaIndex() {
 
           {/* Stat: Livres */}
           <div className="flex flex-col items-center">
-            <span className="text-lg font-bold text-green-600">
-              {filteredAppointments.length > 0 ? Math.max(0, 20 - filteredAppointments.length) : 20}
-            </span>
+            <span className="text-lg font-bold text-green-600 tabular-nums">{freeSlots}</span>
             <span className="text-xs text-gray-600 mt-0.5">Livres</span>
           </div>
 
           {/* Separator */}
           <div className="w-px h-7 bg-gray-200" />
 
-          {/* Stat: Ocupação */}
+          {/* Stat: OcupaÃ§Ã£o */}
           <div className="flex flex-col items-center">
-            <span className="text-lg font-bold text-purple-600">
-              {filteredAppointments.length > 0
-                ? Math.round((filteredAppointments.length / 20) * 100)
-                : 0}
-              %
-            </span>
-            <span className="text-xs text-gray-600 mt-0.5">Ocupação</span>
+            <span className="text-lg font-bold text-purple-600 tabular-nums">{occupancyPct}%</span>
+            <span className="text-xs text-gray-600 mt-0.5">OcupaÃ§Ã£o</span>
           </div>
         </div>
 
@@ -1174,8 +1254,8 @@ export default function AgendaIndex() {
             disabled={whatsappLoading}
             title={
               whatsappLoading
-                ? 'Enviando confirmações...'
-                : 'Enviar confirmações de agendamentos para amanhã via WhatsApp'
+                ? 'Enviando confirmaï¿½ï¿½es...'
+                : 'Enviar confirmaï¿½ï¿½es de agendamentos para amanhï¿½ via WhatsApp'
             }
             className={`px-2.5 py-1 text-xs font-medium text-white rounded transition-all flex items-center gap-1 ${
               whatsappLoading
@@ -1202,7 +1282,7 @@ export default function AgendaIndex() {
       {/* Grid/Content - Renderizar baseado em agendaMode e viewMode */}
 
       {agendaMode === 'profissional' ? (
-        // MODO PROFISSIONAL - Horários disponíveis por profissional (Dia/Semana/Mês)
+        // MODO PROFISSIONAL - Horï¿½rios disponï¿½veis por profissional (Dia/Semana/Mï¿½s)
         <div className="flex-1 mt-4 bg-white border border-gray-200 rounded-lg overflow-hidden">
           {(() => {
             console.log('\n [index.jsx] Passando dados para AgendaPorProfissional:');
@@ -1216,14 +1296,99 @@ export default function AgendaIndex() {
             initialDate={date}
             viewMode={viewMode}
             appointments={filteredAppointments}
+            professionals={professionals}
+            services={services}
+            payers={payers}
+            rooms={rooms}
             clinicId={clinicId}
             onRefreshAppointments={loadAppointments}
           />
         </div>
-      ) : agendaMode === 'sala' ? (
-        // MODO SALA - Horários disponíveis por sala
-        <div className="flex-1 mt-4 bg-white border border-gray-200 rounded-lg overflow-hidden">
-          <AgendaSalaPlaceholder />
+      ) : agendaMode === 'sala' && viewMode === 'dia' ? (
+        <div className="flex-1 mt-4 bg-white border border-gray-200 rounded-lg overflow-auto">
+          {roomModeRooms.length === 0 ? (
+            <div className="h-full min-h-[360px] flex flex-col items-center justify-center text-center px-6">
+              <div className="text-sm font-semibold text-gray-700">Nenhuma sala cadastrada</div>
+              <p className="mt-2 max-w-md text-sm text-gray-500">
+                Cadastre salas para visualizar a agenda por sala. Os filtros e agendamentos existentes continuam preservados.
+              </p>
+            </div>
+          ) : (
+            <div className="min-w-full overflow-x-auto">
+              <div
+                className="grid border-b border-gray-200 bg-gray-50"
+                style={{ gridTemplateColumns: `96px repeat(${roomModeRooms.length}, minmax(220px, 1fr))` }}
+              >
+                <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-r border-gray-200">
+                  Hora
+                </div>
+                {roomModeRooms.map((room) => (
+                  <div key={room.id} className="px-3 py-2 border-r border-gray-200 last:border-r-0">
+                    <div className="text-sm font-semibold text-gray-800 truncate">{room.name}</div>
+                    <div className="text-xs text-gray-500">
+                      {(filteredAppointments || []).filter((appointment) => (appointment.room_id || appointment.roomId || appointment.room?.id) === room.id).length} atendimento(s)
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="divide-y divide-gray-100">
+                {(clinicTimeSlots.length > 0 ? clinicTimeSlots : ['08:00']).map((time) => (
+                  <div
+                    key={time}
+                    className="grid min-h-[76px]"
+                    style={{ gridTemplateColumns: `96px repeat(${roomModeRooms.length}, minmax(220px, 1fr))` }}
+                  >
+                    <div className="px-3 py-3 text-xs font-medium text-gray-500 bg-gray-50 border-r border-gray-200">
+                      {time}
+                    </div>
+                    {roomModeRooms.map((room) => {
+                      const appointmentsInSlot = roomModeAppointmentsByRoomAndTime[room.id]?.[time] || [];
+                      return (
+                        <div key={`${room.id}-${time}`} className="p-2 border-r border-gray-100 last:border-r-0">
+                          {appointmentsInSlot.length === 0 ? (
+                            <button
+                              type="button"
+                              onClick={() => handleSlotClick({ date, time, room_id: room.id })}
+                              className="w-full h-full min-h-[52px] rounded border border-dashed border-gray-200 text-xs text-gray-400 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                            >
+                              Livre
+                            </button>
+                          ) : (
+                            <div className="space-y-2">
+                              {appointmentsInSlot.map((appointment) => {
+                                const statusConfig = getStatusConfig(appointment.status);
+                                return (
+                                  <button
+                                    key={appointment.id}
+                                    type="button"
+                                    onClick={() => handleViewDetails(appointment.id)}
+                                    onDoubleClick={() => handleEditAppointment(appointment.id)}
+                                    className="w-full text-left rounded border border-gray-200 bg-white px-2 py-2 shadow-sm hover:border-blue-300 hover:bg-blue-50 transition-colors"
+                                  >
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className="text-xs font-semibold text-gray-800 truncate">
+                                        {appointment.patient_name || appointment.patient?.name || 'Paciente'}
+                                      </span>
+                                      <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${statusConfig?.badgeColor || 'bg-gray-100'} ${statusConfig?.badgeTextColor || 'text-gray-700'}`}>
+                                        {getStatusLabelOnly(appointment.status)}
+                                      </span>
+                                    </div>
+                                    <div className="mt-1 text-xs text-gray-500 truncate">
+                                      {appointment.professional_name || appointment.professional?.name || 'Profissional nÃ£o informado'}
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       ) : viewMode === 'semana' ? (
         // WEEK VIEW
@@ -1260,11 +1425,11 @@ export default function AgendaIndex() {
           />
         </div>
       ) : (
-        // DAY VIEW (padrão)
+        // DAY VIEW (padrï¿½o)
         <div className="flex-1 mt-4 bg-white border border-gray-200 rounded-lg overflow-hidden">
           {console.log(
             ' [RENDER AgendaIndex] Renderizando AgendaDayView com onEditAppointment:',
-            typeof handleEditAppointment === 'function' ? '? FUNCTION' : '? NÃO É FUNÇÃO',
+            typeof handleEditAppointment === 'function' ? '? FUNCTION' : '? Nï¿½O ï¿½ FUNï¿½ï¿½O',
           )}
           <AgendaDayView
             appointments={filteredAppointments}
@@ -1305,7 +1470,7 @@ export default function AgendaIndex() {
             Editar (ou duplo clique)
           </button>
 
-          {/*  Abrir Prontuário - Para profissionais */}
+          {/*  Abrir Prontuï¿½rio - Para profissionais */}
           {auth?.currentRole === 'profissional' && (
             <button
               onClick={() => {
@@ -1316,7 +1481,7 @@ export default function AgendaIndex() {
               }}
               className="w-full text-left px-3 py-2 text-sm text-green-600 hover:bg-green-50 transition-colors flex items-center gap-2 border-t border-gray-100"
             >
-              Abrir Prontuário
+              Abrir Prontuï¿½rio
             </button>
           )}
 
@@ -1336,7 +1501,7 @@ export default function AgendaIndex() {
         </div>
       )}
 
-      {/* MODAL NOVO/EDIÇÃO DE AGENDAMENTO */}
+      {/* MODAL NOVO/EDIï¿½ï¿½O DE AGENDAMENTO */}
       <ModalCriarAgendamento
         open={modalNovoOpen}
         onOpenChange={(newOpen) => {
@@ -1350,28 +1515,28 @@ export default function AgendaIndex() {
           if (!newOpen) {
             console.log('   ?? Fechando modal');
             console.log(
-              '   ? NÃO limpando appointmentIdToEdit - será zerado apenas ao abrir novo',
+              '   ? Nï¿½O limpando appointmentIdToEdit - serï¿½ zerado apenas ao abrir novo',
             );
-            // ?? FIX: Não zerar appointmentIdToEdit aqui para evitar race condition
-            // Será zerado apenas quando abrir um novo agendamento
+            // ?? FIX: Nï¿½o zerar appointmentIdToEdit aqui para evitar race condition
+            // Serï¿½ zerado apenas quando abrir um novo agendamento
             setNovoAgendamentoInfo(null);
 
-            // ?? CRÍTICO: Marcar que o modal foi fechado intencionalmente
+            // ?? CRï¿½TICO: Marcar que o modal foi fechado intencionalmente
             // Isso previne que o useEffect reabra a modal
             hasModalBeenClosedRef.current = true;
-            console.log('   ? hasModalBeenClosedRef.current = true - não vai reabrir');
+            console.log('   ? hasModalBeenClosedRef.current = true - nï¿½o vai reabrir');
 
-            // Limpar a URL de parâmetros de auto-open
+            // Limpar a URL de parï¿½metros de auto-open
             if (modeParam === 'edit' && appointmentIdFinal) {
-              console.log('   ?? Limpando parâmetros de URL (mode=edit, appointmentId)');
+              console.log('   ?? Limpando parï¿½metros de URL (mode=edit, appointmentId)');
               navigate('/clinica/agenda', { replace: true });
             }
           } else {
             console.log('   ?? Abrindo modal');
-            // ?? FIX: Se abrindo SEM appointmentIdToEdit, isso é novo agendamento
+            // ?? FIX: Se abrindo SEM appointmentIdToEdit, isso ï¿½ novo agendamento
             if (!appointmentIdToEdit) {
               console.log(
-                '   ? Novo agendamento detectado, modalNovoOpen=true, appointmentIdToEdit é null',
+                '   ? Novo agendamento detectado, modalNovoOpen=true, appointmentIdToEdit ï¿½ null',
               );
             } else {
               console.log(
@@ -1379,7 +1544,7 @@ export default function AgendaIndex() {
                 appointmentIdToEdit,
               );
             }
-            // Resetar a flag ao abrir (se o usuário abrir um novo agendamento)
+            // Resetar a flag ao abrir (se o usuï¿½rio abrir um novo agendamento)
             hasModalBeenClosedRef.current = false;
           }
         }}
@@ -1395,7 +1560,7 @@ export default function AgendaIndex() {
           console.log(' Current date state:', date);
 
           if (!appointmentData) {
-            console.log('?? appointmentData é null/undefined');
+            console.log('?? appointmentData ï¿½ null/undefined');
             setModalNovoOpen(false);
             setAppointmentIdToEdit(null);
             setNovoAgendamentoInfo(null);
@@ -1403,18 +1568,18 @@ export default function AgendaIndex() {
             return;
           }
 
-          // Detectar mudança de data (comparar data nova com original)
+          // Detectar mudanï¿½a de data (comparar data nova com original)
           const originalDate = appointmentData.originalDate;
           const newDate = appointmentData.date;
 
           if (newDate) {
-            console.log(' Comparação de datas:');
+            console.log(' Comparaï¿½ï¿½o de datas:');
             console.log(`   Data original (originalDate): "${originalDate}"`);
             console.log(`   Data nova (appointmentData.date): "${newDate}"`);
             console.log(`   Data atual view (date): "${date}"`);
 
-            // Se originalDate está definida, usar para comparação (em modo edição)
-            // Senão, comparar com a data atual (em modo criação)
+            // Se originalDate estï¿½ definida, usar para comparaï¿½ï¿½o (em modo ediï¿½ï¿½o)
+            // Senï¿½o, comparar com a data atual (em modo criaï¿½ï¿½o)
             const compareDate = originalDate || date;
             console.log(`   Comparando contra: "${compareDate}"`);
             console.log(`   Mudou? ${newDate !== compareDate}`);
@@ -1426,13 +1591,13 @@ export default function AgendaIndex() {
               console.log(' ?? Mesma data');
             }
           } else {
-            console.log('?? appointmentData.date não definido');
+            console.log('?? appointmentData.date nï¿½o definido');
           }
 
           setModalNovoOpen(false);
           setAppointmentIdToEdit(null);
           setNovoAgendamentoInfo(null);
-          // ? RECARREGAR AGENDAMENTOS DO SERVIDOR após salvar/editar
+          // ? RECARREGAR AGENDAMENTOS DO SERVIDOR apï¿½s salvar/editar
           await loadAppointments();
         }}
       />
@@ -1480,7 +1645,7 @@ export default function AgendaIndex() {
                 <p className="text-lg font-bold text-gray-900 mt-1">
                   {selectedAppointmentDetails.patients?.name ||
                     selectedAppointmentDetails.lead_name ||
-                    '—'}
+                    'ï¿½'}
                 </p>
                 {selectedAppointmentDetails.patients?.document_id && (
                   <p className="text-sm text-gray-600 mt-1">
@@ -1489,7 +1654,7 @@ export default function AgendaIndex() {
                 )}
                 {selectedAppointmentDetails.patients?.prontuario_numero && (
                   <p className="text-sm text-gray-600">
-                    Prontuário: {selectedAppointmentDetails.patients.prontuario_numero}
+                    Prontuï¿½rio: {selectedAppointmentDetails.patients.prontuario_numero}
                   </p>
                 )}
               </div>
@@ -1505,26 +1670,26 @@ export default function AgendaIndex() {
                       ? new Date(selectedAppointmentDetails.scheduled_date).toLocaleDateString(
                           'pt-BR',
                         )
-                      : '—'}
+                      : 'ï¿½'}
                   </p>
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                    Horário
+                    Horï¿½rio
                   </h3>
                   <p className="text-base font-semibold text-gray-900 mt-1">
-                    {selectedAppointmentDetails.scheduled_time || '—'}
+                    {selectedAppointmentDetails.scheduled_time || 'ï¿½'}
                   </p>
                 </div>
               </div>
 
-              {/* Serviço */}
+              {/* Serviï¿½o */}
               <div>
                 <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                  Serviço
+                  Serviï¿½o
                 </h3>
                 <p className="text-base text-gray-900 mt-1">
-                  {selectedAppointmentDetails.services?.name || '—'}
+                  {selectedAppointmentDetails.services?.name || 'ï¿½'}
                 </p>
               </div>
 
@@ -1534,7 +1699,7 @@ export default function AgendaIndex() {
                   Profissional
                 </h3>
                 <p className="text-base text-gray-900 mt-1">
-                  {selectedAppointmentDetails.professionals?.name || '—'}
+                  {selectedAppointmentDetails.professionals?.name || 'ï¿½'}
                 </p>
               </div>
 
@@ -1544,18 +1709,18 @@ export default function AgendaIndex() {
                   Sala
                 </h3>
                 <p className="text-base text-gray-900 mt-1">
-                  {selectedAppointmentDetails.rooms?.name || '—'}
+                  {selectedAppointmentDetails.rooms?.name || 'ï¿½'}
                 </p>
               </div>
 
-              {/* Convênio */}
+              {/* Convï¿½nio */}
               <div>
                 <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                  Convênio
+                  Convï¿½nio
                 </h3>
                 <p className="text-base text-gray-900 mt-1">
                   {selectedAppointmentDetails.payers?.active === false
-                    ? '—'
+                    ? 'ï¿½'
                     : selectedAppointmentDetails.payers?.name || 'Particular'}
                 </p>
               </div>
@@ -1566,11 +1731,11 @@ export default function AgendaIndex() {
                   Plano
                 </h3>
                 <p className="text-base text-gray-900 mt-1">
-                  {selectedAppointmentDetails.plans?.name || '—'}
+                  {selectedAppointmentDetails.plans?.name || 'ï¿½'}
                 </p>
                 {selectedAppointmentDetails.plans?.code && (
                   <p className="text-sm text-gray-600 mt-1">
-                    Código: {selectedAppointmentDetails.plans.code}
+                    Cï¿½digo: {selectedAppointmentDetails.plans.code}
                   </p>
                 )}
               </div>
@@ -1624,11 +1789,11 @@ export default function AgendaIndex() {
                 )}
               </div>
 
-              {/* Observações */}
+              {/* Observaï¿½ï¿½es */}
               {selectedAppointmentDetails.notes && (
                 <div>
                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                    Observações
+                    Observaï¿½ï¿½es
                   </h3>
                   <p className="text-sm text-gray-700 mt-1 p-3 bg-gray-50 rounded border border-gray-200">
                     {selectedAppointmentDetails.notes}

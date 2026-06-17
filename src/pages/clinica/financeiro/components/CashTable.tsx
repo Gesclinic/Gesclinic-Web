@@ -22,6 +22,10 @@ const getStatusColor = (status: CashMovementStatus) => {
 };
 
 const formatCurrency = (value: number, isEntry: boolean) => {
+  if (value === null || value === undefined) {
+    return <span className="text-slate-400">—</span>;
+  }
+  
   const formatted = value.toLocaleString('pt-BR', {
     style: 'currency',
     currency: 'BRL',
@@ -108,7 +112,7 @@ export const CashTable: React.FC<CashTableProps> = ({ movements, loading, onDele
                 className="px-4 py-3 text-sm text-slate-700 font-medium sticky bg-white z-10 border-r border-slate-100"
                 style={{ left: '0px' }}
               >
-                {formatTime(movement.created_at)}
+                {movement.created_at ? formatTime(movement.created_at) : 'N/A'}
               </td>
               <td
                 className="px-4 py-3 text-sm text-slate-700 sticky bg-white z-10 border-r border-slate-100"

@@ -29,6 +29,9 @@ interface CashMovementsTableProps {
 }
 
 const formatCurrency = (value: number) => {
+  if (value === null || value === undefined) {
+    return '—';
+  }
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
@@ -36,13 +39,20 @@ const formatCurrency = (value: number) => {
 };
 
 const formatDate = (date: string) => {
-  return new Date(date).toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  if (!date) {
+    return '—';
+  }
+  try {
+    return new Date(date).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return '—';
+  }
 };
 
 export const CashMovementsTable: React.FC<CashMovementsTableProps> = ({

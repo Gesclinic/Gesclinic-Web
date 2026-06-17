@@ -362,13 +362,13 @@ export default function RepasseDashboard() {
                     <XAxis dataKey="servico" angle={-20} tickMargin={14} height={60} />
                     <YAxis
                       tickFormatter={(v) =>
-                        v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                        Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
                       }
                       width={100}
                     />
                     <Tooltip
                       formatter={(value) =>
-                        value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                        Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
                       }
                     />
                     <Legend />

@@ -94,8 +94,6 @@ Use Gitlens to create a PR:
 ```bash
 # Test each route
 - [ ] http://localhost:3000/clinica/agenda - Main page
-- [ ] http://localhost:3000/clinica/agenda/confirmacoes - Confirmations
-- [ ] http://localhost:3000/clinica/agenda/espera - Waiting list
 - [ ] Check all sub-routes load
 ```
 

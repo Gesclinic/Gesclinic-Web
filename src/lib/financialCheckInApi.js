@@ -11,7 +11,8 @@ import {
   FINANCIAL_EVENT_TYPES,
   RELATED_ENTITY_TYPES,
 } from './auditFinancialApi';
-import { createReceivable, listReceivables } from './receivablesApi.js';
+import { createReceivable, listReceivables, registerReceivablePayment } from './receivablesApi.js';
+import cashDrawerApi from './cashDrawerApi';
 
 function dateOnly(value = new Date()) {
   return new Date(value).toISOString().split('T')[0];
@@ -21,6 +22,106 @@ function addDays(date, days) {
   const result = new Date(date);
   result.setDate(result.getDate() + days);
   return result;
+}
+
+function parseMoney(value) {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  const normalized = String(value || '')
+    .replace(/\s/g, '')
+    .replace(/\./g, '')
+    .replace(',', '.');
+  const parsed = Number.parseFloat(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function normalizeDrawerPaymentMethod(method) {
+  const value = String(method || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  if (value.includes('pix')) return 'PIX';
+  if (value.includes('dinheiro') || value.includes('cash')) return 'DINHEIRO';
+  if (value.includes('cartao') || value.includes('credito') || value.includes('debito')) return 'CARTAO';
+  if (value.includes('cheque')) return 'CHEQUE';
+  return 'BANCO';
+}
+
+async function getCurrentOperatorId() {
+  const { data } = await supabase.auth.getUser();
+  return data?.user?.id || null;
+}
+
+async function findReceivableForAppointment(clinicId, appointmentId) {
+  const { data, error } = await supabase
+    .from('ar_invoices')
+    .select('*')
+    .eq('clinic_id', clinicId)
+    .eq('appointment_id', appointmentId)
+    .neq('status', 'canceled')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.warn('⚠️ Erro ao buscar recebível do atendimento:', error.message);
+    return null;
+  }
+
+  return data || null;
+}
+
+async function registerReceptionPayment({ appointment, receivable, financialData, amount, description }) {
+  const operatorId = await getCurrentOperatorId();
+  if (!operatorId) {
+    throw new Error('Operador não identificado para registrar o caixa');
+  }
+
+  const paymentMethod = financialData.payment_method || 'DINHEIRO';
+  const drawerPaymentMethod = normalizeDrawerPaymentMethod(paymentMethod);
+  const paymentDate = dateOnly();
+
+  const paidReceivable = await registerReceivablePayment({
+    clinicId: appointment.clinic_id,
+    receivableId: receivable.id,
+    amount,
+    payments: [{ method: paymentMethod, amount }],
+    paymentDate,
+    notes: description,
+    createdBy: operatorId,
+  });
+
+  const drawer = await cashDrawerApi.getOrCreateDrawer(appointment.clinic_id, operatorId);
+  const movement = await cashDrawerApi.addMovement(
+    drawer.id,
+    appointment.clinic_id,
+    drawerPaymentMethod,
+    'entrada',
+    amount,
+    description,
+    appointment.id,
+  );
+
+  await logAppointmentFinancialAudit({
+    appointmentId: appointment.id,
+    financialEventType: FINANCIAL_EVENT_TYPES.PAYMENT_RECEIVED,
+    relatedEntity: RELATED_ENTITY_TYPES.AR_INVOICE,
+    relatedEntityId: receivable.id,
+    amount,
+    status: paidReceivable.status,
+    context: {
+      clinic_id: appointment.clinic_id,
+      patient_id: appointment.patient_id,
+      professional_id: appointment.professional_id,
+      payment_method: paymentMethod,
+      drawer_id: drawer.id,
+      drawer_movement_id: movement.id,
+      operator_id: operatorId,
+      source: 'reception_checkin',
+    },
+  });
+
+  return { drawer, movement, receivable: paidReceivable };
 }
 
 /**
@@ -91,9 +192,9 @@ export const saveCheckInFinancialData = async (appointmentId, financialData) => 
       card_verified: financialData.card_verified || false,
       guide_number: financialData.guide_number || null,
       payment_method: financialData.payment_method || null,
-      value: financialData.value || 0,
-      copayment: financialData.copayment || 0,
-      discount: financialData.discount || 0,
+      value: parseMoney(financialData.value),
+      copayment: parseMoney(financialData.copayment),
+      discount: parseMoney(financialData.discount),
     };
 
     const { error: updateError } = await supabase
@@ -153,7 +254,7 @@ const createAccountsReceivable = async (appointmentId, appointment, financialDat
     // 1. Valor passado nos dados financeiros
     // 2. Valor no appointment
     // 3. Preço do serviço relacionado
-    let finalValue = parseFloat(financialData.value) || 0;
+    let finalValue = parseMoney(financialData.value);
 
     if (!finalValue || isNaN(finalValue)) {
       console.log('   ⚠️ Valor de financialData está vazio, buscando no serviço...');
@@ -173,15 +274,16 @@ const createAccountsReceivable = async (appointmentId, appointment, financialDat
     }
 
     // Calcular valores
-    const copayment = parseFloat(financialData.copayment || 0) || 0;
-    const discount = parseFloat(financialData.discount || 0) || 0;
+    const copayment = parseMoney(financialData.copayment);
+    const discount = parseMoney(financialData.discount);
     const netValue = Math.max(finalValue - discount, 0);
 
     console.log(
       `   Valores: Bruto=${finalValue}, Desconto=${discount}, Copagamento=${copayment}, Líquido=${netValue}`,
     );
 
-    const receivable = await createReceivable(appointment.clinic_id, {
+    const existingReceivable = await findReceivableForAppointment(appointment.clinic_id, appointmentId);
+    const receivable = existingReceivable || await createReceivable(appointment.clinic_id, {
       appointment_id: appointmentId,
       patient_id: appointment.patient_id,
       patient_name: financialData.patient_name || 'Paciente Particular',
@@ -207,7 +309,7 @@ const createAccountsReceivable = async (appointmentId, appointment, financialDat
       },
     });
 
-    console.log('✅ Conta a Receber criada:', receivable?.id);
+    console.log(existingReceivable ? '✅ Conta a Receber reutilizada:' : '✅ Conta a Receber criada:', receivable?.id);
 
     // Registrar auditoria
     await logAppointmentFinancialAudit({
@@ -224,11 +326,26 @@ const createAccountsReceivable = async (appointmentId, appointment, financialDat
       },
     });
 
+    let payment = null;
+    const shouldRegisterPayment = Boolean(financialData.payment_method) && !financialData.payment_authorized_after && netValue > 0;
+    if (shouldRegisterPayment) {
+      payment = await registerReceptionPayment({
+        appointment,
+        receivable,
+        financialData,
+        amount: netValue,
+        description: `Recebimento particular do atendimento ${appointmentId}`,
+      });
+    }
+
     return {
       type: 'receivable',
       data: {
         receivable_id: receivable?.id,
         amount: netValue,
+        payment_received: Boolean(payment),
+        drawer_id: payment?.drawer?.id || null,
+        drawer_movement_id: payment?.movement?.id || null,
       },
     };
   } catch (err) {
@@ -249,7 +366,7 @@ const createBillingGuide = async (appointmentId, appointment, financialData) => 
     console.log('🏥 Criando Guia de Faturamento...');
 
     // Obter valor do serviço se não fornecido
-    let finalValue = financialData.value || 0;
+    let finalValue = parseMoney(financialData.value);
 
     if (!finalValue) {
       const { data: service } = await supabase
@@ -262,8 +379,8 @@ const createBillingGuide = async (appointmentId, appointment, financialData) => 
     }
 
     // Calcular valores
-    const copayment = parseFloat(financialData.copayment || 0);
-    const discount = parseFloat(financialData.discount || 0);
+    const copayment = parseMoney(financialData.copayment);
+    const discount = parseMoney(financialData.discount);
     const netValue = finalValue - discount;
 
     // Inserir Guia
@@ -336,12 +453,50 @@ const createBillingGuide = async (appointmentId, appointment, financialData) => 
       },
     });
 
+    let copaymentPayment = null;
+    if (copayment > 0 && financialData.payment_method) {
+      const copaymentReceivable = await createReceivable(appointment.clinic_id, {
+        appointment_id: appointmentId,
+        patient_id: appointment.patient_id,
+        patient_name: financialData.patient_name || 'Paciente',
+        payer_name: financialData.patient_name || 'Paciente',
+        description: `Coparticipação do atendimento ${appointmentId}`,
+        amount: copayment,
+        net_value: copayment,
+        invoice_date: dateOnly(),
+        due_date: dateOnly(),
+        status: 'open',
+        payment_method: financialData.payment_method,
+        origem: 'Agenda',
+        professional_id: appointment.professional_id,
+        procedure_id: appointment.service_id,
+        payer_type: 'PARTICULAR',
+        metadata: {
+          source: 'financial_check_in_copayment',
+          billing_guide_id: invoice[0]?.id,
+          health_plan: financialData.health_plan,
+        },
+      });
+
+      copaymentPayment = await registerReceptionPayment({
+        appointment,
+        receivable: copaymentReceivable,
+        financialData,
+        amount: copayment,
+        description: `Recebimento de coparticipação do atendimento ${appointmentId}`,
+      });
+    }
+
     return {
       type: 'billing_guide',
       data: {
         invoice_id: invoice[0]?.id,
         amount: netValue,
         authorization_number: financialData.authorization_number,
+        copayment_amount: copayment,
+        copayment_received: Boolean(copaymentPayment),
+        drawer_id: copaymentPayment?.drawer?.id || null,
+        drawer_movement_id: copaymentPayment?.movement?.id || null,
       },
     };
   } catch (err) {

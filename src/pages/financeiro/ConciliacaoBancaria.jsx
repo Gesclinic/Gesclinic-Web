@@ -97,12 +97,12 @@ export default function ConciliacaoBancaria() {
       <h1 className="text-2xl font-bold mb-4">Conciliação Bancária e Projeções</h1>
       {/* Indicadores no topo */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded shadow p-4">🔴 Pendentes: {indicators.pendentes.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-        <div className="bg-white rounded shadow p-4">🟢 Conciliado: {indicators.conciliado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+        <div className="bg-white rounded shadow p-4">🔴 Pendentes: {(indicators.pendentes || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+        <div className="bg-white rounded shadow p-4">🟢 Conciliado: {(indicators.conciliado || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
         <div className="bg-white rounded shadow p-4">⚠ Divergências: {indicators.divergentes} itens</div>
-        <div className="bg-white rounded shadow p-4">💰 Saldo Banco: {indicators.saldoBanco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-        <div className="bg-white rounded shadow p-4">📊 Saldo Sistema: {indicators.saldoSistema.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
-        <div className="bg-white rounded shadow p-4">❗ Diferença: {indicators.diferenca.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+        <div className="bg-white rounded shadow p-4">💰 Saldo Banco: {(indicators.saldoBanco || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+        <div className="bg-white rounded shadow p-4">📊 Saldo Sistema: {(indicators.saldoSistema || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+        <div className="bg-white rounded shadow p-4">❗ Diferença: {(indicators.diferenca || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Bloco 1: Importação de Extrato */}
@@ -210,7 +210,7 @@ export default function ConciliacaoBancaria() {
                     </td>
                     <td className="p-2 whitespace-nowrap cursor-pointer" onClick={() => setSelectedStatement(st)}>{st.date}</td>
                     <td className="p-2 cursor-pointer" onClick={() => setSelectedStatement(st)}>{st.description}</td>
-                    <td className="p-2 text-right cursor-pointer" onClick={() => setSelectedStatement(st)}>{Number(st.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                    <td className="p-2 text-right cursor-pointer" onClick={() => setSelectedStatement(st)}>{Number(st.amount || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
                     <td className="p-2 cursor-pointer" onClick={() => setSelectedStatement(st)}>{st.type === 'credit' ? 'Crédito' : 'Débito'}</td>
                     <td className="p-2 cursor-pointer" onClick={() => setSelectedStatement(st)}>
                       {st.status === 'pending' && <span className="text-yellow-600">🟡 Pendente</span>}
@@ -234,7 +234,7 @@ export default function ConciliacaoBancaria() {
             <div className="mb-2">
               <div><b>Data:</b> {selectedStatement.date}</div>
               <div><b>Descrição:</b> {selectedStatement.description}</div>
-              <div><b>Valor:</b> {Number(selectedStatement.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+              <div><b>Valor:</b> {Number(selectedStatement.amount || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
               <div><b>Tipo:</b> {selectedStatement.type === 'credit' ? 'Crédito' : 'Débito'}</div>
               <div><b>Status:</b> {selectedStatement.status}</div>
             </div>

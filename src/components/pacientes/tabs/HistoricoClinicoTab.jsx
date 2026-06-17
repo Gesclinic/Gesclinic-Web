@@ -27,6 +27,7 @@ import {
   X,
   Clock,
   Download,
+  Printer,
   RefreshCw,
 } from 'lucide-react';
 import {
@@ -205,6 +206,12 @@ const RECORD_TYPE_FORM_CONFIG = {
         inputType: 'textarea',
       },
       {
+        key: 'sadtHealthPlan',
+        label: 'Convênio/Plano para SADT',
+        placeholder: 'Informe o convênio específico desta guia ou mantenha Particular.',
+        inputType: 'text',
+      },
+      {
         key: 'attachmentName',
         label: 'Anexo do exame',
         inputType: 'file',
@@ -229,6 +236,366 @@ function normalizeStructuredData(type, data = {}) {
     ...template,
     ...data,
   };
+}
+
+function getTodayIsoDate() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function formatIsoDateToBr(value) {
+  if (!value) return '';
+  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return String(value);
+  return `${match[3]}/${match[2]}/${match[1]}`;
+}
+
+function parseBrDateToIso(value) {
+  const match = String(value || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!match) return null;
+  const [, day, month, year] = match;
+  const parsed = new Date(Number(year), Number(month) - 1, Number(day));
+  if (
+    parsed.getFullYear() !== Number(year) ||
+    parsed.getMonth() !== Number(month) - 1 ||
+    parsed.getDate() !== Number(day)
+  ) {
+    return null;
+  }
+  return `${year}-${month}-${day}`;
+}
+
+function normalizeBrDateInput(value) {
+  const digits = String(value || '').replace(/\D/g, '').slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+}
+
+function getPatientDocument(patientData) {
+  return patientData?.document_id || patientData?.cpf || patientData?.cpf_cnpj || '';
+}
+
+function getPatientBirthdate(patientData) {
+  return formatIsoDateToBr(patientData?.birthdate || patientData?.birth_date || '');
+}
+
+function getPatientPhone(patientData) {
+  return patientData?.phone || patientData?.cell_phone || patientData?.mobile || '';
+}
+
+function getPatientHealthPlan(patientData) {
+  return (
+    patientData?.payer_name ||
+    patientData?.health_plan ||
+    patientData?.insurance_name ||
+    patientData?.convenio_nome ||
+    'Particular'
+  );
+}
+
+function buildSadtGuideData({ patientData, professional, recordDate, draft }) {
+  const structuredData = normalizeStructuredData('exame', draft?.structuredData || {});
+  const requestedExam = String(structuredData.examRequested || '').trim();
+  const clinicalDescription = String(draft?.diagnostico || '').trim();
+  const resultOrInterpretation = String(structuredData.examResult || '').trim();
+  const conclusion = String(draft?.prescricao || '').trim();
+
+  const procedures = [requestedExam, clinicalDescription]
+    .filter(Boolean)
+    .join(' - ')
+    .split(/\n|;|,/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  return {
+    guideType: 'Guia SADT',
+    patientName: patientData?.name || 'Paciente',
+    document: getPatientDocument(patientData) || 'N/A',
+    birthdate: getPatientBirthdate(patientData) || 'N/A',
+    phone: getPatientPhone(patientData) || 'N/A',
+    healthPlan: String(structuredData.sadtHealthPlan || '').trim() || getPatientHealthPlan(patientData),
+    requestDate: formatIsoDateToBr(recordDate) || formatIsoDateToBr(getTodayIsoDate()),
+    professional: professional || 'Profissional responsável',
+    requestedExam: requestedExam || 'Exame a definir',
+    clinicalIndication: clinicalDescription || 'Indicação clínica não informada.',
+    procedures: procedures.length ? procedures : [requestedExam || 'Exame a definir'],
+    resultOrInterpretation,
+    conclusion,
+  };
+}
+
+function SadtGuidePreview({ patientData, professional, recordDate, draft }) {
+  const guide = buildSadtGuideData({ patientData, professional, recordDate, draft });
+
+  const handlePrint = () => {
+    const escapeHtml = (value) =>
+      String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+
+    const field = (label, value = '', className = '') => `
+      <div class="field ${className}">
+        <span class="label">${label}</span>
+        <span class="value">${escapeHtml(value)}</span>
+      </div>
+    `;
+
+    const rows = guide.procedures
+      .map(
+        (procedure, index) => `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${escapeHtml(procedure)}</td>
+            <td></td>
+            <td>1</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+          </tr>
+        `,
+      )
+      .join('');
+
+    const html = `
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+        <head>
+          <meta charset="UTF-8" />
+          <title>Guia SADT - ${escapeHtml(guide.patientName)}</title>
+          <style>
+            @page { size: A4 landscape; margin: 8mm; }
+            * { box-sizing: border-box; }
+            body { font-family: Arial, Helvetica, sans-serif; color: #111; margin: 0; font-size: 8px; }
+            .sheet { width: 100%; }
+            .header { position: relative; text-align: center; min-height: 32px; margin-bottom: 4px; }
+            .title { font-size: 12px; font-weight: 700; line-height: 1.15; text-transform: uppercase; }
+            .guide-number { position: absolute; right: 0; top: 6px; width: 180px; text-align: left; }
+            .section-title { background: #d8d8d8; border: 1px solid #777; border-bottom: 0; font-weight: 700; padding: 2px 4px; margin-top: 4px; }
+            .grid { display: grid; gap: 0; }
+            .cols-12 { grid-template-columns: repeat(12, 1fr); }
+            .field { border: 1px solid #555; min-height: 20px; padding: 2px 3px; overflow: hidden; }
+            .field.tall { min-height: 34px; }
+            .field.blank { background: #fff; }
+            .span-1 { grid-column: span 1; }
+            .span-2 { grid-column: span 2; }
+            .span-3 { grid-column: span 3; }
+            .span-4 { grid-column: span 4; }
+            .span-5 { grid-column: span 5; }
+            .span-6 { grid-column: span 6; }
+            .span-7 { grid-column: span 7; }
+            .span-8 { grid-column: span 8; }
+            .span-9 { grid-column: span 9; }
+            .span-10 { grid-column: span 10; }
+            .span-12 { grid-column: span 12; }
+            .label { display: block; color: #111; font-size: 7px; line-height: 1; margin-bottom: 2px; }
+            .value { display: block; font-size: 9px; min-height: 10px; line-height: 1.15; font-weight: 600; }
+            table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+            th, td { border: 1px solid #555; padding: 2px 3px; font-size: 8px; text-align: left; vertical-align: top; height: 20px; }
+            th { font-weight: 600; background: #fff; }
+            .spacer { height: 94px; }
+            .dates { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; padding: 4px; border-left: 1px solid #555; border-right: 1px solid #555; }
+            .date-line { display: grid; grid-template-columns: 16px 1fr; align-items: end; gap: 6px; }
+            .line { border-bottom: 1px solid #111; height: 16px; }
+            .totals { display: grid; grid-template-columns: repeat(6, 1fr); }
+            .signature { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 4px; }
+            .signature .sig-box { border: 1px solid #555; height: 26px; display: flex; align-items: end; justify-content: center; padding-bottom: 3px; }
+          </style>
+        </head>
+        <body>
+          <div class="sheet">
+            <div class="header">
+              <div class="title">Guia de Serviço Profissional / Serviço Auxiliar<br />de Diagnóstico e Terapia - SP/SADT</div>
+              <div class="guide-number">2-Nº Guia no Prestador</div>
+            </div>
+
+            <div class="grid cols-12">
+              ${field('1-Registro ANS', '', 'span-2')}
+              ${field('3-Nº Guia Principal', '', 'span-3')}
+              ${field('', '', 'span-7 blank')}
+              ${field('4-Data da Autorização', guide.requestDate, 'span-2')}
+              ${field('5-Senha', '', 'span-3')}
+              ${field('6-Data Validade da Senha', '', 'span-2')}
+              ${field('7-Número da Guia Atribuído pela Operadora', '', 'span-5')}
+            </div>
+
+            <div class="section-title">Dados do Beneficiário</div>
+            <div class="grid cols-12">
+              ${field('8-Número da Carteira', '', 'span-3')}
+              ${field('9-Validade da Carteira', '', 'span-2')}
+              ${field('10-Nome', guide.patientName, 'span-5')}
+              ${field('11-Cartão Nacional de Saúde', '', 'span-2')}
+              ${field('12-Atendimento a RN', '', 'span-12')}
+            </div>
+
+            <div class="section-title">Dados do Contratado Solicitante</div>
+            <div class="grid cols-12">
+              ${field('13-Código na Operadora', '', 'span-2')}
+              ${field('14-Nome do Contratado', guide.healthPlan, 'span-10')}
+              ${field('15-Nome do Profissional Solicitante', guide.professional, 'span-3')}
+              ${field('16-Conselho Profissional', '', 'span-2')}
+              ${field('17-Número no Conselho', '', 'span-2')}
+              ${field('18-UF', '', 'span-1')}
+              ${field('19-CBO', '', 'span-1')}
+              ${field('20-Assinatura do Profissional Solicitante', '', 'span-3')}
+            </div>
+
+            <div class="section-title">Dados da Solicitação / Procedimentos e Exames Solicitados</div>
+            <div class="grid cols-12">
+              ${field('21-Caráter do Atendimento', '', 'span-2')}
+              ${field('22-Data da Solicitação', guide.requestDate, 'span-2')}
+              ${field('23-Indicação Clínica', guide.clinicalIndication, 'span-8 tall')}
+            </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 8%;">24-Tabela</th>
+                <th style="width: 16%;">25-Código do Procedimento ou Item Assistencial</th>
+                <th>26-Descrição</th>
+                <th style="width: 7%;">27-Qtde. Solic.</th>
+                <th style="width: 7%;">28-Qtde. Aut.</th>
+                <th style="width: 7%;">Via</th>
+                <th style="width: 7%;">Tec.</th>
+                <th style="width: 8%;">Valor</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+
+            <div class="section-title">Dados do Contratado Executante</div>
+            <div class="grid cols-12">
+              ${field('29-Código na Operadora', '', 'span-2')}
+              ${field('30-Nome do Contratado', '', 'span-9')}
+              ${field('31-Código CNES', '', 'span-1')}
+            </div>
+
+            <div class="section-title">Dados do Atendimento</div>
+            <div class="grid cols-12">
+              ${field('32-Tipo de Atendimento', '', 'span-2')}
+              ${field('33-Indicação de Acidente', '', 'span-3')}
+              ${field('34-Tipo de Consulta', '', 'span-2')}
+              ${field('35-Motivo de Encerramento do Atendimento', '', 'span-5')}
+            </div>
+
+            <div class="section-title">Dados da Execução / Procedimentos e Exames Realizados</div>
+            <div class="grid cols-12">
+              ${field('36-Data', '', 'span-1')}
+              ${field('37-Hora Inicial', '', 'span-1')}
+              ${field('38-Hora Final', '', 'span-1')}
+              ${field('39-Tabela', '', 'span-1')}
+              ${field('40-Cód. do Procedimento', '', 'span-2')}
+              ${field('41-Descrição', guide.requestedExam, 'span-4')}
+              ${field('42-Qtde.', '1', 'span-1')}
+              ${field('43-Via', '', 'span-1')}
+            </div>
+            <div class="grid cols-12">
+              ${field('44-Tec.', '', 'span-1')}
+              ${field('45-Fator Red./Acresc.', '', 'span-2')}
+              ${field('46-Valor Unitário (R$)', '', 'span-2')}
+              ${field('47-Valor Total (R$)', '', 'span-2')}
+              ${field('', '', 'span-5 blank')}
+            </div>
+
+            <div class="section-title">Identificação do(s) Profissional(is) Executante(s)</div>
+            <div class="grid cols-12">
+              ${field('48-Seq. Ref', '', 'span-1')}
+              ${field('49-Grau Part.', '', 'span-1')}
+              ${field('50-Código na Operadora / CPF', guide.document, 'span-2')}
+              ${field('51-Nome do Profissional', guide.professional, 'span-4')}
+              ${field('52-Conselho Profissional', '', 'span-2')}
+              ${field('53-Número no Conselho', '', 'span-1')}
+              ${field('54-UF', '', 'span-1')}
+            </div>
+
+            <div class="spacer"></div>
+
+            <div class="section-title">Datas de Realização de Procedimentos em Série</div>
+            <div class="dates">
+              ${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((item) => `<div class="date-line"><span>${item}-</span><span class="line"></span></div>`).join('')}
+            </div>
+
+            <div class="grid cols-12">
+              ${field('58-Observação / Justificativa', guide.resultOrInterpretation || guide.conclusion, 'span-12 tall')}
+            </div>
+
+            <div class="totals">
+              ${field('59-Total de Procedimentos (R$)', '', '')}
+              ${field('60-Total de Taxas e Aluguéis (R$)', '', '')}
+              ${field('61-Total de Materiais (R$)', '', '')}
+              ${field('62-Total de OPME (R$)', '', '')}
+              ${field('63-Total de Medicamentos (R$)', '', '')}
+              ${field('65-Total Geral (R$)', '', '')}
+            </div>
+
+            <div class="signature">
+              <div class="sig-box">66-Assinatura do Responsável pela Autorização</div>
+              <div class="sig-box">67-Assinatura do Beneficiário ou Responsável</div>
+              <div class="sig-box">68-Assinatura do Contratado</div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank', 'noopener,noreferrer');
+    if (!printWindow) return;
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  };
+
+  return (
+    <div className="rounded-lg border border-cyan-300 bg-cyan-50 p-4 space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="font-semibold text-cyan-950 flex items-center gap-2">
+            <FileText className="h-4 w-4" /> Guia padrão SADT
+          </h3>
+          <p className="mt-1 text-xs text-cyan-800">
+            Preenchida automaticamente com dados do paciente e exames descritos pelo médico.
+          </p>
+        </div>
+        <Button type="button" variant="outline" onClick={handlePrint} className="border-cyan-300 bg-white text-cyan-900 hover:bg-cyan-100">
+          <Printer className="mr-2 h-4 w-4" /> Imprimir guia
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+        <div className="rounded border border-cyan-200 bg-white p-3">
+          <p className="text-xs font-semibold uppercase text-cyan-700">Paciente</p>
+          <p className="font-medium text-gray-900">{guide.patientName}</p>
+          <p className="text-gray-600">CPF/Doc: {guide.document}</p>
+          <p className="text-gray-600">Nascimento: {guide.birthdate}</p>
+          <p className="text-gray-600">Telefone: {guide.phone}</p>
+          <p className="text-gray-600">Convênio/Plano: {guide.healthPlan}</p>
+        </div>
+        <div className="rounded border border-cyan-200 bg-white p-3">
+          <p className="text-xs font-semibold uppercase text-cyan-700">Solicitação</p>
+          <p className="font-medium text-gray-900">{guide.requestedExam}</p>
+          <p className="text-gray-600">Data: {guide.requestDate}</p>
+          <p className="text-gray-600">Profissional: {guide.professional}</p>
+        </div>
+      </div>
+
+      <div className="rounded border border-cyan-200 bg-white p-3">
+        <p className="text-xs font-semibold uppercase text-cyan-700">Procedimentos / exames solicitados</p>
+        <ul className="mt-2 list-disc pl-5 text-sm text-gray-800">
+          {guide.procedures.map((procedure, index) => (
+            <li key={`${procedure}-${index}`}>{procedure}</li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
 }
 
 function createEmptyDrafts() {
@@ -509,7 +876,7 @@ export default function HistoricoClinicoTab({
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const [syncingLocal, setSyncingLocal] = useState(false);
   const [consultaData, setConsultaData] = useState({
-    data: new Date().toISOString().split('T')[0],
+    data: getTodayIsoDate(),
     tipo: 'consulta',
     profissional: defaultProfessional,
     status: 'rascunho',
@@ -517,7 +884,7 @@ export default function HistoricoClinicoTab({
   });
 
   const resetConsultaData = () => ({
-    data: new Date().toISOString().split('T')[0],
+    data: getTodayIsoDate(),
     tipo: 'consulta',
     profissional: defaultProfessional,
     status: 'rascunho',
@@ -812,10 +1179,14 @@ export default function HistoricoClinicoTab({
   };
 
   const handleSaveConsulta = async (targetStatus = 'rascunho') => {
-    if (!consultaData.data || !consultaData.profissional) {
+    const recordDateIso = /^\d{4}-\d{2}-\d{2}$/.test(consultaData.data)
+      ? consultaData.data
+      : parseBrDateToIso(consultaData.data);
+
+    if (!recordDateIso || !consultaData.profissional) {
       toast({
         title: 'Erro',
-        description: 'Preencha data e profissional antes de salvar.',
+        description: 'Preencha data no formato dd/mm/aaaa e profissional antes de salvar.',
         variant: 'destructive',
       });
       return;
@@ -885,7 +1256,7 @@ export default function HistoricoClinicoTab({
         clinic_id: clinicId || null,
         professional_name: consultaData.profissional,
         record_type: consultaData.tipo,
-        record_date: consultaData.data,
+        record_date: recordDateIso,
         record_time: recordTime,
         diagnosis: primarySection?.diagnostico || 'Registro clínico integrado',
         prescription: buildPatientRecordPrescription(primarySection?.prescricao || '', {
@@ -1016,7 +1387,7 @@ export default function HistoricoClinicoTab({
                 <div>
                   <strong>${typeLabel}</strong> · ${evento.status === 'finalizado' ? 'Definitivo' : 'Rascunho'}
                 </div>
-                <div>${new Date(evento.date).toLocaleDateString('pt-BR')} às ${evento.time}</div>
+                <div>${formatIsoDateToBr(evento.date)} às ${evento.time}</div>
               </div>
               <div style="margin-bottom: 8px;"><strong>Profissional:</strong> ${evento.professional || '—'}</div>
               <div style="margin-bottom: 8px;"><strong>Descrição:</strong><br/>${evento.diagnosis || '—'}</div>
@@ -1087,8 +1458,13 @@ export default function HistoricoClinicoTab({
   // Agrupar por período
   const groupedByPeriod = {};
   filteredHistorico.forEach((item) => {
-    const itemDate = new Date(item.date);
-    const key = itemDate.toLocaleString('pt-BR', { year: 'numeric', month: 'long' });
+    const [year, month] = String(item.date || '').split('-');
+    const key = year && month
+      ? new Date(Number(year), Number(month) - 1, 1).toLocaleString('pt-BR', {
+          year: 'numeric',
+          month: 'long',
+        })
+      : 'Sem data';
     if (!groupedByPeriod[key]) {
       groupedByPeriod[key] = [];
     }
@@ -1126,7 +1502,7 @@ export default function HistoricoClinicoTab({
                   {ultimaConsulta ? (
                     <>
                       <p className="text-lg font-bold text-blue-900 mt-2">
-                        {new Date(ultimaConsulta.date).toLocaleDateString('pt-BR')}
+                        {formatIsoDateToBr(ultimaConsulta.date)}
                       </p>
                       <p className="text-sm text-gray-600 mt-1">{ultimaConsulta.professional}</p>
                     </>
@@ -1492,7 +1868,7 @@ export default function HistoricoClinicoTab({
                                   <p className="mt-1 text-xs text-slate-500">{compactMeta}</p>
                                 </div>
                                 <span className="ml-auto text-xs text-gray-500 font-medium whitespace-nowrap">
-                                  {new Date(evento.date).toLocaleDateString('pt-BR')} às{' '}
+                                  {formatIsoDateToBr(evento.date)} às{' '}
                                   {evento.time}
                                 </span>
                               </div>
@@ -1768,19 +2144,27 @@ export default function HistoricoClinicoTab({
                     </Label>
                     <Input
                       id="data"
-                      type="date"
-                      value={consultaData.data}
-                      onChange={(e) => setConsultaData({ ...consultaData, data: e.target.value })}
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="dd/mm/aaaa"
+                      value={formatIsoDateToBr(consultaData.data)}
+                      onChange={(e) => {
+                        const formatted = normalizeBrDateInput(e.target.value);
+                        setConsultaData({
+                          ...consultaData,
+                          data: parseBrDateToIso(formatted) || formatted,
+                        });
+                      }}
+                      onBlur={(e) => {
+                        const isoDate = parseBrDateToIso(e.target.value);
+                        if (isoDate) {
+                          setConsultaData({ ...consultaData, data: isoDate });
+                        }
+                      }}
                       className="border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                     />
                     <p className="text-xs text-gray-600 mt-1.5">
-                      {consultaData.data &&
-                        new Date(consultaData.data).toLocaleDateString('pt-BR', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                        })}
+                      Informe no formato dd/mm/aaaa.
                     </p>
                   </div>
 
@@ -1862,6 +2246,15 @@ export default function HistoricoClinicoTab({
                     {currentTypeConfig.extraFields.map(renderStructuredField)}
                   </div>
                 ) : null}
+
+                {consultaData.tipo === 'exame' ? (
+                  <SadtGuidePreview
+                    patientData={patientData}
+                    professional={consultaData.profissional}
+                    recordDate={consultaData.data}
+                    draft={currentDraft}
+                  />
+                ) : null}
               </motion.div>
 
               {/* SEÇÃO 4: Orientações (Opcional) */}
@@ -1904,8 +2297,7 @@ export default function HistoricoClinicoTab({
                         <div className="flex justify-between">
                           <span className="text-gray-600">Data:</span>
                           <span className="font-medium text-gray-900">
-                            {consultaData.data &&
-                              new Date(consultaData.data).toLocaleDateString('pt-BR')}
+                            {formatIsoDateToBr(consultaData.data)}
                           </span>
                         </div>
                         <div className="flex justify-between">
@@ -2138,7 +2530,7 @@ export default function HistoricoClinicoTab({
                         <div>
                           <p className="font-semibold text-gray-700">Data</p>
                           <p className="text-gray-900">
-                            {new Date(selectedRecord.date).toLocaleDateString('pt-BR')} às{' '}
+                            {formatIsoDateToBr(selectedRecord.date)} às{' '}
                             {selectedRecord.time}
                           </p>
                         </div>
@@ -2295,6 +2687,15 @@ export default function HistoricoClinicoTab({
                                     </div>
                                   </div>
                                 ) : null}
+
+                                {sectionType === 'exame' ? (
+                                  <SadtGuidePreview
+                                    patientData={patientData}
+                                    professional={selectedRecord.professional}
+                                    recordDate={selectedRecord.date}
+                                    draft={sectionDraft}
+                                  />
+                                ) : null}
                               </div>
                             ))}
                           </div>
@@ -2366,6 +2767,19 @@ export default function HistoricoClinicoTab({
                               {selectedRecord.prescription}
                             </div>
                           </div>
+                        ) : null}
+
+                        {selectedRecord.type === 'exame' && sectionEntries.length <= 1 ? (
+                          <SadtGuidePreview
+                            patientData={patientData}
+                            professional={selectedRecord.professional}
+                            recordDate={selectedRecord.date}
+                            draft={{
+                              diagnostico: selectedRecord.diagnosis,
+                              prescricao: selectedRecord.prescription,
+                              structuredData: selectedRecord.structuredData,
+                            }}
+                          />
                         ) : null}
                       </div>
                     </div>

@@ -101,8 +101,6 @@
 
 ### Routes
 - [ ] `/clinica/agenda` - Main agenda page loads
-- [ ] `/clinica/agenda/confirmacoes` - Confirmations page loads
-- [ ] `/clinica/agenda/espera` - Waiting list loads
 - [ ] All sub-routes load without errors
 
 ### Features

@@ -65,7 +65,7 @@ export const cashDrawerApi = {
         .from('cash_drawers')
         .update({
           closing_balance: parseFloat(closingBalance),
-          expected_balance: expectedBalance ? parseFloat(expectedBalance) : null,
+          expected_balance: expectedBalance !== null ? parseFloat(expectedBalance) : null,
           status: expectedBalance === parseFloat(closingBalance) ? 'closed_full' : 'closed_partial',
           closed_at: new Date().toISOString(),
           notes,
@@ -73,15 +73,14 @@ export const cashDrawerApi = {
         .eq('id', drawerId)
         .select();
 
+      if (error) {
+        throw error;
+      }
+
       if (!data || data.length === 0) {
         throw new Error('Record not found');
       }
       return data[0];
-
-      if (error) {
-        throw error;
-      }
-      return data;
     } catch (err) {
       throw new Error(`Erro ao fechar caixa: ${err.message}`);
     }
@@ -91,15 +90,14 @@ export const cashDrawerApi = {
     try {
       const { data, error } = await client.from('cash_drawers').select('*').eq('id', drawerId);
 
+      if (error) {
+        throw error;
+      }
+
       if (!data || data.length === 0) {
         throw new Error('Record not found');
       }
       return data[0];
-
-      if (error) {
-        throw error;
-      }
-      return data;
     } catch (err) {
       throw new Error(`Erro ao buscar caixa: ${err.message}`);
     }
@@ -157,15 +155,14 @@ export const cashDrawerApi = {
         ])
         .select();
 
+      if (error) {
+        throw error;
+      }
+
       if (!data || data.length === 0) {
         throw new Error('Record not found');
       }
       return data[0];
-
-      if (error) {
-        throw error;
-      }
-      return data;
     } catch (err) {
       throw new Error(`Erro ao registrar movimento: ${err.message}`);
     }

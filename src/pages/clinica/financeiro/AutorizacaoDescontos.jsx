@@ -390,11 +390,13 @@ export default function AutorizacaoDescontos() {
                           </p>
                           <p className="text-sm text-gray-600">
                             🕐{' '}
-                            {new Date(desconto.discount_requested_at).toLocaleTimeString('pt-BR', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                              second: '2-digit',
-                            })}
+                            {desconto.discount_requested_at
+                              ? new Date(desconto.discount_requested_at).toLocaleTimeString('pt-BR', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  second: '2-digit',
+                                })
+                              : 'N/A'}
                           </p>
                         </div>
                       </div>
@@ -427,11 +429,13 @@ export default function AutorizacaoDescontos() {
                         </p>
                         <p className="text-sm text-gray-600 mt-1">
                           🕐{' '}
-                          {new Date(desconto.discount_authorized_at).toLocaleTimeString('pt-BR', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            second: '2-digit',
-                          })}
+                          {desconto.discount_authorized_at
+                            ? new Date(desconto.discount_authorized_at).toLocaleTimeString('pt-BR', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                              })
+                            : 'N/A'}
                         </p>
                       </div>
                     )}

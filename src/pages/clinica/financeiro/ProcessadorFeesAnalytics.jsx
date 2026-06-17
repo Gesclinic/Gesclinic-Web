@@ -204,7 +204,7 @@ export default function ProcessadorFeesAnalytics() {
             <div>
               <p className="text-sm text-gray-600 mb-2">Valor Total Processado</p>
               <p className="text-2xl font-bold">
-                R$ {stats.totalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {(stats.totalAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
             </div>
             <DollarSign className="w-8 h-8 text-blue-500" />
@@ -216,7 +216,7 @@ export default function ProcessadorFeesAnalytics() {
             <div>
               <p className="text-sm text-gray-600 mb-2">Total de Taxas</p>
               <p className="text-2xl font-bold text-red-600">
-                R$ {stats.totalFees.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {(stats.totalFees || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
             </div>
             <TrendingUp className="w-8 h-8 text-red-500" />
@@ -304,10 +304,10 @@ export default function ProcessadorFeesAnalytics() {
                   <td className="px-4 py-2">{brand.name}</td>
                   <td className="px-4 py-2 text-right">{brand.count}</td>
                   <td className="px-4 py-2 text-right">
-                    R$ {brand.totalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    R$ {(brand.totalAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </td>
                   <td className="px-4 py-2 text-right font-semibold text-red-600">
-                    R$ {brand.totalFees.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    R$ {(brand.totalFees || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </td>
                   <td className="px-4 py-2 text-right">
                     {((brand.totalFees / brand.totalAmount) * 100).toFixed(2)}%

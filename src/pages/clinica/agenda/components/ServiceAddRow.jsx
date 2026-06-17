@@ -34,6 +34,7 @@ export default function ServiceAddRow({
   payers = [],
   payerName = '',
   payerId = null,
+  onPayerChange = () => {},
   onAddService = () => {},
   onError = () => {},
   professionalId = null,
@@ -215,7 +216,13 @@ export default function ServiceAddRow({
         </Select>
 
         {/* CONVENIO (dropdown Radix) */}
-        <Select value={selectedPayerId || undefined} onValueChange={setSelectedPayerId}>
+        <Select
+          value={selectedPayerId || undefined}
+          onValueChange={(value) => {
+            setSelectedPayerId(value);
+            onPayerChange(value);
+          }}
+        >
           <SelectTrigger
             style={{
               width: '100%',

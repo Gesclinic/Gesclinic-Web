@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import React from 'react';
 
 /**
  * AgendaToolbarNew - Segmented control para mudar visão da agenda
@@ -7,54 +6,31 @@ import { ChevronDown } from 'lucide-react';
  * Props:
  * - viewMode: 'geral' | 'profissional' | 'sala'
  * - onViewModeChange: (mode) => void
- * - userRole: string
- * - onProfileChange: (profile) => void
- * - agendaMode: 'recepcao' | 'profissional' | 'gestor'
+ * - agendaMode: 'geral' | 'profissional' | 'sala'
  * - canAccessProfessionalMode: boolean
- * - canAccessGestorMode: boolean
+ * - canAccessRoomMode: boolean
  */
 export default function AgendaToolbarNew({
   viewMode = 'geral',
   onViewModeChange,
-  userRole,
-  onProfileChange,
-  agendaMode = 'recepcao',
+  agendaMode = 'geral',
   canAccessProfessionalMode = false,
-  canAccessGestorMode = false,
+  canAccessRoomMode = true,
 }) {
-  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
-
-  const getProfileLabel = () => {
-    switch (agendaMode) {
-      case 'recepcao':
-        return '📞 Recepção';
-      case 'profissional':
-        return '👨‍⚕️ Profissional';
-      case 'gestor':
-        return '📊 Gestor';
-      default:
-        return 'Perfil';
-    }
-  };
-
   const viewModeOptions = [
     { id: 'geral', label: 'Geral', icon: '📋' },
-    { id: 'profissional', label: 'Profissional', icon: '👨‍⚕️' },
-    { id: 'sala', label: 'Sala', icon: '🏥' },
+    { id: 'profissional', label: 'Profissional', icon: '👨‍⚕️', access: canAccessProfessionalMode },
+    { id: 'sala', label: 'Sala', icon: '🚪', access: canAccessRoomMode },
   ];
 
-  const availableProfiles = [
-    { id: 'recepcao', label: '📞 Recepção', always: true },
-    { id: 'profissional', label: '👨‍⚕️ Profissional', access: canAccessProfessionalMode },
-    { id: 'gestor', label: '📊 Gestor', access: canAccessGestorMode },
-  ];
+  const visibleOptions = viewModeOptions.filter((option) => option.id === 'geral' || option.access);
 
   return (
     <div className="bg-white border-b border-gray-200 sticky top-16 z-20">
       <div className="w-full mx-auto px-4 py-3 flex items-center justify-between gap-4">
         {/* Segmented Control */}
         <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
-          {viewModeOptions.map((option) => (
+          {visibleOptions.map((option) => (
             <button
               key={option.id}
               onClick={() => onViewModeChange?.(option.id)}
@@ -70,44 +46,9 @@ export default function AgendaToolbarNew({
             </button>
           ))}
         </div>
-
-        {/* Dropdown de Perfil */}
-        <div className="relative">
-          <button
-            onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-          >
-            <span>{getProfileLabel()}</span>
-            <ChevronDown
-              className={`w-4 h-4 transition-transform ${
-                isProfileDropdownOpen ? 'rotate-180' : ''
-              }`}
-            />
-          </button>
-
-          {isProfileDropdownOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-30">
-              {availableProfiles
-                .filter((p) => p.always || p.access)
-                .map((profile) => (
-                  <button
-                    key={profile.id}
-                    onClick={() => {
-                      onProfileChange?.(profile.id);
-                      setIsProfileDropdownOpen(false);
-                    }}
-                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
-                      agendaMode === profile.id
-                        ? 'bg-blue-50 text-blue-600 font-medium'
-                        : 'text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    {profile.label}
-                  </button>
-                ))}
-            </div>
-          )}
-        </div>
+        <span className="text-xs text-gray-500">
+          Modo: {agendaMode === 'profissional' ? 'Profissional' : agendaMode === 'sala' ? 'Sala' : 'Geral'}
+        </span>
       </div>
     </div>
   );

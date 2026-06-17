@@ -1093,26 +1093,43 @@ export default function AtendimentoModal({
     setTimeout(() => setSuccessMessageVisible(false), 3000);
   };
 
-  const handleOpenPatientRecord = () => {
+  const handleOpenPatientRecord = ({ startAttendance = false } = {}) => {
     if (!appointment?.patientId) {
       return;
     }
+
+    const professionalName =
+      selectedProfessional?.name || appointment.professionals?.name || appointment.professionalName || '';
+
+    localStorage.setItem(
+      'fromAppointmentMode',
+      JSON.stringify({
+        appointmentId: appointment.id,
+        patientId: appointment.patientId,
+        appointmentDate: appointment.date || null,
+        appointmentTime: appointment.time || null,
+        professionalName,
+        timestamp: Date.now(),
+      }),
+    );
 
     onClose();
     navigate(`/clinica/pacientes/${appointment.patientId}`, {
       state: {
         appointmentId: appointment.id,
         appointmentDate: appointment.date || null,
+        appointmentTime: appointment.time || null,
+        professionalName,
         openTab: 'historico',
         fromAgendaClinicalFlow: true,
+        mode: startAttendance ? 'atendimento' : 'visualizacao',
         canStartAppointment: isReleasedForProfessional,
       },
     });
   };
 
   const handleOpenProfessionalFlow = () => {
-    onClose();
-    navigate(`/clinica/agenda/atendimento/${appointment.id}`);
+    handleOpenPatientRecord({ startAttendance: isReleasedForProfessional });
   };
 
   // 🔗 Atualizar procedure_code quando code_type muda
