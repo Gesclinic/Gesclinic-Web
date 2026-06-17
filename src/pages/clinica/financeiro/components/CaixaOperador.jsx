@@ -11,6 +11,9 @@ import {
   Printer,
   AlertTriangle,
   AlertCircle,
+  Wallet,
+  ShieldCheck,
+  User,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useClinicContext } from '@/contexts/ClinicContext';
@@ -42,9 +45,11 @@ const CaixaIndividualOperador = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
+  const [showOpenModal, setShowOpenModal] = useState(false);
   const [filterName, setFilterName] = useState('');
   const [savedFilters, setSavedFilters] = useState([]);
   const [closingAmount, setClosingAmount] = useState('');
+  const [openingAmount, setOpeningAmount] = useState('0');
 
   // Estados dos filtros
   const [filters, setFilters] = useState({
@@ -116,7 +121,20 @@ const CaixaIndividualOperador = () => {
     }
     setLoading(true);
     try {
-      const d = await cashDrawerApi.getOrCreateDrawer(clinicId, user.id);
+      const today = new Date().toISOString().split('T')[0];
+      const d = await cashDrawerApi.getDrawerForDate(clinicId, user.id, today);
+
+      if (!d) {
+        setDrawer(null);
+        setSummary({
+          totalEntrada: 0,
+          totalSaida: 0,
+          balance: 0,
+        });
+        setPaymentMethodSummary([]);
+        return;
+      }
+
       setDrawer(d);
 
       const summ = await cashDrawerApi.getMovementSummary(d.id);
@@ -139,7 +157,7 @@ const CaixaIndividualOperador = () => {
   };
 
   const handleAddMovement = async (formData) => {
-    if (!drawer?.id || !clinicId || !user?.id) {
+    if (!drawer?.id || drawer?.status !== 'open' || !clinicId || !user?.id) {
       toastService.error('Erro', 'Dados incompletos para registrar movimento');
       return;
     }
@@ -211,6 +229,24 @@ const CaixaIndividualOperador = () => {
       await loadDrawer();
     } catch (err) {
       toastService.error('Erro', err.message || 'Erro ao fechar caixa');
+    }
+  };
+
+  const handleOpenDrawer = async () => {
+    if (!clinicId || !user?.id) {
+      toastService.error('Erro', 'Não foi possível identificar clínica/operador para abrir o caixa.');
+      return;
+    }
+
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      await cashDrawerApi.openDrawer(clinicId, user.id, today, Number(openingAmount || 0));
+      toastService.success('Sucesso', 'Caixa aberto com sucesso!');
+      setShowOpenModal(false);
+      setOpeningAmount('0');
+      await loadDrawer();
+    } catch (err) {
+      toastService.error('Erro', err.message || 'Erro ao abrir caixa');
     }
   };
 
@@ -427,9 +463,11 @@ const CaixaIndividualOperador = () => {
   if (loading) {
     return <div className="p-6 text-center">Carregando...</div>;
   }
-  if (!drawer) {
-    return <div className="p-6 text-center text-red-600">Erro ao carregar caixa</div>;
-  }
+  const hasOpenDrawer = drawer?.status === 'open';
+  const statusLabel = hasOpenDrawer ? 'ABERTO' : 'FECHADO';
+  const statusTone = hasOpenDrawer
+    ? 'text-emerald-700 border-emerald-200 bg-emerald-50'
+    : 'text-rose-700 border-rose-200 bg-rose-50';
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">
@@ -437,14 +475,32 @@ const CaixaIndividualOperador = () => {
         {/* Header */}
         <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">💳 Caixa Individual</h1>
-            <p className="text-slate-500">
-              Gerenciamento integrado de movimentações e atendimento clínico
+            <h1 className="text-3xl font-bold text-slate-800">Caixa Individual / Controle Diário</h1>
+            <p className="text-slate-500 mt-2">
+              Abertura e fechamento diário do caixa com rastreabilidade de movimentações.
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
+            {hasOpenDrawer ? (
+              <button
+                onClick={() => setShowCloseModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+              >
+                <AlertCircle size={16} />
+                Fechar Caixa do Dia
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowOpenModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+              >
+                <Wallet size={16} />
+                Abrir Caixa do Dia
+              </button>
+            )}
             <button
               onClick={exportToExcel}
+              disabled={!drawer}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
             >
               <FileSpreadsheet size={16} />
@@ -452,6 +508,7 @@ const CaixaIndividualOperador = () => {
             </button>
             <button
               onClick={exportToPDF}
+              disabled={!drawer}
               className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
             >
               <FileText size={16} />
@@ -467,44 +524,88 @@ const CaixaIndividualOperador = () => {
           </div>
         </div>
 
-        {/* ⚡ Status Card Premium */}
-        <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-xl shadow-lg p-6 mb-8 border border-blue-500">
-          <div className="grid grid-cols-4 gap-6">
-            <div className="flex flex-col">
-              <span className="text-blue-200 text-xs uppercase tracking-wide font-semibold mb-2">
-                Saldo Aberto
-              </span>
-              <span className="text-lg font-bold">R$ {drawer.opening_balance.toFixed(2)}</span>
+        {/* Cards de Status no estilo do Caixa Geral */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow">
+            <div className="h-1 bg-gradient-to-r from-green-500 to-green-600" />
+            <div className="p-4">
+              <div className="p-2 w-fit rounded-lg bg-slate-50 text-slate-600 mb-3">
+                <Wallet size={20} />
+              </div>
+              <p className="text-xs font-medium text-slate-500">Saldo de Abertura</p>
+              <h3 className="text-lg font-bold text-slate-800 mt-1">
+                R$ {Number(drawer?.opening_balance || 0).toFixed(2)}
+              </h3>
+              <p className="text-xs text-slate-400 mt-2">Caixa do dia</p>
             </div>
-            <div className="flex flex-col border-l border-blue-400 pl-6">
-              <span className="text-blue-200 text-xs uppercase tracking-wide font-semibold mb-2">
-                Saldo Atual
-              </span>
-              <span className="text-lg font-bold">R$ {summary?.balance.toFixed(2) || '0.00'}</span>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow">
+            <div className="h-1 bg-gradient-to-r from-blue-500 to-blue-600" />
+            <div className="p-4">
+              <div className="p-2 w-fit rounded-lg bg-slate-50 text-slate-600 mb-3">
+                <TrendingUp size={20} />
+              </div>
+              <p className="text-xs font-medium text-slate-500">Saldo Atual</p>
+              <h3 className="text-lg font-bold text-slate-800 mt-1">
+                R$ {Number(summary?.balance || 0).toFixed(2)}
+              </h3>
+              <p className="text-xs text-slate-400 mt-2">Atualizado em tempo real</p>
             </div>
-            <div className="flex flex-col border-l border-blue-400 pl-6">
-              <span className="text-blue-200 text-xs uppercase tracking-wide font-semibold mb-2">
-                Status
-              </span>
-              <span
-                className={`text-sm font-bold uppercase ${drawer.status === 'open' ? 'text-green-300' : 'text-yellow-300'}`}
-              >
-                {drawer.status === 'open' ? '🟢 ABERTO' : '🔴 FECHADO'}
-              </span>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow">
+            <div className={`h-1 bg-gradient-to-r ${hasOpenDrawer ? 'from-emerald-500 to-emerald-600' : 'from-rose-500 to-rose-600'}`} />
+            <div className="p-4">
+              <div className="p-2 w-fit rounded-lg bg-slate-50 text-slate-600 mb-3">
+                <ShieldCheck size={20} />
+              </div>
+              <p className="text-xs font-medium text-slate-500">Status Diário</p>
+              <div className={`inline-flex px-2.5 py-1 rounded-full text-xs font-bold border mt-2 ${statusTone}`}>
+                {statusLabel}
+              </div>
+              <p className="text-xs text-slate-400 mt-2">
+                {hasOpenDrawer ? 'Pronto para registrar movimentações' : 'Abra o caixa para iniciar o dia'}
+              </p>
             </div>
-            <div className="flex flex-col border-l border-blue-400 pl-6">
-              <span className="text-blue-200 text-xs uppercase tracking-wide font-semibold mb-2">
-                Operador
-              </span>
-              <span className="text-sm font-semibold truncate">
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow">
+            <div className="h-1 bg-gradient-to-r from-indigo-500 to-indigo-600" />
+            <div className="p-4">
+              <div className="p-2 w-fit rounded-lg bg-slate-50 text-slate-600 mb-3">
+                <User size={20} />
+              </div>
+              <p className="text-xs font-medium text-slate-500">Operador</p>
+              <h3 className="text-sm font-bold text-slate-800 mt-1 truncate">
                 {operatorName || user?.email || 'N/A'}
-              </span>
+              </h3>
+              <p className="text-xs text-slate-400 mt-2">Responsável pelo caixa</p>
             </div>
           </div>
         </div>
 
+        {!drawer && (
+          <div className="mb-8 bg-blue-50 border border-blue-200 rounded-xl p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="font-bold text-blue-900">Caixa diário ainda não aberto</h3>
+                <p className="text-sm text-blue-700 mt-1">
+                  Para organização e segurança, abra o caixa do dia antes de registrar movimentações.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowOpenModal(true)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors"
+              >
+                Abrir Caixa
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* 📈 Summary Cards */}
-        {summary && (
+        {drawer && summary && (
           <div className="grid grid-cols-5 gap-6 mb-8">
             <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition">
               <div className="h-1 bg-gradient-to-r from-green-500 to-green-600" />
@@ -573,10 +674,63 @@ const CaixaIndividualOperador = () => {
                   <TrendingUp className="w-5 h-5 text-blue-600" /> Resumo Detalhado do Caixa
                 </h3>
 
-                {/* Breakdown por Forma de Pagamento */}
+                {/* 💰 Entradas por Forma de Pagamento */}
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border-2 border-green-200 p-6 mb-6">
+                  <h4 className="text-sm font-bold text-green-800 mb-4 uppercase flex items-center gap-2">
+                    💰 Entradas por Forma de Pagamento
+                  </h4>
+                  {paymentMethodSummary && paymentMethodSummary.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {paymentMethodSummary.map((method) => {
+                        // Cores por forma de pagamento
+                        const colorMap = {
+                          'DINHEIRO': 'from-green-500 to-emerald-600',
+                          'DINHEIRO FÍSICO': 'from-green-500 to-emerald-600',
+                          'DINHEIRO em ESPECIE': 'from-green-500 to-emerald-600',
+                          'CARTÃO CRÉDITO': 'from-blue-500 to-indigo-600',
+                          'CREDITO': 'from-blue-500 to-indigo-600',
+                          'CARTÃO DÉBITO': 'from-cyan-500 to-sky-600',
+                          'DEBITO': 'from-cyan-500 to-sky-600',
+                          'PIX': 'from-purple-500 to-violet-600',
+                          'BOLETO': 'from-yellow-500 to-amber-600',
+                          'CHEQUE': 'from-slate-500 to-slate-600',
+                          'TED': 'from-orange-500 to-red-600',
+                          'TRANSFERÊNCIA': 'from-orange-500 to-red-600',
+                        };
+                        const bgColor = Object.entries(colorMap).find(([key]) => method.method.toUpperCase().includes(key))?.[1] || 'from-slate-500 to-slate-600';
+                        
+                        return (
+                          <div key={method.method} className="p-4 bg-white rounded-lg border-2 border-green-100 hover:shadow-lg transition-shadow">
+                            <div className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-gradient-to-r ${bgColor} text-white text-xs font-bold mb-3`}>
+                              {method.method}
+                            </div>
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-baseline">
+                                <span className="text-xs text-slate-600">Entrada:</span>
+                                <span className="text-lg font-bold text-green-700">R$ {Number(method.entrada || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                              </div>
+                              {Number(method.saida || 0) > 0 && (
+                                <div className="flex justify-between items-baseline">
+                                  <span className="text-xs text-slate-600">Saída:</span>
+                                  <span className="text-sm font-semibold text-red-700">R$ {Number(method.saida || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 text-slate-500">
+                      <p className="text-sm">Nenhuma entrada registrada ainda</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Breakdown Detalhado por Forma de Pagamento */}
                 {paymentMethodSummary && paymentMethodSummary.length > 0 ? (
                   <div className="bg-slate-50 rounded-xl border-2 border-slate-200 p-6">
-                    <h4 className="text-sm font-bold text-slate-700 mb-4 uppercase">Detalhes por Forma de Pagamento</h4>
+                    <h4 className="text-sm font-bold text-slate-700 mb-4 uppercase">Detalhes Completos por Forma de Pagamento</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                       {paymentMethodSummary.map((method) => (
                         <div
@@ -816,8 +970,15 @@ const CaixaIndividualOperador = () => {
                     <span className="font-semibold">{movements.length}</span> movimentos
                   </p>
                   <button
-                    onClick={() => setShowCashModal(true)}
-                    className="px-4 py-2.5 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-all flex items-center gap-2"
+                    onClick={() => {
+                      if (!hasOpenDrawer) {
+                        toastService.error('Caixa fechado', 'Abra o caixa do dia para registrar movimentos.');
+                        return;
+                      }
+                      setShowCashModal(true);
+                    }}
+                    className="px-4 py-2.5 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={!hasOpenDrawer}
                   >
                     <span>➕</span> Novo Movimento
                   </button>
@@ -834,12 +995,21 @@ const CaixaIndividualOperador = () => {
 
         {/* 🎯 Action Buttons */}
         <div className="flex gap-3 mt-8">
-          {drawer.status === 'open' && (
+          {hasOpenDrawer && (
             <button
               onClick={() => setShowCloseModal(true)}
               className="w-full px-4 py-2.5 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition-all shadow-sm"
             >
               🔴 Fechar Caixa
+            </button>
+          )}
+
+          {!hasOpenDrawer && (
+            <button
+              onClick={() => setShowOpenModal(true)}
+              className="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-all shadow-sm"
+            >
+              🔵 Abrir Caixa do Dia
             </button>
           )}
         </div>
@@ -923,6 +1093,70 @@ const CaixaIndividualOperador = () => {
                     className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Confirmar Fechamento
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Abertura de Caixa */}
+        {showOpenModal && (
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+              <div className="flex items-center justify-between p-6 border-b border-slate-100">
+                <h2 className="text-xl font-bold text-slate-800">Abrir Caixa do Dia</h2>
+                <button
+                  onClick={() => {
+                    setShowOpenModal(false);
+                    setOpeningAmount('0');
+                  }}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
+                  <p className="text-sm text-blue-700 font-semibold">Data do Caixa</p>
+                  <p className="text-lg font-bold text-blue-900 mt-1">
+                    {new Date().toLocaleDateString('pt-BR')}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Saldo Inicial
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="w-full border-2 border-slate-300 rounded-lg p-3 text-lg font-bold outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all"
+                    placeholder="0.00"
+                    value={openingAmount}
+                    onChange={(e) => setOpeningAmount(e.target.value)}
+                    autoFocus
+                  />
+                  <p className="text-xs text-slate-500 mt-2">
+                    Use o valor em caixa no início do expediente.
+                  </p>
+                </div>
+
+                <div className="pt-4 flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowOpenModal(false);
+                      setOpeningAmount('0');
+                    }}
+                    className="flex-1 px-4 py-2.5 border-2 border-slate-200 rounded-lg font-bold text-slate-600 hover:bg-slate-50 transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleOpenDrawer}
+                    className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition-all"
+                  >
+                    Confirmar Abertura
                   </button>
                 </div>
               </div>

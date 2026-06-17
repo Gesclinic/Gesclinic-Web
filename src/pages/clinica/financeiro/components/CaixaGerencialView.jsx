@@ -220,25 +220,7 @@ const CaixaGerencialView = () => {
         </div>
       )}
 
-      {/* Cards de Consolidação */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
-        {summaryCards.map((card, index) => (
-          <div
-            key={index}
-            className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-md transition-shadow"
-          >
-            <div className={`h-1 bg-gradient-to-r ${card.color}`} />
-            <div className="p-4">
-              <div className="p-2 w-fit rounded-lg bg-slate-50 text-slate-600 mb-3">
-                <card.icon size={20} />
-              </div>
-              <p className="text-xs font-medium text-slate-500">{card.title}</p>
-              <h3 className="text-lg font-bold text-slate-800 mt-1">{card.value}</h3>
-              {card.detail && <p className="text-xs text-slate-400 mt-2">{card.detail}</p>}
-            </div>
-          </div>
-        ))}
-      </div>
+
 
       {/* Tabs Navigation */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
@@ -269,6 +251,35 @@ const CaixaGerencialView = () => {
               {/* Consolidação Tab */}
               {activeTab === 'consolidacao' && consolidation && (
                 <div className="space-y-6">
+                  {/* 💰 Resumo de Entradas por Forma de Pagamento do Dia */}
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border-2 border-green-200 p-6">
+                    <h3 className="text-lg font-bold text-green-800 mb-4 flex items-center gap-2">
+                      💰 Movimentações do Dia por Forma de Pagamento
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                      {[
+                        { label: 'Dinheiro em Espécie', value: consolidation?.summary?.cashInDrawers || 0, color: 'from-green-500 to-emerald-600', icon: '💵' },
+                        { label: 'Cartão Crédito', value: 0, color: 'from-blue-500 to-indigo-600', icon: '💳' },
+                        { label: 'Cartão Débito', value: 0, color: 'from-cyan-500 to-sky-600', icon: '🔵' },
+                        { label: 'PIX', value: consolidation?.summary?.pix || 0, color: 'from-purple-500 to-violet-600', icon: '⚡' },
+                        { label: 'TED/DOC', value: 0, color: 'from-orange-500 to-red-600', icon: '📤' },
+                        { label: 'Boleto', value: 0, color: 'from-yellow-500 to-amber-600', icon: '📋' },
+                        { label: 'Cheque', value: consolidation?.summary?.check || 0, color: 'from-slate-500 to-slate-600', icon: '✓' },
+                      ].map((item, idx) => (
+                        <div key={idx} className="p-4 bg-white rounded-lg border-2 border-green-100 hover:shadow-md transition-shadow">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-2xl">{item.icon}</span>
+                            <span className={`px-2 py-1 rounded text-xs font-bold text-white bg-gradient-to-r ${item.color}`}>
+                              {item.label}
+                            </span>
+                          </div>
+                          <p className="text-xl font-bold text-slate-800">
+                            R$ {Number(item.value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Dinheiro em Espécie */}
                     <div className="p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border-2 border-green-200">

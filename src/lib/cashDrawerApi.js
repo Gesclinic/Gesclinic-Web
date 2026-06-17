@@ -6,6 +6,32 @@ const client = customSupabaseClient;
 export const cashDrawerApi = {
   // ==================== CASH DRAWERS ====================
 
+  // Obter caixa mais recente do dia (sem criar automaticamente)
+  async getDrawerForDate(
+    clinicId,
+    operatorId,
+    date = new Date().toISOString().split('T')[0],
+  ) {
+    try {
+      const { data, error } = await client
+        .from('cash_drawers')
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .eq('operator_id', operatorId)
+        .eq('date_opened', date)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error) {
+        throw error;
+      }
+
+      return data?.[0] || null;
+    } catch (err) {
+      throw new Error(`Erro ao buscar caixa do dia: ${err.message}`);
+    }
+  },
+
   // Abrir/Obter caixa do dia
   async getOrCreateDrawer(clinicId, operatorId, date = new Date().toISOString().split('T')[0]) {
     try {
