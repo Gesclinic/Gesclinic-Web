@@ -1,474 +1,301 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useClinicContext } from '@/contexts/ClinicContext';
-import PageLayout from '@/components/ui/PageLayout';
-import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useNavigate } from 'react-router-dom';
 import {
-  PROFILES_CONFIG,
-  listProfiles,
-  countUsersByProfile,
-  listUsersByProfile,
-} from '@/lib/profilesApi';
-import EditProfileModal from '@/components/configuracoes/EditProfileModal';
-import {
-  Users,
-  Shield,
-  Lock,
-  CheckCircle2,
-  Eye,
-  Settings,
-  ChevronRight,
-  AlertCircle,
+  Shield, Users, LayoutDashboard, CalendarDays, UserRound, BookOpen,
+  Wallet, Package, Receipt, Settings, Building2, CheckCircle2,
+  MinusCircle, XCircle, ChevronRight, ExternalLink, Info, BarChart3, Stethoscope,
 } from 'lucide-react';
+import {
+  PROFILES_CONFIG, MODULES_LIST, PERMISSION_MATRIX,
+  listUsersByProfile, countUsersByProfile,
+} from '@/lib/profilesApi';
 
-export default function PerfisUsuarioConfig() {
-  const breadcrumbs = useBreadcrumbs([
-    { label: 'Clínica', path: '/clinica' },
-    { label: 'Configurações' },
-    { label: 'Perfis de Usuário' },
-  ]);
+const MODULE_ICONS = {
+  dashboard:         <LayoutDashboard className="w-4 h-4" />,
+  agenda:            <CalendarDays className="w-4 h-4" />,
+  pacientes:         <UserRound className="w-4 h-4" />,
+  cadastros_basicos: <BookOpen className="w-4 h-4" />,
+  financeiro:        <Wallet className="w-4 h-4" />,
+  estoque:           <Package className="w-4 h-4" />,
+  faturamento:       <Receipt className="w-4 h-4" />,
+  configuracoes:     <Settings className="w-4 h-4" />,
+  administracao:     <Building2 className="w-4 h-4" />,
+};
 
+const PROFILE_ICONS = {
+  admin:       <Shield className="w-5 h-5" />,
+  gestor:      <BarChart3 className="w-5 h-5" />,
+  financeiro:  <Wallet className="w-5 h-5" />,
+  recepcao:    <CalendarDays className="w-5 h-5" />,
+  medico:      <Stethoscope className="w-5 h-5" />,
+  estoque:     <Package className="w-5 h-5" />,
+  faturamento: <Receipt className="w-5 h-5" />,
+};
+
+function AccessBadge({ level }) {
+  if (level === 'full')    return <CheckCircle2 className="w-5 h-5 text-green-500 mx-auto" />;
+  if (level === 'partial') return <MinusCircle  className="w-5 h-5 text-amber-400 mx-auto" />;
+  return <XCircle className="w-5 h-5 text-slate-200 mx-auto" />;
+}
+
+function UsersModal({ roleId, config, onClose, navigate }) {
   const { clinicId } = useClinicContext();
-  const [profiles, setProfiles] = useState([]);
-  const [userCounts, setUserCounts] = useState({});
-  const [selectedProfile, setSelectedProfile] = useState(null);
-  const [profileUsers, setProfileUsers] = useState([]);
+  const [users, setUsers]   = useState([]);
   const [loading, setLoading] = useState(true);
-  const [editingProfile, setEditingProfile] = useState(null);
 
   useEffect(() => {
-    loadProfiles();
-  }, [clinicId]);
-
-  useEffect(() => {
-    if (selectedProfile) {
-      loadProfileUsers(selectedProfile.id);
-    }
-  }, [selectedProfile]);
-
-  const loadProfiles = async () => {
-    if (!clinicId) {
-      return;
-    }
+    if (!clinicId || !roleId) return;
     setLoading(true);
-    try {
-      const data = await listProfiles(clinicId);
-      setProfiles(data.length > 0 ? data : []);
-
-      // Contar usuários por perfil
-      const counts = {};
-      for (const role of Object.keys(PROFILES_CONFIG)) {
-        counts[role] = await countUsersByProfile(role, clinicId);
-      }
-      setUserCounts(counts);
-    } catch (error) {
-      console.error('Erro ao carregar perfis:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadProfileUsers = async (roleId) => {
-    if (!clinicId) {
-      return;
-    }
-    try {
-      const data = await listUsersByProfile(roleId, clinicId);
-      setProfileUsers(data);
-    } catch (error) {
-      console.error('Erro ao carregar usuários:', error);
-    }
-  };
-
-  const ProfileCard = ({ profile, config }) => (
-    <Card
-      className={`cursor-pointer transition-all hover:shadow-lg ${
-        selectedProfile?.id === profile.id ? 'ring-2 ring-blue-500' : ''
-      }`}
-      onClick={() => setSelectedProfile(profile)}
-    >
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <CardTitle className="text-lg">{config.label}</CardTitle>
-            <p className="text-sm text-gray-500 mt-1">{config.description}</p>
-          </div>
-          <Shield className={`w-6 h-6 ${config.color}`} />
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="flex items-center gap-2 text-sm">
-          <Users className="w-4 h-4 text-gray-500" />
-          <span className="font-medium">{userCounts[profile.id] || 0} usuário(s)</span>
-        </div>
-
-        <div className="bg-gray-50 rounded p-3 space-y-2">
-          <div className="font-semibold text-sm text-gray-700">Módulos Acessíveis:</div>
-          <div className="flex flex-wrap gap-1">
-            {config.modules.map((module) => (
-              <span
-                key={module}
-                className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded"
-              >
-                {module}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-blue-50 rounded p-3">
-          <div className="font-semibold text-sm text-blue-900 mb-2 flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4" />
-            Permissões Ativas
-          </div>
-          <div className="text-xs text-blue-700">
-            {config.permissions.length} permissão(ões) configurada(s)
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-
-  const PermissionCategory = ({ title, permissions, allPermissions }) => {
-    const categoryPermissions = allPermissions.filter((p) =>
-      p.startsWith(title.toLowerCase().replace(/\s/g, '_') + '.'),
-    );
-    return (
-      <div className="space-y-2">
-        <h4 className="font-semibold text-sm text-gray-700">{title}</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-          {categoryPermissions.map((perm) => (
-            <div key={perm} className="flex items-center gap-2 text-sm">
-              <CheckCircle2 className="w-4 h-4 text-green-600" />
-              <span className="text-gray-600">
-                {perm.split('.')[1]?.replace(/_/g, ' ') || perm}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
+    listUsersByProfile(roleId, clinicId).then(setUsers).finally(() => setLoading(false));
+  }, [clinicId, roleId]);
 
   return (
-    <PageLayout
-      title="Configuração de Perfis de Usuário"
-      subtitle="Gerencie os perfis, papéis e permissões dos usuários do sistema"
-      breadcrumbs={breadcrumbs}
-    >
-      {/* Informações Gerais */}
-      <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-3">
-        <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-        <div className="text-sm text-blue-900">
-          <p className="font-semibold mb-1">Sobre Perfis e Permissões</p>
-          <p>
-            Os perfis determinam quais módulos e funcionalidades cada usuário pode acessar no
-            sistema. Cada perfil possui um conjunto de permissões específicas que controlam as ações
-            disponíveis.
-          </p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Lista de Perfis */}
-        <div className="lg:col-span-2">
-          <div className="space-y-4">
-            {loading ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-                  <p className="text-gray-500 mt-3">Carregando perfis...</p>
-                </CardContent>
-              </Card>
-            ) : (
-              Object.entries(PROFILES_CONFIG).map(([key, config]) => (
-                <ProfileCard key={key} profile={{ id: key }} config={config} />
-              ))
-            )}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 mx-4" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-3 mb-5">
+          <div className={`flex items-center justify-center w-10 h-10 rounded-xl border ${config.bgClass}`}>
+            <span className={config.colorClass}>{PROFILE_ICONS[roleId]}</span>
           </div>
+          <div>
+            <h3 className="font-bold text-slate-900">{config.label}</h3>
+            <p className="text-xs text-slate-500">{users.length} usuário(s) neste perfil</p>
+          </div>
+          <button onClick={onClose} className="ml-auto text-slate-400 hover:text-slate-600 transition">
+            <XCircle className="w-5 h-5" />
+          </button>
         </div>
 
-        {/* Detalhes do Perfil Selecionado */}
-        <div className="lg:col-span-1">
-          {selectedProfile ? (
-            <Card className="sticky top-4">
-              <CardHeader>
-                <CardTitle className="text-base">
-                  {PROFILES_CONFIG[selectedProfile.id]?.label}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Estatísticas */}
-                <div className="space-y-2">
-                  <div className="text-sm">
-                    <p className="text-gray-600">Usuários Ativos</p>
-                    <p className="text-2xl font-bold text-blue-600">
-                      {userCounts[selectedProfile.id] || 0}
-                    </p>
-                  </div>
+        {loading ? (
+          <div className="py-8 text-center text-slate-400 text-sm">Carregando usuários...</div>
+        ) : users.length === 0 ? (
+          <div className="py-8 text-center text-slate-400 text-sm">
+            <Users className="w-8 h-8 mx-auto mb-2 opacity-30" />
+            Nenhum usuário com este perfil
+          </div>
+        ) : (
+          <ul className="space-y-2 max-h-72 overflow-y-auto pr-1">
+            {users.map((u) => (
+              <li key={u.id} className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-200 text-slate-600 text-xs font-bold flex-shrink-0">
+                  {(u.full_name || u.email || '?')[0].toUpperCase()}
                 </div>
-
-                {/* Descrição */}
-                <div>
-                  <p className="text-xs font-semibold text-gray-700 mb-1">Descrição</p>
-                  <p className="text-sm text-gray-600">
-                    {PROFILES_CONFIG[selectedProfile.id]?.description}
-                  </p>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-slate-800 truncate">{u.full_name || '(sem nome)'}</p>
+                  <p className="text-xs text-slate-500 truncate">{u.email}</p>
                 </div>
+              </li>
+            ))}
+          </ul>
+        )}
 
-                {/* Usuários do Perfil */}
-                {profileUsers.length > 0 && (
-                  <div>
-                    <p className="text-xs font-semibold text-gray-700 mb-2">
-                      Usuários ({profileUsers.length})
-                    </p>
-                    <div className="space-y-1 max-h-40 overflow-y-auto">
-                      {profileUsers.map((user) => (
-                        <div key={user.id} className="text-xs p-1 bg-gray-50 rounded">
-                          <p className="font-medium text-gray-800">
-                            {user.full_name || user.email}
-                          </p>
-                          <p className="text-gray-500">{user.email}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+        <button
+          onClick={() => { onClose(); navigate('/clinica/administracao/usuarios'); }}
+          className="mt-4 w-full flex items-center justify-center gap-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 py-2.5 text-sm font-medium transition"
+        >
+          <ExternalLink className="w-4 h-4" /> Gerenciar Usuários
+        </button>
+      </div>
+    </div>
+  );
+}
 
-                {/* Módulos */}
-                <div>
-                  <p className="text-xs font-semibold text-gray-700 mb-2">Módulos Acessíveis</p>
-                  <div className="flex flex-wrap gap-1">
-                    {PROFILES_CONFIG[selectedProfile.id]?.modules.map((module) => (
-                      <span
-                        key={module}
-                        className="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded"
-                      >
-                        {module}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Ações */}
-                <div className="pt-2 border-t space-y-2">
-                  <button className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-sm font-medium transition">
-                    <Eye className="w-4 h-4" />
-                    Ver Permissões
-                  </button>
-                  <button
-                    onClick={() => setEditingProfile(selectedProfile.id)}
-                    className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 text-sm font-medium transition"
-                  >
-                    <Settings className="w-4 h-4" />
-                    Editar Perfil
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <Shield className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500">Selecione um perfil para ver os detalhes</p>
-              </CardContent>
-            </Card>
-          )}
+function RoleCard({ roleId, config, userCount, onViewUsers }) {
+  return (
+    <div className={`rounded-2xl border p-5 transition hover:shadow-md ${config.bgClass}`}>
+      <div className="flex items-start gap-3 mb-4">
+        <div className={`flex items-center justify-center w-10 h-10 rounded-xl bg-white shadow-sm border ${config.bgClass} flex-shrink-0`}>
+          <span className={config.colorClass}>{PROFILE_ICONS[roleId]}</span>
+        </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="font-bold text-slate-900 text-sm">{config.label}</h3>
+          <p className="text-xs text-slate-500 mt-0.5 leading-snug">{config.description}</p>
         </div>
       </div>
 
-      {/* Seção de Permissões Detalhadas */}
-      {selectedProfile && (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Lock className="w-5 h-5" />
-              Permissões de {PROFILES_CONFIG[selectedProfile.id]?.label}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <PermissionCategory
-                title="Dashboard"
-                permissions={['visualizar']}
-                allPermissions={PROFILES_CONFIG[selectedProfile.id]?.permissions || []}
-              />
-              <PermissionCategory
-                title="Agenda"
-                permissions={[
-                  'visualizar',
-                  'criar',
-                  'editar',
-                  'deletar',
-                  'confirmacao',
-                  'lista_espera',
-                  'relatorios',
-                  'notificacoes',
-                ]}
-                allPermissions={PROFILES_CONFIG[selectedProfile.id]?.permissions || []}
-              />
-              <PermissionCategory
-                title="Pacientes"
-                permissions={[
-                  'visualizar',
-                  'criar',
-                  'editar',
-                  'deletar',
-                  'documentos',
-                  'historico',
-                ]}
-                allPermissions={PROFILES_CONFIG[selectedProfile.id]?.permissions || []}
-              />
-              <PermissionCategory
-                title="Profissionais"
-                permissions={['visualizar', 'criar', 'editar', 'deletar']}
-                allPermissions={PROFILES_CONFIG[selectedProfile.id]?.permissions || []}
-              />
-              <PermissionCategory
-                title="Financeiro"
-                permissions={[
-                  'dashboard',
-                  'contas_pagar',
-                  'contas_receber',
-                  'fluxo_caixa',
-                  'plano_contas',
-                  'centro_custos',
-                  'conciliacao',
-                  'automacao',
-                  'repasse_medico',
-                ]}
-                allPermissions={PROFILES_CONFIG[selectedProfile.id]?.permissions || []}
-              />
-              <PermissionCategory
-                title="Estoque"
-                permissions={[
-                  'dashboard',
-                  'produtos',
-                  'categorias',
-                  'fornecedores',
-                  'movimentacoes',
-                  'transferencias',
-                  'requisicoes',
-                  'inventario',
-                  'relatorios',
-                ]}
-                allPermissions={PROFILES_CONFIG[selectedProfile.id]?.permissions || []}
-              />
-              <PermissionCategory
-                title="Faturamento"
-                permissions={['visualizar', 'criar', 'editar']}
-                allPermissions={PROFILES_CONFIG[selectedProfile.id]?.permissions || []}
-              />
-              <PermissionCategory
-                title="Atendimento"
-                permissions={['visualizar', 'criar', 'editar']}
-                allPermissions={PROFILES_CONFIG[selectedProfile.id]?.permissions || []}
-              />
-              <PermissionCategory
-                title="Configurações"
-                permissions={[
-                  'gerais',
-                  'perfis',
-                  'permissoes',
-                  'agenda',
-                  'conta',
-                  'faturamento',
-                  'estoque',
-                ]}
-                allPermissions={PROFILES_CONFIG[selectedProfile.id]?.permissions || []}
-              />
-              <PermissionCategory
-                title="Administração"
-                permissions={['usuarios', 'clinicas']}
-                allPermissions={PROFILES_CONFIG[selectedProfile.id]?.permissions || []}
-              />
-            </div>
-          </CardContent>
-        </Card>
+      <div className="flex flex-wrap gap-1 mb-4">
+        {config.modules.map((mod) => {
+          const m = MODULES_LIST.find((x) => x.id === mod);
+          return (
+            <span key={mod} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${config.badgeClass}`}>
+              {MODULE_ICONS[mod]} {m?.label || mod}
+            </span>
+          );
+        })}
+      </div>
+
+      <div className="flex items-center justify-between border-t border-white/60 pt-3">
+        <span className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
+          <Users className="w-3.5 h-3.5" />
+          {userCount} usuário{userCount !== 1 ? 's' : ''}
+        </span>
+        <button
+          onClick={() => onViewUsers(roleId)}
+          className={`flex items-center gap-1 text-xs font-semibold ${config.colorClass} hover:underline transition`}
+        >
+          Ver usuários <ChevronRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default function PerfisUsuarioConfig() {
+  const { clinicId } = useClinicContext();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab]   = useState('overview');
+  const [userCounts, setUserCounts] = useState({});
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [loading, setLoading]       = useState(true);
+  const [modalRole, setModalRole]   = useState(null);
+
+  const loadCounts = useCallback(async () => {
+    if (!clinicId) return;
+    setLoading(true);
+    const counts = {};
+    let total = 0;
+    await Promise.all(
+      Object.keys(PROFILES_CONFIG).map(async (role) => {
+        const c = await countUsersByProfile(role, clinicId);
+        counts[role] = c;
+        total += c;
+      })
+    );
+    setUserCounts(counts);
+    setTotalUsers(total);
+    setLoading(false);
+  }, [clinicId]);
+
+  useEffect(() => { loadCounts(); }, [loadCounts]);
+
+  const roles = Object.keys(PROFILES_CONFIG);
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900">Perfis e Permissões</h1>
+        <p className="text-sm text-slate-500 mt-1">
+          Gerencie os perfis de acesso e veja quais módulos cada perfil pode utilizar.
+        </p>
+      </div>
+
+      {/* Info banner */}
+      <div className="flex items-start gap-3 rounded-xl bg-blue-50 border border-blue-200 p-4">
+        <Info className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" />
+        <div className="text-sm text-blue-800">
+          <span className="font-semibold">Permissões baseadas em perfil (RBAC)</span> — cada usuário herda os
+          acessos do seu perfil automaticamente. Para alterar o perfil de um usuário, acesse{' '}
+          <button onClick={() => navigate('/clinica/administracao/usuarios')} className="underline font-medium hover:text-blue-900">
+            Administração → Usuários
+          </button>.
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: 'Total de Perfis',       value: roles.length },
+          { label: 'Usuários Cadastrados',  value: loading ? '—' : totalUsers },
+          { label: 'Módulos do Sistema',    value: MODULES_LIST.length },
+          { label: 'Perfis com Usuários',   value: loading ? '—' : Object.values(userCounts).filter((c) => c > 0).length },
+        ].map((stat) => (
+          <div key={stat.label} className="rounded-xl border border-slate-200 bg-white p-4">
+            <p className="text-xs text-slate-500 uppercase tracking-wide">{stat.label}</p>
+            <p className="text-2xl font-bold text-slate-900 mt-1">{stat.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 rounded-xl bg-slate-100 p-1 w-fit">
+        {[{ id: 'overview', label: 'Visão Geral' }, { id: 'matrix', label: 'Matriz de Permissões' }].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+              activeTab === tab.id ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab: Visão Geral */}
+      {activeTab === 'overview' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {roles.map((roleId) => (
+            <RoleCard
+              key={roleId}
+              roleId={roleId}
+              config={PROFILES_CONFIG[roleId]}
+              userCount={loading ? '…' : (userCounts[roleId] ?? 0)}
+              onViewUsers={setModalRole}
+            />
+          ))}
+        </div>
       )}
 
-      {/* Tabela Resumida de Permissões */}
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle className="text-lg">Resumo de Acesso por Perfil</CardTitle>
-        </CardHeader>
-        <CardContent>
+      {/* Tab: Matriz */}
+      {activeTab === 'matrix' && (
+        <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b">
-                  <th className="text-left py-2 px-3 font-semibold text-gray-700">Módulo</th>
-                  {/* Ordem fixa dos perfis para garantir consistência */}
-                  {[
-                    'admin',
-                    'financeiro',
-                    'recepcao',
-                    'profissional',
-                    'estoque',
-                    'faturamento',
-                  ].map((key) => {
-                    const config = PROFILES_CONFIG[key];
-                    return config ? (
-                      <th key={key} className="text-center py-2 px-3 font-semibold text-gray-700">
-                        {config.label}
-                      </th>
-                    ) : null;
-                  })}
+                <tr className="border-b border-slate-100 bg-slate-50">
+                  <th className="text-left py-3 px-4 font-semibold text-slate-700 min-w-[160px] sticky left-0 bg-slate-50 z-10">
+                    Módulo
+                  </th>
+                  {roles.map((roleId) => (
+                    <th key={roleId} className="py-3 px-3 text-center min-w-[90px]">
+                      <div className="flex flex-col items-center gap-1">
+                        <span className={PROFILES_CONFIG[roleId].colorClass}>{PROFILE_ICONS[roleId]}</span>
+                        <span className="text-xs font-semibold text-slate-700 whitespace-nowrap leading-tight">
+                          {PROFILES_CONFIG[roleId].label}
+                        </span>
+                      </div>
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {[
-                  { module: 'Dashboard', key: 'dashboard' },
-                  { module: 'Agenda', key: 'agenda' },
-                  { module: 'Pacientes', key: 'pacientes' },
-                  { module: 'Profissionais', key: 'profissionais' },
-                  { module: 'Financeiro', key: 'financeiro' },
-                  { module: 'Estoque', key: 'estoque' },
-                  { module: 'Faturamento', key: 'faturamento' },
-                  { module: 'Configurações', key: 'configuracoes' },
-                  { module: 'Administração', key: 'administracao' },
-                  { module: 'Atendimento', key: 'atendimento' },
-                ].map((item) => (
-                  <tr key={item.key} className="border-b hover:bg-gray-50">
-                    <td className="py-2 px-3 font-medium text-gray-700">{item.module}</td>
-                    {/* Ordem fixa dos perfis */}
-                    {[
-                      'admin',
-                      'financeiro',
-                      'recepcao',
-                      'profissional',
-                      'estoque',
-                      'faturamento',
-                    ].map((key) => {
-                      const config = PROFILES_CONFIG[key];
-                      return config ? (
-                        <td key={key} className="text-center py-2 px-3">
-                          {config.modules.includes(item.module) ? (
-                            <CheckCircle2 className="w-5 h-5 text-green-600 mx-auto" />
-                          ) : (
-                            <div className="w-5 h-5 rounded-full border-2 border-gray-300 mx-auto"></div>
-                          )}
-                        </td>
-                      ) : null;
-                    })}
+                {MODULES_LIST.map((mod, i) => (
+                  <tr key={mod.id} className={`border-b border-slate-50 ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}`}>
+                    <td className="py-3 px-4 sticky left-0 bg-inherit z-10">
+                      <div className="flex items-center gap-2 text-slate-700">
+                        <span className="text-slate-400">{MODULE_ICONS[mod.id]}</span>
+                        <span className="font-medium text-sm">{mod.label}</span>
+                      </div>
+                    </td>
+                    {roles.map((roleId) => (
+                      <td key={roleId} className="py-3 px-3 text-center">
+                        <AccessBadge level={PERMISSION_MATRIX[mod.id]?.[roleId] ?? 'none'} />
+                      </td>
+                    ))}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </CardContent>
-      </Card>
+          <div className="flex flex-wrap items-center gap-5 px-4 py-3 border-t border-slate-100 bg-slate-50 text-xs text-slate-600">
+            <span className="font-semibold text-slate-700">Legenda:</span>
+            <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-green-500" /> Acesso completo</span>
+            <span className="flex items-center gap-1.5"><MinusCircle className="w-4 h-4 text-amber-400" /> Acesso parcial</span>
+            <span className="flex items-center gap-1.5"><XCircle className="w-4 h-4 text-slate-300" /> Sem acesso</span>
+          </div>
+        </div>
+      )}
 
-      {/* Modal de Edição */}
-      {editingProfile && (
-        <EditProfileModal
-          profile={{ id: editingProfile }}
-          config={PROFILES_CONFIG[editingProfile]}
-          clinicId={clinicId}
-          onClose={() => setEditingProfile(null)}
-          onSaved={loadProfiles}
+      {/* Modal de usuários */}
+      {modalRole && (
+        <UsersModal
+          roleId={modalRole}
+          config={PROFILES_CONFIG[modalRole]}
+          onClose={() => setModalRole(null)}
+          navigate={navigate}
         />
       )}
-    </PageLayout>
+    </div>
   );
 }

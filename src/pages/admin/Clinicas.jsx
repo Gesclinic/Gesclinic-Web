@@ -304,118 +304,100 @@ export default function Clinicas({ embedded = false }) {
               {filteredClinicas.map((clinic) => (
                 <div
                   key={clinic.id}
-                  className="group rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-5 transition hover:border-[hsl(var(--primary))]/30 hover:shadow-lg hover:shadow-[hsl(var(--primary))]/10"
+                  className="group overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:border-[hsl(var(--primary))]/40 hover:shadow-md"
                 >
+                  {/* Banner superior colorido */}
+                  <div className="relative h-2 bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary))]/50" />
+
                   {/* Cabeçalho do card */}
-                  <div className="mb-4 flex items-start justify-between">
-                    <div className="flex items-center gap-3 flex-1">
+                  <div className="flex items-start gap-4 p-5 pb-4">
+                    {/* Logo */}
+                    <div className="flex-shrink-0">
                       {clinic.logo_url ? (
                         <img
                           src={clinic.logo_url}
                           alt={clinic.name}
-                          className="h-12 w-12 rounded-xl object-cover border border-slate-200"
+                          className="h-14 w-14 rounded-xl object-contain border border-slate-100 bg-slate-50 p-1"
                         />
                       ) : (
-                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[hsl(var(--primary))]/10">
-                          <Building2 className="h-6 w-6 text-[hsl(var(--primary))]" />
+                        <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-[hsl(var(--primary))]/10 border border-[hsl(var(--primary))]/20">
+                          <Building2 className="h-7 w-7 text-[hsl(var(--primary))]" />
                         </div>
                       )}
-                      <div className="min-w-0 flex-1">
-                        <h3 className="truncate text-sm font-bold text-slate-900 group-hover:text-[hsl(var(--primary))]">
-                          {clinic.name}
-                        </h3>
-                        <p className="truncate text-xs text-slate-500">
-                          {clinic.fantasy_name || 'Sem nome fantasia'}
-                        </p>
-                      </div>
                     </div>
 
-                    {/* Badge Status */}
-                    <div className="ml-2">
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
-                          clinic.status === 'active'
-                            ? 'bg-green-100 text-green-700'
-                            : clinic.status === 'inactive'
-                              ? 'bg-slate-100 text-slate-700'
-                              : 'bg-red-100 text-red-700'
-                        }`}
-                      >
-                        {clinic.status === 'active'
-                          ? '✓ Ativa'
-                          : clinic.status === 'inactive'
-                            ? 'Inativa'
-                            : 'Suspensa'}
-                      </span>
+                    {/* Nome + Status */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <h3 className="font-bold text-slate-900 leading-tight group-hover:text-[hsl(var(--primary))] line-clamp-2">
+                            {clinic.name}
+                          </h3>
+                          {clinic.fantasy_name && clinic.fantasy_name !== clinic.name && (
+                            <p className="mt-0.5 truncate text-xs text-slate-500">
+                              {clinic.fantasy_name}
+                            </p>
+                          )}
+                        </div>
+                        <span
+                          className={`flex-shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
+                            clinic.status === 'active'
+                              ? 'bg-green-100 text-green-700'
+                              : clinic.status === 'inactive'
+                                ? 'bg-slate-100 text-slate-600'
+                                : 'bg-red-100 text-red-700'
+                          }`}
+                        >
+                          {clinic.status === 'active' ? '● Ativa' : clinic.status === 'inactive' ? 'Inativa' : 'Suspensa'}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Conteúdo do card */}
-                  <div className="space-y-3 border-t border-slate-100 pt-4 mb-4">
-                    {/* Email */}
+                  {/* Dados em grid compacto */}
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-slate-100 px-5 py-4">
                     {clinic.email && (
-                      <div className="flex items-start gap-3">
-                        <Mail className="mt-0.5 h-4 w-4 text-slate-400 flex-shrink-0" />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs text-slate-500">Email</p>
-                          <p className="truncate text-sm text-slate-700">{clinic.email}</p>
-                        </div>
+                      <div className="col-span-2 flex items-center gap-2 min-w-0">
+                        <Mail className="h-3.5 w-3.5 flex-shrink-0 text-slate-400" />
+                        <span className="truncate text-xs text-slate-600">{clinic.email}</span>
                       </div>
                     )}
-
-                    {/* Telefone */}
                     {clinic.phone && (
-                      <div className="flex items-start gap-3">
-                        <Phone className="mt-0.5 h-4 w-4 text-slate-400 flex-shrink-0" />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs text-slate-500">Telefone</p>
-                          <p className="text-sm text-slate-700">{clinic.phone}</p>
-                        </div>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Phone className="h-3.5 w-3.5 flex-shrink-0 text-slate-400" />
+                        <span className="truncate text-xs text-slate-600">{clinic.phone}</span>
                       </div>
                     )}
-
-                    {/* Localização */}
                     {(clinic.city || clinic.state) && (
-                      <div className="flex items-start gap-3">
-                        <MapPin className="mt-0.5 h-4 w-4 text-slate-400 flex-shrink-0" />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs text-slate-500">Localização</p>
-                          <p className="text-sm text-slate-700">
-                            {clinic.city}
-                            {clinic.state ? `, ${clinic.state}` : ''}
-                          </p>
-                        </div>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <MapPin className="h-3.5 w-3.5 flex-shrink-0 text-slate-400" />
+                        <span className="truncate text-xs text-slate-600">
+                          {[clinic.city, clinic.state].filter(Boolean).join(', ')}
+                        </span>
                       </div>
                     )}
-
-                    {/* CNPJ */}
                     {clinic.cnpj && (
-                      <div className="flex items-start gap-3">
-                        <Building2 className="mt-0.5 h-4 w-4 text-slate-400 flex-shrink-0" />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs text-slate-500">CNPJ</p>
-                          <p className="text-sm font-mono text-slate-700">{clinic.cnpj}</p>
-                        </div>
+                      <div className="col-span-2 flex items-center gap-2 min-w-0">
+                        <Building2 className="h-3.5 w-3.5 flex-shrink-0 text-slate-400" />
+                        <span className="truncate text-xs font-mono text-slate-600">{clinic.cnpj}</span>
                       </div>
                     )}
                   </div>
 
                   {/* Rodapé com ações */}
-                  <div className="flex gap-2 border-t border-slate-100 pt-4">
+                  <div className="flex gap-2 border-t border-slate-100 px-5 py-3">
                     <button
-                      onClick={() =>
-                        navigate(`/clinica/administracao/clinicas/editar/${clinic.id}`)
-                      }
-                      className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-[hsl(var(--primary))] bg-[hsl(var(--primary))]/5 px-3 py-2 text-sm font-medium text-[hsl(var(--primary))] transition hover:bg-[hsl(var(--primary))]/10"
+                      onClick={() => navigate(`/clinica/administracao/clinicas/editar/${clinic.id}`)}
+                      className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-[hsl(var(--primary))]/5 px-3 py-2 text-xs font-semibold text-[hsl(var(--primary))] transition hover:bg-[hsl(var(--primary))]/15 border border-[hsl(var(--primary))]/20"
                     >
-                      <Edit className="h-4 w-4" />
+                      <Edit className="h-3.5 w-3.5" />
                       Editar
                     </button>
                     <button
                       onClick={() => openDeleteDialog(clinic)}
-                      className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-100"
+                      className="flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-red-500 transition hover:bg-red-50 border border-transparent hover:border-red-100"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3.5 w-3.5" />
                       Excluir
                     </button>
                   </div>
