@@ -31,9 +31,10 @@ export default function Usuarios({ embedded = false }) {
   const [stats, setStats] = useState({
     total: 0,
     admin: 0,
+    gestor: 0,
     financeiro: 0,
     recepcao: 0,
-    profissional: 0,
+    clinico: 0,
   });
 
   useEffect(() => {
@@ -58,9 +59,11 @@ export default function Usuarios({ embedded = false }) {
       const stats = {
         total: data?.length || 0,
         admin: data?.filter((u) => u.role === 'admin').length || 0,
+        gestor: data?.filter((u) => u.role === 'gestor').length || 0,
         financeiro: data?.filter((u) => u.role === 'financeiro').length || 0,
         recepcao: data?.filter((u) => u.role === 'recepcao').length || 0,
-        profissional: data?.filter((u) => u.role === 'profissional').length || 0,
+        clinico:
+          data?.filter((u) => u.role === 'medico' || u.role === 'profissional').length || 0,
       };
       setStats(stats);
     } catch (error) {
@@ -78,9 +81,13 @@ export default function Usuarios({ embedded = false }) {
   const getRoleColor = (role) => {
     const colors = {
       admin: 'bg-red-100 text-red-800',
+      gestor: 'bg-indigo-100 text-indigo-800',
       financeiro: 'bg-green-100 text-green-800',
       recepcao: 'bg-blue-100 text-blue-800',
+      medico: 'bg-teal-100 text-teal-800',
       profissional: 'bg-purple-100 text-purple-800',
+      estoque: 'bg-orange-100 text-orange-800',
+      faturamento: 'bg-amber-100 text-amber-800',
     };
     return colors[role] || 'bg-gray-100 text-gray-800';
   };
@@ -88,9 +95,13 @@ export default function Usuarios({ embedded = false }) {
   const getRoleLabel = (role) => {
     const labels = {
       admin: 'Administrador',
+      gestor: 'Gestor',
       financeiro: 'Financeiro',
       recepcao: 'Recepção',
+      medico: 'Médico',
       profissional: 'Profissional',
+      estoque: 'Estoque',
+      faturamento: 'Faturamento',
     };
     return labels[role] || role;
   };
@@ -234,7 +245,7 @@ export default function Usuarios({ embedded = false }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
         <Card className="rounded-3xl border-slate-200 shadow-sm">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
@@ -245,6 +256,20 @@ export default function Usuarios({ embedded = false }) {
                 <p className="mt-2 text-3xl font-bold text-slate-950">{stats.total}</p>
               </div>
               <Users className="h-10 w-10 text-[hsl(var(--primary))] opacity-20" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-3xl border-slate-200 shadow-sm">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Gestor
+                </p>
+                <p className="mt-2 text-3xl font-bold text-indigo-600">{stats.gestor}</p>
+              </div>
+              <Shield className="h-10 w-10 text-indigo-500 opacity-20" />
             </div>
           </CardContent>
         </Card>
@@ -296,11 +321,11 @@ export default function Usuarios({ embedded = false }) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Profissional
+                  Clínico
                 </p>
-                <p className="mt-2 text-3xl font-bold text-purple-600">{stats.profissional}</p>
+                <p className="mt-2 text-3xl font-bold text-teal-600">{stats.clinico}</p>
               </div>
-              <Users className="h-10 w-10 text-purple-500 opacity-20" />
+              <Shield className="h-10 w-10 text-teal-500 opacity-20" />
             </div>
           </CardContent>
         </Card>
@@ -335,9 +360,13 @@ export default function Usuarios({ embedded = false }) {
             >
               <option value="">Todos os perfis</option>
               <option value="admin">Administrador</option>
+              <option value="gestor">Gestor</option>
               <option value="financeiro">Financeiro</option>
               <option value="recepcao">Recepção</option>
+              <option value="medico">Médico</option>
               <option value="profissional">Profissional</option>
+              <option value="estoque">Estoque</option>
+              <option value="faturamento">Faturamento</option>
             </select>
 
             {(searchTerm || filterRole) && (
@@ -412,7 +441,9 @@ export default function Usuarios({ embedded = false }) {
                     >
                       <td className="px-6 py-4">
                         <div className="space-y-1">
-                          <p className="font-semibold text-slate-900">{usuario.full_name || '-'}</p>
+                          <p className="font-semibold text-slate-900 truncate max-w-[220px]">
+                            {usuario.full_name || '-'}
+                          </p>
                           <p className="text-xs text-slate-500">ID: {usuario.id.slice(0, 8)}</p>
                         </div>
                       </td>
@@ -425,7 +456,7 @@ export default function Usuarios({ embedded = false }) {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2 text-slate-600">
                           <Mail className="h-4 w-4" />
-                          <span className="text-sm">{usuario.email}</span>
+                          <span className="text-sm truncate max-w-[240px]">{usuario.email}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4">

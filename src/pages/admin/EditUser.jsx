@@ -27,10 +27,20 @@ const AVAILABLE_ROLES = {
     description: 'Acesso total ao sistema e gerenciamento de usuários',
     color: 'bg-red-50 border-red-200',
   },
+  gestor: {
+    label: 'Gestor',
+    description: 'Visão executiva com acesso gerencial dos módulos principais',
+    color: 'bg-indigo-50 border-indigo-200',
+  },
   recepcao: {
     label: 'Recepção',
     description: 'Acesso a agenda, pacientes e atendimentos',
     color: 'bg-blue-50 border-blue-200',
+  },
+  medico: {
+    label: 'Médico',
+    description: 'Acesso clínico para agenda e prontuário de pacientes',
+    color: 'bg-teal-50 border-teal-200',
   },
   profissional: {
     label: 'Profissional',
@@ -266,6 +276,19 @@ export default function EditUser() {
         'admin.permissoes',
         'admin.configuracoes',
       ],
+      gestor: [
+        'agenda.view',
+        'agenda.criar',
+        'agenda.editar',
+        'pacientes.view',
+        'pacientes.criar',
+        'pacientes.editar',
+        'financeiro.view',
+        'financeiro.contas_pagar',
+        'financeiro.contas_receber',
+        'financeiro.fluxo_caixa',
+        'financeiro.relatorios',
+      ],
       recepcao: [
         'agenda.view',
         'agenda.criar',
@@ -273,6 +296,14 @@ export default function EditUser() {
         'pacientes.view',
         'pacientes.criar',
         'pacientes.editar',
+      ],
+      medico: [
+        'agenda.view',
+        'agenda.criar',
+        'agenda.editar',
+        'pacientes.view',
+        'pacientes.editar',
+        'pacientes.prontuario',
       ],
       profissional: [
         'agenda.view',
@@ -436,7 +467,7 @@ export default function EditUser() {
       }
 
       // 🔗 Se é profissional, sincronizar com tabela professionals
-      if (form.role === 'profissional') {
+      if (form.role === 'profissional' || form.role === 'medico') {
         console.log('🔗 [INTEGRAÇÃO] Sincronizando profissional para:', form.full_name);
 
         // Primeiro, buscar se já existe um profissional com este email
@@ -749,14 +780,14 @@ export default function EditUser() {
                         />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-2">
-                            <p className="font-semibold text-slate-900">{roleInfo.label}</p>
+                            <p className="font-semibold text-slate-900 truncate">{roleInfo.label}</p>
                             <span
                               className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${roleInfo.color}`}
                             >
                               Perfil
                             </span>
                           </div>
-                          <p className="mt-1 text-xs leading-5 text-slate-600">
+                          <p className="mt-1 text-xs leading-5 text-slate-600 line-clamp-2">
                             {roleInfo.description}
                           </p>
                         </div>
