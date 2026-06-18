@@ -9,6 +9,7 @@ import { Download, Upload, FileText, Printer, BarChart3, FileSpreadsheet } from 
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { addClinicHeaderToPDF } from '@/lib/reportHeaderUtils';
 
 export default function RelatoriosToolbar({
   title = 'Relatório',
@@ -16,7 +17,8 @@ export default function RelatoriosToolbar({
   columns = [],
   onImport = null,
   onGenerateReport = null,
-  templateFileName = 'template'
+  templateFileName = 'template',
+  clinic = null
 }) {
   const [isExporting, setIsExporting] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
@@ -127,17 +129,26 @@ export default function RelatoriosToolbar({
     }
   };
 
-  const handleExportPdf = () => {
+  const handleExportPdf = async () => {
     try {
       const doc = new jsPDF({ orientation: columns.length > 6 ? 'landscape' : 'portrait' });
+      
+      // Adicionar header com logo e nome da clínica
+      let startY = 30;
+      if (clinic) {
+        startY = await addClinicHeaderToPDF(doc, clinic);
+        startY += 10;
+      }
+      
       doc.setFontSize(14);
-      doc.text(title, 14, 16);
+      doc.text(title, 14, startY);
       doc.setFontSize(9);
-      doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, 14, 23);
+      doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, 14, startY + 7);
+      
       autoTable(doc, {
         head: [columns.map(col => col.label)],
         body: data.map(row => columns.map(col => formatCellValue(row[col.key], col))),
-        startY: 30,
+        startY: startY + 12,
         styles: { fontSize: 8, cellPadding: 2 },
         headStyles: { fillColor: [75, 85, 99] },
       });

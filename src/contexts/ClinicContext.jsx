@@ -62,7 +62,7 @@ export function ClinicProvider({ children }) {
 
       const { data, error } = await supabase
         .from('clinics')
-        .select('id, name, brand_color')
+        .select('id, name, logo_url, brand_color')
         .eq('id', resolvedClinicId)
         .maybeSingle();
 

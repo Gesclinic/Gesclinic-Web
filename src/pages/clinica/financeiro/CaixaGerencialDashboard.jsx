@@ -26,9 +26,11 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+import { addClinicHeaderToPDF } from '@/lib/reportHeaderUtils';
 
 export default function CaixaGerencialDashboard() {
   const { clinicId } = useClinicContext();
+  const { clinic } = useClinicContext();
   const [summary, setSummary] = useState({
     receita: 0,
     despesas: 0,
@@ -259,24 +261,32 @@ export default function CaixaGerencialDashboard() {
     XLSX.writeFile(wb, `Caixa_Gerencial_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
-  const exportToPDF = () => {
+  const exportToPDF = async () => {
     const doc = new jsPDF({ orientation: 'landscape' });
-    doc.setFontSize(16);
-    doc.text('RELATÓRIO CAIXA GERENCIAL', 14, 15);
+    
+    // Adicionar header com logo e nome da clínica
+    let startY = 30;
+    if (clinic) {
+      startY = await addClinicHeaderToPDF(doc, clinic);
+      startY += 10;
+    }
+
+doc.setFontSize(16);
+    doc.text('RELATÓRIO CAIXA GERENCIAL', 14, startY);
 
     doc.setFontSize(10);
-    doc.text(`Data de Geração: ${new Date().toLocaleDateString('pt-BR')}`, 14, 25);
+    doc.text(`Data de Geração: ${new Date().toLocaleDateString('pt-BR')}`, 14, startY + 10);
 
-    // Se��o de Resumo
+    // Tabela de Movimentos
     doc.setFontSize(12);
-    doc.text('RESUMO FINANCEIRO', 14, 40);
+    doc.text('RESUMO FINANCEIRO', 14, startY + 25);
     doc.setFontSize(10);
-    doc.text(`Receita Total: ${formatCurrency(summary.receita)}`, 14, 50);
-    doc.text(`Despesas: ${formatCurrency(summary.despesas)}`, 14, 57);
-    doc.text(`Resultado: ${formatCurrency(summary.resultado)}`, 14, 64);
-    doc.text(`Receita Particular: ${formatCurrency(summary.receitaParticular)}`, 14, 71);
-    doc.text(`Receita Convênio: ${formatCurrency(summary.receitaConvenio)}`, 14, 78);
-    doc.text(`Repasse: ${formatCurrency(summary.repasse)}`, 14, 85);
+    doc.text(`Receita Total: ${formatCurrency(summary.receita)}`, 14, startY + 35);
+    doc.text(`Despesas: ${formatCurrency(summary.despesas)}`, 14, startY + 42);
+    doc.text(`Resultado: ${formatCurrency(summary.resultado)}`, 14, startY + 49);
+    doc.text(`Receita Particular: ${formatCurrency(summary.receitaParticular)}`, 14, startY + 56);
+    doc.text(`Receita Convênio: ${formatCurrency(summary.receitaConvenio)}`, 14, startY + 63);
+    doc.text(`Repasse: ${formatCurrency(summary.repasse)}`, 14, startY + 70);
 
     // Tabela de Movimentos
     if (movements.length > 0) {
@@ -312,7 +322,7 @@ export default function CaixaGerencialDashboard() {
           ],
         ],
         body: tableData,
-        startY: 95,
+        startY: startY + 80,
         theme: 'grid',
         styles: { fontSize: 8 },
         headStyles: { fillColor: [66, 133, 244], textColor: [255, 255, 255] },

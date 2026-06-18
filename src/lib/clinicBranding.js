@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/customSupabaseClient.js';
 
-const BUCKET = 'clinic-logos';
+const BUCKET = 'logos';
 const MAX_BYTES = 5 * 1024 * 1024; // 5MB
 
 /* ---------------- utils ---------------- */
@@ -27,9 +27,9 @@ export function withCacheBust(url) {
 /**
  * Extrai o path interno do bucket a partir de uma URL pública/assinada ou retorna o próprio path.
  * Suporta formatos:
- *  - /storage/v1/object/public/clinic-logos/<path>
- *  - /storage/v1/object/sign/clinic-logos/<path>?token=...
- *  - /storage/v1/object/clinic-logos/<path> (alguns proxies/CDNs)
+ *  - /storage/v1/object/public/logos/<path>
+ *  - /storage/v1/object/sign/logos/<path>?token=...
+ *  - /storage/v1/object/logos/<path> (alguns proxies/CDNs)
  */
 export function getPathFromPublicUrl(urlOrPath) {
   if (!urlOrPath) {
@@ -125,7 +125,7 @@ function buildLogoKey(clinicId, ext) {
 
 /* ---------------- operações ---------------- */
 
-/** Upload do logo para o bucket clinic-logos. Retorna { path, publicUrl } */
+/** Upload do logo para o bucket logos. Retorna { path, publicUrl } */
 export async function uploadClinicLogo(clinicId, file, opts = {}) {
   if (!clinicId) {
     throw new Error('clinicId é obrigatório');

@@ -30,13 +30,14 @@ import { toastService } from '../hooks/useToastManager';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import { addClinicHeaderToPDF } from '@/lib/reportHeaderUtils';
 
 import { FiltersPanel } from './FiltersPanel';
 import { ImportExportPanel } from './ImportExportPanel';
 
 const CaixaIndividualOperador = () => {
   const { user } = useAuth();
-  const { clinicId } = useClinicContext();
+  const { clinicId, clinic } = useClinicContext();
 
   const [drawer, setDrawer] = useState(null);
   const [summary, setSummary] = useState(null);
@@ -438,24 +439,32 @@ const CaixaIndividualOperador = () => {
     URL.revokeObjectURL(url);
   };
 
-  const exportToPDF = () => {
+  const exportToPDF = async () => {
     try {
       const doc = new jsPDF();
+      
+      // Adicionar header com logo e nome da clínica
+      let startY = 30;
+      if (clinic) {
+        startY = await addClinicHeaderToPDF(doc, clinic);
+        startY += 10;
+      }
+      
       doc.setFontSize(16);
-      doc.text('RELATÓRIO CAIXA INDIVIDUAL', 14, 15);
+      doc.text('RELATÓRIO CAIXA INDIVIDUAL', 14, startY);
 
       doc.setFontSize(10);
-      doc.text(`Data de Geração: ${new Date().toLocaleDateString('pt-BR')}`, 14, 25);
-      doc.text(`Operador: ${operatorName || 'N/A'}`, 14, 32);
+      doc.text(`Data de Geração: ${new Date().toLocaleDateString('pt-BR')}`, 14, startY + 10);
+      doc.text(`Operador: ${operatorName || 'N/A'}`, 14, startY + 17);
 
       // Seção de Resumo
       doc.setFontSize(12);
-      doc.text('RESUMO DO DIA', 14, 45);
+      doc.text('RESUMO DO DIA', 14, startY + 30);
       doc.setFontSize(10);
-      doc.text(`Saldo Aberto: ${formatCurrency(drawer?.opening_balance)}`, 14, 55);
-      doc.text(`Saldo Atual: ${formatCurrency(summary?.balance)}`, 14, 62);
-      doc.text(`Total de Entradas: ${formatCurrency(summary?.totalEntrada)}`, 14, 69);
-      doc.text(`Total de Saídas: ${formatCurrency(summary?.totalSaida)}`, 14, 76);
+      doc.text(`Saldo Aberto: ${formatCurrency(drawer?.opening_balance)}`, 14, startY + 40);
+      doc.text(`Saldo Atual: ${formatCurrency(summary?.balance)}`, 14, startY + 47);
+      doc.text(`Total de Entradas: ${formatCurrency(summary?.totalEntrada)}`, 14, startY + 54);
+      doc.text(`Total de Saídas: ${formatCurrency(summary?.totalSaida)}`, 14, startY + 61);
 
       // Tabela de Movimentos Filtrados
       if (filteredMovements.length > 0) {
@@ -477,7 +486,7 @@ const CaixaIndividualOperador = () => {
         ]);
 
         doc.setFontSize(11);
-        doc.text('MOVIMENTOS FILTRADOS', 14, 85);
+        doc.text('MOVIMENTOS FILTRADOS', 14, startY + 70);
 
         autoTable(doc, {
           head: [
@@ -494,7 +503,7 @@ const CaixaIndividualOperador = () => {
             ],
           ],
           body: tableData,
-          startY: 92,
+          startY: startY + 77,
           theme: 'grid',
           styles: { fontSize: 8 },
           headStyles: { fillColor: [66, 133, 244], textColor: [255, 255, 255], fontStyle: 'bold' },
@@ -504,7 +513,7 @@ const CaixaIndividualOperador = () => {
         });
       } else {
         doc.setFontSize(10);
-        doc.text('Nenhum movimento registrado com os filtros selecionados.', 14, 90);
+        doc.text('Nenhum movimento registrado com os filtros selecionados.', 14, startY + 75);
       }
 
       doc.save(`Caixa_Individual_${new Date().toISOString().split('T')[0]}.pdf`);

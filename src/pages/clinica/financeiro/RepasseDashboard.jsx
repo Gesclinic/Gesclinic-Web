@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
+import { useClinicContext } from '@/contexts/ClinicContext';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import {
   Select,
@@ -16,6 +17,11 @@ import { useNavigate } from 'react-router-dom';
 import RepasseCharts from '@/components/financeiro/RepasseCharts';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { saveAs } from 'file-saver';
+import { getRepassesReport } from '@/lib/repassesReports';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import { addClinicHeaderToPDF } from '@/lib/reportHeaderUtils';
+
 function toCSV(rows, headers) {
   const escape = (v) => `"${String(v).replace(/"/g, '""')}"`;
   const csv = [headers.map(escape).join(',')];
@@ -24,12 +30,10 @@ function toCSV(rows, headers) {
   }
   return csv.join('\r\n');
 }
-import { getRepassesReport } from '@/lib/repassesReports';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
 
 export default function RepasseDashboard() {
   const { clinicId } = useAuth();
+  const { clinic } = useClinicContext();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -141,14 +145,22 @@ export default function RepasseDashboard() {
   }, [data]);
 
   /** 📄 Exporta os dados em PDF */
-  const exportPDF = () => {
+  const exportPDF = async () => {
     const doc = new jsPDF({ orientation: 'landscape' });
+    
+    // Adicionar header com logo e nome da clínica
+    let startY = 30;
+    if (clinic) {
+      startY = await addClinicHeaderToPDF(doc, clinic);
+      startY += 10;
+    }
+    
     doc.setFontSize(12);
     const doctorLabel = doctor === '__all__' ? 'Todos' : doctor;
     const serviceLabel = service === '__all__' ? 'Todos' : service;
-    doc.text(`Relatório de Repasses Médicos - ${year}`, 14, 15);
+    doc.text(`Relatório de Repasses Médicos - ${year}`, 14, startY);
     doc.setFontSize(10);
-    doc.text(`Filtros: Médico = ${doctorLabel} | Serviço = ${serviceLabel}`, 14, 22);
+    doc.text(`Filtros: Médico = ${doctorLabel} | Serviço = ${serviceLabel}`, 14, startY + 7);
 
     const rows = filteredData.map((r) => [
       r.profissional_nome,
@@ -175,7 +187,7 @@ export default function RepasseDashboard() {
         ],
       ],
       body: rows,
-      startY: 25,
+      startY: startY + 12,
       styles: { fontSize: 8 },
       headStyles: { fillColor: [11, 99, 246] },
     });

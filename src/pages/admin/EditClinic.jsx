@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/lib/customSupabaseClient';
@@ -20,16 +20,26 @@ import {
   Landmark,
   Hospital,
   Award,
+  Image,
+  Upload,
+  Trash2,
 } from 'lucide-react';
+import { useClinicContext } from '@/contexts/ClinicContext';
+import { replaceClinicLogo, getClinicLogoPublicURL } from '@/lib/clinicBrandingStorage';
 
 export default function EditClinic() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { clinic, setClinic } = useClinicContext();
+  const logoInputRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [clinicas, setClinicas] = useState([]);
+  const [logoPreview, setLogoPreview] = useState('');
+  const [logoFile, setLogoFile] = useState(null);
+  const [removeLogo, setRemoveLogo] = useState(false);
 
   const [form, setForm] = useState({
     name: '',
@@ -49,6 +59,7 @@ export default function EditClinic() {
     timezone: 'America/Sao_Paulo',
     locale: 'pt-BR',
     settings: {},
+    logo_url: '',
     // Campos de Regime Tributário
     tax_regime: 'simples_nacional', // simples_nacional, lucro_presumido, lucro_real
     municipal_registration: '',
@@ -72,6 +83,7 @@ export default function EditClinic() {
 
   const loadClinica = async () => {
     setLoading(true);
+    setError('');
     try {
       const { data, error: fetchError } = await supabase
         .from('clinics')
@@ -83,45 +95,52 @@ export default function EditClinic() {
         throw fetchError;
       }
 
-      if (data) {
-        setForm({
-          name: data.name || '',
-          fantasy_name: data.fantasy_name || '',
-          cnpj: data.cnpj || '',
-          email: data.email || '',
-          phone: data.phone || '',
-          address: data.address || '',
-          city: data.city || '',
-          state: data.state || '',
-          zipcode: data.zipcode || '',
-          clinic_code: data.clinic_code || '',
-          clinic_type: data.clinic_type || 'matriz',
-          parent_clinic_id: data.parent_clinic_id || null,
-          status: data.status || 'active',
-          slug: data.slug || '',
-          timezone: data.timezone || 'America/Sao_Paulo',
-          locale: data.locale || 'pt-BR',
-          settings: data.settings || {},
-          // Regime Tributário
-          tax_regime: data.tax_regime || 'simples_nacional',
-          municipal_registration: data.municipal_registration || '',
-          cnae_code: data.cnae_code || '',
-          iss_rate: data.iss_rate || 3.0,
-          rps_series: data.rps_series || 'A',
-          rps_number_next: data.rps_number_next || 1,
-          // Equiparação Hospitalar
-          has_hospital_equivalence: data.has_hospital_equivalence || false,
-          hospital_equivalence_certified_at: data.hospital_equivalence_certified_at || null,
-          hospital_equivalence_certificate_number:
-            data.hospital_equivalence_certificate_number || '',
-          // Lucro Real
-          estimated_annual_profit: data.estimated_annual_profit || null,
-          estimated_profit_margin: data.estimated_profit_margin || 20.0,
-        });
+      if (!data) {
+        throw new Error('Clínica não encontrada');
       }
+
+      setForm({
+        name: data.name || '',
+        fantasy_name: data.fantasy_name || '',
+        cnpj: formatCNPJ(data.cnpj || ''),
+        email: data.email || '',
+        phone: formatPhone(data.phone || ''),
+        address: data.address || '',
+        city: data.city || '',
+        state: data.state || '',
+        zipcode: data.zipcode || '',
+        clinic_code: data.clinic_code || '',
+        clinic_type: data.clinic_type || 'matriz',
+        parent_clinic_id: data.parent_clinic_id || null,
+        status: data.status || 'active',
+        slug: data.slug || '',
+        timezone: data.timezone || 'America/Sao_Paulo',
+        locale: data.locale || 'pt-BR',
+        settings: data.settings || {},
+        logo_url: data.logo_url || '',
+        // Campos de Regime Tributário
+        tax_regime: data.tax_regime || 'simples_nacional',
+        municipal_registration: data.municipal_registration || '',
+        cnae_code: data.cnae_code || '',
+        iss_rate: data.iss_rate ?? 3.0,
+        rps_series: data.rps_series || 'A',
+        rps_number_next: data.rps_number_next ?? 1,
+        // Campos de Equiparação Hospitalar
+        has_hospital_equivalence: data.has_hospital_equivalence || false,
+        hospital_equivalence_certified_at: data.hospital_equivalence_certified_at || null,
+        hospital_equivalence_certificate_number:
+          data.hospital_equivalence_certificate_number || '',
+        // Lucro Real
+        estimated_annual_profit: data.estimated_annual_profit ?? null,
+        estimated_profit_margin: data.estimated_profit_margin ?? 20.0,
+      });
+
+      setLogoPreview(data.logo_url ? getClinicLogoPublicURL(data.logo_url) : '');
+      setLogoFile(null);
+      setRemoveLogo(false);
     } catch (err) {
-      console.error('Erro ao carregar clínica:', err);
-      setError('Erro ao carregar dados da clínica');
+      console.error('❌ Erro ao carregar clínica:', err);
+      setError(err.message || 'Erro ao carregar dados da clínica');
     } finally {
       setLoading(false);
     }
@@ -174,6 +193,37 @@ export default function EditClinic() {
     setError('');
   };
 
+  const handleLogoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    if (!file.type?.startsWith('image/')) {
+      setError('Envie uma imagem válida para a logo.');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('A logo deve ter no máximo 5 MB.');
+      return;
+    }
+
+    setLogoFile(file);
+    setLogoPreview(URL.createObjectURL(file));
+    setRemoveLogo(false);
+    setError('');
+  };
+
+  const handleRemoveLogo = () => {
+    setLogoFile(null);
+    setLogoPreview('');
+    setRemoveLogo(true);
+    if (logoInputRef.current) {
+      logoInputRef.current.value = '';
+    }
+  };
+
   const formatCNPJ = (value) => {
     // Remove tudo que não é número
     const cleaned = value.replace(/\D/g, '');
@@ -217,6 +267,24 @@ export default function EditClinic() {
     return truncated;
   };
 
+  const withTimeout = async (promise, timeoutMs, timeoutMessage) => {
+    let timeoutId;
+    try {
+      return await Promise.race([
+        promise,
+        new Promise((_, reject) => {
+          timeoutId = setTimeout(() => {
+            reject(new Error(timeoutMessage));
+          }, timeoutMs);
+        }),
+      ]);
+    } finally {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -226,39 +294,27 @@ export default function EditClinic() {
     try {
       // Validar campos obrigatórios
       if (!form.name.trim()) {
-        setError('Nome da clínica é obrigatório');
-        setSaving(false);
-        return;
+        throw new Error('Nome da clínica é obrigatório');
       }
 
       if (!form.fantasy_name.trim()) {
-        setError('Nome fantasia é obrigatório');
-        setSaving(false);
-        return;
+        throw new Error('Nome fantasia é obrigatório');
       }
 
       if (!form.cnpj.trim()) {
-        setError('CNPJ é obrigatório');
-        setSaving(false);
-        return;
+        throw new Error('CNPJ é obrigatório');
       }
 
       if (!form.email.trim()) {
-        setError('E-mail é obrigatório');
-        setSaving(false);
-        return;
+        throw new Error('E-mail é obrigatório');
       }
 
       if (!form.city.trim()) {
-        setError('Cidade é obrigatória');
-        setSaving(false);
-        return;
+        throw new Error('Cidade é obrigatória');
       }
 
       if (form.clinic_type === 'filial' && !form.parent_clinic_id) {
-        setError('Selecione a clínica matriz');
-        setSaving(false);
-        return;
+        throw new Error('Selecione a clínica matriz');
       }
 
       // Limpar CNPJ para validação e salvamento
@@ -273,9 +329,7 @@ export default function EditClinic() {
         .maybeSingle();
 
       if (existingEmail) {
-        setError('Este e-mail já está cadastrado');
-        setSaving(false);
-        return;
+        throw new Error('Este e-mail já está cadastrado');
       }
 
       // Verificar se CNPJ já existe (excluindo a clínica atual)
@@ -287,9 +341,7 @@ export default function EditClinic() {
         .maybeSingle();
 
       if (existingCNPJ) {
-        setError('Este CNPJ já está cadastrado');
-        setSaving(false);
-        return;
+        throw new Error('Este CNPJ já está cadastrado');
       }
 
       // Gerar slug automático
@@ -298,63 +350,121 @@ export default function EditClinic() {
       // Remover pontuação do telefone para salvar
       const phoneClean = form.phone.replace(/\D/g, '');
 
+      let finalLogoUrl = form.logo_url || null;
+
+      // Tentar fazer upload de logo, mas não falhar se não conseguir
+      if (logoFile) {
+        try {
+          const uploaded = await withTimeout(
+            replaceClinicLogo({
+              clinicId: id,
+              newFile: logoFile,
+              previousPathOrUrl: form.logo_url || null,
+            }),
+            15000,
+            'Tempo limite ao enviar logo. Tente novamente.',
+          );
+          finalLogoUrl = uploaded.publicUrl || uploaded.path || null;
+          console.log('✅ Logo upload bem-sucedido:', finalLogoUrl);
+        } catch (logoErr) {
+          console.warn('⚠️ Erro ao fazer upload da logo (continuando com salvamento):', logoErr);
+          // Não falhar a operação inteira por causa do logo
+          // Manter o logo anterior se falhar no novo upload
+          finalLogoUrl = form.logo_url || null;
+        }
+      } else if (removeLogo) {
+        finalLogoUrl = null;
+      }
+
       // Atualizar clínica
-      const { error: updateError } = await supabase
-        .from('clinics')
-        .update({
-          name: form.name,
-          fantasy_name: form.fantasy_name,
-          cnpj: cnpjClean,
-          email: form.email,
-          phone: phoneClean,
-          address: form.address,
-          city: form.city,
-          state: form.state,
-          zipcode: form.zipcode,
-          clinic_type: form.clinic_type,
-          parent_clinic_id: form.parent_clinic_id || null,
-          status: form.status,
-          slug: slug,
-          timezone: form.timezone,
-          locale: form.locale,
-          settings: form.settings,
-          // Regime Tributário
-          tax_regime: form.tax_regime,
-          municipal_registration: form.municipal_registration,
-          cnae_code: form.cnae_code,
-          iss_rate: parseFloat(form.iss_rate) || 3.0,
-          rps_series: form.rps_series,
-          rps_number_next: parseInt(form.rps_number_next) || 1,
-          // Equiparação Hospitalar
-          has_hospital_equivalence: form.has_hospital_equivalence,
-          hospital_equivalence_certified_at: form.hospital_equivalence_certified_at || null,
-          hospital_equivalence_certificate_number:
-            form.hospital_equivalence_certificate_number || '',
-          // Lucro Real
-          estimated_annual_profit: form.estimated_annual_profit
-            ? parseFloat(form.estimated_annual_profit)
-            : null,
-          estimated_profit_margin: parseFloat(form.estimated_profit_margin) || 20.0,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', id);
+      const { data: updatedClinic, error: updateError } = await withTimeout(
+        supabase
+          .from('clinics')
+          .update({
+            name: form.name,
+            fantasy_name: form.fantasy_name,
+            cnpj: cnpjClean,
+            email: form.email,
+            phone: phoneClean,
+            address: form.address,
+            city: form.city,
+            state: form.state,
+            zipcode: form.zipcode,
+            clinic_type: form.clinic_type,
+            parent_clinic_id: form.parent_clinic_id || null,
+            status: form.status,
+            slug: slug,
+            timezone: form.timezone,
+            locale: form.locale,
+            settings: form.settings,
+            logo_url: finalLogoUrl,
+            // Regime Tributário
+            tax_regime: form.tax_regime,
+            municipal_registration: form.municipal_registration,
+            cnae_code: form.cnae_code,
+            iss_rate: parseFloat(form.iss_rate) || 3.0,
+            rps_series: form.rps_series,
+            rps_number_next: parseInt(form.rps_number_next) || 1,
+            // Equiparação Hospitalar
+            has_hospital_equivalence: form.has_hospital_equivalence,
+            hospital_equivalence_certified_at: form.hospital_equivalence_certified_at || null,
+            hospital_equivalence_certificate_number:
+              form.hospital_equivalence_certificate_number || '',
+            // Lucro Real
+            estimated_annual_profit: form.estimated_annual_profit
+              ? parseFloat(form.estimated_annual_profit)
+              : null,
+            estimated_profit_margin: parseFloat(form.estimated_profit_margin) || 20.0,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', id)
+          .select('*')
+          .single(),
+        20000,
+        'Tempo limite ao salvar clínica. Verifique sua conexão e tente novamente.',
+      );
 
       if (updateError) {
         throw updateError;
       }
 
-      setMessage(`✓ Clínica ${form.name} atualizada com sucesso!`);
+      if (clinic?.id === id && setClinic && updatedClinic) {
+        setClinic((current) =>
+          current
+            ? {
+                ...current,
+                id: updatedClinic.id,
+                name: updatedClinic.name,
+                brand_name: updatedClinic.fantasy_name,
+                logo_url: updatedClinic.logo_url,
+              }
+            : current,
+        );
+      }
+
+      localStorage.setItem(
+        'gesclinic_clinic_data',
+        JSON.stringify({
+          ...(JSON.parse(localStorage.getItem('gesclinic_clinic_data') || '{}') || {}),
+          name: updatedClinic?.name || form.name,
+          brand_name: updatedClinic?.fantasy_name || form.fantasy_name,
+          logo_url: updatedClinic?.logo_url ?? finalLogoUrl,
+          updated_at: new Date().toISOString(),
+        }),
+      );
+
+      setMessage(`✓ Clínica ${updatedClinic?.name || form.name} atualizada com sucesso!`);
 
       // Redirecionar após 2 segundos
       setTimeout(() => {
         navigate('/clinica/administracao/clinicas');
       }, 2000);
     } catch (err) {
-      console.error('Erro ao atualizar clínica:', err);
+      console.error('❌ Erro ao atualizar clínica:', err);
       setError(err.message || 'Erro ao atualizar clínica');
+    } finally {
+      setSaving(false);
     }
-
-    setSaving(false);
   };
 
   if (loading) {
@@ -457,6 +567,60 @@ export default function EditClinic() {
             </CardHeader>
             <CardContent className="space-y-8 p-6">
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                <div className="space-y-3 md:col-span-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <label className="text-sm font-semibold text-slate-700">Logo da Clínica</label>
+                    <button
+                      type="button"
+                      onClick={() => logoInputRef.current?.click()}
+                      className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                    >
+                      <Upload className="h-4 w-4" />
+                      Anexar logo
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4">
+                    <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                      {logoPreview ? (
+                        <img
+                          src={logoPreview}
+                          alt="Prévia da logo"
+                          className="h-full w-full object-contain p-2"
+                        />
+                      ) : (
+                        <Image className="h-6 w-6 text-slate-400" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-slate-800">
+                        {logoPreview ? 'Logo pronta para exibição' : 'Nenhuma logo anexada'}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Use uma imagem PNG, JPG, WEBP ou SVG. Ela aparecerá no topo do sistema.
+                      </p>
+                    </div>
+                    {(logoPreview || form.logo_url) && (
+                      <button
+                        type="button"
+                        onClick={handleRemoveLogo}
+                        className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Remover
+                      </button>
+                    )}
+                  </div>
+
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleLogoChange}
+                  />
+                </div>
+
                 <div className="space-y-2 md:col-span-2">
                   <label className="text-sm font-semibold text-slate-700">Nome da Clínica *</label>
                   <input

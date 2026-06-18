@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/customSupabaseClient.js';
 
-const BUCKET = 'clinic-logos';
+const BUCKET = 'logos';
 
 function getStoragePath(clinicId, filename) {
   const ext = filename?.split('.').pop()?.toLowerCase() ?? 'png';
