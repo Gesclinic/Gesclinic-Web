@@ -10,12 +10,10 @@ import { ProfessionalsPage as ProfessionalsPageComponent } from './Professionals
 import { ConveniosPage as HealthInsurancesPageComponent } from './ConveniosPage';
 import { SalasPage as RoomsPageComponent } from './SalasPage';
 import { RecursosPage as ResourcesPageComponent } from './RecursosPage';
-import { ProfessionalServicesPage as ProfessionalServicesPageComponent } from './ProfessionalServicesPage';
 import { AgendaRulesPage as AgendaRulesPageComponent } from './AgendaRulesPage';
 import { RoomResourcesPage as RoomResourcesPageComponent } from './RoomServicesPage';
 import { ProfessionalSchedulePage as ProfessionalSchedulePageComponent } from './ProfessionalSchedulePage';
 import { ServicePricesPage as ServicePricesPageComponent } from './ServicePricesPage';
-import { ProfessionalPayerPage as ProfessionalPayerPageComponent } from './ProfessionalPayerPage';
 
 // ============================================================
 // EXPORTAÇÕES - Mapear para rotas em AppRoutes.jsx
@@ -31,47 +29,37 @@ export function ProfessionalsPage() {
   return <ProfessionalsPageComponent />;
 }
 
-// 3. Vínculo Profissional-Serviço
-export function ProfessionalServicesPage() {
-  return <ProfessionalServicesPageComponent />;
-}
-
-// 4. Salas
+// 3. Salas
 export function RoomsPage() {
   return <RoomsPageComponent />;
 }
 
-// 5. Recursos
+// 4. Recursos
 export function ResourcesPage() {
   return <ResourcesPageComponent />;
 }
 
-// 6. Convênios
+// 5. Convênios
 export function HealthInsurancesPage() {
   return <HealthInsurancesPageComponent />;
 }
 
-// 7. Regras de Agenda
+// 6. Regras de Agenda
 export function AgendaRulesPage() {
   return <AgendaRulesPageComponent />;
 }
 
-// 8. Recursos por Sala
+// 7. Recursos por Sala
 export function RoomResourcesPage() {
   return <RoomResourcesPageComponent />;
 }
 
-// 9. Disponibilidade de Profissionais
+// 8. Disponibilidade de Profissionais
 export function ProfessionalSchedulePage() {
   return <ProfessionalSchedulePageComponent />;
 }
 
-// 10. Tabelas de Preço
+// 9. Tabelas de Preço
 export function ServicePricesPage() {
   return <ServicePricesPageComponent />;
-}
-
-// 11. Profissional-Convênio
-export function ProfessionalPayerPage() {
-  return <ProfessionalPayerPageComponent />;
 }

@@ -13,6 +13,7 @@ import { ToastProvider } from '@/components/ToastSystem.jsx';
 
 import { AuthProvider } from '@/contexts/SupabaseAuthContext.jsx';
 import { ClinicProvider } from '@/contexts/ClinicContext.jsx';
+import { PermissionsProvider } from '@/contexts/PermissionsContext.jsx';
 import { PatientProvider } from '@/contexts/PatientContext.jsx';
 
 import './index.css';
@@ -80,11 +81,13 @@ createRoot(document.getElementById('root')).render(
           <ToastProvider>
             <AuthProvider>
               <ClinicProvider>
-                <PatientProvider>
-                  <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-                    <App />
-                  </BrowserRouter>
-                </PatientProvider>
+                <PermissionsProvider>
+                  <PatientProvider>
+                    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                      <App />
+                    </BrowserRouter>
+                  </PatientProvider>
+                </PermissionsProvider>
               </ClinicProvider>
             </AuthProvider>
           </ToastProvider>

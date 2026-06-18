@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import {
@@ -15,10 +15,16 @@ import {
   Save,
   ArrowLeft,
   Info,
+  Search,
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { HEALTHCARE_ROLES, defaultPermissionForRole } from '@/lib/rbacCatalog';
+import {
+  getDefaultMenuPermissionsForRole,
+  getMenuPermissionModules,
+} from '@/lib/menuPermissionCatalog';
 
 // Papéis disponíveis
 const AVAILABLE_ROLES = {
@@ -64,117 +70,7 @@ const AVAILABLE_ROLES = {
   },
 };
 
-// Permissões por módulo
-const PERMISSIONS_BY_MODULE = {
-  agenda: {
-    label: 'Agenda',
-    permissions: [
-      { id: 'agenda.view', label: 'Visualizar Agenda', description: 'Ver compromissos agendados' },
-      { id: 'agenda.criar', label: 'Criar Agendamentos', description: 'Criar novos compromissos' },
-      {
-        id: 'agenda.editar',
-        label: 'Editar Agendamentos',
-        description: 'Modificar compromissos existentes',
-      },
-      { id: 'agenda.deletar', label: 'Deletar Agendamentos', description: 'Remover compromissos' },
-    ],
-  },
-  pacientes: {
-    label: 'Pacientes',
-    permissions: [
-      {
-        id: 'pacientes.view',
-        label: 'Visualizar Pacientes',
-        description: 'Ver lista de pacientes',
-      },
-      { id: 'pacientes.criar', label: 'Criar Pacientes', description: 'Cadastrar novos pacientes' },
-      {
-        id: 'pacientes.editar',
-        label: 'Editar Pacientes',
-        description: 'Atualizar dados de pacientes',
-      },
-      { id: 'pacientes.deletar', label: 'Deletar Pacientes', description: 'Remover pacientes' },
-      {
-        id: 'pacientes.prontuario',
-        label: 'Prontuário',
-        description: 'Acessar prontuário eletrônico',
-      },
-    ],
-  },
-  financeiro: {
-    label: 'Financeiro',
-    permissions: [
-      { id: 'financeiro.view', label: 'Visualizar', description: 'Ver dados financeiros' },
-      {
-        id: 'financeiro.contas_pagar',
-        label: 'Contas a Pagar',
-        description: 'Gerenciar contas a pagar',
-      },
-      {
-        id: 'financeiro.contas_receber',
-        label: 'Contas a Receber',
-        description: 'Gerenciar contas a receber',
-      },
-      {
-        id: 'financeiro.fluxo_caixa',
-        label: 'Fluxo de Caixa',
-        description: 'Controlar fluxo de caixa',
-      },
-      {
-        id: 'financeiro.relatorios',
-        label: 'Relatórios',
-        description: 'Acessar relatórios financeiros',
-      },
-    ],
-  },
-  estoque: {
-    label: 'Estoque',
-    permissions: [
-      { id: 'estoque.view', label: 'Visualizar', description: 'Ver produtos do estoque' },
-      {
-        id: 'estoque.adicionar',
-        label: 'Adicionar Produtos',
-        description: 'Adicionar novos produtos',
-      },
-      { id: 'estoque.editar', label: 'Editar Produtos', description: 'Modificar produtos' },
-      {
-        id: 'estoque.movimentacoes',
-        label: 'Movimentações',
-        description: 'Registrar movimentações',
-      },
-      {
-        id: 'estoque.relatorios',
-        label: 'Relatórios',
-        description: 'Acessar relatórios de estoque',
-      },
-    ],
-  },
-  admin: {
-    label: 'Administração',
-    permissions: [
-      {
-        id: 'admin.usuarios',
-        label: 'Gerenciar Usuários',
-        description: 'Criar, editar e deletar usuários',
-      },
-      {
-        id: 'admin.clinicas',
-        label: 'Gerenciar Clínicas',
-        description: 'Criar, editar e deletar clínicas',
-      },
-      {
-        id: 'admin.permissoes',
-        label: 'Gerenciar Permissões',
-        description: 'Atribuir permissões a usuários',
-      },
-      {
-        id: 'admin.configuracoes',
-        label: 'Configurações',
-        description: 'Acessar configurações gerais',
-      },
-    ],
-  },
-};
+const PERMISSIONS_BY_MODULE = getMenuPermissionModules();
 
 export default function EditUser() {
   const navigate = useNavigate();
@@ -189,6 +85,7 @@ export default function EditUser() {
   const [passwordChanging, setPasswordChanging] = useState(false);
   const [selectedPermissions, setSelectedPermissions] = useState([]);
   const [showPermissionsPanel, setShowPermissionsPanel] = useState(false);
+  const [permissionSearch, setPermissionSearch] = useState('');
 
   const [form, setForm] = useState({
     full_name: '',
@@ -238,7 +135,7 @@ export default function EditUser() {
       });
 
       // Inicializar permissões com os padrões do papel
-      const defaultPerms = getDefaultPermissionsForRole(user.role || 'recepcao');
+      const defaultPerms = getDefaultMenuPermissionsForRole(user.role || 'recepcao');
       setSelectedPermissions(defaultPerms);
     } catch (err) {
       console.error('Erro ao carregar usuário:', err);
@@ -248,88 +145,9 @@ export default function EditUser() {
     }
   };
 
-  // Obter permissões padrão para cada papel
-  const getDefaultPermissionsForRole = (role) => {
-    const defaults = {
-      admin: [
-        'agenda.view',
-        'agenda.criar',
-        'agenda.editar',
-        'agenda.deletar',
-        'pacientes.view',
-        'pacientes.criar',
-        'pacientes.editar',
-        'pacientes.deletar',
-        'pacientes.prontuario',
-        'financeiro.view',
-        'financeiro.contas_pagar',
-        'financeiro.contas_receber',
-        'financeiro.fluxo_caixa',
-        'financeiro.relatorios',
-        'estoque.view',
-        'estoque.adicionar',
-        'estoque.editar',
-        'estoque.movimentacoes',
-        'estoque.relatorios',
-        'admin.usuarios',
-        'admin.clinicas',
-        'admin.permissoes',
-        'admin.configuracoes',
-      ],
-      gestor: [
-        'agenda.view',
-        'agenda.criar',
-        'agenda.editar',
-        'pacientes.view',
-        'pacientes.criar',
-        'pacientes.editar',
-        'financeiro.view',
-        'financeiro.contas_pagar',
-        'financeiro.contas_receber',
-        'financeiro.fluxo_caixa',
-        'financeiro.relatorios',
-      ],
-      recepcao: [
-        'agenda.view',
-        'agenda.criar',
-        'agenda.editar',
-        'pacientes.view',
-        'pacientes.criar',
-        'pacientes.editar',
-      ],
-      medico: [
-        'agenda.view',
-        'agenda.criar',
-        'agenda.editar',
-        'pacientes.view',
-        'pacientes.editar',
-        'pacientes.prontuario',
-      ],
-      profissional: [
-        'agenda.view',
-        'agenda.criar',
-        'agenda.editar',
-        'pacientes.view',
-        'pacientes.editar',
-        'pacientes.prontuario',
-      ],
-      faturamento: ['financeiro.view', 'financeiro.relatorios'],
-      estoque: [
-        'estoque.view',
-        'estoque.adicionar',
-        'estoque.editar',
-        'estoque.movimentacoes',
-        'estoque.relatorios',
-      ],
-      financeiro: [
-        'financeiro.view',
-        'financeiro.contas_pagar',
-        'financeiro.contas_receber',
-        'financeiro.fluxo_caixa',
-        'financeiro.relatorios',
-      ],
-    };
-    return defaults[role] || [];
+  const handleRoleChange = (role) => {
+    setForm((prev) => ({ ...prev, role }));
+    setSelectedPermissions(getDefaultMenuPermissionsForRole(role));
   };
 
   const handlePermissionToggle = (permissionId) => {
@@ -350,6 +168,36 @@ export default function EditUser() {
       setSelectedPermissions((prev) => prev.filter((id) => !moduleIds.includes(id)));
     } else {
       setSelectedPermissions((prev) => [...new Set([...prev, ...moduleIds])]);
+    }
+  };
+
+  const saveUserPermissions = async (userId, clinicId, role, permissionIds) => {
+    if (!userId || !clinicId) return;
+    const presetMap = defaultPermissionForRole(role);
+
+    const rows = permissionIds.map((permissionKey) => {
+      const exact = presetMap[permissionKey];
+      const wildcard = presetMap['*'];
+      const moduleWildcard = presetMap[`${permissionKey.split('.')[0]}.*`];
+      const source = exact || moduleWildcard || wildcard;
+
+      return {
+        user_id: userId,
+        clinic_id: clinicId,
+        permission_key: permissionKey,
+        access_level: source?.accessLevel || 'view',
+        data_scope: source?.dataScope || 'own',
+        source: 'custom',
+      };
+    });
+
+    await supabase.from('user_permissions').delete().eq('user_id', userId).eq('clinic_id', clinicId);
+
+    if (rows.length) {
+      const { error } = await supabase.from('user_permissions').upsert(rows, {
+        onConflict: 'user_id,clinic_id,permission_key',
+      });
+      if (error) throw error;
     }
   };
 
@@ -466,6 +314,12 @@ export default function EditUser() {
         throw updateError;
       }
 
+      try {
+        await saveUserPermissions(id, form.clinic_id, form.role, selectedPermissions);
+      } catch (permError) {
+        console.warn('⚠️ Permissões customizadas não persistidas:', permError?.message);
+      }
+
       // 🔗 Se é profissional, sincronizar com tabela professionals
       if (form.role === 'profissional' || form.role === 'medico') {
         console.log('🔗 [INTEGRAÇÃO] Sincronizando profissional para:', form.full_name);
@@ -541,6 +395,44 @@ export default function EditUser() {
     setSaving(false);
   };
 
+  const roleConfig = AVAILABLE_ROLES[form.role];
+  const selectedClinic = clinics.find((clinic) => clinic.id === form.clinic_id);
+  const inputClassName =
+    'w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[hsl(var(--primary))] focus:ring-4 focus:ring-[hsl(var(--primary))]/10 disabled:bg-slate-50 disabled:text-slate-500';
+  const iconInputClassName =
+    'w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[hsl(var(--primary))] focus:ring-4 focus:ring-[hsl(var(--primary))]/10 disabled:bg-slate-50 disabled:text-slate-500';
+
+  const filteredPermissionModules = useMemo(() => {
+    const query = permissionSearch.trim().toLowerCase();
+
+    return Object.entries(PERMISSIONS_BY_MODULE)
+      .map(([moduleName, module]) => {
+        if (!query) {
+          return [moduleName, module];
+        }
+
+        const moduleMatches = (module.label || '').toLowerCase().includes(query);
+        const filteredPermissions = (module.permissions || []).filter((permission) => {
+          return (
+            (permission.label || '').toLowerCase().includes(query) ||
+            (permission.id || '').toLowerCase().includes(query) ||
+            (permission.description || '').toLowerCase().includes(query)
+          );
+        });
+
+        if (moduleMatches) {
+          return [moduleName, module];
+        }
+
+        if (filteredPermissions.length > 0) {
+          return [moduleName, { ...module, permissions: filteredPermissions }];
+        }
+
+        return null;
+      })
+      .filter(Boolean);
+  }, [permissionSearch]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -548,13 +440,6 @@ export default function EditUser() {
       </div>
     );
   }
-
-  const roleConfig = AVAILABLE_ROLES[form.role];
-  const selectedClinic = clinics.find((clinic) => clinic.id === form.clinic_id);
-  const inputClassName =
-    'w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[hsl(var(--primary))] focus:ring-4 focus:ring-[hsl(var(--primary))]/10 disabled:bg-slate-50 disabled:text-slate-500';
-  const iconInputClassName =
-    'w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[hsl(var(--primary))] focus:ring-4 focus:ring-[hsl(var(--primary))]/10 disabled:bg-slate-50 disabled:text-slate-500';
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 p-6">
@@ -764,7 +649,9 @@ export default function EditUser() {
               <div className="space-y-3">
                 <label className="text-sm font-semibold text-slate-700">Papel de Acesso *</label>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  {Object.entries(AVAILABLE_ROLES).map(([roleKey, roleInfo]) => (
+                  {HEALTHCARE_ROLES.filter((r) => AVAILABLE_ROLES[r.id]).map(({ id: roleKey }) => {
+                    const roleInfo = AVAILABLE_ROLES[roleKey];
+                    return (
                     <label
                       key={roleKey}
                       className={`group rounded-2xl border p-4 transition ${form.role === roleKey ? 'border-[hsl(var(--primary))] bg-[hsl(var(--primary))]/5 shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300'}`}
@@ -775,7 +662,7 @@ export default function EditUser() {
                           name="role"
                           value={roleKey}
                           checked={form.role === roleKey}
-                          onChange={(e) => setForm((prev) => ({ ...prev, role: e.target.value }))}
+                          onChange={(e) => handleRoleChange(e.target.value)}
                           className="mt-1 h-4 w-4"
                         />
                         <div className="min-w-0 flex-1">
@@ -793,7 +680,8 @@ export default function EditUser() {
                         </div>
                       </div>
                     </label>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -845,7 +733,19 @@ export default function EditUser() {
                       {selectedPermissions.length} ativas
                     </span>
                   </div>
-                  {Object.entries(PERMISSIONS_BY_MODULE).map(([moduleName, module]) => {
+
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                    <input
+                      type="text"
+                      value={permissionSearch}
+                      onChange={(e) => setPermissionSearch(e.target.value)}
+                      placeholder="Buscar por módulo, submenu ou permissão..."
+                      className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[hsl(var(--primary))] focus:ring-4 focus:ring-[hsl(var(--primary))]/10"
+                    />
+                  </div>
+
+                  {filteredPermissionModules.map(([moduleName, module]) => {
                     const modulePermissions = module.permissions;
                     const selectedCount = modulePermissions.filter((permission) =>
                       selectedPermissions.includes(permission.id),
@@ -903,6 +803,12 @@ export default function EditUser() {
                       </div>
                     );
                   })}
+
+                  {filteredPermissionModules.length === 0 && (
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600">
+                      Nenhuma permissão encontrada para o filtro informado.
+                    </div>
+                  )}
                 </div>
               )}
 

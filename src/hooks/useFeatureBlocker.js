@@ -28,8 +28,8 @@ export function useFeatureBlocker(clinicId) {
         return {
           blocked: true,
           reason:
-            '� Agenda bloqueada: Configure vinculações em Regras Operacionais > Profissionais × Serviços',
-          action: 'base-sistema/professional-services',
+            'Agenda bloqueada: Configure profissionais e serviços nos cadastros básicos antes de usar a agenda',
+          action: 'base-sistema/profissionais',
         };
       }
 

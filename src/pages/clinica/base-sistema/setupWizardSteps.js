@@ -96,42 +96,8 @@ export const SETUP_WIZARD_STEPS = [
   // CATEGORIA 2: REGRAS OPERACIONAIS
   // ============================================================
   {
-    id: 'professional_services',
-    order: 6,
-    title: 'Profissionais × Serviços',
-    description: 'Vincular profissionais aos serviços que realizam',
-    icon: 'Link2',
-    color: 'cyan',
-    required: true,
-    category: 'regras-operacionais',
-    menuRoute: '/clinica/base-sistema/professional-services',
-    validationKey: 'professional_services',
-    minRequired: 1,
-    message: 'Nenhum profissional vinculado a serviços',
-    helpText: 'Defina quais profissionais podem realizar cada serviço',
-    dependencies: ['services', 'professionals'],
-  },
-
-  {
-    id: 'professional_payer',
-    order: 7,
-    title: 'Profissionais × Convênios',
-    description: 'Vincular profissionais aos convênios que atendem',
-    icon: 'Users-link',
-    color: 'teal',
-    required: false,
-    category: 'regras-operacionais',
-    menuRoute: '/clinica/base-sistema/professional-payer',
-    validationKey: 'professional_payer',
-    minRequired: 0,
-    message: 'Nenhum profissional vinculado aos convênios',
-    helpText: 'Indique quais profissionais atendem cada convênio',
-    dependencies: ['professionals', 'health_insurances'],
-  },
-
-  {
     id: 'agenda_rules',
-    order: 8,
+    order: 6,
     title: 'Regras da Agenda',
     description: 'Duração, intervalo e limites de agendamento',
     icon: 'Calendar',
@@ -148,7 +114,7 @@ export const SETUP_WIZARD_STEPS = [
 
   {
     id: 'room_services',
-    order: 9,
+    order: 7,
     title: 'Salas × Serviços',
     description: 'Vincular serviços às salas onde são realizados',
     icon: 'Zap',
@@ -168,7 +134,7 @@ export const SETUP_WIZARD_STEPS = [
   // ============================================================
   {
     id: 'service_prices',
-    order: 10,
+    order: 8,
     title: 'Tabela de Preços',
     description: 'Valores dos serviços por convênio/particular',
     icon: 'DollarSign',
@@ -185,7 +151,7 @@ export const SETUP_WIZARD_STEPS = [
 
   {
     id: 'professional_schedule',
-    order: 11,
+    order: 9,
     title: 'Valores por Convênio',
     description: 'Configurações específicas por operadora',
     icon: 'TrendingUp',
@@ -202,7 +168,7 @@ export const SETUP_WIZARD_STEPS = [
 
   {
     id: 'revenue_rules',
-    order: 12,
+    order: 10,
     title: 'Regras de Repasse',
     description: 'Cálculo de remuneração dos profissionais',
     icon: 'Share2',

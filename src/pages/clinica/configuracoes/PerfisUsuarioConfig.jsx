@@ -15,10 +15,12 @@ const MODULE_ICONS = {
   dashboard:         <LayoutDashboard className="w-4 h-4" />,
   agenda:            <CalendarDays className="w-4 h-4" />,
   pacientes:         <UserRound className="w-4 h-4" />,
+  atendimento:       <Stethoscope className="w-4 h-4" />,
   cadastros_basicos: <BookOpen className="w-4 h-4" />,
   financeiro:        <Wallet className="w-4 h-4" />,
   estoque:           <Package className="w-4 h-4" />,
   faturamento:       <Receipt className="w-4 h-4" />,
+  contabilidade:     <BarChart3 className="w-4 h-4" />,
   configuracoes:     <Settings className="w-4 h-4" />,
   administracao:     <Building2 className="w-4 h-4" />,
 };

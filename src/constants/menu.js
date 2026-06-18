@@ -54,7 +54,8 @@ const ROLE_PERMISSIONS = {
   recepcao: ['dashboard', 'agenda.*', 'pacientes.*', 'financeiro.caixa'],
 };
 
-export function getMenuItems(role = 'admin') {
+export function getMenuItems(role = 'admin', options = {}) {
+  const { canView, enablePermissionFilter = false } = options;
   const menu = [
     // ============================
     // 1️⃣ DASHBOARD — ENTRY POINT ÚNICO
@@ -141,49 +142,49 @@ export function getMenuItems(role = 'admin') {
           label: 'Serviços',
           path: '/clinica/base-sistema/servicos',
           roles: ['admin', 'gestor'],
-          featurePath: 'cadastros_basicos',
+          featurePath: 'cadastros_basicos.servicos',
         },
         {
           id: 'cadastros_basicos.profissionais',
           label: 'Profissionais',
           path: '/clinica/base-sistema/profissionais',
           roles: ['admin', 'gestor'],
-          featurePath: 'cadastros_basicos',
+          featurePath: 'cadastros_basicos.profissionais',
         },
         {
           id: 'cadastros_basicos.salas',
           label: 'Salas',
           path: '/clinica/base-sistema/salas',
           roles: ['admin', 'gestor'],
-          featurePath: 'cadastros_basicos',
+          featurePath: 'cadastros_basicos.salas',
         },
         {
           id: 'cadastros_basicos.recursos',
           label: 'Recursos',
           path: '/clinica/base-sistema/recursos',
           roles: ['admin', 'gestor'],
-          featurePath: 'cadastros_basicos',
+          featurePath: 'cadastros_basicos.recursos',
         },
         {
           id: 'cadastros_basicos.convenios',
           label: 'Convênios',
           path: '/clinica/base-sistema/convenios',
           roles: ['admin', 'gestor'],
-          featurePath: 'cadastros_basicos',
+          featurePath: 'cadastros_basicos.convenios',
         },
         {
           id: 'cadastros_basicos.tabela_precos',
           label: 'Tabela de Preços',
           path: '/clinica/base-sistema/service-prices',
           roles: ['admin', 'gestor'],
-          featurePath: 'cadastros_basicos',
+          featurePath: 'cadastros_basicos.tabela_precos',
         },
         {
           id: 'cadastros_basicos.salas_servicos',
           label: 'Salas × Serviços',
           path: '/clinica/base-sistema/room-resources',
           roles: ['admin', 'gestor'],
-          featurePath: 'cadastros_basicos',
+          featurePath: 'cadastros_basicos.salas_servicos',
         },
       ],
     },
@@ -381,7 +382,7 @@ export function getMenuItems(role = 'admin') {
               icon: 'FileText',
               path: '/clinica/financeiro/auditoria',
               roles: ['admin', 'gestor'],
-              featurePath: 'financeiro.auditoria',
+              featurePath: 'financeiro.auditoria_taxas',
             },
             {
               id: 'financeiro.auditoria-analytics',
@@ -389,7 +390,7 @@ export function getMenuItems(role = 'admin') {
               icon: 'BarChart3',
               path: '/clinica/financeiro/auditoria-analytics',
               roles: ['admin', 'gestor'],
-              featurePath: 'financeiro.auditoria',
+              featurePath: 'financeiro.auditoria_analytics',
             },
           ],
         },
@@ -813,7 +814,7 @@ export function getMenuItems(role = 'admin') {
   ];
 
   // Filtra menu por role
-  return filterMenuByRole(menu, role);
+  return filterMenuByRole(menu, role, { canView, enablePermissionFilter });
 }
 
 /**
@@ -821,57 +822,52 @@ export function getMenuItems(role = 'admin') {
  * - Remove itens que o usuário não tem permissão
  * - Remove grupos vazios (sem children)
  */
-function filterMenuByRole(menu, role = 'admin') {
-  return menu
-    .filter((item) => {
-      // Se não tem roles específicas, permite admin
-      if (!item.roles) {
-        return role === 'admin';
-      }
-      return item.roles.includes(role);
-    })
-    .map((item) => {
-      if (item.children) {
-        const filteredChildren = item.children
-          .filter((child) => {
-            if (!child.roles) {
-              return role === 'admin';
-            }
-            return child.roles.includes(role);
-          })
-          .map((child) => {
-            // Filtra nível 3 (grandchildren)
-            if (child.children) {
-              return {
-                ...child,
-                children: child.children.filter((grandchild) => {
-                  if (!grandchild.roles) {
-                    return role === 'admin';
-                  }
-                  return grandchild.roles.includes(role);
-                }),
-              };
-            }
-            return child;
-          })
-          .filter((child) => {
-            // Remove itens com children vazio
-            if (child.children && child.children.length === 0) {
-              return false;
-            }
-            return true;
-          });
+function filterMenuByRole(menu, role = 'admin', options = {}) {
+  const { canView, enablePermissionFilter = false } = options;
 
-        return { ...item, children: filteredChildren };
-      }
+  const isAllowedByRole = (item) => {
+    if (!item.roles) {
+      return role === 'admin';
+    }
+    return item.roles.includes(role);
+  };
 
-      return item;
-    })
-    .filter((item) => {
-      // Remove módulos vazios (sem children ou sem paths)
-      if (item.children && item.children.length === 0) {
-        return false;
-      }
+  const isAllowedByPermission = (item) => {
+    if (!enablePermissionFilter) {
       return true;
-    });
+    }
+    if (typeof canView !== 'function') {
+      return true;
+    }
+    if (!item.featurePath) {
+      return true;
+    }
+    return canView(item.featurePath);
+  };
+
+  const walk = (items) => {
+    return items.reduce((acc, item) => {
+      if (!isAllowedByRole(item)) {
+        return acc;
+      }
+
+      const filteredChildren = item.children ? walk(item.children) : undefined;
+      const hasVisibleChildren = Array.isArray(filteredChildren) && filteredChildren.length > 0;
+      const currentItemAllowed = isAllowedByPermission(item);
+
+      if (!currentItemAllowed && !hasVisibleChildren) {
+        return acc;
+      }
+
+      const nextItem = { ...item };
+      if (item.children) {
+        nextItem.children = filteredChildren || [];
+      }
+
+      acc.push(nextItem);
+      return acc;
+    }, []);
+  };
+
+  return walk(menu);
 }

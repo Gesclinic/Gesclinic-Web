@@ -1,26 +1,31 @@
 import { useEffect, useState } from 'react';
-import { getCurrentUserPermissions } from '@/api/permissionsApi';
-import { useClinic } from '@/contexts/useClinicContext';
+import { listUserPermissions } from '@/lib/permissionsApi';
+import { useClinicContext } from '@/contexts/useClinicContext';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
 
 export function usePermissions() {
-  const { clinic } = useClinic();
+  const { user, clinicId } = useAuth();
+  const { clinic } = useClinicContext();
+  const resolvedClinicId = clinic?.id || clinicId;
   const [permissions, setPermissions] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!clinic) {
+    if (!user?.id || !resolvedClinicId) {
+      setPermissions([]);
+      setLoading(false);
       return;
     }
 
     async function load() {
       setLoading(true);
-      const data = await getCurrentUserPermissions(clinic.id);
+      const data = await listUserPermissions(user.id, resolvedClinicId);
       setPermissions(data);
       setLoading(false);
     }
 
     load();
-  }, [clinic]);
+  }, [user?.id, resolvedClinicId]);
 
   return { permissions, loading };
 }

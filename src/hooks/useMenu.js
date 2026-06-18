@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { usePermissions as usePermissionsContext } from '@/contexts/PermissionsContext';
 import { getMenuItems } from '@/constants/menu';
 
 /**
@@ -15,14 +16,26 @@ import { getMenuItems } from '@/constants/menu';
  */
 export function useMenu() {
   const { currentRole } = useAuth();
+  const { canView, permissions, loading: loadingPermissions } = usePermissionsContext();
 
   // Filtra menu baseado no role do usuário
   const menu = useMemo(() => {
     if (!currentRole) {
       return [];
     }
-    return getMenuItems(currentRole);
-  }, [currentRole]);
+
+    const enablePermissionFilter =
+      !loadingPermissions &&
+      Array.isArray(permissions) &&
+      permissions.some((item) => {
+        if (typeof item === 'string') {
+          return item === '*';
+        }
+        return !!item?.permission_key;
+      });
+
+    return getMenuItems(currentRole, { canView, enablePermissionFilter });
+  }, [currentRole, canView, permissions, loadingPermissions]);
 
   // Contagem de itens filtrados
   const filteredCount = useMemo(() => {

@@ -7,13 +7,15 @@ export function useUserPermissions(userId, clinicId) {
 
   useEffect(() => {
     if (!userId || !clinicId) {
+      setPermissions([]);
+      setLoading(false);
       return;
     }
 
     async function load() {
       const { data, error } = await supabase
         .from('user_permissions')
-        .select('*')
+        .select('permission_key, access_level, data_scope, source')
         .eq('user_id', userId)
         .eq('clinic_id', clinicId);
 

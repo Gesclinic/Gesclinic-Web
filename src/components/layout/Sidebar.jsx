@@ -83,6 +83,7 @@ import {
 import { getMenuItems } from '@/constants/menu.js';
 import logoG from '@/assets/logo_gesclinic_g.png';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { usePermissions as usePermissionsContext } from '@/contexts/PermissionsContext';
 import { cn } from '@/lib/utils';
 
 const isPathActive = (itemPath, pathname) => {
@@ -217,6 +218,7 @@ const ICONS = {
 
 export default function Sidebar({ isOpen, setIsOpen }) {
   const { currentRole, handleLogout } = useAuth();
+  const { canView, permissions, loading: loadingPermissions } = usePermissionsContext();
   const location = useLocation();
   const navigate = useNavigate();
   const navRef = React.useRef(null);
@@ -239,9 +241,19 @@ export default function Sidebar({ isOpen, setIsOpen }) {
   // Gera menu baseado no perfil
   const menu = useMemo(() => {
     const role = getRoleForMenu();
-    const filteredMenu = getMenuItems(role);
+    const enablePermissionFilter =
+      !loadingPermissions &&
+      Array.isArray(permissions) &&
+      permissions.some((item) => {
+        if (typeof item === 'string') {
+          return item === '*';
+        }
+        return !!item?.permission_key;
+      });
+
+    const filteredMenu = getMenuItems(role, { canView, enablePermissionFilter });
     return filteredMenu;
-  }, [currentRole]);
+  }, [currentRole, canView, permissions, loadingPermissions]);
 
   const descendantsById = useMemo(() => buildDescendantsMap(menu), [menu]);
   const activeTrail = useMemo(

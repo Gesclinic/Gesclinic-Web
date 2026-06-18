@@ -8,10 +8,12 @@ export const MODULES_LIST = [
   { id: 'dashboard',         label: 'Dashboard',         path: '/clinica/dashboard' },
   { id: 'agenda',            label: 'Agenda',             path: '/clinica/agenda' },
   { id: 'pacientes',         label: 'Pacientes',          path: '/clinica/pacientes' },
+  { id: 'atendimento',       label: 'Atendimento',       path: '/clinica/atendimento' },
   { id: 'cadastros_basicos', label: 'Cadastros Básicos',  path: '/clinica/base-sistema' },
   { id: 'financeiro',        label: 'Financeiro',         path: '/clinica/financeiro' },
   { id: 'estoque',           label: 'Estoque',            path: '/clinica/estoque' },
   { id: 'faturamento',       label: 'Faturamento',        path: '/clinica/faturamento' },
+  { id: 'contabilidade',     label: 'Contabilidade',      path: '/clinica/financeiro/lancamentos' },
   { id: 'configuracoes',     label: 'Configurações',      path: '/clinica/configuracoes' },
   { id: 'administracao',     label: 'Administração',      path: '/clinica/administracao/usuarios' },
 ];
@@ -23,15 +25,17 @@ export const MODULES_LIST = [
  * 'none'    = sem acesso
  */
 export const PERMISSION_MATRIX = {
-  dashboard:         { admin: 'full', gestor: 'full', financeiro: 'full', recepcao: 'full', medico: 'full',    estoque: 'full',    faturamento: 'full'    },
-  agenda:            { admin: 'full', gestor: 'full', financeiro: 'none', recepcao: 'full', medico: 'partial', estoque: 'none',    faturamento: 'none'    },
-  pacientes:         { admin: 'full', gestor: 'full', financeiro: 'none', recepcao: 'full', medico: 'full',    estoque: 'none',    faturamento: 'none'    },
-  cadastros_basicos: { admin: 'full', gestor: 'full', financeiro: 'none', recepcao: 'none', medico: 'none',    estoque: 'none',    faturamento: 'none'    },
-  financeiro:        { admin: 'full', gestor: 'full', financeiro: 'full', recepcao: 'partial', medico: 'none', estoque: 'none',    faturamento: 'partial' },
-  estoque:           { admin: 'full', gestor: 'partial', financeiro: 'none', recepcao: 'none', medico: 'none', estoque: 'full',    faturamento: 'none'    },
-  faturamento:       { admin: 'full', gestor: 'full', financeiro: 'full', recepcao: 'none', medico: 'none',    estoque: 'none',    faturamento: 'full'    },
-  configuracoes:     { admin: 'full', gestor: 'none', financeiro: 'none', recepcao: 'none', medico: 'none',    estoque: 'none',    faturamento: 'none'    },
-  administracao:     { admin: 'full', gestor: 'none', financeiro: 'none', recepcao: 'none', medico: 'none',    estoque: 'none',    faturamento: 'none'    },
+  dashboard:         { admin: 'full', gestor: 'full', financeiro: 'full', recepcao: 'full', medico: 'full', enfermeiro: 'full', tecnico_enfermagem: 'full', multiprofissional: 'full', estoque: 'full', faturamento: 'full', contabilidade: 'full' },
+  agenda:            { admin: 'full', gestor: 'full', financeiro: 'none', recepcao: 'full', medico: 'partial', enfermeiro: 'partial', tecnico_enfermagem: 'partial', multiprofissional: 'partial', estoque: 'none', faturamento: 'none', contabilidade: 'none' },
+  pacientes:         { admin: 'full', gestor: 'full', financeiro: 'none', recepcao: 'full', medico: 'full', enfermeiro: 'partial', tecnico_enfermagem: 'partial', multiprofissional: 'partial', estoque: 'none', faturamento: 'none', contabilidade: 'none' },
+  atendimento:       { admin: 'full', gestor: 'partial', financeiro: 'none', recepcao: 'none', medico: 'full', enfermeiro: 'full', tecnico_enfermagem: 'partial', multiprofissional: 'partial', estoque: 'none', faturamento: 'none', contabilidade: 'none' },
+  cadastros_basicos: { admin: 'full', gestor: 'full', financeiro: 'none', recepcao: 'none', medico: 'none', enfermeiro: 'none', tecnico_enfermagem: 'none', multiprofissional: 'none', estoque: 'none', faturamento: 'none', contabilidade: 'none' },
+  financeiro:        { admin: 'full', gestor: 'full', financeiro: 'full', recepcao: 'partial', medico: 'none', enfermeiro: 'none', tecnico_enfermagem: 'none', multiprofissional: 'none', estoque: 'none', faturamento: 'partial', contabilidade: 'partial' },
+  estoque:           { admin: 'full', gestor: 'partial', financeiro: 'none', recepcao: 'none', medico: 'none', enfermeiro: 'none', tecnico_enfermagem: 'none', multiprofissional: 'none', estoque: 'full', faturamento: 'none', contabilidade: 'none' },
+  faturamento:       { admin: 'full', gestor: 'full', financeiro: 'full', recepcao: 'none', medico: 'none', enfermeiro: 'none', tecnico_enfermagem: 'none', multiprofissional: 'none', estoque: 'none', faturamento: 'full', contabilidade: 'partial' },
+  contabilidade:     { admin: 'full', gestor: 'partial', financeiro: 'full', recepcao: 'none', medico: 'none', enfermeiro: 'none', tecnico_enfermagem: 'none', multiprofissional: 'none', estoque: 'none', faturamento: 'none', contabilidade: 'full' },
+  configuracoes:     { admin: 'full', gestor: 'none', financeiro: 'none', recepcao: 'none', medico: 'none', enfermeiro: 'none', tecnico_enfermagem: 'none', multiprofissional: 'none', estoque: 'none', faturamento: 'none', contabilidade: 'none' },
+  administracao:     { admin: 'full', gestor: 'none', financeiro: 'none', recepcao: 'none', medico: 'none', enfermeiro: 'none', tecnico_enfermagem: 'none', multiprofissional: 'none', estoque: 'none', faturamento: 'none', contabilidade: 'none' },
 };
 
 /**
@@ -98,10 +102,10 @@ export const PROFILES_CONFIG = {
     colorClass: 'text-teal-600',
     bgClass: 'bg-teal-50 border-teal-200',
     badgeClass: 'bg-teal-100 text-teal-700',
-    modules: ['dashboard', 'agenda', 'pacientes'],
+    modules: ['dashboard', 'agenda', 'pacientes', 'atendimento'],
     permissions: [
       'dashboard.visualizar', 'agenda.visualizar', 'agenda.confirmacao',
-      'pacientes.visualizar', 'pacientes.prontuario', 'pacientes.documentos',
+      'pacientes.visualizar', 'pacientes.prontuario', 'pacientes.documentos', 'atendimento.*',
     ],
   },
   estoque: {
@@ -123,9 +127,58 @@ export const PROFILES_CONFIG = {
     colorClass: 'text-amber-600',
     bgClass: 'bg-amber-50 border-amber-200',
     badgeClass: 'bg-amber-100 text-amber-700',
-    modules: ['dashboard', 'faturamento'],
+    modules: ['dashboard', 'faturamento', 'contabilidade'],
     permissions: [
-      'dashboard.visualizar', 'faturamento.*', 'pacientes.visualizar',
+      'dashboard.visualizar', 'faturamento.*', 'pacientes.visualizar', 'contabilidade.view',
+    ],
+  },
+  enfermeiro: {
+    id: 'enfermeiro',
+    label: 'Enfermeiro',
+    description: 'Acesso assistencial com foco em atendimento e evolução',
+    colorClass: 'text-cyan-600',
+    bgClass: 'bg-cyan-50 border-cyan-200',
+    badgeClass: 'bg-cyan-100 text-cyan-700',
+    modules: ['dashboard', 'agenda', 'pacientes', 'atendimento'],
+    permissions: [
+      'dashboard.visualizar', 'agenda.visualizar', 'agenda.confirmacao',
+      'pacientes.visualizar', 'pacientes.prontuario', 'atendimento.*',
+    ],
+  },
+  tecnico_enfermagem: {
+    id: 'tecnico_enfermagem',
+    label: 'Técnico de Enfermagem',
+    description: 'Acesso operacional assistencial controlado',
+    colorClass: 'text-sky-600',
+    bgClass: 'bg-sky-50 border-sky-200',
+    badgeClass: 'bg-sky-100 text-sky-700',
+    modules: ['dashboard', 'agenda', 'pacientes', 'atendimento'],
+    permissions: [
+      'dashboard.visualizar', 'agenda.visualizar', 'pacientes.visualizar', 'atendimento.evolucao',
+    ],
+  },
+  multiprofissional: {
+    id: 'multiprofissional',
+    label: 'Multiprofissional',
+    description: 'Equipe multidisciplinar com permissões assistenciais personalizadas',
+    colorClass: 'text-violet-600',
+    bgClass: 'bg-violet-50 border-violet-200',
+    badgeClass: 'bg-violet-100 text-violet-700',
+    modules: ['dashboard', 'agenda', 'pacientes', 'atendimento'],
+    permissions: [
+      'dashboard.visualizar', 'agenda.visualizar', 'pacientes.visualizar', 'atendimento.*',
+    ],
+  },
+  contabilidade: {
+    id: 'contabilidade',
+    label: 'Contabilidade',
+    description: 'Exportações, integrações e conferências contábeis',
+    colorClass: 'text-emerald-600',
+    bgClass: 'bg-emerald-50 border-emerald-200',
+    badgeClass: 'bg-emerald-100 text-emerald-700',
+    modules: ['dashboard', 'financeiro', 'contabilidade'],
+    permissions: [
+      'dashboard.visualizar', 'financeiro.view', 'financeiro.lancamentos.view', 'contabilidade.view',
     ],
   },
 };

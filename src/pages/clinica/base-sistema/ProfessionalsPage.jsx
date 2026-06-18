@@ -16,6 +16,7 @@ import * as professionalPayerApi from '@/lib/professionalPayerApi';
 import * as professionalScheduleApi from '@/lib/professionalScheduleApi';
 import * as servicesApi from '@/lib/servicesApi';
 import * as healthInsurancesApi from '@/lib/healthInsurancesApi';
+import { PROFILES_CONFIG } from '@/lib/profilesApi';
 import { DAYS_OF_WEEK, PAYMENT_METHODS } from '@/lib/selectConstants';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,8 @@ import { maskCPF, maskPhone } from '@/components/forms/MaskedInput';
 import { ProfessionalServicesTab } from '@/components/base-sistema/ProfessionalServicesTab';
 import { ProfessionalScheduleTab } from '@/components/base-sistema/ProfessionalScheduleTab';
 import ProfessionalConveniosTab from '@/components/base-sistema/ProfessionalConveniosTab';
+
+const ACCESS_PROFILE_OPTIONS = Object.values(PROFILES_CONFIG);
 
 // Memoized ProfessionalRow component - prevents re-renders when parent updates
 const ProfessionalRow = React.memo(
@@ -45,6 +48,7 @@ const ProfessionalRow = React.memo(
             />
           ) : (
             <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 font-medium">
+              (profile) =>
               {professional.name?.charAt(0).toUpperCase()}
             </div>
           )}
@@ -1885,12 +1889,11 @@ export function ProfessionalsPage() {
                 disabled={updatingRole}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
               >
-                <option value="profissional">👨‍⚕️ Profissional</option>
-                <option value="recepcao">🎯 Recepção</option>
-                <option value="financeiro">💰 Financeiro</option>
-                <option value="estoque">📦 Estoque</option>
-                <option value="faturamento">📄 Faturamento</option>
-                <option value="admin">🔐 Administrador</option>
+                {ACCESS_PROFILE_OPTIONS.map((profile) => (
+                  <option key={profile.id} value={profile.id}>
+                    {profile.label}
+                  </option>
+                ))}
               </select>
               <p className="text-xs text-gray-500">
                 Papel atual: <strong>{userRole}</strong>

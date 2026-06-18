@@ -20,6 +20,26 @@ import {
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
 import { Loader2 } from 'lucide-react';
+import { PROFILES_CONFIG } from '@/lib/profilesApi';
+
+const ROLE_ORDER = [
+  'admin',
+  'gestor',
+  'recepcao',
+  'profissional',
+  'medico',
+  'enfermeiro',
+  'tecnico_enfermagem',
+  'multiprofissional',
+  'financeiro',
+  'faturamento',
+  'estoque',
+  'contabilidade',
+];
+
+const ROLE_OPTIONS = Object.values(PROFILES_CONFIG)
+  .filter((profile) => ROLE_ORDER.includes(profile.id))
+  .sort((left, right) => ROLE_ORDER.indexOf(left.id) - ROLE_ORDER.indexOf(right.id));
 
 const UserEditDialog = ({ user, isOpen, onOpenChange, onUserUpdate }) => {
   const { toast } = useToast();
@@ -113,11 +133,11 @@ const UserEditDialog = ({ user, isOpen, onOpenChange, onUserUpdate }) => {
                 <SelectValue placeholder="Selecione uma função" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="admin">Administrador</SelectItem>
-                <SelectItem value="recepcao">Recepção</SelectItem>
-                <SelectItem value="profissional">Profissional</SelectItem>
-                <SelectItem value="financeiro">Financeiro</SelectItem>
-                <SelectItem value="faturamento">Faturamento</SelectItem>
+                {ROLE_OPTIONS.map((profile) => (
+                  <SelectItem key={profile.id} value={profile.id}>
+                    {profile.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

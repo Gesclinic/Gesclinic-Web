@@ -317,14 +317,19 @@ export async function grantPermission(userId, permissionId, clinicId) {
   try {
     const { data, error } = await supabase
       .from('user_permissions')
-      .insert([
-        {
-          user_id: userId,
-          permission_id: permissionId,
-          clinic_id: clinicId,
-          granted_at: new Date().toISOString(),
-        },
-      ])
+      .upsert(
+        [
+          {
+            user_id: userId,
+            permission_key: permissionId,
+            clinic_id: clinicId,
+            access_level: 'view',
+            data_scope: 'own',
+            source: 'custom',
+          },
+        ],
+        { onConflict: 'user_id,clinic_id,permission_key' },
+      )
       .select()
       .single();
 
@@ -347,7 +352,7 @@ export async function revokePermission(userId, permissionId, clinicId) {
       .from('user_permissions')
       .delete()
       .eq('user_id', userId)
-      .eq('permission_id', permissionId)
+      .eq('permission_key', permissionId)
       .eq('clinic_id', clinicId);
 
     if (error) {
@@ -367,12 +372,17 @@ export async function grantPermissionsBatch(userId, permissionIds, clinicId) {
   try {
     const permissions = permissionIds.map((permissionId) => ({
       user_id: userId,
-      permission_id: permissionId,
+      permission_key: permissionId,
       clinic_id: clinicId,
-      granted_at: new Date().toISOString(),
+      access_level: 'view',
+      data_scope: 'own',
+      source: 'custom',
     }));
 
-    const { data, error } = await supabase.from('user_permissions').insert(permissions).select();
+    const { data, error } = await supabase
+      .from('user_permissions')
+      .upsert(permissions, { onConflict: 'user_id,clinic_id,permission_key' })
+      .select();
 
     if (error) {
       throw error;
@@ -394,7 +404,7 @@ export async function revokePermissionsBatch(userId, permissionIds, clinicId) {
       .delete()
       .eq('user_id', userId)
       .eq('clinic_id', clinicId)
-      .in('permission_id', permissionIds);
+      .in('permission_key', permissionIds);
 
     if (error) {
       throw error;
@@ -413,16 +423,16 @@ export async function hasPermission(userId, permissionId, clinicId) {
   try {
     const { data, error } = await supabase
       .from('user_permissions')
-      .select('id')
+      .select('id, access_level')
       .eq('user_id', userId)
-      .eq('permission_id', permissionId)
+      .eq('permission_key', permissionId)
       .eq('clinic_id', clinicId)
       .single();
 
     if (error && error.code !== 'PGRST116') {
       throw error;
     }
-    return !!data;
+    return !!data && data.access_level !== 'blocked';
   } catch (error) {
     console.error('Erro ao verificar permissão:', error);
     return false;
@@ -437,7 +447,7 @@ export async function listUsersWithPermission(permissionId, clinicId) {
     const { data, error } = await supabase
       .from('user_permissions')
       .select('users(id, email, full_name, role)')
-      .eq('permission_id', permissionId)
+      .eq('permission_key', permissionId)
       .eq('clinic_id', clinicId);
 
     if (error) {

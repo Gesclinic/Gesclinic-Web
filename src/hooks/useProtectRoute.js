@@ -1,14 +1,14 @@
-import { usePermission } from '@/hooks/usePermission';
+import { usePermissions } from '@/contexts/PermissionsContext';
 import { Navigate } from 'react-router-dom';
 
 export function useProtectRoute(submodule) {
-  const { can_view, loading } = usePermission(submodule);
+  const { canView, loading } = usePermissions();
 
   if (loading) {
     return <p>Carregando...</p>;
   }
 
-  if (!can_view) {
+  if (!canView(submodule)) {
     return <Navigate to="/403" />;
   }
 

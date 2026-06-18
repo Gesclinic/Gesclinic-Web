@@ -3,9 +3,11 @@ import React from 'react';
 const EditarRecebimento = React.lazy(
   () => import('@/pages/clinica/financeiro/EditarRecebimento.jsx'),
 );
-import { Routes, Route, Navigate, Outlet, useParams } from 'react-router-dom';
+import { Routes, Route, Navigate, Outlet, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { ClinicProvider } from '@/contexts/ClinicContext';
+import { usePermissions } from '@/contexts/PermissionsContext';
+import { resolvePermissionForPath } from '@/lib/menuPermissionCatalog';
 import { ProtectedWizardRoute } from '@/components/ProtectedWizardRoute';
 
 // Layout principal
@@ -20,6 +22,7 @@ import PaymentConfirmation from '@/pages/PaymentConfirmation';
 import FixUserClinicPage from '@/pages/FixUserClinicPage';
 import ForceLogoutPage from '@/pages/ForceLogoutPage';
 import DiagnosticsPage from '@/pages/DiagnosticsPage';
+import Forbidden from '@/pages/Forbidden';
 
 // Clínica
 import GeraisConfig from '@/pages/clinica/configuracoes/GeraisConfig';
@@ -153,7 +156,6 @@ import AuditoriaPage from '@/pages/clinica/auditoria/AuditoriaPage';
 import {
   ServicesPage,
   ProfessionalsPage,
-  ProfessionalServicesPage,
   RoomsPage,
   ResourcesPage,
   HealthInsurancesPage,
@@ -161,9 +163,7 @@ import {
   RoomResourcesPage,
   ProfessionalSchedulePage,
   ServicePricesPage,
-  ProfessionalPayerPage,
 } from '@/pages/clinica/base-sistema/pages';
-import CBHPMManagement from '@/pages/clinica/base-sistema/CBHPMManagement';
 
 // Admin
 import Usuarios from '@/pages/admin/Usuarios';
@@ -173,6 +173,38 @@ import SincronizarProfissionais from '@/pages/admin/SincronizarProfissionais';
 import Clinicas from '@/pages/admin/Clinicas';
 import NewClinic from '@/pages/admin/NewClinic';
 import EditClinic from '@/pages/admin/EditClinic';
+
+function getCriticalPermissionForPath(pathname) {
+  return resolvePermissionForPath(pathname);
+}
+
+function CriticalPermissionRoute() {
+  const { currentRole } = useAuth();
+  const { canView, canEdit, loading } = usePermissions();
+  const location = useLocation();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  const required = getCriticalPermissionForPath(location.pathname);
+
+  if (required && currentRole !== 'admin') {
+    const requiredPermission = typeof required === 'string' ? required : required.permission;
+    const requiredLevel = typeof required === 'string' ? 'view' : required.level || 'view';
+    const allowed = requiredLevel === 'edit' ? canEdit(requiredPermission) : canView(requiredPermission);
+
+    if (!allowed) {
+    return <Navigate to="/403" replace />;
+    }
+  }
+
+  return <Outlet />;
+}
 
 /* 🔐 Protected Route */
 function ProtectedRoute() {
@@ -200,6 +232,8 @@ function ProtectedRoute() {
 /* 🔐 Admin Route - Only for admin users */
 function AdminRoute() {
   const { isAuthenticated, loading, currentRole } = useAuth();
+  const { canView, canEdit } = usePermissions();
+  const location = useLocation();
 
   // Verificar se existe sessão customizada no localStorage
   const customSession = (() => {
@@ -229,19 +263,23 @@ function AdminRoute() {
     return <Navigate to="/login" replace />;
   }
 
-  // Verificar role: deve ser admin
   const userRole = customSession?.role || currentRole;
+  const required = getCriticalPermissionForPath(location.pathname);
+  const requiredPermission = required ? (typeof required === 'string' ? required : required.permission) : null;
+  const requiredLevel = required ? (typeof required === 'string' ? 'view' : required.level || 'view') : 'view';
+  const hasPermission =
+    !requiredPermission ||
+    userRole === 'admin' ||
+    (requiredLevel === 'edit' ? canEdit(requiredPermission) : canView(requiredPermission));
 
-  if (userRole !== 'admin') {
+  if (!hasPermission) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
           <div className="text-6xl mb-4">🔒</div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Acesso Negado</h1>
           <p className="text-gray-600 mb-6">Você não tem permissão para acessar esta página.</p>
-          <p className="text-sm text-gray-500 mb-6">
-            Apenas usuários com perfil de Administrador podem acessar.
-          </p>
+          <p className="text-sm text-gray-500 mb-6">Acesse a partir de uma permissão válida.</p>
           <button
             onClick={() => (window.location.href = '/clinica/dashboard')}
             className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
@@ -296,11 +334,13 @@ export default function AppRoutes() {
         <Route path="/register" element={<Register />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/fix-user-clinic" element={<FixUserClinicPage />} />
+        <Route path="/403" element={<Forbidden />} />
       </Route>
 
       {/* PROTECTED */}
       <Route element={<ProtectedRoute />}>
-        <Route path="/diagnostics" element={<DiagnosticsPage />} />
+        <Route element={<CriticalPermissionRoute />}>
+          <Route path="/diagnostics" element={<DiagnosticsPage />} />
 
         {/* 🔴 ADMIN */}
         <Route element={<AdminRoute />}>
@@ -622,15 +662,12 @@ export default function AppRoutes() {
 
           {/* 4.1 Cadastros Estruturais */}
           <Route path="base-sistema/servicos" element={<ServicesPage />} />
-          <Route path="base-sistema/cbhpm" element={<CBHPMManagement />} />
           <Route path="base-sistema/profissionais" element={<ProfessionalsPage />} />
           <Route path="base-sistema/convenios" element={<HealthInsurancesPage />} />
           <Route path="base-sistema/salas" element={<RoomsPage />} />
           <Route path="base-sistema/recursos" element={<ResourcesPage />} />
 
           {/* 4.2 Regras Operacionais */}
-          <Route path="base-sistema/professional-services" element={<ProfessionalServicesPage />} />
-          <Route path="base-sistema/professional-payer" element={<ProfessionalPayerPage />} />
           <Route path="base-sistema/agenda-rules" element={<AgendaRulesPage />} />
           <Route path="base-sistema/room-resources" element={<RoomResourcesPage />} />
           <Route path="base-sistema/professional-schedule" element={<ProfessionalSchedulePage />} />
@@ -641,6 +678,7 @@ export default function AppRoutes() {
           {/* DEFAULT */}
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="*" element={<NotFound />} />
+        </Route>
         </Route>
       </Route>
 

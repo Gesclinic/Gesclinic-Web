@@ -5,6 +5,7 @@ import { supabase } from '@/lib/customSupabaseClient';
 import ConfirmationDialog from '@/components/clinica/ConfirmationDialog';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
+import { PROFILES_CONFIG } from '@/lib/profilesApi';
 import {
   Plus,
   Search,
@@ -30,11 +31,7 @@ export default function Usuarios({ embedded = false }) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
-    admin: 0,
-    gestor: 0,
-    financeiro: 0,
-    recepcao: 0,
-    clinico: 0,
+    roles: {},
   });
 
   useEffect(() => {
@@ -56,14 +53,17 @@ export default function Usuarios({ embedded = false }) {
       setUsuarios(data || []);
 
       // Calcular estatísticas
+      const roleCounts = Object.keys(PROFILES_CONFIG).reduce((accumulator, roleId) => {
+        accumulator[roleId] = data?.filter((user) => user.role === roleId).length || 0;
+        return accumulator;
+      }, {});
+
+      roleCounts.clinico =
+        data?.filter((user) => user.role === 'medico' || user.role === 'profissional').length || 0;
+
       const stats = {
         total: data?.length || 0,
-        admin: data?.filter((u) => u.role === 'admin').length || 0,
-        gestor: data?.filter((u) => u.role === 'gestor').length || 0,
-        financeiro: data?.filter((u) => u.role === 'financeiro').length || 0,
-        recepcao: data?.filter((u) => u.role === 'recepcao').length || 0,
-        clinico:
-          data?.filter((u) => u.role === 'medico' || u.role === 'profissional').length || 0,
+        roles: roleCounts,
       };
       setStats(stats);
     } catch (error) {
@@ -86,6 +86,10 @@ export default function Usuarios({ embedded = false }) {
       recepcao: 'bg-blue-100 text-blue-800',
       medico: 'bg-teal-100 text-teal-800',
       profissional: 'bg-purple-100 text-purple-800',
+      enfermeiro: 'bg-cyan-100 text-cyan-800',
+      tecnico_enfermagem: 'bg-sky-100 text-sky-800',
+      multiprofissional: 'bg-violet-100 text-violet-800',
+      contabilidade: 'bg-emerald-100 text-emerald-800',
       estoque: 'bg-orange-100 text-orange-800',
       faturamento: 'bg-amber-100 text-amber-800',
     };
@@ -100,8 +104,13 @@ export default function Usuarios({ embedded = false }) {
       recepcao: 'Recepção',
       medico: 'Médico',
       profissional: 'Profissional',
+      enfermeiro: 'Enfermeiro',
+      tecnico_enfermagem: 'Técnico de Enfermagem',
+      multiprofissional: 'Multiprofissional',
+      contabilidade: 'Contabilidade',
       estoque: 'Estoque',
       faturamento: 'Faturamento',
+      clinico: 'Clínico',
     };
     return labels[role] || role;
   };
@@ -260,75 +269,30 @@ export default function Usuarios({ embedded = false }) {
           </CardContent>
         </Card>
 
-        <Card className="rounded-3xl border-slate-200 shadow-sm">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Gestor
-                </p>
-                <p className="mt-2 text-3xl font-bold text-indigo-600">{stats.gestor}</p>
-              </div>
-              <Shield className="h-10 w-10 text-indigo-500 opacity-20" />
-            </div>
-          </CardContent>
-        </Card>
+        {Object.keys(PROFILES_CONFIG).map((roleId) => {
+          const config = PROFILES_CONFIG[roleId];
+          const count = stats.roles?.[roleId] ?? 0;
 
-        <Card className="rounded-3xl border-slate-200 shadow-sm">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Admin
-                </p>
-                <p className="mt-2 text-3xl font-bold text-red-600">{stats.admin}</p>
-              </div>
-              <Shield className="h-10 w-10 text-red-500 opacity-20" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-3xl border-slate-200 shadow-sm">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Financeiro
-                </p>
-                <p className="mt-2 text-3xl font-bold text-green-600">{stats.financeiro}</p>
-              </div>
-              <Building className="h-10 w-10 text-green-500 opacity-20" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-3xl border-slate-200 shadow-sm">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Recepção
-                </p>
-                <p className="mt-2 text-3xl font-bold text-blue-600">{stats.recepcao}</p>
-              </div>
-              <Users className="h-10 w-10 text-blue-500 opacity-20" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-3xl border-slate-200 shadow-sm">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                  Clínico
-                </p>
-                <p className="mt-2 text-3xl font-bold text-teal-600">{stats.clinico}</p>
-              </div>
-              <Shield className="h-10 w-10 text-teal-500 opacity-20" />
-            </div>
-          </CardContent>
-        </Card>
+          return (
+            <Card key={roleId} className={`rounded-3xl border-slate-200 shadow-sm ${config.bgClass || ''}`}>
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      {config.label}
+                    </p>
+                    <p className={`mt-2 text-3xl font-bold ${config.colorClass || 'text-slate-900'}`}>
+                      {count}
+                    </p>
+                  </div>
+                  <span className={`${config.colorClass || 'text-slate-400'} opacity-20`}>
+                    <Shield className="h-10 w-10" />
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       <Card className="rounded-3xl border-slate-200 shadow-sm">
@@ -359,14 +323,11 @@ export default function Usuarios({ embedded = false }) {
               className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-[hsl(var(--primary))] focus:ring-4 focus:ring-[hsl(var(--primary))]/10"
             >
               <option value="">Todos os perfis</option>
-              <option value="admin">Administrador</option>
-              <option value="gestor">Gestor</option>
-              <option value="financeiro">Financeiro</option>
-              <option value="recepcao">Recepção</option>
-              <option value="medico">Médico</option>
-              <option value="profissional">Profissional</option>
-              <option value="estoque">Estoque</option>
-              <option value="faturamento">Faturamento</option>
+              {Object.values(PROFILES_CONFIG).map((profile) => (
+                <option key={profile.id} value={profile.id}>
+                  {profile.label}
+                </option>
+              ))}
             </select>
 
             {(searchTerm || filterRole) && (

@@ -104,16 +104,6 @@ export const PAGES_BY_CATEGORY = {
     { path: '/clinica/base-sistema/recursos', title: 'Recursos', icon: '📦' },
   ],
   'regras-operacionais': [
-    {
-      path: '/clinica/base-sistema/professional-services',
-      title: 'Profissionais × Serviços',
-      icon: '🔗',
-    },
-    {
-      path: '/clinica/base-sistema/profissional-payer',
-      title: 'Profissionais × Convênios',
-      icon: '👤💼',
-    },
     { path: '/clinica/base-sistema/agenda-rules', title: 'Regras da Agenda', icon: '📅' },
     { path: '/clinica/base-sistema/room-resources', title: 'Salas × Serviços', icon: '⚡' },
   ],
