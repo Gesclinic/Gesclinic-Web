@@ -6,55 +6,116 @@
  * Suporta câmera frontal/traseira em mobile
  */
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Camera, Check, RotateCcw, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+
+const getCameraAccessMessage = (error) => {
+  if (typeof window !== 'undefined' && !window.isSecureContext) {
+    return 'A câmera só funciona em ambiente seguro. Acesse por HTTPS ou localhost, ou use a opção de selecionar arquivo.';
+  }
+
+  if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+    return 'Câmera indisponível neste navegador. Use a opção de selecionar arquivo.';
+  }
+
+  if (error?.name === 'NotAllowedError' || error?.name === 'SecurityError') {
+    return 'Permissão da câmera negada. Libere a câmera no navegador e tente novamente, ou selecione uma foto do arquivo.';
+  }
+
+  if (error?.name === 'NotFoundError' || error?.name === 'OverconstrainedError') {
+    return 'Nenhuma câmera compatível foi encontrada neste dispositivo. Use a opção de selecionar arquivo.';
+  }
+
+  if (error?.name === 'NotReadableError' || error?.name === 'AbortError') {
+    return 'A câmera está em uso por outro aplicativo ou não pôde ser iniciada. Feche outros aplicativos e tente novamente.';
+  }
+
+  return 'Não foi possível acessar a câmera. Verifique as permissões do navegador ou selecione uma foto do arquivo.';
+};
 
 export default function PhotoCapture({ onPhotoCapture, currentPhoto = null }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
+  const streamRef = useRef(null);
 
   const [isCameraActive, setIsCameraActive] = useState(false);
+  const [isVideoReady, setIsVideoReady] = useState(false);
   const [capturedPhoto, setCapturedPhoto] = useState(currentPhoto);
   const [error, setError] = useState(null);
   const [facingMode, setFacingMode] = useState('user'); // user = frontal, environment = traseira
+
+  useEffect(() => () => stopCamera(), []);
+
+  async function isCameraPermissionDenied() {
+    try {
+      if (!navigator.permissions?.query) {
+        return false;
+      }
+      const permission = await navigator.permissions.query({ name: 'camera' });
+      return permission.state === 'denied';
+    } catch {
+      return false;
+    }
+  }
+
+  async function requestCamera(mode) {
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      throw new Error('MEDIA_DEVICES_UNAVAILABLE');
+    }
+
+    const constraints = {
+      video: {
+        facingMode: mode,
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+      },
+      audio: false,
+    };
+
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    streamRef.current = stream;
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream;
+      await videoRef.current.play().catch(() => {});
+    }
+  }
 
   // Iniciar câmera
   async function startCamera() {
     try {
       setError(null);
-      setIsCameraActive(true); // Ativar interface primeiro
+      setIsVideoReady(false);
 
-      const constraints = {
-        video: {
-          facingMode: facingMode,
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-        audio: false,
-      };
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+      if (await isCameraPermissionDenied()) {
+        setError(getCameraAccessMessage({ name: 'NotAllowedError' }));
+        return;
       }
+
+      setIsCameraActive(true); // Ativar interface primeiro
+      await requestCamera(facingMode);
     } catch (err) {
       console.error('Erro ao acessar câmera:', err);
       setIsCameraActive(false); // Desativar se houver erro
-      setError('Não foi possível acessar a câmera. Verifique as permissões do navegador.');
+      setError(getCameraAccessMessage(err));
     }
   }
 
   // Parar câmera
   function stopCamera() {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const tracks = videoRef.current.srcObject.getTracks();
-      tracks.forEach((track) => track.stop());
-      setIsCameraActive(false);
+    const stream = streamRef.current || videoRef.current?.srcObject;
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
     }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setIsCameraActive(false);
+    setIsVideoReady(false);
   }
 
   // Capturar foto
@@ -95,25 +156,19 @@ export default function PhotoCapture({ onPhotoCapture, currentPhoto = null }) {
   async function startCameraWithMode(mode) {
     try {
       setError(null);
+      setIsVideoReady(false);
 
-      const constraints = {
-        video: {
-          facingMode: mode,
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-        audio: false,
-      };
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        setIsCameraActive(true);
+      if (await isCameraPermissionDenied()) {
+        setError(getCameraAccessMessage({ name: 'NotAllowedError' }));
+        return;
       }
+
+      setIsCameraActive(true);
+      await requestCamera(mode);
     } catch (err) {
       console.error('Erro ao acessar câmera:', err);
-      setError('Não foi possível acessar a câmera. Verifique as permissões do navegador.');
+      setIsCameraActive(false);
+      setError(getCameraAccessMessage(err));
     }
   }
 
@@ -169,11 +224,15 @@ export default function PhotoCapture({ onPhotoCapture, currentPhoto = null }) {
                   autoPlay
                   playsInline
                   muted
+                  onLoadedMetadata={() => setIsVideoReady(true)}
+                  onCanPlay={() => setIsVideoReady(true)}
                   className="w-full min-h-96 max-h-screen object-cover"
                 />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                  <p className="text-white text-center text-sm font-medium">Câmera abrindo...</p>
-                </div>
+                {!isVideoReady && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                    <p className="text-white text-center text-sm font-medium">Câmera abrindo...</p>
+                  </div>
+                )}
               </div>
 
               {/* Controles da Câmera */}
@@ -206,6 +265,7 @@ export default function PhotoCapture({ onPhotoCapture, currentPhoto = null }) {
               <Button
                 type="button"
                 onClick={capturePhoto}
+                disabled={!isVideoReady}
                 className="w-full gap-2 bg-blue-600 hover:bg-blue-700"
               >
                 <Camera size={18} />
@@ -228,6 +288,7 @@ export default function PhotoCapture({ onPhotoCapture, currentPhoto = null }) {
                   ref={fileInputRef}
                   type="file"
                   accept="image/*"
+                  capture="user"
                   onChange={handleFileSelect}
                   className="hidden"
                 />

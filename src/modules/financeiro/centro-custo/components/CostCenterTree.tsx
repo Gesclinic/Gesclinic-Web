@@ -83,9 +83,14 @@ export const CostCenterTree: React.FC<CostCenterTreeProps> = ({
           </span>
 
           {/* Name */}
-          <span className="flex-1 text-slate-900 dark:text-slate-100 font-medium truncate">
-            {node.name}
-          </span>
+          <div className="flex-1 min-w-0">
+            <span className="text-slate-900 dark:text-slate-100 font-medium truncate block">
+              {node.name}
+            </span>
+            <span className="text-[11px] text-slate-500 block truncate">
+              {(node.center_type || 'OPERACOES')} • {(node.unit_name || 'Sem unidade')} • {(node.responsible_name || 'Sem responsável')}
+            </span>
+          </div>
 
           {/* Badge */}
           <div className="flex-shrink-0">

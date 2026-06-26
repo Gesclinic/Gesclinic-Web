@@ -17,9 +17,20 @@ import { Label } from '@/components/ui/label';
 import { motion } from 'framer-motion';
 import { Save, User, Phone, MapPin, FileText } from 'lucide-react';
 
+const toDateInputValue = (value) => {
+  if (!value) return '';
+  const text = String(value).trim();
+  const isoMatch = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+  const brMatch = text.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (brMatch) return `${brMatch[3]}-${brMatch[2]}-${brMatch[1]}`;
+  return '';
+};
+
 export default function DadosCadastraisTab({ patientId, patientData, updatePatientData }) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
 
   // Formatador de CPF: xxx.xxx.xxx-xx
   function formatCPF(value) {
@@ -60,31 +71,32 @@ export default function DadosCadastraisTab({ patientId, patientData, updatePatie
   }
 
   function validateForSave() {
-    const missingFields = [];
+    const nextErrors = {};
     const cpfDigits = formData.document_id.replace(/\D/g, '');
 
     if (!formData.name.trim()) {
-      missingFields.push('Nome completo');
+      nextErrors.name = 'Nome completo é obrigatório';
     }
     if (!formData.document_id.trim()) {
-      missingFields.push('CPF');
+      nextErrors.document_id = 'CPF é obrigatório';
     } else if (cpfDigits.length !== 11) {
-      missingFields.push('CPF com 11 dígitos');
+      nextErrors.document_id = 'CPF deve ter 11 dígitos';
     }
     if (!formData.birthdate) {
-      missingFields.push('Data de nascimento');
+      nextErrors.birthdate = 'Data de nascimento é obrigatória';
     }
     if (!formData.gender) {
-      missingFields.push('Sexo');
+      nextErrors.gender = 'Sexo é obrigatório';
     }
     if (!formData.cell_phone.trim() && !formData.phone.trim()) {
-      missingFields.push('Celular ou telefone');
+      nextErrors.cell_phone = 'Informe celular ou telefone';
     }
     if (!formData.mother_name.trim()) {
-      missingFields.push('Nome da mãe');
+      nextErrors.mother_name = 'Nome da mãe é obrigatório para faturamento XML';
     }
 
-    return missingFields;
+    setErrors(nextErrors);
+    return nextErrors;
   }
 
   const [formData, setFormData] = useState({
@@ -117,7 +129,7 @@ export default function DadosCadastraisTab({ patientId, patientData, updatePatie
       setFormData({
         name: patientData.name || patientData.full_name || '',
         document_id: patientData.document_id || patientData.cpf || '',
-        birthdate: patientData.birthdate || patientData.birth_date || '',
+        birthdate: toDateInputValue(patientData.birthdate || patientData.birth_date),
         gender: patientData.gender || '',
         phone: patientData.phone || '',
         email: patientData.email || '',
@@ -146,11 +158,12 @@ export default function DadosCadastraisTab({ patientId, patientData, updatePatie
       return;
     }
 
-    const missingFields = validateForSave();
-    if (missingFields.length > 0) {
+    const validationErrors = validateForSave();
+    const errorMessages = Object.values(validationErrors);
+    if (errorMessages.length > 0) {
       toast({
         title: 'Cadastro incompleto',
-        description: `Preencha: ${missingFields.join(', ')}.`,
+        description: errorMessages.slice(0, 3).join(' | '),
         variant: 'destructive',
       });
       return;
@@ -229,15 +242,19 @@ export default function DadosCadastraisTab({ patientId, patientData, updatePatie
                 <Input
                   id="name"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white"
+                  onChange={(e) => {
+                    setFormData({ ...formData, name: e.target.value });
+                    setErrors((current) => ({ ...current, name: null }));
+                  }}
+                  className={`border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white ${errors.name ? 'border-red-500' : ''}`}
                   placeholder="Digite o nome completo"
                 />
+                {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
               </div>
 
               <div>
                 <Label htmlFor="document_id" className="text-sm font-medium text-gray-700">
-                  CPF/RG <span className="text-red-500">*</span>
+                  CPF <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="document_id"
@@ -245,10 +262,14 @@ export default function DadosCadastraisTab({ patientId, patientData, updatePatie
                   maxLength="14"
                   value={formData.document_id}
                   onChange={(e) =>
-                    setFormData({ ...formData, document_id: formatCPF(e.target.value) })
+                    {
+                      setFormData({ ...formData, document_id: formatCPF(e.target.value) });
+                      setErrors((current) => ({ ...current, document_id: null }));
+                    }
                   }
-                  className="border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white"
+                  className={`border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white ${errors.document_id ? 'border-red-500' : ''}`}
                 />
+                {errors.document_id && <p className="mt-1 text-sm text-red-600">{errors.document_id}</p>}
               </div>
 
               <div>
@@ -259,9 +280,13 @@ export default function DadosCadastraisTab({ patientId, patientData, updatePatie
                   id="birthdate"
                   type="date"
                   value={formData.birthdate}
-                  onChange={(e) => setFormData({ ...formData, birthdate: e.target.value })}
-                  className="border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white"
+                  onChange={(e) => {
+                    setFormData({ ...formData, birthdate: e.target.value });
+                    setErrors((current) => ({ ...current, birthdate: null }));
+                  }}
+                  className={`border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white ${errors.birthdate ? 'border-red-500' : ''}`}
                 />
+                {errors.birthdate && <p className="mt-1 text-sm text-red-600">{errors.birthdate}</p>}
               </div>
 
               <div>
@@ -271,14 +296,18 @@ export default function DadosCadastraisTab({ patientId, patientData, updatePatie
                 <select
                   id="gender"
                   value={formData.gender}
-                  onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white text-gray-700"
+                  onChange={(e) => {
+                    setFormData({ ...formData, gender: e.target.value });
+                    setErrors((current) => ({ ...current, gender: null }));
+                  }}
+                  className={`w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white text-gray-700 ${errors.gender ? 'border-red-500' : ''}`}
                 >
                   <option value="">Selecionar...</option>
                   <option value="M">Masculino</option>
                   <option value="F">Feminino</option>
                   <option value="O">Outro</option>
                 </select>
+                {errors.gender && <p className="mt-1 text-sm text-red-600">{errors.gender}</p>}
               </div>
             </div>
           </CardContent>
@@ -328,13 +357,17 @@ export default function DadosCadastraisTab({ patientId, patientData, updatePatie
                   maxLength="15"
                   value={formData.cell_phone}
                   onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      cell_phone: formatPhone(e.target.value),
-                    })
+                    {
+                      setFormData({
+                        ...formData,
+                        cell_phone: formatPhone(e.target.value),
+                      });
+                      setErrors((current) => ({ ...current, cell_phone: null }));
+                    }
                   }
-                  className="border-gray-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-white"
+                  className={`border-gray-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-white ${errors.cell_phone ? 'border-red-500' : ''}`}
                 />
+                {errors.cell_phone && <p className="mt-1 text-sm text-red-600">{errors.cell_phone}</p>}
               </div>
 
               <div>
@@ -347,10 +380,13 @@ export default function DadosCadastraisTab({ patientId, patientData, updatePatie
                   maxLength="14"
                   value={formData.phone}
                   onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      phone: formatPhone(e.target.value),
-                    })
+                    {
+                      setFormData({
+                        ...formData,
+                        phone: formatPhone(e.target.value),
+                      });
+                      setErrors((current) => ({ ...current, cell_phone: null }));
+                    }
                   }
                   className="border-gray-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-white"
                 />
@@ -388,9 +424,13 @@ export default function DadosCadastraisTab({ patientId, patientData, updatePatie
                   id="mother_name"
                   placeholder="Ex: Maria da Silva"
                   value={formData.mother_name}
-                  onChange={(e) => setFormData({ ...formData, mother_name: e.target.value })}
-                  className="border-gray-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 bg-white"
+                  onChange={(e) => {
+                    setFormData({ ...formData, mother_name: e.target.value });
+                    setErrors((current) => ({ ...current, mother_name: null }));
+                  }}
+                  className={`border-gray-200 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 bg-white ${errors.mother_name ? 'border-red-500' : ''}`}
                 />
+                {errors.mother_name && <p className="mt-1 text-sm text-red-600">{errors.mother_name}</p>}
               </div>
 
               <div>

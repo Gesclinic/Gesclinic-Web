@@ -3,7 +3,16 @@
  * Central accounting structure for financial module
  */
 
-export type AccountType = 'RECEITA' | 'DESPESA' | 'ATIVO' | 'PASSIVO' | 'PATRIMONIO';
+export type AccountType =
+  | 'RECEITA'
+  | 'DESPESA'
+  | 'CUSTO'
+  | 'DEDUCAO'
+  | 'HONORARIO'
+  | 'INVESTIMENTO'
+  | 'ATIVO'
+  | 'PASSIVO'
+  | 'PATRIMONIO';
 export type AccountNature = 'CREDORA' | 'DEVEDORA';
 
 export interface ChartOfAccount {
@@ -13,11 +22,23 @@ export interface ChartOfAccount {
   code: string;
   name: string;
   description: string | null;
+  category?: string | null;
+  subcategory?: string | null;
+  group_name?: string | null;
   type: AccountType;
   nature: AccountNature;
   level: number;
   is_active: boolean;
   accepts_entries: boolean;
+  allows_posting?: boolean;
+  requires_cost_center?: boolean;
+  is_analytic?: boolean;
+  is_synthetic?: boolean;
+  status?: 'ATIVA' | 'INATIVA';
+  color?: string | null;
+  icon?: string | null;
+  integration_key?: string | null;
+  dimension_config?: Record<string, any> | null;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -29,8 +50,21 @@ export interface ChartOfAccountCreateInput {
   code: string;
   name: string;
   description?: string;
+  category?: string;
+  subcategory?: string;
+  group_name?: string;
   type: AccountType;
   nature: AccountNature;
+  accepts_entries?: boolean;
+  allows_posting?: boolean;
+  requires_cost_center?: boolean;
+  is_analytic?: boolean;
+  is_synthetic?: boolean;
+  status?: 'ATIVA' | 'INATIVA';
+  color?: string;
+  icon?: string;
+  integration_key?: string;
+  dimension_config?: Record<string, any>;
 }
 
 export interface ChartOfAccountUpdateInput {
@@ -38,10 +72,22 @@ export interface ChartOfAccountUpdateInput {
   code?: string;
   name?: string;
   description?: string;
+  category?: string;
+  subcategory?: string;
+  group_name?: string;
   type?: AccountType;
   nature?: AccountNature;
   is_active?: boolean;
   accepts_entries?: boolean;
+  allows_posting?: boolean;
+  requires_cost_center?: boolean;
+  is_analytic?: boolean;
+  is_synthetic?: boolean;
+  status?: 'ATIVA' | 'INATIVA';
+  color?: string;
+  icon?: string;
+  integration_key?: string;
+  dimension_config?: Record<string, any>;
 }
 
 export interface ChartOfAccountTreeNode extends ChartOfAccount {
@@ -88,6 +134,7 @@ export interface ChartOfAccountsTreeResponse {
   parent_id: string | null;
   code: string;
   name: string;
+  description: string | null;
   type: AccountType;
   nature: AccountNature;
   level: number;

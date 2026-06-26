@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/tooltip';
 import {
   FinancialTransaction,
+  CostCenter,
   TRANSACTION_TYPE_LABELS,
   TRANSACTION_STATUS_LABELS,
   STATUS_COLORS,
@@ -39,6 +40,7 @@ import {
 
 interface TransactionsTableProps {
   transactions: FinancialTransaction[];
+  costCenters?: CostCenter[];
   loading?: boolean;
   onEdit?: (transaction: FinancialTransaction) => void;
   onDelete?: (transaction: FinancialTransaction) => Promise<void>;
@@ -47,7 +49,7 @@ interface TransactionsTableProps {
   deletingId?: string | null;
 }
 
-type TransactionColumnKey = 'date' | 'description' | 'type' | 'amount' | 'status' | 'reconciled' | 'origin';
+type TransactionColumnKey = 'date' | 'description' | 'costCenter' | 'type' | 'amount' | 'status' | 'reconciled' | 'origin' | 'originId';
 
 type TransactionColumnDefinition = {
   key: TransactionColumnKey;
@@ -59,11 +61,13 @@ type TransactionColumnDefinition = {
 const transactionColumnDefinitions: TransactionColumnDefinition[] = [
   { key: 'date', label: 'Data', width: 'w-[96px]', align: 'text-left' },
   { key: 'description', label: 'Descrição', width: 'w-[320px]', align: 'text-left' },
+  { key: 'costCenter', label: 'Centro de Custo', width: 'w-[180px]', align: 'text-left' },
   { key: 'type', label: 'Tipo', width: 'w-[86px]', align: 'text-left' },
   { key: 'amount', label: 'Valor', width: 'w-[116px]', align: 'text-right' },
   { key: 'status', label: 'Status', width: 'w-[112px]', align: 'text-center' },
   { key: 'reconciled', label: 'Conciliação', width: 'w-[112px]', align: 'text-center' },
   { key: 'origin', label: 'Origem', width: 'w-[128px]', align: 'text-left' },
+  { key: 'originId', label: 'Origem (Ref.)', width: 'w-[170px]', align: 'text-left' },
 ];
 
 const defaultTransactionColumnOrder = transactionColumnDefinitions.map((column) => column.key);
@@ -72,6 +76,50 @@ const defaultTransactionVisibleColumns: Record<TransactionColumnKey, boolean> = 
   {} as Record<TransactionColumnKey, boolean>,
 );
 const transactionColumnStorageKey = 'lancamentos_visible_columns_v1';
+
+const costCenterNameCache = new Map<string, string>();
+
+type CostCenterLabel = {
+  display: string;
+  tooltip: string;
+};
+
+const resolveCostCenterLabel = (
+  transaction: FinancialTransaction,
+  costCenterLookup: Map<string, CostCenter>,
+): CostCenterLabel => {
+  const allocationCostCenterId = transaction?.metadata?.allocation?.target_cost_center_id;
+  const costCenterId = transaction.cost_center_id || transaction.centro_custo_id || allocationCostCenterId;
+  const directName = transaction?.cost_center?.name;
+  const directCode = transaction?.cost_center?.code;
+
+  if (directName) {
+    if (costCenterId) costCenterNameCache.set(String(costCenterId), directName);
+    return {
+      display: directName,
+      tooltip: directCode ? `${directName} (${directCode})` : directName,
+    };
+  }
+
+  if (!costCenterId) return { display: '-', tooltip: '-' };
+
+  const fromLookup = costCenterLookup.get(String(costCenterId));
+  if (fromLookup?.name) {
+    costCenterNameCache.set(String(costCenterId), fromLookup.name);
+    return {
+      display: fromLookup.name,
+      tooltip: fromLookup.code ? `${fromLookup.name} (${fromLookup.code})` : fromLookup.name,
+    };
+  }
+
+  const cached = costCenterNameCache.get(String(costCenterId));
+  if (cached) return { display: cached, tooltip: cached };
+
+  return {
+    display: 'Centro de custo não identificado',
+    tooltip: `Centro de custo não identificado (${String(costCenterId).slice(0, 8)})`,
+  };
+};
 
 function normalizeTransactionColumnOrder(order?: string[]) {
   const validKeys = new Set(defaultTransactionColumnOrder);
@@ -110,6 +158,7 @@ function loadTransactionColumnSettings() {
 
 export const TransactionsTable = React.memo<TransactionsTableProps>(({
   transactions,
+  costCenters = [],
   loading = false,
   onEdit,
   onDelete,
@@ -144,6 +193,10 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
     () => orderedColumnDefinitions.filter((column) => visibleColumns[column.key] !== false),
     [orderedColumnDefinitions, visibleColumns],
   );
+
+  const costCenterLookup = React.useMemo(() => {
+    return new Map((costCenters || []).map((center) => [String(center.id), center]));
+  }, [costCenters]);
 
   const resetColumnLayout = () => {
     setVisibleColumns(defaultTransactionVisibleColumns);
@@ -302,6 +355,39 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
     if (origin === 'accounts_receivable') return 'Contas a Receber';
     if (origin === 'accounts_payable') return 'Contas a Pagar';
     return origin || 'Manual';
+  };
+
+  const resolveOriginReference = (transaction: FinancialTransaction) => {
+    const originId = String(transaction.origin_id || '').trim();
+    const reference = sanitizeText(transaction.document_number || transaction.reference_document || '');
+
+    if (reference && reference !== '-') {
+      return {
+        display: reference,
+        tooltip: originId ? `${reference} · ID técnico: ${originId}` : reference,
+      };
+    }
+
+    const description = sanitizeText(transaction.description || '');
+    if (description && description !== '-') {
+      const simplified = description
+        .replace(/^Conta a pagar\s*-\s*/i, '')
+        .replace(/^Receita bruta\s*-\s*/i, '')
+        .replace(/^Taxa de cart[aã]o\s*-\s*/i, '')
+        .trim();
+
+      const display = simplified || description;
+      return {
+        display,
+        tooltip: originId ? `${display} · ID técnico: ${originId}` : display,
+      };
+    }
+
+    const fallback = getOriginLabel(transaction);
+    return {
+      display: fallback,
+      tooltip: originId ? `${fallback} · ID técnico: ${originId}` : fallback,
+    };
   };
 
   const selectedRows = transactions.filter((transaction) => selectedIds.has(transaction.id));
@@ -588,6 +674,10 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
                 if (key === 'type') {
                   return <span className={`block truncate text-sm font-semibold ${getTypeColor(transaction.transaction_type || transaction.type)}`} title={getTypeLabel(transaction)}>{getTypeLabel(transaction)}</span>;
                 }
+                if (key === 'costCenter') {
+                  const costCenterLabel = resolveCostCenterLabel(transaction, costCenterLookup);
+                  return <span className="block truncate text-sm text-slate-700" title={costCenterLabel.tooltip}>{costCenterLabel.display}</span>;
+                }
                 if (key === 'amount') {
                   return (
                     <span className={`whitespace-nowrap font-semibold ${isIncomeTransaction(transaction) ? 'text-green-600' : 'text-red-600'}`}>
@@ -605,6 +695,10 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
                 }
                 if (key === 'origin') {
                   return <span className="block truncate text-sm text-slate-600" title={getOriginLabel(transaction)}>{getOriginLabel(transaction)}</span>;
+                }
+                if (key === 'originId') {
+                  const originReference = resolveOriginReference(transaction);
+                  return <span className="block truncate text-sm text-slate-600" title={originReference.tooltip}>{originReference.display}</span>;
                 }
                 return null;
               };

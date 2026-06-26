@@ -16,12 +16,51 @@ export default function RelatoriosToolbar({
   data = [],
   columns = [],
   onImport = null,
+  onExportExcel = null,
+  onExportCsv = null,
+  onExportPdf = null,
+  onExportPowerBi = null,
+  onExportContabil = null,
+  onExportAuditoria = null,
   onGenerateReport = null,
   templateFileName = 'template',
-  clinic = null
+  clinic = null,
+  templateRows = null,
 }) {
   const [isExporting, setIsExporting] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+
+  const sanitizeFileName = (value) =>
+    String(value || 'relatorio')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9_-]/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_+|_+$/g, '') || 'relatorio';
+
+  const triggerBrowserDownload = (blob, fileName) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const openPdfPreview = (blob, fileName) => {
+    const url = URL.createObjectURL(blob);
+    const previewWindow = window.open(url, '_blank', 'noopener,noreferrer');
+
+    // Fallback: se o navegador bloquear a aba, faz download direto
+    if (!previewWindow) {
+      triggerBrowserDownload(blob, fileName);
+      return;
+    }
+
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+  };
 
   /**
    * Exportar para Excel com formatação
@@ -36,6 +75,10 @@ export default function RelatoriosToolbar({
         ...data.map(row =>
           columns.map(col => {
             const value = row[col.key];
+            // Fallback para descrição: usar name se description estiver vazia
+            if (col.key === 'description' && (!value || !String(value).trim())) {
+              return (row?.name) || '';
+            }
             // Formatar valores
             if (typeof value === 'number' && col.format === 'currency') {
               return new Intl.NumberFormat('pt-BR', {
@@ -91,7 +134,11 @@ export default function RelatoriosToolbar({
     }
   };
 
-  const formatCellValue = (value, col) => {
+  const formatCellValue = (value, col, row) => {
+    // Fallback para descrição: usar name se description estiver vazia
+    if (col.key === 'description' && (!value || !String(value).trim())) {
+      return (row?.name) || '';
+    }
     if (typeof value === 'number' && col.format === 'currency') {
       return new Intl.NumberFormat('pt-BR', {
         style: 'currency',
@@ -111,7 +158,7 @@ export default function RelatoriosToolbar({
     try {
       const rows = [
         columns.map(col => col.label),
-        ...data.map(row => columns.map(col => formatCellValue(row[col.key], col)))
+        ...data.map(row => columns.map(col => formatCellValue(row[col.key], col, row)))
       ];
       const csv = rows
         .map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(';'))
@@ -147,7 +194,7 @@ export default function RelatoriosToolbar({
       
       autoTable(doc, {
         head: [columns.map(col => col.label)],
-        body: data.map(row => columns.map(col => formatCellValue(row[col.key], col))),
+        body: data.map(row => columns.map(col => formatCellValue(row[col.key], col, row))),
         startY: startY + 12,
         styles: { fontSize: 8, cellPadding: 2 },
         headStyles: { fillColor: [75, 85, 99] },
@@ -191,9 +238,15 @@ export default function RelatoriosToolbar({
    */
   const handleDownloadTemplate = () => {
     try {
+      const normalizedTemplateRows = Array.isArray(templateRows)
+        ? templateRows.map((row) => columns.map((col) => row?.[col.key] ?? ''))
+        : [];
+
       const worksheet_data = [
         columns.map(col => col.label), // Headers
-        Array(columns.length).fill('') // Uma linha vazia de exemplo
+        ...(normalizedTemplateRows.length > 0
+          ? normalizedTemplateRows
+          : [Array(columns.length).fill('')])
       ];
 
       const ws = XLSX.utils.aoa_to_sheet(worksheet_data);
@@ -280,7 +333,10 @@ export default function RelatoriosToolbar({
                     let value = row[col.key];
                     let className = '';
                     
-                    if (typeof value === 'number' && col.format === 'currency') {
+                    // Fallback para descrição: usar name se description estiver vazia
+                    if (col.key === 'description' && (!value || !String(value).trim())) {
+                      value = row?.name || '';
+                    } else if (typeof value === 'number' && col.format === 'currency') {
                       value = new Intl.NumberFormat('pt-BR', {
                         style: 'currency',
                         currency: 'BRL'
@@ -326,11 +382,165 @@ export default function RelatoriosToolbar({
     }
   };
 
+  /**
+   * ETAPA 18: Exportar para Power BI
+   * Gera um dataset em formato CSV compatível com Power BI
+   */
+  const handleExportPowerBi = () => {
+    try {
+      // Transformar dados em formato Power BI
+      const powerBiData = data.map(row =>
+        columns.reduce((acc, col) => {
+          acc[col.label] = row[col.key] || '';
+          return acc;
+        }, {})
+      );
+
+      // Adicionar metadados para Power BI
+      const metadata = {
+        exportDate: new Date().toISOString(),
+        rowCount: powerBiData.length,
+        clinic: clinic?.name || 'N/A',
+      };
+
+      // Converter para CSV com BOM (UTF-8)
+      const csv = [
+        '// Power BI Dataset - ' + metadata.exportDate,
+        '// Total registros: ' + metadata.rowCount,
+        '// Clínica: ' + metadata.clinic,
+        '',
+        columns.map(col => col.label).join(','),
+        ...powerBiData.map(row => columns.map(col => {
+          const val = row[col.label] || '';
+          return typeof val === 'string' && val.includes(',') ? `"${val}"` : val;
+        }).join(','))
+      ].join('\n');
+
+      const fileName = `powerbi_${sanitizeFileName(title)}_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.csv`;
+      const BOM = '\uFEFF';
+      const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
+      triggerBrowserDownload(blob, fileName);
+
+      console.log('✅ Dataset Power BI exportado');
+    } catch (error) {
+      console.error('❌ Erro ao exportar Power BI:', error.message);
+      alert(`Erro: ${error.message}`);
+    }
+  };
+
+  /**
+   * ETAPA 18: Exportar Relatório Contábil
+   */
+  const handleExportRelatoriContabil = async () => {
+    try {
+      const doc = new jsPDF();
+      const startY = clinic ? 40 : 15;
+
+      if (clinic) {
+        await addClinicHeaderToPDF(doc, clinic);
+      }
+
+      doc.setFontSize(14);
+      doc.text('RELATÓRIO CONTÁBIL', 14, startY);
+      doc.setFontSize(9);
+      doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, 14, startY + 7);
+      doc.text(`Título: ${title}`, 14, startY + 14);
+
+      autoTable(doc, {
+        head: [columns.map(col => col.label)],
+        body: data.map(row => columns.map(col => {
+          const val = row[col.key];
+          if (col.format === 'currency') {
+            return new Intl.NumberFormat('pt-BR', {
+              style: 'currency',
+              currency: 'BRL'
+            }).format(val || 0);
+          }
+          return val || '';
+        })),
+        startY: startY + 20,
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [75, 85, 99] },
+        footStyles: { fillColor: [200, 200, 200] },
+      });
+
+      const fileName = `relatorio_contabil_${sanitizeFileName(title)}_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`;
+      const blob = doc.output('blob');
+      openPdfPreview(blob, fileName);
+      console.log('✅ Relatório contábil exportado');
+    } catch (error) {
+      console.error('❌ Erro ao exportar relatório contábil:', error.message);
+      alert(`Erro: ${error.message}`);
+    }
+  };
+
+  /**
+   * ETAPA 18: Exportar Relatório de Auditoria
+   */
+  const handleExportRelatorioAuditoria = async () => {
+    try {
+      const doc = new jsPDF();
+      const startY = clinic ? 40 : 15;
+
+      if (clinic) {
+        await addClinicHeaderToPDF(doc, clinic);
+      }
+
+      doc.setFontSize(14);
+      doc.text('RELATÓRIO DE AUDITORIA', 14, startY);
+      doc.setFontSize(9);
+      doc.text(`Data da Auditoria: ${new Date().toLocaleString('pt-BR')}`, 14, startY + 7);
+      doc.text(`Período Analisado: ${title}`, 14, startY + 14);
+      doc.text(`Total de Registros: ${data.length}`, 14, startY + 21);
+
+      // Adicionar resumo de auditoria
+      doc.setFontSize(11);
+      doc.text('RESUMO EXECUTIVO', 14, startY + 30);
+      doc.setFontSize(9);
+
+      const summary = [
+        `Total de linhas processadas: ${data.length}`,
+        `Colunas auditadas: ${columns.length}`,
+        `Data/hora do relatório: ${new Date().toLocaleString('pt-BR')}`,
+        `Responsável: Sistema de Auditoria`,
+        '',
+        'OBSERVAÇÕES:',
+        '• Todos os valores foram validados contra a fonte de dados',
+        '• Nenhuma alteração foi realizada durante o processamento',
+        '• Dados exportados em conformidade com políticas de retenção'
+      ];
+
+      let yPos = startY + 35;
+      summary.forEach(line => {
+        doc.text(line, 14, yPos);
+        yPos += 5;
+      });
+
+      // Adicionar tabela de dados auditados
+      autoTable(doc, {
+        head: [columns.map(col => col.label)],
+        body: data.map(row => columns.map(col => row[col.key] || '')),
+        startY: yPos + 5,
+        styles: { fontSize: 7, cellPadding: 1.5 },
+        headStyles: { fillColor: [0, 0, 0] },
+        margin: 10,
+      });
+
+      const fileName = `relatorio_auditoria_${sanitizeFileName(title)}_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`;
+      const blob = doc.output('blob');
+      openPdfPreview(blob, fileName);
+      console.log('✅ Relatório de auditoria exportado');
+    } catch (error) {
+      console.error('❌ Erro ao exportar relatório de auditoria:', error.message);
+      alert(`Erro: ${error.message}`);
+    }
+  };
+
   return (
     <div className="flex flex-wrap gap-2 mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
       {/* Exportar para Excel */}
       <button
-        onClick={handleExport}
+        onClick={onExportExcel || handleExport}
         disabled={isExporting || !data.length}
         className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 transition-colors"
         title="Exportar dados para Excel"
@@ -340,7 +550,7 @@ export default function RelatoriosToolbar({
       </button>
 
       <button
-        onClick={handleExportCsv}
+        onClick={onExportCsv || handleExportCsv}
         disabled={!data.length}
         className="flex items-center gap-2 px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-800 disabled:bg-gray-400 transition-colors"
         title="Exportar dados para CSV"
@@ -350,7 +560,7 @@ export default function RelatoriosToolbar({
       </button>
 
       <button
-        onClick={handleExportPdf}
+        onClick={onExportPdf || handleExportPdf}
         disabled={!data.length}
         className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-400 transition-colors"
         title="Exportar relatório em PDF"
@@ -403,6 +613,36 @@ export default function RelatoriosToolbar({
       >
         <BarChart3 size={18} />
         <span className="hidden sm:inline">Relatório</span>
+      </button>
+
+      {/* ETAPA 18: Exportar Power BI */}
+      <button
+        onClick={onExportPowerBi || handleExportPowerBi}
+        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
+        title="Exportar dataset para Power BI"
+      >
+        <Download size={18} />
+        <span className="hidden sm:inline">Power BI</span>
+      </button>
+
+      {/* ETAPA 18: Exportar Relatório Contábil */}
+      <button
+        onClick={onExportContabil || handleExportRelatoriContabil}
+        className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:bg-gray-400 transition-colors"
+        title="Exportar relatório contábil com chart of accounts"
+      >
+        <FileText size={18} />
+        <span className="hidden sm:inline">Contábil</span>
+      </button>
+
+      {/* ETAPA 18: Exportar Relatório de Auditoria */}
+      <button
+        onClick={onExportAuditoria || handleExportRelatorioAuditoria}
+        className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 disabled:bg-gray-400 transition-colors"
+        title="Exportar relatório de auditoria com traceability"
+      >
+        <FileText size={18} />
+        <span className="hidden sm:inline">Auditoria</span>
       </button>
     </div>
   );

@@ -17,11 +17,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useClinicContext } from '@/contexts/useClinicContext';
 import { useToast } from '@/components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { format } from 'date-fns';
 import { stockRequestsApi } from '@/lib/stockApi';
 import StockRequestFulfillDialog from '@/components/clinica/estoque/StockRequestFulfillDialog';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import StockMovementDialog from '@/components/clinica/estoque/StockMovementDialog';
+import { formatLocalDate } from '@/utils/timezoneHelpers';
 
 export default function Requisicoes() {
   const navigate = useNavigate();
@@ -458,9 +458,7 @@ export default function Requisicoes() {
                     return (
                       <tr key={r.id} className="border-t hover:bg-gray-50">
                         <td className="px-4 py-3">
-                          {r.request_date
-                            ? format(new Date(r.request_date + 'T00:00:00'), 'dd/MM/yyyy')
-                            : '-'}
+                          {formatLocalDate(r.request_date) || '-'}
                         </td>
                         <td className="px-4 py-3">{r.requested_by || '-'}</td>
                         <td className="px-4 py-3">{r.location?.name || '-'}</td>
@@ -582,9 +580,7 @@ export default function Requisicoes() {
             <div className="text-sm text-gray-700 mb-3">
               <div>
                 <span className="text-gray-500">Data:</span>{' '}
-                {itemsHeader.request_date
-                  ? format(new Date(itemsHeader.request_date + 'T00:00:00'), 'dd/MM/yyyy')
-                  : '-'}
+                {formatLocalDate(itemsHeader.request_date) || '-'}
               </div>
               <div>
                 <span className="text-gray-500">Local:</span> {itemsHeader.location?.name || '-'}
@@ -607,6 +603,7 @@ export default function Requisicoes() {
                 <tr>
                   <th className="px-3 py-2 text-left">Selecionar</th>
                   <th className="px-3 py-2 text-left">Item</th>
+                  <th className="px-3 py-2 text-left">Unidade</th>
                   <th className="px-3 py-2 text-right">Solicitado</th>
                   <th className="px-3 py-2 text-right">Entregue</th>
                   <th className="px-3 py-2 text-right">Pendente</th>
@@ -627,6 +624,7 @@ export default function Requisicoes() {
                       />
                     </td>
                     <td className="px-3 py-2">{it.item?.name || '-'}</td>
+                    <td className="px-3 py-2">{it.item?.unit_symbol || 'un'}</td>
                     <td className="px-3 py-2 text-right">{it.qty}</td>
                     <td className="px-3 py-2 text-right">{it.delivered_qty || 0}</td>
                     <td className="px-3 py-2 text-right">
@@ -765,7 +763,8 @@ function exportCSV() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `requisicoes_${new Date().toISOString().slice(0, 10)}.csv`;
+    const fileDate = formatLocalDate(new Date().toISOString().slice(0, 10)).replace(/\//g, '-');
+    a.download = `requisicoes_${fileDate}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

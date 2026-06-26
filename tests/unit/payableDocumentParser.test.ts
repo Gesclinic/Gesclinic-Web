@@ -120,6 +120,165 @@ describe('payableDocumentParser', () => {
     expect(parsed?.metadata.document_installments).toEqual(parsed?.installments);
   });
 
+  it('extrai numero e valor em XML NFS-e com tags municipais', async () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+      <CompNfse>
+        <Nfse>
+          <InfNfse>
+            <Numero>445566</Numero>
+            <DataEmissao>2026-06-20T10:15:00</DataEmissao>
+            <PrestadorServico>
+              <RazaoSocial>Clinica Diagnostica ABC</RazaoSocial>
+              <Cnpj>99888777000166</Cnpj>
+            </PrestadorServico>
+            <Servico>
+              <Valores>
+                <ValorLiquidoNfse>1450.35</ValorLiquidoNfse>
+                <ValorIss>73.20</ValorIss>
+              </Valores>
+              <Discriminacao>Exames laboratoriais</Discriminacao>
+            </Servico>
+          </InfNfse>
+        </Nfse>
+      </CompNfse>`;
+
+    const file = new File([xml], 'nfse-municipal.xml', { type: 'application/xml' });
+    const parsed = await parsePayableDocumentFile(file);
+
+    expect(parsed?.document_type).toBe('nfse');
+    expect(parsed?.supplier_name).toBe('Clinica Diagnostica ABC');
+    expect(parsed?.document_number).toBe('99888777000166');
+    expect(parsed?.invoice_number).toBe('445566');
+    expect(parsed?.amount).toBe(1450.35);
+    expect(parsed?.taxes.iss).toBe(73.2);
+    expect(parsed?.metadata.document_extraction.fields.nf_number).toBe('445566');
+    expect(parsed?.metadata.document_extraction.fields.numero_nota).toBe('445566');
+    expect(parsed?.metadata.document_extraction.fields.guide_number).toBe('445566');
+  });
+
+  it('nao usa chave de acesso de 44 digitos como numero da NF', async () => {
+    const accessKey = '35260212345678000195550010000123456789012345';
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+      <nfeProc>
+        <NFe>
+          <infNFe Id="NFe${accessKey}">
+            <ide>
+              <mod>55</mod>
+              <dhEmi>2026-06-22T11:00:00-03:00</dhEmi>
+            </ide>
+            <emit>
+              <CNPJ>11222333000144</CNPJ>
+              <xNome>Fornecedor Chave LTDA</xNome>
+            </emit>
+            <total>
+              <ICMSTot>
+                <vNF>120.00</vNF>
+              </ICMSTot>
+            </total>
+            <chNFe>${accessKey}</chNFe>
+          </infNFe>
+        </NFe>
+      </nfeProc>`;
+
+    const file = new File([xml], 'nfe-chave.xml', { type: 'application/xml' });
+    const parsed = await parsePayableDocumentFile(file);
+
+    expect(parsed?.document_type).toBe('nfe');
+    expect(parsed?.invoice_number).toBe('12345');
+    expect(parsed?.invoice_number).not.toBe(accessKey);
+    expect(parsed?.metadata.document_extraction.fields.guide_number).toBe('12345');
+    expect(parsed?.amount).toBe(120);
+  });
+
+  it('prioriza nNF exato em NF-e e ignora Numero generico de outros blocos', async () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+      <nfeProc>
+        <NFe>
+          <infNFe>
+            <ide>
+              <mod>55</mod>
+              <nNF>987654</nNF>
+            </ide>
+            <emit>
+              <CNPJ>11222333000144</CNPJ>
+              <xNome>Fornecedor Exato LTDA</xNome>
+            </emit>
+            <cobr>
+              <fat>
+                <Numero>44444444444444444444444444444444444444444444</Numero>
+              </fat>
+            </cobr>
+            <total><ICMSTot><vNF>350.00</vNF></ICMSTot></total>
+          </infNFe>
+        </NFe>
+      </nfeProc>`;
+
+    const file = new File([xml], 'nfe-prioridade.xml', { type: 'application/xml' });
+    const parsed = await parsePayableDocumentFile(file);
+
+    expect(parsed?.document_type).toBe('nfe');
+    expect(parsed?.invoice_number).toBe('987654');
+    expect(parsed?.invoice_number).not.toBe('44444444444444444444444444444444444444444444');
+  });
+
+  it('infere numero da NF pelo nome do arquivo em NFS-e quando XML nao traz tag de numero', async () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+      <CompNfse>
+        <Nfse>
+          <InfNfse>
+            <DataEmissao>2026-06-20T10:15:00</DataEmissao>
+            <PrestadorServico>
+              <RazaoSocial>STERILE SERVICOS DE ESTERILIZACAO LTDA</RazaoSocial>
+              <Cnpj>12345678000199</Cnpj>
+            </PrestadorServico>
+            <Servico>
+              <Valores>
+                <ValorLiquidoNfse>493.66</ValorLiquidoNfse>
+              </Valores>
+            </Servico>
+          </InfNfse>
+        </Nfse>
+      </CompNfse>`;
+
+    const file = new File(
+      [xml],
+      '41048081203937120000108000000003345426060000000015.xml',
+      { type: 'application/xml' },
+    );
+    const parsed = await parsePayableDocumentFile(file);
+
+    expect(parsed?.document_type).toBe('nfse');
+    expect(parsed?.invoice_number).toBe('33454');
+    expect(parsed?.metadata.document_extraction.fields.guide_number).toBe('33454');
+    expect(parsed?.amount).toBe(493.66);
+  });
+
+  it('extrai numero da NF pela tag nDFSe quando presente no XML NFS-e', async () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+      <NFSe>
+        <infNFSe>
+          <nNFSe>4000</nNFSe>
+          <nDFSe>15111734</nDFSe>
+          <emit>
+            <xNome>MANAGER CONSULTORIA EM INFORMATICA LTDA</xNome>
+            <CNPJ>80750714000156</CNPJ>
+          </emit>
+          <valores>
+            <vBC>3656.70</vBC>
+          </valores>
+        </infNFSe>
+      </NFSe>`;
+
+    const file = new File([
+      xml,
+    ], '42054072280750714000156000000000400026064873828638.xml', { type: 'application/xml' });
+    const parsed = await parsePayableDocumentFile(file);
+
+    expect(parsed?.document_type).toBe('nfse');
+    expect(parsed?.invoice_number).toBe('15111734');
+    expect(parsed?.metadata.document_extraction.fields.guide_number).toBe('15111734');
+  });
+
   it('extrai campos basicos de cupom fiscal em texto', async () => {
     const text = `Farmacia Exemplo LTDA
       CNPJ: 11.222.333/0001-44

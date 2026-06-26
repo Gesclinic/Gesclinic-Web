@@ -1,5 +1,8 @@
 import { supabase } from '@/lib/customSupabaseClient';
 import { logReceivableCreated, logPaymentReceived } from '@/lib/auditFinancialIntegration.js';
+import { classifyReceivableForEnterprise } from '@/lib/enterpriseChartOfAccounts';
+import { resolveEnterpriseCostCenterId } from '@/lib/enterpriseCostCenters';
+import { resolveCostCenterAllocation } from '@/lib/costCenterAllocationEngine';
 
 function invalidateFinanceCaches(clinicId) {
   if (!clinicId) return;
@@ -331,6 +334,32 @@ async function insertFinancialTransactionVariants(rows) {
   if (newError) throw fullError;
 }
 
+function buildReceivableAllocatedRows(baseRow, allocationRows, totalAmount) {
+  const total = Number(totalAmount || 0);
+  const rows = (allocationRows || [])
+    .filter((item) => item?.target_cost_center_id && Number(item.amount || 0) > 0)
+    .map((item) => {
+      const allocatedAmount = Number(item.amount || 0);
+      const percentage = total > 0 ? Number(((allocatedAmount / total) * 100).toFixed(6)) : null;
+      return {
+        ...baseRow,
+        amount: allocatedAmount,
+        cost_center_id: item.target_cost_center_id,
+        centro_custo_id: item.target_cost_center_id,
+        metadata: {
+          allocation: {
+            applied: true,
+            target_cost_center_id: item.target_cost_center_id,
+            percentage,
+            source: 'cost_center_allocation_rule',
+          },
+        },
+      };
+    });
+
+  return rows.length > 0 ? rows : [{ ...baseRow, amount: total }];
+}
+
 async function syncReceivableFinancialTransactions(row) {
   if (!row?.clinic_id || !row?.id) return;
 
@@ -356,6 +385,7 @@ async function syncReceivableFinancialTransactions(row) {
     const grossAmount = Number(row.gross_amount ?? row.amount ?? 0);
     const discountAmount = Number(row.discount_value ?? 0);
     const feeAmount = Number(row.fee_amount ?? 0);
+    const sourceCostCenterId = row.cost_center_id || row.centro_custo_id || null;
     const dates = getReceivableFinancialStatus(row);
     const transactionDate = parseDateOnly(row.received_date || row.received_at || row.due_date || row.invoice_date) || new Date().toISOString().split('T')[0];
     const competencyDate = parseDateOnly(row.competency_date || row.invoice_date || row.due_date || transactionDate);
@@ -383,39 +413,66 @@ async function syncReceivableFinancialTransactions(row) {
     const rows = [];
 
     if (grossAmount > 0 && dates.status !== 'canceled') {
-      rows.push({
+      const grossBase = {
         ...base,
         description: `Receita bruta - ${description}`,
-        amount: grossAmount,
         type: 'revenue',
         category: 'medical_service',
         transaction_type: 'INCOME',
         notes: 'Receita bruta originada em contas a receber',
-      });
+      };
+
+      const allocationRows = sourceCostCenterId
+        ? await resolveCostCenterAllocation({
+          clinicId: row.clinic_id,
+          sourceCostCenterId,
+          amount: grossAmount,
+        })
+        : [];
+
+      rows.push(...buildReceivableAllocatedRows(grossBase, allocationRows, grossAmount));
     }
 
     if (discountAmount > 0 && dates.status !== 'canceled') {
-      rows.push({
+      const discountBase = {
         ...base,
         description: `Desconto concedido - ${description}`,
-        amount: discountAmount,
         type: 'deduction',
         category: 'revenue_deduction',
         transaction_type: 'ADJUSTMENT',
         notes: 'Dedução da receita originada em contas a receber',
-      });
+      };
+
+      const allocationRows = sourceCostCenterId
+        ? await resolveCostCenterAllocation({
+          clinicId: row.clinic_id,
+          sourceCostCenterId,
+          amount: discountAmount,
+        })
+        : [];
+
+      rows.push(...buildReceivableAllocatedRows(discountBase, allocationRows, discountAmount));
     }
 
     if (feeAmount > 0 && dates.status !== 'canceled') {
-      rows.push({
+      const feeBase = {
         ...base,
         description: `Taxa de cartão - ${description}`,
-        amount: feeAmount,
         type: 'expense',
         category: 'card_fee',
         transaction_type: 'EXPENSE',
         notes: 'Despesa financeira de taxa de cartão originada em contas a receber',
-      });
+      };
+
+      const allocationRows = sourceCostCenterId
+        ? await resolveCostCenterAllocation({
+          clinicId: row.clinic_id,
+          sourceCostCenterId,
+          amount: feeAmount,
+        })
+        : [];
+
+      rows.push(...buildReceivableAllocatedRows(feeBase, allocationRows, feeAmount));
     }
 
     await insertFinancialTransactionVariants(rows);
@@ -663,9 +720,82 @@ async function attachLatestGlosas(clinicId, rows = []) {
     return rows || [];
   }
 
-  const ids = rows.map((row) => row.id).filter(Boolean);
+  // Extrair IDs únicos de payers e professionals
+  const payerIds = [...new Set(rows.map(r => r.payer_id).filter(Boolean))];
+  const professionalIds = [...new Set(rows.map(r => r.professional_id).filter(Boolean))];
+  const chartAccountIds = [...new Set(rows.map(r => r.chart_account_id).filter(Boolean))];
+  
+  // Contar quantos têm chart_account_id NULL (precisam classificação automática)
+  const needsClassification = rows.filter(r => !r.chart_account_id).length;
+
+  console.log('🔍 [attachLatestGlosas] Enriquecimento de dados:', {
+    payerIds: payerIds.length,
+    professionalIds: professionalIds.length,
+    chartAccountIds: chartAccountIds.length,
+    needsClassification,
+    totalRows: rows.length,
+  });
+
+  // Buscar nomes de payers, professionals e chart_of_accounts
+  const [payersMap, professionalsMap, chartsMap] = await Promise.all([
+    payerIds.length > 0 ? fetchPayersMap(clinicId, payerIds) : Promise.resolve(new Map()),
+    professionalIds.length > 0 ? fetchProfessionalsMap(clinicId, professionalIds) : Promise.resolve(new Map()),
+    chartAccountIds.length > 0 ? fetchChartsMap(clinicId, chartAccountIds) : Promise.resolve(new Map()),
+  ]);
+
+  console.log('📦 [attachLatestGlosas] Dados enriquecidos:', {
+    payersMapSize: payersMap.size,
+    professionalsMapSize: professionalsMap.size,
+    chartsMapSize: chartsMap.size,
+  });
+
+  // Enriquecer rows com nomes E classificação automática
+  const enrichedRows = await Promise.all(rows.map(async (row, idx) => {
+    // Se chart_account_id for NULL, classificar automaticamente
+    let classifiedChartAccountId = row.chart_account_id;
+    let classifiedChartName = null;
+    
+    if (!classifiedChartAccountId) {
+      try {
+        const classification = await classifyReceivableForEnterprise(clinicId, row, { strict: false });
+        if (classification.chartAccountId) {
+          classifiedChartAccountId = classification.chartAccountId;
+          classifiedChartName = chartsMap.get(classifiedChartAccountId);
+        }
+      } catch (e) {
+        console.warn('⚠️ Classificação automática falhou para row', idx, ':', e.message);
+      }
+    }
+    
+    const enriched = {
+      ...row,
+      chart_account_id: classifiedChartAccountId || row.chart_account_id,
+      convenio_name: payersMap.get(row.payer_id) || row.convenio_name || null,
+      professional_name: row.professional_id 
+        ? (professionalsMap.get(row.professional_id) || row.professional_name || 'Não identificado')
+        : 'Não identificado',
+      plano_contas_name: classifiedChartName || chartsMap.get(classifiedChartAccountId) || row.plano_contas_name || 'Não classificado',
+      guide_number: row.guide_number || null, // Vem do XML
+    };
+    
+    // Log primeiros 3 registros com TODOS os campos relevantes
+    if (idx < 3) {
+      console.log(`  🔍 Row ${idx} enriquecido:`, {
+        id: row.id,
+        patient_name: row.patient_name,
+        convenio_name: enriched.convenio_name,
+        professional_name: enriched.professional_name,
+        plano_contas_name: enriched.plano_contas_name,
+        guide_number: enriched.guide_number,
+      });
+    }
+    
+    return enriched;
+  }));
+
+  const ids = enrichedRows.map((row) => row.id).filter(Boolean);
   if (!ids.length) {
-    return rows;
+    return enrichedRows;
   }
 
   const { data, error } = await supabase
@@ -677,7 +807,7 @@ async function attachLatestGlosas(clinicId, rows = []) {
 
   if (error) {
     console.warn('attachLatestGlosas skipped:', error.message);
-    return rows;
+    return enrichedRows;
   }
 
   const latestByReceivable = new Map();
@@ -687,7 +817,7 @@ async function attachLatestGlosas(clinicId, rows = []) {
     }
   });
 
-  return rows.map((row) => {
+  return enrichedRows.map((row) => {
     const latestGlosa = latestByReceivable.get(row.id) || row.last_glosa || null;
     return {
       ...row,
@@ -697,6 +827,55 @@ async function attachLatestGlosas(clinicId, rows = []) {
       glosa_evidence_name: latestGlosa?.evidence_name || row.glosa_evidence_name || null,
     };
   });
+}
+
+// Helper functions to fetch related data
+async function fetchPayersMap(clinicId, payerIds) {
+  if (!payerIds.length) return new Map();
+  const { data, error } = await supabase
+    .from('payers')
+    .select('id, name')
+    .eq('clinic_id', clinicId)
+    .in('id', payerIds);
+  
+  if (error) {
+    console.warn('fetchPayersMap error:', error.message);
+    return new Map();
+  }
+  
+  return new Map((data || []).map(p => [p.id, p.name]));
+}
+
+async function fetchProfessionalsMap(clinicId, professionalIds) {
+  if (!professionalIds.length) return new Map();
+  const { data, error } = await supabase
+    .from('professionals')
+    .select('id, name')
+    .eq('clinic_id', clinicId)
+    .in('id', professionalIds);
+  
+  if (error) {
+    console.warn('fetchProfessionalsMap error:', error.message);
+    return new Map();
+  }
+  
+  return new Map((data || []).map(p => [p.id, p.name]));
+}
+
+async function fetchChartsMap(clinicId, chartAccountIds) {
+  if (!chartAccountIds.length) return new Map();
+  const { data, error } = await supabase
+    .from('chart_of_accounts')
+    .select('id, name')
+    .eq('clinic_id', clinicId)
+    .in('id', chartAccountIds);
+  
+  if (error) {
+    console.warn('fetchChartsMap error:', error.message);
+    return new Map();
+  }
+  
+  return new Map((data || []).map(c => [c.id, c.name]));
 }
 
 /**
@@ -986,7 +1165,23 @@ export async function listReceivables({
  */
 export async function createReceivable(clinicId, payload) {
   const installments = Math.max(1, Number.parseInt(payload.total_parcelas || '1', 10) || 1);
-  const base = normalizeReceivablePayload(clinicId, payload);
+  const classification = await classifyReceivableForEnterprise(clinicId, payload, { strict: true });
+  const resolvedCostCenterId = await resolveEnterpriseCostCenterId(clinicId, payload, 'receivable');
+  const base = normalizeReceivablePayload(clinicId, {
+    ...payload,
+    chart_account_id: payload.chart_account_id || classification.chartAccountId,
+    plano_contas_id: payload.plano_contas_id || classification.chartAccountId,
+    centro_custo_id: payload.centro_custo_id || classification.costCenterId || resolvedCostCenterId,
+    cost_center_id: payload.cost_center_id || classification.costCenterId || resolvedCostCenterId,
+  });
+
+  if (!base.chart_account_id) {
+    throw new Error('Receita sem classificação no plano de contas ERP.');
+  }
+
+  if (!base.centro_custo_id && !base.cost_center_id) {
+    throw new Error('Receita sem centro de custo. Configure o Centro de Custos ERP e tente novamente.');
+  }
   const totalAmount = Number(base.amount || 0);
   const totalDiscount = Number(base.discount_value || 0);
   const totalNetValue = Number(base.net_value || 0);

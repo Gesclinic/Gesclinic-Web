@@ -1,5 +1,5 @@
 import React from 'react';
-import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
 interface DateInputProps
   extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
@@ -14,22 +14,18 @@ interface DateInputProps
  */
 export const DateInput = React.forwardRef<HTMLInputElement, DateInputProps>(
   ({ value, onChange, ...props }, ref) => {
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      // O input type="date" sempre retorna YYYY-MM-DD
-      // Passamos como está para o onChange do parent
-      onChange?.(e);
-    };
-
     return (
-      <Input
+      <input
         ref={ref}
-        type="date"
+        type="text"
+        inputMode="numeric"
         value={value || ''}
-        onChange={handleChange}
-        style={{
-          // Force locale pt-BR para display
-          WebkitLocale: 'pt-BR',
-        }}
+        onChange={onChange}
+        placeholder="dd/mm/aaaa"
+        className={cn(
+          'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+          props.className,
+        )}
         {...props}
       />
     );

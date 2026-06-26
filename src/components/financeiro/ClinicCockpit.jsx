@@ -1,10 +1,17 @@
 import React, { useMemo } from 'react';
 import { Card } from '@/components/ui/card';
-import { Gauge, TrendingUp, AlertCircle } from 'lucide-react';
+import { Gauge } from 'lucide-react';
+
+const closedStatuses = new Set(['paid', 'pago', 'paga', 'received', 'recebido', 'quitado', 'processed', 'canceled', 'cancelado', 'cancelada', 'reversed', 'estornado']);
+
+function isOpenPastDue(item = {}) {
+  if (closedStatuses.has(String(item.status || '').toLowerCase()) || !item.due_date) return false;
+  return new Date(`${String(item.due_date).split('T')[0]}T00:00:00`) < new Date(new Date().toISOString().split('T')[0] + 'T00:00:00');
+}
 
 /**
- * 📊 Clinic Cockpit - Painel de Controle com 5 Indicadores
- * 
+ * Clinic Cockpit - Painel executivo com 5 indicadores
+ *
  * Exibe saúde financeira em 5 dimensões (0-100 cada)
  * Gauge visual com cores: Verde (80+), Amarelo (50-80), Vermelho (<50)
  */
@@ -13,11 +20,11 @@ export default function ClinicCockpit({ summary, receivables = [], payables = []
     // Se healthScores estão disponíveis (vindos do dashboardDataService), usar diretamente
     if (healthScores) {
       return {
-        liquidity: { score: healthScores.liquidity, label: 'Liquidez', icon: '💧' },
-        balance: { score: healthScores.balance, label: 'Saldo/Cobertura', icon: '💰' },
-        flow: { score: healthScores.flow, label: 'Fluxo', icon: '📊' },
-        receivables: { score: healthScores.receivables, label: 'Recebíveis', icon: '📥' },
-        efficiency: { score: healthScores.efficiency, label: 'Eficiência', icon: '⚡' },
+        liquidity: { score: healthScores.liquidity, label: 'Liquidez', icon: 'LQ' },
+        balance: { score: healthScores.balance, label: 'Cobertura de caixa', icon: 'CX' },
+        flow: { score: healthScores.flow, label: 'Fluxo de caixa', icon: 'FC' },
+        receivables: { score: healthScores.receivables, label: 'Recebíveis', icon: 'RB' },
+        efficiency: { score: healthScores.efficiency, label: 'Eficiência', icon: 'EF' },
       };
     }
 
@@ -39,7 +46,7 @@ export default function ClinicCockpit({ summary, receivables = [], payables = []
     // Score 4: Recebíveis (0-100) - % de contas vencidas
     let receivablesScore = 100;
     if (receivables.length > 0) {
-      const overdue = receivables.filter((r) => new Date(r.due_date) < new Date()).length;
+      const overdue = receivables.filter(isOpenPastDue).length;
       receivablesScore = Math.max(0, 100 - (overdue / receivables.length) * 100);
     }
 
@@ -51,11 +58,11 @@ export default function ClinicCockpit({ summary, receivables = [], payables = []
     }
 
     return {
-      liquidity: { score: liquidityScore, label: 'Liquidez', icon: '💧' },
-      balance: { score: balanceScore, label: 'Saldo/Cobertura', icon: '💰' },
-      flow: { score: flowScore, label: 'Fluxo', icon: '📊' },
-      receivables: { score: receivablesScore, label: 'Recebíveis', icon: '📥' },
-      efficiency: { score: efficiencyScore, label: 'Eficiência', icon: '⚡' },
+      liquidity: { score: liquidityScore, label: 'Liquidez', icon: 'LQ' },
+      balance: { score: balanceScore, label: 'Cobertura de caixa', icon: 'CX' },
+      flow: { score: flowScore, label: 'Fluxo de caixa', icon: 'FC' },
+      receivables: { score: receivablesScore, label: 'Recebíveis', icon: 'RB' },
+      efficiency: { score: efficiencyScore, label: 'Eficiência', icon: 'EF' },
     };
   }, [summary, receivables, healthScores, loading]);
 
@@ -92,7 +99,7 @@ export default function ClinicCockpit({ summary, receivables = [], payables = []
     <div className="space-y-4">
       <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
         <Gauge className="w-5 h-5 text-blue-600" />
-        Cockpit de Saúde (5 Dimensões)
+        Painel executivo financeiro (5 dimensões)
       </h2>
 
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
@@ -109,7 +116,7 @@ export default function ClinicCockpit({ summary, receivables = [], payables = []
             <div className="relative z-10">
               {/* Icon & Label */}
               <div className="flex items-center justify-between mb-3">
-                <span className="text-2xl">{dimension.icon}</span>
+                <span className="text-sm font-bold text-gray-500">{dimension.icon}</span>
                 <p className="text-xs font-semibold text-gray-600 text-right">{dimension.label}</p>
               </div>
 
@@ -150,7 +157,7 @@ export default function ClinicCockpit({ summary, receivables = [], payables = []
               {/* Status Text */}
               <div className="text-center">
                 <p className={`text-xs font-semibold ${dimension.score >= 80 ? 'text-green-700' : dimension.score >= 50 ? 'text-yellow-700' : 'text-red-700'}`}>
-                  {dimension.score >= 80 ? '✅ Excelente' : dimension.score >= 50 ? '⚠️ Atenção' : '🔴 Crítico'}
+                  {dimension.score >= 80 ? 'Estável' : dimension.score >= 50 ? 'Atenção' : 'Crítico'}
                 </p>
               </div>
             </div>
@@ -162,7 +169,7 @@ export default function ClinicCockpit({ summary, receivables = [], payables = []
       <Card className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-semibold text-blue-900 mb-1">Score Geral de Saúde</p>
+            <p className="text-sm font-semibold text-blue-900 mb-1">Índice consolidado</p>
             <p className="text-xs text-blue-700">Média das 5 dimensões</p>
           </div>
           <div className="text-right">

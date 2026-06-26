@@ -76,7 +76,8 @@ const normalizeStockSupplier = (row) => ({
   contact_name: row?.contact_person || '',
   email: row?.contact_email || '',
   phone: row?.contact_phone || '',
-  street: row?.address || '',
+  // Prefer dedicated street column; fallback to full address for legacy records.
+  street: row?.street || row?.address || '',
   neighborhood: row?.neighborhood || '',
   postal_code: row?.zip_code || '',
 });
@@ -166,13 +167,24 @@ const classifyStockItem = (item) => {
   return { category: 'Materiais de Consumo', subcategory: 'Consumo Geral' };
 };
 
+const parseUnitCostFromNotes = (notes) => {
+  const text = String(notes || '');
+  const match = text.match(/Custo\s+unitario\s+R\$\s*([0-9.,]+)/i);
+  if (!match?.[1]) return null;
+  const normalized = match[1].includes(',')
+    ? match[1].replace(/\./g, '').replace(',', '.')
+    : match[1];
+  const value = Number(normalized);
+  return Number.isFinite(value) ? value : null;
+};
+
 const normalizeStockMovement = (row) => ({
   ...row,
   move_date: row?.created_at ? String(row.created_at).slice(0, 10) : null,
   type: row?.movement_type || null,
   qty: row?.quantity ?? null,
   item_id: row?.stock_item_id || null,
-  unit_cost: row?.unit_cost ?? null,
+  unit_cost: row?.unit_cost ?? parseUnitCostFromNotes(row?.notes),
 });
 
 export const stockCategoriesApi = {
@@ -544,6 +556,21 @@ export const stockItemsApi = {
     }
     return data[0];
   },
+  updateStatus: async (id, isActive) => {
+    const { data, error } = await supabase
+      .from('stock_items')
+      .update({ is_active: Boolean(isActive) })
+      .eq('id', id)
+      .select('id, is_active');
+
+    if (error) {
+      throw error;
+    }
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+    return data[0];
+  },
   remove: async (id) => {
     return handleResponse(await supabase.from('stock_items').delete().eq('id', id));
   },
@@ -554,7 +581,7 @@ export const stockSuppliersApi = {
     const { data, error } = await supabase
       .from('stock_suppliers')
       .select(
-        'id, name, cnpj, contact_person, contact_email, contact_phone, address, neighborhood, city, state, zip_code, active',
+        'id, name, cnpj, contact_person, contact_email, contact_phone, street, number, address, neighborhood, city, state, zip_code, active',
       )
       .eq('clinic_id', clinicId)
       .order('name');
@@ -571,7 +598,7 @@ export const stockSuppliersApi = {
 
     const { data, error } = await supabase
       .from('stock_suppliers')
-      .select('id, name, cnpj, contact_person, contact_email, contact_phone, address, neighborhood, city, state, zip_code, active')
+      .select('id, name, cnpj, contact_person, contact_email, contact_phone, street, number, address, neighborhood, city, state, zip_code, active')
       .eq('clinic_id', clinicId)
       .or(`cnpj.eq.${cnpj},cnpj.eq.${document}`)
       .limit(1)
@@ -585,7 +612,7 @@ export const stockSuppliersApi = {
   get: async (id) => {
     const { data, error } = await supabase
       .from('stock_suppliers')
-      .select('id, name, cnpj, contact_person, contact_email, contact_phone, address, neighborhood, city, state, zip_code, active')
+      .select('id, name, cnpj, contact_person, contact_email, contact_phone, street, number, address, neighborhood, city, state, zip_code, active')
       .eq('id', id)
       .single();
 
@@ -610,7 +637,9 @@ export const stockSuppliersApi = {
       contact_person: payload?.contact_person ?? payload?.contact_name ?? publicRegistration?.contact_person,
       contact_email: payload?.contact_email ?? payload?.email ?? publicRegistration?.contact_email,
       contact_phone: payload?.contact_phone ?? payload?.phone ?? publicRegistration?.contact_phone,
-      address: payload?.address ?? payload?.street ?? publicRegistration?.address,
+      street: payload?.street ?? publicRegistration?.street,
+      number: payload?.number ?? publicRegistration?.number,
+      address: payload?.address ?? publicRegistration?.address,
       neighborhood: payload?.neighborhood ?? payload?.district ?? publicRegistration?.neighborhood,
       city: payload?.city ?? publicRegistration?.city,
       state: payload?.state ?? publicRegistration?.state,
@@ -628,6 +657,8 @@ export const stockSuppliersApi = {
       contact_person: enrichedPayload.contact_person ?? null,
       contact_email: enrichedPayload.contact_email ?? null,
       contact_phone: enrichedPayload.contact_phone ?? null,
+      street: enrichedPayload.street ?? null,
+      number: enrichedPayload.number ?? null,
       address: enrichedPayload.address ?? null,
       neighborhood: enrichedPayload.neighborhood ?? null,
       city: enrichedPayload.city ?? null,
@@ -642,6 +673,8 @@ export const stockSuppliersApi = {
         contact_person: existing.contact_person ? undefined : supplierPayload.contact_person,
         contact_email: existing.contact_email ? undefined : supplierPayload.contact_email,
         contact_phone: existing.contact_phone ? undefined : supplierPayload.contact_phone,
+        street: existing.street ? undefined : supplierPayload.street,
+        number: existing.number ? undefined : supplierPayload.number,
         address: existing.address ? undefined : supplierPayload.address,
         neighborhood: existing.neighborhood ? undefined : supplierPayload.neighborhood,
         city: existing.city ? undefined : supplierPayload.city,
@@ -665,7 +698,9 @@ export const stockSuppliersApi = {
       contact_person: payload?.contact_person ?? payload?.contact_name ?? null,
       contact_email: payload?.contact_email ?? payload?.email ?? null,
       contact_phone: payload?.contact_phone ?? payload?.phone ?? null,
-      address: payload?.address ?? payload?.street ?? null,
+      street: payload?.street ?? null,
+      number: payload?.number ?? null,
+      address: payload?.address ?? null,
       neighborhood: payload?.neighborhood ?? payload?.district ?? null,
       city: payload?.city ?? null,
       state: payload?.state ?? null,
@@ -683,7 +718,7 @@ export const stockSuppliersApi = {
     const { data, error } = await supabase
       .from('stock_suppliers')
       .insert({ ...safe, clinic_id: clinicId })
-      .select('id, name, cnpj, contact_person, contact_email, contact_phone, address, neighborhood, city, state, zip_code, active');
+      .select('id, name, cnpj, contact_person, contact_email, contact_phone, street, number, address, neighborhood, city, state, zip_code, active');
 
     if (error) {
       if (isUniqueSupplierDocumentError(error)) {
@@ -704,7 +739,9 @@ export const stockSuppliersApi = {
       contact_person: payload?.contact_person ?? payload?.contact_name,
       contact_email: payload?.contact_email ?? payload?.email,
       contact_phone: payload?.contact_phone ?? payload?.phone,
-      address: payload?.address ?? payload?.street,
+      street: payload?.street,
+      number: payload?.number,
+      address: payload?.address,
       neighborhood: payload?.neighborhood ?? payload?.district,
       city: payload?.city,
       state: payload?.state,
@@ -733,7 +770,7 @@ export const stockSuppliersApi = {
       .from('stock_suppliers')
       .update(safe)
       .eq('id', id)
-      .select('id, name, cnpj, contact_person, contact_email, contact_phone, address, neighborhood, city, state, zip_code, active');
+      .select('id, name, cnpj, contact_person, contact_email, contact_phone, street, number, address, neighborhood, city, state, zip_code, active');
 
     if (error) {
       if (isUniqueSupplierDocumentError(error)) {
@@ -872,36 +909,42 @@ export const stockMovementsApi = {
   list: async (clinicId, filters = {}) => {
     console.log('🔍 stockMovementsApi.list chamado:', { clinicId, filters });
 
-    let query = supabase
-      .from('stock_movements')
-      .select(
-        `
-        id, created_at, movement_type, quantity, notes,
-        stock_item_id, location_id,
-        item:stock_items ( name )
-      `,
-      )
-      .eq('clinic_id', clinicId)
-      .order('created_at', { ascending: false });
+    const applyFilters = (query) => {
+      let scoped = query;
+      if (filters.startDate) {
+        scoped = scoped.gte('created_at', filters.startDate);
+      }
+      if (filters.endDate) {
+        scoped = scoped.lte('created_at', filters.endDate);
+      }
+      if (filters.itemId) {
+        scoped = scoped.eq('stock_item_id', filters.itemId);
+      }
+      if (filters.locationId) {
+        scoped = scoped.eq('location_id', filters.locationId);
+      }
+      if (filters.type) {
+        scoped = scoped.eq('movement_type', filters.type);
+      }
+      return scoped;
+    };
 
-    // ✅ APLICAR FILTROS APENAS SE EXISTIREM
-    if (filters.startDate) {
-      query = query.gte('created_at', filters.startDate);
-    }
-    if (filters.endDate) {
-      query = query.lte('created_at', filters.endDate);
-    }
-    if (filters.itemId) {
-      query = query.eq('stock_item_id', filters.itemId);
-    }
-    if (filters.locationId) {
-      query = query.eq('location_id', filters.locationId);
-    }
-    if (filters.type) {
-      query = query.eq('movement_type', filters.type);
-    }
+    const buildQuery = () => applyFilters(
+      supabase
+        .from('stock_movements')
+        .select(
+          `
+          id, created_at, movement_type, quantity, notes,
+          stock_item_id, location_id,
+          item:stock_items ( name, unit_symbol ),
+          location:stock_locations ( name )
+        `,
+        )
+        .eq('clinic_id', clinicId)
+        .order('created_at', { ascending: false }),
+    );
 
-    const { data, error } = await query.limit(100);
+    const { data, error } = await buildQuery().limit(100);
 
     console.log('📦 Resultado da query:', { data, error, count: data?.length });
 
@@ -948,12 +991,37 @@ export const stockMovementsApi = {
       }
       const quantity = Number(item.quantity || item.qty || 0);
       const totalValue = Number(item.total_value || item.total || 0);
-      const unitValue = Number(item.unit_value || item.unit || (quantity > 0 ? totalValue / quantity : 0));
+      let unitValue = Number(item.unit_value || item.unit || 0);
+
+      // Normalize unit_cost intelligently:
+      // 1. Prefer calculated value (totalValue / quantity) when unit_value seems wrong
+      // 2. unit_value is "wrong" if it's missing, zero, or equals totalValue
+      // 3. Only use unit_value directly if it's reasonable (< totalValue and reasonable per-unit price)
+      
+      if (quantity > 0 && Number.isFinite(totalValue) && totalValue > 0) {
+        const calculatedUnitValue = totalValue / quantity;
+        
+        // If unit_value is missing or zero, use calculated
+        if (!Number.isFinite(unitValue) || unitValue <= 0) {
+          unitValue = calculatedUnitValue;
+        }
+        // If unit_value equals totalValue, it's clearly wrong - use calculated
+        else if (Math.abs(unitValue - totalValue) < 0.01) {
+          unitValue = calculatedUnitValue;
+        }
+        // If unit_value is much larger than reasonable per-unit (e.g., equals totalValue 
+        // in earlier incorrect capture), use calculated
+        else if (unitValue > totalValue * 0.95) {
+          unitValue = calculatedUnitValue;
+        }
+      }
+
       rows.push({
         clinic_id: clinicId,
         stock_item_id: stockItem.id,
         movement_type: 'entry',
         quantity,
+        unit_cost: Number.isFinite(unitValue) && unitValue > 0 ? unitValue : null,
         location_id: location?.id || null,
         reference_type: 'accounts_payable',
         reference_id: payable.id,
@@ -971,10 +1039,21 @@ export const stockMovementsApi = {
       return { created: 0, skipped: true };
     }
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('stock_movements')
       .insert(rows)
       .select('id');
+
+    // Compatibilidade: algumas bases legadas podem não ter unit_cost.
+    if (error && isMissingColumnError(error)) {
+      const fallbackRows = rows.map(({ unit_cost, ...rest }) => rest);
+      const fallback = await supabase
+        .from('stock_movements')
+        .insert(fallbackRows)
+        .select('id');
+      data = fallback.data;
+      error = fallback.error;
+    }
 
     if (error) {
       throw error;
@@ -1001,6 +1080,7 @@ export const stockMovementsApi = {
     const safe = {
       created_at: payload?.created_at ?? payload?.move_date ?? null,
       quantity: payload?.quantity ?? payload?.qty ?? null,
+      unit_cost: payload?.unit_cost ?? payload?.unitCost ?? null,
       notes: payload?.notes ?? null,
       location_id: payload?.location_id ?? null,
       stock_item_id: payload?.stock_item_id ?? payload?.item_id ?? null,

@@ -19,52 +19,52 @@ export function ConciliaoIndicadores({ indicators, loading }) {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
-      {/* Pendentes */}
+      {/* Atenção */}
       <Card className="p-4 border-l-4 border-yellow-400">
         <div className="text-sm font-medium text-gray-600 flex items-center gap-2">
           {CONCILIATION_STATUS_VISUAL[CONCILIATION_STATUS.PENDING].icon}
-          Pendentes
+          Atenção
         </div>
         <div className="text-2xl font-bold text-yellow-600 mt-2">
           {formatCurrency(indicators.pending || 0)}
         </div>
-        <p className="text-xs text-gray-500 mt-1">Aguardando conciliação</p>
+        <p className="text-xs text-gray-500 mt-1">Requer tratativa</p>
       </Card>
 
-      {/* Conciliados */}
+      {/* Estáveis */}
       <Card className="p-4 border-l-4 border-green-400">
         <div className="text-sm font-medium text-gray-600 flex items-center gap-2">
           {CONCILIATION_STATUS_VISUAL[CONCILIATION_STATUS.CONCILIATED].icon}
-          Conciliados
+          Estáveis
         </div>
         <div className="text-2xl font-bold text-green-600 mt-2">
           {formatCurrency(indicators.conciliated || 0)}
         </div>
-        <p className="text-xs text-gray-500 mt-1">Vinculados com sucesso</p>
+        <p className="text-xs text-gray-500 mt-1">Sem pendências</p>
       </Card>
 
-      {/* Ajustados */}
+      {/* Estáveis (Ajustes) */}
       <Card className="p-4 border-l-4 border-blue-400">
         <div className="text-sm font-medium text-gray-600 flex items-center gap-2">
           {CONCILIATION_STATUS_VISUAL[CONCILIATION_STATUS.ADJUSTED].icon}
-          Ajustados
+          Estáveis (Ajustes)
         </div>
         <div className="text-2xl font-bold text-blue-600 mt-2">
           {formatCurrency(indicators.adjusted || 0)}
         </div>
-        <p className="text-xs text-gray-500 mt-1">Lançamentos criados</p>
+        <p className="text-xs text-gray-500 mt-1">Regularizados automaticamente</p>
       </Card>
 
-      {/* Divergentes */}
+      {/* Críticos */}
       <Card className="p-4 border-l-4 border-red-400">
         <div className="text-sm font-medium text-gray-600 flex items-center gap-2">
           {CONCILIATION_STATUS_VISUAL[CONCILIATION_STATUS.DIVERGENT].icon}
-          Divergências
+          Críticos
         </div>
         <div className="text-2xl font-bold text-red-600 mt-2">
           {formatCurrency(indicators.divergent || 0)}
         </div>
-        <p className="text-xs text-gray-500 mt-1">Não bateu</p>
+        <p className="text-xs text-gray-500 mt-1">Divergência relevante</p>
       </Card>
 
       {/* Total Créditos */}

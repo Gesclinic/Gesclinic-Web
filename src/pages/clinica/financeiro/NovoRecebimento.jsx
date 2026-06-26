@@ -429,6 +429,12 @@ export default function NovoRecebimento() {
           const missing = [];
           if (!fields.payer_name) missing.push('pagador');
           if (!fields.amount) missing.push('valor bruto');
+
+          if (fields.payer_name || fields.amount || fields.invoice_number || fields.guide_number) {
+            setDocumentExtraction(extraction);
+            applyExtractionToForm(extraction);
+          }
+
           nextDocuments.push({
             file,
             extraction,

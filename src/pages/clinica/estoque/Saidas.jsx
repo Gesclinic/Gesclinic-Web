@@ -8,7 +8,7 @@ import { Minus, Pencil, Trash2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useClinicContext } from '@/contexts/useClinicContext';
 import { stockMovementsApi } from '@/lib/stockApi';
-import { format } from 'date-fns';
+import { formatLocalDate } from '@/utils/timezoneHelpers';
 
 export default function Saidas() {
   const { toast } = useToast();
@@ -85,6 +85,7 @@ export default function Saidas() {
               <th className="px-4 py-2 text-left">Data</th>
               <th className="px-4 py-2 text-left">Produto</th>
               <th className="px-4 py-2 text-left">Quantidade</th>
+              <th className="px-4 py-2 text-left">Unidade</th>
               <th className="px-4 py-2 text-left">Observação</th>
               <th className="px-4 py-2 text-right">Ações</th>
             </tr>
@@ -93,13 +94,13 @@ export default function Saidas() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={5} className="py-10 text-center text-gray-500">
+                <td colSpan={6} className="py-10 text-center text-gray-500">
                   Carregando...
                 </td>
               </tr>
             ) : movements.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-10 text-center text-gray-500">
+                <td colSpan={6} className="py-10 text-center text-gray-500">
                   Nenhuma saída registrada.
                 </td>
               </tr>
@@ -107,12 +108,11 @@ export default function Saidas() {
               movements.map((mov) => (
                 <tr key={mov.id} className="border-t hover:bg-gray-50">
                   <td className="px-4 py-3">
-                    {mov.move_date
-                      ? format(new Date(mov.move_date + 'T00:00:00'), 'dd/MM/yyyy')
-                      : '-'}
+                      {formatLocalDate(mov.move_date) || '-'}
                   </td>
                   <td className="px-4 py-3">{mov.item?.name || '-'}</td>
                   <td className="px-4 py-3">{mov.qty}</td>
+                  <td className="px-4 py-3">{mov.item?.unit_symbol || 'un'}</td>
                   <td className="px-4 py-3 text-gray-600 text-xs">{mov.notes || '-'}</td>
                   <td className="px-4 py-3 text-right space-x-2">
                     <Button

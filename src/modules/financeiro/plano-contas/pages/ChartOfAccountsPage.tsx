@@ -8,6 +8,8 @@ import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useClinicContext } from '@/contexts/ClinicContext';
 import { Plus, AlertCircle, Upload, FileBarChart, Layers, ListChecks, CheckCircle2 } from 'lucide-react';
 import RelatoriosToolbar from '@/components/financeiro/RelatoriosToolbar';
+import { applyDefaultAccountPlan, repairAccountPlanDescriptions, resetAccountPlan } from '@/lib/accountPlanSeed';
+import { getChartOfAccountById } from '../services/chartOfAccountsApi';
 import { useChartOfAccounts } from '../hooks/useChartOfAccounts';
 import {
   ChartOfAccount,
@@ -41,6 +43,52 @@ const reportColumns = [
   { key: 'acceptsEntries', label: 'Lancamentos', width: 14 },
   { key: 'description', label: 'Descricao', width: 36 },
 ];
+
+const templateExampleRows = [
+  { code: '1', name: 'RECEITAS', type: 'RECEITA', nature: 'CREDORA', level: 1, parentName: '', status: 'Ativa', acceptsEntries: 'Nao', description: 'Grupo raiz de receitas' },
+  { code: '1.1', name: 'Particular', type: 'RECEITA', nature: 'CREDORA', level: 2, parentName: 'RECEITAS', status: 'Ativa', acceptsEntries: 'Sim', description: 'Receitas de pacientes particulares' },
+  { code: '1.2', name: 'Convenios', type: 'RECEITA', nature: 'CREDORA', level: 2, parentName: 'RECEITAS', status: 'Ativa', acceptsEntries: 'Nao', description: 'Receitas por convênios' },
+  { code: '1.2.1', name: 'Unimed', type: 'RECEITA', nature: 'CREDORA', level: 3, parentName: 'Convenios', status: 'Ativa', acceptsEntries: 'Sim', description: 'Convênio Unimed' },
+  { code: '2', name: 'DEDUCOES', type: 'DEDUCAO', nature: 'DEVEDORA', level: 1, parentName: '', status: 'Ativa', acceptsEntries: 'Nao', description: 'Glosas, impostos e estornos' },
+  { code: '2.2', name: 'ISS', type: 'DEDUCAO', nature: 'DEVEDORA', level: 2, parentName: 'DEDUCOES', status: 'Ativa', acceptsEntries: 'Sim', description: 'Imposto sobre serviços' },
+  { code: '3', name: 'CUSTOS ASSISTENCIAIS', type: 'CUSTO', nature: 'DEVEDORA', level: 1, parentName: '', status: 'Ativa', acceptsEntries: 'Nao', description: 'Custos diretos assistenciais' },
+  { code: '3.2', name: 'Medicamentos', type: 'CUSTO', nature: 'DEVEDORA', level: 2, parentName: 'CUSTOS ASSISTENCIAIS', status: 'Ativa', acceptsEntries: 'Sim', description: 'Compras de medicamentos' },
+  { code: '4', name: 'HONORARIOS MEDICOS', type: 'HONORARIO', nature: 'DEVEDORA', level: 1, parentName: '', status: 'Ativa', acceptsEntries: 'Nao', description: 'Produção, repasse e plantões' },
+  { code: '4.2', name: 'Repasses', type: 'HONORARIO', nature: 'DEVEDORA', level: 2, parentName: 'HONORARIOS MEDICOS', status: 'Ativa', acceptsEntries: 'Sim', description: 'Repasses médicos' },
+  { code: '5', name: 'PESSOAL', type: 'DESPESA', nature: 'DEVEDORA', level: 1, parentName: '', status: 'Ativa', acceptsEntries: 'Nao', description: 'Folha e encargos' },
+  { code: '5.1', name: 'Salarios', type: 'DESPESA', nature: 'DEVEDORA', level: 2, parentName: 'PESSOAL', status: 'Ativa', acceptsEntries: 'Sim', description: 'Salários fixos' },
+  { code: '6', name: 'DESPESAS ADMINISTRATIVAS', type: 'DESPESA', nature: 'DEVEDORA', level: 1, parentName: '', status: 'Ativa', acceptsEntries: 'Nao', description: 'Despesas de suporte' },
+  { code: '7', name: 'DESPESAS FINANCEIRAS', type: 'DESPESA', nature: 'DEVEDORA', level: 1, parentName: '', status: 'Ativa', acceptsEntries: 'Nao', description: 'Juros, tarifas e IOF' },
+  { code: '8', name: 'INVESTIMENTOS', type: 'INVESTIMENTO', nature: 'DEVEDORA', level: 1, parentName: '', status: 'Ativa', acceptsEntries: 'Nao', description: 'Equipamentos, obras e tecnologia' },
+  { code: '9', name: 'PATRIMONIO', type: 'PATRIMONIO', nature: 'CREDORA', level: 1, parentName: '', status: 'Ativa', acceptsEntries: 'Nao', description: 'Capital social e reservas' },
+];
+
+const templateDescriptionByCode = templateExampleRows.reduce<Record<string, string>>((acc, row) => {
+  const description = String(row.description || '').trim();
+  if (description) acc[row.code] = description;
+  return acc;
+}, {});
+
+const getDetailedDescription = (account: { code?: string; name?: string; description?: string | null; parentName?: string }) => {
+  const rawDescription = String(account.description || '').trim();
+  if (rawDescription) return rawDescription;
+
+  const code = String(account.code || '').trim();
+  if (code && templateDescriptionByCode[code]) {
+    return templateDescriptionByCode[code];
+  }
+
+  const name = String(account.name || '').trim();
+  const parentName = String(account.parentName || '').trim();
+  if (name && parentName && parentName !== 'Conta raiz') {
+    return `Conta ${name} vinculada ao grupo ${parentName}`;
+  }
+  if (name) {
+    return `Conta ${name} na estrutura do plano de contas`;
+  }
+
+  return '';
+};
 
 const flattenTree = (
   nodes: ChartOfAccountTreeNode[],
@@ -95,8 +143,25 @@ const toReportRows = (accounts: Array<ChartOfAccount & { parentName?: string }>)
     parentName: account.parentName || 'Conta raiz',
     status: account.is_active ? 'Ativa' : 'Inativa',
     acceptsEntries: account.accepts_entries ? 'Sim' : 'Nao',
-    description: account.description || '',
+    description: getDetailedDescription(account),
   }));
+
+const getErrorMessage = (err: unknown) => {
+  if (!err) return 'Erro desconhecido';
+  if (err instanceof Error) return err.message;
+  if (typeof err === 'string') return err;
+  if (typeof err === 'object') {
+    const maybe = err as { message?: string; details?: string; hint?: string; code?: string };
+    const parts = [maybe.message, maybe.details, maybe.hint, maybe.code].filter(Boolean);
+    if (parts.length > 0) return parts.join(' | ');
+    try {
+      return JSON.stringify(maybe);
+    } catch {
+      return 'Erro desconhecido';
+    }
+  }
+  return 'Erro desconhecido';
+};
 
 export const ChartOfAccountsPage: React.FC = () => {
   const { user } = useAuth();
@@ -108,6 +173,8 @@ export const ChartOfAccountsPage: React.FC = () => {
   const [filters, setFilters] = useState<ChartOfAccountFilter>({ is_active: true });
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importingProgress, setImportingProgress] = useState<{ current: number; total: number } | null>(null);
+  const [applyingTemplate, setApplyingTemplate] = useState(false);
+  const [repairingDescriptions, setRepairingDescriptions] = useState(false);
 
   const {
     accounts,
@@ -205,6 +272,48 @@ export const ChartOfAccountsPage: React.FC = () => {
     setViewMode('form-create');
   };
 
+  const handleApplyDefaultTemplate = async () => {
+    if (!clinicId) return;
+
+    setApplyingTemplate(true);
+    try {
+      if (visibleAccounts.length > 0) {
+        const confirmed = window.confirm(
+          'Ja existem contas cadastradas. Para aplicar o modelo ERP hospitalar completo, o plano atual sera recriado. Deseja continuar?'
+        );
+        if (!confirmed) return;
+        await resetAccountPlan(clinicId, user?.id, user?.email);
+      } else {
+        await applyDefaultAccountPlan(clinicId, user?.id, user?.email);
+      }
+      await fetchTree(filters.is_active === true);
+      await fetchAccounts(filters);
+      alert('Modelo ERP hospitalar aplicado com sucesso.');
+    } catch (err) {
+      console.error('Erro ao aplicar plano padrão', err);
+      alert(`Erro ao aplicar plano padrão: ${getErrorMessage(err)}`);
+    } finally {
+      setApplyingTemplate(false);
+    }
+  };
+
+  const handleRepairDescriptions = async () => {
+    if (!clinicId) return;
+
+    setRepairingDescriptions(true);
+    try {
+      const result = await repairAccountPlanDescriptions(clinicId);
+      await fetchTree(filters.is_active === true);
+      await fetchAccounts(filters);
+      alert(`Descrições corrigidas: ${result.fixed}`);
+    } catch (err) {
+      console.error('Erro ao corrigir descrições do plano', err);
+      alert(`Erro ao corrigir descrições: ${getErrorMessage(err)}`);
+    } finally {
+      setRepairingDescriptions(false);
+    }
+  };
+
   // Handle import Excel
   const handleImportExcel = async (data: ChartOfAccountCreateInput[]) => {
     try {
@@ -238,10 +347,34 @@ export const ChartOfAccountsPage: React.FC = () => {
   };
 
   // Handle edit
-  const handleEdit = (account: ChartOfAccountTreeNode) => {
-    setFormState({ mode: 'edit', account });
-    setSelectedAccount(account);
-    setViewMode('form-edit');
+  const handleEdit = async (account: ChartOfAccountTreeNode) => {
+    const fallbackDescription = getDetailedDescription(account);
+
+    try {
+      const fullAccount = await getChartOfAccountById(account.id);
+      const hydratedAccount: ChartOfAccountTreeNode = {
+        ...account,
+        ...fullAccount,
+        description: getDetailedDescription({
+          ...account,
+          ...fullAccount,
+          parentName: account.parentName,
+        }),
+      };
+
+      setFormState({ mode: 'edit', account: hydratedAccount });
+      setSelectedAccount(hydratedAccount);
+      setViewMode('form-edit');
+    } catch (err) {
+      console.error('Erro ao carregar conta para edição:', err);
+      const safeAccount: ChartOfAccountTreeNode = {
+        ...account,
+        description: fallbackDescription,
+      };
+      setFormState({ mode: 'edit', account: safeAccount });
+      setSelectedAccount(safeAccount);
+      setViewMode('form-edit');
+    }
   };
 
   // Handle form submit
@@ -303,10 +436,8 @@ export const ChartOfAccountsPage: React.FC = () => {
   };
 
   // Handle table edit
-  const handleTableEdit = (account: any) => {
-    setSelectedAccount(account as ChartOfAccountTreeNode);
-    setFormState({ mode: 'edit', account: account as ChartOfAccountTreeNode });
-    setViewMode('form-edit');
+  const handleTableEdit = async (account: any) => {
+    await handleEdit(account as ChartOfAccountTreeNode);
   };
 
   // Handle table delete
@@ -333,6 +464,20 @@ export const ChartOfAccountsPage: React.FC = () => {
         </div>
         {viewMode === 'tree' || viewMode === 'table' ? (
           <div className="flex items-center gap-3">
+            <button
+              onClick={handleApplyDefaultTemplate}
+              disabled={applyingTemplate}
+              className="px-4 py-2 border border-emerald-300 text-emerald-700 rounded-lg font-medium hover:bg-emerald-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {applyingTemplate ? 'Aplicando...' : 'Plano Padrão'}
+            </button>
+            <button
+              onClick={handleRepairDescriptions}
+              disabled={repairingDescriptions}
+              className="px-4 py-2 border border-amber-300 text-amber-700 rounded-lg font-medium hover:bg-amber-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {repairingDescriptions ? 'Corrigindo...' : 'Corrigir descrições'}
+            </button>
             <button
               onClick={() => setImportDialogOpen(true)}
               className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
@@ -450,6 +595,7 @@ export const ChartOfAccountsPage: React.FC = () => {
             data={reportRows}
             columns={reportColumns}
             templateFileName="plano_de_contas"
+            templateRows={templateExampleRows}
             onGenerateReport={handleGenerateReport}
           />
 
@@ -520,6 +666,7 @@ export const ChartOfAccountsPage: React.FC = () => {
             data={reportRows}
             columns={reportColumns}
             templateFileName="plano_de_contas"
+            templateRows={templateExampleRows}
             onGenerateReport={handleGenerateReport}
           />
 

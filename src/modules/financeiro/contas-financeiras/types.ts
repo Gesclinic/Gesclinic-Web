@@ -181,9 +181,9 @@ export enum ReconciliationStatus {
 }
 
 export const RECONCILIATION_STATUS_LABELS: Record<ReconciliationStatus, string> = {
-  [ReconciliationStatus.RECONCILED]: 'Conciliado',
-  [ReconciliationStatus.PENDING]: 'Pendente',
-  [ReconciliationStatus.DIVERGENT]: 'Divergente',
+  [ReconciliationStatus.RECONCILED]: 'Estável',
+  [ReconciliationStatus.PENDING]: 'Atenção',
+  [ReconciliationStatus.DIVERGENT]: 'Crítico',
 };
 
 export const RECONCILIATION_STATUS_COLORS: Record<ReconciliationStatus, string> = {

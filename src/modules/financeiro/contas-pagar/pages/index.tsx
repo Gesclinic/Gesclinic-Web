@@ -34,6 +34,7 @@ import {
   labelReconciliationMatchType,
   labelReconciliationStatus,
 } from '../utils/labels';
+import { generatePayablesReport } from '../utils/payablesReportUtils';
 
 const emptyPayableFilters = {
   status: '',
@@ -112,6 +113,12 @@ function buildPayableStateFromSearchParams(searchParams: URLSearchParams) {
   };
 }
 
+function getSafeInternalReturnPath(value: string | null) {
+  if (!value || !value.startsWith('/clinica/')) return '';
+  if (value.startsWith('//')) return '';
+  return value;
+}
+
 function withTimeout<T>(promise: Promise<T>, message: string, timeoutMs = 45000): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout>;
   const timeout = new Promise<never>((_, reject) => {
@@ -141,7 +148,7 @@ export default function ContasApagarPage() {
     { label: 'Financeiro', path: '/clinica/financeiro' },
     { label: 'Contas a Pagar' },
   ]);
-  const { clinicId } = useClinicContext();
+  const { clinicId, clinic } = useClinicContext();
   const { user, currentRole } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -155,6 +162,7 @@ export default function ContasApagarPage() {
   const trace = searchParams.get('trace');
   const legacyAction = searchParams.get('action');
   const legacyEditId = searchParams.get('edit') || '';
+  const returnToParam = getSafeInternalReturnPath(searchParams.get('returnTo'));
   const cameFromCashflow = source === 'fluxo-caixa';
 
   // UI State
@@ -177,17 +185,21 @@ export default function ContasApagarPage() {
   const [pageSize, setPageSize] = useState(50);
   const [reconciliationSummary, setReconciliationSummary] = useState<string>('');
   const [reconciliationResult, setReconciliationResult] = useState<PayableReconciliationSummary | null>(null);
+  const [returnToAfterEdit, setReturnToAfterEdit] = useState(returnToParam);
 
   // Advanced Filters State
   const [filters, setFilters] = useState(urlState.filters);
 
   React.useEffect(() => {
+    if (returnToParam) {
+      setReturnToAfterEdit(returnToParam);
+    }
     setFilters(urlState.filters);
     setSearchQuery(urlState.searchQuery);
     if (cameFromCashflow || Object.values(urlState.filters).some(Boolean) || !!urlState.searchQuery) {
       setShowFilters(true);
     }
-  }, [cameFromCashflow, searchParamsKey, urlState.filters, urlState.searchQuery]);
+  }, [cameFromCashflow, returnToParam, searchParamsKey, urlState.filters, urlState.searchQuery]);
 
   const payableQueryParams = useMemo<Partial<PayableFilterParams>>(() => ({
     status: filters.statusList?.length ? filters.statusList : filters.status ? [filters.status as PayableStatus] : undefined,
@@ -302,7 +314,12 @@ export default function ContasApagarPage() {
     setModals({ createEdit: false, pay: false, cancel: false, approval: false });
     setCurrentPayable(null);
     setIsEditMode(false);
-  }, []);
+    if (returnToAfterEdit) {
+      const target = returnToAfterEdit;
+      setReturnToAfterEdit('');
+      navigate(target, { replace: true });
+    }
+  }, [navigate, returnToAfterEdit]);
 
   // Table handlers
   const handleViewPayable = useCallback((payable: Payable) => {
@@ -662,6 +679,29 @@ export default function ContasApagarPage() {
     { key: 'conciliacao', label: 'Conciliação', width: 14 },
   ];
 
+  // Funções de relatório avançado
+  const handleGenerateAdvancedReport = useCallback((format: 'excel' | 'pdf' | 'csv', groupBy: 'status' | 'supplier' | 'category' | 'none' = 'status') => {
+    try {
+      generatePayablesReport({
+        title: 'Relatório de Contas a Pagar',
+        clinic,
+        payables,
+        groupBy,
+        format,
+      });
+      toast({
+        title: 'Sucesso',
+        description: `Relatório gerado em ${format.toUpperCase()} com agrupamento por ${groupBy}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao gerar relatório',
+        description: error?.message || 'Não foi possível gerar o relatório',
+        variant: 'destructive',
+      });
+    }
+  }, [clinic, payables, toast]);
+
   return (
     <PageLayout
       breadcrumbs={breadcrumbs}
@@ -809,7 +849,8 @@ export default function ContasApagarPage() {
       {/* 📊 RESUMO FINANCEIRO */}
       <div className="grid gap-3 mb-6 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
         {[
-          { label: 'Total em Aberto', value: (summary?.open_amount || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), hint: 'Vencendo', tone: 'text-yellow-700', icon: AlertCircle },
+          { label: 'Total em Aberto (Geral)', value: (summary?.open_amount || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), hint: 'Clínica inteira', tone: 'text-yellow-700', icon: AlertCircle },
+          { label: 'Total em Aberto (Período)', value: operationalSummary.totalFilteredAmount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), hint: 'Filtro atual', tone: 'text-amber-600', icon: AlertCircle },
           { label: 'Total Vencido', value: (summary?.overdue_amount || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), hint: 'Atraso', tone: 'text-red-700', icon: AlertCircle },
           { label: 'Pago este Mês', value: (summary?.paid_amount || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), hint: 'Efetivado', tone: 'text-green-700', icon: Check },
           { label: 'Próximos 30 Dias', value: (summary?.due_next_30_days_count || 0).toLocaleString('pt-BR'), hint: 'Contas', tone: 'text-blue-700', icon: Calendar },
@@ -821,7 +862,6 @@ export default function ContasApagarPage() {
           { label: 'Despesas Administrativas', value: (summary?.administrative_amount || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), hint: 'Impacto DRE', tone: 'text-slate-700', icon: WalletCards },
           { label: 'Despesas Assistenciais', value: (summary?.assistential_amount || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), hint: 'Impacto DRE', tone: 'text-slate-700', icon: WalletCards },
           { label: 'Bloqueado/Aprovação', value: ((summary?.blocked_amount || 0) + (summary?.approving_amount || 0)).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), hint: 'Governança', tone: 'text-slate-700', icon: AlertCircle },
-          { label: 'Total filtrado', value: operationalSummary.totalFilteredAmount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), hint: 'Filtro atual', tone: 'text-slate-700', icon: WalletCards },
           { label: 'Com NF/anexo', value: operationalSummary.withInvoiceCount.toLocaleString('pt-BR'), hint: 'Documentos', tone: 'text-blue-700', icon: ReceiptText },
           { label: 'Medicamentos rastreados', value: operationalSummary.medicationTraceCount.toLocaleString('pt-BR'), hint: 'Rastreabilidade', tone: 'text-emerald-700', icon: ShieldCheck },
           { label: 'Proximo vencimento', value: operationalSummary.nextDueDate || 'Sem aberto', hint: 'Agenda financeira', tone: 'text-orange-700', icon: Calendar },
@@ -848,6 +888,13 @@ export default function ContasApagarPage() {
           data={exportRows}
           columns={exportColumns}
           templateFileName="contas_pagar"
+          onExportExcel={() => handleGenerateAdvancedReport('excel', 'status')}
+          onExportCsv={() => handleGenerateAdvancedReport('csv', 'status')}
+          onExportPdf={() => handleGenerateAdvancedReport('pdf', 'status')}
+          onExportPowerBi={() => handleGenerateAdvancedReport('csv', 'category')}
+          onExportContabil={() => handleGenerateAdvancedReport('pdf', 'category')}
+          onExportAuditoria={() => handleGenerateAdvancedReport('pdf', 'supplier')}
+          onGenerateReport={() => handleGenerateAdvancedReport('pdf', 'status')}
           selectedFiltersCount={Object.keys(savedFilters).length}
           onAddFilter={() => setSaveFilterDialogOpen(true)}
           savedFilters={Object.keys(savedFilters)}

@@ -10,6 +10,12 @@ export interface CostCenter {
   code: string; // e.g., "1", "1.1", "1.1.1"
   name: string;
   description: string | null;
+  center_type?: string | null;
+  unit_name?: string | null;
+  responsible_name?: string | null;
+  color?: string | null;
+  icon?: string | null;
+  metadata?: Record<string, any> | null;
   manager_id: string | null;
   is_active: boolean;
   created_by: string;
@@ -56,6 +62,12 @@ export interface CreateCostCenterPayload {
   code: string;
   name: string;
   description?: string;
+  center_type?: string;
+  unit_name?: string;
+  responsible_name?: string;
+  color?: string;
+  icon?: string;
+  metadata?: Record<string, any>;
   parent_id?: string | null;
   manager_id?: string | null;
   is_active?: boolean;
@@ -68,6 +80,12 @@ export interface UpdateCostCenterPayload {
   code?: string;
   name?: string;
   description?: string | null;
+  center_type?: string | null;
+  unit_name?: string | null;
+  responsible_name?: string | null;
+  color?: string | null;
+  icon?: string | null;
+  metadata?: Record<string, any> | null;
   parent_id?: string | null;
   manager_id?: string | null;
   is_active?: boolean;

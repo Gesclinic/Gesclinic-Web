@@ -29,6 +29,18 @@ import { HelpCircle, ChevronRight } from 'lucide-react';
 import type { CostCenter, CreateCostCenterPayload, UpdateCostCenterPayload } from '../types';
 import * as costCentersApi from '../services/costCentersApi';
 
+const CENTER_TYPES = [
+  'ASSISTENCIAL',
+  'ESPECIALIDADE',
+  'PRODUCAO_MEDICA',
+  'CONVENIO',
+  'UNIDADE',
+  'ADMINISTRATIVO',
+  'TECNOLOGIA',
+  'OPERACOES',
+  'SUPORTE',
+];
+
 interface CostCenterFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -52,6 +64,11 @@ export const CostCenterForm: React.FC<CostCenterFormProps> = ({
     code: '',
     name: '',
     description: undefined,
+    center_type: 'OPERACOES',
+    unit_name: undefined,
+    responsible_name: undefined,
+    color: '#0ea5e9',
+    icon: undefined,
     parent_id: undefined,
     manager_id: undefined,
     is_active: true,
@@ -67,6 +84,11 @@ export const CostCenterForm: React.FC<CostCenterFormProps> = ({
         code: center.code,
         name: center.name,
         description: center.description || undefined,
+        center_type: center.center_type || 'OPERACOES',
+        unit_name: center.unit_name || undefined,
+        responsible_name: center.responsible_name || undefined,
+        color: center.color || '#0ea5e9',
+        icon: center.icon || undefined,
         parent_id: center.parent_id || undefined,
         manager_id: center.manager_id || undefined,
         is_active: center.is_active,
@@ -78,6 +100,11 @@ export const CostCenterForm: React.FC<CostCenterFormProps> = ({
         code: '',
         name: '',
         description: undefined,
+        center_type: 'OPERACOES',
+        unit_name: undefined,
+        responsible_name: undefined,
+        color: '#0ea5e9',
+        icon: undefined,
         parent_id: undefined,
         manager_id: undefined,
         is_active: true,
@@ -183,7 +210,7 @@ export const CostCenterForm: React.FC<CostCenterFormProps> = ({
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="right" sideOffset={5}>
-                    Números separados por pontos (ex: 1, 1.1, 1.1.1)
+                    Números separados por pontos até nível 4 (ex: 1, 1.1, 1.1.1, 1.1.1.1)
                   </TooltipContent>
                 </Tooltip>
               </div>
@@ -221,6 +248,75 @@ export const CostCenterForm: React.FC<CostCenterFormProps> = ({
                 disabled={submitting}
                 required
               />
+            </div>
+
+            {/* Center Type */}
+            <div>
+              <Label htmlFor="center_type" className="font-semibold mb-2 block">Tipo *</Label>
+              <Select
+                value={formData.center_type || 'OPERACOES'}
+                onValueChange={(value) => setFormData({ ...formData, center_type: value })}
+                disabled={submitting}
+              >
+                <SelectTrigger id="center_type">
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CENTER_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Unit */}
+            <div>
+              <Label htmlFor="unit_name" className="font-semibold mb-2 block">Unidade</Label>
+              <Input
+                id="unit_name"
+                value={formData.unit_name || ''}
+                onChange={(e) => setFormData({ ...formData, unit_name: e.target.value || undefined })}
+                placeholder="Matriz, Filial 01, Hospital, etc."
+                disabled={submitting}
+              />
+            </div>
+
+            {/* Responsible */}
+            <div>
+              <Label htmlFor="responsible_name" className="font-semibold mb-2 block">Responsável</Label>
+              <Input
+                id="responsible_name"
+                value={formData.responsible_name || ''}
+                onChange={(e) => setFormData({ ...formData, responsible_name: e.target.value || undefined })}
+                placeholder="Nome do responsável pela área"
+                disabled={submitting}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="color" className="font-semibold mb-2 block">Cor</Label>
+                <Input
+                  id="color"
+                  type="color"
+                  value={formData.color || '#0ea5e9'}
+                  onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                  disabled={submitting}
+                  className="h-10"
+                />
+              </div>
+              <div>
+                <Label htmlFor="icon" className="font-semibold mb-2 block">Ícone</Label>
+                <Input
+                  id="icon"
+                  value={formData.icon || ''}
+                  onChange={(e) => setFormData({ ...formData, icon: e.target.value || undefined })}
+                  placeholder="brain, hospital, stethoscope..."
+                  disabled={submitting}
+                />
+              </div>
             </div>
 
             {/* Parent - reorganizado */}

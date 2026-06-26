@@ -148,17 +148,17 @@ export default function FinancialIntegrationStatus() {
 
         <Card className="p-3 text-center border-purple-200 bg-purple-50">
           <div className="text-2xl font-bold text-purple-700">{summary.completed}</div>
-          <div className="text-xs text-purple-600">✅ Completo</div>
+          <div className="text-xs text-purple-600">Estável</div>
         </Card>
 
         <Card className="p-3 text-center border-yellow-200 bg-yellow-50">
           <div className="text-2xl font-bold text-yellow-700">{summary.pending}</div>
-          <div className="text-xs text-yellow-600">⏳ Pendente</div>
+          <div className="text-xs text-yellow-600">Atenção</div>
         </Card>
 
         <Card className="p-3 text-center border-red-200 bg-red-50">
           <div className="text-2xl font-bold text-red-700">{summary.errors}</div>
-          <div className="text-xs text-red-600">❌ Erro</div>
+          <div className="text-xs text-red-600">Crítico</div>
         </Card>
       </div>
 
@@ -193,13 +193,13 @@ export default function FinancialIntegrationStatus() {
               },
               partial_missing_guide: {
                 icon: AlertCircle,
-                label: 'AR (Sem Guia)',
+                label: 'Atenção (sem guia)',
                 color: 'text-yellow-600',
                 bg: 'bg-yellow-50',
               },
               attended_no_financial: {
                 icon: AlertCircle,
-                label: 'Erro/Sem AR',
+                label: 'Crítico (sem AR)',
                 color: 'text-red-600',
                 bg: 'bg-red-50',
               },
@@ -211,7 +211,7 @@ export default function FinancialIntegrationStatus() {
               },
               pending: {
                 icon: Clock,
-                label: 'Pendente',
+                label: 'Atenção',
                 color: 'text-gray-600',
                 bg: 'bg-gray-50',
               },

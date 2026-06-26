@@ -37,16 +37,35 @@ export const ChartOfAccountsForm: React.FC<ChartOfAccountsFormProps> = ({
 }) => {
   const isEdit = !!account;
 
+  const getDescriptionValue = (value?: string | null, fallbackName?: string) => {
+    const trimmed = (value || '').trim();
+    if (trimmed) return value as string;
+    return (fallbackName || '').trim();
+  };
+
   const [formData, setFormData] = useState({
     code: account?.code || '',
     name: account?.name || '',
-    description: account?.description || '',
+    description: getDescriptionValue(account?.description, account?.name),
     type: (account?.type as AccountType) || ('RECEITA' as AccountType),
     nature: (account?.nature as AccountNature) || ('CREDORA' as AccountNature),
     parent_id: account?.parent_id || parentAccount?.id || null,
     is_active: account?.is_active ?? true,
     accepts_entries: account?.accepts_entries ?? false,
   });
+
+  useEffect(() => {
+    setFormData({
+      code: account?.code || '',
+      name: account?.name || '',
+      description: getDescriptionValue(account?.description, account?.name),
+      type: (account?.type as AccountType) || ('RECEITA' as AccountType),
+      nature: (account?.nature as AccountNature) || ('CREDORA' as AccountNature),
+      parent_id: account?.parent_id || parentAccount?.id || null,
+      is_active: account?.is_active ?? true,
+      accepts_entries: account?.accepts_entries ?? false,
+    });
+  }, [account, parentAccount]);
 
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 

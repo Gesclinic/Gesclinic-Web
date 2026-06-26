@@ -44,7 +44,15 @@ export const RBAC_MODULES = [
   {
     id: 'financeiro',
     label: 'Financeiro',
-    children: ['contas_pagar', 'contas_receber', 'fluxo_caixa', 'lancamentos', 'dre', 'repasse'],
+    children: [
+      'contas_pagar',
+      'contas_receber',
+      'autorizacoes_descontos',
+      'fluxo_caixa',
+      'lancamentos',
+      'dre',
+      'repasse',
+    ],
   },
   {
     id: 'faturamento',

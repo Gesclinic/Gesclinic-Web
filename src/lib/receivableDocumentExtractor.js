@@ -82,6 +82,21 @@ function normalizePlainText(value) {
     .trim();
 }
 
+function isLikelyEncodedBlob(value) {
+  const text = String(value || '').trim();
+  if (text.length < 180) return false;
+  const compact = text.replace(/\s+/g, '');
+  if (!compact) return false;
+  const encodedChars = compact.match(/[A-Za-z0-9+/=]/g)?.length || 0;
+  return encodedChars / compact.length > 0.92 && !/[<>{}:;,|]/.test(text);
+}
+
+function cleanMeaningfulText(value, maxLength = 500) {
+  const text = normalizePlainText(value);
+  if (!text || isLikelyEncodedBlob(text)) return '';
+  return text.length > maxLength ? `${text.slice(0, maxLength).trim()}...` : text;
+}
+
 function localName(element) {
   return String(element?.localName || element?.nodeName || '').toLowerCase();
 }
@@ -91,6 +106,18 @@ function findText(root, ...names) {
   for (const name of names) {
     const wanted = String(name).toLowerCase();
     const node = elements.find((element) => localName(element) === wanted);
+    if (node?.textContent?.trim()) {
+      return node.textContent.trim();
+    }
+  }
+  return '';
+}
+
+function findLastText(root, ...names) {
+  const elements = Array.from(root.getElementsByTagName('*'));
+  for (const name of names) {
+    const wanted = String(name).toLowerCase();
+    const node = elements.reverse().find((element) => localName(element) === wanted);
     if (node?.textContent?.trim()) {
       return node.textContent.trim();
     }
@@ -186,7 +213,7 @@ function extractLabeledValue(text, labels = []) {
 }
 
 function extractPartyDocument(element, fallbackRoot, prefixes = []) {
-  const scoped = findDescendantText(element, 'CNPJ', 'CPF', 'CpfCnpj', 'Cpf', 'Cnpj');
+  const scoped = findDescendantText(element, 'CNPJ', 'CPF', 'CpfCnpj', 'Cpf', 'Cnpj', 'NIF', 'cNif');
   if (scoped) return onlyDigits(scoped);
 
   for (const prefix of prefixes) {
@@ -205,6 +232,56 @@ function extractPartyDocument(element, fallbackRoot, prefixes = []) {
   return null;
 }
 
+function regexExtract(xmlText, patterns = []) {
+  for (const pattern of patterns) {
+    const match = String(xmlText || '').match(pattern);
+    const value = match?.[1] || match?.[0] || '';
+    if (String(value).trim()) return String(value).trim();
+  }
+  return '';
+}
+
+function normalizeInvoiceNumberCandidate(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const digits = onlyDigits(raw);
+  return digits || raw;
+}
+
+function inferInvoiceNumberFromCandidates(candidates = [], { documentType, model, xmlText } = {}) {
+  const isNfeLike = documentType === 'nfe' || documentType === 'nfce' || model === '55' || model === '65';
+
+  const accessKey = onlyDigits(regexExtract(xmlText, [
+    /<(?:\w+:)?chNFe\b[^>]*>\s*([0-9]{44})\s*<\/(?:\w+:)?chNFe>/i,
+  ]));
+  if (isNfeLike && accessKey.length === 44) {
+    const nnfFromKey = accessKey.slice(25, 34).replace(/^0+/, '');
+    if (nnfFromKey) return nnfFromKey;
+  }
+
+  const normalized = Array.from(new Set(
+    candidates
+      .map((candidate) => normalizeInvoiceNumberCandidate(candidate))
+      .filter(Boolean),
+  ));
+  if (!normalized.length) return '';
+
+  const nonAccessKey = normalized.find((candidate) => {
+    const digits = onlyDigits(candidate);
+    return digits.length >= 1 && digits.length <= 12;
+  });
+  if (nonAccessKey) return nonAccessKey;
+
+  const first = normalized[0] || '';
+  const firstDigits = onlyDigits(first);
+  if (firstDigits.length === 44) {
+    const nnf = firstDigits.slice(25, 34).replace(/^0+/, '');
+    if (nnf) return nnf;
+  }
+
+  return first;
+}
+
 function parseXmlText(xmlText) {
   const parser = new DOMParser();
   const document = parser.parseFromString(xmlText, 'application/xml');
@@ -215,20 +292,35 @@ function parseXmlText(xmlText) {
 
   const root = document.documentElement;
   const nfse = firstElement(document, 'infNfse', 'Nfse', 'CompNfse', 'nfse', 'nf');
-  const total = firstElement(document, 'total', 'ICMSTot', 'ValoresNfse', 'Valores');
+  const ide = firstElement(document, 'ide', 'identificacao', 'infCFe', 'infnfse');
+  const hasInfNfe = Boolean(firstElement(document, 'infNFe'));
+  const hasInfCfe = Boolean(firstElement(document, 'infCFe', 'CFe'));
+  const hasNfse = Boolean(firstElement(document, 'Nfse', 'CompNfse', 'InfNfse'));
+  const rootName = localName(root);
+  const model = findChildText(ide, 'mod', 'modelo') || findText(document, 'mod', 'modelo');
+  const documentType = hasInfCfe || rootName.includes('cfe')
+    ? 'sat_cfe'
+    : model === '65' || rootName.includes('nfce')
+      ? 'nfce'
+      : hasNfse
+        ? 'nfse'
+        : hasInfNfe || model === '55'
+          ? 'nfe'
+          : (nfse ? 'nfse' : 'nfe');
+  const total = firstElement(document, 'total', 'ICMSTot', 'ValoresNfse', 'Valores', 'valores');
   const cobranca = firstElement(document, 'dup', 'cobr');
   const pagamento = firstElement(document, 'detPag', 'pag');
-  const dest = firstElement(document, 'dest', 'TomadorServico', 'Tomador', 'DadosTomador');
-  const emit = firstElement(document, 'emit', 'PrestadorServico', 'Prestador', 'DadosPrestador');
+  const dest = firstElement(document, 'dest', 'TomadorServico', 'Tomador', 'DadosTomador', 'toma', 'tomador');
+  const emit = firstElement(document, 'emit', 'PrestadorServico', 'Prestador', 'DadosPrestador', 'prest', 'prestador');
   const products = Array.from(document.getElementsByTagName('*'))
     .filter((element) => localName(element) === 'prod')
     .map((element) => findChildText(element, 'xProd'))
     .filter(Boolean);
   const serviceDescriptions = Array.from(document.getElementsByTagName('*'))
-    .filter((element) => ['descritivo', 'discriminacao', 'descricaoservico', 'descricao', 'servico'].includes(localName(element)))
-    .map((element) => element.textContent?.trim())
+    .filter((element) => ['descritivo', 'discriminacao', 'descricaoservico', 'descricao', 'servico', 'xdescserv', 'xdiscriminacao'].includes(localName(element)))
+    .map((element) => cleanMeaningfulText(element.textContent, 300))
     .filter((value, index, values) => value && values.indexOf(value) === index);
-  const observation = findText(document, 'observacao', 'Observacao', 'InfAdic', 'infCpl', 'informacoesComplementares', 'outrasInformacoes');
+  const observation = cleanMeaningfulText(findText(document, 'observacao', 'Observacao', 'InfAdic', 'infCpl', 'informacoesComplementares', 'outrasInformacoes'), 500);
   const allText = normalizePlainText(document.documentElement?.textContent || '');
   const observedPaymentMethod = extractObservationValue(observation, 'Forma de pagamento')
     || extractLabeledValue(allText, ['Forma de pagamento', 'Forma pagamento', 'Pagamento', 'Meio de pagamento']);
@@ -244,30 +336,71 @@ function parseXmlText(xmlText) {
       || findText(document, 'card_last4', 'cartao_final', 'final_cartao', 'ultimos_digitos_cartao'),
   );
 
-  const nfNumber = findText(document, 'nNF', 'Numero', 'NumeroNfse', 'numero', 'numero_nfse', 'numero_nfs', 'numero_nota', 'numeroNota', 'numNota');
-  const payerName = findChildText(dest, 'xNome', 'RazaoSocial', 'Nome', 'nome_razao_social', 'sobrenome_nome_fantasia', 'nome_fantasia')
-    || findDescendantText(dest, 'xNome', 'RazaoSocial', 'Nome', 'nome_razao_social', 'sobrenome_nome_fantasia', 'nome_fantasia')
-    || findText(document, 'RazaoSocialTomador', 'NomeTomador', 'nome_tomador', 'tomador_nome', 'razao_social_tomador');
-  const issuerName = findChildText(emit, 'xNome', 'RazaoSocial', 'Nome', 'nome_razao_social', 'sobrenome_nome_fantasia', 'nome_fantasia')
-    || findDescendantText(emit, 'xNome', 'RazaoSocial', 'Nome', 'nome_razao_social', 'sobrenome_nome_fantasia', 'nome_fantasia')
-    || findText(document, 'RazaoSocialPrestador', 'NomePrestador', 'nome_prestador', 'prestador_nome', 'razao_social_prestador');
+  const infNfse = firstElement(document, 'InfNfse', 'infnfse');
+  const nfeCandidates = [
+    findChildText(ide, 'nNF'),
+    findText(document, 'nNF'),
+    regexExtract(xmlText, [/<(?:\w+:)?nNF\b[^>]*>\s*([^<\s]+)\s*<\/(?:\w+:)?nNF>/i]),
+  ];
+  const nfseCandidates = [
+    findChildText(infNfse, 'nDFSe', 'nDfse', 'nNFSe', 'nNfse', 'nDPS', 'nDps', 'Numero', 'numero'),
+    findChildText(ide, 'nDFSe', 'nDfse', 'nNFSe', 'nNfse', 'nDPS', 'nDps', 'NumeroNfse', 'numero_nfse', 'NFSeNumero', 'numero_nota', 'numNota'),
+    findText(document, 'nDFSe', 'nDfse', 'nNFSe', 'nNfse', 'nDPS', 'nDps', 'NumeroNfse', 'numero_nfse', 'NFSeNumero', 'numero_nota', 'numNota'),
+    regexExtract(xmlText, [
+      /<(?:\w+:)?(?:nDFSe|nDfse|nNFSe|nNfse|nDPS|nDps|NumeroNfse|numero_nfse|NFSeNumero|numero_nota|numNota|Numero)\b[^>]*>\s*([^<\s]+)\s*<\/(?:\w+:)?(?:nDFSe|nDfse|nNFSe|nNfse|nDPS|nDps|NumeroNfse|numero_nfse|NFSeNumero|numero_nota|numNota|Numero)>/i,
+      /\bNFS?-?E?\s*(?:n[\u00ba\u00b0o]?\s*)?(\d{6,12})\b/i,
+    ]),
+  ];
+  const satCandidates = [
+    findChildText(ide, 'nCFe'),
+    findText(document, 'nCFe'),
+    regexExtract(xmlText, [/<(?:\w+:)?nCFe\b[^>]*>\s*([^<\s]+)\s*<\/(?:\w+:)?nCFe>/i]),
+  ];
+  const fallbackCandidates = [
+    findChildText(ide, 'numeroNota', 'numero_nfe', 'nf_numero', 'número'),
+    findText(document, 'numeroNota', 'numero_nfe', 'nf_numero', 'número'),
+    regexExtract(xmlText, [/<(?:\w+:)?(?:numeroNota|numero_nfe|nf_numero)\b[^>]*>\s*([^<\s]+)\s*<\/(?:\w+:)?(?:numeroNota|numero_nfe|nf_numero)>/i]),
+  ];
+
+  const nfNumber = inferInvoiceNumberFromCandidates(
+    documentType === 'nfe' || documentType === 'nfce'
+      ? [...nfeCandidates, ...fallbackCandidates]
+      : documentType === 'nfse'
+        ? [...nfseCandidates, ...fallbackCandidates]
+        : documentType === 'sat_cfe'
+          ? [...satCandidates, ...fallbackCandidates]
+          : [...nfeCandidates, ...nfseCandidates, ...satCandidates, ...fallbackCandidates],
+    { documentType, model, xmlText },
+  );
+  const payerName = cleanMeaningfulText(
+    findChildText(dest, 'xNome', 'RazaoSocial', 'Nome', 'nome_razao_social', 'sobrenome_nome_fantasia', 'nome_fantasia')
+      || findDescendantText(dest, 'xNome', 'RazaoSocial', 'Nome', 'nome_razao_social', 'sobrenome_nome_fantasia', 'nome_fantasia')
+      || findText(document, 'RazaoSocialTomador', 'NomeTomador', 'nome_tomador', 'tomador_nome', 'razao_social_tomador'),
+    160,
+  );
+  const issuerName = cleanMeaningfulText(
+    findChildText(emit, 'xNome', 'RazaoSocial', 'Nome', 'nome_razao_social', 'sobrenome_nome_fantasia', 'nome_fantasia')
+      || findDescendantText(emit, 'xNome', 'RazaoSocial', 'Nome', 'nome_razao_social', 'sobrenome_nome_fantasia', 'nome_fantasia')
+      || findText(document, 'RazaoSocialPrestador', 'NomePrestador', 'nome_prestador', 'prestador_nome', 'razao_social_prestador'),
+    160,
+  );
   const payerDocument = extractPartyDocument(dest, document, ['Tomador', 'tomador']);
   const issuerDocument = extractPartyDocument(emit, document, ['Prestador', 'prestador', 'Emitente', 'emitente']);
   const grossAmount = normalizeMoney(
-    findChildText(total, 'vNF', 'ValorServicos', 'ValorNfse', 'ValorTotal', 'valor_total', 'valor_tributavel', 'valor_rps', 'ValorLiquidoNfse')
-      || findText(document, 'vNF', 'ValorServicos', 'ValorNfse', 'ValorTotal', 'valor_total', 'valor_tributavel', 'valor_rps', 'ValorLiquidoNfse'),
+    findChildText(total, 'vNF', 'ValorServicos', 'ValorServico', 'vServPrest', 'vServ', 'ValorNfse', 'ValorTotal', 'valor_total', 'valor_tributavel', 'valor_rps', 'ValorLiquidoNfse', 'vLiq', 'ValorLiquido')
+      || findText(document, 'vNF', 'ValorServicos', 'ValorServico', 'vServPrest', 'vServ', 'ValorNfse', 'ValorTotal', 'valor_total', 'valor_tributavel', 'valor_rps', 'ValorLiquidoNfse', 'vLiq', 'ValorLiquido'),
   );
   const taxesValue = normalizeMoney(
     findChildText(total, 'vTotTrib', 'ValorIss', 'ValorIssRetido', 'ValorPis', 'ValorCofins', 'valor_issrf', 'valor_ir', 'valor_inss', 'valor_pis', 'valor_cofins', 'valor_contribuicao_social')
       || findText(document, 'vTotTrib', 'ValorIss', 'ValorIssRetido', 'ValorPis', 'ValorCofins', 'valor_issrf', 'valor_ir', 'valor_inss', 'valor_pis', 'valor_cofins', 'valor_contribuicao_social'),
   );
-  const invoiceDate = normalizeIsoDate(findText(document, 'dhEmi', 'dEmi', 'DataEmissao', 'Competencia', 'data_nfse', 'data_fato', 'data_emissao', 'dataEmissao'));
+  const invoiceDate = normalizeIsoDate(findText(document, 'dhEmi', 'dEmi', 'DataEmissao', 'Competencia', 'dCompet', 'data_nfse', 'data_fato', 'data_emissao', 'dataEmissao'));
   const explicitDueDate = normalizeIsoDate(findChildText(cobranca, 'dVenc', 'data_vencimento') || findText(document, 'dVenc', 'DataVencimento', 'Vencimento', 'data_vencimento', 'dataVencimento'));
   const paymentDate = normalizeIsoDate(findText(document, 'DataPagamento', 'data_pagamento', 'data_recebimento', 'dtPagamento'));
   const paymentMethodRaw = observedPaymentMethod || findChildText(pagamento, 'tPag') || findText(document, 'tPag', 'FormaPagamento', 'forma_pagamento', 'tipo_pagamento', 'meio_pagamento');
   const description = products.length
     ? products.slice(0, 3).join(' | ')
-    : serviceDescriptions.slice(0, 3).join(' | ') || findText(document, 'Discriminacao', 'DescricaoServico', 'ItemListaServico', 'descritivo', 'descricao', 'servico');
+    : serviceDescriptions.slice(0, 3).join(' | ') || cleanMeaningfulText(findText(document, 'Discriminacao', 'DescricaoServico', 'xDescServ', 'ItemListaServico', 'descritivo', 'descricao', 'servico'), 300);
   const paymentMethod = normalizePaymentMethod(paymentMethodRaw);
   const dueDate = explicitDueDate || invoiceDate;
 
@@ -294,7 +427,7 @@ function parseXmlText(xmlText) {
 
   const filledCount = Object.values(fields).filter(Boolean).length;
   return {
-    documentType: nfse ? 'nfse' : 'nfe',
+    documentType,
     confidence: filledCount >= 5 ? 'alta' : filledCount >= 3 ? 'media' : 'baixa',
     fields,
     warnings: filledCount ? [] : ['Nenhum campo financeiro reconhecido no XML.'],

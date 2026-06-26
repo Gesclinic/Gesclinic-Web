@@ -3,7 +3,7 @@ import { TrendingDown, AlertTriangle, Calendar, Users, BarChart3, Download, Load
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useClinicContext } from '@/contexts/ClinicContext';
 import { getCashDiscrepancies } from '@/lib/cashConsolidationApi';
-import { getOrCreateDrawer } from '@/lib/cashDrawerApi';
+import { cashDrawerApi } from '@/lib/cashDrawerApi';
 import * as XLSX from 'xlsx';
 
 /**

@@ -5,7 +5,7 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { useToast } from '@/components/ui/use-toast';
-import { FinancialAccount } from '../types';
+import { AccountType, ACCOUNT_TYPE_LABELS, FinancialAccount } from '../types';
 
 // Estender tipos do jsPDF para incluir autoTable
 declare module 'jspdf' {
@@ -34,6 +34,24 @@ export const FinancialAccountsExportImport: React.FC<ExportImportProps> = ({
       style: 'currency',
       currency: 'BRL',
     }).format(value);
+  };
+
+  const normalizeAccountType = (value: unknown): AccountType => {
+    const raw = String(value || '').trim().toUpperCase();
+    const labelToType = Object.entries(ACCOUNT_TYPE_LABELS).reduce<Record<string, AccountType>>((acc, [type, label]) => {
+      acc[label.toUpperCase()] = type as AccountType;
+      return acc;
+    }, {});
+
+    if (Object.values(AccountType).includes(raw as AccountType)) {
+      return raw as AccountType;
+    }
+
+    if (labelToType[raw]) {
+      return labelToType[raw];
+    }
+
+    return AccountType.CHECKING;
   };
 
   // ========================================
@@ -285,7 +303,7 @@ export const FinancialAccountsExportImport: React.FC<ExportImportProps> = ({
             bank_code: (bank_code ? String(bank_code).trim() : '') || undefined,
             bank_name: String(bank_name).trim(),
             account_name: String(account_name).trim(),
-            account_type: (account_type ? String(account_type).trim() : 'Conta Corrente') || 'Conta Corrente',
+            account_type: normalizeAccountType(account_type),
             agency: (agency ? String(agency).trim() : '') || '',
             account_number: (account_number ? String(account_number).trim() : '') || '',
             current_balance: 0,
@@ -325,7 +343,7 @@ export const FinancialAccountsExportImport: React.FC<ExportImportProps> = ({
             bank_code: bank_code || undefined,
             bank_name,
             account_name,
-            account_type: account_type || 'Conta Corrente',
+            account_type: normalizeAccountType(account_type),
             agency: agency || '',
             account_number: account_number || '',
             current_balance: 0,
@@ -656,8 +674,8 @@ export const FinancialAccountsExportImport: React.FC<ExportImportProps> = ({
       // Criar template usando XLSX para melhor compatibilidade
       const templateData = [
         ['Codigo', 'Banco', 'Conta', 'Tipo', 'Agencia', 'Numero', 'Moeda', 'Ativo', 'Padrao'],
-        ['001', 'Banco do Brasil', 'Conta Principal', 'Conta Corrente', '0001', '123456789', 'BRL', 'Sim', 'Sim'],
-        ['033', 'Itau', 'Conta Aplicacao', 'Poupanca', '0002', '987654321', 'BRL', 'Sim', 'Nao'],
+        ['001', 'Banco do Brasil', 'Conta Principal', 'CHECKING', '0001', '123456789', 'BRL', 'Sim', 'Sim'],
+        ['033', 'Itau', 'Conta Aplicacao', 'SAVINGS', '0002', '987654321', 'BRL', 'Sim', 'Nao'],
       ];
 
       const ws = XLSX.utils.aoa_to_sheet(templateData);
@@ -728,6 +746,8 @@ export const FinancialAccountsExportImport: React.FC<ExportImportProps> = ({
           accept=".csv,.xlsx"
           onChange={handleImportCSV}
           disabled={importing}
+          aria-label="Importar contas financeiras"
+          title="Importar contas financeiras"
           className="hidden"
         />
         <Button

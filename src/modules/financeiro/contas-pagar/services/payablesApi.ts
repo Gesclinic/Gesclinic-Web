@@ -5,6 +5,7 @@
 
 import { supabase } from '@/lib/customSupabaseClient';
 import { stockMovementsApi } from '@/lib/stockApi';
+import { syncAPFinancialTransactions } from '@/lib/financeApi';
 import {
   Payable,
   PayableCreateInput,
@@ -47,6 +48,65 @@ async function ignoreOptionalDelete(promise: PromiseLike<{ error: any }>) {
 async function ignoreOptionalUpdate(promise: PromiseLike<{ error: any }>) {
   const { error } = await promise;
   if (error && !isOptionalSchemaError(error)) throw error;
+}
+
+function getMissingColumnFromSchemaError(error: any): string | null {
+  if (!isOptionalSchemaError(error)) return null;
+  const text = String(error?.message || error?.details || '');
+  return text.match(/'([^']+)' column/i)?.[1]
+    || text.match(/column\s+"?([a-zA-Z0-9_]+)"?\s+does not exist/i)?.[1]
+    || null;
+}
+
+async function updateApBillWithSchemaFallback(id: string, updateData: Record<string, any>) {
+  const payload = { ...updateData };
+
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const { data, error } = await supabase
+      .from('ap_bills')
+      .update(payload)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (!error) return data;
+
+    const missingColumn = getMissingColumnFromSchemaError(error);
+    if (!missingColumn || !(missingColumn in payload)) {
+      throw error;
+    }
+
+    delete payload[missingColumn];
+  }
+
+  throw new Error('Nao foi possivel atualizar a conta a pagar: muitas colunas opcionais ausentes no schema.');
+}
+
+async function insertApBillsWithSchemaFallback(rows: Array<Record<string, any>>) {
+  let payload = rows.map((row) => ({ ...row }));
+
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const { data, error } = await supabase
+      .from('ap_bills')
+      .insert(payload)
+      .select()
+      .order('installment_number', { ascending: true });
+
+    if (!error) return data;
+
+    const missingColumn = getMissingColumnFromSchemaError(error);
+    if (!missingColumn || !payload.some((row) => missingColumn in row)) {
+      throw error;
+    }
+
+    payload = payload.map((row) => {
+      const next = { ...row };
+      delete next[missingColumn];
+      return next;
+    });
+  }
+
+  throw new Error('Nao foi possivel criar a conta a pagar: muitas colunas opcionais ausentes no schema.');
 }
 
 async function cleanupPayableDependencies(ids: string[]) {
@@ -137,6 +197,28 @@ function normalizePayableStatus(status: string): PayableStatus {
   };
 
   return statusMap[status?.toLowerCase() || ''] || PayableStatus.OPEN;
+}
+
+function getStatusQueryVariants(status: PayableStatus): string[] {
+  const variants: Record<PayableStatus, string[]> = {
+    [PayableStatus.OPEN]: ['OPEN', 'open', 'aberto', 'PENDING', 'pending'],
+    [PayableStatus.APPROVING]: ['APPROVING', 'approving', 'aprovando'],
+    [PayableStatus.APPROVED]: ['APPROVED', 'approved', 'aprovado'],
+    [PayableStatus.OVERDUE]: ['OVERDUE', 'overdue', 'vencido'],
+    [PayableStatus.PARTIAL]: ['PARTIAL', 'partial', 'parcial'],
+    [PayableStatus.PAID]: ['PAID', 'paid', 'pago'],
+    [PayableStatus.BLOCKED]: ['BLOCKED', 'blocked', 'bloqueado'],
+    [PayableStatus.CANCELED]: ['CANCELED', 'canceled', 'cancelado'],
+    [PayableStatus.NEGOTIATED]: ['NEGOTIATED', 'negotiated', 'negociado'],
+    [PayableStatus.REVERSED]: ['REVERSED', 'reversed', 'estornado'],
+  };
+
+  return variants[status] || [status];
+}
+
+function expandStatusFilter(statuses?: PayableStatus[]): string[] {
+  if (!statuses?.length) return [];
+  return Array.from(new Set(statuses.flatMap((status) => getStatusQueryVariants(status))));
 }
 
 function isUuid(value?: string | null): boolean {
@@ -375,6 +457,122 @@ function normalizeText(value?: string | null): string {
     .toLowerCase();
 }
 
+function normalizeDocument(value?: string | null): string {
+  return String(value || '').replace(/\D/g, '');
+}
+
+function hasClassification(row: any): boolean {
+  const dreClassification = String(row?.dre_classification || '').toUpperCase();
+  return !!(
+    row?.chart_account_id
+    || row?.cost_center_id
+    || row?.financial_account_id
+    || (dreClassification && dreClassification !== 'OPERATIONAL')
+    || row?.category
+    || row?.subcategory
+    || (Array.isArray(row?.cost_allocations) && row.cost_allocations.length)
+  );
+}
+
+function isDocumentBackedPayableInput(input: PayableCreateInput): boolean {
+  return !!(
+    input.has_invoice
+    || input.invoice_xml_url
+    || input.invoice_pdf_url
+    || input.attachment_url
+    || input.document_items?.length
+    || input.medication_traceability?.length
+    || input.metadata?.document_upload
+    || input.metadata?.document_extraction
+    || input.metadata?.nfe
+    || input.metadata?.source_file_name
+  );
+}
+
+async function findHistoricalPayableClassification(clinicId: string, input: PayableCreateInput): Promise<Partial<PayableCreateInput> | null> {
+  const document = normalizeDocument(input.supplier_document || input.document_number);
+  const supplierName = normalizeText(input.supplier_name);
+  const selectColumns = 'category,subcategory,chart_account_id,cost_center_id,financial_account_id,dre_classification,cost_allocations,updated_at,created_at';
+
+  const fetchRows = async (query: any) => {
+    const { data, error } = await query
+      .order('updated_at', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false, nullsFirst: false })
+      .limit(10);
+
+    if (error) {
+      if (isOptionalSchemaError(error)) return [];
+      throw error;
+    }
+
+    return data || [];
+  };
+
+  const documentRows = document.length >= 8
+    ? await fetchRows(
+      supabase
+        .from('ap_bills')
+        .select(selectColumns)
+        .eq('clinic_id', clinicId)
+        .eq('supplier_document', document)
+    )
+    : [];
+
+  let match = documentRows.find(hasClassification);
+
+  if (!match && supplierName.length >= 4) {
+    const supplierRows = await fetchRows(
+      supabase
+        .from('ap_bills')
+        .select(selectColumns)
+        .eq('clinic_id', clinicId)
+        .ilike('supplier_name', `%${input.supplier_name.trim().slice(0, 80)}%`)
+    );
+
+    match = supplierRows.find((row: any) => hasClassification(row));
+  }
+
+  if (!match) return null;
+
+  return {
+    category: match.category || undefined,
+    subcategory: match.subcategory || undefined,
+    chart_account_id: match.chart_account_id || undefined,
+    cost_center_id: match.cost_center_id || undefined,
+    financial_account_id: match.financial_account_id || undefined,
+    dre_classification: match.dre_classification || undefined,
+    cost_allocations: Array.isArray(match.cost_allocations) && match.cost_allocations.length ? match.cost_allocations : undefined,
+  };
+}
+
+async function applyHistoricalPayableClassification(clinicId: string, input: PayableCreateInput): Promise<PayableCreateInput> {
+  const historical = await findHistoricalPayableClassification(clinicId, input);
+  if (!historical) return input;
+
+  const documentBacked = isDocumentBackedPayableInput(input);
+  const shouldUseHistoricalDre = !input.dre_classification
+    || (documentBacked && String(input.dre_classification).toUpperCase() === 'OPERATIONAL' && !!historical.dre_classification);
+
+  return {
+    ...input,
+    category: input.category || historical.category,
+    subcategory: input.subcategory || historical.subcategory,
+    chart_account_id: input.chart_account_id || historical.chart_account_id,
+    cost_center_id: input.cost_center_id || historical.cost_center_id,
+    financial_account_id: input.financial_account_id || historical.financial_account_id,
+    dre_classification: shouldUseHistoricalDre ? historical.dre_classification as any : input.dre_classification,
+    cost_allocations: input.cost_allocations?.length ? input.cost_allocations : historical.cost_allocations,
+    metadata: {
+      ...(input.metadata || {}),
+      auto_classification: {
+        ...(input.metadata?.auto_classification || {}),
+        source: 'payable_history',
+        applied_at: new Date().toISOString(),
+      },
+    },
+  };
+}
+
 function dateDiffDays(first?: string | null, second?: string | null): number {
   if (!first || !second) return 999;
   const a = new Date(`${first}T00:00:00`).getTime();
@@ -451,14 +649,16 @@ export async function listPayables(
   params: PayableFilterParams
 ): Promise<PayablesPageResponse> {
   try {
+    const normalizedStatusFilter = expandStatusFilter(params.status);
+
     let query = supabase
       .from('ap_bills')
       .select('*', { count: 'exact' })
       .eq('clinic_id', params.clinic_id);
 
     // Status filter
-    if (params.status && params.status.length > 0) {
-      query = query.in('status', params.status);
+    if (normalizedStatusFilter.length > 0) {
+      query = query.in('status', normalizedStatusFilter);
     }
 
     // Type filter
@@ -559,12 +759,41 @@ export async function listPayables(
     if (params.is_overdue !== undefined) {
       if (params.is_overdue) {
         query = query.lt('due_date', new Date().toISOString().split('T')[0])
-          .neq('status', 'PAID');
+          .neq('status', 'PAID')
+          .neq('status', 'paid')
+          .neq('status', 'pago');
       }
     }
 
-    // Exclude canceled
-    query = query.neq('status', 'CANCELED');
+    // Exclude canceled only if explicit filters are applied
+    // This ensures that without filters, all records are shown (including CANCELED for visibility)
+    // but when user applies filters, CANCELED is excluded by default
+    const hasExplicitFilters = normalizedStatusFilter.length > 0 
+      || params.supplier_id 
+      || params.supplier_name 
+      || params.category 
+      || params.subcategory 
+      || params.chart_account_id 
+      || params.cost_center_id 
+      || params.financial_account_id 
+      || (params.payment_method && params.payment_method.length > 0)
+      || params.unit_id 
+      || params.due_date_start 
+      || params.due_date_end 
+      || params.issue_date_start 
+      || params.issue_date_end 
+      || params.payment_date_start 
+      || params.payment_date_end 
+      || params.competency_date_start 
+      || params.competency_date_end 
+      || params.search;
+
+    if (hasExplicitFilters) {
+      query = query
+        .neq('status', 'CANCELED')
+        .neq('status', 'canceled')
+        .neq('status', 'cancelado');
+    }
 
     // Pagination
     const limit = params.limit || 50;
@@ -617,10 +846,11 @@ export async function createPayable(
   input: PayableCreateInput
 ): Promise<Payable> {
   try {
-    const documentInstallments = getDocumentInstallments(input);
-    const installmentsCount = Math.max(1, documentInstallments.length || Number(input.installments || 1));
+    const payableInput = await applyHistoricalPayableClassification(clinicId, input);
+    const documentInstallments = getDocumentInstallments(payableInput);
+    const installmentsCount = Math.max(1, documentInstallments.length || Number(payableInput.installments || 1));
     const installmentGroupId = installmentsCount > 1 ? createClientId() : null;
-    const grossAmount = Number(input.amount || 0);
+    const grossAmount = Number(payableInput.amount || 0);
     const installmentAmount = installmentsCount > 1
       ? Number((grossAmount / installmentsCount).toFixed(2))
       : grossAmount;
@@ -636,55 +866,56 @@ export async function createPayable(
 
       return {
         clinic_id: clinicId,
-        supplier_name: input.supplier_name,
-        supplier_id: input.supplier_id || null,
-        supplier_document: input.supplier_document || null,
-        document_number: input.document_number || null,
-        invoice_number: input.invoice_number || null,
-        invoice_series: input.invoice_series || null,
+        supplier_name: payableInput.supplier_name,
+        supplier_id: payableInput.supplier_id || null,
+        supplier_document: payableInput.supplier_document || null,
+        document_number: payableInput.document_number || null,
+        invoice_number: payableInput.invoice_number || null,
+        guide_number: payableInput.guide_number || payableInput.invoice_number || null,
+        invoice_series: payableInput.invoice_series || null,
         description: installmentsCount > 1
-          ? `${input.description} - Parcela ${installmentNumber}/${installmentsCount}`
-          : input.description,
-        observations: input.observations || null,
-        type: input.type || 'SUPPLIER',
-        category: input.category || null,
-        subcategory: input.subcategory || null,
-        unit_id: input.unit_id || null,
-        unit_name: input.unit_name || null,
-        issue_date: input.issue_date || null,
-        competency_date: input.competency_date || null,
-        due_date: documentInstallment?.due_date || (installmentsCount > 1 ? addMonths(input.due_date, index) : input.due_date),
+          ? `${payableInput.description} - Parcela ${installmentNumber}/${installmentsCount}`
+          : payableInput.description,
+        observations: payableInput.observations || null,
+        type: payableInput.type || 'SUPPLIER',
+        category: payableInput.category || null,
+        subcategory: payableInput.subcategory || null,
+        unit_id: payableInput.unit_id || null,
+        unit_name: payableInput.unit_name || null,
+        issue_date: payableInput.issue_date || null,
+        competency_date: payableInput.competency_date || null,
+        due_date: documentInstallment?.due_date || (installmentsCount > 1 ? addMonths(payableInput.due_date, index) : payableInput.due_date),
         amount,
-        interest_amount: input.interest_amount || 0,
-        fine_amount: input.fine_amount || 0,
-        discount_amount: installmentsCount > 1 ? Number(((input.discount_amount || 0) / installmentsCount).toFixed(2)) : input.discount_amount || 0,
-        payment_method: input.payment_method || null,
-        payment_bank: input.payment_bank || null,
-        payment_reference: input.payment_reference || null,
-        chart_account_id: input.chart_account_id || null,
-        cost_center_id: input.cost_center_id || null,
-        financial_account_id: input.financial_account_id || null,
-        dre_classification: input.dre_classification || null,
-        cost_allocations: input.cost_allocations || null,
-        is_recurring: input.is_recurring || false,
-        recurrence_type: input.recurrence_type || null,
-        recurrence_interval: input.recurrence_interval || 1,
-        recurrence_end_date: input.recurrence_end_date || null,
+        interest_amount: payableInput.interest_amount || 0,
+        fine_amount: payableInput.fine_amount || 0,
+        discount_amount: installmentsCount > 1 ? Number(((payableInput.discount_amount || 0) / installmentsCount).toFixed(2)) : payableInput.discount_amount || 0,
+        payment_method: payableInput.payment_method || null,
+        payment_bank: payableInput.payment_bank || null,
+        payment_reference: payableInput.payment_reference || null,
+        chart_account_id: payableInput.chart_account_id || null,
+        cost_center_id: payableInput.cost_center_id || null,
+        financial_account_id: payableInput.financial_account_id || null,
+        dre_classification: payableInput.dre_classification || null,
+        cost_allocations: payableInput.cost_allocations || null,
+        is_recurring: payableInput.is_recurring || false,
+        recurrence_type: payableInput.recurrence_type || null,
+        recurrence_interval: payableInput.recurrence_interval || 1,
+        recurrence_end_date: payableInput.recurrence_end_date || null,
         installments: installmentsCount,
         installment_number: installmentNumber,
         installment_total: installmentsCount,
-        parent_payable_id: input.parent_payable_id || null,
-        has_invoice: input.has_invoice || false,
-        invoice_xml_url: input.invoice_xml_url || null,
-        invoice_pdf_url: input.invoice_pdf_url || null,
-        attachment_url: input.attachment_url || null,
-        document_taxes: input.document_taxes || {},
-        document_items: input.document_items || [],
-        medication_traceability: input.medication_traceability || [],
-        is_forecast: input.is_forecast !== false,
-        is_manual: input.is_manual !== false,
+        parent_payable_id: payableInput.parent_payable_id || null,
+        has_invoice: payableInput.has_invoice || false,
+        invoice_xml_url: payableInput.invoice_xml_url || null,
+        invoice_pdf_url: payableInput.invoice_pdf_url || null,
+        attachment_url: payableInput.attachment_url || null,
+        document_taxes: payableInput.document_taxes || {},
+        document_items: payableInput.document_items || [],
+        medication_traceability: payableInput.medication_traceability || [],
+        is_forecast: payableInput.is_forecast !== false,
+        is_manual: payableInput.is_manual !== false,
         approval_stage: 'LAUNCHED',
-        metadata: buildEnterpriseMetadata(input, {
+        metadata: buildEnterpriseMetadata(payableInput, {
           installment_group_id: installmentGroupId,
           installment_number: installmentNumber,
           installment_total: installmentsCount,
@@ -694,20 +925,19 @@ export async function createPayable(
       };
     });
 
-    const { data, error } = await supabase
-      .from('ap_bills')
-      .insert(rows)
-      .select()
-      .order('installment_number', { ascending: true });
-
-    if (error) throw error;
+    const data = await insertApBillsWithSchemaFallback(rows);
     if (!data?.length) throw new Error('Payable was not created');
+
+    // Keep AP creation from the module aligned with legacy flow by syncing
+    // allocation-aware financial transactions right after ap_bills insertion.
+    await Promise.all((data || []).map((row) => syncAPFinancialTransactions(row)));
+
     try {
       await stockMovementsApi.createEntriesFromPayableDocument(data[0].clinic_id, data[0], {
-        items: input.document_items || [],
-        supplierName: input.supplier_name,
-        invoiceNumber: input.invoice_number || input.document_number,
-        issueDate: input.issue_date || input.competency_date || input.due_date,
+        items: payableInput.document_items || [],
+        supplierName: payableInput.supplier_name,
+        invoiceNumber: payableInput.invoice_number || payableInput.document_number,
+        issueDate: payableInput.issue_date || payableInput.competency_date || payableInput.due_date,
       });
     } catch (stockError: any) {
       console.warn('Payable created, but XML stock entry integration failed:', stockError?.message || stockError);
@@ -739,14 +969,7 @@ export async function updatePayable(
       approval_stage: input.approval_stage,
     });
 
-    const { data, error } = await supabase
-      .from('ap_bills')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
+    const data = await updateApBillWithSchemaFallback(id, updateData as Record<string, any>);
     invalidateFinanceCaches(data.clinic_id);
     return await syncEditedPayableInstallments(data, input);
   } catch (error) {

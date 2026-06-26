@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { supabase } from '@/lib/customSupabaseClient';
+import { listAccountPlans } from '@/lib/financeApi';
 import {
   Select,
   SelectTrigger,
@@ -26,11 +27,7 @@ export default function Analises() {
       if (!clinicId) {
         return;
       }
-      const { data } = await supabase
-        .from('account_plans')
-        .select('*')
-        .eq('clinic_id', clinicId)
-        .order('name');
+      const data = await listAccountPlans(clinicId);
       setCenters(data || []);
     })();
   }, [clinicId]);

@@ -191,9 +191,31 @@ function mapToDatabase(payload) {
     discount_requested_by_name:
       payload.discount_requested_by_name || payload.discountRequestedByName || null,
     discount_authorized_by: payload.discount_authorized_by || payload.discountAuthorizedBy || null,
+    ...(payload.discount_authorized_by_name !== undefined ||
+    payload.discountAuthorizedByName !== undefined
+      ? {
+          discount_authorized_by_name:
+            payload.discount_authorized_by_name || payload.discountAuthorizedByName || null,
+        }
+      : {}),
     discount_authorized_at: payload.discount_authorized_at || payload.discountAuthorizedAt || null,
     discount_rejected_by: payload.discount_rejected_by || payload.discountRejectedBy || null,
+    ...(payload.discount_rejected_by_name !== undefined ||
+    payload.discountRejectedByName !== undefined
+      ? {
+          discount_rejected_by_name:
+            payload.discount_rejected_by_name || payload.discountRejectedByName || null,
+        }
+      : {}),
     discount_rejected_at: payload.discount_rejected_at || payload.discountRejectedAt || null,
+    ...(payload.discount_rejected_amount !== undefined || payload.discountRejectedAmount !== undefined
+      ? {
+          discount_rejected_amount:
+            payload.discount_rejected_amount !== undefined
+              ? parseFloat(payload.discount_rejected_amount)
+              : parseFloat(payload.discountRejectedAmount),
+        }
+      : {}),
     discount_observation: payload.discount_observation || payload.discountObservation || null,
     payment_method: payload.payment_method || payload.paymentMethod || null,
     payment_splits:
@@ -285,9 +307,12 @@ export function mapFromDatabase(record) {
     discountRequestedBy: record.discount_requested_by,
     discountRequestedByName: record.discount_requested_by_name,
     discountAuthorizedBy: record.discount_authorized_by,
+    discountAuthorizedByName: record.discount_authorized_by_name,
     discountAuthorizedAt: record.discount_authorized_at,
     discountRejectedBy: record.discount_rejected_by,
+    discountRejectedByName: record.discount_rejected_by_name,
     discountRejectedAt: record.discount_rejected_at,
+    discountRejectedAmount: record.discount_rejected_amount,
     discountObservation: record.discount_observation,
 
     // Dados do paciente

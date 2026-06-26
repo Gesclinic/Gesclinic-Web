@@ -14,11 +14,76 @@ export function ConciliacaoImportacao({ bankAccounts, onImportSuccess }) {
   const [accountId, setAccountId] = useState(null);
   const [importing, setImporting] = useState(false);
   const [preview, setPreview] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
   const { parseCSV, parseOFX } = useBankStatementParser();
 
-  const handleFileSelect = async (e) => {
-    const selectedFile = e.target.files?.[0];
+  const resolveAccountLabel = (account) => {
+    if (!account) {
+      return 'Conta sem nome';
+    }
+
+    const name = account.account_name || account.name || account.label || 'Conta sem nome';
+    const bank = account.bank_name || account.bank || account.bankLabel || '';
+    const number = account.account_number || account.number || account.accountNumber || '';
+
+    const details = [bank, number].filter(Boolean).join(' - ');
+    return details ? `${name} (${details})` : name;
+  };
+
+  const formatPreviewDate = (value) => {
+    if (!value) {
+      return '--';
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      const [year, month, day] = value.split('-');
+      return `${day}/${month}/${year}`;
+    }
+
+    if (/^\d{8}$/.test(value)) {
+      const year = value.slice(0, 4);
+      const month = value.slice(4, 6);
+      const day = value.slice(6, 8);
+      return `${day}/${month}/${year}`;
+    }
+
+    return value;
+  };
+
+  const decodeFileContent = async (selectedFile, selectedFormat) => {
+    const buffer = await selectedFile.arrayBuffer();
+    const candidates = [];
+
+    const tryDecode = (encoding) => {
+      try {
+        const decoded = new TextDecoder(encoding).decode(buffer);
+        candidates.push(decoded);
+      } catch (err) {
+        console.warn(`Falha ao decodificar com ${encoding}:`, err);
+      }
+    };
+
+    tryDecode('utf-8');
+    tryDecode('windows-1252');
+    tryDecode('iso-8859-1');
+
+    const hasOfxMarkers = (text) => /<OFX>|<STMTTRN>/i.test(text);
+    const replacementCount = (text) => (text.match(/\uFFFD/g) || []).length;
+
+    if (selectedFormat === IMPORT_FORMATS.OFX) {
+      const withMarkers = candidates.filter(hasOfxMarkers);
+      const ranked = (withMarkers.length > 0 ? withMarkers : candidates).sort(
+        (a, b) => replacementCount(a) - replacementCount(b),
+      );
+      return ranked[0] || '';
+    }
+
+    const ranked = candidates.sort((a, b) => replacementCount(a) - replacementCount(b));
+    return ranked[0] || '';
+  };
+
+  const processSelectedFile = async (selectedFile) => {
     if (!selectedFile) {
       return;
     }
@@ -26,7 +91,7 @@ export function ConciliacaoImportacao({ bankAccounts, onImportSuccess }) {
     setFile(selectedFile);
 
     try {
-      const content = await selectedFile.text();
+      const content = await decodeFileContent(selectedFile, format);
       let statements = [];
 
       if (format === IMPORT_FORMATS.CSV) {
@@ -42,6 +107,29 @@ export function ConciliacaoImportacao({ bankAccounts, onImportSuccess }) {
     }
   };
 
+  const handleFileSelect = async (e) => {
+    const selectedFile = e.target.files?.[0];
+    await processSelectedFile(selectedFile);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const droppedFile = e.dataTransfer?.files?.[0];
+    await processSelectedFile(droppedFile);
+  };
+
   const handleImport = async () => {
     if (!file || !accountId) {
       alert('Selecione uma conta bancária e um arquivo');
@@ -50,7 +138,7 @@ export function ConciliacaoImportacao({ bankAccounts, onImportSuccess }) {
 
     try {
       setImporting(true);
-      const content = await file.text();
+      const content = await decodeFileContent(file, format);
       let statements = [];
 
       if (format === IMPORT_FORMATS.CSV) {
@@ -59,7 +147,7 @@ export function ConciliacaoImportacao({ bankAccounts, onImportSuccess }) {
         statements = parseOFX(content);
       }
 
-      await onImportSuccess(statements, accountId);
+      const result = await onImportSuccess(statements, accountId);
 
       // Limpar
       setFile(null);
@@ -69,7 +157,20 @@ export function ConciliacaoImportacao({ bankAccounts, onImportSuccess }) {
         fileInputRef.current.value = '';
       }
 
-      alert(`${statements.length} lançamentos importados com sucesso!`);
+      // Mensagem customizada baseada no resultado
+      if (result && result.imported !== undefined) {
+        if (result.imported > 0) {
+          let message = `✓ ${result.imported} lançamento(ns) importado(s) com sucesso!`;
+          if (result.duplicates > 0) {
+            message += `\n⚠️ ${result.duplicates} duplicata(s) ignorada(s)`;
+          }
+          alert(message);
+        } else if (result.duplicates > 0) {
+          alert(`⚠️ Todos os ${result.duplicates} lançamento(ns) já existem no sistema (duplicatas ignoradas)`);
+        }
+      } else {
+        alert(`${statements.length} lançamentos processados com sucesso!`);
+      }
     } catch (err) {
       console.error('Error importing:', err);
       alert('Erro ao importar: ' + err.message);
@@ -94,11 +195,17 @@ export function ConciliacaoImportacao({ bankAccounts, onImportSuccess }) {
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Selecionar conta...</option>
-            {bankAccounts.map((account) => (
-              <option key={account.id} value={account.id}>
-                {account.account_name} ({account.account_number})
+            {bankAccounts.length === 0 ? (
+              <option value="" disabled>
+                Nenhuma conta encontrada
               </option>
-            ))}
+            ) : (
+              bankAccounts.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {resolveAccountLabel(account)}
+                </option>
+              ))
+            )}
           </select>
         </div>
 
@@ -118,13 +225,56 @@ export function ConciliacaoImportacao({ bankAccounts, onImportSuccess }) {
         {/* Arquivo */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Arquivo</label>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".csv,.ofx,.txt"
-            onChange={handleFileSelect}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-          />
+          <div
+            className={`w-full px-3 py-3 border-2 rounded-lg transition-all duration-200 ${
+              isDragging
+                ? 'border-blue-600 border-dashed bg-blue-100 shadow-sm scale-[1.01]'
+                : 'border-gray-300 bg-white hover:border-blue-400'
+            }`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,.ofx,.txt"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+
+            <div className="flex flex-col items-start gap-2 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-center gap-2">
+                <span
+                  className={`inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+                    isDragging ? 'bg-blue-200 text-blue-700' : 'bg-gray-100 text-gray-600'
+                  }`}
+                  aria-hidden="true"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 16V4" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M8 8l4-4 4 4" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M20 16.5a3.5 3.5 0 0 1-3.5 3.5h-9A3.5 3.5 0 0 1 4 16.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+                <p className={`text-sm ${isDragging ? 'text-blue-800 font-medium' : 'text-gray-700'}`}>
+                {file
+                  ? `Arquivo selecionado: ${file.name}`
+                  : isDragging
+                    ? 'Solte o arquivo para carregar'
+                    : 'Arraste o arquivo aqui ou selecione no botão'}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full md:w-auto"
+              >
+                Selecionar arquivo
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -140,8 +290,8 @@ export function ConciliacaoImportacao({ bankAccounts, onImportSuccess }) {
                 key={idx}
                 className="flex justify-between text-xs p-2 bg-white rounded border border-gray-200"
               >
-                <span className="font-medium">{stmt.date}</span>
-                <span className="text-gray-600">{stmt.description.substring(0, 30)}</span>
+                <span className="font-medium">{formatPreviewDate(stmt.date)}</span>
+                <span className="text-gray-600">{(stmt.description || 'Sem descrição').substring(0, 60)}</span>
                 <span
                   className={
                     stmt.type === TRANSACTION_TYPE.CREDIT

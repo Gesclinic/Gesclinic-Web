@@ -53,6 +53,7 @@ import EstoqueRequisicaoForm from '@/pages/clinica/estoque/RequisicaoFormPage';
 import EstoqueInventario from '@/pages/clinica/estoque/Inventario';
 import EstoqueInventarioForm from '@/pages/clinica/estoque/InventarioFormPage';
 import EstoqueRelatorios from '@/pages/clinica/estoque/Relatorios';
+import AvaliacaoEstoque from '@/pages/clinica/estoque/AvaliacaoEstoque';
 import DashboardEstoque from '@/pages/clinica/estoque/DashboardEstoque';
 
 // Financeiro - removed duplicate Dashboard import, using FinanceDashboard instead
@@ -69,7 +70,6 @@ import { FinancialAccountsPage, FinancialAccountFormPage } from '@/modules/finan
 // Contas a Pagar Module
 import ContasApagarPage from '@/modules/financeiro/contas-pagar/pages';
 import NovaContaPagarPage from '@/modules/financeiro/contas-pagar/pages/NovaContaPagarPage';
-import FinanceAutomacaoFinanceira from '@/pages/clinica/financeiro/AutomacaoFinanceira';
 import AutorizacaoDescontos from '@/pages/clinica/financeiro/AutorizacaoDescontos';
 import CaixaIndividual from '@/pages/clinica/financeiro/CaixaIndividual';
 import CaixaGerencial from '@/pages/clinica/financeiro/CaixaGerencial';
@@ -86,16 +86,9 @@ import { FinancialTransactionsPage } from '@/modules/financeiro/lancamentos';
 import AppointmentFinancialIntegrationConfig from '@/modules/financeiro/etapa1-integracao-agenda/AppointmentFinancialIntegrationConfig';
 // Novas páginas de repasse (estrutura real)
 import RepasseMedicoLayout from '@/pages/financeiro/RepasseMedicoLayout';
-import RepasseMedicoPage from '@/pages/financeiro/RepasseMedicoPage';
-import RepasseRegrasPage from '@/pages/financeiro/RepasseRegrasPage';
-import RepasseDashboardAnalyticsPage from '@/pages/financeiro/RepasseDashboardAnalyticsPage';
-import RepasseAutomacaoPage from '@/pages/financeiro/RepasseAutomacaoPage';
-// ETAPA 4 & 5: Dashboard DRE Dinâmica + Alertas
-import DashboardDRE from '@/pages/financeiro/DashboardDRE';
+import RepasseEnterprisePage from '@/pages/financeiro/repasse-medico/RepasseEnterprisePage';
 import DREDashboard from '@/components/financeiro/DRE/DREDashboard';
 // ETAPA 6: Conciliação Inteligente
-// ETAPA 7: Financial Cockpit Premium
-import CockpitPremium from '@/pages/financeiro/CockpitPremium';
 // ETAPA 8: Alertas e Automações
 import AlertCenter from '@/pages/admin/AlertCenter';
 import JobMonitor from '@/pages/admin/JobMonitor';
@@ -306,7 +299,11 @@ function LegacyAdminClinicEditRedirect() {
 
 function LegacyPayableEditRedirect() {
   const { id } = useParams();
-  return <Navigate to={`/clinica/financeiro/contas-pagar?edit=${id}&trace=legacy-editar-conta`} replace />;
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  params.set('edit', id);
+  if (!params.has('trace')) params.set('trace', 'legacy-editar-conta');
+  return <Navigate to={`/clinica/financeiro/contas-pagar?${params.toString()}`} replace />;
 }
 
 /* 🔓 Public Route */
@@ -484,6 +481,7 @@ export default function AppRoutes() {
           <Route path="estoque/requisicoes/nova" element={<EstoqueRequisicaoForm />} />
           <Route path="estoque/inventario" element={<EstoqueInventario />} />
           <Route path="estoque/inventario/novo" element={<EstoqueInventarioForm />} />
+          <Route path="estoque/avaliacao" element={<AvaliacaoEstoque />} />
           <Route path="estoque/relatorios" element={<EstoqueRelatorios />} />
 
           {/* FINANCEIRO */}
@@ -503,14 +501,11 @@ export default function AppRoutes() {
               </ProtectedWizardRoute>
             }
           />
-          <Route path="financeiro/dre-dinamica" element={<DashboardDRE />} />
-          <Route path="financeiro/dre" element={<DREDashboard />} />
-          <Route path="financeiro/cockpit-premium" element={<CockpitPremium />} />
+          <Route path="financeiro/dre" element={<Navigate to="/clinica/financeiro/resultado" replace />} />
           <Route path="financeiro/caixa" element={<CaixaIndividual />} />
           <Route path="financeiro/caixa-gerencial" element={<CaixaGerencial />} />
           <Route path="financeiro/divergencias" element={<DivergenciasAnalytics />} />
           <Route path="financeiro/resultado" element={<DREPage />} />
-          <Route path="financeiro/dre" element={<DREPage />} />
           <Route path="financeiro/receber" element={<FinanceContasReceber />} />
           <Route path="financeiro/contas-receber" element={<FinanceContasReceber />} />
           <Route
@@ -554,12 +549,6 @@ export default function AppRoutes() {
             path="financeiro/conciliacao"
             element={<Navigate to="/clinica/financeiro/conciliacao-bancaria" replace />}
           />
-          <Route path="financeiro/cockpit-premium" element={<CockpitPremium />} />
-          <Route path="financeiro/automacao" element={<FinanceAutomacaoFinanceira />} />
-          <Route
-            path="financeiro/automacoes"
-            element={<Navigate to="/clinica/financeiro/automacao" replace />}
-          />
           <Route path="financeiro/alerts" element={<AlertCenter />} />
           <Route
             path="financeiro/cartoes"
@@ -592,29 +581,23 @@ export default function AppRoutes() {
             path="financeiro/etapa1-integracao-agenda"
             element={<AppointmentFinancialIntegrationConfig />}
           />
-          <Route
-            path="automacoes"
-            element={<Navigate to="/clinica/financeiro/automacao" replace />}
-          />
           <Route path="financeiro/autorizacoes-descontos" element={<AutorizacaoDescontos />} />
           <Route path="financeiro/repasse/*" element={<RepasseMedicoLayout />}>
-            <Route index element={<Navigate to="?tab=visao-geral" replace />} />
-            <Route path="visao-geral" element={<RepasseMedicoPage />} />
-            <Route path="regras-avancadas" element={<RepasseRegrasPage />} />
-            <Route path="analytics" element={<RepasseDashboardAnalyticsPage />} />
-            <Route path="automacao" element={<RepasseAutomacaoPage />} />
+            <Route index element={<Navigate to="dashboard-executivo" replace />} />
+            <Route path=":section" element={<RepasseEnterprisePage />} />
+            <Route path=":section/:scope" element={<RepasseEnterprisePage />} />
           </Route>
           <Route
             path="financeiro/repasse/medico"
-            element={<Navigate to="/clinica/financeiro/repasse/?tab=visao-geral" replace />}
+            element={<Navigate to="/clinica/financeiro/repasse/dashboard-executivo" replace />}
           />
           <Route
             path="financeiro/repasse-medico"
-            element={<Navigate to="/clinica/financeiro/repasse/?tab=visao-geral" replace />}
+            element={<Navigate to="/clinica/financeiro/repasse/dashboard-executivo" replace />}
           />
           <Route
             path="repasse"
-            element={<Navigate to="/clinica/financeiro/repasse/?tab=visao-geral" replace />}
+            element={<Navigate to="/clinica/financeiro/repasse/dashboard-executivo" replace />}
           />
           <Route path="financeiro/centro-custos" element={<CostCenterPage />} />
           <Route path="financeiro/contas-financeiras/nova" element={<FinancialAccountFormPage />} />

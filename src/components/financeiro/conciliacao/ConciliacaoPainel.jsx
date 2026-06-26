@@ -85,10 +85,10 @@ export function ConciliacaoPainel({
 
   const handleMarkDivergent = () => {
     if (!divergenceReason.trim()) {
-      alert('Informe o motivo da divergência');
+      alert('Informe o motivo da criticidade');
       return;
     }
-    if (window.confirm('Marcar como divergente?')) {
+    if (window.confirm('Classificar como crítico?')) {
       onMarkDivergent(statement.id, divergenceReason);
       setDivergenceReason('');
     }
@@ -96,10 +96,10 @@ export function ConciliacaoPainel({
 
   const handleIgnore = () => {
     if (!ignoreReason.trim()) {
-      alert('Informe o motivo de ignorar');
+      alert('Informe o motivo para classificar como neutro');
       return;
     }
-    if (window.confirm('Ignorar este lançamento?')) {
+    if (window.confirm('Classificar este lançamento como neutro?')) {
       onIgnore(statement.id, ignoreReason);
       setIgnoreReason('');
     }
@@ -108,7 +108,7 @@ export function ConciliacaoPainel({
   if (!statement) {
     return (
       <Card className="p-6 text-center text-gray-500">
-        Selecione um lançamento da lista para conciliar
+        Selecione um lançamento da lista para tratar
       </Card>
     );
   }
@@ -121,7 +121,7 @@ export function ConciliacaoPainel({
       <div className="border-b pb-4 mb-4">
         <div className="flex justify-between items-start">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Conciliação de Lançamento</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Tratativa de lançamento</h3>
             <div className="space-y-1 text-sm">
               <p className="text-gray-600">
                 <span className="font-medium">Data:</span> {formatDate(statement.statement_date)}
@@ -152,7 +152,7 @@ export function ConciliacaoPainel({
               : 'text-gray-600 border-transparent'
           }`}
         >
-          💡 Sugestões ({suggestions[statement.id]?.length || 0})
+          Sugestões ({suggestions[statement.id]?.length || 0})
         </button>
         <button
           onClick={() => setActiveTab('create')}
@@ -162,7 +162,7 @@ export function ConciliacaoPainel({
               : 'text-gray-600 border-transparent'
           }`}
         >
-          ➕ Criar Lançamento
+          Criar lançamento
         </button>
         <button
           onClick={() => setActiveTab('actions')}
@@ -172,7 +172,7 @@ export function ConciliacaoPainel({
               : 'text-gray-600 border-transparent'
           }`}
         >
-          ⚙️ Ações
+          Ações
         </button>
       </div>
 
@@ -211,7 +211,7 @@ export function ConciliacaoPainel({
                       size="sm"
                       className="bg-green-600 hover:bg-green-700"
                     >
-                      ✓ Conciliar
+                      Classificar como estável
                     </Button>
                   </div>
                 </div>
@@ -270,14 +270,14 @@ export function ConciliacaoPainel({
       {/* Ações */}
       {activeTab === 'actions' && (
         <div className="space-y-4">
-          {/* Marcar como divergente */}
+          {/* Classificar como crítico */}
           <div className="p-3 border rounded-lg bg-red-50">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Marcar como Divergente
+              Classificar como crítico
             </label>
             <input
               type="text"
-              placeholder="Motivo da divergência..."
+              placeholder="Motivo da criticidade..."
               value={divergenceReason}
               onChange={(e) => setDivergenceReason(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-2 focus:outline-none focus:ring-2 focus:ring-red-500"
@@ -287,24 +287,24 @@ export function ConciliacaoPainel({
               disabled={loading}
               className="w-full bg-red-600 hover:bg-red-700"
             >
-              🔴 Marcar como Divergente
+              Classificar como crítico
             </Button>
           </div>
 
-          {/* Ignorar */}
+          {/* Classificar como neutro */}
           <div className="p-3 border rounded-lg bg-gray-50">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Ignorar Lançamento
+              Classificar como neutro
             </label>
             <input
               type="text"
-              placeholder="Motivo de ignorar..."
+              placeholder="Motivo para classificação neutra..."
               value={ignoreReason}
               onChange={(e) => setIgnoreReason(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-2 focus:outline-none focus:ring-2 focus:ring-gray-500"
             />
             <Button onClick={handleIgnore} disabled={loading} variant="outline" className="w-full">
-              ⚠️ Ignorar
+              Classificar como neutro
             </Button>
           </div>
         </div>

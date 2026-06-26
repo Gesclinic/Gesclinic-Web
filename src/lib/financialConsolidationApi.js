@@ -38,8 +38,22 @@ function getReceivableCompetenceDate(row) {
   return dateOnly(row.competency_date || row.invoice_date || row.due_date || row.received_date || row.created_at);
 }
 
+function getReceivableMovementDate(row) {
+  if (isPaidStatus(row.status)) {
+    return dateOnly(row.received_date || row.received_at || row.due_date || row.invoice_date || row.created_at);
+  }
+  return dateOnly(row.due_date || row.competency_date || row.invoice_date || row.created_at);
+}
+
 function getPayableCompetenceDate(row) {
   return dateOnly(row.competency_date || row.issue_date || row.due_date || row.paid_at || row.created_at);
+}
+
+function getPayableMovementDate(row) {
+  if (isPaidStatus(row.status)) {
+    return dateOnly(row.paid_date || row.paid_at || row.payment_date || row.due_date || row.issue_date || row.created_at);
+  }
+  return dateOnly(row.due_date || row.competency_date || row.issue_date || row.created_at);
 }
 
 function getTransactionCompetenceDate(row) {
@@ -113,6 +127,27 @@ function getTransactionType(row = {}) {
   return type || transactionType.toLowerCase();
 }
 
+function getReceivablePayerName(row = {}) {
+  return row.payer_name
+    || row.convenio_name
+    || row.convenio
+    || row.company_name
+    || row.empresa_name
+    || row.patient_name
+    || 'Pagador nao informado';
+}
+
+function getPayableRecipientName(row = {}) {
+  return row.vendor_name
+    || row.supplier_name
+    || row.fornecedor_name
+    || row.recipient_name
+    || row.payee_name
+    || row.beneficiary_name
+    || row.favorecido
+    || 'Destinatario nao informado';
+}
+
 function isReceivableOrPayableOrigin(row = {}) {
   const origin = String(row.origin_module || '').toLowerCase();
   return [
@@ -178,9 +213,9 @@ export async function getFinancialConsolidation(clinicId, startDate, endDate) {
   if (!clinicId) return buildEmptyConsolidation(startDate, endDate);
 
   const [receivablesResult, payablesResult, transactionsResult] = await Promise.all([
-    supabase.from('ar_invoices').select('*').eq('clinic_id', clinicId).limit(5000),
-    supabase.from('ap_bills').select('*').eq('clinic_id', clinicId).limit(5000),
-    supabase.from('financial_transactions').select('*').eq('clinic_id', clinicId).limit(5000),
+    supabase.from('ar_invoices').select('*').eq('clinic_id', clinicId).order('created_at', { ascending: false }).limit(20000),
+    supabase.from('ap_bills').select('*').eq('clinic_id', clinicId).order('created_at', { ascending: false }).limit(20000),
+    supabase.from('financial_transactions').select('*').eq('clinic_id', clinicId).order('created_at', { ascending: false }).limit(20000),
   ]);
 
   if (receivablesResult.error) throw receivablesResult.error;
@@ -301,12 +336,28 @@ export function buildDerivedFinancialTransactions(consolidation) {
   const rows = [];
 
   consolidation.receivables.forEach((row) => {
-    const date = getReceivableCompetenceDate(row);
+    const movementDate = getReceivableMovementDate(row);
+    const competenceDate = getReceivableCompetenceDate(row);
     const gross = getReceivableGross(row);
     const discount = money(row.discount_value ?? row.descontos);
     const fee = getReceivableCardFee(row);
     const status = isPaidStatus(row.status) ? 'paid' : 'scheduled';
     const description = row.description || row.service_description || row.patient_name || 'Conta a receber';
+    const payerName = getReceivablePayerName(row);
+    const receivableMeta = {
+      counterparty_name: payerName,
+      counterparty_role: 'Pagador',
+      payer_name: payerName,
+      patient_name: row.patient_name || null,
+      service_name: row.service_name || row.service_description || null,
+      document_number: row.document_number
+        || row.invoice_number
+        || row.numero_documento
+        || row.insurance_invoice_number
+        || row.guide_number
+        || row.nf_document_name
+        || null,
+    };
 
     if (gross > 0) {
       rows.push({
@@ -316,10 +367,16 @@ export function buildDerivedFinancialTransactions(consolidation) {
         transaction_type: 'INCOME',
         status,
         category: 'medical_service',
+        chart_account_id: row.chart_account_id || row.plano_contas_id || row.category_id || null,
+        chart_account_name: row.chart_account_name || row.plano_contas_name || row.category_name || null,
+        category_id: row.category_id || row.chart_account_id || row.plano_contas_id || null,
+        category_name: row.category_name || row.chart_account_name || row.plano_contas_name || null,
+        ...receivableMeta,
+        flow_detail_name: 'Receita bruta',
         description: `Receita bruta - ${description}`,
         amount: gross,
-        transaction_date: date,
-        competency_date: date,
+        transaction_date: movementDate,
+        competency_date: competenceDate,
         origin_module: 'accounts_receivable',
         origin_id: row.id,
         is_reconciled: status === 'paid',
@@ -336,10 +393,16 @@ export function buildDerivedFinancialTransactions(consolidation) {
         transaction_type: 'ADJUSTMENT',
         status,
         category: 'revenue_deduction',
+        chart_account_id: row.chart_account_id || row.plano_contas_id || row.category_id || null,
+        chart_account_name: row.chart_account_name || row.plano_contas_name || row.category_name || null,
+        category_id: row.category_id || row.chart_account_id || row.plano_contas_id || null,
+        category_name: row.category_name || row.chart_account_name || row.plano_contas_name || null,
+        ...receivableMeta,
+        flow_detail_name: 'Desconto concedido',
         description: `Desconto concedido - ${description}`,
         amount: discount,
-        transaction_date: date,
-        competency_date: date,
+        transaction_date: movementDate,
+        competency_date: competenceDate,
         origin_module: 'accounts_receivable',
         origin_id: row.id,
         is_reconciled: status === 'paid',
@@ -356,10 +419,16 @@ export function buildDerivedFinancialTransactions(consolidation) {
         transaction_type: 'ADJUSTMENT',
         status,
         category: 'card_fee',
+        chart_account_id: row.chart_account_id || row.plano_contas_id || row.category_id || null,
+        chart_account_name: row.chart_account_name || row.plano_contas_name || row.category_name || null,
+        category_id: row.category_id || row.chart_account_id || row.plano_contas_id || null,
+        category_name: row.category_name || row.chart_account_name || row.plano_contas_name || null,
+        ...receivableMeta,
+        flow_detail_name: 'Taxa de cartao',
         description: `Taxa de cartão - ${description}`,
         amount: fee,
-        transaction_date: date,
-        competency_date: date,
+        transaction_date: movementDate,
+        competency_date: competenceDate,
         origin_module: 'accounts_receivable',
         origin_id: row.id,
         is_reconciled: status === 'paid',
@@ -370,7 +439,9 @@ export function buildDerivedFinancialTransactions(consolidation) {
   });
 
   consolidation.payables.forEach((row) => {
-    const date = getPayableCompetenceDate(row);
+    const movementDate = getPayableMovementDate(row);
+    const competenceDate = getPayableCompetenceDate(row);
+    const recipientName = getPayableRecipientName(row);
     rows.push({
       id: `ap-${row.id}`,
       clinic_id: row.clinic_id,
@@ -378,10 +449,20 @@ export function buildDerivedFinancialTransactions(consolidation) {
       transaction_type: 'EXPENSE',
       status: isPaidStatus(row.status) ? 'paid' : 'scheduled',
       category: classifyExpense(row),
+      chart_account_id: row.chart_account_id || row.plano_contas_id || row.category_id || null,
+      chart_account_name: row.chart_account_name || row.plano_contas_name || row.category_name || null,
+      category_id: row.category_id || row.chart_account_id || row.plano_contas_id || null,
+      category_name: row.category_name || row.chart_account_name || row.plano_contas_name || null,
+      counterparty_name: recipientName,
+      counterparty_role: 'Destinatario',
+      recipient_name: recipientName,
+      vendor_name: recipientName,
+      document_number: row.document_number || row.invoice_number || row.nf_number || row.numero_documento || null,
+      flow_detail_name: 'Conta a pagar',
       description: row.description || row.vendor_name || 'Conta a pagar',
       amount: getPayableAmount(row),
-      transaction_date: date,
-      competency_date: date,
+      transaction_date: movementDate,
+      competency_date: competenceDate,
       origin_module: 'accounts_payable',
       origin_id: row.id,
       is_reconciled: isPaidStatus(row.status),
@@ -393,6 +474,7 @@ export function buildDerivedFinancialTransactions(consolidation) {
   (consolidation.transactions || []).forEach((row) => {
     const date = getTransactionCompetenceDate(row);
     const type = getTransactionType(row);
+    const counterpartyName = row.counterparty_name || row.payer_name || row.vendor_name || row.recipient_name || row.payee_name || row.patient_name || 'Contraparte nao informada';
     rows.push({
       id: `ft-${row.id}`,
       clinic_id: row.clinic_id,
@@ -400,6 +482,16 @@ export function buildDerivedFinancialTransactions(consolidation) {
       transaction_type: type === 'revenue' ? 'INCOME' : type === 'expense' ? 'EXPENSE' : 'ADJUSTMENT',
       status: String(row.status || '').toLowerCase(),
       category: row.category || row.category_id || 'general',
+      chart_account_id: row.chart_account_id || row.plano_contas_id || row.category_id || null,
+      chart_account_name: row.chart_account_name || row.plano_contas_name || row.category_name || null,
+      category_id: row.category_id || row.chart_account_id || row.plano_contas_id || null,
+      category_name: row.category_name || row.chart_account_name || row.plano_contas_name || null,
+      counterparty_name: counterpartyName,
+      counterparty_role: type === 'revenue' ? 'Pagador' : 'Destinatario',
+      payer_name: row.payer_name || null,
+      recipient_name: row.recipient_name || row.vendor_name || null,
+      document_number: row.document_number || row.reference_document || null,
+      flow_detail_name: row.flow_detail_name || row.category_name || row.category || 'Lancamento manual',
       description: row.description || row.reference_document || 'Lancamento financeiro',
       amount: money(row.amount),
       transaction_date: date,

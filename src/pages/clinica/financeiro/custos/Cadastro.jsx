@@ -10,8 +10,20 @@ import {
   SelectItem,
 } from '@/components/ui/select';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
-import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
+import {
+  createCostCenter,
+  getNextCostCenterCode,
+  listCostCenters,
+} from '@/modules/financeiro/centro-custo/services/costCentersApi';
+
+function toCenterType(value) {
+  const normalized = String(value || '').toLowerCase();
+  if (normalized === 'assistencial') return 'ASSISTENCIAL';
+  if (normalized === 'administrativo') return 'ADMINISTRATIVO';
+  if (normalized === 'comercial') return 'COMERCIAL';
+  return 'OPERACOES';
+}
 
 export default function Cadastro() {
   const { clinicId } = useAuth();
@@ -31,32 +43,28 @@ export default function Cadastro() {
       if (!clinicId) {
         return;
       }
-      const { data } = await supabase
-        .from('cost_centers')
-        .select('*')
-        .eq('clinic_id', clinicId)
-        .order('name');
+      const data = await listCostCenters(clinicId);
       setAccounts(data || []);
     })();
   }, [clinicId]);
 
   const save = async (goLink = false) => {
     try {
-      // Mapear campos para cost_centers
-      const base = {
+      const code = await getNextCostCenterCode(clinicId, form.parent_id || null);
+
+      await createCostCenter(clinicId, {
+        code,
         name: form.name,
-        type: form.tipo,
-        category: form.categoria,
-        parent_id: form.parent_id,
-        clinic_id: clinicId,
-        order_index: form.order_index ? Number(form.order_index) : null,
-        active: !!form.active,
-        notes: form.notes,
-      };
-      const { data, error } = await supabase.from('cost_centers').insert(base).select().single();
-      if (error) {
-        throw error;
-      }
+        description: form.notes || null,
+        center_type: toCenterType(form.tipo),
+        parent_id: form.parent_id || null,
+        is_active: !!form.active,
+        metadata: {
+          legacy_category: form.categoria,
+          legacy_order_index: form.order_index ? Number(form.order_index) : null,
+        },
+      });
+
       toast({ title: 'Centro salvo!' });
       if (goLink) {
         window.location.assign('/clinica/financeiro/centro-custos/vinculacoes');
@@ -140,7 +148,7 @@ export default function Cadastro() {
                   .filter((a) => !a.parent_id)
                   .map((a) => (
                     <SelectItem key={a.id} value={a.id}>
-                      {a.name}
+                      {a.code} - {a.name}
                     </SelectItem>
                   ))}
               </SelectContent>

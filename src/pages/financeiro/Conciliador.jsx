@@ -241,9 +241,9 @@ const Conciliador = () => {
                       ? 'bg-yellow-100 text-yellow-800'
                       : 'bg-gray-100 text-gray-800'
                   }`}>
-                    {stmt.status === 'completed' ? '✅ Concluído' : 
-                     stmt.status === 'processing' ? '⏳ Processando' : 
-                     '⏸️ Pendente'}
+                    {stmt.status === 'completed' ? 'Estável' : 
+                     stmt.status === 'processing' ? 'Atenção' : 
+                     'Atenção'}
                   </span>
                 </CardContent>
               </Card>
@@ -293,7 +293,7 @@ const Conciliador = () => {
                               ? 'bg-green-100 text-green-800'
                               : 'bg-yellow-100 text-yellow-800'
                           }`}>
-                            {tx.status === 'matched' ? '✅ Combinado' : '❌ Não combinado'}
+                            {tx.status === 'matched' ? 'Estável' : 'Atenção'}
                           </span>
                         </div>
                         <p className="text-sm text-gray-600">
@@ -365,9 +365,9 @@ const Conciliador = () => {
                   </td>
                   <td className="px-4 py-3 text-sm">
                     {tx.status === 'matched' ? (
-                      <span className="text-green-600 font-medium">✅ Combinado</span>
+                      <span className="text-green-600 font-medium">Estável</span>
                     ) : (
-                      <span className="text-yellow-600 font-medium">⚠️ Pendente</span>
+                      <span className="text-yellow-600 font-medium">Atenção</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-sm">
@@ -460,7 +460,7 @@ const Conciliador = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm">Pendentes</CardTitle>
+              <CardTitle className="text-sm">Em atenção</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-red-600">{summary.unmatched_count}</p>

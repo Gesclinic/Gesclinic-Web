@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useClinicContext } from '../contexts/useClinicContext';
 import { listarAgenda } from '@/modules/agenda/services/agenda.api.complex';
 import { mapAgendaItem } from '@/modules/agenda/services/agendaMapper';
+import { Input } from '@/components/ui/input';
 
 export function AgendaUnificada() {
   const { clinic } = useClinicContext();
@@ -32,7 +33,7 @@ export function AgendaUnificada() {
   return (
     <div>
       <h2>Agenda Unificada</h2>
-      <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+      <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
       {loading && <p>Carregando...</p>}
       {error && <p style={{ color: 'red' }}>{error}</p>}
       {!loading && agendas.length === 0 && <p>Nenhum agendamento encontrado</p>}

@@ -162,7 +162,7 @@ describe('receivablesApi enterprise contract', () => {
     expect(query.delete).toHaveBeenCalled();
     expect(query.calls.eq).toContainEqual(['id', 'ar-1']);
     expect(query.calls.eq).toContainEqual(['clinic_id', clinicId]);
-    expect(query.select).toHaveBeenCalledWith('id');
+    expect(query.select).toHaveBeenCalledWith('id, clinic_id');
   });
 
   it('throws when delete does not remove a row in the current clinic', async () => {

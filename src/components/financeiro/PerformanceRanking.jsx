@@ -2,11 +2,32 @@ import React, { useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Medal, Trophy, AlertTriangle } from 'lucide-react';
 
+const closedStatuses = new Set(['paid', 'pago', 'paga', 'received', 'recebido', 'quitado', 'processed', 'canceled', 'cancelado', 'cancelada', 'reversed', 'estornado']);
+
+function daysUntilDue(item = {}) {
+  if (!item.due_date) return null;
+  const today = new Date(new Date().toISOString().split('T')[0] + 'T00:00:00');
+  const due = new Date(`${String(item.due_date).split('T')[0]}T00:00:00`);
+  return Math.floor((due - today) / (1000 * 60 * 60 * 24));
+}
+
+function isClosed(item = {}) {
+  return closedStatuses.has(String(item.status || '').toLowerCase());
+}
+
+function money(value) {
+  const parsed = Number(value || 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function movementAmount(item = {}) {
+  return money(item.amount || item.net_amount || item.paid_value || item.balance_amount || item.open_amount || item.valor || item.total_amount);
+}
+
 /**
- * 🏆 Performance Ranking - Ranking de Desempenho
- * 
- * Identifica top performers (melhores resultados)
- * E bottom performers (que precisam melhorar)
+ * Performance Ranking - Ranking de desempenho
+ *
+ * Identifica melhores resultados e principais pontos de atenção
  */
 export default function PerformanceRanking({ receivables = [], payables = [], dailyData = [], loading = false }) {
   const rankings = useMemo(() => {
@@ -14,34 +35,32 @@ export default function PerformanceRanking({ receivables = [], payables = [], da
 
     // Calcular score de desempenho para receivables
     const receivableScore = receivables.map((r) => {
-      const isOverdue = new Date(r.due_date) < new Date();
-      const daysOverdue = isOverdue
-        ? Math.floor((new Date() - new Date(r.due_date)) / (1000 * 60 * 60 * 24))
-        : -Math.floor((new Date(r.due_date) - new Date()) / (1000 * 60 * 60 * 24));
+      const dueInDays = daysUntilDue(r);
+      const isOverdue = !isClosed(r) && dueInDays !== null && dueInDays < 0;
+      const daysOverdue = isOverdue ? Math.abs(dueInDays) : dueInDays;
 
       return {
         type: 'receivable',
-        entity: r.covenant_name || 'Sem Convênio',
-        amount: r.amount || 0,
+        entity: r.covenant_name || r.payer_name || r.patient_name || 'Recebível sem pagador',
+        amount: movementAmount(r),
         score: isOverdue ? Math.max(0, 100 - daysOverdue * 5) : 100,
-        status: isOverdue ? 'Vencido' : 'Em dia',
+        status: isOverdue ? (daysOverdue > 15 ? 'Crítico' : 'Atenção') : 'Estável',
         daysOverdue,
       };
     });
 
     // Calcular score para payables
     const payableScore = payables.map((p) => {
-      const isOverdue = new Date(p.due_date) < new Date();
-      const daysOverdue = isOverdue
-        ? Math.floor((new Date() - new Date(p.due_date)) / (1000 * 60 * 60 * 24))
-        : -Math.floor((new Date(p.due_date) - new Date()) / (1000 * 60 * 60 * 24));
+      const dueInDays = daysUntilDue(p);
+      const isOverdue = !isClosed(p) && dueInDays !== null && dueInDays < 0;
+      const daysOverdue = isOverdue ? Math.abs(dueInDays) : dueInDays;
 
       return {
         type: 'payable',
-        entity: p.creditor_name || 'Sem Credor',
-        amount: p.amount || 0,
+        entity: p.creditor_name || p.supplier_name || p.vendor_name || 'Conta sem destinatario',
+        amount: movementAmount(p),
         score: isOverdue ? Math.max(0, 100 - daysOverdue * 3) : 100,
-        status: isOverdue ? 'Atrasado' : 'No Prazo',
+        status: isOverdue ? (daysOverdue > 15 ? 'Crítico' : 'Atenção') : 'Estável',
         daysOverdue,
       };
     });
@@ -56,7 +75,7 @@ export default function PerformanceRanking({ receivables = [], payables = [], da
 
     return {
       topPerformers: sorted.slice(0, 5),
-      bottomPerformers: sorted.slice(-5).reverse(),
+      bottomPerformers: sorted.filter((item) => item.score < 100).slice(-5).reverse(),
     };
   }, [receivables, payables, dailyData, loading]);
 
@@ -64,6 +83,18 @@ export default function PerformanceRanking({ receivables = [], payables = [], da
     if (score >= 85) return 'bg-green-100 text-green-700';
     if (score >= 60) return 'bg-yellow-100 text-yellow-700';
     return 'bg-red-100 text-red-700';
+  };
+
+  const getStatusColor = (status) => {
+    if (status === 'Estável') return 'text-green-700';
+    if (status === 'Atenção') return 'text-yellow-700';
+    return 'text-red-700';
+  };
+
+  const getStatusDotColor = (status) => {
+    if (status === 'Estável') return 'bg-green-500';
+    if (status === 'Atenção') return 'bg-yellow-500';
+    return 'bg-red-500';
   };
 
   if (loading) {
@@ -87,7 +118,7 @@ export default function PerformanceRanking({ receivables = [], payables = [], da
     <div className="space-y-6 animate-fade-in">
       <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
         <Trophy className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-        Ranking de Desempenho
+        Ranking de desempenho financeiro
       </h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -95,7 +126,7 @@ export default function PerformanceRanking({ receivables = [], payables = [], da
         <div className="space-y-3">
           <h3 className="font-semibold text-green-900 dark:text-green-300 flex items-center gap-2 px-4">
             <Medal className="w-5 h-5" />
-            🏆 Top Performers
+            Melhores desempenhos
           </h3>
 
           {rankings.topPerformers.length > 0 ? (
@@ -112,7 +143,7 @@ export default function PerformanceRanking({ receivables = [], payables = [], da
                     <div className="flex-1">
                       <p className="font-semibold text-gray-900 dark:text-white truncate">{item.entity}</p>
                       <p className="text-xs text-gray-600 dark:text-gray-400">
-                        {item.type === 'receivable' ? 'A Receber' : 'A Pagar'} • R$ {item.amount.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
+                        {item.type === 'receivable' ? 'Recebíveis' : 'Pagamentos'} • R$ {item.amount.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
                       </p>
                     </div>
                   </div>
@@ -123,8 +154,8 @@ export default function PerformanceRanking({ receivables = [], payables = [], da
 
                 {item.status && (
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="w-2 h-2 rounded-full bg-green-500 dark:bg-green-400"></span>
-                    <span className="text-green-700 dark:text-green-300 font-semibold">{item.status}</span>
+                    <span className={`w-2 h-2 rounded-full ${getStatusDotColor(item.status)}`}></span>
+                    <span className={`font-semibold ${getStatusColor(item.status)}`}>{item.status}</span>
                   </div>
                 )}
               </Card>
@@ -140,7 +171,7 @@ export default function PerformanceRanking({ receivables = [], payables = [], da
         <div className="space-y-3">
           <h3 className="font-semibold text-red-900 dark:text-red-300 flex items-center gap-2 px-4">
             <AlertTriangle className="w-5 h-5" />
-            ⚠️ Precisam Melhorar
+            Pontos de atenção
           </h3>
 
           {rankings.bottomPerformers.length > 0 ? (
@@ -152,12 +183,12 @@ export default function PerformanceRanking({ receivables = [], payables = [], da
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex items-start gap-3 flex-1">
                     <div className="flex items-center justify-center w-8 h-8 rounded-full bg-red-200 text-red-700 font-bold text-sm">
-                      ⬇️
+                      {idx + 1}
                     </div>
                     <div className="flex-1">
                       <p className="font-semibold text-gray-900 truncate">{item.entity}</p>
                       <p className="text-xs text-gray-600">
-                        {item.type === 'receivable' ? 'A Receber' : 'A Pagar'} • R$ {item.amount.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
+                        {item.type === 'receivable' ? 'Recebíveis' : 'Pagamentos'} • R$ {item.amount.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
                       </p>
                     </div>
                   </div>
@@ -168,8 +199,8 @@ export default function PerformanceRanking({ receivables = [], payables = [], da
 
                 {item.status && (
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="w-2 h-2 rounded-full bg-red-500"></span>
-                    <span className="text-red-700 font-semibold">
+                    <span className={`w-2 h-2 rounded-full ${getStatusDotColor(item.status)}`}></span>
+                    <span className={`font-semibold ${getStatusColor(item.status)}`}>
                       {item.status} • {item.daysOverdue} dias
                     </span>
                   </div>
@@ -189,7 +220,7 @@ export default function PerformanceRanking({ receivables = [], payables = [], da
         <Card className="p-4 bg-blue-50 border-blue-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-gray-600 mb-1">Total em Análise</p>
+              <p className="text-xs text-gray-600 mb-1">Itens analisados</p>
               <p className="text-2xl font-bold text-blue-600">
                 {(rankings.topPerformers.length + rankings.bottomPerformers.length).toLocaleString()}
               </p>
@@ -201,7 +232,7 @@ export default function PerformanceRanking({ receivables = [], payables = [], da
         <Card className="p-4 bg-green-50 border-green-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-gray-600 mb-1">Em Dia</p>
+              <p className="text-xs text-gray-600 mb-1">Com desempenho adequado</p>
               <p className="text-2xl font-bold text-green-600">
                 {rankings.topPerformers.filter((p) => p.score >= 85).length.toLocaleString()}
               </p>
@@ -213,7 +244,7 @@ export default function PerformanceRanking({ receivables = [], payables = [], da
         <Card className="p-4 bg-red-50 border-red-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-gray-600 mb-1">Com Atraso</p>
+              <p className="text-xs text-gray-600 mb-1">Itens críticos</p>
               <p className="text-2xl font-bold text-red-600">
                 {rankings.bottomPerformers.filter((p) => p.score < 60).length.toLocaleString()}
               </p>

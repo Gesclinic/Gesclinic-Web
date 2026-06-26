@@ -45,6 +45,15 @@ CREATE POLICY "Users can view audit logs for their clinic"
     )
   );
 
+DROP POLICY IF EXISTS "Users can insert audit logs for their clinic" ON financial_audit_logs;
+CREATE POLICY "Users can insert audit logs for their clinic"
+  ON financial_audit_logs FOR INSERT
+  WITH CHECK (
+    clinic_id IN (
+      SELECT clinic_id FROM user_clinic_roles WHERE user_id = auth.uid()
+    )
+  );
+
 -- RPC: Create receivable from appointment
 CREATE OR REPLACE FUNCTION create_receivable_from_appointment(
   p_appointment_id UUID,

@@ -20,7 +20,15 @@ import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { supabase } from '@/lib/customSupabaseClient';
 import { applyDefaultAccountPlan, resetAccountPlan } from '@/lib/accountPlanSeed';
+import {
+  createChartOfAccount,
+  deleteChartOfAccount,
+  getChartOfAccountAuditLogs,
+  listChartOfAccounts,
+  updateChartOfAccount,
+} from '@/modules/financeiro/plano-contas/services/chartOfAccountsApi';
 import { NONE, noneOr } from '@/lib/selectUtils';
+import * as XLSX from 'xlsx';
 import {
   Download,
   Edit,
@@ -38,23 +46,39 @@ import {
 } from 'lucide-react';
 
 const ACCOUNT_TYPES = [
-  { value: 'receita', label: 'Receita' },
-  { value: 'despesa', label: 'Despesa' },
-  { value: 'custo', label: 'Custo' },
-  { value: 'deducao', label: 'Deducao' },
-  { value: 'investimento', label: 'Investimento' },
-  { value: 'ajuste', label: 'Ajuste' },
+  { value: 'RECEITA', label: 'Receita' },
+  { value: 'DEDUCAO', label: 'Dedução' },
+  { value: 'CUSTO', label: 'Custo' },
+  { value: 'HONORARIO', label: 'Honorário Médico' },
+  { value: 'DESPESA', label: 'Despesa' },
+  { value: 'INVESTIMENTO', label: 'Investimento' },
+  { value: 'PATRIMONIO', label: 'Patrimônio' },
+];
+
+const ACCOUNT_NATURES = [
+  { value: 'CREDORA', label: 'Credora' },
+  { value: 'DEVEDORA', label: 'Devedora' },
 ];
 
 const TEMPLATE_ROWS = [
-  ['Receitas', 'receita', ''],
-  ['Consultas particulares', 'receita', 'Receitas'],
-  ['Convenios', 'receita', 'Receitas'],
-  ['Despesas operacionais', 'despesa', ''],
-  ['Aluguel', 'despesa', 'Despesas operacionais'],
-  ['Folha medica', 'despesa', 'Despesas operacionais'],
-  ['Materiais e medicamentos', 'custo', ''],
-  ['Taxas de cartao', 'deducao', ''],
+  ['Receitas', 'RECEITA', ''],
+  ['Particular', 'RECEITA', 'Receitas'],
+  ['Convenios', 'RECEITA', 'Receitas'],
+  ['Unimed', 'RECEITA', 'Convenios'],
+  ['Exames', 'RECEITA', 'Receitas'],
+  ['Cirurgias', 'RECEITA', 'Receitas'],
+  ['Deducoes', 'DEDUCAO', ''],
+  ['ISS', 'DEDUCAO', 'Deducoes'],
+  ['Custos Assistenciais', 'CUSTO', ''],
+  ['Medicamentos', 'CUSTO', 'Custos Assistenciais'],
+  ['Honorarios Medicos', 'HONORARIO', ''],
+  ['Repasses', 'HONORARIO', 'Honorarios Medicos'],
+  ['Despesas Administrativas', 'DESPESA', ''],
+  ['TI', 'DESPESA', 'Despesas Administrativas'],
+  ['Despesas Financeiras', 'DESPESA', ''],
+  ['Tarifas Bancarias', 'DESPESA', 'Despesas Financeiras'],
+  ['Investimentos', 'INVESTIMENTO', ''],
+  ['Patrimonio', 'PATRIMONIO', ''],
 ];
 
 const normalize = (value) => String(value || '').trim().toLowerCase();
@@ -82,24 +106,49 @@ const downloadText = (filename, content, type = 'text/csv;charset=utf-8;') => {
   URL.revokeObjectURL(url);
 };
 
+const mapTypeToNature = (type) => {
+  const creditTypes = ['RECEITA', 'DEDUCAO', 'PASSIVO', 'PATRIMONIO'];
+  return creditTypes.includes(String(type || '').toUpperCase()) ? 'CREDORA' : 'DEVEDORA';
+};
+
 const AccountDialog = ({ open, onOpenChange, account, onSave, parentOptions }) => {
+  const [code, setCode] = useState('');
   const [name, setName] = useState('');
-  const [type, setType] = useState('receita');
+  const [description, setDescription] = useState('');
+  const [type, setType] = useState('RECEITA');
+  const [nature, setNature] = useState('CREDORA');
   const [parentId, setParentId] = useState(NONE);
+  const [acceptsEntries, setAcceptsEntries] = useState(false);
+  const [requiresCostCenter, setRequiresCostCenter] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!open) return;
+    setCode(account?.code || '');
     setName(account?.name || '');
-    setType(account?.type || 'receita');
+    setDescription(account?.description || '');
+    setType(account?.type || 'RECEITA');
+    setNature(account?.nature || mapTypeToNature(account?.type));
     setParentId(account?.parent_id || NONE);
+    setAcceptsEntries(Boolean(account?.accepts_entries || account?.allows_posting));
+    setRequiresCostCenter(Boolean(account?.requires_cost_center));
   }, [account, open]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setSubmitting(true);
     try {
-      await onSave({ name: name.trim(), type, parent_id: noneOr(parentId) });
+      await onSave({
+        code: code.trim(),
+        name: name.trim(),
+        description: description.trim(),
+        type,
+        nature,
+        parent_id: noneOr(parentId),
+        accepts_entries: acceptsEntries,
+        allows_posting: acceptsEntries,
+        requires_cost_center: requiresCostCenter,
+      });
       onOpenChange(false);
     } finally {
       setSubmitting(false);
@@ -114,8 +163,16 @@ const AccountDialog = ({ open, onOpenChange, account, onSave, parentOptions }) =
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
+            <Label>Código</Label>
+            <Input value={code} onChange={(event) => setCode(event.target.value)} placeholder="Ex.: 1.2.1" required />
+          </div>
+          <div>
             <Label>Nome</Label>
             <Input value={name} onChange={(event) => setName(event.target.value)} required />
+          </div>
+          <div>
+            <Label>Descrição</Label>
+            <Input value={description} onChange={(event) => setDescription(event.target.value)} />
           </div>
           <div>
             <Label>Tipo</Label>
@@ -125,6 +182,21 @@ const AccountDialog = ({ open, onOpenChange, account, onSave, parentOptions }) =
               </SelectTrigger>
               <SelectContent>
                 {ACCOUNT_TYPES.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Natureza</Label>
+            <Select value={nature} onValueChange={setNature}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ACCOUNT_NATURES.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>
@@ -148,6 +220,16 @@ const AccountDialog = ({ open, onOpenChange, account, onSave, parentOptions }) =
               </SelectContent>
             </Select>
           </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input type="checkbox" checked={acceptsEntries} onChange={(event) => setAcceptsEntries(event.target.checked)} />
+              Permite lançamento
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input type="checkbox" checked={requiresCostCenter} onChange={(event) => setRequiresCostCenter(event.target.checked)} />
+              Centro de custo obrigatório
+            </label>
+          </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
               Cancelar
@@ -163,11 +245,12 @@ const AccountDialog = ({ open, onOpenChange, account, onSave, parentOptions }) =
 };
 
 export default function PlanoContas() {
-  const { clinicId } = useAuth();
+  const { clinicId, user } = useAuth();
   const { toast } = useToast();
   const fileInputRef = useRef(null);
   const [accounts, setAccounts] = useState([]);
   const [usageInfo, setUsageInfo] = useState({});
+  const [auditLogs, setAuditLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialog, setDialog] = useState({ open: false, account: null });
   const [inlineEdits, setInlineEdits] = useState({});
@@ -185,13 +268,10 @@ export default function PlanoContas() {
     }
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('account_plans')
-        .select('*')
-        .eq('clinic_id', clinicId)
-        .order('name');
-      if (error) throw error;
+      const { data } = await listChartOfAccounts(clinicId, undefined, { page: 1, limit: 1000 });
       setAccounts(data || []);
+      const logs = await getChartOfAccountAuditLogs(clinicId);
+      setAuditLogs(logs || []);
     } catch (error) {
       toast({ variant: 'destructive', title: 'Erro ao carregar plano de contas', description: error.message });
     } finally {
@@ -232,18 +312,34 @@ export default function PlanoContas() {
   }, [clinicId, accounts.length]);
 
   const accountsById = useMemo(() => new Map(accounts.map((account) => [account.id, account])), [accounts]);
-  const parentOptions = useMemo(() => accounts.filter((account) => !account.parent_id), [accounts]);
+  const parentOptions = useMemo(() => accounts, [accounts]);
+
+  const getAccountLevel = useCallback((accountId) => {
+    let currentId = accountId;
+    let level = 0;
+    let guard = 0;
+
+    while (currentId && guard < 30) {
+      const current = accountsById.get(currentId);
+      if (!current) break;
+      level += 1;
+      currentId = current.parent_id;
+      guard += 1;
+    }
+
+    return Math.max(1, level);
+  }, [accountsById]);
 
   const enrichedAccounts = useMemo(
     () =>
       accounts.map((account) => ({
         ...account,
-        level: account.parent_id ? 2 : 1,
+        level: getAccountLevel(account.id),
         parentName: accountsById.get(account.parent_id)?.name || '',
         usageCount: usageInfo[account.id]?.count || 0,
         lastDue: usageInfo[account.id]?.lastDue || null,
       })),
-    [accounts, accountsById, usageInfo],
+    [accounts, accountsById, getAccountLevel, usageInfo],
   );
 
   const filteredAccounts = useMemo(() => {
@@ -254,7 +350,7 @@ export default function PlanoContas() {
         normalize(account.name).includes(query) ||
         normalize(account.type).includes(query) ||
         normalize(account.parentName).includes(query);
-      const matchesType = typeFilter === 'all' || normalize(account.type) === typeFilter;
+      const matchesType = typeFilter === 'all' || String(account.type || '').toUpperCase() === typeFilter;
       const matchesLevel =
         levelFilter === 'all' ||
         (levelFilter === 'root' && !account.parent_id) ||
@@ -309,11 +405,24 @@ export default function PlanoContas() {
   const handleSave = async (payload) => {
     try {
       if (!payload.name) throw new Error('Informe o nome da conta.');
-      const data = { ...payload, clinic_id: clinicId, parent_id: payload.parent_id || null };
-      const { error } = dialog.account?.id
-        ? await supabase.from('account_plans').update(data).eq('id', dialog.account.id)
-        : await supabase.from('account_plans').insert(data);
-      if (error) throw error;
+      const parentLevel = payload.parent_id ? getAccountLevel(payload.parent_id) : 0;
+      const data = {
+        code: payload.code,
+        name: payload.name,
+        description: payload.description || null,
+        type: payload.type,
+        nature: payload.nature || mapTypeToNature(payload.type),
+        parent_id: payload.parent_id || null,
+        level: parentLevel + 1,
+        accepts_entries: Boolean(payload.accepts_entries),
+        allows_posting: Boolean(payload.allows_posting),
+        requires_cost_center: Boolean(payload.requires_cost_center),
+      };
+      if (dialog.account?.id) {
+        await updateChartOfAccount(dialog.account.id, data);
+      } else {
+        await createChartOfAccount({ clinic_id: clinicId, ...data }, user?.id);
+      }
       toast({ title: 'Salvo com sucesso!' });
       await loadAccounts();
     } catch (error) {
@@ -328,8 +437,7 @@ export default function PlanoContas() {
     }
     if (!window.confirm('Tem certeza que deseja excluir?')) return;
     try {
-      const { error } = await supabase.from('account_plans').delete().eq('id', id);
-      if (error) throw error;
+      await deleteChartOfAccount(id);
       toast({ title: 'Excluído com sucesso!' });
       await loadAccounts();
     } catch (error) {
@@ -340,7 +448,7 @@ export default function PlanoContas() {
   const startInlineEdit = (account) => {
     setInlineEdits((prev) => ({
       ...prev,
-      [account.id]: { name: account.name || '', type: account.type || 'receita', parent_id: account.parent_id || NONE },
+      [account.id]: { name: account.name || '', type: account.type || 'RECEITA', parent_id: account.parent_id || NONE },
     }));
   };
 
@@ -359,17 +467,13 @@ export default function PlanoContas() {
       toast({ variant: 'destructive', title: 'Estrutura inválida', description: 'Uma conta com subcontas não pode virar filha.' });
       return;
     }
-    if (parentId && accounts.some((item) => item.id === parentId && !!item.parent_id)) {
-      toast({ variant: 'destructive', title: 'Conta pai inválida', description: 'Selecione apenas contas de nível 1 como pai.' });
-      return;
-    }
     const parent = accounts.find((item) => item.id === parentId);
     try {
-      const { error } = await supabase
-        .from('account_plans')
-        .update({ name: payload.name.trim(), type: parent?.type || payload.type, parent_id: parentId || null })
-        .eq('id', account.id);
-      if (error) throw error;
+      await updateChartOfAccount(account.id, {
+        name: payload.name.trim(),
+        type: parent?.type || payload.type,
+        parent_id: parentId || null,
+      });
       cancelInlineEdit(account.id);
       await loadAccounts();
       toast({ title: 'Estrutura atualizada!' });
@@ -399,9 +503,15 @@ export default function PlanoContas() {
 
   const handleApplyTemplate = async () => {
     try {
-      await applyDefaultAccountPlan(clinicId);
+      if (accounts.length > 0) {
+        const confirmed = window.confirm('Ja existem contas cadastradas. Para aplicar o modelo ERP hospitalar completo, o plano atual sera recriado. Deseja continuar?');
+        if (!confirmed) return;
+        await resetAccountPlan(clinicId, user?.id, user?.email);
+      } else {
+        await applyDefaultAccountPlan(clinicId, user?.id, user?.email);
+      }
       await loadAccounts();
-      toast({ title: 'Template aplicado com sucesso!' });
+      toast({ title: 'Modelo ERP hospitalar aplicado com sucesso!' });
     } catch (error) {
       toast({ variant: 'destructive', title: 'Erro ao aplicar template', description: error.message });
     }
@@ -410,7 +520,7 @@ export default function PlanoContas() {
   const handleResetTemplate = async () => {
     if (!window.confirm('Isso recria o plano de contas padrão. Deseja continuar?')) return;
     try {
-      await resetAccountPlan(clinicId);
+      await resetAccountPlan(clinicId, user?.id, user?.email);
       await loadAccounts();
       toast({ title: 'Plano de contas recriado!' });
     } catch (error) {
@@ -423,24 +533,65 @@ export default function PlanoContas() {
     event.target.value = '';
     if (!file) return;
     try {
-      const text = await file.text();
-      const rows = text
-        .split(/\r?\n/)
-        .map((line) => line.split(';').map((cell) => cell.replace(/^"|"$/g, '').trim()))
-        .filter((row) => row.some(Boolean));
-      const dataRows = normalize(rows[0]?.[0]) === 'nome' ? rows.slice(1) : rows;
+      let rows = [];
+      const lowerName = file.name.toLowerCase();
+
+      if (lowerName.endsWith('.xlsx') || lowerName.endsWith('.xlsm') || lowerName.endsWith('.xls')) {
+        const bytes = await file.arrayBuffer();
+        const workbook = XLSX.read(bytes, { type: 'array' });
+        const firstSheet = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[firstSheet];
+        rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false });
+      } else {
+        const text = await file.text();
+        rows = text
+          .split(/\r?\n/)
+          .map((line) => line.split(';').map((cell) => cell.replace(/^"|"$/g, '').trim()));
+      }
+
+      rows = rows.filter((row) => Array.isArray(row) && row.some((cell) => String(cell || '').trim()));
+      const header = (rows[0] || []).map((cell) => normalize(cell));
+      const col = {
+        code: Math.max(header.indexOf('codigo'), header.indexOf('code')),
+        name: Math.max(header.indexOf('nome'), header.indexOf('name')),
+        type: Math.max(header.indexOf('tipo'), header.indexOf('type')),
+        parent: Math.max(header.indexOf('conta_pai'), header.indexOf('pai'), header.indexOf('parent')),
+        category: Math.max(header.indexOf('categoria'), header.indexOf('group')),
+        subcategory: Math.max(header.indexOf('subcategoria'), header.indexOf('subgroup')),
+      };
+
+      const hasHeader = col.name >= 0 || col.code >= 0;
+      const dataRows = hasHeader ? rows.slice(1) : rows;
       const knownParents = new Map(accounts.map((account) => [normalize(account.name), account.id]));
       let imported = 0;
-      for (const [name, type = 'despesa', parentName = ''] of dataRows) {
+      for (const row of dataRows) {
+        const code = String((col.code >= 0 ? row[col.code] : row[0]) || '').trim();
+        const name = String((col.name >= 0 ? row[col.name] : row[1] || row[0]) || '').trim();
+        const typeRaw = String((col.type >= 0 ? row[col.type] : row[2] || 'DESPESA') || 'DESPESA').trim();
+        const parentName = String((col.parent >= 0 ? row[col.parent] : row[3] || '') || '').trim();
+        const category = String((col.category >= 0 ? row[col.category] : '') || '').trim();
+        const subcategory = String((col.subcategory >= 0 ? row[col.subcategory] : '') || '').trim();
         if (!name) continue;
+
+        const normalizedType = String(typeRaw || 'DESPESA').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const type = ACCOUNT_TYPES.some((item) => item.value === normalizedType) ? normalizedType : 'DESPESA';
         const parentId = parentName ? knownParents.get(normalize(parentName)) || null : null;
-        const { data, error } = await supabase
-          .from('account_plans')
-          .insert({ clinic_id: clinicId, name, type: normalize(type) || 'despesa', parent_id: parentId })
-          .select('id, name')
-          .single();
-        if (error) throw error;
-        knownParents.set(normalize(data.name), data.id);
+        const created = await createChartOfAccount(
+          {
+            clinic_id: clinicId,
+            code: code || `IMP-${Date.now()}-${imported + 1}`,
+            name,
+            type,
+            nature: mapTypeToNature(type),
+            parent_id: parentId,
+            accepts_entries: true,
+            allows_posting: true,
+            category: category || null,
+            subcategory: subcategory || null,
+          },
+          user?.id,
+        );
+        knownParents.set(normalize(created.name), created.id);
         imported += 1;
       }
       await loadAccounts();
@@ -528,7 +679,7 @@ export default function PlanoContas() {
           <p className="text-gray-600 mt-1">Gerenciar a estrutura contábil central da clínica</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <input ref={fileInputRef} type="file" accept=".csv,.txt" className="hidden" onChange={handleImportFile} />
+          <input ref={fileInputRef} type="file" accept=".csv,.txt,.xlsx,.xlsm,.xls" className="hidden" onChange={handleImportFile} />
           <Button variant="outline" onClick={() => fileInputRef.current?.click()}><FileSpreadsheet className="w-4 h-4 mr-2" />Importar Excel</Button>
           <Button variant="outline" onClick={handleDownloadTemplate}><Download className="w-4 h-4 mr-2" />Template</Button>
           <Button onClick={() => setDialog({ open: true, account: null })}><Plus className="w-4 h-4 mr-2" />Nova Conta</Button>
@@ -584,6 +735,21 @@ export default function PlanoContas() {
             )}
           </tbody>
         </table>
+      </div>
+
+      <div className="rounded-lg border bg-white p-4">
+        <h2 className="mb-3 text-lg font-semibold text-gray-900">Governança e Auditoria</h2>
+        <div className="space-y-2">
+          {(auditLogs || []).slice(0, 8).map((log) => (
+            <div key={log.id} className="flex flex-wrap items-center justify-between gap-2 rounded border px-3 py-2 text-sm">
+              <div className="font-medium">{log.action}</div>
+              <div className="text-gray-600">{new Date(log.changed_at).toLocaleString('pt-BR')}</div>
+            </div>
+          ))}
+          {(!auditLogs || auditLogs.length === 0) && (
+            <p className="text-sm text-gray-500">Nenhum log de auditoria encontrado para esta clínica.</p>
+          )}
+        </div>
       </div>
 
       <AccountDialog open={dialog.open} onOpenChange={(open) => setDialog({ open, account: open ? dialog.account : null })} account={dialog.account} onSave={handleSave} parentOptions={parentOptions} />

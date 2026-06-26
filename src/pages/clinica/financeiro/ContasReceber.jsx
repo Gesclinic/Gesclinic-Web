@@ -365,12 +365,14 @@ function loadReceivableColumnOrder() {
 
 function getReceivableNfDisplay(row) {
   const extractionFields = row?.metadata?.document_extraction?.fields || {};
-  const number = row?.insurance_invoice_number
-    || row?.nf_number
-    || row?.invoice_number
+  // NF deve ser sempre derivada do XML (campos extraidos ou guia persistida do XML importado).
+  const number = extractionFields.guide_number
+    || extractionFields.numero_guia
+    || extractionFields.nf_number
     || extractionFields.invoice_number
-    || extractionFields.guide_number
     || row?.guide_number
+    || row?.metadata?.guide_number
+    || row?.metadata?.xml?.guide_number
     || null;
   const name = row?.nf_document_name || row?.metadata?.source_file_name || null;
   return {
@@ -729,6 +731,7 @@ export default function ContasReceber() {
 
   const [filters, setFilters] = useState(urlFilters);
   const [rows, setRows] = useState([]);
+  const [allLoadedRows, setAllLoadedRows] = useState([]); // Armazena TODOS os dados para calcular indicadores
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [nextOffset, setNextOffset] = useState(0);
@@ -809,6 +812,8 @@ export default function ContasReceber() {
   const [reconciliationResult, setReconciliationResult] = useState(null);
   const [reconciliationActionId, setReconciliationActionId] = useState(null);
   const [xmlBatchProgress, setXmlBatchProgress] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
   const xmlBatchCompletionToastRef = useRef(new Set());
 
   // Hook para gerenciar filtros salvos
@@ -927,24 +932,24 @@ export default function ContasReceber() {
 
   // Calcular resumo financeiro
   const summary = useMemo(() => {
-    const activeRows = rows.filter((r) => !['canceled', 'glossed'].includes(r.status));
+    const activeRows = allLoadedRows.filter((r) => !['canceled', 'glossed'].includes(r.status));
     const today = new Date().toISOString().split('T')[0];
     const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
     const in30 = new Date();
     in30.setDate(in30.getDate() + 30);
     const in30Date = in30.toISOString().split('T')[0];
     const total = activeRows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
-    const realized = rows.reduce((s, r) => s + (Number(r.received_value || r.paid_total) || 0), 0);
-    const receivedToday = rows
+    const realized = allLoadedRows.reduce((s, r) => s + (Number(r.received_value || r.paid_total) || 0), 0);
+    const receivedToday = allLoadedRows
       .filter((r) => String(r.received_date || '').slice(0, 10) === today)
       .reduce((s, r) => s + (Number(r.received_value || r.paid_total || 0) || 0), 0);
-    const receivedMonth = rows
+    const receivedMonth = allLoadedRows
       .filter((r) => String(r.received_date || '').slice(0, 10) >= startOfMonth)
       .reduce((s, r) => s + (Number(r.received_value || r.paid_total || 0) || 0), 0);
     const next30 = activeRows
       .filter((r) => r.due_date && r.due_date >= today && r.due_date <= in30Date && !['received', 'canceled', 'glossed'].includes(r.status))
       .reduce((s, r) => s + getDisplayAmount(r), 0);
-    const received = rows
+    const received = allLoadedRows
       .filter((r) => r.status === 'received')
       .reduce((s, r) => s + (Number(r.received_value || r.net_value || r.amount) || 0), 0);
     const pending = activeRows
@@ -953,29 +958,29 @@ export default function ContasReceber() {
     const overdue = activeRows
       .filter(isReceivableOverdue)
       .reduce((s, r) => s + (Number(r.amount) || 0), 0);
-    const canceled = rows
+    const canceled = allLoadedRows
       .filter((r) => r.status === 'canceled')
       .reduce((s, r) => s + (Number(r.amount) || 0), 0);
-    const glosas = rows.reduce((s, r) => s + Number(r.glosa_value || 0), 0);
-    const glosaRows = rows.filter((r) => Number(r.glosa_value || 0) > 0 || r.last_glosa);
+    const glosas = allLoadedRows.reduce((s, r) => s + Number(r.glosa_value || 0), 0);
+    const glosaRows = allLoadedRows.filter((r) => Number(r.glosa_value || 0) > 0 || r.last_glosa);
     const glosaContested = glosaRows.reduce((s, r) => s + Number(r.last_glosa?.contested_amount || 0), 0);
     const glosaRecovered = glosaRows.reduce((s, r) => s + Number(r.last_glosa?.recovered_amount || 0), 0);
     const glosaFinalLoss = glosaRows.reduce((s, r) => s + Number(r.last_glosa?.final_loss_amount || 0), 0);
     const glosaOpenCount = glosaRows.filter((r) => !['recuperada', 'aceita_perda'].includes(String(r.last_glosa?.contestation_status || '').toLowerCase())).length;
-    const extractedDocuments = rows.filter((r) => getDocumentExtraction(r));
+    const extractedDocuments = allLoadedRows.filter((r) => getDocumentExtraction(r));
     const extractedTaxes = extractedDocuments.reduce((s, r) => s + Number(r.taxes_value || 0), 0);
     const fiscalPendingRows = extractedDocuments.filter((r) => getFiscalReviewStatus(r)?.status === 'pending');
     const fiscalDivergenceRows = extractedDocuments.filter((r) => getFiscalDivergenceCount(r) > 0);
     const oldFiscalPendingRows = fiscalPendingRows.filter((r) => daysSinceFiscalReference(r) >= 7);
-    const fiscalReviewQueue = buildFiscalReviewQueue(rows);
+    const fiscalReviewQueue = buildFiscalReviewQueue(allLoadedRows);
     const fiscalReviewPending = fiscalPendingRows.length;
     const fiscalReviewDone = extractedDocuments.filter((r) => getFiscalReviewStatus(r)?.status === 'reviewed').length;
-    const repasseExpected = rows.reduce((s, r) => s + Number(r.repasse_expected || r.repasse_medico || 0), 0);
-    const repassePaid = rows.reduce((s, r) => s + Number(r.repasse_paid || 0), 0);
-    const convenioRevenue = rows.filter((r) => ['convenio', 'CONVENIO'].includes(String(r.payer_type))).reduce((s, r) => s + getDisplayAmount(r), 0);
-    const particularRevenue = rows.filter((r) => !r.payer_type || ['paciente', 'particular', 'PARTICULAR'].includes(String(r.payer_type))).reduce((s, r) => s + getDisplayAmount(r), 0);
-    const companyRevenue = rows.filter((r) => ['empresa', 'EMPRESA'].includes(String(r.payer_type))).reduce((s, r) => s + getDisplayAmount(r), 0);
-    const revenueByUnit = rows.reduce((map, row) => {
+    const repasseExpected = allLoadedRows.reduce((s, r) => s + Number(r.repasse_expected || r.repasse_medico || 0), 0);
+    const repassePaid = allLoadedRows.reduce((s, r) => s + Number(r.repasse_paid || 0), 0);
+    const convenioRevenue = allLoadedRows.filter((r) => ['convenio', 'CONVENIO'].includes(String(r.payer_type))).reduce((s, r) => s + getDisplayAmount(r), 0);
+    const particularRevenue = allLoadedRows.filter((r) => !r.payer_type || ['paciente', 'particular', 'PARTICULAR'].includes(String(r.payer_type))).reduce((s, r) => s + getDisplayAmount(r), 0);
+    const companyRevenue = allLoadedRows.filter((r) => ['empresa', 'EMPRESA'].includes(String(r.payer_type))).reduce((s, r) => s + getDisplayAmount(r), 0);
+    const revenueByUnit = allLoadedRows.reduce((map, row) => {
       const unitName = row.unit_name || row.unidade_name || row.clinic_unit_name || 'Sem unidade';
       map.set(unitName, (map.get(unitName) || 0) + getDisplayAmount(row));
       return map;
@@ -983,7 +988,7 @@ export default function ContasReceber() {
     const topUnitRevenue = [...revenueByUnit.entries()]
       .sort((a, b) => b[1] - a[1])
       .map(([name, value]) => ({ name, value }))[0] || { name: 'Sem unidade', value: 0 };
-    const averageTicket = rows.length ? total / rows.length : 0;
+    const averageTicket = allLoadedRows.length ? total / allLoadedRows.length : 0;
     const defaultRate = total > 0 ? (overdue / total) * 100 : 0;
 
     return {
@@ -1018,7 +1023,26 @@ export default function ContasReceber() {
       averageTicket,
       defaultRate,
     };
-  }, [rows]);
+
+  }, [allLoadedRows]);
+  // Paginação
+  const paginationInfo = useMemo(() => {
+    const totalRows = rows.length;
+    const totalPages = Math.ceil(totalRows / rowsPerPage);
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    const paginatedRows = rows.slice(startIndex, endIndex);
+    
+    return {
+      totalRows,
+      totalPages,
+      startIndex,
+      endIndex,
+      currentPage,
+      rowsPerPage,
+      paginatedRows,
+    };
+  }, [rows, currentPage, rowsPerPage]);
 
   const selectableRows = useMemo(
     () => rows.filter((row) => isAdmin || !['received', 'canceled', 'glossed'].includes(row.status)),
@@ -1102,6 +1126,52 @@ export default function ContasReceber() {
       .map(([key, value]) => ({ key, label: labels[key] || key, value: valueLabel(key, value) }));
   }, [filters, payers, professionals, plans, costCenters]);
 
+  // Carregar TODOS os recebíveis para calcular indicadores corretos (sem paginação)
+  const loadAllReceivablesForSummary = async (nextFilters = filters) => {
+    if (!clinicId) return;
+    try {
+      // Carregar sem limite para ter total correto nos indicadores
+      const data = await listReceivables({
+        clinicId,
+        payer: nextFilters.payer,
+        payerType: nextFilters.payerType || null,
+        status: nextFilters.status === 'overdue' ? 'open' : nextFilters.status || null,
+        origin: nextFilters.origin || null,
+        payerId: nextFilters.payerId || null,
+        professionalId: nextFilters.professionalId || null,
+        ccId: nextFilters.ccId || null,
+        planId: nextFilters.planId || null,
+        emissionStart: nextFilters.emissionStart || null,
+        emissionEnd: nextFilters.emissionEnd || null,
+        dueStart: nextFilters.dueStart || null,
+        dueEnd: nextFilters.dueEnd || null,
+        receivedStart: nextFilters.receivedStart || null,
+        receivedEnd: nextFilters.receivedEnd || null,
+        companyId: nextFilters.companyId || null,
+        unitId: nextFilters.unitId || null,
+        unitName: nextFilters.unitName || null,
+        specialtyId: nextFilters.specialtyId || null,
+        specialtyName: nextFilters.specialtyName || null,
+        paymentMethod: nextFilters.paymentMethod || null,
+        insuranceBillingStatus: nextFilters.insuranceBillingStatus || null,
+        tissXmlStatus: nextFilters.tissXmlStatus || null,
+        insuranceReturnStatus: nextFilters.insuranceReturnStatus || null,
+        hasGlosa: nextFilters.hasGlosa === '' ? null : nextFilters.hasGlosa,
+        minValue: nextFilters.minValue || null,
+        maxValue: nextFilters.maxValue || null,
+        search: nextFilters.search || null,
+        limit: 10000, // Carregar até 10k registros para indicadores, sem paginação
+        offset: 0,
+      });
+      const rowsData = Array.isArray(data) ? data : [];
+      const filteredRows = applyClientReceivableFilters(rowsData.map(formatReceivableRowTexts), nextFilters);
+      setAllLoadedRows(filteredRows);
+      console.log('✓ allLoadedRows atualizado com', filteredRows.length, 'registros para indicadores');
+    } catch (e) {
+      console.error('❌ loadAllReceivablesForSummary error:', e?.message);
+    }
+  };
+
   const load = async (nextFilters = filters, options = {}) => {
     if (!clinicId) {
       return;
@@ -1156,6 +1226,7 @@ export default function ContasReceber() {
       const rowsData = Array.isArray(data) ? data : [];
       const filteredRows = applyClientReceivableFilters(rowsData.map(formatReceivableRowTexts), nextFilters);
       setRows((current) => (append ? [...current, ...filteredRows] : filteredRows));
+      setAllLoadedRows((current) => (append ? [...current, ...filteredRows] : filteredRows));
       setNextOffset(offset + rowsData.length);
       setHasMoreRows(rowsData.length === RECEIVABLES_PAGE_SIZE);
     } catch (e) {
@@ -1163,6 +1234,7 @@ export default function ContasReceber() {
       console.error('   Stack:', e?.stack);
       if (!append) {
         setRows([]);
+        setAllLoadedRows([]);
       }
       toast({ variant: 'destructive', title: 'Erro ao carregar contas a receber', description: e?.message });
     } finally {
@@ -1450,6 +1522,7 @@ export default function ContasReceber() {
     setFilters(nextFilters);
     setShowFilters(true);
     load(nextFilters);
+    loadAllReceivablesForSummary(nextFilters); // Carregar TODOS para indicadores
   };
 
   const applyQuickFilter = (preset) => {
@@ -1479,6 +1552,7 @@ export default function ContasReceber() {
 
   const loadMoreRows = () => {
     load(filters, { append: true });
+    loadAllReceivablesForSummary(filters); // Atualizar TODOS para indicadores
   };
 
   const openDocumentDetails = (row) => {
@@ -1609,6 +1683,7 @@ export default function ContasReceber() {
       setShowFilters(true);
     }
     load(urlFilters);
+    loadAllReceivablesForSummary(urlFilters); // Carregar TODOS para indicadores
   }, [clinicId, searchParamsKey]);
 
   useEffect(() => {
@@ -1681,6 +1756,7 @@ export default function ContasReceber() {
       }
       setXmlBatchProgress(null);
       load(filters);
+      loadAllReceivablesForSummary(filters); // Carregar TODOS para indicadores
       showXmlBatchFinishedToast(detail);
     };
 
@@ -1726,11 +1802,13 @@ export default function ContasReceber() {
       if (savedCreated > lastCreated) {
         lastCreated = savedCreated;
         load(filters);
+        loadAllReceivablesForSummary(filters); // Carregar TODOS para indicadores
       }
 
       if (savedProgress.active === false) {
         setXmlBatchProgress(null);
         load(filters);
+        loadAllReceivablesForSummary(filters); // Carregar TODOS para indicadores
         showXmlBatchFinishedToast(savedProgress);
       }
     };
@@ -1739,6 +1817,28 @@ export default function ContasReceber() {
     const intervalId = window.setInterval(syncProgressFromStorage, 800);
     return () => window.clearInterval(intervalId);
   }, [clinicId, filters, searchParamsKey, source, xmlBatchProgress?.active, xmlBatchProgress?.batchId]);
+
+  // Aviso ao sair da página durante processamento XML
+  useEffect(() => {
+    if (!xmlBatchProgress?.active) {
+      return;
+    }
+
+    const handleBeforeUnload = (e) => {
+      e.preventDefault();
+      e.returnValue = 'Existe um carregamento em progresso. Se você sair desta página, poderá perder as informações. Tem certeza que deseja sair?';
+      return e.returnValue;
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [xmlBatchProgress?.active]);
+
+  // Resetar página quando filtros mudam
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters]);
+
   useEffect(() => {
     if (!clinicId) {
       return;
@@ -1850,7 +1950,7 @@ export default function ContasReceber() {
       || bulkReceiveForm.paymentMethod;
   };
 
-  // 🔗 Enriquecer dados com payers e account_plans
+  // 🔗 Enriquecer dados com payers e plano de contas padrão
   useEffect(() => {
     if (!rows.length) return;
 
@@ -1917,32 +2017,16 @@ export default function ContasReceber() {
         const planoMap = {};
         if (planoIds.size > 0) {
           try {
-            const { data: planoData, error } = await supabase
-              .from('account_plans')
-              .select('id, name')
-              .in('id', Array.from(planoIds));
-
-            if (error) {
-              console.warn('⚠️ Error fetching account_plans, trying chart_of_accounts:', error.message);
-              const { data: chartData, error: chartError } = await supabase
-                .from('chart_of_accounts')
-                .select('id, name')
-                .in('id', Array.from(planoIds));
-              if (chartError) {
-                console.error('❌ Error fetching chart_of_accounts:', chartError);
-              } else {
-                chartData?.forEach((p) => {
-                  planoMap[p.id] = p.name;
-                });
+            const planoData = await listAccountPlans(clinicId);
+            const index = new Map((planoData || []).map((p) => [p.id, p.name]));
+            Array.from(planoIds).forEach((id) => {
+              if (index.has(id)) {
+                planoMap[id] = index.get(id);
               }
-            } else {
-              planoData?.forEach((p) => {
-                planoMap[p.id] = p.name;
-              });
-              console.log('✓ Plano map built:', planoMap);
-            }
+            });
+            console.log('✓ Plano map built:', planoMap);
           } catch (err) {
-            console.error('❌ Exception fetching chart_of_accounts:', err);
+            console.error('❌ Exception fetching standard chart of accounts:', err);
           }
         } else {
           console.log('ℹ️ No plano_contas IDs found in data');
@@ -2874,6 +2958,8 @@ export default function ContasReceber() {
         </Card>
       )}
 
+      {renderXmlBatchProgress('mb-4')}
+
       {reconciliationResult?.matches?.length ? (
         <Card className="mb-4 border-slate-200 bg-white p-4">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -2988,7 +3074,7 @@ export default function ContasReceber() {
       {/* RESUMO FINANCEIRO */}
       <div className="grid gap-3 mb-6 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
         {[
-          { label: 'Receita prevista', value: summary.total, hint: `${rows.length} contas`, tone: 'text-blue-700', icon: Clock },
+          { label: 'Receita prevista', value: summary.total, hint: `${allLoadedRows.length} contas`, tone: 'text-blue-700', icon: Clock },
           { label: 'Realizada', value: summary.realized, hint: 'Baixas registradas', tone: 'text-green-700', icon: Check },
           { label: 'Recebido no mês', value: summary.receivedMonth, hint: 'Competência atual', tone: 'text-emerald-700', icon: Check },
           { label: 'Recebido hoje', value: summary.receivedToday, hint: 'Operação diária', tone: 'text-cyan-700', icon: Check },
@@ -3610,7 +3696,6 @@ export default function ContasReceber() {
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {renderXmlBatchProgress()}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button type="button" size="sm" variant="outline">
@@ -3782,7 +3867,7 @@ export default function ContasReceber() {
                   </td>
                 </tr>
               )}
-              {rows.map((r) => {
+              {paginationInfo.paginatedRows.map((r) => {
                 const isOverdue = isReceivableOverdue(r);
                 const statusColor = getStatusColor(r, isOverdue);
                 const canReceive = !['received', 'canceled', 'glossed'].includes(r.status);
@@ -3805,7 +3890,7 @@ export default function ContasReceber() {
                     </td>
                   ),
                   payerContract: <td key="payerContract" className="px-4 py-3 text-gray-700">{formatReceivableText(r.convenio_name) || '—'}</td>,
-                  professional: <td key="professional" className="px-4 py-3 text-gray-700">{formatReceivableText(r.professional_name || r.profissional_name) || '—'}</td>,
+                  professional: <td key="professional" className="px-4 py-3 text-gray-700">{formatReceivableText(r.professional_name || r.profissional_name) || 'Não identificado'}</td>,
                   unitSpecialty: (
                     <td key="unitSpecialty" className="px-4 py-3 text-gray-700">
                       <div className="max-w-[180px] space-y-0.5">
@@ -3857,7 +3942,7 @@ export default function ContasReceber() {
                       })()}
                     </td>
                   ),
-                  accountPlan: <td key="accountPlan" className="px-4 py-3 text-gray-700">{formatReceivableText(r.plano_contas_name) || '—'}</td>,
+                  accountPlan: <td key="accountPlan" className="px-4 py-3 text-gray-700">{formatReceivableText(r.plano_contas_name) || 'Não classificado'}</td>,
                   status: (
                     <td key="status" className="px-4 py-3 text-center">
                       <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${statusColor}`}>
@@ -3877,10 +3962,10 @@ export default function ContasReceber() {
                             title={formatReceivableText(nfDisplay.name) || 'Abrir NF'}
                           >
                             <FileText className="h-3 w-3" />
-                            {formatReceivableText(nfDisplay.number) || 'NF'}
+                            {formatReceivableText(nfDisplay.number) || 'NF XML'}
                           </a>
                         ) : (
-                          <p className="font-medium text-slate-700">{formatReceivableText(nfDisplay.number) || '—'}</p>
+                          <p className="font-medium text-slate-700">{formatReceivableText(nfDisplay.number) || 'Nao identificado no XML'}</p>
                         )}
                         {nfDisplay.name && <p className="truncate text-gray-500" title={formatReceivableText(nfDisplay.name)}>{formatReceivableText(nfDisplay.name)}</p>}
                       </div>
@@ -4064,14 +4149,79 @@ export default function ContasReceber() {
             </tbody>
           </table>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-          <span>
-            {rows.length} recebivel{rows.length === 1 ? '' : 's'} carregado{rows.length === 1 ? '' : 's'}
-            {hasMoreRows ? ` em lotes de ${RECEIVABLES_PAGE_SIZE}` : ''}
-          </span>
+        <div className="flex flex-wrap items-center justify-between gap-4 border-t border-slate-200 bg-slate-50 px-4 py-3 text-sm">
+          <div className="flex items-center gap-3">
+            <span className="text-slate-600">
+              Linhas por página:
+            </span>
+            <select
+              value={rowsPerPage}
+              onChange={(e) => {
+                setRowsPerPage(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              className="px-3 py-1.5 border border-slate-200 rounded bg-white text-slate-700 hover:border-slate-300 cursor-pointer"
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </div>
+
+          <div className="text-slate-600">
+            Exibindo {paginationInfo.totalRows === 0 ? 0 : paginationInfo.startIndex + 1}-{Math.min(paginationInfo.endIndex, paginationInfo.totalRows)} de {paginationInfo.totalRows} recebível{paginationInfo.totalRows === 1 ? '' : 's'}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(1)}
+              disabled={currentPage === 1 || loading}
+              title="Primeira página"
+            >
+              ⟨⟨
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1 || loading}
+              title="Página anterior"
+            >
+              ⟨
+            </Button>
+            <span className="px-3 py-1.5 text-slate-700">
+              Página {paginationInfo.currentPage} de {paginationInfo.totalPages}
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(Math.min(paginationInfo.totalPages, currentPage + 1))}
+              disabled={currentPage === paginationInfo.totalPages || loading}
+              title="Próxima página"
+            >
+              ⟩
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(paginationInfo.totalPages)}
+              disabled={currentPage === paginationInfo.totalPages || loading}
+              title="Última página"
+            >
+              ⟩⟩
+            </Button>
+          </div>
+
           {hasMoreRows && (
             <Button type="button" variant="outline" size="sm" onClick={loadMoreRows} disabled={loading || loadingMore}>
-              {loadingMore ? 'Carregando...' : 'Carregar mais'}
+              {loadingMore ? 'Carregando...' : 'Carregar mais lotes'}
             </Button>
           )}
         </div>

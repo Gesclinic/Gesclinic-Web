@@ -226,7 +226,7 @@ export default function PatientCadastroPage() {
 
       <PageLayout
         title="Novo Paciente"
-        breadcrumbs={[{ label: 'Pacientes', href: '/clinica/pacientes' }, { label: 'Novo' }]}
+        breadcrumbs={[{ label: 'Pacientes', path: '/clinica/pacientes' }, { label: 'Novo' }]}
       >
         <motion.div
           className="w-full mx-auto"
@@ -257,11 +257,11 @@ export default function PatientCadastroPage() {
             <div className="flex justify-between text-sm">
               <div className="text-center flex-1">
                 <p className="font-bold text-blue-600 text-base">Dados Essenciais</p>
-                <p className="text-xs text-gray-500 mt-1">Informações principais</p>
+                <p className="text-xs text-gray-500 mt-1">Inclui obrigatórios para faturamento</p>
               </div>
               <div className="text-center flex-1">
-                <p className="font-semibold text-gray-500">Dados Completos</p>
-                <p className="text-xs text-gray-500 mt-1">(opcional)</p>
+                <p className="font-semibold text-gray-500">Cadastro Completo</p>
+                <p className="text-xs text-gray-500 mt-1">Após salvar</p>
               </div>
             </div>
           </motion.div>
@@ -776,7 +776,7 @@ export default function PatientCadastroPage() {
               className="px-6 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed gap-2"
             >
               <Check size={16} />
-              {loading ? 'Salvando...' : 'Salvar Apenas'}
+              {loading ? 'Salvando...' : 'Salvar e Voltar'}
             </Button>
             <Button
               onClick={() => handleSave(true)}
@@ -784,7 +784,7 @@ export default function PatientCadastroPage() {
               className="px-6 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-medium shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed gap-2"
             >
               <ArrowRight size={16} />
-              {loading ? 'Salvando...' : 'Continuar Cadastro'}
+              {loading ? 'Salvando...' : 'Salvar e Abrir Cadastro'}
             </Button>
           </motion.div>
         </motion.div>

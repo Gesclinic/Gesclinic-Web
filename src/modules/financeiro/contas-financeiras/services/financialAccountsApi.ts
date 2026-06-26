@@ -18,6 +18,25 @@ import {
   AccountType,
 } from '../types';
 
+const ACCOUNT_TYPE_LABEL_TO_ENUM: Record<string, AccountType> = {
+  'CONTA CORRENTE': AccountType.CHECKING,
+  'CONTA POUPANCA': AccountType.SAVINGS,
+  'CAIXA': AccountType.CASH,
+  'CARTEIRA DIGITAL': AccountType.DIGITAL_WALLET,
+  'APLICACAO': AccountType.INVESTMENT,
+  'CARTAO DE CREDITO': AccountType.CREDIT_CARD,
+};
+
+function normalizeAccountType(value: unknown): AccountType {
+  const raw = String(value || '').trim().toUpperCase();
+  if (Object.values(AccountType).includes(raw as AccountType)) {
+    return raw as AccountType;
+  }
+
+  const withoutAccents = raw.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return ACCOUNT_TYPE_LABEL_TO_ENUM[withoutAccents] || AccountType.CHECKING;
+}
+
 const FINANCIAL_ACCOUNT_SORT_COLUMNS: Record<string, string> = {
   name: 'account_name',
   account_name: 'account_name',
@@ -144,6 +163,7 @@ export async function createFinancialAccount(
     const newAccount: any = {
       clinic_id: clinicId, // ⚠️ SECURITY: Always set clinic_id from parameter
       ...input,
+      account_type: normalizeAccountType(input.account_type),
       // DO NOT set created_by here - let database trigger set it to auth.uid()
       // This ensures RLS policies work correctly
       currency: input.currency || 'BRL',

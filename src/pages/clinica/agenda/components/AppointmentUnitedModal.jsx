@@ -17,10 +17,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useClinicContext } from '@/contexts/ClinicContext';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import Calendar from 'react-calendar';
-import { AlertCircle, CalendarDays, ChevronLeft, ChevronRight, Clock3, FileText, PlayCircle, Send } from 'lucide-react';
+import { AlertCircle, CalendarDays, ChevronLeft, ChevronRight, Clock3, FileText, PlayCircle, PlusCircle, Send } from 'lucide-react';
 import {
   createAppointment,
   updateAppointment,
+  getAppointmentById,
   mapFromDatabase,
   syncAppointmentServices,
   getAppointmentServices,
@@ -60,6 +61,7 @@ import {
   listarConveniosPorProfissional,
   listarConveniosPorServicosDoFrofissional,
 } from '@/modules/agenda/services/agenda.api.business';
+import { listAccountPlans } from '@/lib/financeApi';
 import { isBusinessHours, formatTime } from '@/modules/agenda/utils/timezone';
 import { validateAppointmentBeforeSave } from '@/modules/agenda/services/appointments.validation';
 import {
@@ -1140,8 +1142,16 @@ export default function AppointmentUnitedModal({
             ? parseFloat(finalAppointment.discount).toFixed(2)
             : '0.00',
           discount_reason: finalAppointment.discountReason || '',
+          discount_requested_by: finalAppointment.discountRequestedBy || null,
+          discount_requested_by_name: finalAppointment.discountRequestedByName || null,
+          discount_requested_at: finalAppointment.discountRequestedAt || null,
           discount_authorized_by: finalAppointment.discountAuthorizedBy || null,
+          discount_authorized_by_name: finalAppointment.discountAuthorizedByName || null,
           discount_authorized_at: finalAppointment.discountAuthorizedAt || null,
+          discount_rejected_by: finalAppointment.discountRejectedBy || null,
+          discount_rejected_by_name: finalAppointment.discountRejectedByName || null,
+          discount_rejected_at: finalAppointment.discountRejectedAt || null,
+          discount_rejected_amount: finalAppointment.discountRejectedAmount || 0,
           discount_observation: finalAppointment.discountObservation || '',
           plano_contas_id: finalAppointment.planoContasId || '',
           dinheiro: {
@@ -1399,14 +1409,7 @@ export default function AppointmentUnitedModal({
     const loadPlans = async () => {
       try {
         console.log('?? Carregando planos de contas para clinic:', clinicId);
-        const { data: plans, error } = await supabase
-          .from('account_plans')
-          .select('id, name, parent_id')
-          .eq('clinic_id', clinicId);
-
-        if (error) {
-          throw error;
-        }
+        const plans = await listAccountPlans(clinicId);
         console.log('?? Planos carregados:', plans);
 
         // Apenas sub-planos (com parent_id)
@@ -2438,6 +2441,119 @@ export default function AppointmentUnitedModal({
     setPagamentoData((prev) => ({ ...prev, [field]: value }));
   };
 
+  const getCurrentUserDisplayName = () =>
+    user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email || 'Usuario';
+
+  const getCurrentAppointmentId = () => finalAppointment?.id || appointment?.id || agendamentoData.id;
+
+  const requestDiscountAuthorization = async () => {
+    const appointmentId = getCurrentAppointmentId();
+    const discountAmount = parseFloat(pagamentoData.discount || 0);
+
+    if (discountAmount <= 0) {
+      alert('Informe um valor de desconto maior que zero antes de solicitar autorizacao.');
+      return;
+    }
+
+    if (!appointmentId) {
+      const shouldSave = window.confirm(
+        'Para enviar a solicitacao de desconto, o agendamento precisa ser salvo primeiro. Salvar o agendamento agora e enviar para autorizacao?',
+      );
+
+      if (!shouldSave) {
+        return;
+      }
+
+      await handleSaveChanges();
+      return;
+    }
+
+    const requestedAt = new Date().toISOString();
+    const requestedByName = getCurrentUserDisplayName();
+
+    const requestData = {
+      discount: discountAmount,
+      discountReason: pagamentoData.discount_reason || null,
+      discountObservation: pagamentoData.discount_observation || null,
+      discountRequestedBy: user?.id || null,
+      discountRequestedByName: requestedByName,
+      discountRequestedAt: requestedAt,
+      discountAuthorizedBy: null,
+      discountAuthorizedByName: null,
+      discountAuthorizedAt: null,
+      discountRejectedBy: null,
+      discountRejectedByName: null,
+      discountRejectedAt: null,
+      discountRejectedAmount: 0,
+    };
+
+    updatePagamentoField('discount_requested_at', requestedAt);
+    updatePagamentoField('discount_requested_by', user?.id || null);
+    updatePagamentoField('discount_requested_by_name', requestedByName);
+    updatePagamentoField('discount_authorized_by', null);
+    updatePagamentoField('discount_authorized_by_name', null);
+    updatePagamentoField('discount_authorized_at', null);
+    updatePagamentoField('discount_rejected_by', null);
+    updatePagamentoField('discount_rejected_by_name', null);
+    updatePagamentoField('discount_rejected_at', null);
+    updatePagamentoField('discount_rejected_amount', 0);
+
+    await updateAppointment(appointmentId, requestData);
+
+    alert(
+      'Desconto enviado para autorizacao!\n\nDestino: Financeiro > Autorizacao de Descontos.\nDepois que for aprovado, use Atualizar Retorno da Autorizacao ou reabra o agendamento para prosseguir com o recebimento com desconto.',
+    );
+  };
+
+  const refreshDiscountAuthorizationStatus = async () => {
+    const appointmentId = getCurrentAppointmentId();
+
+    if (!appointmentId) {
+      alert('Este agendamento ainda nao foi salvo.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const updatedAppointment = await getAppointmentById(appointmentId);
+
+      if (!updatedAppointment) {
+        throw new Error('Agendamento nao encontrado.');
+      }
+
+      setPagamentoData((prev) => ({
+        ...prev,
+        discount: updatedAppointment.discount
+          ? parseFloat(updatedAppointment.discount).toFixed(2)
+          : '0.00',
+        discount_reason: updatedAppointment.discountReason || '',
+        discount_requested_by: updatedAppointment.discountRequestedBy || null,
+        discount_requested_by_name: updatedAppointment.discountRequestedByName || null,
+        discount_requested_at: updatedAppointment.discountRequestedAt || null,
+        discount_authorized_by: updatedAppointment.discountAuthorizedBy || null,
+        discount_authorized_by_name: updatedAppointment.discountAuthorizedByName || null,
+        discount_authorized_at: updatedAppointment.discountAuthorizedAt || null,
+        discount_rejected_by: updatedAppointment.discountRejectedBy || null,
+        discount_rejected_by_name: updatedAppointment.discountRejectedByName || null,
+        discount_rejected_at: updatedAppointment.discountRejectedAt || null,
+        discount_rejected_amount: updatedAppointment.discountRejectedAmount || 0,
+        discount_observation: updatedAppointment.discountObservation || '',
+      }));
+
+      if (updatedAppointment.discountAuthorizedBy) {
+        alert('Desconto autorizado. O recebimento ja pode prosseguir com o valor descontado.');
+      } else if (updatedAppointment.discountRejectedAt) {
+        alert('Desconto rejeitado. O desconto foi removido do recebimento.');
+      } else {
+        alert('A solicitacao ainda esta pendente de autorizacao.');
+      }
+    } catch (error) {
+      alert(`Erro ao atualizar retorno da autorizacao: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleOpenPatientRecord = async ({ startAttendance = false } = {}) => {
     const apt = finalAppointment || appointment;
     if (!patientRecordId) {
@@ -2718,7 +2834,12 @@ export default function AppointmentUnitedModal({
         discount_reason: pagamentoData.discount_reason || null,
         ...discountRequestData,
         discount_authorized_by: pagamentoData.discount_authorized_by || null,
+        discount_authorized_by_name: pagamentoData.discount_authorized_by_name || null,
         discount_authorized_at: pagamentoData.discount_authorized_at || null,
+        discount_rejected_by: pagamentoData.discount_rejected_by || null,
+        discount_rejected_by_name: pagamentoData.discount_rejected_by_name || null,
+        discount_rejected_at: pagamentoData.discount_rejected_at || null,
+        discount_rejected_amount: pagamentoData.discount_rejected_amount || 0,
         discount_observation: pagamentoData.discount_observation || null,
         notes: agendamentoData.notes,
         payment_method: pagamentoData.payment_method || null,
@@ -2883,7 +3004,7 @@ export default function AppointmentUnitedModal({
           console.error('   Stack:', servicesErr.stack);
           // N�o bloquear o salvamento se os servi�os falharem
           alert(
-            '?? Agendamento salvo, mas houve erro ao sincronizar os servi�os: ' +
+            'Agendamento salvo, mas houve erro ao sincronizar os servicos: ' +
               servicesErr.message,
           );
         }
@@ -3079,8 +3200,9 @@ export default function AppointmentUnitedModal({
           notes: agendamentoData.notes,
           value: agendamentoData.value ? parseFloat(agendamentoData.value) : null,
           discount: discountValue,
-          discount_reason: agendamentoData.discount_reason || null,
+          discount_reason: pagamentoData.discount_reason || null,
           ...discountRequested,
+          discount_observation: pagamentoData.discount_observation || null,
           duration: agendamentoData.duration,
           payment_method: pagamentoData.payment_method || null,
           convenio_id: faturamentoData?.convenio_id || null,
@@ -3176,11 +3298,16 @@ export default function AppointmentUnitedModal({
 
           value: agendamentoData.value ? parseFloat(agendamentoData.value) : null,
           discount: discountValue,
-          discount_reason: agendamentoData.discount_reason || null,
+          discount_reason: pagamentoData.discount_reason || null,
           ...discountRequestData,
-          discount_authorized_by: agendamentoData.discount_authorized_by || null,
-          discount_authorized_at: agendamentoData.discount_authorized_at || null,
-          discount_observation: agendamentoData.discount_observation || null,
+          discount_authorized_by: pagamentoData.discount_authorized_by || null,
+          discount_authorized_by_name: pagamentoData.discount_authorized_by_name || null,
+          discount_authorized_at: pagamentoData.discount_authorized_at || null,
+          discount_rejected_by: pagamentoData.discount_rejected_by || null,
+          discount_rejected_by_name: pagamentoData.discount_rejected_by_name || null,
+          discount_rejected_at: pagamentoData.discount_rejected_at || null,
+          discount_rejected_amount: pagamentoData.discount_rejected_amount || 0,
+          discount_observation: pagamentoData.discount_observation || null,
 
           payment_method: pagamentoData.payment_method || null,
           payment_splits:
@@ -3462,11 +3589,12 @@ export default function AppointmentUnitedModal({
   };
 
   const tabClass = (tab) => `
-    px-4 py-3 font-medium text-base border-b-2 transition-colors cursor-pointer
+    min-h-11 rounded-t-lg border border-b-0 px-4 py-2.5 text-sm font-semibold transition-colors
+    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2
     ${
       tabAtivo === tab
-        ? 'border-blue-600 text-blue-600'
-        : 'border-transparent text-gray-600 hover:text-gray-900'
+        ? 'border-blue-200 bg-white text-blue-700 shadow-sm'
+        : 'border-transparent bg-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-900'
     }
   `;
 
@@ -3505,7 +3633,7 @@ export default function AppointmentUnitedModal({
           <div className="flex-1 overflow-y-auto px-6 py-6">
             <div className="space-y-6">
               {/* ABAS */}
-              <div className="border-b border-gray-200 flex gap-2 flex-wrap overflow-x-auto">
+              <div className="flex flex-wrap gap-1 border-b border-gray-200">
                 {(mode === 'new' || mode === 'edit') && (
                   <button
                     type="button"
@@ -4165,7 +4293,7 @@ export default function AppointmentUnitedModal({
                             const statusConfig = STATUS_CONFIG[statusValue];
                             return (
                               <SelectItem key={statusValue} value={statusValue}>
-                                {statusConfig?.icon || '�'} {statusConfig?.label || statusValue}
+                                {statusConfig?.label || statusValue}
                               </SelectItem>
                             );
                           })}
@@ -4201,11 +4329,23 @@ export default function AppointmentUnitedModal({
                       <AppointmentItemsManager
                         appointmentId={mode === 'edit' && finalAppointment?.id ? finalAppointment.id : agendamentoData.id || null}
                         services={services}
-                        payers={payers}
+                        payers={(() => {
+                          const servicePayers = agendamentoData.professionalId ? filteredPayers || [] : [];
+                          const currentPayer =
+                            servicePayers.find((p) => p.id === agendamentoData.payerId) ||
+                            payers?.find((p) => p.id === agendamentoData.payerId);
+
+                          return currentPayer
+                            ? [currentPayer, ...servicePayers.filter((p) => p.id !== currentPayer.id)]
+                            : servicePayers;
+                        })()}
                         clinicId={clinicId}
                         professionalId={agendamentoData.professionalId}
                         payerId={agendamentoData.payerId}
-                        payerName={payers?.find((p) => p.id === agendamentoData.payerId)?.name}
+                        payerName={
+                          filteredPayers?.find((p) => p.id === agendamentoData.payerId)?.name ||
+                          payers?.find((p) => p.id === agendamentoData.payerId)?.name
+                        }
                         onPayerChange={(payerId) => updateAgendamentoField('payerId', payerId)}
                         savedServices={appointmentServices}
                         onItemsChange={(updatedServices) => {
@@ -4253,26 +4393,26 @@ export default function AppointmentUnitedModal({
                     {selectedPatient && (
                       <div className="bg-green-50 border border-green-300 rounded-lg p-3 mb-4">
                         <p className="text-sm font-semibold text-green-900">
-                          ? Dados do paciente "{selectedPatient.patientName}" carregados
+                          Dados do paciente "{selectedPatient.patientName}" carregados
                         </p>
                         <p className="text-xs text-green-800 mt-1">
-                          Voc� pode editar os dados abaixo se necess�rio
+                          Voce pode editar os dados abaixo se necessario
                         </p>
                       </div>
                     )}
 
                     {/* Grid de Dados + Foto */}
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid gap-4 lg:grid-cols-3">
                       {/* COLUNA ESQUERDA: Dados Cadastrais */}
-                      <div className="col-span-2 space-y-4">
+                      <div className="space-y-4 lg:col-span-2">
                         <div className="bg-blue-50 border border-blue-300 rounded-lg p-3">
                           <p className="text-sm font-semibold text-blue-900">
-                            ?? Dados Cadastrais (Padr�o TISS)
+                            Dados Cadastrais (Padrao TISS)
                           </p>
                         </div>
 
                         <div>
-                          <Label>?? Nome Completo *</Label>
+                          <Label>Nome Completo *</Label>
                           <Input
                             placeholder="Nome completo"
                             value={cadastralData.name}
@@ -4282,7 +4422,7 @@ export default function AppointmentUnitedModal({
 
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <Label>?? CPF/RG *</Label>
+                            <Label>CPF/RG *</Label>
                             <Input
                               placeholder="CPF ou RG"
                               value={cadastralData.document_id}
@@ -4290,7 +4430,7 @@ export default function AppointmentUnitedModal({
                             />
                           </div>
                           <div>
-                            <Label>?? Data de Nascimento</Label>
+                            <Label>Data de Nascimento</Label>
                             <Input
                               type="date"
                               value={cadastralData.birthdate}
@@ -4301,7 +4441,7 @@ export default function AppointmentUnitedModal({
 
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <Label>?? Telefone *</Label>
+                            <Label>Telefone *</Label>
                             <Input
                               placeholder="(11) 9999-9999"
                               value={cadastralData.phone}
@@ -4309,7 +4449,7 @@ export default function AppointmentUnitedModal({
                             />
                           </div>
                           <div>
-                            <Label>?? Celular</Label>
+                            <Label>Celular</Label>
                             <Input
                               placeholder="(11) 99999-9999"
                               value={cadastralData.cell_phone}
@@ -4319,7 +4459,7 @@ export default function AppointmentUnitedModal({
                         </div>
 
                         <div>
-                          <Label>?? Email</Label>
+                          <Label>Email</Label>
                           <Input
                             type="email"
                             placeholder="email@example.com"
@@ -4329,7 +4469,7 @@ export default function AppointmentUnitedModal({
                         </div>
 
                         <div className="space-y-3">
-                          <p className="text-sm font-semibold text-gray-700">?? Endere�o</p>
+                          <p className="text-sm font-semibold text-gray-700">Endereco</p>
                           <div className="grid grid-cols-2 gap-4">
                             <input
                               type="text"
@@ -4340,7 +4480,7 @@ export default function AppointmentUnitedModal({
                             />
                             <input
                               type="text"
-                              placeholder="N�mero"
+                              placeholder="Numero"
                               value={cadastralData.number}
                               onChange={(e) => updateCadastralField('number', e.target.value)}
                               className="px-3 py-2 border border-gray-300 rounded-md"
@@ -4378,10 +4518,10 @@ export default function AppointmentUnitedModal({
                         </div>
                       </div>
 
-                      {/* COLUNA DIREITA: Se��o de Foto do Paciente */}
+                      {/* COLUNA DIREITA: Secao de Foto do Paciente */}
                       <div className="bg-green-50 border border-green-300 rounded-lg p-4 h-fit">
                         <p className="text-sm font-semibold text-gray-700 mb-3">
-                          ?? Foto do Paciente
+                          Foto do Paciente
                         </p>
 
                         {/* Exibir foto atual */}
@@ -4397,12 +4537,12 @@ export default function AppointmentUnitedModal({
                                 // Apenas remove do state local - ser� salvo quando clicar em "Salvar Dados Cadastrais"
                                 setCadastralData((prev) => ({ ...prev, photo_url: null }));
                                 alert(
-                                  '? Foto removida! Clique em "Salvar Dados Cadastrais" para confirmar.',
+                                  'Foto removida! Clique em "Salvar Dados Cadastrais" para confirmar.',
                                 );
                               }}
                               className="mt-2 px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200 transition"
                             >
-                              ??? Remover Foto
+                              Remover Foto
                             </button>
                           </div>
                         )}
@@ -4461,7 +4601,7 @@ export default function AppointmentUnitedModal({
                           }}
                           className="flex-1 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium"
                         >
-                          {submitting ? '? Salvando...' : '?? Salvar Dados Cadastrais'}
+                          {submitting ? 'Salvando...' : 'Salvar Dados Cadastrais'}
                         </button>
                       </div>
                     )}
@@ -4473,7 +4613,7 @@ export default function AppointmentUnitedModal({
                   <div className="space-y-4">
                     <div className="bg-blue-50 border border-blue-300 rounded-lg p-3 mb-4">
                       <p className="text-sm font-semibold text-blue-900">
-                        ?? Status do Agendamento
+                        Status do Agendamento
                       </p>
                     </div>
 
@@ -4487,7 +4627,7 @@ export default function AppointmentUnitedModal({
 
                     {/* Seletor de Status */}
                     <div>
-                      <Label>?? Atualizar Status *</Label>
+                      <Label>Atualizar Status *</Label>
                       <Select
                         value={agendamentoData.status || 'scheduled'}
                         onValueChange={(newStatus) => {
@@ -4502,7 +4642,7 @@ export default function AppointmentUnitedModal({
                             newStatus,
                           );
                           if (!validation.allowed) {
-                            alert(`?? ${validation.reason}`);
+                            alert(validation.reason);
                             return;
                           }
 
@@ -4513,7 +4653,7 @@ export default function AppointmentUnitedModal({
                           );
                           if (missingFields.length > 0) {
                             alert(
-                              `?? Dados obrigat�rios n�o preenchidos:\n\n${missingFields.join('\n')}`,
+                              `Dados obrigatorios nao preenchidos:\n\n${missingFields.join('\n')}`,
                             );
                             return;
                           }
@@ -4539,7 +4679,7 @@ export default function AppointmentUnitedModal({
                       agendamentoData.status === SERVICE_STATUSES.AWAITING_PROFESSIONAL) && (
                       <div className="bg-orange-50 border border-orange-300 rounded-lg p-4">
                         <p className="text-sm text-orange-900 font-semibold">
-                          ?? Dados Obrigat�rios Validados
+                          Dados Obrigatorios Validados
                         </p>
                         <p className="text-xs text-orange-800 mt-1">Nome Completo ? e CPF/RG ?</p>
                       </div>
@@ -4548,28 +4688,28 @@ export default function AppointmentUnitedModal({
                     {/* Info sobre Transi��es */}
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800 space-y-1">
                       <p>
-                        <strong>??? Agendado:</strong> Criado na agenda
+                        <strong>Agendado:</strong> Criado na agenda
                       </p>
                       <p>
-                        <strong>?? Confirmado via Telefone:</strong> Paciente confirmou por telefone
+                        <strong>Confirmado via Telefone:</strong> Paciente confirmou por telefone
                       </p>
                       <p>
-                        <strong>?? Confirmado via WhatsApp:</strong> Paciente confirmou por WhatsApp
+                        <strong>Confirmado via WhatsApp:</strong> Paciente confirmou por WhatsApp
                       </p>
                       <p>
-                        <strong>?? Na Recep��o:</strong> Paciente chegou e iniciou check-in
+                        <strong>Na Recepcao:</strong> Paciente chegou e iniciou check-in
                       </p>
                       <p>
-                        <strong>?? No Guich�:</strong> Validando dados obrigat�rios
+                        <strong>No Guiche:</strong> Validando dados obrigatorios
                       </p>
                       <p>
-                        <strong>????? Aguardando Profissional:</strong> Pronto para ser atendido
+                        <strong>Aguardando Profissional:</strong> Pronto para ser atendido
                       </p>
                       <p>
-                        <strong>? Em Atendimento:</strong> Profissional atendendo o paciente
+                        <strong>Em Atendimento:</strong> Profissional atendendo o paciente
                       </p>
                       <p>
-                        <strong>?? Atendido:</strong> Atendimento finalizado
+                        <strong>Atendido:</strong> Atendimento finalizado
                       </p>
                     </div>
                   </div>
@@ -4580,23 +4720,23 @@ export default function AppointmentUnitedModal({
                   <div className="space-y-4">
                     <div className="bg-green-50 border border-green-300 rounded-lg p-3 mb-4">
                       <p className="text-sm font-semibold text-green-900">
-                        ? Valida��o do Conv�nio
+                        Validacao do Convenio
                       </p>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label>?? N� Carteira/Matr�cula *</Label>
+                        <Label>Numero Carteira/Matricula *</Label>
                         <Input
-                          placeholder="N�mero da carteira"
+                          placeholder="Numero da carteira"
                           value={liberacaoData.card_number}
                           onChange={(e) => updateLiberacaoField('card_number', e.target.value)}
                         />
                       </div>
                       <div>
-                        <Label>?? N� Autoriza��o</Label>
+                        <Label>Numero Autorizacao</Label>
                         <Input
-                          placeholder="N�mero da autoriza��o"
+                          placeholder="Numero da autorizacao"
                           value={liberacaoData.auth_number}
                           onChange={(e) => updateLiberacaoField('auth_number', e.target.value)}
                         />
@@ -4604,7 +4744,7 @@ export default function AppointmentUnitedModal({
                     </div>
 
                     <div>
-                      <Label>?? Validade da Autoriza��o</Label>
+                      <Label>Validade da Autorizacao</Label>
                       <Input
                         type="date"
                         value={liberacaoData.auth_expiry || ''}
@@ -4613,7 +4753,7 @@ export default function AppointmentUnitedModal({
                     </div>
 
                     <div>
-                      <Label>? Autorizado?</Label>
+                      <Label>Autorizado?</Label>
                       <label className="flex items-center gap-3 p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
                         <input
                           type="checkbox"
@@ -4622,7 +4762,7 @@ export default function AppointmentUnitedModal({
                           className="w-4 h-4"
                         />
                         <span className="text-sm font-medium text-gray-700">
-                          ? Paciente est� autorizado para atendimento
+                          Paciente esta autorizado para atendimento
                         </span>
                       </label>
                     </div>
@@ -4884,7 +5024,7 @@ export default function AppointmentUnitedModal({
                 {tabAtivo === 'pagamento' && isParticular && (
                   <div className="space-y-4">
                     <div className="bg-orange-50 border border-orange-300 rounded-lg p-3 mb-4">
-                      <p className="text-sm font-semibold text-orange-900">?? Dados de Pagamento</p>
+                      <p className="text-sm font-semibold text-orange-900">Dados de Pagamento</p>
                     </div>
 
                     {/* ? CHECKBOX: Habilitar M�ltiplos Pagamentos */}
@@ -4899,13 +5039,13 @@ export default function AppointmentUnitedModal({
                         <div className="flex-1">
                           <p className="font-semibold text-gray-900">
                             {enableMultiplePayments
-                              ? '? M�ltiplos Pagamentos Habilitados'
-                              : '? Pagamento �nico'}
+                              ? 'Multiplos Pagamentos Habilitados'
+                              : 'Pagamento Unico'}
                           </p>
                           <p className="text-xs text-gray-600">
                             {enableMultiplePayments
-                              ? 'Voc� pode dividir o pagamento em v�rias formas (Cart�o, PIX, Dinheiro, etc)'
-                              : 'Clique para habilitar e dividir o pagamento em m�ltiplas formas'}
+                              ? 'Voce pode dividir o pagamento em varias formas (Cartao, PIX, Dinheiro, etc)'
+                              : 'Clique para habilitar e dividir o pagamento em multiplas formas'}
                           </p>
                         </div>
                       </label>
@@ -4916,7 +5056,6 @@ export default function AppointmentUnitedModal({
                       <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-400 rounded-lg p-4 space-y-4">
                         <div>
                           <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                            <span className="text-2xl">??</span>
                             Adicionar Forma de Pagamento
                           </h3>
                           {/* Informa��o sobre saldo com desconto */}
@@ -4933,7 +5072,7 @@ export default function AppointmentUnitedModal({
                             return (
                               <div className="mt-2 p-2 bg-white rounded border border-blue-200">
                                 <p className="text-xs text-gray-600">
-                                  ?? Saldo a receber:{' '}
+                                  Saldo a receber:{' '}
                                   <span className="font-bold text-blue-900">
                                     {formatCurrency(saldoRestante)}
                                   </span>
@@ -4951,7 +5090,7 @@ export default function AppointmentUnitedModal({
 
                         <div className="grid grid-cols-3 gap-3">
                           <div>
-                            <Label className="text-xs font-semibold">M�todo de Pagamento</Label>
+                            <Label className="text-xs font-semibold">Metodo de Pagamento</Label>
                             <Select
                               value={splitFormData.payment_method}
                               onValueChange={(value) =>
@@ -4962,14 +5101,14 @@ export default function AppointmentUnitedModal({
                                 <SelectValue placeholder="Selecione" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="DINHEIRO">?? Dinheiro</SelectItem>
-                                <SelectItem value="CARTAO">?? Cart�o</SelectItem>
-                                <SelectItem value="PIX">?? PIX</SelectItem>
-                                <SelectItem value="CHEQUE">?? Cheque</SelectItem>
-                                <SelectItem value="BOLETO">?? Boleto</SelectItem>
-                                <SelectItem value="DOC">?? DOC</SelectItem>
-                                <SelectItem value="TED">? TED</SelectItem>
-                                <SelectItem value="DEPOSITO">?? Dep�sito</SelectItem>
+                                <SelectItem value="DINHEIRO">Dinheiro</SelectItem>
+                                <SelectItem value="CARTAO">Cartao</SelectItem>
+                                <SelectItem value="PIX">PIX</SelectItem>
+                                <SelectItem value="CHEQUE">Cheque</SelectItem>
+                                <SelectItem value="BOLETO">Boleto</SelectItem>
+                                <SelectItem value="DOC">DOC</SelectItem>
+                                <SelectItem value="TED">TED</SelectItem>
+                                <SelectItem value="DEPOSITO">Deposito</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
@@ -4993,9 +5132,10 @@ export default function AppointmentUnitedModal({
                             <button
                               type="button"
                               onClick={addPaymentSplit}
-                              className="w-full h-9 px-4 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition text-sm"
+                              className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-md bg-green-600 px-4 text-sm font-semibold text-white transition hover:bg-green-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2"
                             >
-                              ? Adicionar
+                              <PlusCircle className="h-4 w-4 flex-shrink-0" />
+                              <span>Adicionar</span>
                             </button>
                           </div>
                         </div>
@@ -5014,7 +5154,7 @@ export default function AppointmentUnitedModal({
                         {/* RESUMO DE PAGAMENTOS */}
                         <div className="bg-white rounded-lg p-3 border border-gray-200 space-y-2">
                           <p className="font-semibold text-sm text-gray-900">
-                            ?? Pagamentos Adicionados
+                            Pagamentos Adicionados
                           </p>
 
                           {pagamentoSplits.length === 0 ? (
@@ -5025,14 +5165,14 @@ export default function AppointmentUnitedModal({
                             <div className="space-y-2">
                               {pagamentoSplits.map((split) => {
                                 const metodosMap = {
-                                  DINHEIRO: '?? Dinheiro',
-                                  CARTAO: '?? Cart�o',
-                                  PIX: '?? PIX',
-                                  CHEQUE: '?? Cheque',
-                                  BOLETO: '?? Boleto',
-                                  DOC: '?? DOC',
-                                  TED: '? TED',
-                                  DEPOSITO: '?? Dep�sito',
+                                  DINHEIRO: 'Dinheiro',
+                                  CARTAO: 'Cartao',
+                                  PIX: 'PIX',
+                                  CHEQUE: 'Cheque',
+                                  BOLETO: 'Boleto',
+                                  DOC: 'DOC',
+                                  TED: 'TED',
+                                  DEPOSITO: 'Deposito',
                                 };
 
                                 // Renderizar detalhes espec�ficos do pagamento
@@ -5097,7 +5237,7 @@ export default function AppointmentUnitedModal({
 
                                     {details.length > 0 && (
                                       <p className="text-xs text-gray-600 mb-2">
-                                        {details.join(' � ')}
+                                        {details.join(' - ')}
                                       </p>
                                     )}
 
@@ -5107,7 +5247,7 @@ export default function AppointmentUnitedModal({
                                         onClick={() => removePaymentSplit(split.id)}
                                         className="text-red-600 hover:text-red-800 text-xs font-bold hover:underline transition"
                                       >
-                                        ? Remover
+                                        Remover
                                       </button>
                                     </div>
                                   </div>
@@ -5160,7 +5300,7 @@ export default function AppointmentUnitedModal({
                                     </p>
                                   </div>
                                   <div className="bg-green-50 p-2 rounded text-center">
-                                    <p className="text-gray-600 font-semibold text-xs">J� Pago</p>
+                                    <p className="text-gray-600 font-semibold text-xs">Ja Pago</p>
                                     <p className="text-green-900 font-bold text-sm">
                                       {formatCurrency(totalPago)}
                                     </p>
@@ -5181,7 +5321,7 @@ export default function AppointmentUnitedModal({
                                     <p
                                       className={`font-bold text-sm ${Math.abs(saldo) < 0.01 ? 'text-green-600' : 'text-orange-600'}`}
                                     >
-                                      {Math.abs(saldo) < 0.01 ? '? Completo' : '?? Incompleto'}
+                                      {Math.abs(saldo) < 0.01 ? 'Completo' : 'Incompleto'}
                                     </p>
                                   </div>
                                 </div>
@@ -5202,20 +5342,20 @@ export default function AppointmentUnitedModal({
                           <SelectValue placeholder="Selecione a forma de pagamento" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="DINHEIRO">?? Dinheiro</SelectItem>
-                          <SelectItem value="CARTAO">?? Cart�o de Cr�dito/D�bito</SelectItem>
-                          <SelectItem value="PIX">?? PIX</SelectItem>
-                          <SelectItem value="CHEQUE">?? Cheque</SelectItem>
-                          <SelectItem value="BOLETO">?? Boleto</SelectItem>
-                          <SelectItem value="DOC">?? DOC</SelectItem>
-                          <SelectItem value="TED">? TED</SelectItem>
-                          <SelectItem value="DEPOSITO">?? Dep�sito</SelectItem>
+                          <SelectItem value="DINHEIRO">Dinheiro</SelectItem>
+                          <SelectItem value="CARTAO">Cartao de Credito/Debito</SelectItem>
+                          <SelectItem value="PIX">PIX</SelectItem>
+                          <SelectItem value="CHEQUE">Cheque</SelectItem>
+                          <SelectItem value="BOLETO">Boleto</SelectItem>
+                          <SelectItem value="DOC">DOC</SelectItem>
+                          <SelectItem value="TED">TED</SelectItem>
+                          <SelectItem value="DEPOSITO">Deposito</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
                     <div>
-                      <Label>?? Plano de Contas *</Label>
+                      <Label>Plano de Contas *</Label>
                       <Select
                         value={pagamentoData.plano_contas_id || ''}
                         onValueChange={(value) => updatePagamentoField('plano_contas_id', value)}
@@ -5235,7 +5375,7 @@ export default function AppointmentUnitedModal({
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label>?? Valor Total (R$) *</Label>
+                        <Label>Valor Total (R$) *</Label>
                         <Input
                           type="text"
                           value={formatCurrency(agendamentoData.value || 0)}
@@ -5262,9 +5402,9 @@ export default function AppointmentUnitedModal({
                     >
                       <div className="font-bold">
                         {parseFloat(pagamentoData.discount || 0) > 0 ? (
-                          <span className="text-yellow-900">?? Desconto Aplicado</span>
+                          <span className="text-yellow-900">Desconto Aplicado</span>
                         ) : (
-                          <span className="text-gray-900">?? Desconto e Observa��es</span>
+                          <span className="text-gray-900">Desconto e Observacoes</span>
                         )}
                       </div>
 
@@ -5273,17 +5413,18 @@ export default function AppointmentUnitedModal({
                         parseFloat(pagamentoData.discount || 0) > 0 && (
                           <div className="bg-blue-50 border border-blue-300 rounded p-3">
                             <p className="text-sm text-blue-900 font-semibold mb-2">
-                              ?? Campos Protegidos - Desconto J� Autorizado
+                              Campos Protegidos - Desconto Ja Autorizado
                             </p>
                             <div className="text-xs text-blue-700 mb-3 space-y-1">
                               <p>
                                 <strong>Autorizado por:</strong>{' '}
-                                {(() => {
-                                  const authorized = professionals.find(
-                                    (p) => p.id === pagamentoData.discount_authorized_by,
-                                  );
-                                  return authorized ? authorized.name : 'Administrador do Sistema';
-                                })()}
+                                {pagamentoData.discount_authorized_by_name ||
+                                  (() => {
+                                    const authorized = professionals.find(
+                                      (p) => p.id === pagamentoData.discount_authorized_by,
+                                    );
+                                    return authorized ? authorized.name : 'Administrador do Sistema';
+                                  })()}
                               </p>
                               {pagamentoData.discount_authorized_at && (
                                 <p>
@@ -5291,7 +5432,7 @@ export default function AppointmentUnitedModal({
                                   {new Date(
                                     pagamentoData.discount_authorized_at,
                                   ).toLocaleDateString('pt-BR')}{' '}
-                                  �s{' '}
+                                  as{' '}
                                   {new Date(
                                     pagamentoData.discount_authorized_at,
                                   ).toLocaleTimeString('pt-BR', {
@@ -5301,7 +5442,7 @@ export default function AppointmentUnitedModal({
                                 </p>
                               )}
                               <p className="mt-2">
-                                Para alterar os valores, voc� deve primeiro remover a autoriza��o.
+                                Para alterar os valores, voce deve primeiro remover a autorizacao.
                               </p>
                             </div>
                             <button
@@ -5311,7 +5452,7 @@ export default function AppointmentUnitedModal({
                                 console.log('?? [RemoveAuthorization] Bot�o clicado');
 
                                 const confirmRemove = window.confirm(
-                                  '?? Tem certeza que deseja remover a autoriza��o deste desconto?\n\nIsso permitir� editar os valores, mas a autoriza��o ser� cancelada no sistema.',
+                                  'Tem certeza que deseja remover a autorizacao deste desconto?\n\nIsso permitira editar os valores, mas a autorizacao sera cancelada no sistema.',
                                 );
 
                                 console.log('?? [RemoveAuthorization] Confirma��o:', confirmRemove);
@@ -5331,7 +5472,7 @@ export default function AppointmentUnitedModal({
                                   );
 
                                   if (!appointmentId) {
-                                    throw new Error('ID do agendamento n�o encontrado');
+                                    throw new Error('ID do agendamento nao encontrado');
                                   }
 
                                   // Atualizar campos locais primeiro
@@ -5339,6 +5480,7 @@ export default function AppointmentUnitedModal({
                                     '??  [RemoveAuthorization] Atualizando campos locais',
                                   );
                                   updatePagamentoField('discount_authorized_by', null);
+                                  updatePagamentoField('discount_authorized_by_name', null);
                                   updatePagamentoField('discount_authorized_at', null);
 
                                   // Atualizar no banco de dados
@@ -5347,25 +5489,26 @@ export default function AppointmentUnitedModal({
                                   );
                                   const result = await updateAppointment(appointmentId, {
                                     discountAuthorizedBy: null,
+                                    discountAuthorizedByName: null,
                                     discountAuthorizedAt: null,
                                   });
                                   console.log('? [RemoveAuthorization] Resultado:', result);
 
                                   setLoading(false);
                                   alert(
-                                    '? Autoriza��o removida com sucesso!\n\nOs campos est�o desbloqueados para edi��o.',
+                                    'Autorizacao removida com sucesso!\n\nOs campos estao desbloqueados para edicao.',
                                   );
                                 } catch (error) {
                                   setLoading(false);
                                   console.error('? [RemoveAuthorization] Erro:', error);
                                   console.error('Stack:', error.stack);
-                                  alert(`? Erro ao remover autoriza��o:\n\n${error.message}`);
+                                  alert(`Erro ao remover autorizacao:\n\n${error.message}`);
                                 }
                               }}
                               disabled={loading}
                               className="text-xs bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-3 py-1 rounded transition font-semibold"
                             >
-                              {loading ? '? Removendo...' : '?? Remover Autoriza��o para Alterar'}
+                              {loading ? 'Removendo...' : 'Remover Autorizacao para Alterar'}
                             </button>
                           </div>
                         )}
@@ -5417,70 +5560,70 @@ export default function AppointmentUnitedModal({
                             <SelectContent>
                               <SelectGroup>
                                 <SelectLabel className="text-blue-600 font-bold">
-                                  ?? MOTIVOS COMERCIAIS
+                                  Motivos comerciais
                                 </SelectLabel>
-                                <SelectItem value="promocao">?? Promo��o</SelectItem>
+                                <SelectItem value="promocao">Promocao</SelectItem>
                                 <SelectItem value="primeira_consulta">
-                                  ? Primeira Consulta
+                                  Primeira Consulta
                                 </SelectItem>
-                                <SelectItem value="indicacao">?? Indica��o/Refer�ncia</SelectItem>
+                                <SelectItem value="indicacao">Indicacao/Referencia</SelectItem>
                                 <SelectItem value="fidelidade">
-                                  ? Fidelidade/Cliente Recorrente
+                                  Fidelidade/Cliente Recorrente
                                 </SelectItem>
                                 <SelectItem value="desconto_grupo">
-                                  ??????????? Desconto Grupo/Pacote
+                                  Desconto Grupo/Pacote
                                 </SelectItem>
                               </SelectGroup>
 
                               <SelectGroup>
                                 <SelectLabel className="text-green-600 font-bold">
-                                  ?? MOTIVOS DO PACIENTE
+                                  Motivos do paciente
                                 </SelectLabel>
                                 <SelectItem value="dificuldade_financeira">
-                                  ?? Dificuldade Financeira
+                                  Dificuldade Financeira
                                 </SelectItem>
                                 <SelectItem value="cortesia_medica">
-                                  ?? Cortesia M�dica/Profissional
+                                  Cortesia Medica/Profissional
                                 </SelectItem>
                                 <SelectItem value="cortesia_administrativo">
-                                  ?? Cortesia Administrativa
+                                  Cortesia Administrativa
                                 </SelectItem>
                               </SelectGroup>
 
                               <SelectGroup>
                                 <SelectLabel className="text-orange-600 font-bold">
-                                  ?? MOTIVOS OPERACIONAIS
+                                  Motivos operacionais
                                 </SelectLabel>
                                 <SelectItem value="erro_cobranca">
-                                  ? Erro de Cobran�a/Faturamento
+                                  Erro de Cobranca/Faturamento
                                 </SelectItem>
                                 <SelectItem value="correcao_sistema">
-                                  ?? Corre��o de Sistema
+                                  Correcao de Sistema
                                 </SelectItem>
-                                <SelectItem value="ajuste_convenio">?? Ajuste Conv�nio</SelectItem>
+                                <SelectItem value="ajuste_convenio">Ajuste Convenio</SelectItem>
                               </SelectGroup>
 
                               <SelectGroup>
                                 <SelectLabel className="text-purple-600 font-bold">
-                                  ?? MOTIVOS CRONOL�GICOS
+                                  Motivos cronologicos
                                 </SelectLabel>
-                                <SelectItem value="feriado">?? Feriado/Data Especial</SelectItem>
+                                <SelectItem value="feriado">Feriado/Data Especial</SelectItem>
                                 <SelectItem value="agendamento_bloqueado">
-                                  ?? Libera��o de Agendamento Bloqueado
+                                  Liberacao de Agendamento Bloqueado
                                 </SelectItem>
                               </SelectGroup>
 
                               <SelectGroup>
                                 <SelectLabel className="text-gray-600 font-bold">
-                                  ?? OUTROS
+                                  Outros
                                 </SelectLabel>
                                 <SelectItem value="cancelamento_anterior">
-                                  ?? Compensa��o Cancelamento Anterior
+                                  Compensacao Cancelamento Anterior
                                 </SelectItem>
                                 <SelectItem value="cortesia_outros">
-                                  ?? Cortesia Especial
+                                  Cortesia Especial
                                 </SelectItem>
-                                <SelectItem value="outros">?? Outros Motivos</SelectItem>
+                                <SelectItem value="outros">Outros Motivos</SelectItem>
                               </SelectGroup>
                             </SelectContent>
                           </Select>
@@ -5488,7 +5631,7 @@ export default function AppointmentUnitedModal({
                       </div>
 
                       <div>
-                        <Label>Observa��es sobre Desconto</Label>
+                        <Label>Observacoes sobre Desconto</Label>
                         <Textarea
                           placeholder="Justificativa ou detalhes adicionais..."
                           value={pagamentoData.discount_observation || ''}
@@ -5515,8 +5658,13 @@ export default function AppointmentUnitedModal({
                           {pagamentoData.discount_authorized_by ? (
                             <div className="bg-green-50 border border-green-200 rounded p-3">
                               <p className="text-sm text-green-900 font-semibold">
-                                ? Desconto Autorizado
+                                Desconto Autorizado
                               </p>
+                              {pagamentoData.discount_authorized_by_name && (
+                                <p className="text-xs text-green-700 mt-1">
+                                  Autorizado por: {pagamentoData.discount_authorized_by_name}
+                                </p>
+                              )}
                               {pagamentoData.discount_authorized_at && (
                                 <p className="text-xs text-green-700 mt-1">
                                   Autorizado em:{' '}
@@ -5526,51 +5674,72 @@ export default function AppointmentUnitedModal({
                                 </p>
                               )}
                             </div>
+                          ) : pagamentoData.discount_rejected_at ? (
+                            <div className="bg-red-50 border border-red-200 rounded p-3">
+                              <p className="text-sm text-red-900 font-semibold">
+                                Desconto Rejeitado
+                              </p>
+                              {pagamentoData.discount_rejected_by_name && (
+                                <p className="text-xs text-red-700 mt-1">
+                                  Rejeitado por: {pagamentoData.discount_rejected_by_name}
+                                </p>
+                              )}
+                              <p className="text-xs text-red-700 mt-1">
+                                Rejeitado em:{' '}
+                                {new Date(pagamentoData.discount_rejected_at).toLocaleDateString(
+                                  'pt-BR',
+                                )}
+                              </p>
+                            </div>
                           ) : (
                             <div className="space-y-3">
                               <div className="bg-red-50 border border-red-200 rounded p-3">
                                 <p className="text-sm text-red-900 font-semibold">
-                                  ?? Este desconto requer autoriza��o de administrador
+                                  Este desconto requer autorizacao de administrador
                                 </p>
                                 <p className="text-xs text-red-700 mt-1">
-                                  O desconto ser� registrado e enviado para aprova��o
+                                  O desconto sera registrado e enviado para aprovacao
                                 </p>
                               </div>
 
                               {/* Bot�o para submeter desconto para autoriza��o */}
                               {pagamentoData.discount_requested_at ? (
-                                <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                                <div className="bg-blue-50 border border-blue-200 rounded p-3 space-y-3">
                                   <p className="text-sm text-blue-900 font-semibold">
-                                    ?? Desconto j� foi solicitado
+                                    Desconto ja foi solicitado
                                   </p>
+                                  {pagamentoData.discount_requested_by_name && (
+                                    <p className="text-xs text-blue-700">
+                                      Solicitado por: {pagamentoData.discount_requested_by_name}
+                                    </p>
+                                  )}
                                   <p className="text-xs text-blue-700 mt-1">
                                     Solicitado em:{' '}
                                     {new Date(
                                       pagamentoData.discount_requested_at,
                                     ).toLocaleDateString('pt-BR')}
                                   </p>
+                                  {!pagamentoData.discount_authorized_by &&
+                                    !pagamentoData.discount_rejected_at && (
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={refreshDiscountAuthorizationStatus}
+                                        disabled={loading}
+                                        className="h-8 w-full border-blue-300 text-blue-700 hover:bg-blue-100"
+                                      >
+                                        {loading
+                                          ? 'Atualizando...'
+                                          : 'Atualizar Retorno da Autorizacao'}
+                                      </Button>
+                                    )}
                                 </div>
                               ) : (
                                 <Button
                                   onClick={async () => {
                                     try {
                                       setLoading(true);
-                                      console.log('?? Enviando desconto para autoriza��o...');
-
-                                      // Atualizar os campos de solicita��o
-                                      updatePagamentoField(
-                                        'discount_requested_at',
-                                        new Date().toISOString(),
-                                      );
-                                      updatePagamentoField('discount_requested_by', user?.id);
-                                      updatePagamentoField(
-                                        'discount_requested_by_name',
-                                        user?.user_metadata?.name || user?.email,
-                                      ); // ? NOVO: Armazenar nome do usu�rio
-
-                                      alert(
-                                        '? Desconto enviado para autoriza��o!\n\nVoc� pode acompanhar em Financeiro > Autoriza��o de Descontos',
-                                      );
+                                      await requestDiscountAuthorization();
                                       setLoading(false);
                                     } catch (error) {
                                       setLoading(false);
@@ -5582,8 +5751,8 @@ export default function AppointmentUnitedModal({
                                   className="w-full bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white"
                                 >
                                   {loading
-                                    ? '? Enviando...'
-                                    : '?? Solicitar Autoriza��o de Desconto'}
+                                    ? 'Enviando...'
+                                    : 'Solicitar Autorizacao de Desconto'}
                                 </Button>
                               )}
                             </div>
@@ -5597,7 +5766,7 @@ export default function AppointmentUnitedModal({
 
                     {/* RESUMO FINANCEIRO */}
                     <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-300 rounded-lg p-4 space-y-2 mt-6">
-                      <p className="font-semibold text-blue-900">?? Resumo Financeiro</p>
+                      <p className="font-semibold text-blue-900">Resumo Financeiro</p>
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-700">Valor Total:</span>
                         <span className="font-bold text-gray-900">
@@ -5657,7 +5826,7 @@ export default function AppointmentUnitedModal({
                         disabled={loading}
                         className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white animate-pulse"
                       >
-                        {loading ? '? Criando atendimento...' : '?? Criar Atendimento'}
+                        {loading ? 'Criando atendimento...' : 'Criar Atendimento'}
                       </Button>
                     )}
                   </div>
@@ -5667,7 +5836,7 @@ export default function AppointmentUnitedModal({
                 {tabAtivo === 'pagamento' && (
                   <div className="space-y-4 overflow-y-auto max-h-[600px]">
                     <div className="bg-blue-50 border border-blue-300 rounded-lg p-3 mb-4">
-                      <p className="text-sm font-semibold text-blue-900">?? Informa��es de Pagamento</p>
+                      <p className="text-sm font-semibold text-blue-900">Informacoes de Pagamento</p>
                     </div>
 
                     {/* Card Processor Selector para pagamentos em cart�o */}
@@ -5700,7 +5869,7 @@ export default function AppointmentUnitedModal({
                   <div className="space-y-4 overflow-y-auto max-h-[600px]">
                     <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-300 rounded-lg p-4 mb-4">
                       <p className="text-lg font-bold text-green-900">
-                        ? Resumo Completo do Atendimento
+                        Resumo Completo do Atendimento
                       </p>
                       <p className="text-sm text-green-700 mt-1">
                         Todos os dados foram salvos com sucesso
@@ -5710,7 +5879,7 @@ export default function AppointmentUnitedModal({
                     {/* ?? PACIENTE */}
                     <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                       <p className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                        <span>?? Paciente</span>
+                        <span>Paciente</span>
                       </p>
                       <div className="grid grid-cols-2 gap-3 text-sm">
                         <div>
@@ -5745,7 +5914,7 @@ export default function AppointmentUnitedModal({
                     {/* ?? AGENDAMENTO */}
                     <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                       <p className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                        <span>?? Agendamento</span>
+                        <span>Agendamento</span>
                       </p>
                       <div className="grid grid-cols-2 gap-3 text-sm">
                         <div>
@@ -5753,11 +5922,11 @@ export default function AppointmentUnitedModal({
                           <p className="text-gray-900 font-bold">{agendamentoData.date || '-'}</p>
                         </div>
                         <div>
-                          <span className="text-gray-600 block text-xs font-semibold">Hor�rio</span>
+                          <span className="text-gray-600 block text-xs font-semibold">Horario</span>
                           <p className="text-gray-900 font-bold">{agendamentoData.time || '-'}</p>
                         </div>
                         <div>
-                          <span className="text-gray-600 block text-xs font-semibold">Dura��o</span>
+                          <span className="text-gray-600 block text-xs font-semibold">Duracao</span>
                           <p className="text-gray-900 font-bold">
                             {agendamentoData.duration || 30} minutos
                           </p>
@@ -5783,12 +5952,12 @@ export default function AppointmentUnitedModal({
                     {/* ?? SERVI�O */}
                     <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
                       <p className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                        <span>?? Servi�o</span>
+                        <span>Servico</span>
                       </p>
                       <div className="grid grid-cols-1 gap-3 text-sm">
                         <div>
                           <span className="text-gray-600 block text-xs font-semibold">
-                            Nome do Servi�o
+                            Nome do Servico
                           </span>
                           <p className="text-gray-900 font-bold">
                             {services.find((s) => s.id === agendamentoData.serviceId)?.name || '-'}
@@ -5797,7 +5966,7 @@ export default function AppointmentUnitedModal({
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <span className="text-gray-600 block text-xs font-semibold">
-                              C�digo
+                              Codigo
                             </span>
                             <p className="text-gray-900 font-bold">
                               {agendamentoData.serviceCode || '-'}
@@ -5817,7 +5986,7 @@ export default function AppointmentUnitedModal({
                     {!checkIsParticular(agendamentoData.payerId) && isConvenioFaturado && (
                       <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
                         <p className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                          <span>?? Conv�nio/Faturamento</span>
+                          <span>Convenio/Faturamento</span>
                         </p>
                         <div className="grid grid-cols-2 gap-3 text-sm">
                           <div className="col-span-2">
@@ -5828,7 +5997,7 @@ export default function AppointmentUnitedModal({
                           </div>
                           <div>
                             <span className="text-gray-600 block text-xs font-semibold">
-                              Cart�o
+                              Cartao
                             </span>
                             <p className="text-gray-900 font-bold">
                               {liberacaoData.card_number || '-'}
@@ -5836,7 +6005,7 @@ export default function AppointmentUnitedModal({
                           </div>
                           <div>
                             <span className="text-gray-600 block text-xs font-semibold">
-                              Autoriza��o
+                              Autorizacao
                             </span>
                             <p className="text-gray-900 font-bold">
                               {liberacaoData.auth_number || '-'}
@@ -5844,7 +6013,7 @@ export default function AppointmentUnitedModal({
                           </div>
                           <div>
                             <span className="text-gray-600 block text-xs font-semibold">
-                              C�digo TISS
+                              Codigo TISS
                             </span>
                             <p className="text-gray-900 font-bold">
                               {faturamentoData.procedure_code || '-'}
@@ -5865,7 +6034,7 @@ export default function AppointmentUnitedModal({
                     {checkIsParticular(agendamentoData.payerId) && isParticular && (
                       <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
                         <p className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                          <span>?? Pagamento Particular</span>
+                          <span>Pagamento Particular</span>
                         </p>
                         <div className="grid grid-cols-2 gap-3 text-sm">
                           <div>
@@ -5878,7 +6047,7 @@ export default function AppointmentUnitedModal({
                           </div>
                           <div>
                             <span className="text-gray-600 block text-xs font-semibold">
-                              M�todo
+                              Metodo
                             </span>
                             <p className="text-gray-900 font-bold">
                               {pagamentoData.payment_method || '-'}
@@ -5914,7 +6083,7 @@ export default function AppointmentUnitedModal({
                     {/* ?? STATUS */}
                     <div className="bg-emerald-50 rounded-lg p-4 border border-emerald-200">
                       <p className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                        <span>?? Status</span>
+                        <span>Status</span>
                       </p>
                       <div className="text-sm">
                         <span className="text-gray-600 block text-xs font-semibold mb-1">
@@ -5922,7 +6091,7 @@ export default function AppointmentUnitedModal({
                         </span>
                         <div className="inline-block bg-green-600 text-white px-3 py-1 rounded-full text-xs font-bold">
                           {agendamentoData.status === 'awaiting_professional'
-                            ? '? Aguardando Profissional'
+                            ? 'Aguardando Profissional'
                             : getFormattedStatus(agendamentoData.status)}
                         </div>
                       </div>
@@ -5930,10 +6099,10 @@ export default function AppointmentUnitedModal({
 
                     <div className="bg-blue-100 border-2 border-blue-500 rounded-lg p-4 text-center">
                       <p className="text-blue-900 font-bold text-base">
-                        ? Atendimento pronto para ser iniciado!
+                        Atendimento pronto para ser iniciado!
                       </p>
                       <p className="text-blue-800 text-sm mt-2">
-                        O profissional pode clicar em "Iniciar Atendimento" para come�ar.
+                        O profissional pode clicar em "Iniciar Atendimento" para comecar.
                       </p>
                     </div>
                   </div>
@@ -5941,8 +6110,8 @@ export default function AppointmentUnitedModal({
               </div>
             </div>
 
-            {/* FOOTER COM BOT�ES */}
-            <div className="border-t border-gray-200 p-4 bg-white flex gap-2 justify-end flex-shrink-0">
+            {/* FOOTER COM BOTOES */}
+            <div className="border-t border-gray-200 p-4 bg-white flex flex-wrap items-center justify-end gap-2 flex-shrink-0">
               {tabAtivo === 'dados' && (
                 <>
                   <Button variant="outline" onClick={onClose}>
@@ -6352,16 +6521,17 @@ export default function AppointmentUnitedModal({
                     }}
                     className="bg-orange-600 hover:bg-orange-700 text-white font-bold gap-2"
                   >
-                    ?? Emitir NF
+                    Emitir NF
                   </Button>
                   <Button
                     onClick={() => {
                       onSuccess?.();
                       onClose();
                     }}
-                    className="bg-green-600 hover:bg-green-700 text-white font-bold"
+                    className="h-10 min-w-[190px] bg-green-600 hover:bg-green-700 text-white font-semibold gap-2 whitespace-nowrap"
                   >
-                    ? Liberar para Atendimento
+                    <PlayCircle className="h-4 w-4 flex-shrink-0" />
+                    <span>Liberar para Atendimento</span>
                   </Button>
                 </>
               )}

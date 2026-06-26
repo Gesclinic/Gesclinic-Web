@@ -1,6 +1,9 @@
 import { supabase } from '@/lib/customSupabaseClient.js';
 import { asUuidOrNull, asStringOrNull, asNumberOrNull } from '@/lib/selectUtils';
 import { logReceivableCreated, logPaymentReceived } from '@/lib/auditFinancialIntegration.js';
+import { classifyPayableForEnterprise } from '@/lib/enterpriseChartOfAccounts';
+import { resolveEnterpriseCostCenterId } from '@/lib/enterpriseCostCenters';
+import { resolveCostCenterAllocation } from '@/lib/costCenterAllocationEngine';
 
 function invalidateFinanceCaches(clinicId) {
   if (!clinicId) return;
@@ -34,6 +37,227 @@ function normalizeApStatus(s) {
   if (['blocked', 'bloqueado', 'bloqueada'].includes(v)) return 'BLOCKED';
   if (['reversed', 'estornado', 'estornada'].includes(v)) return 'REVERSED';
   return null; // desconhecido -> não manda
+}
+
+async function getCurrentUserId() {
+  try {
+    const { data } = await supabase.auth.getUser();
+    return data?.user?.id || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Enriquece registros de contas a pagar com guide_number extraído de XML e dados complementares.
+ * Similar a attachLatestGlosas em receivablesApi.js, mantém consistência com Contas a Receber.
+ * Extrai guide_number (NF) de metadata.document_extraction se disponível.
+ * @param {string} clinicId - ID da clínica
+ * @param {array} rows - Registros de ap_bills a enriquecer
+ * @returns {array} Registros enriquecidos
+ */
+async function attachGuideNumberToPayables(clinicId, rows = []) {
+  if (!rows?.length) return rows;
+
+  try {
+    // Enriquecer cada linha com informações de XML se disponível
+    return rows.map((row) => {
+      // Extrair guide_number do XML ou usar campo existente
+      const extractionFields = row.metadata?.document_extraction?.fields || {};
+      return {
+        ...row,
+        guide_number:
+          row.guide_number
+          || extractionFields.guide_number
+          || extractionFields.invoice_number
+          || extractionFields.nf_number
+          || extractionFields.numero_nota
+          || null,
+      };
+    });
+  } catch (error) {
+    console.error('Error enriching payables with guide_number:', error);
+    return rows; // Retorna dados originais sem enriquecimento em caso de erro
+  }
+}
+
+async function resolveAPFinancialAccountId(clinicId, row = {}) {
+  if (row.financial_account_id) return row.financial_account_id;
+  if (row.account_id) return row.account_id;
+
+  try {
+    const { data, error } = await supabase
+      .from('financial_accounts')
+      .select('id')
+      .eq('clinic_id', clinicId)
+      .order('created_at', { ascending: true })
+      .limit(1);
+    if (error) throw error;
+    return data?.[0]?.id || null;
+  } catch {
+    return null;
+  }
+}
+
+async function insertAPFinancialTransactionVariants(rows) {
+  if (!rows.length) return;
+
+  const tryInsert = async (candidateRows) => {
+    if (!candidateRows?.length) return { error: new Error('empty rows') };
+    return supabase.from('financial_transactions').insert(candidateRows);
+  };
+
+  const fullInsert = await tryInsert(rows);
+  if (!fullInsert.error) return;
+
+  // Common compatibility path: some schemas do not have metadata/centro_custo_id,
+  // but still support cost_center_id and other modern columns.
+  const noMetadataRows = rows.map((row) => {
+    const { metadata, centro_custo_id, ...rest } = row;
+    return rest;
+  });
+  const noMetadataInsert = await tryInsert(noMetadataRows);
+  if (!noMetadataInsert.error) return;
+
+  const oldSchemaRows = rows.map((row) => ({
+    clinic_id: row.clinic_id,
+    created_by: row.created_by,
+    account_id: row.account_id,
+    type: row.type,
+    status: row.status,
+    category: row.category,
+    description: row.description,
+    amount: row.amount,
+    scheduled_date: row.scheduled_date,
+    due_date: row.due_date,
+    reference_document: row.reference_document,
+    notes: row.notes,
+    professional_id: row.professional_id,
+    origin_module: row.origin_module,
+    origin_id: row.origin_id,
+    cost_center_id: row.cost_center_id,
+  }));
+
+  const { error: oldError } = await supabase.from('financial_transactions').insert(oldSchemaRows);
+  if (!oldError) return;
+
+  const newSchemaRows = rows.map((row) => ({
+    clinic_id: row.clinic_id,
+    financial_account_id: row.financial_account_id,
+    created_by: row.created_by,
+    updated_by: row.updated_by,
+    transaction_type: row.transaction_type,
+    movement_type: row.movement_type,
+    description: row.description,
+    amount: row.amount,
+    status: String(row.status || '').toUpperCase(),
+    transaction_date: row.transaction_date,
+    due_date: row.due_date,
+    competency_date: row.competency_date,
+    document_number: row.document_number,
+    origin_module: row.origin_module,
+    origin_id: row.origin_id,
+    cost_center_id: row.cost_center_id,
+    is_reconciled: false,
+    notes: row.notes,
+  }));
+
+  const { error: newError } = await supabase.from('financial_transactions').insert(newSchemaRows);
+  if (newError) throw fullInsert.error;
+}
+
+function round2(value) {
+  return Number(Number(value || 0).toFixed(2));
+}
+
+function getAPMovementMeta(row = {}) {
+  const normalizedStatus = String(normalizeApStatus(row.status) || row.status || '').toUpperCase();
+  if (normalizedStatus === 'PAID' || normalizedStatus === 'PARTIAL') {
+    return { status: normalizedStatus === 'PAID' ? 'paid' : 'partial', movementType: 'REALIZED' };
+  }
+  if (normalizedStatus === 'CANCELED' || normalizedStatus === 'REVERSED') {
+    return { status: 'canceled', movementType: 'REALIZED' };
+  }
+  return { status: 'scheduled', movementType: 'PREDICTED' };
+}
+
+export async function syncAPFinancialTransactions(row) {
+  if (!row?.clinic_id || !row?.id) return;
+
+  try {
+    const accountId = await resolveAPFinancialAccountId(row.clinic_id, row);
+    const userId = await getCurrentUserId();
+    if (!userId) return;
+
+    await supabase
+      .from('financial_transactions')
+      .delete()
+      .in('origin_module', ['accounts_payable', 'contas_pagar', 'ap_bills'])
+      .eq('origin_id', row.id);
+
+    const amount = round2(Number(row.amount || 0));
+    if (amount <= 0) return;
+
+    const sourceCostCenterId = row.cost_center_id || row.centro_custo_id || null;
+    const allocation = sourceCostCenterId
+      ? await resolveCostCenterAllocation({
+        clinicId: row.clinic_id,
+        sourceCostCenterId,
+        amount,
+      })
+      : [];
+
+    const effectiveAllocation = allocation.length > 0
+      ? allocation
+      : [{ target_cost_center_id: sourceCostCenterId, amount }];
+
+    const movement = getAPMovementMeta(row);
+    const transactionDate = String(
+      row.paid_at || row.due_date || row.issue_date || new Date().toISOString(),
+    ).split('T')[0];
+    const competencyDate = String(row.competency_date || row.issue_date || row.due_date || transactionDate).split('T')[0];
+    const documentNumber = row.document_number || null;
+    const description = row.description || row.vendor_name || 'Conta a pagar';
+
+    const rows = effectiveAllocation
+      .filter((item) => item?.target_cost_center_id && Number(item.amount || 0) > 0)
+      .map((item) => ({
+        clinic_id: row.clinic_id,
+        ...(accountId ? { financial_account_id: accountId, account_id: accountId } : {}),
+        created_by: userId,
+        updated_by: userId,
+        type: 'expense',
+        category: 'operational_expense',
+        transaction_type: 'EXPENSE',
+        movement_type: movement.movementType,
+        status: movement.status,
+        description: `Conta a pagar - ${description}`,
+        amount: round2(item.amount),
+        transaction_date: transactionDate,
+        scheduled_date: row.due_date || transactionDate,
+        due_date: row.due_date || transactionDate,
+        competency_date: competencyDate,
+        reference_document: documentNumber,
+        document_number: documentNumber,
+        origin_module: 'accounts_payable',
+        origin_id: row.id,
+        cost_center_id: item.target_cost_center_id,
+        centro_custo_id: item.target_cost_center_id,
+        is_reconciled: false,
+        notes: 'Despesa originada em contas a pagar com rateio de centro de custo',
+        metadata: {
+          allocation: {
+            applied: true,
+            target_cost_center_id: item.target_cost_center_id,
+            source: 'cost_center_allocation_rule',
+          },
+        },
+      }));
+
+    await insertAPFinancialTransactionVariants(rows);
+  } catch (error) {
+    console.warn('syncAPFinancialTransactions failed:', error?.message || error);
+  }
 }
 
 /* =========================
@@ -138,16 +362,20 @@ export async function listAPQuery({
     console.error('listAPQuery error:', error);
     throw new Error(error.message);
   }
-  return data ?? [];
+  
+  // Enriquecer dados com guide_number e informações de XML
+  return attachGuideNumberToPayables(clinicId, data ?? []);
 }
 
 export async function createAP(clinicId, payload) {
+  const classification = await classifyPayableForEnterprise(clinicId, payload, { strict: true });
+  const resolvedCostCenterId = await resolveEnterpriseCostCenterId(clinicId, payload, 'payable');
   const status = normalizeApStatus(payload.status) || 'open';
 
   // Construir base obrigatória
   const baseInsert = {
     clinic_id: clinicId,
-    category_id: asUuidOrNull(payload.category_id),
+    category_id: asUuidOrNull(payload.category_id || classification.categoryId),
     method_id: asUuidOrNull(payload.method_id),
     vendor_name: asStringOrNull(payload.vendor_name),
     description: asStringOrNull(payload.description),
@@ -158,6 +386,14 @@ export async function createAP(clinicId, payload) {
     status,
     document_url: asStringOrNull(payload.document_url),
   };
+
+  if (!baseInsert.category_id) {
+    throw new Error('Conta a pagar sem vínculo de conta contábil no plano ERP.');
+  }
+
+  if (!resolvedCostCenterId) {
+    throw new Error('Conta a pagar sem centro de custo. Configure o Centro de Custos ERP e tente novamente.');
+  }
 
   // Tentar com campos opcionais (installments, payment_method)
   const toInsert = {
@@ -178,6 +414,8 @@ export async function createAP(clinicId, payload) {
     linked_service: payload.linked_service || null,
     linked_revenue:
       typeof payload.linked_revenue !== 'undefined' ? Number(payload.linked_revenue) : null,
+    cost_center_id: asUuidOrNull(payload.cost_center_id || payload.centro_custo_id || resolvedCostCenterId),
+    centro_custo_id: asUuidOrNull(payload.centro_custo_id || payload.cost_center_id || resolvedCostCenterId),
   };
 
   console.log('Tentando criar AP com:', toInsert);
@@ -185,12 +423,9 @@ export async function createAP(clinicId, payload) {
   // Validar categoria: somente contas de nível 2 (com parent_id) são lançáveis
   try {
     if (baseInsert.category_id) {
-      const { data: cat, error: catErr } = await supabase
-        .from('account_plans')
-        .select('id,parent_id')
-        .eq('id', baseInsert.category_id)
-        .single();
-      if (!catErr && !cat?.parent_id) {
+      const plans = await listAccountPlans(clinicId);
+      const cat = (plans || []).find((p) => p.id === baseInsert.category_id);
+      if (cat && !cat?.parent_id) {
         baseInsert.category_id = null; // não lançável, ignora
       }
     }
@@ -234,6 +469,7 @@ export async function createAP(clinicId, payload) {
         throw new Error(error2.message);
       }
       console.log('AP criada com fallback:', data2);
+      await syncAPFinancialTransactions(data2);
       invalidateFinanceCaches(clinicId);
       return data2;
     }
@@ -271,6 +507,7 @@ export async function createAP(clinicId, payload) {
   } catch (e) {
     console.warn('Erro ao criar ap_items:', e?.message || e);
   }
+  await syncAPFinancialTransactions(data);
   invalidateFinanceCaches(clinicId);
   return data;
 }
@@ -325,6 +562,7 @@ export async function updateAP(id, patch) {
   if (!data || data.length === 0) {
     throw new Error('Record not found');
   }
+  await syncAPFinancialTransactions(data[0]);
   invalidateFinanceCaches(data[0].clinic_id);
   return data[0];
 
@@ -351,6 +589,8 @@ export async function updateAP(id, patch) {
     'linked_invoice_id',
     'linked_service',
     'linked_revenue',
+    'cost_center_id',
+    'centro_custo_id',
   ];
   const looksLikeMissingCol =
     error.code === '42703' ||
@@ -453,6 +693,7 @@ export async function updateAPBulk(ids, patch) {
     console.error('updateAPBulk error:', error);
     throw new Error(error.message);
   }
+  await Promise.all((data || []).map((row) => syncAPFinancialTransactions(row)));
   return { updated: (data || []).length };
 }
 
@@ -490,20 +731,67 @@ export async function payAccountsPayableBatch(ids, paymentDateISO, paymentMethod
     console.error('payAccountsPayableBatch error:', error);
     throw new Error(error.message);
   }
+
+  const { data: paidRows } = await supabase.from('ap_bills').select('*').in('id', ids);
+  await Promise.all((paidRows || []).map((row) => syncAPFinancialTransactions(row)));
+
   return { ok: true };
 }
 
-// Plano de Contas (centros de custo)
-export async function listAccountPlans(clinicId) {
-  const { data, error } = await supabase
-    .from('account_plans')
-    .select('*')
-    .eq('clinic_id', clinicId)
-    .order('name');
-  if (error) {
-    throw new Error(error.message);
+function flattenChartOfAccountsTree(nodes = [], parentName = '') {
+  return (nodes || []).flatMap((node) => {
+    const { children = [], ...account } = node || {};
+    return [
+      { ...account, parentName },
+      ...flattenChartOfAccountsTree(children, account.name || parentName),
+    ];
+  });
+}
+
+async function fetchStandardChartOfAccounts(clinicId) {
+  if (!clinicId) return [];
+
+  try {
+    const { data, error } = await supabase.rpc('get_chart_of_accounts_tree', {
+      p_clinic_id: clinicId,
+    });
+
+    if (error) throw error;
+
+    const flattened = flattenChartOfAccountsTree(Array.isArray(data) ? data : []);
+    if (flattened.length > 0) {
+      return flattened;
+    }
+  } catch (error) {
+    console.warn('fetchStandardChartOfAccounts rpc fallback:', error?.message || error);
   }
-  return data || [];
+
+  const tableCandidates = ['financial_chart_of_accounts', 'chart_of_accounts'];
+
+  for (const tableName of tableCandidates) {
+    try {
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .order('name');
+
+      if (error) throw error;
+
+      if ((data || []).length > 0) {
+        return data || [];
+      }
+    } catch (error) {
+      console.warn(`fetchStandardChartOfAccounts ${tableName} fallback:`, error?.message || error);
+    }
+  }
+
+  return [];
+}
+
+// Plano de Contas (source of truth: enterprise tree)
+export async function listAccountPlans(clinicId) {
+  return fetchStandardChartOfAccounts(clinicId);
 }
 
 function isRevenueAccount(account) {
@@ -532,20 +820,10 @@ export async function listRevenueAccountPlans(clinicId) {
       return revenuePlans;
     }
   } catch (error) {
-    console.warn('listRevenueAccountPlans account_plans fallback:', error?.message || error);
+    console.warn('listRevenueAccountPlans standard fallback:', error?.message || error);
   }
 
-  const { data, error } = await supabase
-    .from('chart_of_accounts')
-    .select('*')
-    .eq('clinic_id', clinicId)
-    .order('name', { ascending: true });
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return (data || []).filter((account) => isRevenueAccount(account) && isPostableAccount(account));
+  return [];
 }
 
 // Optional helpers: Cost Centers and Finance Accounts (gracefully no-op if tables don't exist)

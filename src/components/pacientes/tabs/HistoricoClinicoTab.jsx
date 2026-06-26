@@ -9,6 +9,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useClinicContext } from '@/contexts/ClinicContext';
 import { useToast } from '@/components/ui/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -52,6 +54,7 @@ import {
   parsePatientRecordPrescription,
 } from '@/lib/patientRecordMetadata';
 import { uploadPacienteMedia } from '@/lib/pacientesService';
+import { getProfessionalByUserId } from '@/lib/professionalsApi';
 
 const RECORD_TYPES = {
   consulta: { label: 'Consulta', color: 'blue', icon: Stethoscope },
@@ -61,6 +64,44 @@ const RECORD_TYPES = {
 };
 
 const RECORD_TYPE_ORDER = ['consulta', 'evolucao', 'procedimento', 'exame'];
+
+const COUNCIL_BY_KIND = {
+  medico: 'CRM',
+  dentista: 'CRO',
+  nutricionista: 'CRN',
+  fisioterapeuta: 'CREFITO',
+  psicologo: 'CRP',
+  enfermeiro: 'COREN',
+  fonoaudiologo: 'CREFONO',
+};
+
+const RECORD_TYPE_UI = {
+  consulta: {
+    active: 'border-blue-500 bg-blue-50 text-blue-950 ring-2 ring-blue-200',
+    inactive: 'border-slate-200 bg-white text-slate-700 hover:border-blue-300 hover:bg-blue-50',
+    icon: 'bg-blue-100 text-blue-700',
+    dot: 'bg-blue-500',
+  },
+  evolucao: {
+    active: 'border-green-500 bg-green-50 text-green-950 ring-2 ring-green-200',
+    inactive: 'border-slate-200 bg-white text-slate-700 hover:border-green-300 hover:bg-green-50',
+    icon: 'bg-green-100 text-green-700',
+    dot: 'bg-green-500',
+  },
+  procedimento: {
+    active: 'border-purple-500 bg-purple-50 text-purple-950 ring-2 ring-purple-200',
+    inactive:
+      'border-slate-200 bg-white text-slate-700 hover:border-purple-300 hover:bg-purple-50',
+    icon: 'bg-purple-100 text-purple-700',
+    dot: 'bg-purple-500',
+  },
+  exame: {
+    active: 'border-cyan-500 bg-cyan-50 text-cyan-950 ring-2 ring-cyan-200',
+    inactive: 'border-slate-200 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50',
+    icon: 'bg-cyan-100 text-cyan-700',
+    dot: 'bg-cyan-500',
+  },
+};
 
 const RECORD_TYPE_FORM_CONFIG = {
   consulta: {
@@ -212,6 +253,36 @@ const RECORD_TYPE_FORM_CONFIG = {
         inputType: 'text',
       },
       {
+        key: 'sadtCardNumber',
+        label: 'Número da carteira',
+        placeholder: 'Número da carteirinha do beneficiário.',
+        inputType: 'text',
+      },
+      {
+        key: 'sadtAnsRegistry',
+        label: 'Registro ANS',
+        placeholder: 'Código ANS da operadora, quando houver.',
+        inputType: 'text',
+      },
+      {
+        key: 'sadtGuideNumber',
+        label: 'Nº guia no prestador',
+        placeholder: 'Número interno da guia ou autorização.',
+        inputType: 'text',
+      },
+      {
+        key: 'sadtAuthorizationPassword',
+        label: 'Senha/autorização',
+        placeholder: 'Senha de autorização da operadora.',
+        inputType: 'text',
+      },
+      {
+        key: 'sadtProcedureCode',
+        label: 'Código do procedimento',
+        placeholder: 'Código TUSS/procedimento, se informado.',
+        inputType: 'text',
+      },
+      {
         key: 'attachmentName',
         label: 'Anexo do exame',
         inputType: 'file',
@@ -297,12 +368,47 @@ function getPatientHealthPlan(patientData) {
   );
 }
 
-function buildSadtGuideData({ patientData, professional, recordDate, draft }) {
+function firstFilled(...values) {
+  return values.find((value) => String(value || '').trim()) || '';
+}
+
+function getProfessionalCouncilData(professionalProfile) {
+  const profile = professionalProfile || {};
+
+  return {
+    type: firstFilled(
+      profile.council_type,
+      COUNCIL_BY_KIND[profile.professional_kind],
+      profile.cremepe_crm || profile.crm ? 'CRM' : '',
+    ),
+    number: firstFilled(
+      profile.council_number,
+      profile.cremepe_crm,
+      profile.crm,
+    ),
+    state: firstFilled(profile.council_state, profile.uf, profile.state),
+    cbo: firstFilled(profile.cbo, profile.cbo_code, profile.cbos),
+  };
+}
+
+function buildSadtGuideData({ patientData, clinic, professional, professionalProfile, recordDate, draft }) {
   const structuredData = normalizeStructuredData('exame', draft?.structuredData || {});
+  const professionalCouncil = getProfessionalCouncilData(professionalProfile);
   const requestedExam = String(structuredData.examRequested || '').trim();
   const clinicalDescription = String(draft?.diagnostico || '').trim();
   const resultOrInterpretation = String(structuredData.examResult || '').trim();
   const conclusion = String(draft?.prescricao || '').trim();
+  const providerName = firstFilled(clinic?.name, clinic?.legal_name, clinic?.corporate_name, 'Clínica solicitante');
+  const professionalName = firstFilled(
+    professional,
+    professionalProfile?.name,
+    professionalProfile?.full_name,
+    'Profissional responsável',
+  );
+  const guideNumber = firstFilled(
+    structuredData.sadtGuideNumber,
+    `SADT-${formatIsoDateToBr(recordDate || getTodayIsoDate()).replace(/\D/g, '')}`,
+  );
 
   const procedures = [requestedExam, clinicalDescription]
     .filter(Boolean)
@@ -313,13 +419,29 @@ function buildSadtGuideData({ patientData, professional, recordDate, draft }) {
 
   return {
     guideType: 'Guia SADT',
+    guideNumber,
+    ansRegistry: firstFilled(structuredData.sadtAnsRegistry, patientData?.ans_registry, patientData?.payer_ans),
+    authorizationPassword: firstFilled(structuredData.sadtAuthorizationPassword),
+    cardNumber: firstFilled(structuredData.sadtCardNumber, patientData?.insurance_id_number),
+    cardValidity: firstFilled(patientData?.insurance_validity, patientData?.plan_validity),
+    cnsNumber: firstFilled(patientData?.cns_number, patientData?.national_health_card),
     patientName: patientData?.name || 'Paciente',
     document: getPatientDocument(patientData) || 'N/A',
     birthdate: getPatientBirthdate(patientData) || 'N/A',
     phone: getPatientPhone(patientData) || 'N/A',
     healthPlan: String(structuredData.sadtHealthPlan || '').trim() || getPatientHealthPlan(patientData),
     requestDate: formatIsoDateToBr(recordDate) || formatIsoDateToBr(getTodayIsoDate()),
-    professional: professional || 'Profissional responsável',
+    providerName,
+    providerCode: firstFilled(clinic?.provider_code, clinic?.operator_code, clinic?.ans_provider_code),
+    providerCnes: firstFilled(clinic?.cnes, clinic?.cnes_code),
+    professional: professionalName,
+    professionalCouncil,
+    attendanceCharacter: firstFilled(structuredData.sadtAttendanceCharacter, 'Eletivo'),
+    attendanceType: firstFilled(structuredData.sadtAttendanceType, 'SADT'),
+    accidentIndication: firstFilled(structuredData.sadtAccidentIndication, 'Não acidente'),
+    consultationType: firstFilled(structuredData.sadtConsultationType),
+    tableCode: firstFilled(structuredData.sadtTableCode, '22'),
+    procedureCode: firstFilled(structuredData.sadtProcedureCode),
     requestedExam: requestedExam || 'Exame a definir',
     clinicalIndication: clinicalDescription || 'Indicação clínica não informada.',
     procedures: procedures.length ? procedures : [requestedExam || 'Exame a definir'],
@@ -328,8 +450,8 @@ function buildSadtGuideData({ patientData, professional, recordDate, draft }) {
   };
 }
 
-function SadtGuidePreview({ patientData, professional, recordDate, draft }) {
-  const guide = buildSadtGuideData({ patientData, professional, recordDate, draft });
+function SadtGuidePreview({ patientData, clinic, professional, professionalProfile, recordDate, draft }) {
+  const guide = buildSadtGuideData({ patientData, clinic, professional, professionalProfile, recordDate, draft });
 
   const handlePrint = () => {
     const escapeHtml = (value) =>
@@ -351,9 +473,9 @@ function SadtGuidePreview({ patientData, professional, recordDate, draft }) {
       .map(
         (procedure, index) => `
           <tr>
-            <td>${index + 1}</td>
+            <td>${escapeHtml(guide.tableCode || '')}</td>
+            <td>${escapeHtml(index === 0 ? guide.procedureCode || '' : '')}</td>
             <td>${escapeHtml(procedure)}</td>
-            <td></td>
             <td>1</td>
             <td></td>
             <td></td>
@@ -413,43 +535,43 @@ function SadtGuidePreview({ patientData, professional, recordDate, draft }) {
           <div class="sheet">
             <div class="header">
               <div class="title">Guia de Serviço Profissional / Serviço Auxiliar<br />de Diagnóstico e Terapia - SP/SADT</div>
-              <div class="guide-number">2-Nº Guia no Prestador</div>
+              <div class="guide-number">2-Nº Guia no Prestador<br /><strong>${escapeHtml(guide.guideNumber)}</strong></div>
             </div>
 
             <div class="grid cols-12">
-              ${field('1-Registro ANS', '', 'span-2')}
-              ${field('3-Nº Guia Principal', '', 'span-3')}
+              ${field('1-Registro ANS', guide.ansRegistry, 'span-2')}
+              ${field('3-Nº Guia Principal', guide.guideNumber, 'span-3')}
               ${field('', '', 'span-7 blank')}
               ${field('4-Data da Autorização', guide.requestDate, 'span-2')}
-              ${field('5-Senha', '', 'span-3')}
-              ${field('6-Data Validade da Senha', '', 'span-2')}
-              ${field('7-Número da Guia Atribuído pela Operadora', '', 'span-5')}
+              ${field('5-Senha', guide.authorizationPassword, 'span-3')}
+              ${field('6-Data Validade da Senha', guide.cardValidity, 'span-2')}
+              ${field('7-Número da Guia Atribuído pela Operadora', guide.guideNumber, 'span-5')}
             </div>
 
             <div class="section-title">Dados do Beneficiário</div>
             <div class="grid cols-12">
-              ${field('8-Número da Carteira', '', 'span-3')}
-              ${field('9-Validade da Carteira', '', 'span-2')}
+              ${field('8-Número da Carteira', guide.cardNumber, 'span-3')}
+              ${field('9-Validade da Carteira', guide.cardValidity, 'span-2')}
               ${field('10-Nome', guide.patientName, 'span-5')}
-              ${field('11-Cartão Nacional de Saúde', '', 'span-2')}
+              ${field('11-Cartão Nacional de Saúde', guide.cnsNumber, 'span-2')}
               ${field('12-Atendimento a RN', '', 'span-12')}
             </div>
 
             <div class="section-title">Dados do Contratado Solicitante</div>
             <div class="grid cols-12">
-              ${field('13-Código na Operadora', '', 'span-2')}
-              ${field('14-Nome do Contratado', guide.healthPlan, 'span-10')}
+              ${field('13-Código na Operadora', guide.providerCode, 'span-2')}
+              ${field('14-Nome do Contratado', guide.providerName, 'span-10')}
               ${field('15-Nome do Profissional Solicitante', guide.professional, 'span-3')}
-              ${field('16-Conselho Profissional', '', 'span-2')}
-              ${field('17-Número no Conselho', '', 'span-2')}
-              ${field('18-UF', '', 'span-1')}
-              ${field('19-CBO', '', 'span-1')}
+              ${field('16-Conselho Profissional', guide.professionalCouncil.type, 'span-2')}
+              ${field('17-Número no Conselho', guide.professionalCouncil.number, 'span-2')}
+              ${field('18-UF', guide.professionalCouncil.state, 'span-1')}
+              ${field('19-CBO', guide.professionalCouncil.cbo, 'span-1')}
               ${field('20-Assinatura do Profissional Solicitante', '', 'span-3')}
             </div>
 
             <div class="section-title">Dados da Solicitação / Procedimentos e Exames Solicitados</div>
             <div class="grid cols-12">
-              ${field('21-Caráter do Atendimento', '', 'span-2')}
+              ${field('21-Caráter do Atendimento', guide.attendanceCharacter, 'span-2')}
               ${field('22-Data da Solicitação', guide.requestDate, 'span-2')}
               ${field('23-Indicação Clínica', guide.clinicalIndication, 'span-8 tall')}
             </div>
@@ -472,26 +594,26 @@ function SadtGuidePreview({ patientData, professional, recordDate, draft }) {
 
             <div class="section-title">Dados do Contratado Executante</div>
             <div class="grid cols-12">
-              ${field('29-Código na Operadora', '', 'span-2')}
-              ${field('30-Nome do Contratado', '', 'span-9')}
-              ${field('31-Código CNES', '', 'span-1')}
+              ${field('29-Código na Operadora', guide.providerCode, 'span-2')}
+              ${field('30-Nome do Contratado', guide.providerName, 'span-9')}
+              ${field('31-Código CNES', guide.providerCnes, 'span-1')}
             </div>
 
             <div class="section-title">Dados do Atendimento</div>
             <div class="grid cols-12">
-              ${field('32-Tipo de Atendimento', '', 'span-2')}
-              ${field('33-Indicação de Acidente', '', 'span-3')}
-              ${field('34-Tipo de Consulta', '', 'span-2')}
+              ${field('32-Tipo de Atendimento', guide.attendanceType, 'span-2')}
+              ${field('33-Indicação de Acidente', guide.accidentIndication, 'span-3')}
+              ${field('34-Tipo de Consulta', guide.consultationType, 'span-2')}
               ${field('35-Motivo de Encerramento do Atendimento', '', 'span-5')}
             </div>
 
             <div class="section-title">Dados da Execução / Procedimentos e Exames Realizados</div>
             <div class="grid cols-12">
-              ${field('36-Data', '', 'span-1')}
+              ${field('36-Data', guide.requestDate, 'span-1')}
               ${field('37-Hora Inicial', '', 'span-1')}
               ${field('38-Hora Final', '', 'span-1')}
-              ${field('39-Tabela', '', 'span-1')}
-              ${field('40-Cód. do Procedimento', '', 'span-2')}
+              ${field('39-Tabela', guide.tableCode, 'span-1')}
+              ${field('40-Cód. do Procedimento', guide.procedureCode, 'span-2')}
               ${field('41-Descrição', guide.requestedExam, 'span-4')}
               ${field('42-Qtde.', '1', 'span-1')}
               ${field('43-Via', '', 'span-1')}
@@ -510,9 +632,9 @@ function SadtGuidePreview({ patientData, professional, recordDate, draft }) {
               ${field('49-Grau Part.', '', 'span-1')}
               ${field('50-Código na Operadora / CPF', guide.document, 'span-2')}
               ${field('51-Nome do Profissional', guide.professional, 'span-4')}
-              ${field('52-Conselho Profissional', '', 'span-2')}
-              ${field('53-Número no Conselho', '', 'span-1')}
-              ${field('54-UF', '', 'span-1')}
+              ${field('52-Conselho Profissional', guide.professionalCouncil.type, 'span-2')}
+              ${field('53-Número no Conselho', guide.professionalCouncil.number, 'span-1')}
+              ${field('54-UF', guide.professionalCouncil.state, 'span-1')}
             </div>
 
             <div class="spacer"></div>
@@ -541,16 +663,32 @@ function SadtGuidePreview({ patientData, professional, recordDate, draft }) {
               <div class="sig-box">68-Assinatura do Contratado</div>
             </div>
           </div>
+          <script>
+            window.addEventListener('load', function () {
+              setTimeout(function () {
+                if (typeof window.print === 'function') {
+                  window.print();
+                }
+              }, 300);
+            });
+          </script>
         </body>
       </html>
     `;
 
-    const printWindow = window.open('', '_blank', 'noopener,noreferrer');
-    if (!printWindow) return;
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = window.URL.createObjectURL(blob);
+    const printWindow = window.open(url, '_blank');
+
+    if (!printWindow) {
+      const link = document.createElement('a');
+      link.href = url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.click();
+    }
+
+    setTimeout(() => window.URL.revokeObjectURL(url), 60000);
   };
 
   return (
@@ -583,6 +721,12 @@ function SadtGuidePreview({ patientData, professional, recordDate, draft }) {
           <p className="font-medium text-gray-900">{guide.requestedExam}</p>
           <p className="text-gray-600">Data: {guide.requestDate}</p>
           <p className="text-gray-600">Profissional: {guide.professional}</p>
+          <p className="text-gray-600">
+            Conselho: {[guide.professionalCouncil.type, guide.professionalCouncil.number, guide.professionalCouncil.state]
+              .filter(Boolean)
+              .join(' / ') || 'Não informado'}
+          </p>
+          <p className="text-gray-600">Contratado: {guide.providerName}</p>
         </div>
       </div>
 
@@ -859,6 +1003,7 @@ export default function HistoricoClinicoTab({
 }) {
   console.log('🔍 HistoricoClinicoTab recebeu defaultProfessional:', defaultProfessional);
   const { clinicId, user } = useAuth();
+  const { clinic } = useClinicContext();
   const { toast } = useToast();
   const [historico, setHistorico] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -873,6 +1018,7 @@ export default function HistoricoClinicoTab({
   const [activeDetailSection, setActiveDetailSection] = useState(null);
   const [editingRecordId, setEditingRecordId] = useState(null);
   const [examAttachmentFile, setExamAttachmentFile] = useState(null);
+  const [professionalProfile, setProfessionalProfile] = useState(null);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const [syncingLocal, setSyncingLocal] = useState(false);
   const [consultaData, setConsultaData] = useState({
@@ -1060,7 +1206,7 @@ export default function HistoricoClinicoTab({
             }))
           }
           placeholder={field.placeholder}
-          className="border-gray-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 min-h-[90px] resize-none"
+          className="border-gray-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 min-h-[76px] resize-none"
         />
       </div>
     );
@@ -1069,6 +1215,29 @@ export default function HistoricoClinicoTab({
   useEffect(() => {
     loadHistorico();
   }, [patientId]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadProfessionalProfile() {
+      const email = user?.email || user?.user_metadata?.email;
+      if (!user?.id && !email) {
+        setProfessionalProfile(null);
+        return;
+      }
+
+      const profile = await getProfessionalByUserId(user?.id, email);
+      if (active) {
+        setProfessionalProfile(profile || null);
+      }
+    }
+
+    loadProfessionalProfile();
+
+    return () => {
+      active = false;
+    };
+  }, [user?.id, user?.email, user?.user_metadata?.email]);
 
   // Atualizar profissional padrão quando a prop mudar
   useEffect(() => {
@@ -1476,6 +1645,12 @@ export default function HistoricoClinicoTab({
   const totalRascunhos = historico.filter((item) => item.status === 'rascunho').length;
   const totalDefinitivos = historico.filter((item) => item.status === 'finalizado').length;
   const localRecordsCount = historico.filter((item) => item.storageMode === 'local').length;
+  const activeFiltersCount = [
+    filterType !== 'all',
+    filterStatus !== 'all',
+    Boolean(filterProfessional),
+    Boolean(filterMonth),
+  ].filter(Boolean).length;
 
   return (
     <motion.div
@@ -1560,38 +1735,47 @@ export default function HistoricoClinicoTab({
 
       {/* Cabeçalho com Botões */}
       <motion.div
-        className="flex justify-between items-center gap-4"
+        className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5"
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1, duration: 0.3 }}
       >
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">Timeline Clínica</h3>
-          <p className="text-sm text-gray-500 mt-1">
-            Histórico de consultas, exames e procedimentos
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={handleExportHistorico} className="gap-2">
-            <Download size={16} />
-            Exportar
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowFilters(!showFilters)}
-            className="gap-2"
-          >
-            <FilterIcon size={16} />
-            {showFilters ? 'Ocultar' : 'Filtros'}
-          </Button>
-          <Button
-            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-sm"
-            onClick={openCreateDialog}
-          >
-            <Plus size={16} className="mr-2" />
-            Novo Registro
-          </Button>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-lg font-semibold text-gray-900">Timeline Clínica</h3>
+              {activeFiltersCount > 0 ? (
+                <Badge className="border border-blue-200 bg-blue-50 text-blue-800">
+                  {activeFiltersCount} filtro(s) ativo(s)
+                </Badge>
+              ) : null}
+            </div>
+            <p className="text-sm text-gray-500 mt-1">
+              Registre, revise e finalize evoluções do paciente em uma linha do tempo única.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={handleExportHistorico} className="gap-2">
+              <Download size={16} />
+              Exportar
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+              className="gap-2"
+            >
+              <FilterIcon size={16} />
+              {showFilters ? 'Ocultar filtros' : 'Filtros'}
+            </Button>
+            <Button
+              className="bg-blue-600 text-white shadow-sm hover:bg-blue-700"
+              onClick={openCreateDialog}
+            >
+              <Plus size={16} className="mr-2" />
+              Novo Registro
+            </Button>
+          </div>
         </div>
       </motion.div>
 
@@ -2046,78 +2230,88 @@ export default function HistoricoClinicoTab({
           }
         }}
       >
-        <DialogContent className="app-dialog-shell app-dialog-shell--content">
+        <DialogContent className="app-dialog-shell app-dialog-shell--content max-w-7xl overflow-hidden p-0">
           <DialogHeader className="border-b border-gray-200 px-6 pb-4 pt-6">
             <DialogTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
               <Stethoscope className="w-5 h-5 text-blue-600" />
               {editingRecordId ? 'Editar Registro Clínico' : 'Novo Registro Clínico'}
             </DialogTitle>
-            <p className="text-sm text-gray-600 mt-1">
+            <DialogDescription className="text-sm text-gray-600 mt-1">
               Salve como rascunho para continuar depois ou finalize para bloquear novas edições.
-            </p>
+            </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto px-6 py-6">
-            <div className="space-y-6">
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+            <div className="space-y-4">
               {/* SEÇÃO 1: Tipo de Registro */}
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="space-y-3"
+                className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
               >
                 <div>
-                  <Label className="text-base font-semibold text-gray-900 mb-3 block">
-                    Tipo de Registro <span className="text-red-500">*</span>
-                  </Label>
-                  <p className="text-xs text-gray-600 mb-3">
-                    Selecione o tipo de evento clínico a registrar
-                  </p>
-                  {!editingRecordId ? (
-                    <p className="mb-3 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
-                      Cada aba preenchida será salva como um registro separado na timeline.
-                    </p>
-                  ) : null}
+                  <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <Label className="text-base font-semibold text-gray-900 block">
+                        Abas do registro <span className="text-red-500">*</span>
+                      </Label>
+                      <p className="mt-1 text-xs text-gray-600">
+                        Alterne entre consulta, evolução, procedimento e exame sem perder o que já foi preenchido.
+                      </p>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className="border-slate-300 bg-slate-50 text-slate-700"
+                    >
+                      {filledDraftEntries.length} de {RECORD_TYPE_ORDER.length} aba(s) preenchida(s)
+                    </Badge>
+                  </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
                     {Object.entries(RECORD_TYPES).map(([key, typeInfo]) => {
                       const Icon = typeInfo.icon;
                       const isSelected = consultaData.tipo === key;
-                      const colorMap = {
-                        blue: 'border-blue-500 bg-blue-50',
-                        green: 'border-green-500 bg-green-50',
-                        purple: 'border-purple-500 bg-purple-50',
-                        cyan: 'border-cyan-500 bg-cyan-50',
-                      };
+                      const isFilled = hasMeaningfulDraftContent(key, drafts[key]);
+                      const hasRequiredDescription = Boolean(
+                        String(drafts[key]?.diagnostico || '').trim(),
+                      );
+                      const ui = RECORD_TYPE_UI[key] || RECORD_TYPE_UI.consulta;
 
                       return (
                         <motion.button
                           key={key}
-                          whileHover={{ scale: 1.05 }}
+                          whileHover={{ y: -1 }}
                           whileTap={{ scale: 0.95 }}
+                          type="button"
                           onClick={() =>
                             setConsultaData((prev) => ({
                               ...prev,
                               tipo: key,
                             }))
                           }
-                          className={`
-                          p-3 rounded-lg border-2 transition-all duration-200 flex flex-col items-center gap-2
-                          ${
-                            isSelected
-                              ? `border-${typeInfo.color}-500 bg-${typeInfo.color}-50 ring-2 ring-${typeInfo.color}-300`
-                              : 'border-gray-200 bg-white hover:border-gray-300'
-                          }
-                        `}
+                          className={`rounded-xl border px-3 py-3 text-left transition-all duration-200 ${
+                            isSelected ? ui.active : ui.inactive
+                          }`}
                         >
-                          <Icon
-                            className={`w-5 h-5 ${isSelected ? `text-${typeInfo.color}-600` : 'text-gray-500'}`}
-                          />
-                          <span
-                            className={`text-xs font-medium text-center ${isSelected ? `text-${typeInfo.color}-900` : 'text-gray-700'}`}
-                          >
-                            {typeInfo.label}
-                          </span>
+                          <div className="flex items-center gap-3">
+                            <span
+                              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${ui.icon}`}
+                            >
+                              <Icon className="h-4 w-4" />
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-sm font-semibold">{typeInfo.label}</span>
+                              <span className="mt-0.5 block text-xs text-slate-500">
+                                {hasRequiredDescription
+                                  ? 'Pronta para salvar'
+                                  : isFilled
+                                    ? 'Completar descrição'
+                                    : 'Sem preenchimento'}
+                              </span>
+                            </span>
+                            {isFilled ? <span className={`h-2.5 w-2.5 rounded-full ${ui.dot}`} /> : null}
+                          </div>
                         </motion.button>
                       );
                     })}
@@ -2130,7 +2324,7 @@ export default function HistoricoClinicoTab({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="bg-blue-50 rounded-lg p-4 border border-blue-200 space-y-4"
+                className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-4"
               >
                 <h3 className="font-semibold text-gray-900 flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-blue-600" />
@@ -2206,7 +2400,7 @@ export default function HistoricoClinicoTab({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="bg-purple-50 rounded-lg p-4 border border-purple-200 space-y-4"
+                className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-4"
               >
                 <h3 className="font-semibold text-gray-900 flex items-center gap-2">
                   <FileText className="w-4 h-4 text-purple-600" />
@@ -2229,7 +2423,7 @@ export default function HistoricoClinicoTab({
                     placeholder={currentTypeConfig.mainPlaceholder}
                     value={currentDraft.diagnostico}
                     onChange={(e) => updateCurrentDraft({ diagnostico: e.target.value })}
-                    className="border-gray-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 min-h-[120px] resize-none"
+                    className="border-gray-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 min-h-[108px] resize-none"
                   />
                   <div className="flex justify-between items-center mt-2">
                     <p className="text-xs text-gray-600">{currentTypeConfig.mainHelp}</p>
@@ -2250,7 +2444,9 @@ export default function HistoricoClinicoTab({
                 {consultaData.tipo === 'exame' ? (
                   <SadtGuidePreview
                     patientData={patientData}
+                    clinic={clinic}
                     professional={consultaData.profissional}
+                    professionalProfile={professionalProfile}
                     recordDate={consultaData.data}
                     draft={currentDraft}
                   />
@@ -2262,7 +2458,7 @@ export default function HistoricoClinicoTab({
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
-                className="bg-green-50 rounded-lg p-4 border border-green-200 space-y-4"
+                className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-4"
               >
                 <h3 className="font-semibold text-gray-900 flex items-center gap-2">
                   <Stethoscope className="w-4 h-4 text-green-600" />
@@ -2275,13 +2471,13 @@ export default function HistoricoClinicoTab({
                   placeholder={currentTypeConfig.secondaryPlaceholder}
                   value={currentDraft.prescricao}
                   onChange={(e) => updateCurrentDraft({ prescricao: e.target.value })}
-                  className="border-gray-300 focus:border-green-500 focus:ring-2 focus:ring-green-200 min-h-[100px] resize-none"
+                  className="border-gray-300 focus:border-green-500 focus:ring-2 focus:ring-green-200 min-h-[84px] resize-none"
                 />
                 <p className="text-xs text-gray-600">{currentTypeConfig.secondaryHelp}</p>
               </motion.div>
 
               {/* SEÇÃO 5: Preview dos dados */}
-              {(consultaData.data || consultaData.profissional || currentDraft.diagnostico) && (
+              {(currentDraft.diagnostico || currentDraft.prescricao || filledDraftEntries.length > 0) && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -2483,6 +2679,9 @@ export default function HistoricoClinicoTab({
               <Eye className="w-5 h-5 text-slate-600" />
               Detalhes do Registro
             </DialogTitle>
+            <DialogDescription className="text-sm text-gray-600 mt-1">
+              Consulte as seções clínicas, dados estruturados, anexos e orientações do registro.
+            </DialogDescription>
           </DialogHeader>
 
           {selectedRecord
@@ -2691,7 +2890,9 @@ export default function HistoricoClinicoTab({
                                 {sectionType === 'exame' ? (
                                   <SadtGuidePreview
                                     patientData={patientData}
+                                    clinic={clinic}
                                     professional={selectedRecord.professional}
+                                    professionalProfile={professionalProfile}
                                     recordDate={selectedRecord.date}
                                     draft={sectionDraft}
                                   />
@@ -2772,7 +2973,9 @@ export default function HistoricoClinicoTab({
                         {selectedRecord.type === 'exame' && sectionEntries.length <= 1 ? (
                           <SadtGuidePreview
                             patientData={patientData}
+                            clinic={clinic}
                             professional={selectedRecord.professional}
+                            professionalProfile={professionalProfile}
                             recordDate={selectedRecord.date}
                             draft={{
                               diagnostico: selectedRecord.diagnosis,

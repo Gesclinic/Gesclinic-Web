@@ -181,11 +181,21 @@ export function fromLocalTimeToDateAndTime(date, time) {
  */
 export function formatLocalDate(dateStr) {
   if (!dateStr) return '';
+  const text = String(dateStr).trim();
+  const isoMatch = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch;
+    return `${day}/${month}/${year}`;
+  }
+
   try {
-    const dateObj = parseISO(`${dateStr}T00:00:00`);
-    return format(dateObj, 'dd/MM/yyyy', { locale: require('date-fns/locale/pt-BR') });
+    const dateObj = parseISO(text);
+    if (!isValid(dateObj)) {
+      return text;
+    }
+    return format(dateObj, 'dd/MM/yyyy');
   } catch {
-    return dateStr;
+    return text;
   }
 }
 

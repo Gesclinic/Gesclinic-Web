@@ -17,9 +17,28 @@ import {
   SelectItem,
 } from '@/components/ui/select';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
-import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import {
+  listCostCenters,
+  updateCostCenter,
+} from '@/modules/financeiro/centro-custo/services/costCentersApi';
+
+function fromCenterType(value) {
+  const normalized = String(value || '').toUpperCase();
+  if (normalized === 'ASSISTENCIAL') return 'assistencial';
+  if (normalized === 'ADMINISTRATIVO') return 'administrativo';
+  if (normalized === 'COMERCIAL') return 'comercial';
+  return 'operacoes';
+}
+
+function toCenterType(value) {
+  const normalized = String(value || '').toLowerCase();
+  if (normalized === 'assistencial') return 'ASSISTENCIAL';
+  if (normalized === 'administrativo') return 'ADMINISTRATIVO';
+  if (normalized === 'comercial') return 'COMERCIAL';
+  return 'OPERACOES';
+}
 
 export default function Hierarquia() {
   const { clinicId } = useAuth();
@@ -29,7 +48,7 @@ export default function Hierarquia() {
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null);
-  const [editForm, setEditForm] = useState({ name: '', type: 'despesa' });
+  const [editForm, setEditForm] = useState({ name: '', type: 'operacoes' });
 
   useEffect(() => {
     (async () => {
@@ -37,11 +56,7 @@ export default function Hierarquia() {
         return;
       }
       setLoading(true);
-      const { data } = await supabase
-        .from('cost_centers')
-        .select('*')
-        .eq('clinic_id', clinicId)
-        .order('name');
+      const data = await listCostCenters(clinicId);
       setAccounts(data || []);
       setLoading(false);
       // Open edit dialog if edit param is present
@@ -70,7 +85,7 @@ export default function Hierarquia() {
 
   const openEdit = (node) => {
     setEditing(node);
-    setEditForm({ name: node.name || '', type: node.type || 'despesa' });
+    setEditForm({ name: node.name || '', type: fromCenterType(node.center_type) });
     setSearchParams((prev) => {
       const p = new URLSearchParams(prev);
       p.set('edit', node.id);
@@ -83,20 +98,10 @@ export default function Hierarquia() {
       return;
     }
     try {
-      const update = { name: editForm.name, type: editForm.type };
-      const { data, error } = await supabase
-        .from('cost_centers')
-        .update(update)
-        .eq('id', editing.id)
-        .select();
-
-      if (error) {
-        throw error;
-      }
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      const updated = data[0];
+      const updated = await updateCostCenter(editing.id, {
+        name: editForm.name,
+        center_type: toCenterType(editForm.type),
+      });
       setAccounts((prev) => prev.map((a) => (a.id === editing.id ? { ...a, ...updated } : a)));
       setEditing(null);
       setSearchParams((prev) => {
@@ -119,7 +124,7 @@ export default function Hierarquia() {
     >
       <div className="flex items-center gap-2">
         <span className="text-sm">{node.name}</span>
-        <span className="text-xs text-gray-500 capitalize">({node.type || 'â€”'})</span>
+        <span className="text-xs text-gray-500 capitalize">({fromCenterType(node.center_type) || 'operacoes'})</span>
       </div>
       <div className="flex items-center gap-1">
         <Button size="sm" variant="ghost" onClick={() => openEdit(node)}>
@@ -186,8 +191,10 @@ export default function Hierarquia() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="receita">Receita</SelectItem>
-                  <SelectItem value="despesa">Despesa</SelectItem>
+                  <SelectItem value="assistencial">Assistencial</SelectItem>
+                  <SelectItem value="administrativo">Administrativo</SelectItem>
+                  <SelectItem value="comercial">Comercial</SelectItem>
+                  <SelectItem value="operacoes">Operações</SelectItem>
                 </SelectContent>
               </Select>
             </div>

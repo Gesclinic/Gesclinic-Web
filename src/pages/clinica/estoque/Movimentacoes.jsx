@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, ArrowUpCircle, ArrowDownCircle, RefreshCw } from 'lucide-react';
 import { stockMovementsApi } from '@/lib/stockApi';
-import { format } from 'date-fns';
+import { formatLocalDate } from '@/utils/timezoneHelpers';
 
 export default function Movimentacoes() {
   const breadcrumbs = useBreadcrumbs([
@@ -132,6 +132,7 @@ export default function Movimentacoes() {
                 <th className="px-4 py-2 text-left">Tipo</th>
                 <th className="px-4 py-2 text-left">Produto</th>
                 <th className="px-4 py-2 text-right">Quantidade</th>
+                <th className="px-4 py-2 text-left">Unidade</th>
                 <th className="px-4 py-2 text-right">Custo Unit.</th>
                 <th className="px-4 py-2 text-left">Observação</th>
               </tr>
@@ -139,13 +140,13 @@ export default function Movimentacoes() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-10 text-gray-500">
+                  <td colSpan={7} className="text-center py-10 text-gray-500">
                     Carregando...
                   </td>
                 </tr>
               ) : movements.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-10 text-gray-500">
+                  <td colSpan={7} className="text-center py-10 text-gray-500">
                     Nenhuma movimentação encontrada.
                   </td>
                 </tr>
@@ -153,9 +154,7 @@ export default function Movimentacoes() {
                 movements.map((mov) => (
                   <tr key={mov.id} className="border-t hover:bg-gray-50">
                     <td className="px-4 py-3">
-                      {mov.move_date
-                        ? format(new Date(mov.move_date + 'T00:00:00'), 'dd/MM/yyyy')
-                        : '-'}
+                      {formatLocalDate(mov.move_date) || '-'}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -165,6 +164,7 @@ export default function Movimentacoes() {
                     </td>
                     <td className="px-4 py-3">{mov.item?.name || '-'}</td>
                     <td className="px-4 py-3 text-right font-medium">{mov.qty}</td>
+                    <td className="px-4 py-3">{mov.item?.unit_symbol || 'un'}</td>
                     <td className="px-4 py-3 text-right">
                       {mov.unit_cost ? `R$ ${parseFloat(mov.unit_cost).toFixed(2)}` : '-'}
                     </td>

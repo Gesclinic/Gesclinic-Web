@@ -2,19 +2,28 @@ import React, { useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { BarChart3, TrendingUp, Target } from 'lucide-react';
 
-/**
- * 💰 Profit Map - Mapa de Rentabilidade por Serviço
- * 
- * Identifica quais serviços/procedimentos são mais lucrativos
- * Segmenta por revenue, cost, margin
- */
-export default function ProfitMap({ dailyData = [], loading = false }) {
-  const profitAnalysis = useMemo(() => {
-    if (loading || !dailyData.length) return [];
+function money(value) {
+  const parsed = Number(value || 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
 
-    // Simular dados de lucro por serviço
-    // (Em produção, viria de dados reais de appointment_services)
+function movementAmount(item = {}) {
+  return money(item.amount || item.net_amount || item.paid_value || item.balance_amount || item.valor || item.total_amount);
+}
+
+/**
+ * Profit Map - Rentabilidade por categoria
+ *
+ * Identifica quais serviços/procedimentos são mais lucrativos
+ * Segmenta por receita, custo e margem
+ */
+export default function ProfitMap({ dailyData = [], payables = [], loading = false }) {
+  const profitAnalysis = useMemo(() => {
+    if (loading || (!dailyData.length && !payables.length)) return [];
+
     const servicesByCategory = {};
+
+    const hasDetailedPayables = payables.length > 0;
 
     dailyData.forEach((day) => {
       const category = day.category || 'Sem Categoria';
@@ -29,7 +38,25 @@ export default function ProfitMap({ dailyData = [], loading = false }) {
       }
 
       servicesByCategory[category].revenue += day.inflow || 0;
-      servicesByCategory[category].cost += (day.outflow || 0) * 0.3; // Assumindo 30% de custo
+      if (!hasDetailedPayables) {
+        servicesByCategory[category].cost += day.outflow || 0;
+      }
+      servicesByCategory[category].count += 1;
+    });
+
+    payables.forEach((payable) => {
+      const category = payable.category || payable.category_name || payable.dre_classification || 'Despesas sem categoria';
+      if (!servicesByCategory[category]) {
+        servicesByCategory[category] = {
+          name: category,
+          revenue: 0,
+          cost: 0,
+          margin: 0,
+          count: 0,
+        };
+      }
+
+      servicesByCategory[category].cost += movementAmount(payable);
       servicesByCategory[category].count += 1;
     });
 
@@ -41,7 +68,7 @@ export default function ProfitMap({ dailyData = [], loading = false }) {
         marginPercent: s.revenue > 0 ? ((s.revenue - s.cost) / s.revenue) * 100 : 0,
       }))
       .sort((a, b) => b.profit - a.profit);
-  }, [dailyData, loading]);
+  }, [dailyData, payables, loading]);
 
   const getMargingColor = (margin) => {
     if (margin >= 40) return 'text-green-600';
@@ -71,7 +98,7 @@ export default function ProfitMap({ dailyData = [], loading = false }) {
       <Card className="p-6 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 animate-slide-up">
         <div className="flex gap-3">
           <BarChart3 className="w-5 h-5 text-gray-600 dark:text-gray-400 flex-shrink-0 mt-1" />
-          <p className="text-gray-600 dark:text-gray-400">Sem dados de rentabilidade disponível</p>
+          <p className="text-gray-600 dark:text-gray-400">Sem dados de rentabilidade disponíveis</p>
         </div>
       </Card>
     );
@@ -81,7 +108,7 @@ export default function ProfitMap({ dailyData = [], loading = false }) {
     <div className="space-y-4 animate-fade-in">
       <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
         <BarChart3 className="w-5 h-5 text-green-600 dark:text-green-400" />
-        Mapa de Rentabilidade ({profitAnalysis.length} categorias)
+        Rentabilidade por categoria ({profitAnalysis.length} categorias)
       </h2>
 
       <div className="space-y-3">
@@ -90,11 +117,11 @@ export default function ProfitMap({ dailyData = [], loading = false }) {
             <div className="flex items-start justify-between mb-3">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-lg font-bold text-gray-400 dark:text-gray-500">#{idx + 1}</span>
+                  <span className="text-lg font-bold text-gray-400 dark:text-gray-500">{idx + 1}º</span>
                   <h3 className="font-semibold text-gray-900 dark:text-white">{service.name}</h3>
                 </div>
                 <p className="text-xs text-gray-600 dark:text-gray-400">
-                  {service.count} transação{service.count !== 1 ? 's' : ''} no período
+                  {service.count} transaç{service.count !== 1 ? 'ões' : 'ão'} no período
                 </p>
               </div>
 
@@ -140,7 +167,7 @@ export default function ProfitMap({ dailyData = [], loading = false }) {
         <Card className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800 animate-slide-up card-hover">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Receita Total</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Receita consolidada</p>
               <p className="text-2xl font-bold text-green-600 dark:text-green-400 number-transition">
                 R$ {totalRevenue.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
               </p>
@@ -152,7 +179,7 @@ export default function ProfitMap({ dailyData = [], loading = false }) {
         <Card className="p-4 bg-gradient-to-br from-blue-50 to-cyan-50 border-blue-200">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs text-gray-600 mb-1">Lucro Total</p>
+              <p className="text-xs text-gray-600 mb-1">Resultado operacional consolidado</p>
               <p className="text-2xl font-bold text-blue-600">
                 R$ {totalProfit.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
               </p>
@@ -164,7 +191,7 @@ export default function ProfitMap({ dailyData = [], loading = false }) {
         <Card className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs text-gray-600 mb-1">Margem Média</p>
+              <p className="text-xs text-gray-600 mb-1">Margem operacional média</p>
               <p className="text-2xl font-bold text-purple-600">{avgMargin.toFixed(1)}%</p>
             </div>
             <BarChart3 className="w-5 h-5 text-purple-600" />

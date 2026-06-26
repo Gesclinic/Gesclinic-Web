@@ -126,4 +126,79 @@ describe('receivableDocumentExtractor', () => {
       card_last4: '9876',
     });
   });
+
+  it('prioriza nNF exato em XML NF-e e ignora Numero generico de outros blocos', async () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+      <nfeProc>
+        <NFe>
+          <infNFe>
+            <ide>
+              <mod>55</mod>
+              <nNF>432109</nNF>
+              <dhEmi>2026-06-21T09:30:00-03:00</dhEmi>
+            </ide>
+            <dest><xNome>Paciente Exemplo</xNome><CPF>12345678901</CPF></dest>
+            <emit><xNome>Clinica Exata LTDA</xNome><CNPJ>11222333000144</CNPJ></emit>
+            <cobr><fat><Numero>44444444444444444444444444444444444444444444</Numero></fat></cobr>
+            <total><ICMSTot><vNF>150.00</vNF></ICMSTot></total>
+          </infNFe>
+        </NFe>
+      </nfeProc>`;
+
+    const file = new File([xml], 'nfe-receber-prioridade.xml', { type: 'text/xml' });
+    const extraction = await extractReceivableDocument(file);
+
+    expect(extraction.documentType).toBe('nfe');
+    expect(extraction.fields.invoice_number).toBe('432109');
+    expect(extraction.fields.invoice_number).not.toBe('44444444444444444444444444444444444444444444');
+    expect(extraction.fields.guide_number).toBe('432109');
+  });
+
+  it('deriva nNF da chave chNFe quando nNF nao estiver presente', async () => {
+    const accessKey = '35260212345678000195550010000123456789012345';
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+      <nfeProc>
+        <NFe>
+          <infNFe Id="NFe${accessKey}">
+            <ide><mod>55</mod><dhEmi>2026-06-22T11:00:00-03:00</dhEmi></ide>
+            <dest><xNome>Paciente Exemplo</xNome><CPF>12345678901</CPF></dest>
+            <emit><xNome>Clinica Exata LTDA</xNome><CNPJ>11222333000144</CNPJ></emit>
+            <total><ICMSTot><vNF>120.00</vNF></ICMSTot></total>
+            <chNFe>${accessKey}</chNFe>
+          </infNFe>
+        </NFe>
+      </nfeProc>`;
+
+    const file = new File([xml], 'nfe-receber-chave.xml', { type: 'text/xml' });
+    const extraction = await extractReceivableDocument(file);
+
+    expect(extraction.documentType).toBe('nfe');
+    expect(extraction.fields.invoice_number).toBe('12345');
+    expect(extraction.fields.invoice_number).not.toBe(accessKey);
+    expect(extraction.fields.guide_number).toBe('12345');
+  });
+
+  it('extrai numero da NF pela tag nDFSe em XML NFS-e', async () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+      <NFSe>
+        <infNFSe>
+          <nNFSe>4000</nNFSe>
+          <nDFSe>15111734</nDFSe>
+          <emit>
+            <xNome>MANAGER CONSULTORIA EM INFORMATICA LTDA</xNome>
+            <CNPJ>80750714000156</CNPJ>
+          </emit>
+          <valores>
+            <vBC>3656.70</vBC>
+          </valores>
+        </infNFSe>
+      </NFSe>`;
+
+    const file = new File([xml], '42054072280750714000156000000000400026064873828638.xml', { type: 'text/xml' });
+    const extraction = await extractReceivableDocument(file);
+
+    expect(extraction.documentType).toBe('nfse');
+    expect(extraction.fields.invoice_number).toBe('15111734');
+    expect(extraction.fields.guide_number).toBe('15111734');
+  });
 });

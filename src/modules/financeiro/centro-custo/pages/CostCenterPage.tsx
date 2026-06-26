@@ -7,11 +7,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, AlertCircle, FileBarChart, CheckCircle2, Layers, Users } from 'lucide-react';
 import RelatoriosToolbar from '@/components/financeiro/RelatoriosToolbar';
+import {
+  applyEnterpriseCostCenterTemplate,
+  repairCostCenterDescriptions,
+  ENTERPRISE_COST_CENTER_TEMPLATE,
+  DESCRIPTION_BY_CODE,
+} from '@/lib/enterpriseCostCenters';
 import { useCostCenters } from '../hooks/useCostCenters';
 import { CostCenterForm } from '../components/CostCenterForm';
 import { CostCenterTree } from '../components/CostCenterTree';
 import { CostCenterTable } from '../components/CostCenterTable';
 import { CostCenterFilters } from '../components/CostCenterFilters';
+import { CostCenterAllocationsManager } from '../components/CostCenterAllocationsManager';
 import type { CostCenter, CreateCostCenterPayload, UpdateCostCenterPayload } from '../types';
 
 type ViewMode = 'tree' | 'table' | 'form-create' | 'form-edit';
@@ -19,11 +26,26 @@ type ViewMode = 'tree' | 'table' | 'form-create' | 'form-edit';
 const reportColumns = [
   { key: 'code', label: 'Codigo', width: 14 },
   { key: 'name', label: 'Nome', width: 32 },
+  { key: 'level', label: 'Nivel', width: 10 },
+  { key: 'type', label: 'Tipo', width: 18 },
+  { key: 'unit', label: 'Unidade', width: 20 },
   { key: 'parentName', label: 'Centro Pai', width: 28 },
   { key: 'status', label: 'Status', width: 12 },
   { key: 'manager', label: 'Responsavel', width: 20 },
   { key: 'description', label: 'Descricao', width: 38 },
 ];
+
+const templateRows = ENTERPRISE_COST_CENTER_TEMPLATE.map((row) => ({
+  code: row.code,
+  name: row.name,
+  level: String(row.code || '').split('.').length,
+  type: row.center_type,
+  unit: row.unit_name,
+  parentName: row.parent_code || '',
+  status: 'Ativo',
+  manager: row.responsible_name,
+  description: row.description,
+}));
 
 function escapeHtml(value: unknown) {
   return String(value ?? '')
@@ -35,13 +57,15 @@ function escapeHtml(value: unknown) {
 }
 
 export default function CostCenterPage() {
-  const { clinicId } = useAuth();
+  const { clinicId, user } = useAuth();
   const { toast } = useToast();
 
   const state = useCostCenters(clinicId);
   const [viewMode, setViewMode] = useState<ViewMode>('tree');
   const [selectedCenter, setSelectedCenter] = useState<CostCenter | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<CostCenter | null>(null);
+  const [applyingTemplate, setApplyingTemplate] = useState(false);
+  const [repairingDescriptions, setRepairingDescriptions] = useState(false);
 
   // Load tree view on mount
   useEffect(() => {
@@ -164,13 +188,54 @@ export default function CostCenterPage() {
     () => visibleCenters.map((center) => ({
       code: center.code,
       name: center.name,
+      level: String(center.code || '').split('.').length,
+      type: center.center_type || 'OPERACOES',
+      unit: center.unit_name || '',
       parentName: center.parent_id ? centerById.get(center.parent_id)?.name || 'Centro pai' : 'Centro raiz',
       status: center.is_active ? 'Ativo' : 'Inativo',
-      manager: center.manager_id || '',
-      description: center.description || '',
+      manager: center.responsible_name || center.manager_id || '',
+      description: center.description || DESCRIPTION_BY_CODE[center.code] || center.name || '',
     })),
     [centerById, visibleCenters],
   );
+
+  const handleApplyTemplate = async () => {
+    if (!clinicId) return;
+    setApplyingTemplate(true);
+    try {
+      await applyEnterpriseCostCenterTemplate(clinicId, user?.id || null);
+      await state.fetchTree();
+      await state.fetchCenters();
+      toast({ title: 'Template ERP hospitalar aplicado no Centro de Custos!' });
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao aplicar template ERP',
+        description: err?.message || 'Falha ao aplicar estrutura enterprise',
+      });
+    } finally {
+      setApplyingTemplate(false);
+    }
+  };
+
+  const handleRepairDescriptions = async () => {
+    if (!clinicId) return;
+    setRepairingDescriptions(true);
+    try {
+      const result = await repairCostCenterDescriptions(clinicId);
+      await state.fetchTree();
+      await state.fetchCenters();
+      toast({ title: `Descrições atualizadas: ${result.fixed}` });
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao corrigir descrições',
+        description: err?.message || 'Falha ao corrigir descrições',
+      });
+    } finally {
+      setRepairingDescriptions(false);
+    }
+  };
 
   const handleGenerateReport = useCallback(() => {
     const reportWindow = window.open('', '_blank');
@@ -232,10 +297,26 @@ export default function CostCenterPage() {
         </div>
 
         {(viewMode === 'tree' || viewMode === 'table') && (
-          <Button onClick={handleCreateClick} className="gap-2">
-            <Plus className="w-5 h-5" />
-            Novo Centro
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={handleApplyTemplate}
+              disabled={applyingTemplate}
+            >
+              {applyingTemplate ? 'Aplicando ERP...' : 'Aplicar Modelo ERP'}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleRepairDescriptions}
+              disabled={repairingDescriptions}
+            >
+              {repairingDescriptions ? 'Corrigindo...' : 'Corrigir descrições'}
+            </Button>
+            <Button onClick={handleCreateClick} className="gap-2">
+              <Plus className="w-5 h-5" />
+              Novo Centro
+            </Button>
+          </div>
         )}
       </div>
 
@@ -325,8 +406,20 @@ export default function CostCenterPage() {
             data={reportRows}
             columns={reportColumns}
             templateFileName="centro_de_custos"
+            templateRows={templateRows}
             onGenerateReport={handleGenerateReport}
           />
+
+          {clinicId && (
+            <CostCenterAllocationsManager
+              clinicId={clinicId}
+              centers={state.centers}
+              onChanged={async () => {
+                await state.fetchCenters();
+                await state.fetchTree();
+              }}
+            />
+          )}
 
           {viewMode === 'tree' ? (
             <CostCenterTree

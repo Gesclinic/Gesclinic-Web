@@ -124,7 +124,6 @@ const EXPLICIT_ROUTE_RULES = [
   },
   { match: /^\/clinica\/financeiro\/fluxo$/, permission: 'financeiro.fluxo', level: 'view' },
   { match: /^\/clinica\/financeiro\/conciliacao(\/|$)/, permission: 'financeiro.conciliacao', level: 'view' },
-  { match: /^\/clinica\/financeiro\/automacoes(\/|$)/, permission: 'financeiro.automacoes', level: 'edit' },
   {
     match: /^\/clinica\/financeiro\/contas-pagar\/[^/]+\/editar(\/|$)/,
     permission: 'financeiro.contas_pagar_editar',
@@ -142,10 +141,9 @@ const EXPLICIT_ROUTE_RULES = [
   },
   {
     match: /^\/clinica\/financeiro\/autorizacoes-descontos(\/|$)/,
-    permission: 'financeiro.automacoes',
+    permission: 'financeiro.autorizacoes_descontos',
     level: 'edit',
   },
-  { match: /^\/clinica\/automacoes(\/|$)/, permission: 'financeiro.automacoes', level: 'edit' },
   { match: /^\/clinica\/financeiro\/repasse$/, permission: 'financeiro.repasse', level: 'view' },
   {
     match: /^\/clinica\/financeiro\/repasse\/(visao-geral|analytics)(\/|$)/,
@@ -154,6 +152,21 @@ const EXPLICIT_ROUTE_RULES = [
   },
   {
     match: /^\/clinica\/financeiro\/repasse\/(regras-avancadas|automacao)(\/|$)/,
+    permission: 'financeiro.repasse',
+    level: 'edit',
+  },
+  {
+    match: /^\/clinica\/financeiro\/repasse\/regras(\/|$)/,
+    permission: 'financeiro.repasse',
+    level: 'edit',
+  },
+  {
+    match: /^\/clinica\/financeiro\/repasse\/(dashboard-executivo|producao-medica|calculo-repasse|contas-pagar-medicas|glosas-impacto|analytics|rentabilidade|simulacoes|contas-bancarias|auditoria)(\/|$)/,
+    permission: 'financeiro.repasse',
+    level: 'view',
+  },
+  {
+    match: /^\/clinica\/financeiro\/repasse\/(aprovacoes|automacoes)(\/|$)/,
     permission: 'financeiro.repasse',
     level: 'edit',
   },

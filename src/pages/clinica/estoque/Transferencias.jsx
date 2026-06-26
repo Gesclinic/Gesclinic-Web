@@ -9,7 +9,7 @@ import LocationSelect from '@/components/clinica/estoque/LocationSelect';
 import { useClinicContext } from '@/contexts/useClinicContext';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
-import { format } from 'date-fns';
+import { formatLocalDate } from '@/utils/timezoneHelpers';
 
 export default function Transferencias() {
   const navigate = useNavigate();
@@ -94,7 +94,7 @@ export default function Transferencias() {
       const { data, error } = await supabase
         .from('stock_movements')
         .select(
-          'id, created_at, movement_type, quantity, notes, stock_item_id, location_id, item:stock_items(name), location:stock_locations(name)',
+          'id, created_at, movement_type, quantity, notes, stock_item_id, location_id, item:stock_items(name, unit_symbol), location:stock_locations(name)',
         )
         .eq('clinic_id', clinicId)
         .ilike('notes', 'Transferência%')
@@ -121,6 +121,7 @@ export default function Transferencias() {
             item: r.item?.name || '-',
             item_id: r.item_id,
             qty: r.qty,
+            unit_symbol: r.item?.unit_symbol || 'un',
             exit: null,
             entry: null,
           });
@@ -149,6 +150,7 @@ export default function Transferencias() {
             item: rec.item,
             item_id: rec.item_id,
             qty: rec.qty,
+            unit_symbol: rec.unit_symbol || 'un',
             origem: rec.exit?.location?.name || '-',
             destino: rec.entry?.location?.name || '-',
             origemId: rec.exit?.location_id || '',
@@ -401,6 +403,7 @@ export default function Transferencias() {
                 <th className="px-4 py-2 text-left">Data</th>
                 <th className="px-4 py-2 text-left">Produto</th>
                 <th className="px-4 py-2 text-right">Quantidade</th>
+                <th className="px-4 py-2 text-left">Unidade</th>
                 <th className="px-4 py-2 text-left">Origem</th>
                 <th className="px-4 py-2 text-left">Destino</th>
                 <th className="px-4 py-2 text-left">Observação</th>
@@ -412,10 +415,11 @@ export default function Transferencias() {
               {filteredRows.map((r, idx) => (
                 <tr key={idx} className="border-t hover:bg-gray-50">
                   <td className="px-4 py-3">
-                    {r.date ? format(new Date(r.date + 'T00:00:00'), 'dd/MM/yyyy') : '-'}
+                    {formatLocalDate(r.date) || '-'}
                   </td>
                   <td className="px-4 py-3">{r.item}</td>
                   <td className="px-4 py-3 text-right">{r.qty}</td>
+                  <td className="px-4 py-3">{r.unit_symbol || 'un'}</td>
                   <td className="px-4 py-3">{r.origem}</td>
                   <td className="px-4 py-3">{r.destino}</td>
                   <td className="px-4 py-3 text-gray-600 text-xs">{r.notes || '-'}</td>

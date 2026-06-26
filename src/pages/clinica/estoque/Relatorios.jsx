@@ -14,6 +14,7 @@ import {
 import { useClinicContext } from '@/contexts/useClinicContext';
 import { useToast } from '@/components/ui/use-toast';
 import { stockItemsApi, stockMovementsApi } from '@/lib/stockApi';
+import { formatLocalDate } from '@/utils/timezoneHelpers';
 
 export default function EstoqueRelatorios() {
   const breadcrumbs = useBreadcrumbs([
@@ -78,10 +79,11 @@ export default function EstoqueRelatorios() {
         const items = await stockItemsApi.list(clinicId);
         return {
           title: 'Posição de Estoque',
-          columns: ['Produto', 'SKU', 'Categoria', 'Saldo', 'Mín.', 'Máx.', 'Status'],
+          columns: ['Produto', 'SKU', 'Unidade', 'Categoria', 'Saldo', 'Mín.', 'Máx.', 'Status'],
           data: items.map((item) => ({
             name: item.name,
             sku: item.sku,
+            unidade: item.unit_symbol || 'un',
             category: item.category_name || '-',
             balance: item.total_balance || 0,
             min: item.min_stock || 0,
@@ -95,10 +97,11 @@ export default function EstoqueRelatorios() {
         const criticos = items.filter((item) => item.total_balance < item.min_stock);
         return {
           title: 'Itens Críticos',
-          columns: ['Produto', 'SKU', 'Saldo Atual', 'Mínimo', 'Falta'],
+          columns: ['Produto', 'SKU', 'Unidade', 'Saldo Atual', 'Mínimo', 'Falta'],
           data: criticos.map((item) => ({
             name: item.name,
             sku: item.sku,
+            unidade: item.unit_symbol || 'un',
             balance: item.total_balance || 0,
             min: item.min_stock || 0,
             falta: Math.max(0, (item.min_stock || 0) - (item.total_balance || 0)),
@@ -168,7 +171,8 @@ export default function EstoqueRelatorios() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `relatorio_${reportData.id}_${Date.now()}.csv`;
+    const fileDate = formatLocalDate(new Date().toISOString().slice(0, 10)).replace(/\//g, '-');
+    a.download = `relatorio_${reportData.id}_${fileDate}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -234,7 +238,8 @@ export default function EstoqueRelatorios() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `relatorio_${reportData.id}_${Date.now()}.html`;
+    const fileDate = formatLocalDate(new Date().toISOString().slice(0, 10)).replace(/\//g, '-');
+    a.download = `relatorio_${reportData.id}_${fileDate}.html`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

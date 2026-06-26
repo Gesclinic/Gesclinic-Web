@@ -23,6 +23,8 @@ export const FinancialDashboard = React.memo<FinancialDashboardProps>(({
   metrics,
   loading = false,
 }) => {
+  const [apScopeOnly, setApScopeOnly] = React.useState(false);
+
   if (loading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -44,6 +46,11 @@ export const FinancialDashboard = React.memo<FinancialDashboardProps>(({
       currency: 'BRL',
     }).format(value);
   };
+
+  const apOpenGross = Number(metrics.ap_open_total || 0);
+  const predictedFromApOnly = -Math.abs(apOpenGross);
+  const predictedDisplay = apScopeOnly ? predictedFromApOnly : Number(metrics.total_predicted || 0);
+  const netBalanceDisplay = Number(metrics.total_realized || 0) + predictedDisplay;
 
   const cards = [
     {
@@ -69,10 +76,12 @@ export const FinancialDashboard = React.memo<FinancialDashboardProps>(({
     },
     {
       title: 'Saldo Previsto',
-      value: metrics.total_predicted,
+      value: predictedDisplay,
       icon: Clock,
       color: 'blue',
-      subtext: `${metrics.pending_count} pendentes`,
+      subtext: apScopeOnly
+        ? `Escopo AP apenas • AP bruto ${formatCurrency(apOpenGross)}`
+        : `${metrics.pending_count} pendentes • Rec ${formatCurrency(metrics.predicted_income || 0)} / Desp ${formatCurrency(metrics.predicted_expense || 0)} • AP bruto ${formatCurrency(apOpenGross)}`,
     },
   ];
 
@@ -115,6 +124,20 @@ export const FinancialDashboard = React.memo<FinancialDashboardProps>(({
 
   return (
     <>
+      <div className="mb-3 flex items-center justify-end">
+        <button
+          type="button"
+          onClick={() => setApScopeOnly((value) => !value)}
+          className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${
+            apScopeOnly
+              ? 'border-blue-600 bg-blue-600 text-white'
+              : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+          }`}
+        >
+          {apScopeOnly ? 'Somente origem Contas a Pagar: ON' : 'Somente origem Contas a Pagar: OFF'}
+        </button>
+      </div>
+
       {/* Métricas Principais */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map((card, idx) => {
@@ -148,16 +171,21 @@ export const FinancialDashboard = React.memo<FinancialDashboardProps>(({
         {/* Saldo Geral */}
         <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-gray-900">Saldo Geral</h3>
+            <h3 className="text-sm font-semibold text-gray-900">Saldo Geral (Líquido)</h3>
             <DollarSign className="w-5 h-5 text-blue-600" />
           </div>
           <p className={`text-3xl font-bold ${
-            metrics.net_balance >= 0 ? 'text-green-600' : 'text-red-600'
+            netBalanceDisplay >= 0 ? 'text-green-600' : 'text-red-600'
           }`}>
-            {formatCurrency(metrics.net_balance)}
+            {formatCurrency(netBalanceDisplay)}
           </p>
           <p className="text-xs text-gray-600 mt-2">
-            {metrics.total_realized >= 0 ? 'Realizado' : 'Realizado em déficit'} + {metrics.total_predicted >= 0 ? 'Previsão positiva' : 'Previsão negativa'}
+            {apScopeOnly
+              ? 'Fórmula: Saldo Realizado + Saldo Previsto (somente Contas a Pagar)'
+              : 'Fórmula: Saldo Realizado + Saldo Previsto (líquido de receitas e despesas pendentes)'}
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            Não representa o total bruto de Contas a Pagar.
           </p>
         </div>
 

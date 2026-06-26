@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import PageLayout from '@/components/ui/PageLayout';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { getReceivableById, updateReceivable, uploadReceivableNfFile, arStatusOptions } from '@/lib/receivablesApi';
 import { listRevenueAccountPlans, listCostCenters } from '@/lib/financeApi';
 import { listProfessionals } from '@/lib/professionalsApi';
@@ -74,11 +74,52 @@ function withTimeout(promise, timeoutMs, message) {
   return Promise.race([promise, timeout]).finally(() => window.clearTimeout(timeoutId));
 }
 
+function getSafeInternalReturnPath(value) {
+  if (!value || !value.startsWith('/clinica/')) return '';
+  if (value.startsWith('//')) return '';
+  return value;
+}
+
+function cleanBrokenText(value) {
+  if (typeof value !== 'string' || !value.includes('�')) return value;
+  return value
+    .replace(/FUNDA�+O/gi, 'FUNDACAO')
+    .replace(/PRODU�+O/gi, 'PRODUCAO')
+    .replace(/OP�+O/gi, 'OPCAO')
+    .replace(/SERVI�+OS?/gi, 'SERVICOS')
+    .replace(/M�DICOS?/gi, 'MEDICOS')
+    .replace(/PEDI�TRICO/gi, 'PEDIATRICO')
+    .replace(/S�O/gi, 'SAO')
+    .replace(/N�/gi, 'Nº')
+    .replace(/�+/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function cleanBrokenTextDeep(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => cleanBrokenTextDeep(item));
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, cleanBrokenTextDeep(item)]));
+  }
+  return cleanBrokenText(value);
+}
+
 export default function EditarRecebimento() {
   const { clinicId } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const returnTo = getSafeInternalReturnPath(searchParams.get('returnTo'));
+  const goBack = () => {
+    if (returnTo) {
+      navigate(returnTo, { replace: true });
+      return;
+    }
+    navigate(-1);
+  };
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -139,16 +180,16 @@ export default function EditarRecebimento() {
           unit_name: rec.unit_name || '',
         };
         setDocumentExtraction(metadataExtraction);
-        setData({
+        setData(cleanBrokenTextDeep({
           ...baseData,
           ...mergeMissingExtractionFields(baseData, buildExtractionFormUpdates(extractionFields, professionalsData || [])),
           is_card_payment: isCardPaymentMethod(baseData.payment_method || extractionFields.payment_method) || !!baseData.processor_id,
           notes: mergeDocumentNotes(baseData.notes, extractionFields),
-        });
-        setPlans(ps || []);
-        setCostCenters(cs || []);
-        setProfessionals(professionalsData || []);
-        setConvenios(payersData || []);
+        }));
+        setPlans(cleanBrokenTextDeep(ps || []));
+        setCostCenters(cleanBrokenTextDeep(cs || []));
+        setProfessionals(cleanBrokenTextDeep(professionalsData || []));
+        setConvenios(cleanBrokenTextDeep(payersData || []));
         setEmpresas([]);
         setCardProcessors(processorsData || []);
       } catch (e) {
@@ -183,7 +224,7 @@ export default function EditarRecebimento() {
   }, [clinicId, data?.is_card_payment, data?.processor_id, data?.card_brand, data?.settlement_type, data?.amount]);
 
   const handleChange = (field, value) => {
-    setData((current) => ({ ...current, [field]: value }));
+    setData((current) => ({ ...current, [field]: cleanBrokenText(value) }));
   };
 
   const getDateInputValue = (field) => {
@@ -351,7 +392,7 @@ export default function EditarRecebimento() {
         title: 'Recebimento atualizado',
         description: uploadWarning || (data.is_card_payment && !data.processor_id ? 'Taxa de cartão estimada por ausência de operadora selecionada.' : undefined),
       });
-      navigate(-1);
+      goBack();
     } catch (e) {
       setError(e?.message || 'Erro ao salvar alterações');
       toast({ variant: 'destructive', title: 'Erro ao salvar', description: e?.message });
@@ -380,7 +421,7 @@ export default function EditarRecebimento() {
                   Este lancamento pode ter sido excluido, cancelado ou nao pertencer a clinica atual.
                 </p>
               </div>
-              <Button type="button" variant="outline" onClick={() => navigate('/clinica/financeiro/receber')}>
+              <Button type="button" variant="outline" onClick={goBack}>
                 Voltar para Contas a Receber
               </Button>
             </div>
@@ -788,7 +829,7 @@ export default function EditarRecebimento() {
           </FormSection>
 
           <div className="sticky bottom-0 -mx-4 -mb-4 flex flex-wrap justify-end gap-2 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
-            <Button variant="outline" onClick={() => navigate(-1)}>Cancelar</Button>
+            <Button variant="outline" onClick={goBack}>Cancelar</Button>
             <Button onClick={handleSave} disabled={saving} className="gap-2 bg-blue-600 text-white">
               <Save className="w-4 h-4" />
               {saving ? 'Salvando...' : 'Salvar alterações'}

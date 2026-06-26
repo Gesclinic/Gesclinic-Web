@@ -43,6 +43,7 @@ import { Badge } from '@/components/ui/badge';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import PhotoCapture from '@/components/PhotoCapture';
+import { formatLocalDate } from '@/utils/timezoneHelpers';
 import {
   AlertCircle,
   FileText,
@@ -162,6 +163,13 @@ const ALERT_CONFIGS = {
     color: 'red',
   },
 };
+
+function parseDateOnly(dateValue) {
+  const match = String(dateValue || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return null;
+  const [, year, month, day] = match;
+  return new Date(Number(year), Number(month) - 1, Number(day));
+}
 
 export default function PatientDetailPage() {
   const { patientId } = useParams();
@@ -393,11 +401,11 @@ export default function PatientDetailPage() {
 
   // Calcular idade
   function calculateAge(birthDate) {
-    if (!birthDate) {
+    const birth = parseDateOnly(birthDate);
+    if (!birth) {
       return null;
     }
     const today = new Date();
-    const birth = new Date(birthDate);
     let age = today.getFullYear() - birth.getFullYear();
     const monthDiff = today.getMonth() - birth.getMonth();
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
@@ -712,7 +720,7 @@ export default function PatientDetailPage() {
       <PageLayout
         title={patientData.name}
         breadcrumbs={[
-          { label: 'Pacientes', href: '/clinica/pacientes' },
+          { label: 'Pacientes', path: '/clinica/pacientes' },
           { label: patientData.name },
         ]}
       >
@@ -800,9 +808,7 @@ export default function PatientDetailPage() {
                     <p className="text-sm text-gray-600 mb-1">Data de Nascimento</p>
                     <p className="font-semibold text-gray-900">
                       {patientData.birthdate || patientData.birth_date
-                        ? new Date(
-                            patientData.birthdate || patientData.birth_date,
-                          ).toLocaleDateString('pt-BR')
+                        ? formatLocalDate(patientData.birthdate || patientData.birth_date)
                         : 'N/A'}
                       {age && ` (${age} anos)`}
                     </p>

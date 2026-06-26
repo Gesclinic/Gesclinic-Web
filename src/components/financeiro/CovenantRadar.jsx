@@ -2,11 +2,31 @@ import React, { useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Radar, AlertCircle, TrendingUp } from 'lucide-react';
 
+const closedStatuses = new Set(['paid', 'pago', 'paga', 'received', 'recebido', 'quitado', 'processed', 'canceled', 'cancelado', 'cancelada', 'reversed', 'estornado']);
+
+function money(value) {
+  const parsed = Number(value || 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function isOpenPastDue(item = {}) {
+  if (closedStatuses.has(String(item.status || '').toLowerCase()) || !item.due_date) return false;
+  return new Date(`${String(item.due_date).split('T')[0]}T00:00:00`) < new Date(new Date().toISOString().split('T')[0] + 'T00:00:00');
+}
+
+function isOpenReceivable(item = {}) {
+  return !closedStatuses.has(String(item.status || '').toLowerCase());
+}
+
+function receivableAmount(item = {}) {
+  return money(item.balance_amount || item.open_amount || item.amount || item.gross_amount || item.valor || item.total_amount);
+}
+
 /**
- * 📡 Covenant Radar - Análise de Convênios Médicos
- * 
+ * Covenant Radar - Análise de convênios médicos
+ *
  * Monitora saúde financeira de cada convênio
- * Identifica convênios problemáticos e oportunidades
+ * Identifica convênios críticos e oportunidades de melhoria
  */
 export default function CovenantRadar({ receivables = [], loading = false }) {
   const covenantAnalysis = useMemo(() => {
@@ -14,7 +34,7 @@ export default function CovenantRadar({ receivables = [], loading = false }) {
 
     // Agrupar por convênio
     const byConvenant = {};
-    receivables.forEach((r) => {
+    receivables.filter(isOpenReceivable).forEach((r) => {
       const covenantName = r.covenant_name || 'Convênio Desconhecido';
       if (!byConvenant[covenantName]) {
         byConvenant[covenantName] = {
@@ -28,15 +48,14 @@ export default function CovenantRadar({ receivables = [], loading = false }) {
         };
       }
 
-      byConvenant[covenantName].total += r.amount || 0;
+      byConvenant[covenantName].total += receivableAmount(r);
       byConvenant[covenantName].count += 1;
 
-      if (new Date(r.due_date) < new Date()) {
+      if (isOpenPastDue(r)) {
         byConvenant[covenantName].overdue += 1;
-        byConvenant[covenantName].overdueAmount += r.amount || 0;
-        const delayDays = Math.floor((new Date() - new Date(r.due_date)) / (1000 * 60 * 60 * 24));
-        byConvenant[covenantName].avgDelay =
-          (byConvenant[covenantName].avgDelay + delayDays) / 2;
+        byConvenant[covenantName].overdueAmount += receivableAmount(r);
+        const delayDays = Math.floor((new Date(new Date().toISOString().split('T')[0] + 'T00:00:00') - new Date(`${String(r.due_date).split('T')[0]}T00:00:00`)) / (1000 * 60 * 60 * 24));
+        byConvenant[covenantName].avgDelay += delayDays;
       }
     });
 
@@ -44,7 +63,8 @@ export default function CovenantRadar({ receivables = [], loading = false }) {
     return Object.values(byConvenant)
       .map((c) => ({
         ...c,
-        healthScore: Math.max(0, 100 - (c.overdue / c.count) * 100 - c.avgDelay * 0.5),
+        avgDelay: c.overdue > 0 ? c.avgDelay / c.overdue : 0,
+        healthScore: Math.max(0, 100 - (c.overdue / c.count) * 100 - (c.overdue > 0 ? (c.avgDelay / c.overdue) : 0) * 0.5),
         percentageOverdue: ((c.overdue / c.count) * 100).toFixed(1),
       }))
       .sort((a, b) => a.healthScore - b.healthScore);
@@ -75,8 +95,8 @@ export default function CovenantRadar({ receivables = [], loading = false }) {
         <div className="flex gap-3">
           <Radar className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-1" />
           <div>
-            <p className="font-semibold text-blue-900 dark:text-blue-300">Nenhum Convênio Configurado</p>
-            <p className="text-sm text-blue-700 dark:text-blue-400">Sem dados de convênios para análise</p>
+            <p className="font-semibold text-blue-900 dark:text-blue-300">Sem carteira de convênios para análise</p>
+            <p className="text-sm text-blue-700 dark:text-blue-400">Cadastre ou sincronize convênios para habilitar este painel.</p>
           </div>
         </div>
       </Card>
@@ -87,7 +107,7 @@ export default function CovenantRadar({ receivables = [], loading = false }) {
     <div className="space-y-4 animate-fade-in">
       <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
         <Radar className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-        Radar de Convênios ({covenantAnalysis.length})
+        Saúde da carteira de convênios ({covenantAnalysis.length})
       </h2>
 
       <div className="space-y-3">
@@ -100,7 +120,7 @@ export default function CovenantRadar({ receivables = [], loading = false }) {
                 <div className="flex-1">
                   <h3 className={`font-semibold ${colors.text}`}>{covenant.name}</h3>
                   <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                    {covenant.count} conta{covenant.count !== 1 ? 's' : ''} | A receber: R$ {covenant.total.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
+                    {covenant.count} conta{covenant.count !== 1 ? 's' : ''} | Valor a receber: R$ {covenant.total.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
                   </p>
                 </div>
 
@@ -113,7 +133,7 @@ export default function CovenantRadar({ receivables = [], loading = false }) {
               <div className="space-y-2">
                 {/* Healthy Rate */}
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-600 dark:text-gray-400 w-20">Em dia:</span>
+                  <span className="text-xs text-gray-600 dark:text-gray-400 w-20">Adimplência:</span>
                   <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
                     <div
                       className="bg-green-500 dark:bg-green-600 h-full transition-all"
@@ -128,7 +148,7 @@ export default function CovenantRadar({ receivables = [], loading = false }) {
                 {/* Overdue Rate */}
                 {covenant.overdue > 0 && (
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-600 dark:text-gray-400 w-20">Vencidas:</span>
+                    <span className="text-xs text-gray-600 dark:text-gray-400 w-20">Inadimplência:</span>
                     <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
                       <div
                         className="bg-red-500 dark:bg-red-600 h-full transition-all"
@@ -149,7 +169,7 @@ export default function CovenantRadar({ receivables = [], loading = false }) {
                   <p>
                     <strong>{covenant.overdue} conta{covenant.overdue !== 1 ? 's' : ''}</strong> vencida
                     {covenant.overdue !== 1 ? 's' : ''} por <strong>{covenant.avgDelay.toFixed(0)} dias</strong> em média.
-                    Recomenda-se contato com {covenant.name}.
+                    Recomenda-se tratativa com {covenant.name}.
                   </p>
                 </div>
               )}
@@ -162,19 +182,19 @@ export default function CovenantRadar({ receivables = [], loading = false }) {
       <Card className="p-4 bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200">
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <p className="text-xs text-gray-600 mb-1">Total a Receber</p>
+            <p className="text-xs text-gray-600 mb-1">Valor total a receber</p>
             <p className="text-lg font-bold text-purple-600">
               R$ {covenantAnalysis.reduce((sum, c) => sum + c.total, 0).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
             </p>
           </div>
           <div>
-            <p className="text-xs text-gray-600 mb-1">Convênios em Risco</p>
+            <p className="text-xs text-gray-600 mb-1">Convênios sob risco</p>
             <p className="text-lg font-bold text-red-600">
               {covenantAnalysis.filter((c) => c.healthScore < 60).length}
             </p>
           </div>
           <div>
-            <p className="text-xs text-gray-600 mb-1">Saúde Média</p>
+            <p className="text-xs text-gray-600 mb-1">Índice médio de saúde</p>
             <p className="text-lg font-bold text-blue-600">
               {(covenantAnalysis.reduce((sum, c) => sum + c.healthScore, 0) / covenantAnalysis.length).toFixed(0)}/100
             </p>

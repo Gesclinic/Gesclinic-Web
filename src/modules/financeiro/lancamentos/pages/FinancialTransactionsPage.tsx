@@ -247,6 +247,7 @@ export const FinancialTransactionsPage: React.FC = () => {
         loading={loading}
         accounts={accounts}
         categories={categories}
+        costCenters={costCenters}
       />
 
       {/* Tabela */}
@@ -274,6 +275,7 @@ export const FinancialTransactionsPage: React.FC = () => {
         </div>
         <TransactionsTable
           transactions={transactions}
+          costCenters={costCenters}
           loading={loading}
           onEdit={handleEdit}
           onDelete={handleDelete}

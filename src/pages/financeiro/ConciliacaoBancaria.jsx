@@ -1,9 +1,13 @@
+import { Input } from '@/components/ui/input';
 import React, { useState, useEffect, useMemo } from 'react';
 import { importBankStatement, listBankStatements, reconcileStatement, markAsDivergent, ignoreStatement } from '@/lib/conciliationApi';
 import { suggestForStatement } from '@/lib/conciliationSuggest';
+import { useFinancialAccounts } from '@/modules/financeiro/contas-financeiras';
 
-// Estrutura inicial da página de Conciliação Bancária
+// Conciliação Bancária integrada com Contas Financeiras
 export default function ConciliacaoBancaria() {
+  // Carregar contas financeiras reais
+  const { accounts, loading: loadingAccounts, error: accountsError } = useFinancialAccounts();
   // Estado para formulário de importação
   const [bankAccountId, setBankAccountId] = useState('');
   const [periodStart, setPeriodStart] = useState('');
@@ -40,12 +44,6 @@ export default function ConciliacaoBancaria() {
     }
     fetchStatements();
   }, [bankAccountId, filterStatus, filterType, periodStart, periodEnd, importResult]);
-
-  // TODO: Buscar contas bancárias reais da API
-  const fakeAccounts = [
-    { id: '1', name: 'Conta Banco XPTO' },
-    { id: '2', name: 'Conta Banco Saúde' },
-  ];
 
   async function handleImport(e) {
     e.preventDefault();
@@ -111,16 +109,18 @@ export default function ConciliacaoBancaria() {
           <form onSubmit={handleImport} className="space-y-3">
             <div>
               <label className="block text-sm font-medium">Conta bancária</label>
-              <select value={bankAccountId} onChange={e => setBankAccountId(e.target.value)} className="w-full border rounded p-2">
-                <option value="">Selecione</option>
-                {fakeAccounts.map(acc => (
-                  <option key={acc.id} value={acc.id}>{acc.name}</option>
+              <select value={bankAccountId} onChange={e => setBankAccountId(e.target.value)} disabled={loadingAccounts} className="w-full border rounded p-2">
+                <option value="">{loadingAccounts ? 'Carregando...' : 'Selecione'}</option>
+                {accounts.map(acc => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.account_name} ({acc.bank_name})
+                  </option>
                 ))}
               </select>
             </div>
             <div className="flex gap-2">
-              <input type="date" value={periodStart} onChange={e => setPeriodStart(e.target.value)} className="border rounded p-2 w-full" />
-              <input type="date" value={periodEnd} onChange={e => setPeriodEnd(e.target.value)} className="border rounded p-2 w-full" />
+              <Input type="date" value={periodStart} onChange={e => setPeriodStart(e.target.value)} className="border rounded p-2 w-full" />
+              <Input type="date" value={periodEnd} onChange={e => setPeriodEnd(e.target.value)} className="border rounded p-2 w-full" />
             </div>
             <div>
               <label className="block text-sm font-medium">Arquivo CSV</label>

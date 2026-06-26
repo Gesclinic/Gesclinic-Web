@@ -86,6 +86,24 @@ export default function CaixaGerencialDashboard() {
     }
   };
 
+  const getMovementStatusVisual = (rawStatus) => {
+    const status = String(rawStatus || '').toLowerCase();
+
+    if (status === 'paid' || status === 'concluido' || status === 'concluído') {
+      return { label: 'Estável', className: 'bg-green-100 text-green-700' };
+    }
+
+    if (status === 'pending' || status === 'pendente') {
+      return { label: 'Atenção', className: 'bg-amber-100 text-amber-700' };
+    }
+
+    if (status === 'failed' || status === 'cancelado' || status === 'canceled') {
+      return { label: 'Crítico', className: 'bg-red-100 text-red-700' };
+    }
+
+    return { label: 'Neutro', className: 'bg-slate-100 text-slate-700' };
+  };
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -756,17 +774,14 @@ doc.setFontSize(16);
                                 {formatCurrency(mov.amount || 0)}
                               </td>
                               <td className="px-2 py-3">
-                                <span
-                                  className={`px-2 py-1 rounded text-xs font-bold uppercase ${
-                                    mov.status === 'paid' || mov.status === 'concluído'
-                                      ? 'bg-green-100 text-green-700'
-                                      : mov.status === 'pending' || mov.status === 'pendente'
-                                        ? 'bg-amber-100 text-amber-700'
-                                        : 'bg-slate-100 text-slate-700'
-                                  }`}
-                                >
-                                  {mov.status || 'Concluído'}
-                                </span>
+                                {(() => {
+                                  const statusVisual = getMovementStatusVisual(mov.status);
+                                  return (
+                                    <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${statusVisual.className}`}>
+                                      {statusVisual.label}
+                                    </span>
+                                  );
+                                })()}
                               </td>
                             </tr>
                           ))}

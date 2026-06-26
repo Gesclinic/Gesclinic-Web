@@ -1,22 +1,33 @@
 // src/pages/clinica/financeiro/ConciliacaoBancaria.jsx
 // Página principal de Conciliação Bancária
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useClinicContext } from '@/contexts/useClinicContext';
 import { useConciliation } from '@/hooks/useConciliation';
+import { deleteStatement } from '@/lib/conciliationApi';
+import { useFinancialAccounts } from '@/modules/financeiro/contas-financeiras';
 import { ConciliaoIndicadores } from '@/components/financeiro/conciliacao/ConciliaoIndicadores';
 import { ConciliacaoImportacao } from '@/components/financeiro/conciliacao/ConciliacaoImportacao';
 import { ConciliacaoLista } from '@/components/financeiro/conciliacao/ConciliacaoLista';
 import { ConciliacaoPainel } from '@/components/financeiro/conciliacao/ConciliacaoPainel';
 import { ConciliacaoPayablesReview } from '@/components/financeiro/conciliacao/ConciliacaoPayablesReview';
 import { Card } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 export default function ConciliacaoBancaria() {
   const { clinicId } = useClinicContext();
   const [selectedStatements, setSelectedStatements] = useState([]);
 
+  const { accounts: financialAccounts } = useFinancialAccounts({
+    limit: 500,
+    is_active: true,
+    sortBy: 'account_name',
+    sortOrder: 'asc',
+  });
+
   const {
     statements,
+    statementsTotal,
     loading,
     error,
     indicators,
@@ -46,14 +57,83 @@ export default function ConciliacaoBancaria() {
     loadPayableReviews,
   } = useConciliation(clinicId);
 
+  const importBankAccounts = useMemo(() => {
+    const normalizeAccount = (account) => ({
+      ...account,
+      id: account?.id,
+      account_name: account?.account_name || account?.name || account?.label || 'Conta sem nome',
+      account_number: account?.account_number || account?.number || account?.accountNumber || '',
+      bank_name: account?.bank_name || account?.bank || account?.bankLabel || '',
+    });
+
+    const merged = [...(bankAccounts || []), ...(financialAccounts || [])]
+      .filter(Boolean)
+      .map(normalizeAccount);
+
+    const byId = new Map();
+    merged.forEach((account) => {
+      if (account.id && !byId.has(account.id)) {
+        byId.set(account.id, account);
+      }
+    });
+
+    return Array.from(byId.values());
+  }, [bankAccounts, financialAccounts]);
+
   const handleToggleSelect = (statementId) => {
     setSelectedStatements((prev) =>
       prev.includes(statementId) ? prev.filter((id) => id !== statementId) : [...prev, statementId],
     );
   };
 
+  const handleDeleteStatement = async (statementId) => {
+    try {
+      await deleteStatement(statementId);
+    } catch (err) {
+      console.error('Error deleting statement:', err);
+      throw err;
+    }
+  };
+
+  const handleBulkDelete = async (ids) => {
+    const toDelete = [...ids];
+    try {
+      const failed = [];
+
+      for (const id of toDelete) {
+        try {
+          await deleteStatement(id);
+        } catch (err) {
+          console.error(`Erro ao deletar ${id}:`, err);
+          failed.push(id);
+        }
+      }
+
+      try {
+        await loadStatements();
+        await loadIndicators();
+      } catch (loadErr) {
+        console.error('Erro ao recarregar após exclusão:', loadErr);
+      }
+
+      const success = toDelete.length - failed.length;
+      let message = `✓ ${success} lançamento(s) deletado(s) com sucesso`;
+      if (failed.length > 0) {
+        message += ` | ⚠️ ${failed.length} falharam`;
+      }
+
+      setSelectedStatements([]);
+      setSelectedStatement(null);
+      alert(message);
+    } catch (err) {
+      console.error('Erro crítico em bulk delete:', err);
+      alert('Erro ao deletar em lote: ' + err.message);
+      setSelectedStatements([]);
+      setSelectedStatement(null);
+    }
+  };
+
   const handleBulkConciliateClick = async (ids) => {
-    // Para bulk conciliation, vamos obter a melhor sugestão de cada um
     try {
       const promises = ids.map(async (id) => {
         const stmt = statements.find((s) => s.id === id);
@@ -61,10 +141,9 @@ export default function ConciliacaoBancaria() {
           return null;
         }
 
-        const bestSuggestion = suggestions[id][0]; // Melhor score
         return {
           id,
-          suggestion: bestSuggestion,
+          suggestion: suggestions[id][0],
         };
       });
 
@@ -116,9 +195,18 @@ export default function ConciliacaoBancaria() {
 
       {/* Importação */}
       <ConciliacaoImportacao
-        bankAccounts={bankAccounts}
+        bankAccounts={importBankAccounts}
         onImportSuccess={async (statements, accountId) => {
-          await importExtract(statements, accountId);
+          const result = await importExtract(statements, accountId);
+          if (result.imported > 0) {
+            let message = `✓ ${result.imported} lançamento(ns) importado(s)`;
+            if (result.duplicates > 0) {
+              message += ` | ⚠️ ${result.duplicates} duplicata(s) ignorada(s)`;
+            }
+            alert(message);
+          } else if (result.duplicates > 0) {
+            alert(`⚠️ Todos os ${result.duplicates} lançamento(ns) já existem no sistema (duplicatas)`);
+          }
         }}
       />
 
@@ -140,33 +228,38 @@ export default function ConciliacaoBancaria() {
       />
 
       {/* Conteúdo Principal */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Lista (2/3) */}
-        <div className="lg:col-span-2">
-          <ConciliacaoLista
-            statements={statements}
-            loading={loading}
-            onSelectStatement={setSelectedStatement}
-            onBulkConciliate={handleBulkConciliateClick}
-            selectedStatements={selectedStatements}
-            onToggleSelect={handleToggleSelect}
-          />
-        </div>
-
-        {/* Painel de Conciliação (1/3) */}
-        <div>
-          <ConciliacaoPainel
-            statement={selectedStatement}
-            suggestions={suggestions}
-            onConciliate={handleConciliate}
-            onCreateAndLink={handleCreateAndLink}
-            onMarkDivergent={handleMarkDivergent}
-            onIgnore={handleIgnore}
-            findSuggestions={findSuggestionsForStatement}
-            loading={loading}
-          />
-        </div>
+      <div>
+        <ConciliacaoLista
+          statements={statements}
+          statementsTotal={statementsTotal}
+          loading={loading}
+          onSelectStatement={setSelectedStatement}
+          onBulkConciliate={handleBulkConciliateClick}
+          onDeleteStatement={handleDeleteStatement}
+          onBulkDelete={handleBulkDelete}
+          selectedStatements={selectedStatements}
+          onToggleSelect={handleToggleSelect}
+        />
       </div>
+      <Dialog open={Boolean(selectedStatement)} onOpenChange={(open) => !open && setSelectedStatement(null)}>
+        <DialogContent className="max-w-5xl w-[95vw] max-h-[90vh] overflow-y-auto p-0">
+          <DialogHeader className="px-6 py-4 border-b">
+            <DialogTitle>Detalhes da conciliação</DialogTitle>
+          </DialogHeader>
+          <div className="p-6">
+            <ConciliacaoPainel
+              statement={selectedStatement}
+              suggestions={suggestions}
+              onConciliate={handleConciliate}
+              onCreateAndLink={handleCreateAndLink}
+              onMarkDivergent={handleMarkDivergent}
+              onIgnore={handleIgnore}
+              findSuggestions={findSuggestionsForStatement}
+              loading={loading}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Erro */}
       {error && (

@@ -17,6 +17,7 @@ export interface ParsedPayableDocument {
   };
   document_number?: string;
   invoice_number?: string;
+  guide_number?: string;
   invoice_series?: string;
   issue_date?: string;
   due_date?: string;
@@ -93,6 +94,106 @@ function numberFrom(parent: Element | Document | null | undefined, ...names: str
   const value = textFrom(parent, ...names);
   if (!value) return undefined;
   return parseMoney(value);
+}
+
+function firstNonEmpty(...values: Array<string | null | undefined>): string | undefined {
+  return values.find((value) => String(value || '').trim())?.trim();
+}
+
+function firstNumber(...values: Array<number | null | undefined>): number | undefined {
+  return values.find((value) => Number.isFinite(value));
+}
+
+function regexExtract(xmlText: string, patterns: RegExp[]): string | undefined {
+  for (const pattern of patterns) {
+    const match = xmlText.match(pattern);
+    const value = match?.[1] || match?.[0];
+    if (value?.trim()) {
+      return value.trim();
+    }
+  }
+  return undefined;
+}
+
+function inferInvoiceNumberFromFileName(fileName: string, documentType?: ParsedPayableDocument['document_type']): string | undefined {
+  const base = String(fileName || '').replace(/\.[a-z0-9]+$/i, '').trim();
+  if (!base) return undefined;
+
+  // Padrões legíveis (ex.: NFSE_27244_..., NFE-30199)
+  const explicit = base.match(/(?:^|[_\-\s])NFS?E?[_\-\s]*(\d{2,})(?:[_\-\s.]|$)/i)
+    || base.match(/(?:^|[_\-\s])NFE[_\-\s]*(\d{2,})(?:[_\-\s.]|$)/i)
+    || base.match(/(?:^|[_\-\s])NF[_\-\s]*(\d{2,})(?:[_\-\s.]|$)/i);
+  if (explicit?.[1]) return explicit[1].replace(/^0+/, '') || '0';
+
+  const digits = onlyDigits(base);
+  if (!digits) return undefined;
+
+  // Em muitos layouts NFS-e de prefeitura, o numero da nota vem como bloco imediatamente
+  // antes do marcador de competencia (ex.: 2606 para 2026/06) no nome do arquivo.
+  if (documentType === 'nfse' && digits.length >= 20) {
+    const markerRegex = /2\d(0[1-9]|1[0-2])/g;
+    let marker: RegExpExecArray | null;
+    let markerIndex = -1;
+    while ((marker = markerRegex.exec(digits)) !== null) {
+      markerIndex = marker.index;
+    }
+
+    if (markerIndex > 0) {
+      const prefix = digits.slice(0, markerIndex);
+      const blockBeforeMarker = prefix.match(/0*([1-9]\d{1,11})$/)?.[1];
+      if (blockBeforeMarker) return blockBeforeMarker;
+    }
+  }
+
+  return undefined;
+}
+
+function onlyDigits(value?: string | null): string {
+  return String(value || '').replace(/\D/g, '');
+}
+
+function normalizeInvoiceNumberCandidate(value?: string | null): string | undefined {
+  const raw = String(value || '').trim();
+  if (!raw) return undefined;
+  const digits = onlyDigits(raw);
+  // Para notas fiscais brasileiras, usamos preferencialmente o formato numerico.
+  return digits || raw;
+}
+
+function inferInvoiceNumberFromCandidates(
+  candidates: Array<string | undefined>,
+  options: { documentType?: ParsedPayableDocument['document_type']; model?: string; xmlText?: string },
+): string | undefined {
+  const isNfeLike = options.documentType === 'nfe' || options.documentType === 'nfce' || options.model === '55' || options.model === '65';
+  const accessKeyInXml = onlyDigits(options.xmlText?.match(/<(?:\w+:)?chNFe\b[^>]*>\s*([0-9]{44})\s*<\/(?:\w+:)?chNFe>/i)?.[1] || '');
+  if (isNfeLike && accessKeyInXml) {
+    const accessKeyNnf = accessKeyInXml.slice(25, 34).replace(/^0+/, '');
+    if (accessKeyNnf) return accessKeyNnf;
+  }
+
+  const normalized = Array.from(new Set(
+    candidates
+      .map((candidate) => normalizeInvoiceNumberCandidate(candidate))
+      .filter(Boolean) as string[],
+  ));
+  if (!normalized.length) return undefined;
+
+  const nonAccessKey = normalized.find((candidate) => {
+    const digits = onlyDigits(candidate);
+    return digits.length >= 1 && digits.length <= 12;
+  });
+  if (nonAccessKey) return nonAccessKey;
+
+  const first = normalized[0];
+  const firstDigits = onlyDigits(first);
+  // Quando vier uma chave de acesso (44 digitos), nunca usamos a chave inteira como numero da NF.
+  // Extraimos o bloco nNF (9 digitos) da posicao padrao para evitar exibicao de identificadores longos.
+  if (firstDigits.length === 44) {
+    const nnf = firstDigits.slice(25, 34).replace(/^0+/, '');
+    if (nnf) return nnf;
+  }
+
+  return first;
 }
 
 function dateOnly(value: string): string | undefined {
@@ -230,8 +331,14 @@ function parseXmlPayableDocument(file: File, xmlText: string): ParsedPayableDocu
           ? 'nfe'
           : 'xml';
 
-  const supplierName = textFrom(emit, 'xNome', 'RazaoSocial', 'Nome', 'nome_razao_social', 'xFant');
-  const cnpj = textFrom(emit, 'CNPJ', 'CPF', 'CNPJPrestador', 'CpfCnpj', 'cpfcnpj');
+  const supplierName = firstNonEmpty(
+    textFrom(emit, 'xNome', 'RazaoSocial', 'Nome', 'nome_razao_social', 'xFant', 'NomeFantasia'),
+    textFrom(documentXml, 'xNome', 'RazaoSocial', 'Nome', 'nome_razao_social', 'xFant', 'NomeFantasia', 'RazaoSocialPrestador', 'NomePrestador'),
+  );
+  const cnpj = firstNonEmpty(
+    textFrom(emit, 'CNPJ', 'CPF', 'CNPJPrestador', 'CpfCnpj', 'cpfcnpj'),
+    textFrom(documentXml, 'CNPJ', 'CPF', 'CNPJPrestador', 'CpfCnpj', 'cpfcnpj', 'Cnpj', 'Cpf'),
+  );
   const supplierAddressElement = firstElement(emit || documentXml, ['enderEmit', 'Endereco', 'EnderecoPrestador', 'endereco']);
   const supplierAddress = {
     street: textFrom(supplierAddressElement, 'xLgr', 'Logradouro', 'Endereco', 'logradouro') || undefined,
@@ -243,16 +350,81 @@ function parseXmlPayableDocument(file: File, xmlText: string): ParsedPayableDocu
     country: textFrom(supplierAddressElement, 'xPais', 'Pais', 'pais') || undefined,
     phone: textFrom(emit, 'fone', 'Telefone', 'telefone') || undefined,
   };
-  const invoiceNumber = textFrom(ide, 'nNF', 'NumeroNfse', 'Numero', 'numero_nfse', 'numeroNota', 'nCFe');
-  const invoiceSeries = textFrom(ide, 'serie', 'Serie', 'serie_nfse');
-  const issueDate = dateOnly(textFrom(ide, 'dhEmi', 'dEmi', 'DataEmissao', 'data_nfse', 'data_emissao'));
-  const dueDate = firstDuplicate?.due_date || issueDate;
-  const amount = numberFrom(total, 'vNF', 'vCFe', 'ValorNfse', 'ValorServicos', 'ValorTotal', 'vProd', 'valor_total')
-    ?? numberFrom(documentXml, 'vNF', 'vCFe', 'ValorNfse', 'ValorServicos', 'ValorTotal', 'valor_total');
+  const infNfse = firstElement(documentXml, ['InfNfse', 'infnfse']);
+  const nfeCandidates = [
+    textFrom(ide, 'nNF'),
+    textFrom(documentXml, 'nNF'),
+    regexExtract(xmlText, [/<(?:\w+:)?nNF\b[^>]*>\s*([^<\s]+)\s*<\/(?:\w+:)?nNF>/i]),
+  ];
+  const nfseCandidates = [
+    textFrom(infNfse, 'nDFSe', 'nDfse', 'Numero', 'numero'),
+    textFrom(ide, 'nDFSe', 'nDfse', 'NumeroNfse', 'numero_nfse', 'NFSeNumero', 'numero_nota', 'numNota'),
+    textFrom(documentXml, 'nDFSe', 'nDfse', 'NumeroNfse', 'numero_nfse', 'NFSeNumero', 'numero_nota', 'numNota'),
+    regexExtract(xmlText, [
+      /<(?:\w+:)?(?:nDFSe|nDfse|NumeroNfse|numero_nfse|NFSeNumero|numero_nota|numNota|Numero)\b[^>]*>\s*([^<\s]+)\s*<\/(?:\w+:)?(?:nDFSe|nDfse|NumeroNfse|numero_nfse|NFSeNumero|numero_nota|numNota|Numero)>/i,
+      /\bNFS?-?E?\s*(?:n[\u00ba\u00b0o]?\s*)?(\d{6,12})\b/i,
+    ]),
+  ];
+  const satCandidates = [
+    textFrom(ide, 'nCFe'),
+    textFrom(documentXml, 'nCFe'),
+    regexExtract(xmlText, [/<(?:\w+:)?nCFe\b[^>]*>\s*([^<\s]+)\s*<\/(?:\w+:)?nCFe>/i]),
+  ];
+  const fallbackCandidates = [
+    textFrom(ide, 'numeroNota', 'numero_nfe', 'nf_numero', 'número'),
+    textFrom(documentXml, 'numeroNota', 'numero_nfe', 'nf_numero', 'número'),
+    regexExtract(xmlText, [/<(?:\w+:)?(?:numeroNota|numero_nfe|nf_numero)\b[^>]*>\s*([^<\s]+)\s*<\/(?:\w+:)?(?:numeroNota|numero_nfe|nf_numero)>/i]),
+  ];
+
+  const invoiceNumberCandidates = documentType === 'nfe' || documentType === 'nfce'
+    ? [...nfeCandidates, ...fallbackCandidates]
+    : documentType === 'nfse'
+      ? [...nfseCandidates, ...fallbackCandidates]
+      : documentType === 'sat_cfe'
+        ? [...satCandidates, ...fallbackCandidates]
+        : [...nfeCandidates, ...nfseCandidates, ...satCandidates, ...fallbackCandidates];
+
+  const invoiceNumber = inferInvoiceNumberFromCandidates(invoiceNumberCandidates, { documentType, model, xmlText })
+    || inferInvoiceNumberFromFileName(file.name, documentType);
+  const invoiceSeries = firstNonEmpty(
+    textFrom(ide, 'serie', 'Serie', 'serie_nfse', 'serienfe', 'serie_nfe'),
+    textFrom(documentXml, 'serie', 'Serie', 'serie_nfse', 'serienfe', 'serie_nfe'),
+  );
+  const issueDate = dateOnly(
+    firstNonEmpty(
+      textFrom(ide, 'dhEmi', 'dEmi', 'DataEmissao', 'data_nfse', 'data_emissao', 'competencia', 'DataCompetencia'),
+      textFrom(documentXml, 'dhEmi', 'dEmi', 'DataEmissao', 'data_nfse', 'data_emissao', 'competencia', 'DataCompetencia'),
+      regexExtract(xmlText, [/(\d{4}-\d{2}-\d{2})(?:T\d{2}:\d{2}:\d{2})?/]),
+    ) || '',
+  );
+  const dueDate = dateOnly(
+    firstNonEmpty(
+      firstDuplicate?.due_date,
+      textFrom(documentXml, 'dVenc', 'DataVencimento', 'Vencimento', 'data_vencimento', 'DataVenc', 'dtVencimento'),
+      issueDate,
+    ) || '',
+  );
+  const duplicatesTotal = duplicates.reduce((acc, installment) => acc + Number(installment.amount || 0), 0);
+  const amount = firstNumber(
+    numberFrom(total, 'vNF', 'vCFe', 'ValorNfse', 'ValorServicos', 'ValorTotal', 'vProd', 'valor_total', 'valorbruto', 'valor_bruto', 'vlr_total', 'ValorLiquidoNfse', 'valor_liquido_nfse', 'valor_tributavel', 'valor_rps', 'vServ'),
+    numberFrom(documentXml, 'vNF', 'vCFe', 'ValorNfse', 'ValorServicos', 'ValorTotal', 'valor_total', 'valorbruto', 'valor_bruto', 'vlr_total', 'ValorLiquidoNfse', 'valor_liquido_nfse', 'valor_tributavel', 'valor_rps', 'vServ'),
+    duplicatesTotal > 0 ? duplicatesTotal : undefined,
+    parseMoney(regexExtract(xmlText, [
+      /<(?:\w+:)?(?:ValorLiquidoNfse|valor_liquido_nfse|ValorNfse|ValorServicos|ValorTotal|valor_total|vNF|vCFe|vServ)\b[^>]*>\s*([^<]+)\s*<\/(?:\w+:)?(?:ValorLiquidoNfse|valor_liquido_nfse|ValorNfse|ValorServicos|ValorTotal|valor_total|vNF|vCFe|vServ)>/i,
+      /(?:valor\s*total|valor\s*nf|valor\s*liquido)\s*[:=]?\s*R?\$?\s*([0-9.,]+)/i,
+    ])),
+  );
   const discount = numberFrom(total, 'vDesc', 'ValorDesconto', 'valor_desconto')
     ?? numberFrom(documentXml, 'vDesc', 'ValorDesconto', 'valor_desconto');
   const paymentCode = textFrom(payment, 'tPag', 'cMP', 'forma_pagamento');
-  const paymentMethod = paymentCode ? mapNfePaymentMethod(paymentCode) : mapTextPaymentMethod(textFrom(payment, 'xPag', 'MeioPagamento'));
+  const paymentMethod = paymentCode
+    ? mapNfePaymentMethod(paymentCode)
+    : mapTextPaymentMethod(
+      firstNonEmpty(
+        textFrom(payment, 'xPag', 'MeioPagamento', 'forma_pagamento', 'FormaPagamento'),
+        textFrom(documentXml, 'xPag', 'MeioPagamento', 'forma_pagamento', 'FormaPagamento'),
+      ),
+    );
 
   const items = Array.from(documentXml.querySelectorAll('det')).map((det) => {
     const prod = firstElement(det, ['prod']) || det;
@@ -289,12 +461,12 @@ function parseXmlPayableDocument(file: File, xmlText: string): ParsedPayableDocu
   const medicationItems = items.filter((item) => item.anvisa_code || item.traceability.length > 0);
 
   const taxes = {
-    icms: numberFrom(total, 'vICMS') || 0,
-    ipi: numberFrom(total, 'vIPI') || 0,
-    pis: numberFrom(total, 'vPIS') || 0,
-    cofins: numberFrom(total, 'vCOFINS') || 0,
-    iss: numberFrom(total, 'ValorIss', 'ValorIssRetido') || 0,
-    total_tributes: numberFrom(total, 'vTotTrib') || 0,
+    icms: numberFrom(total, 'vICMS') ?? numberFrom(documentXml, 'vICMS') ?? 0,
+    ipi: numberFrom(total, 'vIPI') ?? numberFrom(documentXml, 'vIPI') ?? 0,
+    pis: numberFrom(total, 'vPIS') ?? numberFrom(documentXml, 'vPIS') ?? 0,
+    cofins: numberFrom(total, 'vCOFINS') ?? numberFrom(documentXml, 'vCOFINS') ?? 0,
+    iss: numberFrom(total, 'ValorIss', 'ValorIssRetido', 'vISS') ?? numberFrom(documentXml, 'ValorIss', 'ValorIssRetido', 'vISS') ?? 0,
+    total_tributes: numberFrom(total, 'vTotTrib') ?? numberFrom(documentXml, 'vTotTrib') ?? 0,
   };
 
   const itemSummary = items.slice(0, 3).map((item) => item.description).join(', ');
@@ -307,6 +479,9 @@ function parseXmlPayableDocument(file: File, xmlText: string): ParsedPayableDocu
     supplier_name: supplierName || null,
     supplier_document: cnpj || null,
     invoice_number: invoiceNumber || null,
+    nf_number: invoiceNumber || null,
+    numero_nota: invoiceNumber || null,
+    guide_number: invoiceNumber || null,
     invoice_series: invoiceSeries || null,
     issue_date: issueDate || null,
     due_date: dueDate || null,
@@ -328,6 +503,7 @@ function parseXmlPayableDocument(file: File, xmlText: string): ParsedPayableDocu
     supplier_address: Object.values(supplierAddress).some(Boolean) ? supplierAddress : undefined,
     document_number: cnpj || undefined,
     invoice_number: invoiceNumber || undefined,
+    guide_number: invoiceNumber || undefined,
     invoice_series: invoiceSeries || undefined,
     issue_date: issueDate,
     due_date: dueDate,

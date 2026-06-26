@@ -21,6 +21,17 @@ import { Helmet } from 'react-helmet-async';
 import { Save, ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import PhotoCapture from '@/components/PhotoCapture';
+import { formatLocalDate } from '@/utils/timezoneHelpers';
+
+const toDateInputValue = (value) => {
+  if (!value) return '';
+  const text = String(value).trim();
+  const isoMatch = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+  const brMatch = text.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (brMatch) return `${brMatch[3]}-${brMatch[2]}-${brMatch[1]}`;
+  return '';
+};
 
 export default function PatientDadosPage() {
   const { patientId } = useParams();
@@ -76,7 +87,7 @@ export default function PatientDadosPage() {
       setFormData({
         name: patientData.name || patientData.full_name || '',
         document_id: patientData.document_id || patientData.cpf || '',
-        birthdate: patientData.birthdate || patientData.birth_date || '',
+        birthdate: toDateInputValue(patientData.birthdate || patientData.birth_date),
         gender: patientData.gender || '',
         phone: patientData.phone || '',
         email: patientData.email || '',
@@ -265,7 +276,9 @@ export default function PatientDadosPage() {
                     <div>
                       <p className="text-gray-500 text-xs font-medium">Data Nascimento</p>
                       <p className="text-gray-900 font-semibold">
-                        {patientData?.birthdate || patientData?.birth_date || 'N/A'}
+                        {patientData?.birthdate || patientData?.birth_date
+                          ? formatLocalDate(patientData.birthdate || patientData.birth_date)
+                          : 'N/A'}
                       </p>
                     </div>
                     <div>

@@ -39,6 +39,7 @@ import {
   syncLocalDigitalPrescriptions,
   updateDigitalPrescription,
 } from '@/lib/digitalPrescriptionsApi';
+import { generatePrescriptionHtml } from '@/lib/prescriptionHtmlTemplate';
 
 const STATUS_CONFIG = {
   assinada: { label: 'Assinada (Digital)', color: 'green', icon: CheckCircle },
@@ -52,6 +53,16 @@ const PRESCRIPTION_TYPE_LABELS = {
   antibiotico: 'Receita branca de antibiótico',
   controle_especial_azul: 'Controle especial azul',
   controle_especial_amarela: 'Notificação amarela',
+};
+
+const COUNCIL_BY_KIND = {
+  medico: 'CRM',
+  dentista: 'CRO',
+  nutricionista: 'CRN',
+  fisioterapeuta: 'CREFITO',
+  psicologo: 'CRP',
+  enfermeiro: 'COREN',
+  fonoaudiologo: 'CREFONO',
 };
 
 export default function ReceitasDigitaisTab({ patientId, patientData, updatePatientData }) {
@@ -119,6 +130,9 @@ export default function ReceitasDigitaisTab({ patientId, patientData, updatePati
         PRESCRIPTION_TYPE_LABELS[parsed.metadata?.prescriptionType] ||
         PRESCRIPTION_TYPE_LABELS.simples,
       protocolName: parsed.metadata?.protocolName || '',
+      professionalCouncilLabel: parsed.metadata?.professionalCouncilLabel || '',
+      professionalCouncilNumber: parsed.metadata?.professionalCouncilNumber || '',
+      professionalCouncilState: parsed.metadata?.professionalCouncilState || '',
     };
   };
 
@@ -145,6 +159,9 @@ export default function ReceitasDigitaisTab({ patientId, patientData, updatePati
     observacoes: buildPrescriptionObservations(receitaData.observacoes || '', {
       prescriptionType: receitaData.prescription_type,
       protocolName: receitaData.protocol_name,
+      professionalCouncilLabel: receitaData.professional_council_label,
+      professionalCouncilNumber: receitaData.professional_crm,
+      professionalCouncilState: receitaData.professional_uf,
     }),
     modo_assinatura: receitaData.modo_assinatura,
     status,
@@ -340,73 +357,27 @@ export default function ReceitasDigitaisTab({ patientId, patientData, updatePati
       console.log('Baixando receita:', receitaId);
       console.log('modo_assinatura:', receita.modo_assinatura);
 
-      // Sempre usar o novo modelo/layout padronizado
-      const htmlContent = `
-        <!DOCTYPE html>
-        <html lang="pt-BR">
-        <head>
-          <meta charset="UTF-8">
-          <title>Receita Médica</title>
-          <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #fff; color: #222; }
-            .container { max-width: 600px; margin: 40px auto; background: #fff; border: 1.5px solid #222; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 32px 32px 24px 32px; }
-            .header { text-align: center; border-bottom: 2px solid #222; padding-bottom: 12px; margin-bottom: 24px; }
-            .logo { max-width: 120px; max-height: 60px; margin: 0 auto 8px auto; display: block; }
-            .clinic-name { font-size: 1.15rem; font-weight: bold; margin-bottom: 2px; }
-            .clinic-info { font-size: 0.95rem; color: #444; margin-bottom: 2px; }
-            .title { text-align: center; font-size: 1.35rem; font-weight: bold; margin: 24px 0 12px 0; letter-spacing: 1px; }
-            .section-label { font-weight: bold; margin-top: 18px; margin-bottom: 6px; font-size: 1.08rem; border-bottom: 1px solid #eee; }
-            .info-row { margin-bottom: 8px; }
-            .info-label { font-weight: bold; display: inline-block; min-width: 90px; }
-            .prescricao { font-size: 1.08rem; margin: 18px 0; padding: 12px; background: #fafafa; border-radius: 6px; border: 1px solid #eee; }
-            .assinatura { margin: 32px 0 12px 0; text-align: center; }
-            .assinatura-label { font-size: 1.08rem; font-weight: bold; margin-bottom: 4px; }
-            .assinatura-digital { background: #1e7e34; color: #fff; font-weight: bold; padding: 8px 18px; border-radius: 20px; display: inline-block; margin-bottom: 8px; }
-            .profissional { margin-top: 10px; font-size: 1.05rem; font-weight: 500; }
-            .crm { font-size: 0.98rem; color: #444; }
-            .qrcode { margin: 18px auto 0 auto; display: flex; flex-direction: column; align-items: center; }
-            .qrcode img { width: 110px; height: 110px; border: 1.5px solid #222; border-radius: 8px; background: #fff; }
-            .qrcode-label { font-size: 0.95rem; color: #222; margin-top: 6px; }
-            .footer { text-align: center; margin-top: 32px; font-size: 0.98rem; color: #888; border-top: 1px solid #eee; padding-top: 10px; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              ${clinic?.logo_url ? `<img src="${clinic.logo_url}" class="logo" alt="Logo da Clínica" />` : ''}
-              <div class="clinic-name">${receita.clinic_name || 'Clínica'}</div>
-              <div class="clinic-info">
-                ${receita.clinic_cnpj ? `CNPJ: ${receita.clinic_cnpj}` : ''}
-                ${clinic?.address ? ` | ${clinic.address}` : ''}
-                ${clinic?.phone ? ` | ${clinic.phone}` : ''}
-              </div>
-            </div>
-            <div class="title">RECEITA MÉDICA</div>
-            <div class="info-row"><span class="info-label">Paciente:</span> ${receita.patient_name}</div>
-            ${receita.patient_cpf ? `<div class="info-row"><span class="info-label">CPF:</span> ${receita.patient_cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}</div>` : ''}
-            <div class="info-row"><span class="info-label">Data:</span> ${new Date().toLocaleDateString('pt-BR')}</div>
-            ${receitaView.protocolName ? `<div class="info-row"><span class="info-label">Diagnóstico:</span> ${receitaView.protocolName}</div>` : ''}
-            <div class="section-label">PRESCRIÇÃO</div>
-            <div class="prescricao">
-              ${receita.medicamentos?.map((med) => `<div><strong>${med.nome}</strong><br>${med.dose} ${med.forma_farmaceutica ? '- ' + med.forma_farmaceutica : ''} ${med.via_administracao ? '- ' + med.via_administracao : ''}<br>${med.frequencia ? 'Frequência: ' + med.frequencia + '<br>' : ''}${med.duracao_dias ? 'Duração: ' + med.duracao_dias + ' dias<br>' : ''}${med.quantidade_total ? 'Quantidade: ' + med.quantidade_total + ' ' + (med.unidade_quantidade || '') + '<br>' : ''}${med.repeticoes ? 'Repetições: ' + med.repeticoes + '<br>' : ''}${med.instrucoes ? 'Instruções: ' + med.instrucoes : ''}</div>`).join('<hr style="margin:10px 0;">')}
-            </div>
-            <div class="assinatura">
-              <div class="assinatura-label">Assinatura Digital ICP Brasil</div>
-              <div class="assinatura-digital">ASSINADA DIGITALMENTE</div>
-              <div class="profissional">${receita.professional_name}</div>
-              <div class="crm">CRM: ${receita.professional_crm || '_____'} / ${receita.professional_uf || '_____'}</div>
-            </div>
-            <div class="qrcode">
-              <img src="https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=VALIDAR_RECEITA_PLACEHOLDER" alt="QR Code" />
-              <div class="qrcode-label">Validar receita</div>
-            </div>
-            <div class="footer">
-              Emitido pelo sistema Gesclinic
-            </div>
-          </div>
-        </body>
-        </html>`;
+      const htmlContent = generatePrescriptionHtml({
+        receitaData: {
+          ...receita,
+          observacoes: receitaView.notes,
+          protocol_name: receitaView.protocolName,
+          prescription_type: receitaView.prescriptionType,
+          professional_council_label:
+            receitaView.professionalCouncilLabel || (receita.professional_crm ? 'CRM' : ''),
+          professional_crm: receitaView.professionalCouncilNumber || receita.professional_crm,
+          professional_uf: receitaView.professionalCouncilState || receita.professional_uf,
+          clinic_address: receita.clinic_address || clinic?.address || '',
+          clinic_phone: receita.clinic_phone || clinic?.phone || '',
+          clinic_logo: receita.clinic_logo || clinic?.logo_url || clinic?.logo || '',
+          data_emissao:
+            receita.data_emissao ||
+            (receita.created_at ? new Date(receita.created_at).toLocaleDateString('pt-BR') : ''),
+        },
+        medicamentos: receita.medicamentos || [],
+        assinaturaDigital: receita.modo_assinatura === 'digital',
+        validationUrl: `gesclinic:receita:${receita.id}`,
+      });
 
       // Criar blob e download
       const blob = new Blob([htmlContent], { type: 'text/html' });
@@ -702,9 +673,21 @@ export default function ReceitasDigitaisTab({ patientId, patientData, updatePati
           patientId={patientId}
           patientName={patientData?.name}
           patientCpf={patientData?.document_id}
-          professionalName={getProfessionalName()}
-          professionalCrm={professionalData?.cremepe_crm || ''}
-          professionalUf={professionalData?.state || ''}
+          professionalName={professionalData?.name || getProfessionalName()}
+          professionalCouncilType={
+            professionalData?.council_type ||
+            COUNCIL_BY_KIND[professionalData?.professional_kind] ||
+            (professionalData?.cremepe_crm || professionalData?.crm ? 'CRM' : '') ||
+            ''
+          }
+          professionalCouncilNumber={
+            professionalData?.council_number || professionalData?.cremepe_crm || professionalData?.crm || ''
+          }
+          professionalCouncilState={
+            professionalData?.council_state || professionalData?.uf || professionalData?.state || ''
+          }
+          professionalCrm={professionalData?.council_number || professionalData?.cremepe_crm || professionalData?.crm || ''}
+          professionalUf={professionalData?.council_state || professionalData?.uf || professionalData?.state || ''}
           professionalSpecialty={
             professionalData?.specialization || professionalData?.specialty || ''
           }

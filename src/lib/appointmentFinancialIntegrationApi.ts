@@ -976,7 +976,10 @@ export async function logFinancialEvent(
         created_at: new Date().toISOString(),
       });
 
-    if (error) throw error;
+    if (error) {
+      console.warn('[logFinancialEvent] Skipping audit log due to insert error:', error?.message || error);
+      return;
+    }
   } catch (err) {
     console.error('[logFinancialEvent] Error:', err);
     // Don't throw - logging failure shouldn't block main process

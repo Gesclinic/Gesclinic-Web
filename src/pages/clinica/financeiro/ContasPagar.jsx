@@ -179,7 +179,20 @@ const APRow = React.memo(
             <div>
               <div className="text-xs text-gray-500">NF/Documento</div>
               <div className="flex items-center gap-2">
-                <span>{item.document_number || '—'}</span>
+                <span>
+                  {(() => {
+                    // Priorizar NF do XML (guide_number) sobre document_number
+                    const extractionFields = item.metadata?.document_extraction?.fields || {};
+                    const xmlNF = item.guide_number
+                      || extractionFields.guide_number
+                      || extractionFields.invoice_number
+                      || extractionFields.nf_number
+                      || extractionFields.numero_nota
+                      || item.metadata?.guide_number;
+                    const docNF = item.document_number;
+                    return xmlNF || docNF || '—';
+                  })()}
+                </span>
                 {item.document_url && (
                   <a
                     href={item.document_url}
@@ -228,6 +241,9 @@ const APRow = React.memo(
 
 APRow.displayName = 'APRow';
 
+// Tamanho de página para exibição em tabela (não afeta indicadores)
+const PAYABLES_PAGE_SIZE = 100;
+
 export default function ContasPagar() {
   const navigate = useNavigate();
   const breadcrumbs = useBreadcrumbs([
@@ -270,6 +286,7 @@ export default function ContasPagar() {
   const [termDaysPattern, setTermDaysPattern] = useState(null); // ex.: [30,60,90]
 
   const [items, setItems] = useState([]);
+  const [allLoadedRows, setAllLoadedRows] = useState([]); // Para cálculos de indicadores (todos os dados, não paginados)
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState(new Set());
   const [autoSelectNext, setAutoSelectNext] = useState(false);
@@ -402,6 +419,7 @@ export default function ContasPagar() {
       setSortDir('asc');
     }
     triggerLoad(false);
+    loadAllPayablesForSummary({});
   };
 
   // Memoized toggleExpanded handler to prevent re-renders
@@ -692,6 +710,7 @@ export default function ContasPagar() {
       setSortBy(filterData.sortBy || 'due_date');
       setSortDir(filterData.sortDir || 'asc');
       triggerLoad(true);
+      loadAllPayablesForSummary(filterData);
     }
   };
 
@@ -712,6 +731,7 @@ export default function ContasPagar() {
     setSortBy(fav.sortBy || 'due_date');
     setSortDir(fav.sortDir || 'asc');
     triggerLoad(true);
+    loadAllPayablesForSummary(fav);
   };
 
   const loadBills = useCallback(
@@ -785,13 +805,70 @@ export default function ContasPagar() {
     [toast],
   );
 
+  /**
+   * Carrega TODOS os dados de contas a pagar (até 10.000 registros) sem paginação
+   * para calcular indicadores corretamente. Replicação de loadAllReceivablesForSummary de ContasReceber.
+   * Os dados são usados APENAS para cálculos de totais em cards, não para exibição em tabela.
+   */
+  const loadAllPayablesForSummary = useCallback(
+    async (nextFilters) => {
+      if (!clinicId) return;
+      try {
+        const adv = parseSearchGeneral(nextFilters?.search || searchFilter);
+        const data = await listAPQuery({
+          clinicId,
+          vendor: nextFilters?.vendor || vendorFilter,
+          paymentMethod: nextFilters?.paymentMethod || paymentMethodFilter,
+          start: nextFilters?.start || startFilter || null,
+          end: nextFilters?.end || endFilter || null,
+          search: adv.clean,
+          statusText: adv.statusText ?? (nextFilters?.status || statusFilter || null),
+          amountMin: nextFilters?.amountMin || amountMinFilter || null,
+          amountMax: nextFilters?.amountMax || amountMaxFilter || null,
+          categoryId: nextFilters?.categoryId || costCenterFilter || null,
+          searchDateIso: adv.dateIso || null,
+          orderBy: apiOrderBy(nextFilters?.sortBy || sortBy),
+          orderDir: nextFilters?.sortDir || sortDir,
+          limit: 10000, // Carrega todos sem paginação
+          offset: 0,
+        });
+        
+        // Aplicar filtro de vencidos se necessário
+        const statusLower = (nextFilters?.status || statusFilter)
+          ? String(nextFilters?.status || statusFilter).toLowerCase()
+          : '';
+        const isOverdueSelected = statusLower === 'overdue' || statusLower === 'vencida';
+        const filtered = isOverdueSelected && Array.isArray(data) ? data.filter((it) => isOverdue(it)) : (data || []);
+        
+        setAllLoadedRows(filtered);
+      } catch (error) {
+        console.error('[ContasPagar] Error loading all payables for summary:', error);
+      }
+    },
+    [
+      clinicId,
+      searchFilter,
+      vendorFilter,
+      paymentMethodFilter,
+      startFilter,
+      endFilter,
+      statusFilter,
+      amountMinFilter,
+      amountMaxFilter,
+      costCenterFilter,
+      sortBy,
+      sortDir,
+    ],
+  );
+
   // Carrega inicialmente e quando a clínica muda
   useEffect(() => {
     console.log('[ContasPagar] useEffect(clinicId) acionado com clinicId:', clinicId, 'loadingClinic:', loadingClinic);
     if (clinicId && !loadingClinic) {
       triggerLoad(false);
+      loadAllPayablesForSummary({});
     }
-  }, [clinicId, loadingClinic, triggerLoad]);
+  }, [clinicId, loadingClinic, triggerLoad, loadAllPayablesForSummary]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -904,6 +981,7 @@ export default function ContasPagar() {
                     });
                   }
                   triggerLoad(false);
+                  loadAllPayablesForSummary({});
                 }}
               >
                 Marcar como paga
@@ -933,6 +1011,7 @@ export default function ContasPagar() {
                     });
                   }
                   triggerLoad(false);
+                  loadAllPayablesForSummary({});
                 }}
               >
                 Excluir selecionados
@@ -1454,7 +1533,7 @@ export default function ContasPagar() {
           </div>
 
           {/* Resumo financeiro */}
-          <SummaryCards items={items} startFilter={startFilter} endFilter={endFilter} />
+          <SummaryCards items={allLoadedRows.length > 0 ? allLoadedRows : items} startFilter={startFilter} endFilter={endFilter} />
 
           <div className="overflow-x-visible">
             <table className="w-full text-sm table-fixed">
@@ -1810,7 +1889,18 @@ export default function ContasPagar() {
               <div>
                 <Label className="text-xs text-gray-600">NF/Documento</Label>
                 <div className="break-words">
-                  {viewItem.document_number || '—'}
+                  {(() => {
+                    // Priorizar NF do XML (guide_number) sobre document_number
+                    const extractionFields = viewItem.metadata?.document_extraction?.fields || {};
+                    const xmlNF = viewItem.guide_number
+                      || extractionFields.guide_number
+                      || extractionFields.invoice_number
+                      || extractionFields.nf_number
+                      || extractionFields.numero_nota
+                      || viewItem.metadata?.guide_number;
+                    const docNF = viewItem.document_number;
+                    return xmlNF || docNF || '—';
+                  })()}
                   {viewItem.document_url && (
                     <div className="mt-1">
                       <a

@@ -47,6 +47,15 @@ export default function ServiceAddRow({
   const [selectedValue, setSelectedValue] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const payerOptions = payerId && payerName
+    ? [{ id: payerId, name: payerName, active: true }, ...(payers || [])]
+    : payers || [];
+
+  const availablePayers = payerOptions.filter(
+    (payer, index, list) =>
+      payer?.id && payer?.name && payer.active !== false && list.findIndex((item) => item?.id === payer.id) === index,
+  );
+
   // 🆕 Sincronizar com o último serviço adicionado (para pré-popular dropdowns)
   useEffect(() => {
     if (lastAddedService?.service_id) {
@@ -236,8 +245,8 @@ export default function ServiceAddRow({
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
-              {payers.length > 0 ? (
-                payers.map((payer) => (
+              {availablePayers.length > 0 ? (
+                availablePayers.map((payer) => (
                   <SelectItem key={payer.id} value={payer.id}>
                     {payer.name}
                   </SelectItem>

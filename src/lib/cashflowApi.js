@@ -144,7 +144,7 @@ export async function getDailyCashFlow(clinicId, startDate, endDate) {
     if (!dailyMap.has(key)) {
       dailyMap.set(key, { inflow: 0, outflow: 0 });
     }
-    dailyMap.get(key).inflow += Number(r.received_value || r.amount || 0);
+    dailyMap.get(key).inflow += Number(r.received_value ?? r.paid_total ?? r.net_value ?? r.amount ?? 0);
   });
 
   // Adicionar outflows
@@ -152,6 +152,9 @@ export async function getDailyCashFlow(clinicId, startDate, endDate) {
     const date = p.paid_date || p.due_date;
     if (date) {
       const key = date.split('T')[0];
+      if (!isDateInRange(key, startDate, endDate)) {
+        return;
+      }
       if (!dailyMap.has(key)) {
         dailyMap.set(key, { inflow: 0, outflow: 0 });
       }
@@ -353,8 +356,8 @@ export async function getCashFlowByCategory(clinicId, type = 'inflow', startDate
     // Recebíveis por serviço
     const receivables = await listReceivables({
       clinicId,
-      dueStart: startDate,
-      dueEnd: endDate,
+      receivedStart: startDate,
+      receivedEnd: endDate,
       status: 'received',
       limit: 1000,
     });
@@ -365,7 +368,7 @@ export async function getCashFlowByCategory(clinicId, type = 'inflow', startDate
       if (!byService[service]) {
         byService[service] = { total: 0, count: 0 };
       }
-      byService[service].total += Number(r.amount || 0);
+      byService[service].total += Number(r.received_value ?? r.paid_total ?? r.net_value ?? r.amount ?? 0);
       byService[service].count += 1;
     });
 
@@ -464,7 +467,7 @@ async function getCashFlowSummaryManual(clinicId, startDate, endDate) {
       if (!isDateInRange(receivedDate, startDate, endDate)) {
         return sum;
       }
-      return sum + Number(r.received_value || r.amount || 0);
+      return sum + Number(r.received_value ?? r.paid_total ?? r.net_value ?? r.amount ?? 0);
     }, 0);
     const totalOutflows = payables.reduce((sum, p) => sum + Number(p.amount || p.valor || 0), 0);
 

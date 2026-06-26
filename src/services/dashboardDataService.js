@@ -174,18 +174,26 @@ export const loadDashboardData = async (
 
     const consolidatedCashflow = consolidated ? buildCashflowFromConsolidation(consolidated) : null;
     const consolidatedDailyData = consolidated ? buildDailyCashflowFromConsolidation(consolidated) : [];
+    const consolidatedReceivables = Array.isArray(consolidated?.receivables) ? consolidated.receivables : [];
+    const consolidatedPayables = Array.isArray(consolidated?.payables) ? consolidated.payables : [];
+
+    // Keep a single source of truth whenever consolidation is available.
+    // This avoids mismatches between Fluxo de Caixa, Lançamentos and DRE.
+    const receivablesSource = consolidatedReceivables.length ? consolidatedReceivables : (receivablesData || []);
+    const payablesSource = consolidatedPayables.length ? consolidatedPayables : (apBillsData || []);
+    const receivablesProcessed = processReceivables(receivablesSource);
 
     // Processar dados e consolidar
     const processedData = {
       period,
       dateRange: { start, end },
       cashflow: consolidatedCashflow || cashflowData || {},
-      apBills: apBillsData || [],
+      apBills: payablesSource,
       projection: projectionData || [],
       receivables: {
-        items: receivablesData || [],
-        windows: processReceivables(receivablesData || []).windows,
-        total: processReceivables(receivablesData || []).total,
+        items: receivablesSource,
+        windows: receivablesProcessed.windows,
+        total: receivablesProcessed.total,
       },
       clinic: clinicData || {},
       dailyData: consolidatedDailyData.length ? consolidatedDailyData : dailyData || [],

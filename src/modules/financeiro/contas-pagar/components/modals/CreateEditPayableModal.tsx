@@ -208,6 +208,8 @@ export const CreateEditPayableModal: React.FC<CreateEditPayableModalProps> = ({
       cnpj: source.supplier_document || source.document_number || supplierMetadata.document,
       contact_name: supplierMetadata.fantasy_name || source.supplier_name,
       phone: supplierAddress.phone || supplierMetadata.phone,
+      street: supplierAddress.street,
+      number: supplierAddress.number,
       address: [supplierAddress.street, supplierAddress.number].filter(Boolean).join(', ') || undefined,
       neighborhood: supplierAddress.district,
       city: supplierAddress.city,
@@ -607,7 +609,14 @@ export const CreateEditPayableModal: React.FC<CreateEditPayableModalProps> = ({
       warnings: parsedDocument?.warnings || metadataDocument.warnings || [],
       supplier_name: parsedDocument?.supplier_name || metadataFields.supplier_name || metadataNfe.supplier_name || formData.supplier_name,
       document_number: parsedDocument?.document_number || metadataFields.supplier_document || metadataNfe.supplier_document || formData.document_number,
-      invoice_number: parsedDocument?.invoice_number || metadataFields.invoice_number || metadataNfe.invoice_number || formData.invoice_number,
+      invoice_number:
+        parsedDocument?.invoice_number
+        || metadataFields.guide_number
+        || metadataFields.invoice_number
+        || metadataFields.nf_number
+        || metadataFields.numero_nota
+        || metadataNfe.invoice_number
+        || formData.invoice_number,
       invoice_series: parsedDocument?.invoice_series || metadataFields.invoice_series || metadataNfe.invoice_series || formData.invoice_series,
       issue_date: parsedDocument?.issue_date || metadataFields.issue_date || metadataNfe.issue_date || formData.issue_date,
       due_date: parsedDocument?.due_date || metadataFields.due_date || metadataNfe.due_date || formData.due_date,
@@ -1402,6 +1411,7 @@ function buildPayableInputFromDocument(
     supplier_document: parsed.document_number || baseFormData.supplier_document || undefined,
     document_number: parsed.document_number || baseFormData.document_number || undefined,
     invoice_number: parsed.invoice_number || baseFormData.invoice_number || undefined,
+    guide_number: parsed.guide_number || parsed.invoice_number || baseFormData.guide_number || undefined,
     invoice_series: parsed.invoice_series || baseFormData.invoice_series || undefined,
     description: parsed.description || baseFormData.description || `Documento fiscal - ${file.name}`,
     observations: baseFormData.observations || undefined,
@@ -1426,7 +1436,6 @@ function buildPayableInputFromDocument(
     dre_classification: baseFormData.dre_classification || DreClassification.OPERATIONAL,
     cost_allocations: baseFormData.cost_allocations || undefined,
     is_recurring: false,
-    installments: 1,
     has_invoice: true,
     installments: parsed.installments?.length && parsed.installments.length > 1 ? parsed.installments.length : 1,
     document_taxes: parsed.taxes || {},

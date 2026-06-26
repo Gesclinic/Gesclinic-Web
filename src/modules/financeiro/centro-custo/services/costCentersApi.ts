@@ -101,6 +101,12 @@ export async function createCostCenter(
       code: payload.code,
       name: payload.name,
       description: payload.description || null,
+      center_type: payload.center_type || 'OPERACOES',
+      unit_name: payload.unit_name || null,
+      responsible_name: payload.responsible_name || null,
+      color: payload.color || null,
+      icon: payload.icon || null,
+      metadata: payload.metadata || null,
       parent_id: payload.parent_id || null,
       manager_id: payload.manager_id || null,
       is_active: payload.is_active !== false,
@@ -128,6 +134,12 @@ export async function updateCostCenter(
   if (payload.code !== undefined) updates.code = payload.code;
   if (payload.name !== undefined) updates.name = payload.name;
   if (payload.description !== undefined) updates.description = payload.description;
+  if (payload.center_type !== undefined) updates.center_type = payload.center_type;
+  if (payload.unit_name !== undefined) updates.unit_name = payload.unit_name;
+  if (payload.responsible_name !== undefined) updates.responsible_name = payload.responsible_name;
+  if (payload.color !== undefined) updates.color = payload.color;
+  if (payload.icon !== undefined) updates.icon = payload.icon;
+  if (payload.metadata !== undefined) updates.metadata = payload.metadata;
   if (payload.parent_id !== undefined) updates.parent_id = payload.parent_id;
   if (payload.manager_id !== undefined) updates.manager_id = payload.manager_id;
   if (payload.is_active !== undefined) updates.is_active = payload.is_active;
@@ -256,8 +268,10 @@ export function exportToCsv(costCenters: CostCenter[]): string {
  * Validate cost center code format
  */
 export function validateCostCenterCode(code: string): boolean {
-  // Format: digits separated by dots, e.g., "1", "1.1", "1.1.1"
-  return /^\d+(\.\d+)*$/.test(code);
+  // Format: digits separated by dots, e.g., "1", "1.1", "1.1.1", "1.1.1.1"
+  if (!/^\d+(\.\d+)*$/.test(code)) return false;
+  const level = String(code).split('.').length;
+  return level >= 1 && level <= 4;
 }
 
 /**
@@ -293,4 +307,111 @@ export async function getNextCostCenterCode(
   parts[parts.length - 1] = String(lastNumber + 1);
 
   return parts.join('.');
+}
+
+/**
+ * List active allocation rules (rateio) for a clinic
+ */
+export async function listCostCenterAllocations(clinicId: string): Promise<any[]> {
+  const { data, error } = await supabase
+    .from('financial_cost_center_allocations')
+    .select('*, items:financial_cost_center_allocation_items(*)')
+    .eq('clinic_id', clinicId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+/**
+ * Create or replace a rateio rule for one source center
+ */
+export async function saveCostCenterAllocation(
+  clinicId: string,
+  sourceCostCenterId: string,
+  items: Array<{ target_cost_center_id: string; percentage?: number | null; fixed_amount?: number | null }>,
+  options?: { description?: string; allocation_method?: 'PERCENT' | 'VALUE' | 'MIXED' },
+): Promise<any> {
+  const { data: user } = await supabase.auth.getUser();
+  const actorId = user?.user?.id;
+  if (!actorId) throw new Error('Usuário não autenticado');
+
+  const { data: existing, error: existingError } = await supabase
+    .from('financial_cost_center_allocations')
+    .select('id')
+    .eq('clinic_id', clinicId)
+    .eq('source_cost_center_id', sourceCostCenterId)
+    .maybeSingle();
+
+  if (existingError) throw existingError;
+
+  let allocationId = existing?.id;
+
+  if (!allocationId) {
+    const { data: created, error: createError } = await supabase
+      .from('financial_cost_center_allocations')
+      .insert({
+        clinic_id: clinicId,
+        source_cost_center_id: sourceCostCenterId,
+        description: options?.description || null,
+        allocation_method: options?.allocation_method || 'PERCENT',
+        is_active: true,
+        created_by: actorId,
+      })
+      .select('id')
+      .single();
+    if (createError) throw createError;
+    allocationId = created.id;
+  } else {
+    const { error: updateError } = await supabase
+      .from('financial_cost_center_allocations')
+      .update({
+        description: options?.description || null,
+        allocation_method: options?.allocation_method || 'PERCENT',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', allocationId);
+    if (updateError) throw updateError;
+
+    const { error: cleanError } = await supabase
+      .from('financial_cost_center_allocation_items')
+      .delete()
+      .eq('allocation_id', allocationId);
+    if (cleanError) throw cleanError;
+  }
+
+  if (items.length) {
+    const rows = items.map((item) => ({
+      allocation_id: allocationId,
+      target_cost_center_id: item.target_cost_center_id,
+      percentage: item.percentage ?? null,
+      fixed_amount: item.fixed_amount ?? null,
+    }));
+
+    const { error: insertItemsError } = await supabase
+      .from('financial_cost_center_allocation_items')
+      .insert(rows);
+    if (insertItemsError) throw insertItemsError;
+  }
+
+  const { data, error } = await supabase
+    .from('financial_cost_center_allocations')
+    .select('*, items:financial_cost_center_allocation_items(*)')
+    .eq('id', allocationId)
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Delete an allocation rule by id
+ */
+export async function deleteCostCenterAllocation(allocationId: string): Promise<void> {
+  const { error } = await supabase
+    .from('financial_cost_center_allocations')
+    .delete()
+    .eq('id', allocationId);
+
+  if (error) throw error;
 }

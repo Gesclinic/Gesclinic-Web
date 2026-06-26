@@ -17,31 +17,31 @@ export const CONCILIATION_STATUS = {
  */
 export const CONCILIATION_STATUS_VISUAL = {
   [CONCILIATION_STATUS.PENDING]: {
-    label: 'Pendente',
+    label: 'Atenção',
     color: 'yellow',
     icon: '🟡',
     className: 'bg-yellow-100 text-yellow-800',
   },
   [CONCILIATION_STATUS.CONCILIATED]: {
-    label: 'Conciliado',
+    label: 'Estável',
     color: 'green',
     icon: '🟢',
     className: 'bg-green-100 text-green-800',
   },
   [CONCILIATION_STATUS.ADJUSTED]: {
-    label: 'Ajustado',
+    label: 'Estável',
     color: 'blue',
     icon: '🔵',
     className: 'bg-blue-100 text-blue-800',
   },
   [CONCILIATION_STATUS.DIVERGENT]: {
-    label: 'Divergente',
+    label: 'Crítico',
     color: 'red',
     icon: '🔴',
     className: 'bg-red-100 text-red-800',
   },
   [CONCILIATION_STATUS.IGNORED]: {
-    label: 'Ignorado',
+    label: 'Neutro',
     color: 'gray',
     icon: '⚠',
     className: 'bg-gray-100 text-gray-800',
@@ -151,11 +151,11 @@ export const IMPORT_FORMAT_FIELDS = {
 export const CONCILIATION_MESSAGES = {
   IMPORT_SUCCESS: 'Extrato importado com sucesso',
   IMPORT_ERROR: 'Erro ao importar extrato',
-  CONCILIATE_SUCCESS: 'Lançamento conciliado com sucesso',
+  CONCILIATE_SUCCESS: 'Lançamento classificado como estável',
   CONCILIATE_ERROR: 'Erro ao conciliar lançamento',
   CREATE_SUCCESS: 'Lançamento criado e vinculado com sucesso',
   CREATE_ERROR: 'Erro ao criar lançamento',
-  DIVERGENT_SUCCESS: 'Marcado como divergente',
-  IGNORE_SUCCESS: 'Lançamento ignorado',
+  DIVERGENT_SUCCESS: 'Lançamento classificado como crítico',
+  IGNORE_SUCCESS: 'Lançamento marcado como neutro',
   UNLINK_SUCCESS: 'Vínculo removido',
 };

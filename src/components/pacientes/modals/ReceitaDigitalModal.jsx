@@ -7,8 +7,10 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 // Garante que CardHeader está importado corretamente
 import { Button } from '@/components/ui/button';
-import { Plus, Trash2, CheckCircle, Loader } from 'lucide-react';
+import { Plus, Trash2, CheckCircle, Loader, Pencil } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { parsePrescriptionObservations } from '@/lib/digitalPrescriptionMetadata';
+import { generatePrescriptionHtml } from '@/lib/prescriptionHtmlTemplate';
 
 // ...existing code...
 /**
@@ -22,33 +24,116 @@ import { motion, AnimatePresence } from 'framer-motion';
  * - Duração do tratamento
  * - Assinatura digital
  */
+const createEmptyMedicationForm = () => ({
+  medicamento_id: '',
+  forma_farmaceutica: '',
+  via_administracao: '',
+  dose: '',
+  frequencia: '',
+  duracao_dias: '',
+  quantidade_total: '',
+  unidade_quantidade: 'comprimidos',
+  repeticoes: '0',
+  instrucoes: '',
+});
+
+const makeTemplateStorageKey = (type, userId) =>
+  `gesclinic:receitas:${type}:${userId || 'anonimo'}`;
+
+const readTemplateStorage = (key) => {
+  try {
+    const rawValue = window.localStorage.getItem(key);
+    const parsedValue = rawValue ? JSON.parse(rawValue) : [];
+    return Array.isArray(parsedValue) ? parsedValue : [];
+  } catch (error) {
+    console.warn('Falha ao carregar modelos de receita:', error);
+    return [];
+  }
+};
+
+const writeTemplateStorage = (key, value) => {
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch (error) {
+    console.warn('Falha ao salvar modelos de receita:', error);
+    return false;
+  }
+};
+
+const makeTemplateName = (prefix, medications) => {
+  const names = medications.map((med) => med.nome).filter(Boolean);
+  if (names.length === 0) return prefix;
+  if (names.length === 1) return `${prefix} - ${names[0]}`;
+  return `${prefix} - ${names[0]} + ${names.length - 1}`;
+};
+
+const COUNCIL_BY_KIND = {
+  medico: 'CRM',
+  dentista: 'CRO',
+  nutricionista: 'CRN',
+  fisioterapeuta: 'CREFITO',
+  psicologo: 'CRP',
+  enfermeiro: 'COREN',
+  fonoaudiologo: 'CREFONO',
+};
+
 function ReceitaDigitalModal(props) {
   // Clinic context
   const { clinic } = useClinicContext();
   // Usuário autenticado do contexto
   const { user } = useAuth();
+  const {
+    editingData,
+    onClose,
+    patientName,
+    patientId,
+    patientCpf,
+    onSuccess = () => {},
+    professionalName,
+    professionalCouncilType,
+    professionalCouncilNumber,
+    professionalCouncilState,
+    professionalCrm: professionalCrmProp,
+    professionalUf: professionalUfProp,
+    professionalSpecialty: professionalSpecialtyProp,
+    professionalRqe: professionalRqeProp,
+  } = props;
   // State para loading de ações assíncronas
   const [loading, setLoading] = useState(false);
   // State para controle do checkbox de certificado digital
   const [certificadoSelecionado, setCertificadoSelecionado] = useState(false);
   // Variáveis profissionais para evitar ReferenceError
   // Dados do profissional logado
+  const professionalCouncilLabel =
+    professionalCouncilType ||
+    user?.user_metadata?.council_type ||
+    COUNCIL_BY_KIND[user?.user_metadata?.professional_kind] ||
+    'Conselho';
   const professionalCrm =
+    professionalCouncilNumber ||
+    professionalCrmProp ||
+    user?.user_metadata?.council_number ||
     user?.user_metadata?.crm ||
     user?.user_metadata?.professional_crm ||
     user?.user_metadata?.CRM ||
     '';
   const professionalUf =
+    professionalCouncilState ||
+    professionalUfProp ||
+    user?.user_metadata?.council_state ||
     user?.user_metadata?.uf ||
     user?.user_metadata?.professional_uf ||
     user?.user_metadata?.UF ||
     '';
   const professionalSpecialty =
+    professionalSpecialtyProp ||
     user?.user_metadata?.specialty ||
     user?.user_metadata?.especialidade ||
     user?.user_metadata?.professional_specialty ||
     '';
   const professionalRqe =
+    professionalRqeProp ||
     user?.user_metadata?.rqe ||
     user?.user_metadata?.professional_rqe ||
     user?.user_metadata?.RQE ||
@@ -57,12 +142,23 @@ function ReceitaDigitalModal(props) {
   function getProfessionalName() {
     // Usa nome completo do user_metadata
     return (
+      professionalName ||
       user?.user_metadata?.full_name ||
       user?.user_metadata?.name ||
       user?.user_metadata?.nome ||
       user?.email ||
       'Profissional'
     );
+  }
+
+  function getClinicLogoForPrescription() {
+    if (clinic?.logo_url || clinic?.logo) {
+      return clinic.logo_url || clinic.logo;
+    }
+    if (typeof document === 'undefined') {
+      return '';
+    }
+    return document.querySelector('img[alt$=" logo"]')?.src || '';
   }
   // CartaoSUS seguro para evitar ReferenceError
   const CartaoSUS = '';
@@ -75,18 +171,11 @@ function ReceitaDigitalModal(props) {
   const [searchMed, setSearchMed] = useState('');
   const [observacoes, setObservacoes] = useState('');
   const [prescriptionType, setPrescriptionType] = useState('simples');
-  const [formData, setFormData] = useState({
-    medicamento_id: '',
-    forma_farmaceutica: '',
-    via_administracao: '',
-    dose: '',
-    frequencia: '',
-    duracao_dias: '',
-    quantidade_total: '',
-    unidade_quantidade: 'comprimidos',
-    repeticoes: '0',
-    instrucoes: '',
-  });
+  const [formData, setFormData] = useState(createEmptyMedicationForm);
+  const [favoriteTemplates, setFavoriteTemplates] = useState([]);
+  const [protocolOptions, setProtocolOptions] = useState([]);
+  const [selectedFavoriteName, setSelectedFavoriteName] = useState('');
+  const [templateFeedback, setTemplateFeedback] = useState('');
 
   // Tipos de receita disponíveis
   const PRESCRIPTION_TYPES = [
@@ -110,26 +199,245 @@ function ReceitaDigitalModal(props) {
   const selectedPrescriptionType =
     PRESCRIPTION_TYPES.find((t) => t.value === prescriptionType) || PRESCRIPTION_TYPES[0];
 
-  // Protocolos prontos (stub)
-  const protocolOptions = [];
+  const favoriteStorageKey = makeTemplateStorageKey('favoritos', user?.id);
+  const protocolStorageKey = makeTemplateStorageKey('protocolos', user?.id);
+
+  useEffect(() => {
+    setFavoriteTemplates(readTemplateStorage(favoriteStorageKey));
+    setProtocolOptions(readTemplateStorage(protocolStorageKey));
+  }, [favoriteStorageKey, protocolStorageKey]);
+
+  useEffect(() => {
+    if (!templateFeedback) return undefined;
+    const timeoutId = window.setTimeout(() => {
+      setTemplateFeedback('');
+    }, 3500);
+    return () => window.clearTimeout(timeoutId);
+  }, [templateFeedback]);
+
+  useEffect(() => {
+    if (!editingData) return;
+
+    const parsedObservations = parsePrescriptionObservations(editingData.observacoes || '');
+    const editingMedications = (editingData.medicamentos || []).map((medication, index) => ({
+      ...medication,
+      id: medication.id || `edit-${editingData.id || Date.now()}-${index}`,
+    }));
+
+    if (editingMedications.length === 1) {
+      loadMedicationIntoForm(editingMedications[0]);
+      setMedicamentos([]);
+    } else {
+      setMedicamentos(editingMedications);
+      setFormData(createEmptyMedicationForm());
+    }
+
+    setObservacoes(parsedObservations.notes || '');
+    setPrescriptionType(parsedObservations.metadata?.prescriptionType || 'simples');
+    setSelectedProtocolName(parsedObservations.metadata?.protocolName || '');
+    setSelectedFavoriteName('');
+    setSearchMed('');
+    setStep(1);
+  }, [editingData]);
+
+  const getDraftMedication = () => {
+    const selectedMed = MEDICAMENTOS_EXEMPLO.find((m) => m.id == formData.medicamento_id);
+    if (!selectedMed) return null;
+    return {
+      id: `draft-${Date.now()}`,
+      medicamento_id: formData.medicamento_id,
+      nome: selectedMed.nome,
+      forma_farmaceutica: formData.forma_farmaceutica,
+      via_administracao: formData.via_administracao,
+      dose: formData.dose,
+      frequencia: formData.frequencia,
+      duracao_dias: formData.duracao_dias ? parseInt(formData.duracao_dias) : '',
+      quantidade_total: formData.quantidade_total ? parseInt(formData.quantidade_total) : '',
+      unidade_quantidade: formData.unidade_quantidade,
+      repeticoes: parseInt(formData.repeticoes || 0),
+      instrucoes: formData.instrucoes,
+    };
+  };
+
+  const getCurrentTemplateMedications = () => {
+    const draftMedication = getDraftMedication();
+    if (draftMedication) return [...medicamentos, draftMedication];
+    return medicamentos;
+  };
+
+  const loadMedicationIntoForm = (medicamento) => {
+    setFormData({
+      medicamento_id: String(medicamento.medicamento_id || ''),
+      forma_farmaceutica: medicamento.forma_farmaceutica || '',
+      via_administracao: medicamento.via_administracao || '',
+      dose: medicamento.dose || '',
+      frequencia: medicamento.frequencia || '',
+      duracao_dias: medicamento.duracao_dias ? String(medicamento.duracao_dias) : '',
+      quantidade_total: medicamento.quantidade_total ? String(medicamento.quantidade_total) : '',
+      unidade_quantidade: medicamento.unidade_quantidade || 'comprimidos',
+      repeticoes: medicamento.repeticoes != null ? String(medicamento.repeticoes) : '0',
+      instrucoes: medicamento.instrucoes || '',
+    });
+  };
+
   const handleAplicarProtocolo = (protocol) => {
-    // Implemente a lógica de aplicar protocolo aqui
-    // Exemplo: setFormData(protocol);
+    const protocolMedications = protocol.medicamentos || [];
+    if (protocolMedications.length === 1) {
+      loadMedicationIntoForm(protocolMedications[0]);
+      setMedicamentos([]);
+    } else {
+      setMedicamentos(protocolMedications);
+      setFormData(createEmptyMedicationForm());
+    }
+    setObservacoes(protocol.observacoes || '');
+    setPrescriptionType(protocol.prescriptionType || 'simples');
+    setSelectedProtocolName(protocol.name || '');
+    setSelectedFavoriteName('');
+    setSearchMed('');
+    setTemplateFeedback(`Editando protocolo: ${protocol.name}`);
+    toast({ title: 'Protocolo carregado para edição', description: protocol.name });
   };
-  // Função stub para salvar protocolo (declarada antes do uso no JSX)
+
+  const handleExcluirProtocolo = (protocolName) => {
+    const nextProtocols = protocolOptions.filter((protocol) => protocol.name !== protocolName);
+    if (!writeTemplateStorage(protocolStorageKey, nextProtocols)) {
+      setTemplateFeedback('Não foi possível excluir o protocolo neste navegador.');
+      toast({
+        title: 'Erro ao excluir protocolo',
+        description: 'O navegador bloqueou o armazenamento local.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setProtocolOptions(nextProtocols);
+    if (selectedProtocolName === protocolName) {
+      setSelectedProtocolName('');
+    }
+    setTemplateFeedback(`Protocolo excluído: ${protocolName}`);
+    toast({ title: 'Protocolo excluído', description: protocolName });
+  };
+
   const handleSalvarProtocoloAtual = () => {
-    // Implemente a lógica de salvar protocolo aqui
-    // Exemplo: toast({ title: 'Protocolo salvo!' });
+    const templateMedications = getCurrentTemplateMedications();
+    if (templateMedications.length === 0) {
+      setTemplateFeedback('Selecione ou adicione um medicamento antes de salvar o protocolo.');
+      toast({
+        title: 'Adicione um medicamento',
+        description: 'Preencha ou adicione ao menos um medicamento antes de salvar o protocolo.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const isEditingProtocol = Boolean(selectedProtocolName);
+    const name = selectedProtocolName || makeTemplateName('Protocolo', templateMedications);
+    const nextProtocol = {
+      id: `${Date.now()}`,
+      name,
+      medicamentos: templateMedications,
+      observacoes,
+      prescriptionType,
+    };
+    const nextProtocols = [
+      nextProtocol,
+      ...protocolOptions.filter((protocol) => protocol.name !== nextProtocol.name),
+    ];
+    if (!writeTemplateStorage(protocolStorageKey, nextProtocols)) {
+      setTemplateFeedback('Não foi possível salvar o protocolo neste navegador.');
+      toast({
+        title: 'Erro ao salvar protocolo',
+        description: 'O navegador bloqueou o armazenamento local.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setProtocolOptions(nextProtocols);
+    setSelectedProtocolName(nextProtocol.name);
+    setSelectedFavoriteName('');
+    setTemplateFeedback(
+      `${isEditingProtocol ? 'Protocolo atualizado' : 'Protocolo salvo'}: ${nextProtocol.name}`,
+    );
+    toast({
+      title: isEditingProtocol ? 'Protocolo atualizado' : 'Protocolo salvo',
+      description: nextProtocol.name,
+    });
   };
-  // Favoritos do médico (stub)
-  const favoriteTemplates = [];
+
   const handleSalvarFavorito = () => {
-    // Implemente a lógica de salvar favorito aqui
-    // Exemplo: toast({ title: 'Favorito salvo!' });
+    const templateMedications = getCurrentTemplateMedications();
+    if (templateMedications.length === 0) {
+      setTemplateFeedback('Selecione ou adicione um medicamento antes de salvar o favorito.');
+      toast({
+        title: 'Adicione um medicamento',
+        description: 'Preencha ou adicione ao menos um medicamento antes de salvar o favorito.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const isEditingFavorite = Boolean(selectedFavoriteName);
+    const name = selectedFavoriteName || makeTemplateName('Favorito', templateMedications);
+    const nextFavorite = {
+      id: `${Date.now()}`,
+      name,
+      medicamentos: templateMedications,
+    };
+    const nextFavorites = [
+      nextFavorite,
+      ...favoriteTemplates.filter((favorite) => favorite.name !== nextFavorite.name),
+    ];
+    if (!writeTemplateStorage(favoriteStorageKey, nextFavorites)) {
+      setTemplateFeedback('Não foi possível salvar o favorito neste navegador.');
+      toast({
+        title: 'Erro ao salvar favorito',
+        description: 'O navegador bloqueou o armazenamento local.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setFavoriteTemplates(nextFavorites);
+    setSelectedFavoriteName(nextFavorite.name);
+    setSelectedProtocolName('');
+    setTemplateFeedback(
+      `${isEditingFavorite ? 'Favorito atualizado' : 'Favorito salvo'}: ${nextFavorite.name}`,
+    );
+    toast({
+      title: isEditingFavorite ? 'Favorito atualizado' : 'Favorito salvo',
+      description: nextFavorite.name,
+    });
   };
+
   const handleAplicarFavorito = (favorite) => {
-    // Implemente a lógica de aplicar favorito aqui
-    // Exemplo: setFormData(favorite);
+    const favoriteMedications = favorite.medicamentos || [];
+    if (favoriteMedications.length === 1) {
+      loadMedicationIntoForm(favoriteMedications[0]);
+      setMedicamentos([]);
+    } else {
+      setMedicamentos(favoriteMedications);
+      setFormData(createEmptyMedicationForm());
+    }
+    setSelectedFavoriteName(favorite.name || '');
+    setSelectedProtocolName('');
+    setSearchMed('');
+    setTemplateFeedback(`Editando favorito: ${favorite.name}`);
+    toast({ title: 'Favorito carregado para edição', description: favorite.name });
+  };
+
+  const handleExcluirFavorito = (favoriteName) => {
+    const nextFavorites = favoriteTemplates.filter((favorite) => favorite.name !== favoriteName);
+    if (!writeTemplateStorage(favoriteStorageKey, nextFavorites)) {
+      setTemplateFeedback('Não foi possível excluir o favorito neste navegador.');
+      toast({
+        title: 'Erro ao excluir favorito',
+        description: 'O navegador bloqueou o armazenamento local.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setFavoriteTemplates(nextFavorites);
+    if (selectedFavoriteName === favoriteName) {
+      setSelectedFavoriteName('');
+    }
+    setTemplateFeedback(`Favorito excluído: ${favoriteName}`);
+    toast({ title: 'Favorito excluído', description: favoriteName });
   };
   // Exemplo de medicamentos para busca (substitua por dados reais se necessário)
   const MEDICAMENTOS_EXEMPLO = [
@@ -203,72 +511,11 @@ function ReceitaDigitalModal(props) {
     'pó',
     'outro',
   ];
-  const { editingData, onClose, patientName, patientId, patientCpf, onSuccess = () => {} } = props;
   // Estado para o formulário de medicamento
 
   // Função utilitária para gerar o HTML padronizado da receita
   function gerarHtmlReceita({ receitaData, medicamentos, assinaturaDigital }) {
-    return `
-      <!DOCTYPE html>
-      <html lang="pt-BR">
-      <head>
-        <meta charset="UTF-8">
-        <title>Receita Médica</title>
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #fff; color: #222; }
-          .container { max-width: 600px; margin: 40px auto; background: #fff; border: 1.5px solid #222; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 32px 32px 24px 32px; }
-          .header { text-align: center; border-bottom: 2px solid #222; padding-bottom: 12px; margin-bottom: 24px; }
-          .logo { max-width: 120px; max-height: 60px; margin: 0 auto 8px auto; display: block; }
-          .clinic-name { font-size: 1.15rem; font-weight: bold; margin-bottom: 2px; }
-          .clinic-info { font-size: 0.95rem; color: #444; margin-bottom: 2px; }
-          .title { text-align: center; font-size: 1.35rem; font-weight: bold; margin: 24px 0 12px 0; letter-spacing: 1px; }
-          .section-label { font-weight: bold; margin-top: 18px; margin-bottom: 6px; font-size: 1.08rem; border-bottom: 1px solid #eee; }
-          .info-row { margin-bottom: 8px; }
-          .info-label { font-weight: bold; display: inline-block; min-width: 90px; }
-          .prescricao { font-size: 1.08rem; margin: 18px 0; padding: 12px; background: #fafafa; border-radius: 6px; border: 1px solid #eee; }
-          .assinatura { margin: 32px 0 12px 0; text-align: center; }
-          .assinatura-label { font-size: 1.08rem; font-weight: bold; margin-bottom: 4px; }
-          .assinatura-digital { background: #1e7e34; color: #fff; font-weight: bold; padding: 8px 18px; border-radius: 20px; display: inline-block; margin-bottom: 8px; }
-          .assinatura-manual { background: #f59e42; color: #fff; font-weight: bold; padding: 8px 18px; border-radius: 20px; display: inline-block; margin-bottom: 8px; }
-          .profissional { margin-top: 10px; font-size: 1.05rem; font-weight: 500; }
-          .crm { font-size: 0.98rem; color: #444; }
-          .footer { text-align: center; margin-top: 32px; font-size: 0.98rem; color: #888; border-top: 1px solid #eee; padding-top: 10px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            ${receitaData.clinic_logo ? `<img src="${receitaData.clinic_logo}" class="logo" alt="Logo da Clínica" />` : ''}
-            <div class="clinic-name">${receitaData.clinic_name || 'Clínica'}</div>
-            <div class="clinic-info">
-              ${receitaData.clinic_cnpj ? `CNPJ: ${receitaData.clinic_cnpj}` : ''}
-              ${receitaData.clinic_address ? ` | ${receitaData.clinic_address}` : ''}
-              ${receitaData.clinic_phone ? ` | ${receitaData.clinic_phone}` : ''}
-            </div>
-          </div>
-          <div class="title">RECEITA MÉDICA</div>
-          <div class="info-row"><span class="info-label">Paciente:</span> ${receitaData.patient_name}</div>
-          ${receitaData.patient_cpf ? `<div class="info-row"><span class="info-label">CPF:</span> ${receitaData.patient_cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}</div>` : ''}
-          <div class="info-row"><span class="info-label">Data:</span> ${new Date().toLocaleDateString('pt-BR')}</div>
-          ${receitaData.protocol_name ? `<div class="info-row"><span class="info-label">Diagnóstico:</span> ${receitaData.protocol_name}</div>` : ''}
-          <div class="section-label">PRESCRIÇÃO</div>
-          <div class="prescricao">
-            ${medicamentos.map((med) => `<div><strong>${med.nome}</strong><br>${med.dose} ${med.forma_farmaceutica ? '- ' + med.forma_farmaceutica : ''} ${med.via_administracao ? '- ' + med.via_administracao : ''}<br>${med.frequencia ? 'Frequência: ' + med.frequencia + '<br>' : ''}${med.duracao_dias ? 'Duração: ' + med.duracao_dias + ' dias<br>' : ''}${med.quantidade_total ? 'Quantidade: ' + med.quantidade_total + ' ' + (med.unidade_quantidade || '') + '<br>' : ''}${med.repeticoes ? 'Repetições: ' + med.repeticoes + '<br>' : ''}${med.instrucoes ? 'Instruções: ' + med.instrucoes : ''}</div>`).join('<hr style="margin:10px 0;">')}
-          </div>
-          <div class="assinatura">
-            <div class="assinatura-label">${assinaturaDigital ? 'Assinatura Digital ICP Brasil' : 'Assinatura Manual'}</div>
-            <div class="${assinaturaDigital ? 'assinatura-digital' : 'assinatura-manual'}">${assinaturaDigital ? 'ASSINADA DIGITALMENTE' : 'ASSINATURA MANUAL'}</div>
-            <div class="profissional">${receitaData.professional_name}</div>
-            <div class="crm">CRM: ${receitaData.professional_crm || '_____'} / ${receitaData.professional_uf || '_____'}</div>
-          </div>
-          <div class="footer">
-            Emitido pelo sistema Gesclinic
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
+    return generatePrescriptionHtml({ receitaData, medicamentos, assinaturaDigital });
   }
 
   const handleImprimirParaAssinatura = async () => {
@@ -290,13 +537,14 @@ function ReceitaDigitalModal(props) {
         professional_name: getProfessionalName(),
         professional_crm: professionalCrm,
         professional_uf: professionalUf,
+        professional_council_label: professionalCouncilLabel,
         professional_specialty: professionalSpecialty,
         professional_rqe: professionalRqe,
         clinic_name: clinic?.name || '',
         clinic_cnpj: clinic?.cnpj || clinic?.cnpj_cpf || '',
         clinic_city: clinic?.city || '',
         clinic_state: clinic?.state || '',
-        clinic_logo: clinic?.logo || '',
+        clinic_logo: getClinicLogoForPrescription(),
         clinic_address: clinic?.address || '',
         clinic_phone: clinic?.phone || '',
         medicamentos,
@@ -352,6 +600,7 @@ function ReceitaDigitalModal(props) {
     // Find the selected medication name
     const selectedMed = MEDICAMENTOS_EXEMPLO.find((m) => m.id == formData.medicamento_id);
     const novoMedicamento = {
+      id: `${Date.now()}`,
       medicamento_id: formData.medicamento_id,
       nome: selectedMed ? selectedMed.nome : '',
       forma_farmaceutica: formData.forma_farmaceutica,
@@ -367,18 +616,7 @@ function ReceitaDigitalModal(props) {
 
     setMedicamentos([...medicamentos, novoMedicamento]);
     // Reset form
-    setFormData({
-      medicamento_id: '',
-      forma_farmaceutica: '',
-      via_administracao: '',
-      dose: '',
-      frequencia: '',
-      duracao_dias: '',
-      quantidade_total: '',
-      unidade_quantidade: 'comprimidos',
-      repeticoes: '0',
-      instrucoes: '',
-    });
+    setFormData(createEmptyMedicationForm());
     setSearchMed('');
     toast({
       title: 'Medicamento adicionado',
@@ -388,6 +626,12 @@ function ReceitaDigitalModal(props) {
 
   const handleRemoverMedicamento = (id) => {
     setMedicamentos(medicamentos.filter((m) => m.id !== id));
+  };
+
+  const handleEditarMedicamento = (medicamento) => {
+    loadMedicationIntoForm(medicamento);
+    setMedicamentos(medicamentos.filter((item) => item.id !== medicamento.id));
+    setTemplateFeedback(`Editando medicamento: ${medicamento.nome}`);
   };
 
   const handleAssinarCertificado = async () => {
@@ -417,13 +661,14 @@ function ReceitaDigitalModal(props) {
         professional_name: getProfessionalName(),
         professional_crm: professionalCrm,
         professional_uf: professionalUf,
+        professional_council_label: professionalCouncilLabel,
         professional_specialty: professionalSpecialty,
         professional_rqe: professionalRqe,
         clinic_name: clinic?.name || '',
         clinic_cnpj: clinic?.cnpj || clinic?.cnpj_cpf || '',
         clinic_city: clinic?.city || '',
         clinic_state: clinic?.state || '',
-        clinic_logo: clinic?.logo || '',
+        clinic_logo: getClinicLogoForPrescription(),
         clinic_address: clinic?.address || '',
         clinic_phone: clinic?.phone || '',
         medicamentos,
@@ -501,7 +746,7 @@ function ReceitaDigitalModal(props) {
                           size="sm"
                           onClick={handleSalvarFavorito}
                         >
-                          Salvar favorito
+                          {selectedFavoriteName ? 'Atualizar favorito' : 'Salvar favorito'}
                         </Button>
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -509,16 +754,30 @@ function ReceitaDigitalModal(props) {
                           <p className="text-xs text-amber-900">Nenhum favorito salvo ainda.</p>
                         ) : (
                           favoriteTemplates.map((favorite) => (
-                            <Button
-                              key={`${favorite.nome}-${favorite.dose}-${favorite.frequencia}`}
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="bg-white"
-                              onClick={() => handleAplicarFavorito(favorite)}
+                            <div
+                              key={favorite.id || favorite.name}
+                              className="flex items-center overflow-hidden rounded-md border border-amber-200 bg-white"
                             >
-                              {favorite.nome}
-                            </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 rounded-none px-3 text-amber-950 hover:bg-amber-100"
+                                onClick={() => handleAplicarFavorito(favorite)}
+                              >
+                                Editar {favorite.name}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                aria-label={`Excluir favorito ${favorite.name}`}
+                                className="h-8 rounded-none border-l border-amber-200 px-2 text-red-600 hover:bg-red-50 hover:text-red-700"
+                                onClick={() => handleExcluirFavorito(favorite.name)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
                           ))
                         )}
                       </div>
@@ -542,26 +801,50 @@ function ReceitaDigitalModal(props) {
                           size="sm"
                           onClick={handleSalvarProtocoloAtual}
                         >
-                          Salvar protocolo atual
+                          {selectedProtocolName ? 'Atualizar protocolo atual' : 'Salvar protocolo atual'}
                         </Button>
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        {protocolOptions.map((protocol) => (
-                          <Button
-                            key={protocol.name}
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="bg-white"
-                            onClick={() => handleAplicarProtocolo(protocol)}
-                          >
-                            {protocol.name}
-                          </Button>
-                        ))}
+                        {protocolOptions.length === 0 ? (
+                          <p className="text-xs text-sky-900">Nenhum protocolo salvo ainda.</p>
+                        ) : (
+                          protocolOptions.map((protocol) => (
+                            <div
+                              key={protocol.id || protocol.name}
+                              className="flex items-center overflow-hidden rounded-md border border-sky-200 bg-white"
+                            >
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 rounded-none px-3 text-sky-950 hover:bg-sky-100"
+                                onClick={() => handleAplicarProtocolo(protocol)}
+                              >
+                                Editar {protocol.name}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                aria-label={`Excluir protocolo ${protocol.name}`}
+                                className="h-8 rounded-none border-l border-sky-200 px-2 text-red-600 hover:bg-red-50 hover:text-red-700"
+                                onClick={() => handleExcluirProtocolo(protocol.name)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          ))
+                        )}
                       </div>
                     </CardContent>
                   </Card>
                 </div>
+
+                {templateFeedback ? (
+                  <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-900">
+                    {templateFeedback}
+                  </div>
+                ) : null}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -787,14 +1070,25 @@ function ReceitaDigitalModal(props) {
                                 </p>
                               )}
                             </div>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="text-red-600 hover:text-red-700"
-                              onClick={() => handleRemoverMedicamento(med.id)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-1 text-blue-600 hover:text-blue-700"
+                                onClick={() => handleEditarMedicamento(med)}
+                              >
+                                <Pencil className="w-4 h-4" />
+                                Editar
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-red-600 hover:text-red-700"
+                                onClick={() => handleRemoverMedicamento(med.id)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
@@ -919,7 +1213,8 @@ function ReceitaDigitalModal(props) {
                       <p className="font-semibold text-gray-900 mb-1">Profissional</p>
                       <p className="text-sm text-gray-700">{getProfessionalName()}</p>
                       <p className="text-xs text-gray-600">
-                        CRM: {professionalCrm || '_____'} / {professionalUf || '_____'}
+                        {professionalCouncilLabel}: {professionalCrm || '_____'} /{' '}
+                        {professionalUf || '_____'}
                       </p>
                       {professionalSpecialty && (
                         <p className="text-xs text-gray-600">

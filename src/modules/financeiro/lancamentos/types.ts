@@ -82,6 +82,7 @@ export interface FinancialTransaction {
   
   // Cost Center - only in NEW schema
   cost_center_id?: string;
+  centro_custo_id?: string;
   
   // Amount and description
   description: string;
@@ -113,6 +114,7 @@ export interface FinancialTransaction {
   
   // Notes
   notes?: string;
+  metadata?: Record<string, any>;
   
   // Audit
   created_by: string;
@@ -195,6 +197,7 @@ export interface TransactionFilters {
   transaction_type?: TransactionType;
   status?: TransactionStatus;
   category_id?: string;
+  cost_center_id?: string;
   date_from?: string;
   date_to?: string;
   movement_type?: MovementType;
@@ -217,6 +220,9 @@ export interface FinancialMetrics {
   total_expense: number;
   total_realized: number;
   total_predicted: number;
+  predicted_income?: number;
+  predicted_expense?: number;
+  ap_open_total?: number;
   net_balance: number;
   pending_count: number;
   paid_count: number;

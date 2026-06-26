@@ -319,7 +319,7 @@ CREATE TABLE IF NOT EXISTS chart_of_accounts (
 
 CREATE INDEX IF NOT EXISTS idx_chart_of_accounts_clinic ON chart_of_accounts(clinic_id);
 -- REMOVED: CREATE INDEX IF NOT EXISTS idx_chart_of_accounts_code ON chart_of_accounts(code);
-CREATE INDEX IF NOT EXISTS idx_chart_of_accounts_type ON chart_of_accounts(type);
+-- REMOVED: CREATE INDEX IF NOT EXISTS idx_chart_of_accounts_type ON chart_of_accounts(type);
 
 CREATE TABLE IF NOT EXISTS account_plans (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

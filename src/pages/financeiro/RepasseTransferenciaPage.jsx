@@ -496,7 +496,11 @@ export default function RepasseTransferenciaPage() {
                                 : 'bg-red-100 text-red-800'
                           }`}
                         >
-                          {trans.status.charAt(0).toUpperCase() + trans.status.slice(1)}
+                          {trans.status === 'concluido'
+                            ? 'Estável'
+                            : trans.status === 'pendente'
+                              ? 'Atenção'
+                              : 'Crítico'}
                         </span>
                       </td>
                       <td className="py-3 px-4 text-gray-600">

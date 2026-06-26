@@ -2,11 +2,26 @@ import React, { useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Lightbulb, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
 
+const closedStatuses = new Set(['paid', 'pago', 'paga', 'received', 'recebido', 'quitado', 'processed', 'canceled', 'cancelado', 'cancelada', 'reversed', 'estornado']);
+
+function money(value) {
+  const parsed = Number(value || 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function isOpenFinancialItem(item = {}) {
+  return !closedStatuses.has(String(item.status || '').toLowerCase());
+}
+
+function isPastDue(item = {}) {
+  if (!isOpenFinancialItem(item) || !item.due_date) return false;
+  return new Date(`${String(item.due_date).split('T')[0]}T00:00:00`) < new Date(new Date().toISOString().split('T')[0] + 'T00:00:00');
+}
+
 /**
- * 🧠 Gesclinic Insights - Gerador Automático de Insights
- * 
- * Analisa dados financeiros e gera recomendações inteligentes
- * Baseado em padrões e benchmarks de saúde financeira
+ * Gesclinic Insights - Gerador automático de insights
+ *
+ * Analisa dados financeiros e gera recomendações executivas
  */
 export default function GesclinicInsights({
   summary,
@@ -26,37 +41,36 @@ export default function GesclinicInsights({
         id: 'revenue-growth',
         type: 'positive',
         icon: TrendingUp,
-        title: '📈 Receita em Alta',
+        title: 'Receita em crescimento',
         message: `Receitas aumentaram ${(((summary.total_inflows - previousSummary.total_inflows) / previousSummary.total_inflows) * 100).toFixed(1)}% versus período anterior`,
         action: 'Considere reinvestir o lucro extra em infraestrutura ou marketing',
       });
     }
 
     // Insight 2: Contas vencidas
-    const overdueCount = receivables.filter((r) => new Date(r.due_date) < new Date()).length;
+    const overdueReceivables = receivables.filter(isPastDue);
+    const overdueCount = overdueReceivables.length;
     if (overdueCount > 0) {
-      const overdueAmount = receivables
-        .filter((r) => new Date(r.due_date) < new Date())
-        .reduce((sum, r) => sum + (r.amount || 0), 0);
+      const overdueAmount = overdueReceivables.reduce((sum, r) => sum + money(r.balance_amount ?? r.open_amount ?? r.amount), 0);
 
       generated.push({
         id: 'overdue-receivables',
         type: 'warning',
         icon: AlertTriangle,
-        title: '⚠️ Contas Vencidas',
+        title: 'Contas vencidas',
         message: `${overdueCount} conta(s) vencida(s) totalizando R$ ${overdueAmount.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}`,
         action: 'Contate devedores hoje mesmo para cobrar ou renegociar prazos',
       });
     }
 
     // Insight 3: Saldo projetado positivo
-    const projectedBalance = summary.net_balance + (summary.total_inflows || 0) * 0.3 - (summary.total_outflows || 0) * 0.2;
-    if (projectedBalance > summary.net_balance && summary.net_balance > 0) {
+    const projectedBalance = money(summary.net_balance) + money(summary.total_inflows) * 0.3 - money(summary.total_outflows) * 0.2;
+    if (projectedBalance > money(summary.net_balance) && money(summary.net_balance) > 0) {
       generated.push({
         id: 'positive-projection',
         type: 'positive',
         icon: CheckCircle,
-        title: '✅ Fluxo Positivo Previsto',
+        title: 'Fluxo de caixa com tendência positiva',
         message: 'Projeção indica acúmulo de caixa nos próximos 30 dias',
         action: 'Situação favorável! Mantenha o controle e acompanhe recebimentos',
       });
@@ -68,7 +82,7 @@ export default function GesclinicInsights({
         id: 'critical-liquidity',
         type: 'critical',
         icon: AlertTriangle,
-        title: '🚨 Liquidez Crítica',
+        title: 'Liquidez crítica',
         message: `Razão de liquidez em ${summary.liquidity_ratio.toFixed(2)} - sério risco de insolvência`,
         action: 'Ação urgente: reduza despesas, acelere recebimentos ou busque crédito emergencial',
       });
@@ -80,21 +94,22 @@ export default function GesclinicInsights({
         id: 'low-coverage',
         type: 'warning',
         icon: AlertTriangle,
-        title: '⏰ Cobertura Baixa',
+        title: 'Cobertura de caixa reduzida',
         message: `Caixa cobre apenas ${summary.coverage_days.toFixed(0)} dias de despesas`,
         action: 'Aumente reservas: meta é 30-60 dias de cobertura para segurança',
       });
     }
 
     // Insight 6: Padrão de pagamentos
-    const avgPayableAmount = payables.length > 0 ? payables.reduce((sum, p) => sum + (p.amount || 0), 0) / payables.length : 0;
-    if (summary.total_outflows > summary.total_inflows * 0.9) {
+    const totalInflows = money(summary.total_inflows);
+    const totalOutflows = money(summary.total_outflows);
+    if (totalInflows > 0 && totalOutflows > totalInflows * 0.9) {
       generated.push({
         id: 'tight-margin',
         type: 'info',
         icon: Lightbulb,
-        title: '💡 Margem Apertada',
-        message: `Despesas representam ${((summary.total_outflows / summary.total_inflows) * 100).toFixed(0)}% das receitas`,
+        title: 'Margem operacional pressionada',
+        message: `Despesas representam ${((totalOutflows / totalInflows) * 100).toFixed(0)}% das receitas`,
         action: 'Revisar custos operacionais e buscar oportunidades de otimização',
       });
     }
@@ -121,8 +136,8 @@ export default function GesclinicInsights({
         <div className="flex gap-3 items-start">
           <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
           <div>
-            <h3 className="font-semibold text-green-900 dark:text-green-300 mb-1">✅ Financeiro Saudável</h3>
-            <p className="text-green-700 dark:text-green-400 text-sm">Nenhum alerta ou problema detectado no momento. Continue monitorando!</p>
+            <h3 className="font-semibold text-green-900 dark:text-green-300 mb-1">Situação financeira estável</h3>
+            <p className="text-green-700 dark:text-green-400 text-sm">Nenhum alerta crítico identificado no momento.</p>
           </div>
         </div>
       </Card>
@@ -133,7 +148,7 @@ export default function GesclinicInsights({
     <div className="space-y-3 animate-fade-in">
       <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
         <Lightbulb className="w-5 h-5 text-amber-500 dark:text-amber-400" />
-        Insights Automáticos
+        Resumo executivo
       </h2>
 
       {insights.map((insight, index) => {
@@ -168,7 +183,7 @@ export default function GesclinicInsights({
                   {insight.message}
                 </p>
                 <p className={`text-xs font-medium italic ${insight.type === 'positive' ? 'text-green-600' : insight.type === 'critical' ? 'text-red-600' : insight.type === 'warning' ? 'text-yellow-600' : 'text-blue-600'}`}>
-                  💡 {insight.action}
+                  Recomendação: {insight.action}
                 </p>
               </div>
             </div>

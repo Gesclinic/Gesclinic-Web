@@ -92,7 +92,24 @@ export async function getBankStatement(id) {
 }
 
 /**
- * Importar extrato (criar múltiplos registros)
+ * Calcular hash de referência para deduplicação (simples, baseado em conversão)
+ */
+function generateReferenceHash(clinicId, accountId, date, amount, referenceNumber) {
+  const key = `${clinicId}|${accountId}|${date}|${parseFloat(amount).toFixed(2)}|${referenceNumber || ''}`;
+  
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) {
+    const char = key.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  
+  // Converter para hex string
+  return Math.abs(hash).toString(16).padStart(16, '0');
+}
+
+/**
+ * Importar extrato (criar múltiplos registros com deduplicação)
  */
 export async function importBankStatements({
   clinicId,
@@ -101,21 +118,62 @@ export async function importBankStatements({
   accountId = null,
 }) {
   try {
-    const records = statements.map((stmt) => ({
-      clinic_id: clinicId,
-      bank_account_id: accountId,
-      statement_date: stmt.date || stmt.statement_date,
-      description: stmt.description,
-      amount: parseFloat(stmt.amount),
-      transaction_type: stmt.type || stmt.transaction_type,
-      status: CONCILIATION_STATUS.PENDING,
-      import_batch_id: batchId,
-      created_by: null, // será preenchido pelo trigger se houver user_id
-    }));
+    const records = statements.map((stmt) => {
+      const referenceNumber = stmt.bankId || stmt.referenceNumber || null;
+      const referenceHash = generateReferenceHash(
+        clinicId,
+        accountId,
+        stmt.date || stmt.statement_date,
+        stmt.amount,
+        referenceNumber,
+      );
+
+      return {
+        clinic_id: clinicId,
+        bank_account_id: accountId,
+        statement_date: stmt.date || stmt.statement_date,
+        description: stmt.description,
+        amount: parseFloat(stmt.amount),
+        transaction_type: stmt.type || stmt.transaction_type,
+        bank_id: referenceNumber,
+        reference_hash: referenceHash,
+        metadata: stmt.metadata || {
+          operation_type: stmt.operationType || 'OUTRO',
+          raw_type: stmt.rawType || null,
+          raw_memo: stmt.rawMemo || null,
+        },
+        status: CONCILIATION_STATUS.PENDING,
+        import_batch_id: batchId,
+        created_by: null,
+      };
+    });
+
+    // Verificar duplicatas por reference_hash
+    const hashes = records.map((r) => r.reference_hash);
+    const { data: existingStatements, error: checkError } = await supabase
+      .from('conciliation_bank_statements')
+      .select('id, reference_hash')
+      .eq('clinic_id', clinicId)
+      .in('reference_hash', hashes);
+
+    if (checkError && checkError.code !== 'PGRST116') {
+      throw checkError;
+    }
+
+    const existingHashes = new Set(existingStatements?.map((s) => s.reference_hash) || []);
+    const newRecords = records.filter((r) => !existingHashes.has(r.reference_hash));
+
+    if (newRecords.length === 0) {
+      return {
+        imported: 0,
+        duplicates: records.length,
+        statements: [],
+      };
+    }
 
     const { data, error } = await supabase
       .from('conciliation_bank_statements')
-      .insert(records)
+      .insert(newRecords)
       .select();
 
     if (error) {
@@ -124,6 +182,7 @@ export async function importBankStatements({
 
     return {
       imported: data.length,
+      duplicates: records.length - newRecords.length,
       statements: data,
     };
   } catch (error) {
@@ -363,10 +422,89 @@ export async function findSuggestions({
   description,
   transactionType,
   statementDate,
+  referenceNumber = null,
+  operationType = null,
   maxDaysDifference = SUGGESTION_LIMITS.MAX_DAYS_DIFFERENCE,
 }) {
   try {
     const suggestions = [];
+    const normalizedReference = referenceNumber
+      ? String(referenceNumber).toLowerCase().replace(/[^a-z0-9]/g, '')
+      : null;
+    const normalizedDescription = (description || '').toLowerCase();
+
+    const computeTextBoost = (candidateDescription) => {
+      let boost = 0;
+      const candidate = (candidateDescription || '').toLowerCase();
+
+      if (!candidate) {
+        return boost;
+      }
+
+      if (normalizedReference) {
+        const candidateRef = candidate.replace(/[^a-z0-9]/g, '');
+        if (candidateRef.includes(normalizedReference)) {
+          boost += 0.15;
+        }
+      }
+
+      const tokens = normalizedDescription
+        .split(/\s+/)
+        .map((token) => token.trim())
+        .filter((token) => token.length >= 4);
+
+      const matchingTokens = tokens.filter((token) => candidate.includes(token)).length;
+      if (matchingTokens > 0) {
+        boost += Math.min(matchingTokens * 0.03, 0.12);
+      }
+
+      return boost;
+    };
+
+    const computeOperationTypeBoost = (candidateDescription, candidateOperationType) => {
+      if (!operationType) {
+        return 0;
+      }
+
+      const rules = {
+        PIX: ['pix', 'transferência pix'],
+        TED: ['ted', 'transferência eletrônica'],
+        BOLETO: ['boleto', 'registrado'],
+        CHEQUE: ['cheque', 'check'],
+        DEPOSITO: ['depósito', 'deposito'],
+        TARIFA: ['tarifa', 'taxa'],
+        JUROS: ['juros', 'cob'],
+        DEVOLUCAO: ['devolução', 'devolucao'],
+      };
+
+      const operationRules = rules[operationType] || [];
+      const candidate = (candidateDescription || '').toLowerCase();
+
+      let matches = 0;
+      for (const rule of operationRules) {
+        if (candidate.includes(rule)) {
+          matches += 1;
+        }
+      }
+
+      return Math.min(matches * 0.1, 0.2);
+    };
+
+    const getDateTolerance = (opType) => {
+      const tolerances = {
+        PIX: 0,
+        TED: 1,
+        BOLETO: 3,
+        CHEQUE: 5,
+        DEPOSITO: 1,
+        TARIFA: 0,
+        JUROS: 0,
+        DEVOLUCAO: 2,
+      };
+      return tolerances[opType] || maxDaysDifference;
+    };
+
+    const tolerance = getDateTolerance(operationType);
 
     // Buscar em Contas a Pagar (se débito ou ambos)
     if (!transactionType || transactionType === TRANSACTION_TYPE.DEBIT) {
@@ -381,20 +519,33 @@ export async function findSuggestions({
       if (apSuggestions) {
         suggestions.push(
           ...apSuggestions.map((ap) => ({
-            id: ap.id,
-            type: FINANCIAL_LINK_TYPE.PAYABLE,
-            description: ap.description,
-            amount: ap.amount,
-            date: ap.due_date,
-            status: ap.status,
-            matchScore: calculateMatchScore(
-              amount,
-              ap.amount,
-              statementDate,
-              ap.due_date,
-              maxDaysDifference,
-            ),
-            matchReason: 'Valor e data aproximados',
+            ...(function () {
+              const baseScore = calculateMatchScore(
+                amount,
+                ap.amount,
+                statementDate,
+                ap.due_date,
+                tolerance,
+              );
+              const textBoost = computeTextBoost(ap.description);
+              const operationBoost = computeOperationTypeBoost(ap.description, operationType);
+              return {
+                id: ap.id,
+                type: FINANCIAL_LINK_TYPE.PAYABLE,
+                description: ap.description,
+                amount: ap.amount,
+                date: ap.due_date,
+                status: ap.status,
+                matchScore: Math.min(baseScore + textBoost + operationBoost, 1),
+                matchReason: [
+                  textBoost > 0 && 'semelhança textual',
+                  operationBoost > 0 && `tipo ${operationType}`,
+                  'valor/data aproximados',
+                ]
+                  .filter(Boolean)
+                  .join(' + '),
+              };
+            })(),
           })),
         );
       }
@@ -403,31 +554,44 @@ export async function findSuggestions({
     // Buscar em Contas a Receber (se crédito ou ambos)
     if (!transactionType || transactionType === TRANSACTION_TYPE.CREDIT) {
       const { data: arSuggestions } = await supabase
-        .from('ar_invoices')
-        .select('id, description, amount, due_date, status')
+        .from('invoices')
+        .select('id, description, net_amount, due_date, status')
         .eq('clinic_id', clinicId)
-        .gte('amount', amount * 0.95)
-        .lte('amount', amount * 1.05)
+        .gte('net_amount', amount * 0.95)
+        .lte('net_amount', amount * 1.05)
         .neq('status', 'paid')
         .neq('status', 'canceled');
 
       if (arSuggestions) {
         suggestions.push(
           ...arSuggestions.map((ar) => ({
-            id: ar.id,
-            type: FINANCIAL_LINK_TYPE.RECEIVABLE,
-            description: ar.description,
-            amount: ar.amount,
-            date: ar.due_date,
-            status: ar.status,
-            matchScore: calculateMatchScore(
-              amount,
-              ar.amount,
-              statementDate,
-              ar.due_date,
-              maxDaysDifference,
-            ),
-            matchReason: 'Valor e data aproximados',
+            ...(function () {
+              const baseScore = calculateMatchScore(
+                amount,
+                ar.net_amount,
+                statementDate,
+                ar.due_date,
+                tolerance,
+              );
+              const textBoost = computeTextBoost(ar.description);
+              const operationBoost = computeOperationTypeBoost(ar.description, operationType);
+              return {
+                id: ar.id,
+                type: FINANCIAL_LINK_TYPE.RECEIVABLE,
+                description: ar.description,
+                amount: ar.amount,
+                date: ar.due_date,
+                status: ar.status,
+                matchScore: Math.min(baseScore + textBoost + operationBoost, 1),
+                matchReason: [
+                  textBoost > 0 && 'semelhança textual',
+                  operationBoost > 0 && `tipo ${operationType}`,
+                  'valor/data aproximados',
+                ]
+                  .filter(Boolean)
+                  .join(' + '),
+              };
+            })(),
           })),
         );
       }
@@ -853,16 +1017,29 @@ export async function getIndicators(clinicId, accountId = null, startDate = null
 export async function listBankAccounts(clinicId) {
   try {
     const { data, error } = await supabase
+      .from('financial_accounts')
+      .select('*')
+      .eq('clinic_id', clinicId)
+      .eq('is_active', true)
+      .order('account_name');
+
+    if (!error) {
+      return data || [];
+    }
+
+    // Fallback legado para ambientes antigos que ainda usem clinic_bank_accounts
+    const { data: legacyData, error: legacyError } = await supabase
       .from('clinic_bank_accounts')
       .select('*')
       .eq('clinic_id', clinicId)
       .eq('active', true)
       .order('account_name');
 
-    if (error) {
-      throw error;
+    if (legacyError) {
+      throw legacyError;
     }
-    return data || [];
+
+    return legacyData || [];
   } catch (error) {
     console.error('Error listing bank accounts:', error);
     return [];
@@ -925,6 +1102,27 @@ export async function updateBankAccountBalance(accountId, bankBalance, systemBal
     return data?.[0];
   } catch (error) {
     console.error('Error updating bank account balance:', error);
+    throw error;
+  }
+}
+
+/**
+ * Deleta um lançamento bancário
+ */
+export async function deleteStatement(statementId) {
+  try {
+    const { error } = await supabase
+      .from('conciliation_bank_statements')
+      .delete()
+      .eq('id', statementId);
+
+    if (error) {
+      throw error;
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting statement:', error);
     throw error;
   }
 }

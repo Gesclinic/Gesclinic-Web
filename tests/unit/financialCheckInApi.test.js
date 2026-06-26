@@ -7,6 +7,7 @@ const supabaseMock = {
 
 vi.mock('../../src/lib/customSupabaseClient', () => ({
   supabase: supabaseMock,
+  customSupabaseClient: supabaseMock,
 }));
 
 vi.mock('../../src/lib/auditFinancialApi', () => ({
@@ -38,13 +39,18 @@ function resolvedChain(result) {
     select: vi.fn(() => chain),
     update: vi.fn(() => chain),
     eq: vi.fn(() => chain),
+    neq: vi.fn(() => chain),
+    order: vi.fn(() => chain),
+    limit: vi.fn(() => chain),
     single: vi.fn(() => Promise.resolve(result)),
+    maybeSingle: vi.fn(() => Promise.resolve(result)),
     then: (resolve, reject) => Promise.resolve(result).then(resolve, reject),
   };
   return chain;
 }
 
 function setupParticularCheckInSupabase() {
+  const receivableLookupQuery = resolvedChain({ data: null, error: null });
   const appointmentQuery = resolvedChain({
     data: {
       id: appointmentId,
@@ -62,6 +68,7 @@ function setupParticularCheckInSupabase() {
   let appointmentCalls = 0;
 
   queryForTable.mockImplementation((table) => {
+    if (table === 'ar_invoices') return receivableLookupQuery;
     if (table === 'appointments') {
       appointmentCalls += 1;
       return appointmentCalls === 1 ? appointmentQuery : appointmentUpdateQuery;
@@ -88,7 +95,7 @@ describe('financialCheckInApi consolidado em ar_invoices', () => {
       value: 200,
       discount: 20,
       copayment: 0,
-      payment_method: 'pix',
+      payment_method: null,
     });
 
     expect(supabaseMock.from).not.toHaveBeenCalledWith('ar_receivables');
@@ -101,7 +108,7 @@ describe('financialCheckInApi consolidado em ar_invoices', () => {
       discount_value: 20,
       net_value: 180,
       status: 'open',
-      payment_method: 'pix',
+      payment_method: null,
       origem: 'Agenda',
       professional_id: 'professional-001',
       procedure_id: 'service-001',

@@ -33,7 +33,7 @@ export default function Overview() {
           `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
         const [{ data: centersData }, { data: ap }, { data: inv }] = await Promise.all([
-          supabase.from('cost_centers').select('*').eq('clinic_id', clinicId).order('name'),
+          supabase.from('financial_cost_centers').select('*').eq('clinic_id', clinicId).order('code'),
           supabase
             .from('ap_bills')
             .select('cost_center_id, amount, status, due_date')
@@ -151,7 +151,7 @@ export default function Overview() {
                   >
                     {currency(res)}
                   </td>
-                  <td className="p-2 text-center">Ativo</td>
+                  <td className="p-2 text-center">{c.is_active ? 'Ativo' : 'Inativo'}</td>
                   <td className="p-2 text-right">
                     <div className="flex justify-end gap-2">
                       <Button

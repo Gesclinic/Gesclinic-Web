@@ -54,6 +54,11 @@ CREATE POLICY "Users can read audit logs for their clinic" ON public.financial_a
   FOR SELECT
   USING (clinic_id = (SELECT clinic_id FROM user_clinic_roles WHERE user_id = auth.uid() LIMIT 1));
 
+-- RLS Policy: Users can write logs for their clinic
+CREATE POLICY "Users can insert audit logs for their clinic" ON public.financial_audit_logs
+  FOR INSERT
+  WITH CHECK (clinic_id = (SELECT clinic_id FROM user_clinic_roles WHERE user_id = auth.uid() LIMIT 1));
+
 -- ================================================================
 -- STEP 2: RPC Function - Core Integration Logic
 -- ================================================================

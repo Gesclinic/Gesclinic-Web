@@ -4,6 +4,7 @@ import { useClinicContext } from '../contexts/useClinicContext';
 import { listarAgenda } from '@/modules/agenda/services/agenda.api.complex';
 import { mapAgendaItem } from '@/modules/agenda/services/agendaMapper';
 import AgendamentoDetalhesModal from '../components/AgendamentoDetalhesModal';
+import { Input } from '@/components/ui/input';
 
 export function AgendaSala() {
   const { clinic } = useClinicContext();
@@ -44,7 +45,7 @@ export function AgendaSala() {
   return (
     <div>
       <h2>Agenda por Sala</h2>
-      <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+      <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
       {loading && <p>Carregando...</p>}
       {error && <p style={{ color: 'red' }}>{error}</p>}
       {!loading && agendas.length === 0 && <p>Nenhum agendamento encontrado</p>}

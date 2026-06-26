@@ -28,47 +28,49 @@ export async function listChartOfAccounts(
     const limit = pagination?.limit || 100;
     const offset = (page - 1) * limit;
 
-    let query = supabase
-      .from('financial_chart_of_accounts')
-      .select('*', { count: 'exact' })
-      .eq('clinic_id', clinicId);
-
-    // Apply filters
-    if (filters?.search) {
-      query = query.or(
-        `code.ilike.%${filters.search}%,name.ilike.%${filters.search}%`
-      );
-    }
-
-    if (filters?.type) {
-      query = query.eq('type', filters.type);
-    }
-
-    if (filters?.nature) {
-      query = query.eq('nature', filters.nature);
-    }
-
-    if (filters?.is_active !== undefined) {
-      query = query.eq('is_active', filters.is_active);
-    }
-
-    if (filters?.level) {
-      query = query.eq('level', filters.level);
-    }
-
-    if (filters?.accepts_entries !== undefined) {
-      query = query.eq('accepts_entries', filters.accepts_entries);
-    }
-
-    const { data, error, count } = await query
-      .order('code', { ascending: true })
-      .range(offset, offset + limit - 1);
+    const { data, error } = await supabase.rpc('get_chart_of_accounts_tree', {
+      p_clinic_id: clinicId,
+    });
 
     if (error) throw error;
 
+    const flatten = (nodes: any[], parentName = ''): Array<ChartOfAccount & { parentName?: string }> =>
+      (nodes || []).flatMap((node) => {
+        const { children = [], ...account } = node;
+        return [
+          { ...account, parentName },
+          ...flatten(children, node.name),
+        ];
+      });
+
+    const allAccounts = flatten(data || []);
+
+    const matchesFilters = (account: ChartOfAccount & { parentName?: string }) => {
+      const search = filters?.search?.trim().toLowerCase();
+
+      if (search) {
+        const haystack = `${account.code || ''} ${account.name || ''} ${account.description || ''}`.toLowerCase();
+        if (!haystack.includes(search)) return false;
+      }
+
+      if (filters?.type && account.type !== filters.type) return false;
+      if (filters?.nature && account.nature !== filters.nature) return false;
+      if (filters?.is_active !== undefined && account.is_active !== filters.is_active) return false;
+      if (filters?.level && account.level !== filters.level) return false;
+      if (filters?.accepts_entries !== undefined && account.accepts_entries !== filters.accepts_entries) return false;
+
+      return true;
+    };
+
+    const filtered = allAccounts.filter(matchesFilters);
+    const total = filtered.length;
+    const pageItems = filtered
+      .sort((a, b) => a.code.localeCompare(b.code, 'pt-BR'))
+      .slice(offset, offset + limit);
+
     return {
-      data: data || [],
-      total: count || 0,
+      data: pageItems as ChartOfAccount[],
+      total,
       page,
       limit,
     };

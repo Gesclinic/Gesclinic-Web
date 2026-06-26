@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Input } from '@/components/ui/input';
 
 export default function BuscarAgendamentoModal({ isOpen = true, onClose, onSelect }) {
   const [term, setTerm] = useState('');
@@ -71,7 +72,7 @@ export default function BuscarAgendamentoModal({ isOpen = true, onClose, onSelec
               value={term}
               onChange={(e) => setTerm(e.target.value)}
             />
-            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             {/* botão de submit: type="submit" para funcionar com onSubmit */}
             <button type="submit" disabled={loading}>
               {loading ? 'Buscando...' : 'Buscar'}

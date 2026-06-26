@@ -149,10 +149,8 @@ export async function createPayer(clinicId, payload) {
       contact_person: payload.contact_person || null,
       contact_email: payload.contact_email || null,
       contact_phone: payload.contact_phone || null,
-      ans_code: payload.ans_code || null,
-      is_default: payload.is_default || false,
     })
-    .select()
+    .select('id, name, cnpj, active')
     .single();
   if (error) {
     throw error;
@@ -180,8 +178,6 @@ export async function updatePayer(id, payload) {
   }
   const updates = {
     name: payload.name,
-    ans_code: payload.ans_code || null,
-    is_default: payload.is_default || false,
   };
   if (hasDocumentField) {
     updates.cnpj = cnpj;
@@ -191,7 +187,7 @@ export async function updatePayer(id, payload) {
     .from('payers')
     .update(updates)
     .eq('id', id)
-    .select();
+    .select('id, name, cnpj, active');
 
   if (error) {
     throw error;

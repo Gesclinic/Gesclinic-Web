@@ -102,6 +102,7 @@ export interface Payable {
   // Document info
   document_number?: string;
   invoice_number?: string;
+  guide_number?: string;
   invoice_series?: string;
   
   // Description
@@ -309,6 +310,7 @@ export interface PayableCreateInput {
   
   document_number?: string;
   invoice_number?: string;
+  guide_number?: string;
   invoice_series?: string;
   
   description: string;

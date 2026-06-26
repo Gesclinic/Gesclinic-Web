@@ -485,46 +485,36 @@ export async function getDREData(clinicId, startDate, endDate) {
  * @returns {Promise<Array>} Array com {servico, quantidade, valor_medio, total, percentual}
  */
 export async function getRevenueByService(clinicId, startDate, endDate) {
-  const { data: transactions, error } = await supabase
-    .from('financial_transactions')
-    .select('description, amount')
-    .eq('clinic_id', clinicId)
-    .eq('type', 'revenue')
-    .neq('status', 'canceled')
-    .gte('competency_date', startDate)
-    .lte('competency_date', endDate);
-
-  if (!error && transactions) {
-    const totalReceita = transactions.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-    return transactions.map((item) => ({
-      servico: item.description || 'Receita',
-      quantidade: 1,
-      valor_medio: Number(item.amount || 0),
-      total: Number(item.amount || 0),
-      percentual: totalReceita > 0 ? Number(((Number(item.amount || 0) / totalReceita) * 100).toFixed(2)) : 0,
-    }));
-  }
-
-  // Buscar recebíveis sem filtro de status para pegar todos os dados
-  const receivables = await listReceivables({
-    clinicId,
-    emissionStart: startDate,
-    emissionEnd: endDate,
-    limit: 1000,
+  const consolidated = await getFinancialConsolidation(clinicId, startDate, endDate);
+  const receivables = consolidated.receivables || [];
+  const manualRevenues = (consolidated.transactions || []).filter((item) => {
+    const type = String(item.type || '').toLowerCase();
+    const transactionType = String(item.transaction_type || '').toUpperCase();
+    return type === 'revenue' || type === 'income' || transactionType === 'INCOME';
   });
 
   const byService = {};
   receivables.forEach((r) => {
-    const service = r.service_name || 'Não especificado';
+    const service = r.service_name || r.service_description || r.description || 'Não especificado';
     if (!byService[service]) {
       byService[service] = { total: 0, count: 0, items: [] };
     }
-    byService[service].total += Number(r.amount || 0);
+    byService[service].total += Number(r.gross_amount ?? r.amount ?? r.service_value ?? 0);
     byService[service].count += 1;
     byService[service].items.push(r);
   });
 
-  const totalReceita = receivables.reduce((sum, r) => sum + Number(r.amount || 0), 0);
+  manualRevenues.forEach((item) => {
+    const service = item.description || item.category || 'Receita manual';
+    if (!byService[service]) {
+      byService[service] = { total: 0, count: 0, items: [] };
+    }
+    byService[service].total += Number(item.amount || 0);
+    byService[service].count += 1;
+    byService[service].items.push(item);
+  });
+
+  const totalReceita = Object.values(byService).reduce((sum, item) => sum + Number(item.total || 0), 0);
 
   return Object.entries(byService)
     .map(([servico, data]) => ({
@@ -546,42 +536,12 @@ export async function getRevenueByService(clinicId, startDate, endDate) {
  * @returns {Promise<Array>} Array com {categoria, tipo, quantidade, total, percentual}
  */
 export async function getExpenseByCategory(clinicId, startDate, endDate) {
-  const { data: transactions, error } = await supabase
-    .from('financial_transactions')
-    .select('category, type, amount')
-    .eq('clinic_id', clinicId)
-    .in('type', ['expense', 'cost', 'deduction'])
-    .neq('status', 'canceled')
-    .gte('competency_date', startDate)
-    .lte('competency_date', endDate);
-
-  if (!error && transactions) {
-    const byCategory = {};
-    transactions.forEach((transaction) => {
-      const category = transaction.category || 'Outros';
-      const type = transaction.type === 'cost' ? 'Custo' : 'Despesa';
-      const key = `${category}|${type}`;
-      if (!byCategory[key]) byCategory[key] = { category, type, total: 0, count: 0 };
-      byCategory[key].total += Number(transaction.amount || 0);
-      byCategory[key].count += 1;
-    });
-
-    const totalDespesa = transactions.reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0);
-    return Object.values(byCategory)
-      .map((item) => ({
-        ...item,
-        total: Number(item.total.toFixed(2)),
-        percentual: totalDespesa > 0 ? Number(((item.total / totalDespesa) * 100).toFixed(2)) : 0,
-      }))
-      .sort((a, b) => b.total - a.total);
-  }
-
-  const payables = await listAPQuery({
-    clinicId,
-    statusList: ['paid'],
-    start: startDate,
-    end: endDate,
-    limit: 1000,
+  const consolidated = await getFinancialConsolidation(clinicId, startDate, endDate);
+  const payables = consolidated.payables || [];
+  const manualExpenses = (consolidated.transactions || []).filter((item) => {
+    const type = String(item.type || '').toLowerCase();
+    const transactionType = String(item.transaction_type || '').toUpperCase();
+    return ['expense', 'cost', 'deduction'].includes(type) || ['EXPENSE', 'ADJUSTMENT'].includes(transactionType);
   });
 
   const byCategory = {};
@@ -597,7 +557,18 @@ export async function getExpenseByCategory(clinicId, startDate, endDate) {
     byCategory[key].count += 1;
   });
 
-  const totalDespesa = payables.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+  manualExpenses.forEach((transaction) => {
+    const category = transaction.category || 'Outros';
+    const type = transaction.type === 'cost' ? 'Custo' : 'Despesa';
+    const key = `${category}|${type}`;
+    if (!byCategory[key]) {
+      byCategory[key] = { category, type, total: 0, count: 0 };
+    }
+    byCategory[key].total += Number(transaction.amount || 0);
+    byCategory[key].count += 1;
+  });
+
+  const totalDespesa = Object.values(byCategory).reduce((sum, item) => sum + Number(item.total || 0), 0);
 
   return Object.values(byCategory)
     .map((item) => ({
@@ -691,9 +662,18 @@ export async function comparePeriods(clinicId, period1, period2) {
   const dre1 = await getDREData(clinicId, period1.start, period1.end);
   const dre2 = await getDREData(clinicId, period2.start, period2.end);
 
-  const calcVariation = (novo, anterior) => {
-    if (anterior === 0) return novo > 0 ? 100 : 0;
-    return Number((((novo - anterior) / anterior) * 100).toFixed(2));
+  const SMALL_BASE_THRESHOLD = 1;
+
+  const calcVariation = (novo, anterior, { absoluteDenominator = false } = {}) => {
+    const current = Number(novo || 0);
+    const previous = Number(anterior || 0);
+    const denominator = absoluteDenominator ? Math.abs(previous) : previous;
+
+    if (Math.abs(denominator) < SMALL_BASE_THRESHOLD) {
+      return null;
+    }
+
+    return Number((((current - previous) / denominator) * 100).toFixed(2));
   };
 
   return {
@@ -731,7 +711,7 @@ export async function comparePeriods(clinicId, period1, period2) {
         novo: dre1.lucros.liquido,
         anterior: dre2.lucros.liquido,
         variacao_valor: Number((dre1.lucros.liquido - dre2.lucros.liquido).toFixed(2)),
-        variacao_percentual: calcVariation(dre1.lucros.liquido, dre2.lucros.liquido),
+        variacao_percentual: calcVariation(dre1.lucros.liquido, dre2.lucros.liquido, { absoluteDenominator: true }),
         tendencia: dre1.lucros.liquido > dre2.lucros.liquido ? 'crescente' : 'decrescente',
       },
 

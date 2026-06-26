@@ -4,7 +4,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useClinicContext } from '@/contexts/useClinicContext';
 import { CashFlowDashboard } from '../components';
@@ -20,16 +20,107 @@ import {
   useCashFlowForecastData,
   useCashFlowReportData,
 } from '../hooks/useCashFlowIntegration';
+import CashFlowWorkbookModel from '../components/CashFlowWorkbookModel';
+
+const STANDARD_FLOW_BASE_DATE = '2026-02-01';
+
+function addDays(dateString, days) {
+  const date = new Date(dateString);
+  date.setDate(date.getDate() + days);
+  return date.toISOString().split('T')[0];
+}
+
+function buildStandardFlowTrendData() {
+  const rows = [];
+  let balance = 126500;
+
+  for (let i = 0; i < 30; i += 1) {
+    const income = i % 5 === 0 ? 13200 : i % 3 === 0 ? 8600 : 5400;
+    const expense = i % 4 === 0 ? 9800 : i % 2 === 0 ? 6200 : 4300;
+    balance += income - expense;
+
+    rows.push({
+      date: addDays(STANDARD_FLOW_BASE_DATE, i),
+      income,
+      expense,
+      balance,
+    });
+  }
+
+  return rows;
+}
+
+function buildStandardFlowReportData(trendData) {
+  const totalIncome = trendData.reduce((sum, item) => sum + item.income, 0);
+  const totalExpense = trendData.reduce((sum, item) => sum + item.expense, 0);
+  const netBalance = totalIncome - totalExpense;
+
+  return {
+    title: 'Relatório de Fluxo de Caixa - Modelo Padrão',
+    period: {
+      start: trendData[0]?.date || STANDARD_FLOW_BASE_DATE,
+      end: trendData[trendData.length - 1]?.date || '2026-03-02',
+    },
+    summary: {
+      totalIncome,
+      totalExpense: -Math.abs(totalExpense),
+      netBalance,
+      variation: 17.4,
+    },
+    details: [
+      { date: '2026-02-03', description: 'Recebimento Convênio Unimed', amount: 24324.54, type: 'income' },
+      { date: '2026-02-05', description: 'Recebimentos Clínica CNPJ', amount: 20000, type: 'income' },
+      { date: '2026-02-08', description: 'IR Trimestral', amount: 16016.28, type: 'expense' },
+      { date: '2026-02-10', description: 'Glosas Convênio', amount: 12152.77, type: 'expense' },
+      { date: '2026-02-14', description: 'Marketing e Mídias', amount: 1091.5, type: 'expense' },
+      { date: '2026-02-20', description: 'Receita Particular NF', amount: 47295, type: 'income' },
+      { date: '2026-02-24', description: 'Receita CEONC-SUS', amount: 38315.25, type: 'income' },
+      { date: '2026-02-27', description: 'Investimento Equipamentos', amount: 8755.17, type: 'expense' },
+    ],
+  };
+}
 
 export default function FluxoCaixaPage() {
   const { clinic, loadingClinic } = useClinicContext();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'summary' | 'trend' | 'forecast' | 'report'>('dashboard');
+  const [useWorkbookPreview, setUseWorkbookPreview] = useState(true);
 
   // Load data for all new components
   const summary = useCashFlowSummaryData();
   const trend = useCashFlowTrendData();
   const forecast = useCashFlowForecastData(30);
   const report = useCashFlowReportData();
+
+  const standardFlowTrendData = useMemo(() => buildStandardFlowTrendData(), []);
+  const standardFlowSummaryData = useMemo(() => {
+    const totalIncome = standardFlowTrendData.reduce((sum, item) => sum + item.income, 0);
+    const totalExpense = standardFlowTrendData.reduce((sum, item) => sum + item.expense, 0);
+
+    return {
+      totalIncome,
+      totalExpense: -Math.abs(totalExpense),
+      netBalance: totalIncome - totalExpense,
+      previousNetBalance: 81220.4,
+      period: 'Modelo padrão do sistema - Pré-visualização',
+      isLoading: false,
+    };
+  }, [standardFlowTrendData]);
+  const drMilitaoForecastData = useMemo(
+    () => standardFlowTrendData.map((item) => ({ date: item.date, balance: item.balance })),
+    [standardFlowTrendData],
+  );
+  const standardFlowReportData = useMemo(() => buildStandardFlowReportData(standardFlowTrendData), [standardFlowTrendData]);
+
+  const summaryMetrics = useWorkbookPreview ? standardFlowSummaryData : summary.data;
+  const trendData = useWorkbookPreview ? standardFlowTrendData : trend.trendData;
+  const trendLoading = useWorkbookPreview ? false : trend.isLoading;
+  const trendError = useWorkbookPreview ? undefined : trend.error;
+  const forecastData = useWorkbookPreview ? drMilitaoForecastData : forecast.historicalData;
+  const forecastLoading = useWorkbookPreview ? false : forecast.isLoading;
+  const forecastError = useWorkbookPreview ? undefined : forecast.error;
+  const reportData = useWorkbookPreview ? standardFlowReportData : report.reportData;
+  const reportLoading = useWorkbookPreview ? false : report.isLoading;
+  const reportError = useWorkbookPreview ? undefined : report.error;
 
   if (loadingClinic) {
     return (
@@ -71,6 +162,29 @@ export default function FluxoCaixaPage() {
             Visão completa do fluxo de caixa realizado, previsto e projetado
           </p>
         </div>
+
+        <Card className="border-slate-200 bg-slate-50/80">
+          <CardContent className="pt-6">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-slate-800">Modelo padrão do fluxo</p>
+                <p className="text-sm text-slate-600">
+                  Use a pré-visualização padrão do sistema para validar a apresentação antes da integração definitiva.
+                </p>
+              </div>
+              <button
+                onClick={() => setUseWorkbookPreview((value) => !value)}
+                className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+                  useWorkbookPreview
+                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
+                }`}
+              >
+                {useWorkbookPreview ? 'Prévia padrão: ON' : 'Prévia padrão: OFF'}
+              </button>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Tab Navigation */}
         <div className="flex gap-2 overflow-x-auto pb-2">
@@ -145,6 +259,7 @@ export default function FluxoCaixaPage() {
                 </p>
               </CardContent>
             </Card>
+            {useWorkbookPreview && <CashFlowWorkbookModel />}
             <CashFlowDashboard />
           </div>
         )}
@@ -153,7 +268,7 @@ export default function FluxoCaixaPage() {
         {activeTab === 'summary' && (
           <div className="space-y-6">
             <CashFlowSummary
-              metrics={summary.data}
+              metrics={summaryMetrics}
               onMetricClick={(metric) => console.log('Métrica clicada:', metric)}
             />
           </div>
@@ -163,9 +278,9 @@ export default function FluxoCaixaPage() {
         {activeTab === 'trend' && (
           <div className="space-y-6">
             <CashFlowTrend
-              data={trend.trendData}
-              isLoading={trend.isLoading}
-              error={trend.error}
+              data={trendData}
+              isLoading={trendLoading}
+              error={trendError}
             />
           </div>
         )}
@@ -174,9 +289,9 @@ export default function FluxoCaixaPage() {
         {activeTab === 'forecast' && (
           <div className="space-y-6">
             <CashFlowForecast
-              historicalData={forecast.historicalData}
-              isLoading={forecast.isLoading}
-              error={forecast.error}
+              historicalData={forecastData}
+              isLoading={forecastLoading}
+              error={forecastError}
             />
           </div>
         )}
@@ -184,11 +299,11 @@ export default function FluxoCaixaPage() {
         {/* Report Tab */}
         {activeTab === 'report' && (
           <div className="space-y-6">
-            {report.reportData ? (
+            {reportData ? (
               <CashFlowReport
-                data={report.reportData}
-                isLoading={report.isLoading}
-                error={report.error}
+                data={reportData}
+                isLoading={reportLoading}
+                error={reportError}
               />
             ) : (
               <Card>

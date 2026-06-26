@@ -50,6 +50,15 @@ export const CostCenterTable: React.FC<CostCenterTableProps> = ({
               Nome
             </th>
             <th className="text-left p-3 font-semibold text-slate-700 dark:text-slate-300">
+              Tipo
+            </th>
+            <th className="text-left p-3 font-semibold text-slate-700 dark:text-slate-300">
+              Unidade
+            </th>
+            <th className="text-left p-3 font-semibold text-slate-700 dark:text-slate-300">
+              Responsável
+            </th>
+            <th className="text-left p-3 font-semibold text-slate-700 dark:text-slate-300">
               Descrição
             </th>
             <th className="text-center p-3 font-semibold text-slate-700 dark:text-slate-300">
@@ -75,6 +84,17 @@ export const CostCenterTable: React.FC<CostCenterTableProps> = ({
 
               {/* Name */}
               <td className="p-3 text-slate-900 dark:text-slate-100">{center.name}</td>
+
+              {/* Type */}
+              <td className="p-3 text-slate-700 dark:text-slate-300 text-xs">
+                {center.center_type || 'OPERACOES'}
+              </td>
+
+              {/* Unit */}
+              <td className="p-3 text-slate-700 dark:text-slate-300">{center.unit_name || '—'}</td>
+
+              {/* Responsible */}
+              <td className="p-3 text-slate-700 dark:text-slate-300">{center.responsible_name || '—'}</td>
 
               {/* Description */}
               <td className="p-3 text-slate-600 dark:text-slate-400 truncate max-w-xs">

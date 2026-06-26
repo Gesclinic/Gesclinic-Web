@@ -40,6 +40,7 @@ interface TransactionFiltersProps {
   loading?: boolean;
   accounts: any[];
   categories: any[];
+  costCenters: any[];
 }
 
 export const TransactionFilters = React.memo<TransactionFiltersProps>(({
@@ -48,6 +49,7 @@ export const TransactionFilters = React.memo<TransactionFiltersProps>(({
   loading = false,
   accounts,
   categories,
+  costCenters,
 }) => {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -56,6 +58,7 @@ export const TransactionFilters = React.memo<TransactionFiltersProps>(({
   const [movementType, setMovementType] = useState('');
   const [status, setStatus] = useState('');
   const [categoryId, setCategoryId] = useState('');
+  const [costCenterId, setCostCenterId] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [reconciled, setReconciled] = useState<string>('');
@@ -72,6 +75,7 @@ export const TransactionFilters = React.memo<TransactionFiltersProps>(({
     if (movementType) filters.movement_type = movementType as MovementType;
     if (status) filters.status = status as TransactionStatus;
     if (categoryId) filters.category_id = categoryId;
+    if (costCenterId) filters.cost_center_id = costCenterId;
     if (dateFrom) filters.date_from = dateFrom;
     if (dateTo) filters.date_to = dateTo;
     if (reconciled !== '') filters.is_reconciled = reconciled === 'true';
@@ -86,6 +90,7 @@ export const TransactionFilters = React.memo<TransactionFiltersProps>(({
     setMovementType('');
     setStatus('');
     setCategoryId('');
+    setCostCenterId('');
     setDateFrom('');
     setDateTo('');
     setReconciled('');
@@ -100,6 +105,7 @@ export const TransactionFilters = React.memo<TransactionFiltersProps>(({
       movementType,
       status,
       categoryId,
+      costCenterId,
       dateFrom,
       dateTo,
       reconciled,
@@ -116,6 +122,7 @@ export const TransactionFilters = React.memo<TransactionFiltersProps>(({
       setMovementType(filters.movementType || '');
       setStatus(filters.status || '');
       setCategoryId(filters.categoryId || '');
+      setCostCenterId(filters.costCenterId || '');
       setDateFrom(filters.dateFrom || '');
       setDateTo(filters.dateTo || '');
       setReconciled(filters.reconciled || '');
@@ -128,6 +135,7 @@ export const TransactionFilters = React.memo<TransactionFiltersProps>(({
       if (filters.movementType) appliedFilters.movement_type = filters.movementType;
       if (filters.status) appliedFilters.status = filters.status;
       if (filters.categoryId) appliedFilters.category_id = filters.categoryId;
+      if (filters.costCenterId) appliedFilters.cost_center_id = filters.costCenterId;
       if (filters.dateFrom) appliedFilters.date_from = filters.dateFrom;
       if (filters.dateTo) appliedFilters.date_to = filters.dateTo;
       if (filters.reconciled !== '') appliedFilters.is_reconciled = filters.reconciled === 'true';
@@ -143,6 +151,7 @@ export const TransactionFilters = React.memo<TransactionFiltersProps>(({
     movementType ||
     status ||
     categoryId ||
+    costCenterId ||
     dateFrom ||
     dateTo ||
     reconciled !== '';
@@ -286,8 +295,8 @@ export const TransactionFilters = React.memo<TransactionFiltersProps>(({
         </div>
       </div>
 
-      {/* Row 3: Datas e Categoria */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Row 3: Datas, Categoria e Centro de Custo */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700">Data De</label>
           <Input
@@ -320,6 +329,22 @@ export const TransactionFilters = React.memo<TransactionFiltersProps>(({
               {categories.map((cat) => (
                 <SelectItem key={cat.id} value={cat.id}>
                   {cat.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700">Centro de Custo</label>
+          <Select value={costCenterId} onValueChange={setCostCenterId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Todos os centros" />
+            </SelectTrigger>
+            <SelectContent>
+              {costCenters.map((cc) => (
+                <SelectItem key={cc.id} value={cc.id}>
+                  {cc.code ? `${cc.code} - ${cc.name}` : cc.name}
                 </SelectItem>
               ))}
             </SelectContent>

@@ -73,7 +73,18 @@ const PatientCard = React.memo(
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: idx * 0.05 }}
       >
-        <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer group">
+        <Card
+          className="overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer group"
+          onClick={() => handleOpenPatient(patient.id)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              handleOpenPatient(patient.id);
+            }
+          }}
+        >
           <CardContent className="p-5">
             <div className="flex items-start gap-4">
               {/* Foto - Coluna 1 */}
@@ -186,7 +197,10 @@ const PatientCard = React.memo(
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleOpenPatient(patient.id)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    handleOpenPatient(patient.id, 'historico');
+                  }}
                   title="Abrir prontuário"
                   className="hover:bg-blue-50 hover:border-blue-300"
                 >
@@ -195,8 +209,11 @@ const PatientCard = React.memo(
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => navigate(`/clinica/pacientes/${patient.id}`)}
-                  title="Editar"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    navigate(`/clinica/pacientes/${patient.id}`, { state: { openTab: 'dados' } });
+                  }}
+                  title="Editar dados cadastrais"
                   className="hover:bg-emerald-50 hover:border-emerald-300"
                 >
                   <Edit2 size={16} />
@@ -204,7 +221,8 @@ const PatientCard = React.memo(
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
+                  onClick={(event) => {
+                    event.stopPropagation();
                     setPatientToDelete(patient);
                     setDeleteDialogOpen(true);
                   }}
@@ -385,8 +403,11 @@ export default function PatientListPage() {
   } = usePagination(filteredPatients, 50);
 
   // Abrir paciente
-  function handleOpenPatient(patientId) {
-    navigate(`/clinica/pacientes/${patientId}`);
+  function handleOpenPatient(patientId, openTab = null) {
+    navigate(
+      `/clinica/pacientes/${patientId}`,
+      openTab ? { state: { openTab } } : undefined,
+    );
   }
 
   // Deletar paciente

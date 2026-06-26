@@ -9,7 +9,7 @@ import { useClinicContext } from '@/contexts/ClinicContext';
 import { customSupabaseClient } from '@/lib/customSupabaseClient';
 import { buildDerivedFinancialTransactions, getFinancialConsolidation } from '@/lib/financialConsolidationApi';
 import { deleteReceivable, updateReceivable } from '@/lib/receivablesApi';
-import { deleteAP, updateAP } from '@/lib/financeApi';
+import { deleteAP, listAPQuery, updateAP } from '@/lib/financeApi';
 import { invalidateDashboardDataCache } from '@/services/dashboardDataService';
 import {
   FinancialTransaction,
@@ -164,6 +164,13 @@ function matchesClientFilters(item: any, filters: TransactionFilters) {
   if (!matchesTransactionType(item, filters.transaction_type)) return false;
   if (!matchesStatusFilter(item?.status, filters.status)) return false;
   if (category && item?.category !== category && item?.category_id !== category) return false;
+  if (filters.cost_center_id) {
+    const itemCostCenterId =
+      item?.cost_center_id
+      || item?.centro_custo_id
+      || item?.metadata?.allocation?.target_cost_center_id;
+    if (String(itemCostCenterId || '') !== String(filters.cost_center_id)) return false;
+  }
   if (!matchesMovementType(item, filters.movement_type)) return false;
   if (filters.is_reconciled !== undefined && Boolean(item?.is_reconciled) !== filters.is_reconciled) return false;
   if (!matchesDateRange(item, filters.date_from, filters.date_to)) return false;
@@ -203,9 +210,24 @@ function getIdentifierTokens(value: unknown) {
 }
 
 function hasSharedBusinessIdentifier(left: unknown, right: unknown) {
-  const leftTokens = getIdentifierTokens(left);
+  const leftText = normalizeText(left);
+  const rightText = normalizeText(right);
+
+  const leftNumeric = new Set(leftText.match(/\d{4,}/g) || []);
+  const rightNumeric = new Set(rightText.match(/\d{4,}/g) || []);
+
+  // If either side has long numeric ids, match only by numeric id.
+  // This prevents collisions by generic words like "auto", "percent", "fix".
+  if (leftNumeric.size > 0 || rightNumeric.size > 0) {
+    for (const token of leftNumeric) {
+      if (rightNumeric.has(token)) return true;
+    }
+    return false;
+  }
+
+  const leftTokens = getIdentifierTokens(leftText);
   if (leftTokens.size === 0) return false;
-  const rightTokens = getIdentifierTokens(right);
+  const rightTokens = getIdentifierTokens(rightText);
   for (const token of leftTokens) {
     if (rightTokens.has(token)) return true;
   }
@@ -215,6 +237,67 @@ function hasSharedBusinessIdentifier(left: unknown, right: unknown) {
 function isAccountsPayableDerived(item: any) {
   const origin = String(item?.origin_module || '').toLowerCase();
   return origin === 'accounts_payable' || String(item?.id || '').startsWith('ap-');
+}
+
+function getBusinessIdentifier(item: any) {
+  const source = String(item?.reference_document || item?.document_number || item?.description || '');
+  const normalized = normalizeText(source);
+  const numeric = normalized.match(/\d{6,}/g);
+  if (numeric && numeric.length > 0) return numeric[0];
+  return '';
+}
+
+function isExpenseTransaction(item: any) {
+  const type = normalizeType(item);
+  return ['expense', 'cost', 'deduction'].includes(type) || String(item?.transaction_type || '').toUpperCase() === 'EXPENSE';
+}
+
+function getCostCenterToken(item: any) {
+  return String(
+    item?.cost_center_id
+    || item?.centro_custo_id
+    || item?.metadata?.allocation?.target_cost_center_id
+    || '',
+  ).trim();
+}
+
+function removeAllocationParentDuplicates(rows: any[]) {
+  if (!Array.isArray(rows) || rows.length < 3) return rows;
+
+  const groups = new Map<string, any[]>();
+  rows.forEach((row) => {
+    if (!isExpenseTransaction(row)) return;
+    const key = getBusinessIdentifier(row);
+    if (!key) return;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(row);
+  });
+
+  const removeIds = new Set<string>();
+
+  groups.forEach((group) => {
+    if (group.length < 3) return;
+
+    const withCenter = group.filter((row) => !!getCostCenterToken(row));
+    const withoutCenter = group.filter((row) => !getCostCenterToken(row));
+    if (withCenter.length < 2 || withoutCenter.length === 0) return;
+
+    const splitSum = withCenter.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+
+    withoutCenter.forEach((candidate) => {
+      const amount = Number(candidate.amount || 0);
+      const sameDate = withCenter.some((child) => normalizeDate(child) === normalizeDate(candidate));
+      if (!sameDate) return;
+
+      // Remove parent when child split rows sum to same amount.
+      if (Math.abs(splitSum - amount) < 0.01) {
+        removeIds.add(String(candidate.id || ''));
+      }
+    });
+  });
+
+  if (removeIds.size === 0) return rows;
+  return rows.filter((row) => !removeIds.has(String(row.id || '')));
 }
 
 function normalizeTransactionUpdateInput(input: FinancialTransactionUpdateInput) {
@@ -372,14 +455,22 @@ export const useFinancialTransactions = (options: UseFinancialTransactionsOption
             const similarDescription = itemDescription.includes(derivedDescription) || derivedDescription.includes(itemDescription);
             if (sameBusinessOrigin && sameAmount && sameDate) return true;
             if (sameCardFee && sameAmount && sameDate) return true;
-            if (isAccountsPayableDerived(derivedItem) && sameAmount && sameType && sharedIdentifier) return true;
+            if (isAccountsPayableDerived(derivedItem)) {
+              // AP rows must match by business id token or exact origin match.
+              // Avoid generic description-based matches that collapse distinct bills.
+              return (sameAmount && sameType && sharedIdentifier) || (sameBusinessOrigin && sameAmount && sameDate);
+            }
             return sameAmount && sameType && sameDate && similarDescription;
           });
           const derived = buildDerivedFinancialTransactions(consolidation)
             .filter((item: any) => {
               const key = getOriginKey(item);
+              const isApDerived = isAccountsPayableDerived(item);
               if (existingKeys.has(key)) return false;
-              if (existingSemanticKeys.has(getSemanticKey(item))) return false;
+              // For AP-derived rows, semantic/fuzzy dedupe can wrongly merge distinct bills
+              // that share date/amount/description patterns (common in installment tests).
+              // Keep AP rows by strict origin key; use semantic dedupe for other modules.
+              if (!isApDerived && existingSemanticKeys.has(getSemanticKey(item))) return false;
               if (hasEquivalentPersisted(item)) return false;
               if (!matchesTransactionType(item, finalFilters.transaction_type)) return false;
               if (!matchesStatusFilter(item.status, finalFilters.status)) return false;
@@ -397,10 +488,11 @@ export const useFinancialTransactions = (options: UseFinancialTransactionsOption
         }
 
         const filteredMergedTransactions = allMergedTransactions.filter((item: any) => matchesClientFilters(item, finalFilters));
+        const normalizedTransactions = removeAllocationParentDuplicates(filteredMergedTransactions);
 
-        setMetricTransactions(filteredMergedTransactions);
-        setTransactions(filteredMergedTransactions.slice(offset, offset + limit));
-        setTotalCount(filteredMergedTransactions.length || count || 0);
+        setMetricTransactions(normalizedTransactions);
+        setTransactions(normalizedTransactions.slice(offset, offset + limit));
+        setTotalCount(normalizedTransactions.length || count || 0);
         setPage(currentPage);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Erro ao carregar transações';
@@ -435,10 +527,11 @@ export const useFinancialTransactions = (options: UseFinancialTransactionsOption
 
     try {
       const { data, error: fetchError } = await customSupabaseClient
-        .from('cost_centers')
-        .select('*')
+        .from('financial_cost_centers')
+        .select('id, clinic_id, code, name, description, is_active, created_at, updated_at')
         .eq('clinic_id', clinicId)
-        .order('name');
+        .eq('is_active', true)
+        .order('code');
 
       if (fetchError) throw fetchError;
       setCostCenters(data || []);
@@ -538,6 +631,7 @@ export const useFinancialTransactions = (options: UseFinancialTransactionsOption
 
         invalidateDashboardDataCache(clinicId);
         setTransactions(trans => trans.map(t => (t.id === id ? data : t)));
+        setMetricTransactions(trans => trans.map(t => (t.id === id ? data : t)));
         return data;
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Erro ao atualizar transação';
@@ -785,6 +879,7 @@ export const useFinancialTransactions = (options: UseFinancialTransactionsOption
           if (origin === 'accounts_receivable') {
             await deleteReceivable(originId, clinicId);
             setTransactions(trans => trans.filter(t => t.id !== id && t.origin_id !== originId));
+            setMetricTransactions(trans => trans.filter(t => t.id !== id && t.origin_id !== originId));
             invalidateDashboardDataCache(clinicId);
             await fetchTransactions();
             return;
@@ -792,6 +887,7 @@ export const useFinancialTransactions = (options: UseFinancialTransactionsOption
           if (origin === 'accounts_payable') {
             await deleteAP(originId);
             setTransactions(trans => trans.filter(t => t.id !== id && t.origin_id !== originId));
+            setMetricTransactions(trans => trans.filter(t => t.id !== id && t.origin_id !== originId));
             invalidateDashboardDataCache(clinicId);
             await fetchTransactions();
             return;
@@ -809,6 +905,7 @@ export const useFinancialTransactions = (options: UseFinancialTransactionsOption
 
         invalidateDashboardDataCache(clinicId);
         setTransactions(trans => trans.filter(t => t.id !== id && getPersistedTransactionId(t) !== persistedId));
+        setMetricTransactions(trans => trans.filter(t => t.id !== id && getPersistedTransactionId(t) !== persistedId));
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Erro ao deletar transação';
         setError(message);
@@ -831,7 +928,11 @@ export const useFinancialTransactions = (options: UseFinancialTransactionsOption
       
       const isRealizedStatus = (transaction: any) => {
         const status = String(transaction.status || '').toLowerCase();
-        return ['paid', 'received', 'processed', 'pago', 'recebido', 'quitado'].includes(status) || transaction.movement_type === 'REALIZED';
+        if (['paid', 'received', 'processed', 'pago', 'recebido', 'quitado'].includes(status)) {
+          return true;
+        }
+        // Legacy fallback: only trust movement_type when status is absent.
+        return !status && String(transaction.movement_type || '').toUpperCase() === 'REALIZED';
       };
 
       const isPredictedStatus = (transaction: any) => !isRealizedStatus(transaction);
@@ -878,6 +979,39 @@ export const useFinancialTransactions = (options: UseFinancialTransactionsOption
           return isIncome ? sum + amount : sum - amount;
         }, 0);
 
+      const predictedIncome = sourceTransactions
+        .filter((t: any) => {
+          const isIncome = t.type === 'revenue' || t.transaction_type === 'INCOME';
+          return isIncome && isPredictedStatus(t);
+        })
+        .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+      const predictedExpense = sourceTransactions
+        .filter((t: any) => {
+          const isExpense =
+            (t.type && ['expense', 'cost', 'deduction'].includes(t.type))
+            || t.transaction_type === 'EXPENSE';
+          return isExpense && isPredictedStatus(t);
+        })
+        .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+      const apRows = await listAPQuery({
+        clinicId,
+        statusList: ['open', 'partial', 'approved', 'overdue'],
+        limit: 5000,
+        offset: 0,
+      }).catch(() => []);
+
+      const apOpenTotal = (apRows || []).reduce((sum: number, row: any) => {
+        const explicitBalance = row.balance_amount ?? row.open_amount ?? row.remaining_amount;
+        if (explicitBalance !== null && explicitBalance !== undefined) {
+          return sum + Math.max(0, Number(explicitBalance || 0));
+        }
+        const amount = Number(row.net_amount ?? row.amount ?? row.valor ?? 0);
+        const paid = Number(row.paid_amount ?? row.paid_value ?? 0);
+        return sum + Math.max(0, amount - paid);
+      }, 0);
+
       // Status normalizados para comparação (OLD: lowercase, NEW: uppercase)
       const normalizeStatus = (status: string) => status.toLowerCase();
       const isIncomeTransaction = (t: any) => t.type === 'revenue' || t.transaction_type === 'INCOME';
@@ -891,6 +1025,9 @@ export const useFinancialTransactions = (options: UseFinancialTransactionsOption
         total_expense: expense,
         total_realized: realized,
         total_predicted: predicted,
+        predicted_income: predictedIncome,
+        predicted_expense: predictedExpense,
+        ap_open_total: apOpenTotal,
         net_balance: realized + predicted,
         pending_count: sourceTransactions.filter((t: any) => isPredictedStatus(t)).length,
         paid_count: sourceTransactions.filter((t: any) => isRealizedStatus(t)).length,
@@ -905,6 +1042,9 @@ export const useFinancialTransactions = (options: UseFinancialTransactionsOption
         total_expense: expense,
         total_realized: realized,
         total_predicted: predicted,
+        predicted_income: predictedIncome,
+        predicted_expense: predictedExpense,
+        ap_open_total: apOpenTotal,
         transaction_count: sourceTransactions.length,
         metrics
       });
