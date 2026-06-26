@@ -86,14 +86,30 @@ export default function DRECharts({ summary, variant, loading = false, period }:
   }, [clinicId, period?.end, period?.start]);
 
   const showCharts = variant !== 'projetada' && variant !== 'especialidade';
-
-  if (!showCharts) return null;
-  if (loading || actualData.loading) return <Card className="p-6 animate-pulse h-96 bg-gray-100" />;
-  if (!summary) return null;
+  const safeSummary = summary || {
+    receitaBruta: 0,
+    deducoes: 0,
+    receitaLiquida: 0,
+    custosVariaveis: 0,
+    custosFixos: 0,
+    margemBruta: 0,
+    margemBrutaPercent: 0,
+    despesasOperacionais: 0,
+    ebitda: 0,
+    ebitdaPercent: 0,
+    depreciacao: 0,
+    ebit: 0,
+    ebitPercent: 0,
+    despesasFinanceiras: 0,
+    receitasFinanceiras: 0,
+    impostos: 0,
+    lucroLiquido: 0,
+    lucroLiquidoPercent: 0,
+  };
 
   const timeSeriesData = actualData.timeSeries.length > 0
     ? actualData.timeSeries
-    : [{ month: 'Período', receita: summary.receitaBruta, custos: summary.custosFixos + summary.custosVariaveis + summary.despesasOperacionais, ebitda: summary.ebitda, lucro: summary.lucroLiquido }];
+    : [{ month: 'Período', receita: safeSummary.receitaBruta, custos: safeSummary.custosFixos + safeSummary.custosVariaveis + safeSummary.despesasOperacionais, ebitda: safeSummary.ebitda, lucro: safeSummary.lucroLiquido }];
   const convenioData = actualData.convenio;
   const especialidadeData = actualData.especialidade;
   const centroData = actualData.centro;
@@ -101,25 +117,29 @@ export default function DRECharts({ summary, variant, loading = false, period }:
 
   const contabilData = useMemo(() => {
     return [
-      { label: 'Receita Bruta', value: summary.receitaBruta, tone: '#3b82f6' },
-      { label: 'Deduções', value: summary.deducoes, tone: '#ef4444' },
-      { label: 'Receita Líquida', value: summary.receitaLiquida, tone: '#10b981' },
-      { label: 'Despesas Operacionais', value: summary.despesasOperacionais, tone: '#f59e0b' },
-      { label: 'EBITDA', value: summary.ebitda, tone: '#8b5cf6' },
-      { label: 'Lucro Líquido', value: summary.lucroLiquido, tone: '#14b8a6' },
+      { label: 'Receita Bruta', value: safeSummary.receitaBruta, tone: '#3b82f6' },
+      { label: 'Deduções', value: safeSummary.deducoes, tone: '#ef4444' },
+      { label: 'Receita Líquida', value: safeSummary.receitaLiquida, tone: '#10b981' },
+      { label: 'Despesas Operacionais', value: safeSummary.despesasOperacionais, tone: '#f59e0b' },
+      { label: 'EBITDA', value: safeSummary.ebitda, tone: '#8b5cf6' },
+      { label: 'Lucro Líquido', value: safeSummary.lucroLiquido, tone: '#14b8a6' },
     ];
-  }, [summary]);
+  }, [safeSummary.deducoes, safeSummary.despesasOperacionais, safeSummary.ebitda, safeSummary.lucroLiquido, safeSummary.receitaBruta, safeSummary.receitaLiquida]);
 
   const contabilPieData = useMemo(() => {
     return [
-      { name: 'Receita Líquida', value: Math.max(summary.receitaLiquida, 0) },
-      { name: 'Deduções', value: Math.max(summary.deducoes, 0) },
-      { name: 'Custos Fixos', value: Math.max(summary.custosFixos, 0) },
-      { name: 'Custos Variáveis', value: Math.max(summary.custosVariaveis, 0) },
-      { name: 'Despesas Operacionais', value: Math.max(summary.despesasOperacionais, 0) },
-      { name: 'Lucro', value: Math.max(summary.lucroLiquido, 0) },
+      { name: 'Receita Líquida', value: Math.max(safeSummary.receitaLiquida, 0) },
+      { name: 'Deduções', value: Math.max(safeSummary.deducoes, 0) },
+      { name: 'Custos Fixos', value: Math.max(safeSummary.custosFixos, 0) },
+      { name: 'Custos Variáveis', value: Math.max(safeSummary.custosVariaveis, 0) },
+      { name: 'Despesas Operacionais', value: Math.max(safeSummary.despesasOperacionais, 0) },
+      { name: 'Lucro', value: Math.max(safeSummary.lucroLiquido, 0) },
     ].filter((item) => item.value > 0);
-  }, [summary]);
+  }, [safeSummary.custosFixos, safeSummary.custosVariaveis, safeSummary.deducoes, safeSummary.despesasOperacionais, safeSummary.lucroLiquido, safeSummary.receitaLiquida]);
+
+  if (!showCharts) return null;
+  if (loading || actualData.loading) return <Card className="p-6 animate-pulse h-96 bg-gray-100" />;
+  if (!summary) return null;
 
   const variantTitle = {
     gerencial: 'Análise Gráfica Premium - Gerencial',
