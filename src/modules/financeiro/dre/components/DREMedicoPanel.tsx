@@ -26,6 +26,45 @@ type Props = {
   period?: { start: string; end: string };
 };
 
+const money = (value: unknown): number => {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const getReceivableValue = (row: any): number => money(
+  row?.valor_liquido
+  ?? row?.net_value
+  ?? row?.net_amount
+  ?? row?.valor_bruto
+  ?? row?.gross_value
+  ?? row?.gross_amount
+  ?? row?.amount
+  ?? row?.value
+  ?? row?.total_amount
+  ?? row?.valor
+);
+
+const getPayableValue = (row: any): number => money(
+  row?.valor_liquido
+  ?? row?.net_value
+  ?? row?.net_amount
+  ?? row?.valor_bruto
+  ?? row?.gross_value
+  ?? row?.gross_amount
+  ?? row?.amount
+  ?? row?.value
+  ?? row?.total_amount
+  ?? row?.valor
+);
+
+const getDeductionValue = (row: any): number => money(
+  row?.glosa_value
+  ?? row?.glosa_amount
+  ?? row?.chargeback_amount
+  ?? row?.desconto
+  ?? row?.discount_value
+);
+
 /**
  * ETAPA 7: DRE por Médico
  * Painel dedicado com análise de rentabilidade por profissional
@@ -64,8 +103,8 @@ export default function DREMedicoPanel({ summary, variant, loading = false, peri
         (receivables || []).forEach((row: any) => {
           const id = String(row.professional_id || row.medico_id || row.doctor_id || row.professional_name || row.medico_name || 'sem-profissional');
           const name = row.professional_name || row.doctor_name || row.medico_name || 'Sem profissional';
-          const receita = Number(row.net_value ?? row.amount ?? row.valor ?? 0) || 0;
-          const glosa = Number(row.glosa_value ?? row.glosa_amount ?? 0) || 0;
+          const receita = getReceivableValue(row);
+          const glosa = getDeductionValue(row);
 
           if (!byMedico.has(id)) {
             byMedico.set(id, { id, name, receitaProduzida: 0, glosas: 0, count: 0 });
@@ -83,7 +122,7 @@ export default function DREMedicoPanel({ summary, variant, loading = false, peri
           const description = String(row.description || '').toLowerCase();
           if (!doctorName && !description.includes('repasse')) return;
 
-          const amount = Number(row.amount ?? row.net_amount ?? row.valor ?? 0) || 0;
+          const amount = getPayableValue(row);
           const key = doctorName ? doctorName.toLowerCase() : 'sem-profissional';
           repasseByKey.set(key, (repasseByKey.get(key) || 0) + amount);
         });

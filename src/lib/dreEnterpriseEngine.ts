@@ -32,17 +32,40 @@ const isPaidStatus = (status: any): boolean => {
   return ['paid', 'pago', 'partial', 'partially_paid'].includes(normalized);
 };
 
+const isActiveAccrualStatus = (status: any): boolean => {
+  const normalized = String(status || '').trim().toLowerCase();
+  return !['canceled', 'cancelled', 'cancelado', 'cancelada', 'void', 'estornado', 'estornada'].includes(normalized);
+};
+
 const getReceivableValue = (row: any): number =>
   money(
-    row?.amount
+    row?.valor_liquido
+    ?? row?.net_value
+    ?? row?.net_amount
+    ?? row?.valor_bruto
+    ?? row?.gross_value
+    ?? row?.gross_amount
+    ?? row?.amount
+    ?? row?.value
+    ?? row?.total_amount
     ?? row?.valor
     ?? row?.valor_recebido
     ?? row?.paid_amount
-    ?? row?.net_amount
-    ?? row?.gross_amount
   );
 
-const getPayableValue = (row: any): number => money(row?.amount ?? row?.valor ?? row?.paid_amount);
+const getPayableValue = (row: any): number => money(
+  row?.valor_liquido
+  ?? row?.net_value
+  ?? row?.net_amount
+  ?? row?.valor_bruto
+  ?? row?.gross_value
+  ?? row?.gross_amount
+  ?? row?.amount
+  ?? row?.value
+  ?? row?.total_amount
+  ?? row?.valor
+  ?? row?.paid_amount
+);
 
 const normalizeText = (value: any): string => String(value || '').trim().toLowerCase();
 
@@ -709,7 +732,7 @@ function calculateReceitaBruta(receivables: any[], filters?: DREFilters): number
   return receivables
     .filter((r) => !filters?.convenioId || String(r.convenio_id || r.payer_id || '') === String(filters.convenioId))
     .filter((r) => !filters?.centroId || String(getRowCostCenterId(r) || '') === String(filters.centroId))
-    .filter((r) => isPaidStatus(r.status))
+    .filter((r) => isActiveAccrualStatus(r.status))
     .reduce((sum, r) => sum + getReceivableValue(r), 0);
 }
 
@@ -724,7 +747,7 @@ function calculateReceitaByType(
   receivables
     .filter((r) => !filters?.convenioId || String(r.convenio_id || r.payer_id || '') === String(filters.convenioId))
     .filter((r) => !filters?.centroId || String(getRowCostCenterId(r) || '') === String(filters.centroId))
-    .filter((r) => isPaidStatus(r.status))
+    .filter((r) => isActiveAccrualStatus(r.status))
     .forEach(r => {
       let type = r.convenio_name || r.payer_name || 'Particular';
       if (variant === 'contabil' && accountIndex) {
@@ -807,7 +830,7 @@ function calculateCustosVariaveis(
 ): number {
   if (variant === 'contabil' && accountIndex) {
     return payables
-      .filter((p) => isPaidStatus(p.status))
+      .filter((p) => isActiveAccrualStatus(p.status))
       .filter((p) => {
         const account = getLinkedAccount(p, accountIndex);
         return !!account && isCustoVariavelConta(account);
@@ -817,7 +840,7 @@ function calculateCustosVariaveis(
 
   if (variant === 'centro') {
     return payables
-      .filter((p) => isPaidStatus(p.status))
+      .filter((p) => isActiveAccrualStatus(p.status))
       .filter((p) => !filters?.centroId || String(getRowCostCenterId(p) || '') === String(filters.centroId))
       .filter((p) => {
         const categoria = normalizeText(p.categoria || p.category || p.category_name);
@@ -832,7 +855,7 @@ function calculateCustosVariaveis(
       const categoria = normalizeText(p.categoria || p.category || p.category_name);
       return ['medicamentos', 'insumos', 'materiais', 'repasse', 'honorario'].some(c => categoria.includes(c));
     })
-    .filter((p) => isPaidStatus(p.status))
+    .filter((p) => isActiveAccrualStatus(p.status))
     .reduce((sum, p) => sum + getPayableValue(p), 0);
 }
 
@@ -847,7 +870,7 @@ function calculateCustoVariavelByType(
 
   if (variant === 'contabil' && accountIndex) {
     payables
-      .filter((p) => isPaidStatus(p.status))
+      .filter((p) => isActiveAccrualStatus(p.status))
       .forEach((p) => {
         const account = getLinkedAccount(p, accountIndex);
         if (!account || !isCustoVariavelConta(account)) return;
@@ -868,7 +891,7 @@ function calculateCustoVariavelByType(
       const categoria = normalizeText(p.categoria || p.category || p.category_name);
       return ['medicamentos', 'insumos', 'materiais', 'repasse', 'honorario'].some(c => categoria.includes(c));
     })
-    .filter((p) => isPaidStatus(p.status))
+    .filter((p) => isActiveAccrualStatus(p.status))
     .forEach(p => {
       const type = p.categoria || p.category_name || p.category || 'Outro';
       types[type] = (types[type] || 0) + getPayableValue(p);
@@ -894,7 +917,7 @@ function calculateCustosFixos(
 ): number {
   if (variant === 'contabil' && accountIndex) {
     return payables
-      .filter((p) => isPaidStatus(p.status))
+      .filter((p) => isActiveAccrualStatus(p.status))
       .filter((p) => {
         const account = getLinkedAccount(p, accountIndex);
         return !!account && isCustoFixoConta(account);
@@ -904,7 +927,7 @@ function calculateCustosFixos(
 
   if (variant === 'centro') {
     return payables
-      .filter((p) => isPaidStatus(p.status))
+      .filter((p) => isActiveAccrualStatus(p.status))
       .filter((p) => !filters?.centroId || String(getRowCostCenterId(p) || '') === String(filters.centroId))
       .filter((p) => {
         const categoria = normalizeText(p.categoria || p.category || p.category_name);
@@ -919,7 +942,7 @@ function calculateCustosFixos(
       const categoria = normalizeText(p.categoria || p.category || p.category_name);
       return ['folha', 'infraestrutura', 'servicos', 'aluguel', 'energia', 'salario'].some(c => categoria.includes(c));
     })
-    .filter((p) => isPaidStatus(p.status))
+    .filter((p) => isActiveAccrualStatus(p.status))
     .reduce((sum, p) => sum + getPayableValue(p), 0);
 }
 
@@ -934,7 +957,7 @@ function calculateCustoFixoByType(
 
   if (variant === 'contabil' && accountIndex) {
     payables
-      .filter((p) => isPaidStatus(p.status))
+      .filter((p) => isActiveAccrualStatus(p.status))
       .forEach((p) => {
         const account = getLinkedAccount(p, accountIndex);
         if (!account || !isCustoFixoConta(account)) return;
@@ -955,7 +978,7 @@ function calculateCustoFixoByType(
       const categoria = normalizeText(p.categoria || p.category || p.category_name);
       return ['folha', 'infraestrutura', 'servicos', 'aluguel', 'energia', 'salario'].some(c => categoria.includes(c));
     })
-    .filter((p) => isPaidStatus(p.status))
+    .filter((p) => isActiveAccrualStatus(p.status))
     .forEach(p => {
       const type = p.categoria || p.category_name || p.category || 'Outro';
       types[type] = (types[type] || 0) + getPayableValue(p);
@@ -981,7 +1004,7 @@ function calculateDespesasOperacionais(
 ): number {
   if (variant === 'contabil' && accountIndex) {
     return payables
-      .filter((p) => isPaidStatus(p.status))
+      .filter((p) => isActiveAccrualStatus(p.status))
       .filter((p) => {
         const account = getLinkedAccount(p, accountIndex);
         return !!account && isDespesaOperacionalConta(account);
@@ -991,7 +1014,7 @@ function calculateDespesasOperacionais(
 
   if (variant === 'centro') {
     return payables
-      .filter((p) => isPaidStatus(p.status))
+      .filter((p) => isActiveAccrualStatus(p.status))
       .filter((p) => !filters?.centroId || String(getRowCostCenterId(p) || '') === String(filters.centroId))
       .filter((p) => {
         const categoria = normalizeText(p.categoria || p.category || p.category_name);
@@ -1008,7 +1031,7 @@ function calculateDespesasOperacionais(
       const excluded = ['medicamentos', 'insumos', 'materiais', 'repasse', 'honorario', 'folha', 'infraestrutura', 'servicos', 'salario'];
       return !excluded.some(c => categoria.includes(c));
     })
-    .filter((p) => isPaidStatus(p.status))
+    .filter((p) => isActiveAccrualStatus(p.status))
     .reduce((sum, p) => sum + getPayableValue(p), 0);
 }
 
@@ -1023,7 +1046,7 @@ function calculateDespesaByType(
 
   if (variant === 'contabil' && accountIndex) {
     payables
-      .filter((p) => isPaidStatus(p.status))
+      .filter((p) => isActiveAccrualStatus(p.status))
       .forEach((p) => {
         const account = getLinkedAccount(p, accountIndex);
         if (!account || !isDespesaOperacionalConta(account)) return;
@@ -1045,7 +1068,7 @@ function calculateDespesaByType(
       const excluded = ['medicamentos', 'insumos', 'materiais', 'repasse', 'honorario', 'folha', 'infraestrutura', 'servicos', 'salario'];
       return !excluded.some(c => categoria.includes(c));
     })
-    .filter((p) => isPaidStatus(p.status))
+    .filter((p) => isActiveAccrualStatus(p.status))
     .forEach(p => {
       const type = p.categoria || p.category_name || p.category || 'Outro';
       types[type] = (types[type] || 0) + getPayableValue(p);
@@ -1076,7 +1099,7 @@ function calculateDespesasFinanceiras(
 ): number {
   if (variant === 'contabil' && accountIndex) {
     const fromAccounts = payables
-      .filter((p) => isPaidStatus(p.status))
+      .filter((p) => isActiveAccrualStatus(p.status))
       .filter((p) => {
         const account = getLinkedAccount(p, accountIndex);
         return !!account && isDespesaFinanceiraConta(account);
@@ -1088,7 +1111,7 @@ function calculateDespesasFinanceiras(
 
   if (variant === 'centro') {
     return payables
-      .filter((p) => isPaidStatus(p.status))
+      .filter((p) => isActiveAccrualStatus(p.status))
       .filter((p) => !filters?.centroId || String(getRowCostCenterId(p) || '') === String(filters.centroId))
       .filter((p) => /tarifa|taxa|cartao|juros|multa|banco|financeir|iof|ted|pix/i.test(normalizeText(p.category || p.category_name || p.description || p.vendor_name || p.notes || p.payment_method)))
       .reduce((sum, p) => sum + getPayableValue(p), 0);
@@ -1212,7 +1235,7 @@ function buildCentroDreLines(
   };
 
   receivables
-    .filter((row) => isPaidStatus(row.status))
+    .filter((row) => isActiveAccrualStatus(row.status))
     .filter((row) => matchesEnterpriseScope(row, filters))
     .forEach((row) => {
       const center = ensure(getRowCostCenterId(row), 'Sem centro');
@@ -1221,7 +1244,7 @@ function buildCentroDreLines(
     });
 
   payables
-    .filter((row) => isPaidStatus(row.status))
+    .filter((row) => isActiveAccrualStatus(row.status))
     .filter((row) => matchesEnterpriseScope(row, filters))
     .forEach((row) => {
       const center = ensure(getRowCostCenterId(row), 'Sem centro');
@@ -1712,7 +1735,7 @@ async function drillDownByConvenio(clinicId: string): Promise<DRELineItem[]> {
 
     const grouped = new Map<string, { name: string; total: number }>();
     (data || [])
-      .filter((row: any) => isPaidStatus(row.status))
+      .filter((row: any) => isActiveAccrualStatus(row.status))
       .forEach((row: any) => {
         const id = String(row.convenio_id || row.payer_id || 'particular');
         const name = row.convenio_name || row.payer_name || 'Particular';

@@ -28,6 +28,24 @@ type Props = {
   period?: { start: string; end: string };
 };
 
+const money = (value: unknown): number => {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const getFinancialValue = (row: any): number => money(
+  row?.valor_liquido
+  ?? row?.net_value
+  ?? row?.net_amount
+  ?? row?.valor_bruto
+  ?? row?.gross_value
+  ?? row?.gross_amount
+  ?? row?.amount
+  ?? row?.value
+  ?? row?.total_amount
+  ?? row?.valor
+);
+
 /**
  * ETAPA 9: DRE por Unidade
  * Painel dedicado com comparativo entre unidades/filiais
@@ -66,7 +84,7 @@ export default function DREUnidadePanel({ summary, variant, loading = false, per
         (receivables || []).forEach((row: any) => {
           const unitId = String(row.unit_id || row.branch_id || row.unit_name || row.branch_name || 'sem-unidade');
           const unitName = row.unit_name || row.branch_name || 'Sem unidade';
-          const receita = Number(row.net_value ?? row.amount ?? row.valor ?? 0) || 0;
+          const receita = getFinancialValue(row);
 
           if (!byUnit.has(unitId)) {
             byUnit.set(unitId, { id: unitId, name: unitName, receita: 0, custos: 0, atendimentos: 0 });
@@ -80,7 +98,7 @@ export default function DREUnidadePanel({ summary, variant, loading = false, per
         (payables || []).forEach((row: any) => {
           const unitId = String(row.unit_id || row.branch_id || row.unit_name || row.branch_name || 'sem-unidade');
           const unitName = row.unit_name || row.branch_name || 'Sem unidade';
-          const custo = Number(row.amount ?? row.net_amount ?? row.valor ?? 0) || 0;
+          const custo = getFinancialValue(row);
 
           if (!byUnit.has(unitId)) {
             byUnit.set(unitId, { id: unitId, name: unitName, receita: 0, custos: 0, atendimentos: 0 });

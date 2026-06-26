@@ -26,6 +26,32 @@ type Props = {
   period?: { start: string; end: string };
 };
 
+const money = (value: unknown): number => {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const getReceivableValue = (row: any): number => money(
+  row?.valor_liquido
+  ?? row?.net_value
+  ?? row?.net_amount
+  ?? row?.valor_bruto
+  ?? row?.gross_value
+  ?? row?.gross_amount
+  ?? row?.amount
+  ?? row?.value
+  ?? row?.total_amount
+  ?? row?.valor
+);
+
+const getDeductionValue = (row: any): number => money(
+  row?.glosa_value
+  ?? row?.glosa_amount
+  ?? row?.chargeback_amount
+  ?? row?.desconto
+  ?? row?.discount_value
+);
+
 /**
  * ETAPA 8: DRE por Convênio
  * Painel dedicado com análise de desempenho por plano de saúde
@@ -63,9 +89,9 @@ export default function DREConvenioPanel({ summary, variant, loading = false, pe
         (receivables || []).forEach((row: any) => {
           const id = String(row.payer_id || row.convenio_id || row.health_insurance_id || row.payer_name || row.convenio_name || 'particular');
           const name = row.payer_name || row.convenio_name || row.insurance_name || 'Particular';
-          const receita = Number(row.net_value ?? row.amount ?? row.valor ?? 0) || 0;
-          const glosa = Number(row.glosa_value ?? row.glosa_amount ?? 0) || 0;
-          const recebido = Number(row.received_amount ?? row.paid_amount ?? 0) || 0;
+          const receita = getReceivableValue(row);
+          const glosa = getDeductionValue(row);
+          const recebido = money(row.received_amount ?? row.valor_recebido ?? row.paid_amount);
 
           if (!byConvenio.has(id)) {
             byConvenio.set(id, { id, name, receita: 0, glosa: 0, recebido: 0, prazoTotal: 0, count: 0 });
