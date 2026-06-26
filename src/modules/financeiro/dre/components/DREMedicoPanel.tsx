@@ -3,9 +3,8 @@ import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TrendingUp, TrendingDown, DollarSign, Percent } from 'lucide-react';
 import type { DRESummary } from '@/lib/dreEnterpriseEngine';
-import { listReceivables } from '@/lib/receivablesApi';
-import { listAPQuery } from '@/lib/financeApi';
 import { useClinicContext } from '@/contexts/useClinicContext';
+import { loadDreActualData } from '@/modules/financeiro/dre/utils/dreActualData';
 
 type MedicoMetrics = {
   id: string;
@@ -87,10 +86,9 @@ export default function DREMedicoPanel({ summary, variant, loading = false, peri
         const start = period?.start || new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0];
         const end = period?.end || new Date().toISOString().split('T')[0];
 
-        const [receivables, payables] = await Promise.all([
-          listReceivables({ clinicId, dueStart: start, dueEnd: end, limit: 5000 }),
-          listAPQuery({ clinicId, start, end, limit: 5000 }),
-        ]);
+        const consolidation = await loadDreActualData(clinicId, { start, end });
+        const receivables = consolidation.receivables || [];
+        const payables = consolidation.payables || [];
 
         const byMedico = new Map<string, {
           id: string;

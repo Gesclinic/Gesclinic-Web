@@ -12,8 +12,6 @@
  */
 
 import { supabase } from '@/lib/customSupabaseClient';
-import { listReceivables } from '@/lib/receivablesApi';
-import { listAPQuery } from '@/lib/financeApi';
 import { getFinancialConsolidation } from '@/lib/financialConsolidationApi';
 import { computeAllScenarios, type ScenarioResult, type ScenarioType } from '@/modules/financeiro/fluxo-caixa/services/projectionEngine';
 
@@ -325,11 +323,9 @@ export async function calculateDREVariant(
     // 1. Buscar dados consolidados
     const consolidated = await getFinancialConsolidation(clinicId, period.start, period.end);
 
-    // 2. Buscar AR/AP detalhados
-    const [receivables, payables] = await Promise.all([
-      listReceivables({ clinicId, dueStart: period.start, dueEnd: period.end, limit: 5000 }),
-      listAPQuery({ clinicId, start: period.start, end: period.end, limit: 5000 }),
-    ]);
+    // 2. Usar a mesma base de competência da consolidação financeira.
+    const receivables = Array.isArray(consolidated.receivables) ? consolidated.receivables : [];
+    const payables = Array.isArray(consolidated.payables) ? consolidated.payables : [];
 
     // 3. Buscar informações complementares baseado no variant
     let complementaryData: Record<string, any> = {};

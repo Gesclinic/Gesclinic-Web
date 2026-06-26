@@ -579,6 +579,7 @@ export default function DREPage() {
               <DRECashflowComparison
                 summary={enterpriseDRE.dre?.summary || null}
                 loading={enterpriseDRE.loading}
+                period={enterpriseDRE.period}
               />
             )}
             <DREKpis
@@ -646,6 +647,7 @@ export default function DREPage() {
                 summary={enterpriseDRE.dre?.summary || null}
                 variant={enterpriseDRE.variant}
                 loading={enterpriseDRE.loading}
+                period={enterpriseDRE.period}
               />
             ) : null}
             
@@ -700,6 +702,7 @@ export default function DREPage() {
                 summary={enterpriseDRE.dre?.summary || null}
                 variant={enterpriseDRE.variant}
                 loading={enterpriseDRE.loading}
+                period={enterpriseDRE.period}
               />
             ) : null}
             

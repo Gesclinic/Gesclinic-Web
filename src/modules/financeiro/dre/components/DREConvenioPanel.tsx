@@ -3,8 +3,8 @@ import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TrendingUp, TrendingDown, Clock, AlertCircle } from 'lucide-react';
 import type { DRESummary } from '@/lib/dreEnterpriseEngine';
-import { listReceivables } from '@/lib/receivablesApi';
 import { useClinicContext } from '@/contexts/useClinicContext';
+import { loadDreActualData } from '@/modules/financeiro/dre/utils/dreActualData';
 
 type ConvenioMetrics = {
   id: string;
@@ -74,7 +74,8 @@ export default function DREConvenioPanel({ summary, variant, loading = false, pe
         const start = period?.start || new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0];
         const end = period?.end || new Date().toISOString().split('T')[0];
 
-        const receivables = await listReceivables({ clinicId, dueStart: start, dueEnd: end, limit: 5000 });
+        const consolidation = await loadDreActualData(clinicId, { start, end });
+        const receivables = consolidation.receivables || [];
 
         const byConvenio = new Map<string, {
           id: string;

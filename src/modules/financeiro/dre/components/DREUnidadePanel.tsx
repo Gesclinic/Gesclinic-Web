@@ -4,9 +4,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Building2, TrendingUp, TrendingDown, BarChart3 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import type { DRESummary } from '@/lib/dreEnterpriseEngine';
-import { listReceivables } from '@/lib/receivablesApi';
-import { listAPQuery } from '@/lib/financeApi';
 import { useClinicContext } from '@/contexts/useClinicContext';
+import { loadDreActualData } from '@/modules/financeiro/dre/utils/dreActualData';
 
 type UnidadeMetrics = {
   id: string;
@@ -68,10 +67,9 @@ export default function DREUnidadePanel({ summary, variant, loading = false, per
         const start = period?.start || new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0];
         const end = period?.end || new Date().toISOString().split('T')[0];
 
-        const [receivables, payables] = await Promise.all([
-          listReceivables({ clinicId, dueStart: start, dueEnd: end, limit: 5000 }),
-          listAPQuery({ clinicId, start, end, limit: 5000 }),
-        ]);
+        const consolidation = await loadDreActualData(clinicId, { start, end });
+        const receivables = consolidation.receivables || [];
+        const payables = consolidation.payables || [];
 
         const byUnit = new Map<string, {
           id: string;

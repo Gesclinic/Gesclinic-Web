@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import {
   LineChart,
@@ -19,12 +19,14 @@ import {
   Cell,
 } from 'recharts';
 import type { DRESummary } from '@/lib/dreEnterpriseEngine';
+import { useClinicContext } from '@/contexts/useClinicContext';
+import { buildMonthlyMetrics, buildSegmentMetrics, loadDreActualData, type DrePeriod } from '@/modules/financeiro/dre/utils/dreActualData';
 
 type Props = {
   summary: DRESummary | null;
   variant: string;
   loading?: boolean;
-  period?: string;
+  period?: DrePeriod;
 };
 
 /**
@@ -32,66 +34,70 @@ type Props = {
  * Suite completa de visualizações com Recharts para análise financeira
  */
 export default function DRECharts({ summary, variant, loading = false, period }: Props) {
+  const { clinicId } = useClinicContext();
+  const [actualData, setActualData] = useState({
+    loading: false,
+    timeSeries: [] as Array<{ month: string; receita: number; custos: number; ebitda: number; lucro: number }>,
+    convenio: [] as Array<{ name: string; value: number; percent: number }>,
+    especialidade: [] as Array<{ name: string; receita: number; margem: number }>,
+    centro: [] as Array<{ centro: string; ebitda: number; margem: number; receita: number }>,
+    medico: [] as Array<{ nome: string; receita: number; margem: number }>,
+  });
+
+  useEffect(() => {
+    if (!clinicId || !period) return;
+    let active = true;
+
+    const load = async () => {
+      setActualData((current) => ({ ...current, loading: true }));
+      try {
+        const consolidation = await loadDreActualData(clinicId, period);
+        const timeSeries = buildMonthlyMetrics(consolidation);
+        const convenioRows = buildSegmentMetrics(consolidation, 'convenios').sort((a, b) => b.receita - a.receita).slice(0, 5);
+        const especialidadeRows = buildSegmentMetrics(consolidation, 'especialidades').sort((a, b) => b.receita - a.receita).slice(0, 5);
+        const centroRows = buildSegmentMetrics(consolidation, 'centros').sort((a, b) => b.ebitda - a.ebitda).slice(0, 5);
+        const medicoRows = buildSegmentMetrics(consolidation, 'medicos').sort((a, b) => b.receita - a.receita).slice(0, 5);
+        const totalConvenios = convenioRows.reduce((sum, item) => sum + item.receita, 0);
+
+        if (active) {
+          setActualData({
+            loading: false,
+            timeSeries,
+            convenio: convenioRows.map((item) => ({
+              name: item.name,
+              value: item.receita,
+              percent: totalConvenios > 0 ? Number(((item.receita / totalConvenios) * 100).toFixed(1)) : 0,
+            })),
+            especialidade: especialidadeRows.map((item) => ({ name: item.name, receita: item.receita, margem: item.margem })),
+            centro: centroRows.map((item) => ({ centro: item.name, ebitda: item.ebitda, margem: item.margem, receita: item.receita })),
+            medico: medicoRows.map((item) => ({ nome: item.name, receita: item.receita, margem: item.margem })),
+          });
+        }
+      } catch (error) {
+        console.warn('[DRECharts] Erro ao carregar dados reais:', error);
+        if (active) setActualData((current) => ({ ...current, loading: false }));
+      }
+    };
+
+    load();
+    return () => {
+      active = false;
+    };
+  }, [clinicId, period?.end, period?.start]);
+
   const showCharts = variant !== 'projetada' && variant !== 'especialidade';
 
   if (!showCharts) return null;
-  if (loading) return <Card className="p-6 animate-pulse h-96 bg-gray-100" />;
+  if (loading || actualData.loading) return <Card className="p-6 animate-pulse h-96 bg-gray-100" />;
   if (!summary) return null;
 
-  // Mock data para gráficos de série temporal (últimos 12 meses)
-  const timeSeriesData = useMemo(() => {
-    return [
-      { month: 'Jan', receita: 320000, custos: 180000, ebitda: 80000, lucro: 50000 },
-      { month: 'Fev', receita: 340000, custos: 185000, ebitda: 85000, lucro: 55000 },
-      { month: 'Mar', receita: 380000, custos: 200000, ebitda: 100000, lucro: 65000 },
-      { month: 'Abr', receita: 360000, custos: 195000, ebitda: 95000, lucro: 60000 },
-      { month: 'Mai', receita: 400000, custos: 210000, ebitda: 110000, lucro: 72000 },
-      { month: 'Jun', receita: 420000, custos: 220000, ebitda: 120000, lucro: 80000 },
-    ];
-  }, []);
-
-  // Mock data por convênio
-  const convenioData = useMemo(() => {
-    return [
-      { name: 'Unimed', value: 280000, percent: 28 },
-      { name: 'HAPVIDA', value: 200000, percent: 20 },
-      { name: 'Bradesco', value: 150000, percent: 15 },
-      { name: 'Particular', value: 120000, percent: 12 },
-      { name: 'Outros', value: 250000, percent: 25 },
-    ];
-  }, []);
-
-  // Mock data por especialidade
-  const especialidadeData = useMemo(() => {
-    return [
-      { name: 'Cardiologia', receita: 180000, margem: 42 },
-      { name: 'Oncologia', receita: 150000, margem: 38 },
-      { name: 'Cirurgia', receita: 140000, margem: 35 },
-      { name: 'Neurologia', receita: 120000, margem: 32 },
-      { name: 'Outras', receita: 410000, margem: 30 },
-    ];
-  }, []);
-
-  // Mock data por centro de custo
-  const centroData = useMemo(() => {
-    return [
-      { centro: 'Centro Cirúrgico', ebitda: 150000, margem: 50 },
-      { centro: 'UTI', ebitda: 112500, margem: 45 },
-      { centro: 'Diagnóstico', ebitda: 93600, margem: 52 },
-      { centro: 'Internação', ebitda: 75000, margem: 38 },
-      { centro: 'Consultorias', ebitda: 45000, margem: 35 },
-    ];
-  }, []);
-
-  const medicoData = useMemo(() => {
-    return [
-      { nome: 'Dr. Silva', receita: 184000, margem: 44 },
-      { nome: 'Dra. Souza', receita: 162000, margem: 41 },
-      { nome: 'Dr. Lima', receita: 145000, margem: 39 },
-      { nome: 'Dra. Alves', receita: 121000, margem: 36 },
-      { nome: 'Dr. Rocha', receita: 98000, margem: 32 },
-    ];
-  }, []);
+  const timeSeriesData = actualData.timeSeries.length > 0
+    ? actualData.timeSeries
+    : [{ month: 'Período', receita: summary.receitaBruta, custos: summary.custosFixos + summary.custosVariaveis + summary.despesasOperacionais, ebitda: summary.ebitda, lucro: summary.lucroLiquido }];
+  const convenioData = actualData.convenio;
+  const especialidadeData = actualData.especialidade;
+  const centroData = actualData.centro;
+  const medicoData = actualData.medico;
 
   const contabilData = useMemo(() => {
     return [

@@ -1,24 +1,52 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { ArrowRight, TrendingUp, TrendingDown } from 'lucide-react';
 import type { DRESummary } from '@/lib/dreEnterpriseEngine';
+import { useClinicContext } from '@/contexts/useClinicContext';
+import { loadDreActualData, money, type DrePeriod } from '@/modules/financeiro/dre/utils/dreActualData';
 
 type Props = {
   summary: DRESummary | null;
   loading?: boolean;
   projectedScenarioLabel?: string;
+  period?: DrePeriod;
 };
 
 /**
  * ETAPA 12: DRE x Fluxo de Caixa
  * Comparação entre resultado contábil (competência) e fluxo de caixa (realizado)
  */
-export default function DRECashflowComparison({ summary, loading = false, projectedScenarioLabel }: Props) {
+export default function DRECashflowComparison({ summary, loading = false, projectedScenarioLabel, period }: Props) {
+  const { clinicId } = useClinicContext();
+  const [cashflow, setCashflow] = useState({ realized: 0, loading: false });
+
+  useEffect(() => {
+    if (!clinicId || !period) return;
+    let active = true;
+
+    const load = async () => {
+      setCashflow((current) => ({ ...current, loading: true }));
+      try {
+        const consolidation = await loadDreActualData(clinicId, period);
+        const realized = money(consolidation.revenue?.receivedRevenue) - money(consolidation.expenses?.paid);
+        if (active) setCashflow({ realized, loading: false });
+      } catch (error) {
+        console.warn('[DRECashflowComparison] Erro ao carregar fluxo realizado:', error);
+        if (active) setCashflow({ realized: 0, loading: false });
+      }
+    };
+
+    load();
+    return () => {
+      active = false;
+    };
+  }, [clinicId, period?.end, period?.start]);
+
   const title = projectedScenarioLabel
     ? `DRE x Fluxo de Caixa (${projectedScenarioLabel})`
     : 'DRE x Fluxo de Caixa';
 
-  if (loading) {
+  if (loading || cashflow.loading) {
     return <Card className="p-6 animate-pulse h-64 bg-gray-100" />;
   }
 
@@ -31,12 +59,10 @@ export default function DRECashflowComparison({ summary, loading = false, projec
     );
   }
 
-  // Simular dados de fluxo de caixa baseado no DRE
-  // Em produção, isso viria de um cálculo integrado com contas a receber/pagar
   const lucroDRE = summary.lucroLiquido || 0;
-  const fluxoCaixa = Math.max(0, lucroDRE * 0.6); // Estimativa: 60% do lucro vira caixa
+  const fluxoCaixa = cashflow.realized;
   const diferenca = lucroDRE - fluxoCaixa;
-  const percentualConversao = lucroDRE > 0 ? (fluxoCaixa / lucroDRE) * 100 : 0;
+  const percentualConversao = lucroDRE !== 0 ? (fluxoCaixa / lucroDRE) * 100 : 0;
 
   return (
     <div className="space-y-4">

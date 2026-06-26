@@ -3,6 +3,8 @@ import { Card } from '@/components/ui/card';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { DRESummary } from '@/lib/dreEnterpriseEngine';
+import { useClinicContext } from '@/contexts/useClinicContext';
+import { buildSegmentMetrics, loadDreActualData, type DrePeriod, type SegmentKey } from '@/modules/financeiro/dre/utils/dreActualData';
 
 type RentabilityCategory = 'convenios' | 'medicos' | 'procedimentos' | 'especialidades' | 'centros';
 
@@ -20,89 +22,59 @@ type Props = {
   summary: DRESummary | null;
   variant: string;
   loading?: boolean;
+  period?: DrePeriod;
 };
 
 /**
  * ETAPA 15: Rentabilidade TOP/BOTTOM 10
  * Análise de rentabilidade com rankings de convênios, médicos, procedimentos, especialidades e centros
  */
-export default function DRERentabilidade({ summary, variant, loading = false }: Props) {
+export default function DRERentabilidade({ summary, variant, loading = false, period }: Props) {
+  const { clinicId } = useClinicContext();
   const [category, setCategory] = useState<RentabilityCategory>('convenios');
+  const [loadingData, setLoadingData] = useState(false);
   const [rentabilityData, setRentabilityData] = useState<{ top: RentabilityItem[]; bottom: RentabilityItem[] }>({
     top: [],
     bottom: [],
   });
 
-  // Simular dados de rentabilidade baseado no tipo
   useEffect(() => {
-    if (!summary || loading) return;
+    if (!summary || loading || !clinicId || !period) return;
+    let active = true;
 
-    // Mock data - Em produção, isso viria de uma API específica
-    const mockData: Record<RentabilityCategory, { top: RentabilityItem[]; bottom: RentabilityItem[] }> = {
-      convenios: {
-        top: [
-          { id: '1', name: 'Unimed SP', receita: 150000, margem: 45, glosa: 5, ticketMedio: 800, ebitda: 65000 },
-          { id: '2', name: 'HAPVIDA', receita: 120000, margem: 42, glosa: 8, ticketMedio: 750, ebitda: 48000 },
-          { id: '3', name: 'Bradesco Saúde', receita: 95000, margem: 40, glosa: 10, ticketMedio: 700, ebitda: 36000 },
-        ],
-        bottom: [
-          { id: '10', name: 'Convênio X', receita: 15000, margem: 8, glosa: 35, ticketMedio: 150, ebitda: 1500 },
-          { id: '11', name: 'Convênio Y', receita: 12000, margem: 5, glosa: 40, ticketMedio: 100, ebitda: 600 },
-          { id: '12', name: 'Convênio Z', receita: 8000, margem: -5, glosa: 50, ticketMedio: 80, ebitda: -500 },
-        ],
-      },
-      medicos: {
-        top: [
-          { id: 'm1', name: 'Dr. Silva', receita: 200000, margem: 35, glosa: 5, ticketMedio: 1200, ebitda: 70000 },
-          { id: 'm2', name: 'Dra. Santos', receita: 180000, margem: 32, glosa: 6, ticketMedio: 1100, ebitda: 58000 },
-          { id: 'm3', name: 'Dr. Costa', receita: 150000, margem: 28, glosa: 8, ticketMedio: 950, ebitda: 42000 },
-        ],
-        bottom: [
-          { id: 'm10', name: 'Dr. Novo', receita: 20000, margem: 2, glosa: 20, ticketMedio: 400, ebitda: 600 },
-          { id: 'm11', name: 'Dra. Teste', receita: 15000, margem: -5, glosa: 30, ticketMedio: 300, ebitda: -800 },
-          { id: 'm12', name: 'Dr. Saída', receita: 10000, margem: -15, glosa: 40, ticketMedio: 200, ebitda: -2000 },
-        ],
-      },
-      procedimentos: {
-        top: [
-          { id: 'p1', name: 'Ressonância Magnética', receita: 250000, margem: 55, glosa: 3, ticketMedio: 2500, ebitda: 140000 },
-          { id: 'p2', name: 'Internação', receita: 200000, margem: 48, glosa: 5, ticketMedio: 4000, ebitda: 96000 },
-          { id: 'p3', name: 'Cirurgia Eletiva', receita: 180000, margem: 45, glosa: 7, ticketMedio: 3600, ebitda: 81000 },
-        ],
-        bottom: [
-          { id: 'p10', name: 'Teste Não-usual', receita: 5000, margem: 2, glosa: 25, ticketMedio: 100, ebitda: 100 },
-          { id: 'p11', name: 'Procedimento Novo', receita: 3000, margem: -10, glosa: 50, ticketMedio: 150, ebitda: -400 },
-          { id: 'p12', name: 'Serviço Descontinuado', receita: 1000, margem: -20, glosa: 60, ticketMedio: 100, ebitda: -300 },
-        ],
-      },
-      especialidades: {
-        top: [
-          { id: 'e1', name: 'Cardiologia', receita: 180000, margem: 42, glosa: 6, ticketMedio: 1500, ebitda: 75600 },
-          { id: 'e2', name: 'Oncologia', receita: 150000, margem: 38, glosa: 8, ticketMedio: 2000, ebitda: 57000 },
-          { id: 'e3', name: 'Cirurgia', receita: 140000, margem: 35, glosa: 10, ticketMedio: 1800, ebitda: 49000 },
-        ],
-        bottom: [
-          { id: 'e10', name: 'Oftalmologia', receita: 25000, margem: 5, glosa: 22, ticketMedio: 300, ebitda: 1500 },
-          { id: 'e11', name: 'Dermatologia', receita: 15000, margem: -3, glosa: 35, ticketMedio: 200, ebitda: -600 },
-          { id: 'e12', name: 'Fisioterapia', receita: 8000, margem: -18, glosa: 50, ticketMedio: 150, ebitda: -1600 },
-        ],
-      },
-      centros: {
-        top: [
-          { id: 'c1', name: 'Centro Cirúrgico', receita: 300000, margem: 50, glosa: 4, ticketMedio: 3000, ebitda: 150000 },
-          { id: 'c2', name: 'UTI', receita: 250000, margem: 45, glosa: 5, ticketMedio: 5000, ebitda: 112500 },
-          { id: 'c3', name: 'Diagnóstico', receita: 180000, margem: 52, glosa: 3, ticketMedio: 1800, ebitda: 93600 },
-        ],
-        bottom: [
-          { id: 'c10', name: 'Administração', receita: 0, margem: -40, glosa: 0, ticketMedio: 0, ebitda: -80000 },
-          { id: 'c11', name: 'Infraestrutura', receita: 0, margem: -35, glosa: 0, ticketMedio: 0, ebitda: -60000 },
-          { id: 'c12', name: 'RH e Pessoal', receita: 0, margem: -30, glosa: 0, ticketMedio: 0, ebitda: -45000 },
-        ],
-      },
+    const load = async () => {
+      setLoadingData(true);
+      try {
+        const consolidation = await loadDreActualData(clinicId, period);
+        const rows = buildSegmentMetrics(consolidation, category as SegmentKey).map((item) => ({
+          id: item.id,
+          name: item.name,
+          receita: item.receita,
+          margem: item.margem,
+          glosa: item.receita > 0 ? (item.glosa / item.receita) * 100 : 0,
+          ticketMedio: item.ticketMedio,
+          ebitda: item.ebitda,
+        }));
+        const ranked = rows.sort((a, b) => b.margem - a.margem);
+        if (active) {
+          setRentabilityData({
+            top: ranked.slice(0, 3),
+            bottom: ranked.slice(-3).reverse(),
+          });
+        }
+      } catch (error) {
+        console.warn('[DRERentabilidade] Erro ao carregar dados reais:', error);
+        if (active) setRentabilityData({ top: [], bottom: [] });
+      } finally {
+        if (active) setLoadingData(false);
+      }
     };
 
-    setRentabilityData(mockData[category]);
-  }, [category, summary, loading]);
+    load();
+    return () => {
+      active = false;
+    };
+  }, [category, clinicId, loading, period?.end, period?.start, summary]);
 
   const categoryLabels: Record<RentabilityCategory, string> = {
     convenios: 'Convênios',
@@ -112,7 +84,7 @@ export default function DRERentabilidade({ summary, variant, loading = false }: 
     centros: 'Centros de Custo',
   };
 
-  if (loading) {
+  if (loading || loadingData) {
     return <Card className="p-6 animate-pulse h-64 bg-gray-100" />;
   }
 
@@ -157,7 +129,9 @@ export default function DRERentabilidade({ summary, variant, loading = false }: 
             TOP 3 - Maior Rentabilidade
           </h4>
           <div className="space-y-3">
-            {rentabilityData.top.map((item, idx) => (
+            {rentabilityData.top.length === 0 ? (
+              <p className="text-sm text-gray-500">Sem dados reais para esta categoria no período.</p>
+            ) : rentabilityData.top.map((item, idx) => (
               <div key={item.id} className="p-4 rounded-lg border border-green-200 bg-green-50">
                 <div className="flex justify-between items-start mb-2">
                   <div>
@@ -199,7 +173,9 @@ export default function DRERentabilidade({ summary, variant, loading = false }: 
             BOTTOM 3 - Menor Rentabilidade
           </h4>
           <div className="space-y-3">
-            {rentabilityData.bottom.map((item, idx) => (
+            {rentabilityData.bottom.length === 0 ? (
+              <p className="text-sm text-gray-500">Sem dados reais para esta categoria no período.</p>
+            ) : rentabilityData.bottom.map((item, idx) => (
               <div key={item.id} className="p-4 rounded-lg border border-red-200 bg-red-50">
                 <div className="flex justify-between items-start mb-2">
                   <div>
