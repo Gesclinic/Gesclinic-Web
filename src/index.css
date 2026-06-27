@@ -53,6 +53,14 @@
     @apply bg-[hsl(var(--background))] text-foreground antialiased;
   }
 
+  #root img,
+  #root object,
+  #root embed,
+  #root iframe,
+  #root canvas {
+    max-width: 100%;
+  }
+
   * {
     @apply border-border;
   }
