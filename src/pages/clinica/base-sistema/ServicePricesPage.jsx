@@ -13,10 +13,33 @@ import { Alert } from '@/components/layout/BaseSystemAlert';
 import EmptyState from '@/components/layout/EmptyState';
 import * as servicesApi from '@/lib/servicesApi';
 import * as servicePricesApi from '@/lib/servicePricesApi';
+import * as healthInsurancesApi from '@/lib/healthInsurancesApi';
+import * as payersApi from '@/lib/payersApi';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, Edit2, Trash2, X, DollarSign, Filter, ArrowRight } from 'lucide-react';
 import { customSupabaseClient } from '@/lib/customSupabaseClient';
+
+const normalizeName = (value) =>
+  String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+
+const normalizeDocument = (value) => String(value || '').replace(/\D/g, '');
+
+const getInsuranceDisplayName = (insurance) =>
+  insurance?.name || insurance?.fantasy_name || insurance?.legal_name || 'Convênio sem nome';
+
+const isBusinessService = (service) => {
+  const serviceText = normalizeName(
+    [service?.name, service?.code, service?.tuss_code, service?.description].filter(Boolean).join(' '),
+  );
+
+  return service?.active !== false && !/\b(validacao|validation|teste|test)\b/.test(serviceText);
+};
 
 export function ServicePricesPage() {
   const navigate = useNavigate();
@@ -67,23 +90,64 @@ export function ServicePricesPage() {
 
       // Carregar serviços
       const servicesData = await servicesApi.listServices(clinicId);
-      setServices(Array.isArray(servicesData) ? servicesData : []);
+      const businessServices = Array.isArray(servicesData) ? servicesData.filter(isBusinessService) : [];
+      setServices(businessServices);
 
-      // Carregar convênios
-      const { data: payersData, error: payersError } = await customSupabaseClient
+      // Carregar convênios cadastrados e mapear para seus pagadores financeiros.
+      const healthInsurances = await healthInsurancesApi.listHealthInsurances(clinicId);
+      const { data: allPayersData, error: payersError } = await customSupabaseClient
         .from('payers')
-        .select('*')
+        .select('id, name, cnpj, active')
         .eq('clinic_id', clinicId)
+        .eq('active', true)
         .order('name', { ascending: true });
 
       if (payersError) {
         throw payersError;
       }
-      setPayers(Array.isArray(payersData) ? payersData : []);
+
+      const payerByName = new Map(
+        (allPayersData || []).map((payer) => [normalizeName(payer.name), payer]),
+      );
+      const payerByDocument = new Map(
+        (allPayersData || [])
+          .map((payer) => [normalizeDocument(payer.cnpj), payer])
+          .filter(([document]) => document),
+      );
+      const convenioPayers = (healthInsurances || []).map((insurance) => {
+        const displayName = getInsuranceDisplayName(insurance);
+        const payer =
+          payerByDocument.get(normalizeDocument(insurance.cnpj)) ||
+          payerByName.get(normalizeName(displayName)) ||
+          payerByName.get(normalizeName(insurance.fantasy_name)) ||
+          payerByName.get(normalizeName(insurance.legal_name));
+
+        return {
+          id: payer?.id || `insurance:${insurance.id}`,
+          payerId: payer?.id || null,
+          insuranceId: insurance.id,
+          name: displayName,
+          cnpj: insurance.cnpj || payer?.cnpj || null,
+          insurance,
+        };
+      });
+      setPayers(convenioPayers);
 
       // Carregar preços com relacionamentos
       const pricesData = await servicePricesApi.getServicePrices(clinicId);
-      setPrices(Array.isArray(pricesData) ? pricesData : []);
+      const businessServiceIds = new Set(businessServices.map((service) => service.id));
+      const convenioPayerIds = new Set(
+        convenioPayers.map((payer) => payer.payerId).filter(Boolean),
+      );
+      setPrices(
+        Array.isArray(pricesData)
+          ? pricesData.filter(
+              (price) =>
+                businessServiceIds.has(price.service_id) &&
+                (!price.payer_id || convenioPayerIds.has(price.payer_id)),
+            )
+          : [],
+      );
     } catch (err) {
       setError(err.message || 'Erro ao carregar dados');
       console.error('Erro:', err);
@@ -216,9 +280,25 @@ export function ServicePricesPage() {
       setSubmitting(true);
       setError(null);
 
+      let payerId = formData.payer_id || null;
+      const selectedPayer = payers.find((payer) => payer.id === payerId);
+
+      if (selectedPayer && !selectedPayer.payerId) {
+        const payer = await payersApi.createPayer(clinicId, {
+          name: selectedPayer.name,
+          cnpj: selectedPayer.cnpj,
+          contact_person: selectedPayer.insurance?.contact_person,
+          contact_email: selectedPayer.insurance?.contact_email,
+          contact_phone: selectedPayer.insurance?.contact_phone,
+        });
+        payerId = payer.id;
+      } else if (selectedPayer?.payerId) {
+        payerId = selectedPayer.payerId;
+      }
+
       const dataToSave = {
         service_id: formData.service_id,
-        payer_id: formData.payer_id || null,
+        payer_id: payerId,
         price: parseFloat(formData.price),
         cost: formData.cost ? parseFloat(formData.cost) : null,
         currency: formData.currency,
@@ -234,6 +314,7 @@ export function ServicePricesPage() {
         setPrices([...prices, newPrice]);
       }
 
+      await loadData();
       closeForm();
     } catch (err) {
       setError(err.message || 'Erro ao salvar preço');
@@ -292,8 +373,13 @@ export function ServicePricesPage() {
       : '-';
   };
 
-  const getPayerName = (id) => {
-    return payers.find((p) => p.id === id)?.name || 'Desconhecido';
+  const getPayerName = (priceEntry) => {
+    const id = typeof priceEntry === 'object' ? priceEntry.payer_id : priceEntry;
+    return (
+      payers.find((p) => p.payerId === id || p.id === id)?.name ||
+      (typeof priceEntry === 'object' ? priceEntry.payers?.name : null) ||
+      'Desconhecido'
+    );
   };
 
   // Função auxiliar para extrair código do objeto de preço (se tiver relacionamento carregado)
@@ -483,7 +569,7 @@ export function ServicePricesPage() {
                             {formatCurrency(priceEntry.price, priceEntry.currency)}
                           </td>
                           <td className="py-3 px-4 text-gray-700">
-                            {getPayerName(priceEntry.payer_id)}
+                            {getPayerName(priceEntry)}
                           </td>
                           <td className="py-3 px-4 text-gray-600">{priceEntry.plan || '-'}</td>
                           <td className="py-3 px-4 flex justify-center gap-2">
