@@ -976,39 +976,43 @@ export function ConveniosPage() {
   // ?? Toggle status de preço (ativo/inativo)
 
   const togglePricingStatus = async (priceEntry) => {
-    const schedulingConfig = priceEntry.scheduling_config
-      ? typeof priceEntry.scheduling_config === 'string'
-        ? JSON.parse(priceEntry.scheduling_config)
-        : priceEntry.scheduling_config
-      : null;
-
-    // Se est ativo (tem scheduling_config), desativa (limpa)
-
-    // Se est inativo (sem scheduling_config), ativa (cria objeto vazio)
-
-    const newConfig = schedulingConfig ? null : {};
+    const nextActive = priceEntry.active !== true;
 
     try {
       setError(null);
+
+      setPricingTableData((current) =>
+        current.map((item) =>
+          item.id === priceEntry.id ? { ...item, active: nextActive } : item,
+        ),
+      );
 
       const { error: updateError } = await supabase
 
         .from('service_prices')
 
-        .update({ scheduling_config: newConfig })
+        .update({ active: nextActive })
 
-        .eq('id', priceEntry.id);
+        .eq('id', priceEntry.id)
+
+        .eq('clinic_id', clinicId);
 
       if (updateError) {
         throw updateError;
       }
 
-      console.log(`? Preço ${priceEntry.id} agora est ${newConfig ? 'ATIVO' : 'INATIVO'}`);
+      console.log(`? Preço ${priceEntry.id} agora est ${nextActive ? 'ATIVO' : 'INATIVO'}`);
 
       setError(null);
 
-      loadPricingTable();
+      await loadPricingTable();
     } catch (err) {
+      setPricingTableData((current) =>
+        current.map((item) =>
+          item.id === priceEntry.id ? { ...item, active: priceEntry.active === true } : item,
+        ),
+      );
+
       setError(err.message || 'Erro ao alterar status do preço');
 
       console.error('Erro:', err);
