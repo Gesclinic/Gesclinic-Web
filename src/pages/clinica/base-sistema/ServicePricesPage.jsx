@@ -94,7 +94,9 @@ export function ServicePricesPage() {
       setServices(businessServices);
 
       // Carregar convênios cadastrados e mapear para seus pagadores financeiros.
-      const healthInsurances = await healthInsurancesApi.listHealthInsurances(clinicId);
+      const healthInsurances = await healthInsurancesApi.listHealthInsurances(clinicId, {
+        includeInactive: true,
+      });
       const { data: allPayersData, error: payersError } = await customSupabaseClient
         .from('payers')
         .select('id, name, cnpj, active')
@@ -117,10 +119,10 @@ export function ServicePricesPage() {
       const convenioPayers = (healthInsurances || []).map((insurance) => {
         const displayName = getInsuranceDisplayName(insurance);
         const payer =
-          payerByDocument.get(normalizeDocument(insurance.cnpj)) ||
           payerByName.get(normalizeName(displayName)) ||
           payerByName.get(normalizeName(insurance.fantasy_name)) ||
-          payerByName.get(normalizeName(insurance.legal_name));
+          payerByName.get(normalizeName(insurance.legal_name)) ||
+          payerByDocument.get(normalizeDocument(insurance.cnpj));
 
         return {
           id: payer?.id || `insurance:${insurance.id}`,
