@@ -20,7 +20,7 @@ import { PROFILES_CONFIG } from '@/lib/profilesApi';
 import { DAYS_OF_WEEK, PAYMENT_METHODS } from '@/lib/selectConstants';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, Plus, Edit2, X, Check, Users, FileText, Download, User } from 'lucide-react';
+import { AlertCircle, Plus, Edit2, X, Check, Users, FileText, Download, User, ImageIcon } from 'lucide-react';
 import BaseSystemHeader from '@/components/layout/BaseSystemHeader';
 import { Alert } from '@/components/layout/BaseSystemAlert';
 import EmptyState from '@/components/layout/EmptyState';
@@ -47,9 +47,8 @@ const ProfessionalRow = React.memo(
               className="w-10 h-10 rounded-full object-cover border border-gray-300"
             />
           ) : (
-            <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 font-medium">
-              (profile) =>
-              {professional.name?.charAt(0).toUpperCase()}
+            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center border border-gray-300 text-gray-400">
+              <ImageIcon className="w-5 h-5" aria-hidden="true" />
             </div>
           )}
           <span>{professional.name}</span>
