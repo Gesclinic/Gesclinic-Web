@@ -242,7 +242,7 @@ export const ExcelImportDialog: React.FC<ExcelImportDialogProps> = ({
                   {importType === 'chart-of-accounts' ? (
                     <>
                       <li>Formato: .xlsx (Excel)</li>
-                      <li>Colunas: Código, Nome, Tipo, Natureza, Descrição</li>
+                      <li>Colunas: Código, Código Pai, Nome, Tipo, Natureza, Descrição</li>
                       <li>Mínimo 1 linha de dados (além do cabeçalho)</li>
                     </>
                   ) : (
@@ -289,16 +289,16 @@ async function generateChartOfAccountsTemplate(): Promise<ArrayBuffer> {
   const XLSX = await import('xlsx');
   
   const data = [
-    { Código: '1', Nome: 'ATIVO', Tipo: 'ATIVO', Natureza: 'DEVEDORA', Descrição: 'Ativo geral' },
-    { Código: '1.1', Nome: 'Ativo Circulante', Tipo: 'ATIVO', Natureza: 'DEVEDORA', Descrição: 'Ativo de curto prazo' },
-    { Código: '1.1.1', Nome: 'Caixa', Tipo: 'ATIVO', Natureza: 'DEVEDORA', Descrição: 'Dinheiro em caixa' },
-    { Código: '1.1.2', Nome: 'Bancos', Tipo: 'ATIVO', Natureza: 'DEVEDORA', Descrição: 'Contas bancárias' },
-    { Código: '2', Nome: 'PASSIVO', Tipo: 'PASSIVO', Natureza: 'CREDORA', Descrição: 'Passivo geral' },
-    { Código: '2.1', Nome: 'Passivo Circulante', Tipo: 'PASSIVO', Natureza: 'CREDORA', Descrição: 'Passivo de curto prazo' },
-    { Código: '3', Nome: 'RECEITA', Tipo: 'RECEITA', Natureza: 'CREDORA', Descrição: 'Receita de serviços' },
-    { Código: '3.1', Nome: 'Consultas', Tipo: 'RECEITA', Natureza: 'CREDORA', Descrição: 'Receita de consultas' },
-    { Código: '4', Nome: 'DESPESA', Tipo: 'DESPESA', Natureza: 'DEVEDORA', Descrição: 'Despesa operacional' },
-    { Código: '4.1', Nome: 'Salários', Tipo: 'DESPESA', Natureza: 'DEVEDORA', Descrição: 'Despesa com salários' },
+    { Código: '1', 'Código Pai': '', Nome: 'RECEITAS', Tipo: 'RECEITA', Natureza: 'CREDORA', Descrição: 'Grupo raiz de receitas' },
+    { Código: '1.1', 'Código Pai': '1', Nome: 'Particular', Tipo: 'RECEITA', Natureza: 'CREDORA', Descrição: 'Receitas de pacientes particulares' },
+    { Código: '1.2', 'Código Pai': '1', Nome: 'Convenios', Tipo: 'RECEITA', Natureza: 'CREDORA', Descrição: 'Receitas por convênios' },
+    { Código: '1.2.1', 'Código Pai': '1.2', Nome: 'Unimed', Tipo: 'RECEITA', Natureza: 'CREDORA', Descrição: 'Convênio Unimed' },
+    { Código: '2', 'Código Pai': '', Nome: 'DEDUCOES', Tipo: 'DEDUCAO', Natureza: 'DEVEDORA', Descrição: 'Glosas, impostos e estornos' },
+    { Código: '2.2', 'Código Pai': '2', Nome: 'ISS', Tipo: 'DEDUCAO', Natureza: 'DEVEDORA', Descrição: 'Imposto sobre serviços' },
+    { Código: '3', 'Código Pai': '', Nome: 'CUSTOS ASSISTENCIAIS', Tipo: 'CUSTO', Natureza: 'DEVEDORA', Descrição: 'Custos diretos assistenciais' },
+    { Código: '3.2', 'Código Pai': '3', Nome: 'Medicamentos', Tipo: 'CUSTO', Natureza: 'DEVEDORA', Descrição: 'Compras de medicamentos' },
+    { Código: '4', 'Código Pai': '', Nome: 'HONORARIOS MEDICOS', Tipo: 'HONORARIO', Natureza: 'DEVEDORA', Descrição: 'Produção, repasse e plantões' },
+    { Código: '4.2', 'Código Pai': '4', Nome: 'Repasses', Tipo: 'HONORARIO', Natureza: 'DEVEDORA', Descrição: 'Repasses médicos' },
   ];
 
   const worksheet = XLSX.utils.json_to_sheet(data);

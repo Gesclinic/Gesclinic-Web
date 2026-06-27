@@ -319,14 +319,30 @@ export const ChartOfAccountsPage: React.FC = () => {
     try {
       setImportingProgress({ current: 0, total: data.length });
 
-      for (let i = 0; i < data.length; i++) {
-        await createAccount(
+      const existingAccounts = accounts.length > 0 ? accounts : treeRows;
+      const codeToId = new Map(existingAccounts.map((account) => [account.code, account.id]));
+      const sortedData = [...data].sort((a, b) => {
+        const levelDiff = a.code.split('.').length - b.code.split('.').length;
+        return levelDiff || a.code.localeCompare(b.code, 'pt-BR', { numeric: true });
+      });
+
+      for (let i = 0; i < sortedData.length; i++) {
+        const { parent_code, ...accountInput } = sortedData[i];
+        const parentId = parent_code ? codeToId.get(parent_code) : null;
+
+        if (parent_code && !parentId) {
+          throw new Error(`Conta pai ${parent_code} não encontrada para ${accountInput.code}`);
+        }
+
+        const createdAccount = await createAccount(
           {
-            ...data[i],
+            ...accountInput,
             clinic_id: clinicId,
+            parent_id: parentId,
           },
           user.id
         );
+        codeToId.set(createdAccount.code, createdAccount.id);
         setImportingProgress({ current: i + 1, total: data.length });
       }
 

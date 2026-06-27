@@ -18,21 +18,27 @@ type Props = {
  */
 export default function DRECashflowComparison({ summary, loading = false, projectedScenarioLabel, period }: Props) {
   const { clinicId } = useClinicContext();
-  const [cashflow, setCashflow] = useState({ realized: 0, loading: false });
+  const [cashflow, setCashflow] = useState<{
+    realized: number | null;
+    hasMovements: boolean;
+    loading: boolean;
+    error: boolean;
+  }>({ realized: null, hasMovements: false, loading: false, error: false });
 
   useEffect(() => {
     if (!clinicId || !period) return;
     let active = true;
 
     const load = async () => {
-      setCashflow((current) => ({ ...current, loading: true }));
+      setCashflow((current) => ({ ...current, loading: true, error: false }));
       try {
         const consolidation = await loadDreActualData(clinicId, period);
         const realized = money(consolidation.revenue?.receivedRevenue) - money(consolidation.expenses?.paid);
-        if (active) setCashflow({ realized, loading: false });
+        const hasMovements = money(consolidation.revenue?.receivedCount) + money(consolidation.expenses?.paidPayableCount) > 0;
+        if (active) setCashflow({ realized, hasMovements, loading: false, error: false });
       } catch (error) {
         console.warn('[DRECashflowComparison] Erro ao carregar fluxo realizado:', error);
-        if (active) setCashflow({ realized: 0, loading: false });
+        if (active) setCashflow({ realized: null, hasMovements: false, loading: false, error: true });
       }
     };
 
@@ -61,8 +67,9 @@ export default function DRECashflowComparison({ summary, loading = false, projec
 
   const lucroDRE = summary.lucroLiquido || 0;
   const fluxoCaixa = cashflow.realized;
-  const diferenca = lucroDRE - fluxoCaixa;
-  const percentualConversao = lucroDRE !== 0 ? (fluxoCaixa / lucroDRE) * 100 : 0;
+  const hasRealizedCashflow = cashflow.hasMovements && fluxoCaixa !== null;
+  const diferenca = hasRealizedCashflow ? lucroDRE - fluxoCaixa : null;
+  const percentualConversao = hasRealizedCashflow && lucroDRE !== 0 ? (fluxoCaixa / lucroDRE) * 100 : null;
 
   return (
     <div className="space-y-4">
@@ -83,7 +90,9 @@ export default function DRECashflowComparison({ summary, loading = false, projec
           <div className="flex items-center justify-center">
             <div className="flex flex-col items-center gap-2">
               <ArrowRight className="w-6 h-6 text-gray-400" />
-              <span className="text-xs text-gray-600 font-semibold">{percentualConversao.toFixed(0)}%</span>
+              <span className="text-xs text-gray-600 font-semibold">
+                {percentualConversao !== null ? `${percentualConversao.toFixed(0)}%` : '-'}
+              </span>
               <span className="text-xs text-gray-500">conversão</span>
             </div>
           </div>
@@ -92,13 +101,22 @@ export default function DRECashflowComparison({ summary, loading = false, projec
           <div className="rounded-lg border border-green-200 bg-green-50 p-4">
             <p className="text-xs text-green-600 font-semibold">FLUXO CAIXA (REALIZADO)</p>
             <p className="text-2xl font-bold text-green-900 mt-2">
-              R$ {fluxoCaixa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              {hasRealizedCashflow
+                ? `R$ ${fluxoCaixa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                : 'Sem caixa confirmado'}
             </p>
-            <p className="text-xs text-green-600 mt-2">Caixa gerada efetivamente</p>
+            <p className="text-xs text-green-600 mt-2">
+              {cashflow.error
+                ? 'Nao foi possivel carregar o caixa realizado'
+                : hasRealizedCashflow
+                  ? 'Caixa gerada efetivamente'
+                  : 'Sem recebimentos/pagamentos realizados no periodo'}
+            </p>
           </div>
         </div>
 
         {/* DIFERENÇA */}
+        {hasRealizedCashflow ? (
         <div className="mt-6 pt-6 border-t border-gray-200">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -124,12 +142,14 @@ export default function DRECashflowComparison({ summary, loading = false, projec
             </div>
           </div>
         </div>
+        ) : null}
 
         {/* RECOMENDAÇÕES */}
+        {hasRealizedCashflow ? (
         <div className="mt-6 pt-6 border-t border-gray-200">
           <p className="text-xs text-gray-600 font-semibold mb-3">RECOMENDAÇÕES</p>
           <div className="space-y-2 text-sm text-gray-700">
-            {percentualConversao < 70 && (
+            {percentualConversao !== null && percentualConversao < 70 && (
               <div className="flex gap-2 items-start p-3 bg-yellow-50 rounded border border-yellow-200">
                 <span className="text-yellow-600 flex-shrink-0">⚠️</span>
                 <span>
@@ -137,13 +157,13 @@ export default function DRECashflowComparison({ summary, loading = false, projec
                 </span>
               </div>
             )}
-            {diferenca > lucroDRE * 0.3 && (
+            {diferenca !== null && diferenca > lucroDRE * 0.3 && (
               <div className="flex gap-2 items-start p-3 bg-amber-50 rounded border border-amber-200">
                 <span className="text-amber-600 flex-shrink-0">⚠️</span>
                 <span>Gap significativo. Avaliar impacto de glosas e atrasos de recebimento.</span>
               </div>
             )}
-            {percentualConversao >= 70 && (
+            {percentualConversao !== null && percentualConversao >= 70 && (
               <div className="flex gap-2 items-start p-3 bg-green-50 rounded border border-green-200">
                 <span className="text-green-600 flex-shrink-0">✅</span>
                 <span>Fluxo de caixa saudável. Conversão dentro do esperado.</span>
@@ -151,6 +171,7 @@ export default function DRECashflowComparison({ summary, loading = false, projec
             )}
           </div>
         </div>
+        ) : null}
       </Card>
 
       {/* LEGENDA */}

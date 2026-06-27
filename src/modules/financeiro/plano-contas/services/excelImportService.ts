@@ -6,6 +6,33 @@
 import { ChartOfAccountCreateInput } from '../types';
 
 /**
+ * Validate hierarchical relationship between child code and parent code
+ * Example: 1.2.1 must have parent 1.2, 1.2 must have parent 1
+ */
+function validateCodeHierarchy(childCode: string, parentCode: string | null | undefined): void {
+  if (!parentCode) {
+    // No parent: child code must be single digit (1, 2, 3, etc.)
+    if (!/^\d+$/.test(childCode)) {
+      throw new Error(
+        `Código raiz inválido: "${childCode}". Contas de nível superior devem ser números simples (1, 2, 3, etc.)`
+      );
+    }
+    return;
+  }
+
+  // Extract parent code from child code by removing last segment
+  const childParts = childCode.split('.');
+  const expectedParentCode = childParts.slice(0, -1).join('.') || childParts[0];
+
+  if (expectedParentCode !== parentCode) {
+    throw new Error(
+      `Hierarquia de código inválida: ${childCode} (pai esperado: ${expectedParentCode}, informado: ${parentCode}). ` +
+      `A estrutura de códigos deve seguir: 1 > 1.1 > 1.1.1`
+    );
+  }
+}
+
+/**
  * Parse Chart of Accounts from Excel file
  */
 export async function parseChartOfAccountsExcel(
@@ -45,7 +72,7 @@ export async function parseChartOfAccountsExcel(
       }
 
       // Validate type
-      const validTypes = ['RECEITA', 'DESPESA', 'ATIVO', 'PASSIVO', 'PATRIMONIO'];
+      const validTypes = ['RECEITA', 'DESPESA', 'ATIVO', 'PASSIVO', 'PATRIMONIO', 'CUSTO', 'DEDUCAO', 'HONORARIO', 'INVESTIMENTO'];
       if (!validTypes.includes(String(row.Tipo).toUpperCase())) {
         throw new Error(
           `Tipo inválido: ${row.Tipo}. Deve ser: ${validTypes.join(', ')}`
@@ -60,8 +87,15 @@ export async function parseChartOfAccountsExcel(
         );
       }
 
+      const code = String(row.Código).trim();
+      const parentCode = row['Código Pai'] ? String(row['Código Pai']).trim() : undefined;
+
+      // Validate code hierarchy
+      validateCodeHierarchy(code, parentCode);
+
       accounts.push({
-        code: String(row.Código).trim(),
+        code,
+        parent_code: parentCode,
         name: String(row.Nome).trim(),
         type: String(row.Tipo).toUpperCase() as any,
         nature: String(row.Natureza).toUpperCase() as any,
@@ -74,6 +108,10 @@ export async function parseChartOfAccountsExcel(
 
   if (errors.length > 0 && errors.length === data.length) {
     throw new Error(`Nenhum registro válido encontrado. ${errors[0]}`);
+  }
+
+  if (errors.length > 0) {
+    console.warn('Erros na importação (linhas ignoradas):', errors);
   }
 
   return accounts;

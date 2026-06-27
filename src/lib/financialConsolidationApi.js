@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/customSupabaseClient';
+import { listAP } from '@/lib/financeApi';
 
 function money(value) {
   const parsed = Number(value || 0);
@@ -99,7 +100,7 @@ function getReceivableOpen(row) {
 }
 
 function getPayableAmount(row) {
-  return money(row.net_amount ?? row.balance_amount ?? row.amount ?? row.valor);
+  return money(row.net_amount ?? row.balance_amount ?? row.amount ?? row.value ?? row.valor);
 }
 
 function getPayablePaid(row) {
@@ -138,6 +139,7 @@ function getReceivablePayerName(row = {}) {
 }
 
 function getPayableRecipientName(row = {}) {
+  const parsedFromDescription = String(row.description || '').match(/^NF\s+[^-]+-\s*(.+)$/i)?.[1]?.trim();
   return row.vendor_name
     || row.supplier_name
     || row.fornecedor_name
@@ -145,6 +147,10 @@ function getPayableRecipientName(row = {}) {
     || row.payee_name
     || row.beneficiary_name
     || row.favorecido
+    || row.metadata?.nfe?.supplier_name
+    || row.metadata?.nfe?.supplier?.name
+    || row.metadata?.public_supplier_lookup?.name
+    || parsedFromDescription
     || 'Destinatario nao informado';
 }
 
@@ -209,6 +215,51 @@ function buildEmptyConsolidation(startDate, endDate) {
   };
 }
 
+function mapLegacyInvoiceForConsolidation(row, clinicId) {
+  const amount = money(row.amount ?? row.total ?? row.value ?? row.valor);
+  const status = String(row.status || '').toLowerCase();
+  const isReceived = ['paid', 'received', 'pago', 'recebido', 'quitado'].includes(status);
+  const dueDate = dateOnly(row.due_date || row.vencimento || row.data_vencimento || row.created_at);
+  const invoiceDate = dateOnly(row.invoice_date || row.issue_date || row.emission_date || row.created_at);
+  const receivedDate = dateOnly(row.received_date || row.paid_at || row.payment_date);
+  const payerName = row.payer_name || row.patient_name || row.customer_name || row.client_name || row.name;
+
+  return {
+    ...row,
+    clinic_id: row.clinic_id || clinicId,
+    patient_name: payerName,
+    payer_name: payerName,
+    description: row.description || row.descricao || row.notes || 'Conta a receber',
+    amount,
+    gross_amount: money(row.gross_amount ?? amount),
+    net_value: money(row.net_value ?? row.total ?? amount),
+    received_value: money(row.received_value ?? (isReceived ? (row.net_value ?? row.total ?? amount) : 0)),
+    due_date: dueDate,
+    invoice_date: invoiceDate,
+    competency_date: dateOnly(row.competency_date || invoiceDate || dueDate),
+    received_date: receivedDate,
+    status: isReceived ? 'received' : (status || 'open'),
+    origem: row.origem || row.origin || 'legacy_invoices',
+  };
+}
+
+async function listLegacyInvoicesForConsolidation(clinicId) {
+  try {
+    const { data, error } = await supabase
+      .from('invoices')
+      .select('*')
+      .eq('clinic_id', clinicId)
+      .order('created_at', { ascending: false })
+      .limit(20000);
+
+    if (error) throw error;
+    return (data || []).map((row) => mapLegacyInvoiceForConsolidation(row, clinicId));
+  } catch (error) {
+    console.warn('getFinancialConsolidation legacy invoice fallback skipped:', error?.message || error);
+    return [];
+  }
+}
+
 export async function getFinancialConsolidation(clinicId, startDate, endDate) {
   if (!clinicId) return buildEmptyConsolidation(startDate, endDate);
 
@@ -219,13 +270,34 @@ export async function getFinancialConsolidation(clinicId, startDate, endDate) {
   ]);
 
   if (receivablesResult.error) throw receivablesResult.error;
-  if (payablesResult.error) throw payablesResult.error;
   if (transactionsResult.error) throw transactionsResult.error;
 
-  const receivables = (receivablesResult.data || []).filter(
+  let rawPayables = payablesResult.data || [];
+  if (payablesResult.error) {
+    try {
+      rawPayables = await listAP({ clinicId, limit: 20000, offset: 0 });
+    } catch (_fallbackError) {
+      throw payablesResult.error;
+    }
+  } else if (rawPayables.length === 0) {
+    try {
+      const fallbackPayables = await listAP({ clinicId, limit: 20000, offset: 0 });
+      if (fallbackPayables?.length) rawPayables = fallbackPayables;
+    } catch (fallbackError) {
+      console.warn('getFinancialConsolidation AP fallback skipped:', fallbackError?.message || fallbackError);
+    }
+  }
+
+  let rawReceivables = receivablesResult.data || [];
+  if (rawReceivables.length === 0) {
+    const fallbackReceivables = await listLegacyInvoicesForConsolidation(clinicId);
+    if (fallbackReceivables.length) rawReceivables = fallbackReceivables;
+  }
+
+  const receivables = rawReceivables.filter(
     (row) => !isCanceledStatus(row.status) && inRange(getReceivableCompetenceDate(row), startDate, endDate),
   );
-  const payables = (payablesResult.data || []).filter(
+  const payables = rawPayables.filter(
     (row) => !isCanceledStatus(row.status) && inRange(getPayableCompetenceDate(row), startDate, endDate),
   );
   const transactions = (transactionsResult.data || []).filter(

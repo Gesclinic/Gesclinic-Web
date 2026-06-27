@@ -5,7 +5,7 @@
 
 import { supabase } from '@/lib/customSupabaseClient';
 import { stockMovementsApi } from '@/lib/stockApi';
-import { syncAPFinancialTransactions } from '@/lib/financeApi';
+import { listAP, syncAPFinancialTransactions } from '@/lib/financeApi';
 import {
   Payable,
   PayableCreateInput,
@@ -629,12 +629,103 @@ function scorePayableTransaction(payable: Payable, transaction: any): { score: n
  * Transform database record to typed Payable
  */
 function transformPayable(data: any): Payable {
+  const amount = Number(data.amount ?? data.value ?? data.valor ?? 0);
+  const paidValue = Number(data.paid_value ?? data.paid_amount ?? 0);
+  const discountAmount = Number(data.discount_amount ?? data.discount ?? 0);
+  const interestAmount = Number(data.interest_amount ?? data.interest ?? 0);
+  const fineAmount = Number(data.fine_amount ?? data.fine ?? 0);
+  const netAmount = Number(data.net_amount ?? Math.max(0, amount + interestAmount + fineAmount - discountAmount));
+  const balanceAmount = Number(data.balance_amount ?? Math.max(0, netAmount - paidValue));
+
   return {
     ...data,
+    supplier_name: data.supplier_name || data.vendor_name || data.fornecedor || 'Fornecedor não informado',
+    description: data.description || data.notes || data.observations || 'Conta a pagar',
+    amount,
+    interest_amount: interestAmount,
+    fine_amount: fineAmount,
+    discount_amount: discountAmount,
+    paid_value: paidValue,
+    net_amount: netAmount,
+    balance_amount: balanceAmount,
     payment_date: data.payment_date || (data.paid_at ? String(data.paid_at).split('T')[0] : undefined),
     status: normalizePayableStatus(data.status),
     type: data.type as PayableType,
     payment_method: data.payment_method as PaymentMethodType,
+  };
+}
+
+function payableText(...values: unknown[]): string {
+  return values.filter(Boolean).join(' ').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function payableDate(value: unknown): string {
+  return String(value || '').split('T')[0];
+}
+
+function getPayableComparableAmount(payable: Payable): number {
+  return Number(payable.net_amount ?? payable.amount ?? 0);
+}
+
+function matchesPayableClientFilters(payable: Payable, params: PayableFilterParams): boolean {
+  if (params.status?.length && !params.status.includes(payable.status)) return false;
+  if (params.type?.length && !params.type.includes(payable.type)) return false;
+  if (params.supplier_id && payable.supplier_id !== params.supplier_id) return false;
+  if (params.supplier_name && !payableText(payable.supplier_name).includes(payableText(params.supplier_name))) return false;
+  if (params.category && !payableText(payable.category).includes(payableText(params.category))) return false;
+  if (params.subcategory && !payableText(payable.subcategory).includes(payableText(params.subcategory))) return false;
+  if (params.chart_account_id && payable.chart_account_id !== params.chart_account_id) return false;
+  if (params.cost_center_id && payable.cost_center_id !== params.cost_center_id) return false;
+  if (params.financial_account_id && payable.financial_account_id !== params.financial_account_id) return false;
+  if (params.payment_method?.length && (!payable.payment_method || !params.payment_method.includes(payable.payment_method))) return false;
+  if (params.unit_id && payable.unit_id !== params.unit_id) return false;
+
+  const dueDate = payableDate(payable.due_date);
+  const issueDate = payableDate(payable.issue_date);
+  const paymentDate = payableDate(payable.payment_date || payable.paid_at);
+  const competencyDate = payableDate(payable.competency_date);
+  if (params.due_date_start && dueDate < params.due_date_start) return false;
+  if (params.due_date_end && dueDate > params.due_date_end) return false;
+  if (params.issue_date_start && issueDate < params.issue_date_start) return false;
+  if (params.issue_date_end && issueDate > params.issue_date_end) return false;
+  if (params.payment_date_start && paymentDate < params.payment_date_start) return false;
+  if (params.payment_date_end && paymentDate > params.payment_date_end) return false;
+  if (params.competency_date_start && competencyDate < params.competency_date_start) return false;
+  if (params.competency_date_end && competencyDate > params.competency_date_end) return false;
+
+  const amount = getPayableComparableAmount(payable);
+  if (params.amount_min !== undefined && amount < params.amount_min) return false;
+  if (params.amount_max !== undefined && amount > params.amount_max) return false;
+  if (params.is_recurring !== undefined && Boolean(payable.is_recurring) !== params.is_recurring) return false;
+  if (params.is_overdue) {
+    const today = new Date().toISOString().split('T')[0];
+    if (!dueDate || dueDate >= today || payable.status === PayableStatus.PAID) return false;
+  }
+  if (params.search) {
+    const haystack = payableText(payable.description, payable.supplier_name, payable.document_number, payable.invoice_number, payable.observations);
+    if (!haystack.includes(payableText(params.search))) return false;
+  }
+  return true;
+}
+
+function sortPayables(payables: Payable[], orderBy = 'due_date.asc'): Payable[] {
+  const [field, direction = 'asc'] = orderBy.split('.');
+  const multiplier = direction.toLowerCase() === 'desc' ? -1 : 1;
+  return [...payables].sort((left: any, right: any) => String(left?.[field] || '').localeCompare(String(right?.[field] || '')) * multiplier);
+}
+
+async function listPayablesViaRpc(params: PayableFilterParams): Promise<PayablesPageResponse> {
+  const rows = await listAP({ clinicId: params.clinic_id, limit: 20000, offset: 0 });
+  const filtered = sortPayables(
+    (rows || []).map(transformPayable).filter((payable) => matchesPayableClientFilters(payable, params)),
+    params.order_by || 'due_date.asc',
+  );
+  const limit = params.limit || 50;
+  const offset = params.offset || 0;
+  return {
+    payables: filtered.slice(offset, offset + limit),
+    total: filtered.length,
+    has_more: filtered.length > offset + limit,
   };
 }
 
@@ -801,12 +892,21 @@ export async function listPayables(
     query = query.range(offset, offset + limit - 1);
 
     // Ordering
-    const orderBy = params.order_by || 'due_date.asc';
-    query = query.order(...orderBy.split('.'));
+    const [orderColumn, orderDirection = 'asc'] = (params.order_by || 'due_date.asc').split('.');
+    query = query.order(orderColumn, { ascending: orderDirection.toLowerCase() !== 'desc' });
 
     const { data, count, error } = await query;
 
     if (error) throw error;
+
+    if ((count || 0) === 0) {
+      try {
+        const rpcResult = await listPayablesViaRpc(params);
+        if (rpcResult.total > 0) return rpcResult;
+      } catch (rpcError) {
+        console.warn('listPayables RPC fallback failed:', rpcError);
+      }
+    }
 
     return {
       payables: (data || []).map(transformPayable),

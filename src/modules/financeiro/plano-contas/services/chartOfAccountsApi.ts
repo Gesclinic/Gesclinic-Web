@@ -38,7 +38,7 @@ export async function listChartOfAccounts(
       (nodes || []).flatMap((node) => {
         const { children = [], ...account } = node;
         return [
-          { ...account, parentName },
+          { ...account, level: getCodeLevel(account.code), parentName },
           ...flatten(children, node.name),
         ];
       });
@@ -104,6 +104,7 @@ export async function getChartOfAccountsTree(
       if (!activeOnly || item.is_active) {
         const node: ChartOfAccountTreeNode = {
           ...item,
+          level: getCodeLevel(item.code),
           children: [],
           isExpanded: false,
           isLoading: false,
@@ -167,6 +168,43 @@ export async function getChartOfAccountById(
 }
 
 /**
+ * Validate hierarchical relationship between child code and parent code
+ * Example: 1.2.1 must have parent 1.2, 1.2 must have parent 1
+ */
+function validateCodeHierarchy(childCode: string, parentCode: string | null): void {
+  if (!/^\d+(\.\d+)*$/.test(childCode)) {
+    throw new Error(
+      `Código inválido: "${childCode}". Use a estrutura numérica do plano de contas, como 1, 1.2 ou 1.2.1`
+    );
+  }
+
+  if (!parentCode) {
+    // No parent: child code must be single digit (1, 2, 3, etc.)
+    if (!/^\d+$/.test(childCode)) {
+      throw new Error(
+        `Código raiz inválido: "${childCode}". Contas de nível superior devem ser números simples (1, 2, 3, etc.)`
+      );
+    }
+    return;
+  }
+
+  // Extract parent code from child code by removing last segment
+  const childParts = childCode.split('.');
+  const expectedParentCode = childParts.slice(0, -1).join('.') || childParts[0];
+
+  if (expectedParentCode !== parentCode) {
+    throw new Error(
+      `Hierarquia de código inválida: ${childCode} (pai esperado: ${expectedParentCode}, informado: ${parentCode}). ` +
+      `A estrutura de códigos deve seguir: 1 > 1.1 > 1.1.1`
+    );
+  }
+}
+
+function getCodeLevel(code: string): number {
+  return code.split('.').filter(Boolean).length;
+}
+
+/**
  * Create new account
  */
 export async function createChartOfAccount(
@@ -174,17 +212,23 @@ export async function createChartOfAccount(
   userId: string
 ): Promise<ChartOfAccount> {
   try {
-    // Calculate level
-    let level = 1;
-    if (input.parent_id) {
-      const parent = await getChartOfAccountById(input.parent_id);
-      level = (parent.level || 1) + 1;
+    const { parent_code, ...accountInput } = input;
+
+    const level = getCodeLevel(accountInput.code);
+
+    if (accountInput.parent_id) {
+      const parent = await getChartOfAccountById(accountInput.parent_id);
+
+      // Validate hierarchy between child and parent codes
+      validateCodeHierarchy(accountInput.code, parent.code);
+    } else {
+      validateCodeHierarchy(accountInput.code, null);
     }
 
     const { data, error } = await supabase
       .from('financial_chart_of_accounts')
       .insert({
-        ...input,
+        ...accountInput,
         level,
         created_by: userId,
       })
@@ -208,12 +252,31 @@ export async function updateChartOfAccount(
   input: ChartOfAccountUpdateInput
 ): Promise<ChartOfAccount> {
   try {
+    const updates: ChartOfAccountUpdateInput & { level?: number; updated_at: string } = {
+      ...input,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (input.parent_id !== undefined || input.code !== undefined) {
+      const account = await getChartOfAccountById(accountId);
+      const code = input.code ?? account.code;
+      const parentId = input.parent_id !== undefined ? input.parent_id : account.parent_id;
+
+      if (parentId) {
+        const parent = await getChartOfAccountById(parentId);
+        // Validate hierarchy between child and parent codes
+        validateCodeHierarchy(code, parent.code);
+      } else {
+        // Parent is being removed - validate that code is a root code
+        validateCodeHierarchy(code, null);
+      }
+
+      updates.level = getCodeLevel(code);
+    }
+
     const { data, error } = await supabase
       .from('financial_chart_of_accounts')
-      .update({
-        ...input,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updates)
       .eq('id', accountId)
       .select()
       .single();

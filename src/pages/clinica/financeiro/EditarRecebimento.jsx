@@ -7,6 +7,7 @@ import { listRevenueAccountPlans, listCostCenters } from '@/lib/financeApi';
 import { listProfessionals } from '@/lib/professionalsApi';
 import { listPayers } from '@/lib/payersApi';
 import { listCardProcessors } from '@/lib/cardProcessorsApi';
+import { listServices } from '@/lib/servicesApi';
 import { calculateProcessingFee } from '@/lib/processingFeeCalculator';
 import { buildReceivableDocumentExtractionMetadata, extractReceivableDocument, inferReceivableInvoiceNumberFromFileName } from '@/lib/receivableDocumentExtractor';
 import { invalidateDashboardDataCache } from '@/services/dashboardDataService';
@@ -106,6 +107,17 @@ function cleanBrokenTextDeep(value) {
   return cleanBrokenText(value);
 }
 
+function getServiceCategoryLabel(service = {}) {
+  const labels = {
+    consultation: 'Consultas',
+    exam: 'Exames',
+    procedure: 'Procedimentos',
+    surgery: 'Cirurgias',
+    other: 'Outros',
+  };
+  return labels[service.service_category] || '';
+}
+
 export default function EditarRecebimento() {
   const { clinicId } = useAuth();
   const { id } = useParams();
@@ -113,6 +125,7 @@ export default function EditarRecebimento() {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const returnTo = getSafeInternalReturnPath(searchParams.get('returnTo'));
+  const backLabel = returnTo?.startsWith('/clinica/financeiro/resultado') ? 'Voltar para DRE' : 'Voltar para Contas a Receber';
   const goBack = () => {
     if (returnTo) {
       navigate(returnTo, { replace: true });
@@ -129,6 +142,7 @@ export default function EditarRecebimento() {
   const [professionals, setProfessionals] = useState([]);
   const [convenios, setConvenios] = useState([]);
   const [empresas, setEmpresas] = useState([]);
+  const [services, setServices] = useState([]);
   const [cardProcessors, setCardProcessors] = useState([]);
   const [cardFeeCalc, setCardFeeCalc] = useState(null);
   const [nfFile, setNfFile] = useState(null);
@@ -141,17 +155,19 @@ export default function EditarRecebimento() {
     setLoading(true);
     (async () => {
       try {
-        const [rec, ps, cs, professionalsData, payersData, processorsData] = await Promise.all([
+        const [rec, ps, cs, professionalsData, payersData, processorsData, servicesData] = await Promise.all([
           getReceivableById(id, clinicId),
           listRevenueAccountPlans(clinicId),
           listCostCenters(clinicId),
           listProfessionals(clinicId),
           listPayers(clinicId),
           listCardProcessors(clinicId),
+          listServices(clinicId),
         ]);
 
         const metadataExtraction = rec.metadata?.document_extraction || null;
         const extractionFields = metadataExtraction?.fields || {};
+        const selectedService = (servicesData || []).find((service) => service.id === rec.procedure_id) || null;
         const metadataText = JSON.stringify(rec.metadata || {});
         const inferredInvoiceNumber = rec.insurance_invoice_number
           || extractionFields.invoice_number
@@ -175,7 +191,9 @@ export default function EditarRecebimento() {
           guide_number: rec.guide_number || '',
           insurance_invoice_number: inferredInvoiceNumber || '',
           batch_number: rec.batch_number || '',
-          procedure_name: rec.procedure_name || rec.service_description || '',
+          procedure_id: rec.procedure_id || '',
+          procedure_name: selectedService?.name || '',
+          service_group: rec.service_group || getServiceCategoryLabel(selectedService) || rec.metadata?.service_group || '',
           specialty_name: rec.specialty_name || '',
           unit_name: rec.unit_name || '',
         };
@@ -191,6 +209,7 @@ export default function EditarRecebimento() {
         setProfessionals(cleanBrokenTextDeep(professionalsData || []));
         setConvenios(cleanBrokenTextDeep(payersData || []));
         setEmpresas([]);
+        setServices(cleanBrokenTextDeep(servicesData || []));
         setCardProcessors(processorsData || []);
       } catch (e) {
         setError(e?.message || 'Erro ao carregar recebível');
@@ -225,6 +244,16 @@ export default function EditarRecebimento() {
 
   const handleChange = (field, value) => {
     setData((current) => ({ ...current, [field]: cleanBrokenText(value) }));
+  };
+
+  const handleServiceChange = (serviceId) => {
+    const selectedService = services.find((service) => service.id === serviceId) || null;
+    setData((current) => ({
+      ...current,
+      procedure_id: serviceId || '',
+      procedure_name: selectedService?.name || '',
+      service_group: selectedService ? getServiceCategoryLabel(selectedService) : '',
+    }));
   };
 
   const getDateInputValue = (field) => {
@@ -353,7 +382,9 @@ export default function EditarRecebimento() {
         due_date: dueDate,
         guide_number: data.guide_number || null,
         batch_number: data.batch_number || null,
+        procedure_id: data.procedure_id || null,
         procedure_name: data.procedure_name || null,
+        service_group: data.service_group || null,
         specialty_name: data.specialty_name || null,
         unit_name: data.unit_name || null,
         notes: data.notes || null,
@@ -422,7 +453,7 @@ export default function EditarRecebimento() {
                 </p>
               </div>
               <Button type="button" variant="outline" onClick={goBack}>
-                Voltar para Contas a Receber
+                {backLabel}
               </Button>
             </div>
           </div>
@@ -733,8 +764,17 @@ export default function EditarRecebimento() {
           <FormSection title="Rastreabilidade e anexos">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <div>
-              <Label>Procedimento</Label>
-              <Input value={data.procedure_name || ''} onChange={(e) => handleChange('procedure_name', e.target.value)} placeholder="Procedimento/serviço" />
+              <Label>Serviço</Label>
+              <select className="w-full border rounded h-9 px-2 text-sm" value={data.procedure_id || ''} onChange={(e) => handleServiceChange(e.target.value)}>
+                <option value="">Selecione um serviço cadastrado</option>
+                {services.map((service) => (
+                  <option key={service.id} value={service.id}>{service.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label>Grupo</Label>
+              <Input value={data.service_group || ''} onChange={(e) => handleChange('service_group', e.target.value)} placeholder="Consulta, Exame..." />
             </div>
             <div>
               <Label>Especialidade</Label>

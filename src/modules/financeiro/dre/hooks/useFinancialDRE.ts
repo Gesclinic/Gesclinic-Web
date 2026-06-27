@@ -62,7 +62,7 @@ export interface UseFinancialDREActions {
   compareToPreviousPeriod: () => Promise<void>;
 
   // Drill-down
-  drillDown: (drillBy: 'convenio' | 'guia' | 'paciente' | 'atendimento' | 'centro' | 'medico') => Promise<void>;
+  drillDown: (drillBy: 'convenio' | 'guia' | 'paciente' | 'atendimento' | 'centro' | 'medico', context?: Record<string, any>) => Promise<void>;
   goBackDrillDown: () => void;
 
   // Benchmark
@@ -204,13 +204,14 @@ export function useFinancialDRE(
   }, [clinicId, state.variant, state.period, state.filters]);
 
   const drillDown = useCallback(
-    async (drillBy: 'convenio' | 'guia' | 'paciente' | 'atendimento' | 'centro' | 'medico') => {
+    async (drillBy: 'convenio' | 'guia' | 'profissional' | 'servico' | 'paciente' | 'atendimento' | 'centro' | 'medico', context: Record<string, any> = {}) => {
       if (!clinicId) return;
 
       setState(s => ({ ...s, loadingDrillDown: true }));
 
       try {
-        const cacheKey = `drilldown_${drillBy}_${JSON.stringify(state.filters || {})}`;
+        const drillKey = `v11:${drillBy}:${JSON.stringify(context || {})}`;
+        const cacheKey = `drilldown_${drillKey}_${JSON.stringify(state.filters || {})}`;
         const cached = getFromCache(cacheKey);
 
         let drilled: DRELineItem[];
@@ -218,13 +219,13 @@ export function useFinancialDRE(
         if (cached) {
           drilled = cached;
         } else {
-          drilled = await drillDownReceita(clinicId, drillBy, state.filters);
+          drilled = await drillDownReceita(clinicId, drillBy, { ...state.filters, ...context });
           setInCache(cacheKey, drilled);
         }
 
         setState(s => {
           const newDrillDowns = new Map(s.drillDowns);
-          newDrillDowns.set(drillBy, drilled);
+          newDrillDowns.set(drillKey, drilled);
 
           const level = drillBy === 'convenio' ? 2 : drillBy === 'guia' ? 3 : drillBy === 'paciente' ? 4 : 5;
 

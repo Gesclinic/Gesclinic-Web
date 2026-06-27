@@ -122,6 +122,117 @@ function parseDateOnly(value) {
   return String(value).split('T')[0];
 }
 
+function normalizeReceivableText(...values) {
+  return values.filter(Boolean).join(' ').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function mapLegacyInvoiceToReceivable(row, clinicId) {
+  const amount = Number(row.amount ?? row.total ?? row.valor ?? row.value ?? 0);
+  const received = ['paid', 'received', 'pago', 'recebido', 'quitado'].includes(String(row.status || '').toLowerCase());
+  const dueDate = parseDateOnly(row.due_date || row.vencimento || row.data_vencimento || row.created_at);
+  const invoiceDate = parseDateOnly(row.invoice_date || row.issue_date || row.emission_date || row.created_at);
+  const payerName = row.payer_name || row.patient_name || row.customer_name || row.client_name || row.name || 'Pagador não informado';
+
+  return {
+    ...row,
+    clinic_id: row.clinic_id || clinicId,
+    patient_name: payerName,
+    payer_name: payerName,
+    description: row.description || row.descricao || row.notes || `Fatura ${row.id ? String(row.id).slice(0, 8) : ''}`.trim(),
+    amount,
+    gross_amount: Number(row.gross_amount ?? amount),
+    net_value: Number(row.net_value ?? row.total ?? amount),
+    received_value: Number(row.received_value ?? (received ? (row.net_value ?? row.total ?? amount) : 0)),
+    due_date: dueDate,
+    invoice_date: invoiceDate,
+    competency_date: parseDateOnly(row.competency_date || invoiceDate || dueDate),
+    received_date: parseDateOnly(row.received_date || row.paid_at || row.payment_date),
+    status: normalizeArStatus(row.status) || (received ? 'received' : 'open'),
+    origem: row.origem || row.origin || 'legacy_invoices',
+  };
+}
+
+function matchesLegacyReceivableFilters(row, filters) {
+  if (filters.payer && !normalizeReceivableText(row.patient_name, row.payer_name).includes(normalizeReceivableText(filters.payer))) return false;
+  if (filters.payerType && String(row.payer_type || '').toLowerCase() !== String(filters.payerType).toLowerCase()) return false;
+  if (filters.statusList?.length) {
+    const accepted = normalizeStatusListForQuery(filters.statusList);
+    if (!accepted.includes(String(row.status || '').toLowerCase())) return false;
+  } else if (filters.status) {
+    const accepted = normalizeStatusListForQuery([filters.status]);
+    if (!accepted.includes(String(row.status || '').toLowerCase())) return false;
+  }
+  if (filters.dueStart && (!row.due_date || row.due_date < filters.dueStart)) return false;
+  if (filters.dueEnd && (!row.due_date || row.due_date > filters.dueEnd)) return false;
+  if (filters.emissionStart && (!row.invoice_date || row.invoice_date < filters.emissionStart)) return false;
+  if (filters.emissionEnd && (!row.invoice_date || row.invoice_date > filters.emissionEnd)) return false;
+  if (filters.receivedStart && (!row.received_date || row.received_date < filters.receivedStart)) return false;
+  if (filters.receivedEnd && (!row.received_date || row.received_date > filters.receivedEnd)) return false;
+  if (filters.minValue !== null && filters.minValue !== undefined && filters.minValue !== '' && Number(row.net_value || row.amount || 0) < Number(filters.minValue)) return false;
+  if (filters.maxValue !== null && filters.maxValue !== undefined && filters.maxValue !== '' && Number(row.net_value || row.amount || 0) > Number(filters.maxValue)) return false;
+  if (filters.search && !normalizeReceivableText(row.description, row.patient_name, row.payer_name, row.document_number, row.invoice_number).includes(normalizeReceivableText(filters.search))) return false;
+  return true;
+}
+
+async function listLegacyInvoiceReceivables(clinicId, filters) {
+  try {
+    const { data, error } = await supabase
+      .from('invoices')
+      .select('*')
+      .eq('clinic_id', clinicId)
+      .order('created_at', { ascending: false })
+      .limit(20000);
+
+    if (error) throw error;
+    const rows = (data || [])
+      .map((row) => mapLegacyInvoiceToReceivable(row, clinicId))
+      .filter((row) => matchesLegacyReceivableFilters(row, filters));
+    return rows.slice(filters.offset || 0, (filters.offset || 0) + (filters.limit || 100));
+  } catch (error) {
+    console.warn('listLegacyInvoiceReceivables skipped:', error?.message || error);
+    return [];
+  }
+}
+
+async function listArInvoicesViaRpc(clinicId, filters) {
+  try {
+    const { sessionUserId, sessionEmail } = getCustomSessionIdentity();
+
+    const { data, error } = await supabase.rpc('list_ar_invoices', {
+      p_clinic_id: clinicId,
+      p_limit: 20000,
+      p_offset: 0,
+      p_user_id: sessionUserId,
+      p_email: sessionEmail,
+    });
+
+    if (error) throw error;
+    const offset = filters.offset || 0;
+    const limit = filters.limit || 100;
+    return (data || [])
+      .filter((row) => matchesLegacyReceivableFilters(row, filters))
+      .slice(offset, offset + limit);
+  } catch (error) {
+    console.warn('listArInvoicesViaRpc skipped:', error?.message || error);
+    return [];
+  }
+}
+
+function getCustomSessionIdentity() {
+  let sessionUserId = null;
+  let sessionEmail = null;
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const session = JSON.parse(localStorage.getItem('gesclinic_session') || '{}');
+      sessionUserId = session.user_id || session.userId || null;
+      sessionEmail = session.email || null;
+    }
+  } catch (_error) {
+    // Ignore malformed local custom sessions; Supabase auth claims may still work.
+  }
+  return { sessionUserId, sessionEmail };
+}
+
 function normalizeCardLast4(value) {
   const digits = String(value || '').replace(/\D/g, '');
   return digits.length >= 4 ? digits.slice(-4) : null;
@@ -219,6 +330,7 @@ function normalizeReceivablePayload(clinicId, payload) {
     batch_number: payload.batch_number || null,
     procedure_id: payload.procedure_id || null,
     procedure_name: payload.procedure_name || null,
+    service_group: payload.service_group || null,
     specialty_id: payload.specialty_id || null,
     specialty_name: payload.specialty_name || null,
     unit_id: payload.unit_id || null,
@@ -615,6 +727,7 @@ function omitOptionalReceivableColumns(row) {
     batch_number,
     procedure_id,
     procedure_name,
+    service_group,
     specialty_id,
     specialty_name,
     unit_id,
@@ -724,6 +837,8 @@ async function attachLatestGlosas(clinicId, rows = []) {
   const payerIds = [...new Set(rows.map(r => r.payer_id).filter(Boolean))];
   const professionalIds = [...new Set(rows.map(r => r.professional_id).filter(Boolean))];
   const chartAccountIds = [...new Set(rows.map(r => r.chart_account_id).filter(Boolean))];
+  const serviceIds = [...new Set(rows.map(getRegisteredServiceId).filter(Boolean))];
+  const hasRowsWithoutService = rows.some((row) => !getRegisteredServiceId(row));
   
   // Contar quantos têm chart_account_id NULL (precisam classificação automática)
   const needsClassification = rows.filter(r => !r.chart_account_id).length;
@@ -732,21 +847,26 @@ async function attachLatestGlosas(clinicId, rows = []) {
     payerIds: payerIds.length,
     professionalIds: professionalIds.length,
     chartAccountIds: chartAccountIds.length,
+    serviceIds: serviceIds.length,
     needsClassification,
     totalRows: rows.length,
   });
 
   // Buscar nomes de payers, professionals e chart_of_accounts
-  const [payersMap, professionalsMap, chartsMap] = await Promise.all([
+  const [payersMap, professionalsMap, chartsMap, servicesMap, allServices] = await Promise.all([
     payerIds.length > 0 ? fetchPayersMap(clinicId, payerIds) : Promise.resolve(new Map()),
     professionalIds.length > 0 ? fetchProfessionalsMap(clinicId, professionalIds) : Promise.resolve(new Map()),
     chartAccountIds.length > 0 ? fetchChartsMap(clinicId, chartAccountIds) : Promise.resolve(new Map()),
+    serviceIds.length > 0 ? fetchServicesMap(clinicId, serviceIds) : Promise.resolve(new Map()),
+    hasRowsWithoutService ? fetchServicesForClassification(clinicId) : Promise.resolve([]),
   ]);
 
   console.log('📦 [attachLatestGlosas] Dados enriquecidos:', {
     payersMapSize: payersMap.size,
     professionalsMapSize: professionalsMap.size,
     chartsMapSize: chartsMap.size,
+    servicesMapSize: servicesMap.size,
+    allServicesSize: allServices.length,
   });
 
   // Enriquecer rows com nomes E classificação automática
@@ -767,6 +887,7 @@ async function attachLatestGlosas(clinicId, rows = []) {
       }
     }
     
+    const registeredService = servicesMap.get(getRegisteredServiceId(row)) || findRegisteredServiceByText(row, allServices);
     const enriched = {
       ...row,
       chart_account_id: classifiedChartAccountId || row.chart_account_id,
@@ -775,6 +896,9 @@ async function attachLatestGlosas(clinicId, rows = []) {
         ? (professionalsMap.get(row.professional_id) || row.professional_name || 'Não identificado')
         : 'Não identificado',
       plano_contas_name: classifiedChartName || chartsMap.get(classifiedChartAccountId) || row.plano_contas_name || 'Não classificado',
+      registered_service_id: registeredService?.id || null,
+      registered_service_name: registeredService?.name || null,
+      registered_service_group: getServiceGroupLabel(registeredService),
       guide_number: row.guide_number || null, // Vem do XML
     };
     
@@ -878,6 +1002,92 @@ async function fetchChartsMap(clinicId, chartAccountIds) {
   return new Map((data || []).map(c => [c.id, c.name]));
 }
 
+function getRegisteredServiceId(row = {}) {
+  const appointment = Array.isArray(row.appointments) ? row.appointments[0] : row.appointments;
+  return row.procedure_id || row.service_id || appointment?.service_id || null;
+}
+
+function getServiceGroupLabel(service) {
+  if (!service) return null;
+  const category = service.service_category || service.type_service || '';
+  const labels = {
+    consultation: 'Consultas',
+    exam: 'Exames',
+    procedure: 'Procedimentos',
+    surgery: 'Cirurgias',
+    other: 'Outros',
+  };
+  return labels[category] || service.service_group || null;
+}
+
+function normalizeServiceMatchText(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function buildReceivableServiceHaystack(row = {}) {
+  const fields = row.metadata?.document_extraction?.fields || {};
+  return normalizeServiceMatchText([
+    row.procedure_name,
+    row.service_description,
+    row.description,
+    row.nf_document_name,
+    fields.procedure_name,
+    fields.service_name,
+    fields.description,
+    fields.tuss_code,
+  ].filter(Boolean).join(' '));
+}
+
+function findRegisteredServiceByText(row = {}, services = []) {
+  const haystack = buildReceivableServiceHaystack(row);
+  if (!haystack) return null;
+  return [...services]
+    .sort((left, right) => String(right.name || '').length - String(left.name || '').length)
+    .find((service) => {
+      const name = normalizeServiceMatchText(service.name);
+      const code = normalizeServiceMatchText(service.tuss_code || service.code);
+      return (name && haystack.includes(name)) || (code && haystack.includes(code));
+    }) || null;
+}
+
+async function fetchServicesMap(clinicId, serviceIds) {
+  if (!serviceIds.length) return new Map();
+  const { data, error } = await supabase
+    .from('services')
+    .select('id, name, code, tuss_code, service_category, type_service')
+    .eq('clinic_id', clinicId)
+    .in('id', serviceIds);
+
+  if (error) {
+    console.warn('fetchServicesMap error:', error.message);
+    return new Map();
+  }
+
+  return new Map((data || []).map((service) => [service.id, service]));
+}
+
+async function fetchServicesForClassification(clinicId) {
+  const { data, error } = await supabase
+    .from('services')
+    .select('id, name, code, tuss_code, service_category, type_service')
+    .eq('clinic_id', clinicId)
+    .eq('active', true)
+    .order('name', { ascending: true });
+
+  if (error) {
+    console.warn('fetchServicesForClassification error:', error.message);
+    return [];
+  }
+
+  return data || [];
+}
+
 /**
  * List receivables from ar_invoices table
  * This uses ar_invoices as the source table instead of ar_receivables
@@ -928,6 +1138,7 @@ export async function listReceivables({
       *,
       appointments!left(
         id,
+        service_id,
         patient_id,
         patients!left(name),
         payment_method,
@@ -1097,6 +1308,7 @@ export async function listReceivables({
           *,
           appointments!left(
             id,
+            service_id,
             patient_id,
             patients!left(name),
             payment_method,
@@ -1149,6 +1361,50 @@ export async function listReceivables({
   }
 
   console.log('📡 [listReceivables] ✅ Resultado:', data?.length || 0, 'linhas');
+
+  if (!data?.length) {
+    const rpcRows = await listArInvoicesViaRpc(clinicId, {
+      payer,
+      payerType,
+      status,
+      statusList,
+      dueStart,
+      dueEnd,
+      emissionStart,
+      emissionEnd,
+      receivedStart,
+      receivedEnd,
+      minValue,
+      maxValue,
+      search,
+      limit,
+      offset,
+    });
+    if (rpcRows.length) {
+      return attachLatestGlosas(clinicId, rpcRows);
+    }
+
+    const legacyRows = await listLegacyInvoiceReceivables(clinicId, {
+      payer,
+      payerType,
+      status,
+      statusList,
+      dueStart,
+      dueEnd,
+      emissionStart,
+      emissionEnd,
+      receivedStart,
+      receivedEnd,
+      minValue,
+      maxValue,
+      search,
+      limit,
+      offset,
+    });
+    if (legacyRows.length) {
+      return attachLatestGlosas(clinicId, legacyRows);
+    }
+  }
 
   // DEBUG: Log structure of first record
   if (data && data.length > 0) {
@@ -1344,11 +1600,27 @@ export async function deleteReceivable(id, clinicId = null) {
   if (error) {
     throw new Error(error.message);
   }
-  if (!data || data.length === 0) {
+  if (data?.length) {
+    invalidateFinanceCaches(data[0].clinic_id || clinicId);
+    return;
+  }
+
+  const { sessionUserId, sessionEmail } = getCustomSessionIdentity();
+  const { data: rpcData, error: rpcError } = await supabase.rpc('delete_ar_invoice_cascade', {
+    p_ar_invoice_id: id,
+    p_clinic_id: clinicId,
+    p_user_id: sessionUserId,
+    p_email: sessionEmail,
+  });
+
+  if (rpcError) {
+    throw new Error(rpcError.message);
+  }
+  if (!rpcData || rpcData.length === 0) {
     throw new Error('Record not found or outside current clinic');
   }
 
-  invalidateFinanceCaches(data[0].clinic_id || clinicId);
+  invalidateFinanceCaches(rpcData[0].clinic_id || clinicId);
 }
 
 /**

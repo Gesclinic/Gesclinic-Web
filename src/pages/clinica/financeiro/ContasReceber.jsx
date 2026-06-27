@@ -93,9 +93,12 @@ const RECEIVABLE_COLUMNS_STORAGE_KEY = 'contas_receber_visible_columns_v1';
 const receivableColumnOptions = [
   { key: 'payer', label: 'Pagador' },
   { key: 'description', label: 'Descrição' },
+  { key: 'service', label: 'Serviço' },
+  { key: 'serviceGroup', label: 'Grupo' },
   { key: 'payerContract', label: 'Convênio' },
   { key: 'professional', label: 'Profissional' },
-  { key: 'unitSpecialty', label: 'Unidade/Especialidade' },
+  { key: 'unit', label: 'Unidade' },
+  { key: 'specialty', label: 'Especialidade' },
   { key: 'paymentMethod', label: 'Forma de Pagamento' },
   { key: 'competence', label: 'Competência' },
   { key: 'dueDate', label: 'Vencimento' },
@@ -365,13 +368,22 @@ function loadReceivableColumnOrder() {
 
 function getReceivableNfDisplay(row) {
   const extractionFields = row?.metadata?.document_extraction?.fields || {};
-  // NF deve ser sempre derivada do XML (campos extraidos ou guia persistida do XML importado).
+  const inferNumberFromXmlName = (value) => {
+    const key = String(value || '').match(/([0-9]{40,60})\.xml$/i)?.[1] || '';
+    if (!key) return null;
+    const nfseNumber = key.match(/0{6,}([0-9]{3,6})2606/)?.[1];
+    return nfseNumber || null;
+  };
   const number = extractionFields.guide_number
     || extractionFields.numero_guia
     || extractionFields.nf_number
     || extractionFields.invoice_number
+    || row?.insurance_invoice_number
     || row?.guide_number
+    || inferNumberFromXmlName(row?.nf_document_name)
+    || inferNumberFromXmlName(row?.metadata?.source_file_name)
     || row?.metadata?.guide_number
+    || row?.metadata?.invoice_number
     || row?.metadata?.xml?.guide_number
     || null;
   const name = row?.nf_document_name || row?.metadata?.source_file_name || null;
@@ -725,6 +737,8 @@ export default function ContasReceber() {
   const source = searchParams.get('from');
   const trace = searchParams.get('trace');
   const cameFromCashflow = source === 'fluxo-caixa';
+  const cameFromDre = source === 'dre';
+  const returnTo = searchParams.get('returnTo') || '/clinica/financeiro/resultado';
   const isAdmin = ['admin', 'administrador', 'owner', 'super_admin'].includes(
     String(currentRole || '').toLowerCase(),
   );
@@ -1126,47 +1140,20 @@ export default function ContasReceber() {
       .map(([key, value]) => ({ key, label: labels[key] || key, value: valueLabel(key, value) }));
   }, [filters, payers, professionals, plans, costCenters]);
 
-  // Carregar TODOS os recebíveis para calcular indicadores corretos (sem paginação)
-  const loadAllReceivablesForSummary = async (nextFilters = filters) => {
+  // Carregar TODOS os recebíveis para calcular indicadores gerais da clínica (sem filtros da tela)
+  const loadAllReceivablesForSummary = async () => {
     if (!clinicId) return;
     try {
-      // Carregar sem limite para ter total correto nos indicadores
+      // Os indicadores devem permanecer globais mesmo quando a lista estiver filtrada pela DRE.
       const data = await listReceivables({
         clinicId,
-        payer: nextFilters.payer,
-        payerType: nextFilters.payerType || null,
-        status: nextFilters.status === 'overdue' ? 'open' : nextFilters.status || null,
-        origin: nextFilters.origin || null,
-        payerId: nextFilters.payerId || null,
-        professionalId: nextFilters.professionalId || null,
-        ccId: nextFilters.ccId || null,
-        planId: nextFilters.planId || null,
-        emissionStart: nextFilters.emissionStart || null,
-        emissionEnd: nextFilters.emissionEnd || null,
-        dueStart: nextFilters.dueStart || null,
-        dueEnd: nextFilters.dueEnd || null,
-        receivedStart: nextFilters.receivedStart || null,
-        receivedEnd: nextFilters.receivedEnd || null,
-        companyId: nextFilters.companyId || null,
-        unitId: nextFilters.unitId || null,
-        unitName: nextFilters.unitName || null,
-        specialtyId: nextFilters.specialtyId || null,
-        specialtyName: nextFilters.specialtyName || null,
-        paymentMethod: nextFilters.paymentMethod || null,
-        insuranceBillingStatus: nextFilters.insuranceBillingStatus || null,
-        tissXmlStatus: nextFilters.tissXmlStatus || null,
-        insuranceReturnStatus: nextFilters.insuranceReturnStatus || null,
-        hasGlosa: nextFilters.hasGlosa === '' ? null : nextFilters.hasGlosa,
-        minValue: nextFilters.minValue || null,
-        maxValue: nextFilters.maxValue || null,
-        search: nextFilters.search || null,
         limit: 10000, // Carregar até 10k registros para indicadores, sem paginação
         offset: 0,
       });
       const rowsData = Array.isArray(data) ? data : [];
-      const filteredRows = applyClientReceivableFilters(rowsData.map(formatReceivableRowTexts), nextFilters);
-      setAllLoadedRows(filteredRows);
-      console.log('✓ allLoadedRows atualizado com', filteredRows.length, 'registros para indicadores');
+      const summaryRows = rowsData.map(formatReceivableRowTexts);
+      setAllLoadedRows(summaryRows);
+      console.log('✓ allLoadedRows atualizado com', summaryRows.length, 'registros totais para indicadores');
     } catch (e) {
       console.error('❌ loadAllReceivablesForSummary error:', e?.message);
     }
@@ -1226,7 +1213,6 @@ export default function ContasReceber() {
       const rowsData = Array.isArray(data) ? data : [];
       const filteredRows = applyClientReceivableFilters(rowsData.map(formatReceivableRowTexts), nextFilters);
       setRows((current) => (append ? [...current, ...filteredRows] : filteredRows));
-      setAllLoadedRows((current) => (append ? [...current, ...filteredRows] : filteredRows));
       setNextOffset(offset + rowsData.length);
       setHasMoreRows(rowsData.length === RECEIVABLES_PAGE_SIZE);
     } catch (e) {
@@ -1234,7 +1220,6 @@ export default function ContasReceber() {
       console.error('   Stack:', e?.stack);
       if (!append) {
         setRows([]);
-        setAllLoadedRows([]);
       }
       toast({ variant: 'destructive', title: 'Erro ao carregar contas a receber', description: e?.message });
     } finally {
@@ -1679,7 +1664,7 @@ export default function ContasReceber() {
 
   useEffect(() => {
     setFilters(urlFilters);
-    if (cameFromCashflow || hasUrlFilters(urlFilters)) {
+    if (cameFromCashflow || cameFromDre || hasUrlFilters(urlFilters)) {
       setShowFilters(true);
     }
     load(urlFilters);
@@ -3071,6 +3056,32 @@ export default function ContasReceber() {
         </Card>
       )}
 
+      {cameFromDre && (
+        <Card className="mb-4 border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span>
+              Origem: DRE Gerencial{trace ? ` (${trace})` : ''}. As contas foram filtradas a partir do paciente/profissional selecionado.
+            </span>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => navigate(returnTo)}
+              >
+                Voltar para DRE
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => navigate('/clinica/financeiro/receber', { replace: true })}
+              >
+                Limpar rastreio
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* RESUMO FINANCEIRO */}
       <div className="grid gap-3 mb-6 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
         {[
@@ -3889,14 +3900,34 @@ export default function ContasReceber() {
                       {formatReceivableText((r.description || r.patient_name || r.appointments?.[0]?.notes || '').split(' - ')[0]) || 'Atendimento'}
                     </td>
                   ),
+                  service: (
+                    <td key="service" className="px-4 py-3 text-gray-700">
+                      <p className="max-w-[220px] truncate" title={formatReceivableText(r.registered_service_name)}>
+                        {formatReceivableText(r.registered_service_name) || 'Serviço não vinculado'}
+                      </p>
+                    </td>
+                  ),
+                  serviceGroup: (
+                    <td key="serviceGroup" className="px-4 py-3 text-gray-700">
+                      <p className="max-w-[160px] truncate" title={formatReceivableText(r.service_group || r.registered_service_group)}>
+                        {formatReceivableText(r.service_group || r.registered_service_group) || 'Grupo não vinculado'}
+                      </p>
+                    </td>
+                  ),
                   payerContract: <td key="payerContract" className="px-4 py-3 text-gray-700">{formatReceivableText(r.convenio_name) || '—'}</td>,
                   professional: <td key="professional" className="px-4 py-3 text-gray-700">{formatReceivableText(r.professional_name || r.profissional_name) || 'Não identificado'}</td>,
-                  unitSpecialty: (
-                    <td key="unitSpecialty" className="px-4 py-3 text-gray-700">
-                      <div className="max-w-[180px] space-y-0.5">
-                        <p className="truncate font-medium">{formatReceivableText(r.unit_name || r.unidade_name) || '—'}</p>
-                        <p className="truncate text-xs text-gray-500">{formatReceivableText(r.specialty_name) || 'Sem especialidade'}</p>
-                      </div>
+                  unit: (
+                    <td key="unit" className="px-4 py-3 text-gray-700">
+                      <p className="max-w-[160px] truncate" title={formatReceivableText(r.unit_name || r.unidade_name)}>
+                        {formatReceivableText(r.unit_name || r.unidade_name) || '—'}
+                      </p>
+                    </td>
+                  ),
+                  specialty: (
+                    <td key="specialty" className="px-4 py-3 text-gray-700">
+                      <p className="max-w-[180px] truncate" title={formatReceivableText(r.specialty_name)}>
+                        {formatReceivableText(r.specialty_name) || 'Sem especialidade'}
+                      </p>
                     </td>
                   ),
                   paymentMethod: (
@@ -3965,7 +3996,7 @@ export default function ContasReceber() {
                             {formatReceivableText(nfDisplay.number) || 'NF XML'}
                           </a>
                         ) : (
-                          <p className="font-medium text-slate-700">{formatReceivableText(nfDisplay.number) || 'Nao identificado no XML'}</p>
+                          <p className="font-medium text-slate-700">{formatReceivableText(nfDisplay.number) || 'NF não cadastrada'}</p>
                         )}
                         {nfDisplay.name && <p className="truncate text-gray-500" title={formatReceivableText(nfDisplay.name)}>{formatReceivableText(nfDisplay.name)}</p>}
                       </div>
@@ -4446,9 +4477,9 @@ export default function ContasReceber() {
         const reviewRows = buildFiscalReviewRows(documentDetailsRow);
         const divergences = reviewRows.filter((item) => !fiscalValuesMatch(item.xml, item.saved, item.type));
         return (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg p-6 w-full max-w-3xl shadow-xl">
-              <div className="flex items-start justify-between gap-3 mb-4">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 sm:p-4">
+            <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white shadow-xl">
+              <div className="flex flex-none items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 sm:px-5">
                 <div>
                   <h3 className="text-lg font-bold text-slate-900">Revisao fiscal do documento</h3>
                   <p className="text-sm text-gray-600">
@@ -4460,26 +4491,27 @@ export default function ContasReceber() {
                 </Button>
               </div>
 
-              <div className="grid gap-3 mb-4 md:grid-cols-4">
-                <div className="rounded border bg-emerald-50 p-3">
+              <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3 sm:px-5">
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+                <div className="rounded border bg-emerald-50 p-2.5">
                   <p className="text-xs text-emerald-700">Tipo</p>
                   <p className="font-bold text-emerald-900">{String(extraction.documentType || 'documento').toUpperCase()}</p>
                 </div>
-                <div className="rounded border bg-emerald-50 p-3">
+                <div className="rounded border bg-emerald-50 p-2.5">
                   <p className="text-xs text-emerald-700">Confianca</p>
                   <p className="font-bold text-emerald-900">{extraction.confidence || 'manual'}</p>
                 </div>
-                <div className="rounded border bg-slate-50 p-3">
+                <div className="rounded border bg-slate-50 p-2.5">
                   <p className="text-xs text-slate-600">Impostos</p>
                   <p className="font-bold text-slate-900">{formatFiscalValue(documentDetailsRow.taxes_value, 'currency')}</p>
                 </div>
-                <div className={`rounded border p-3 ${divergences.length ? 'bg-amber-50' : 'bg-green-50'}`}>
+                <div className={`rounded border p-2.5 ${divergences.length ? 'bg-amber-50' : 'bg-green-50'}`}>
                   <p className={divergences.length ? 'text-xs text-amber-700' : 'text-xs text-green-700'}>Conferencia</p>
                   <p className={divergences.length ? 'font-bold text-amber-900' : 'font-bold text-green-900'}>
                     {divergences.length ? `${divergences.length} divergencias` : 'Sem divergencias'}
                   </p>
                 </div>
-                <div className={`rounded border p-3 ${fiscalReview?.status === 'reviewed' ? 'bg-green-50' : 'bg-amber-50'}`}>
+                <div className={`rounded border p-2.5 ${fiscalReview?.status === 'reviewed' ? 'bg-green-50' : 'bg-amber-50'}`}>
                   <p className={fiscalReview?.status === 'reviewed' ? 'text-xs text-green-700' : 'text-xs text-amber-700'}>Status fiscal</p>
                   <p className={fiscalReview?.status === 'reviewed' ? 'font-bold text-green-900' : 'font-bold text-amber-900'}>
                     {fiscalReview?.label || 'Pendente'}
@@ -4488,14 +4520,14 @@ export default function ContasReceber() {
               </div>
 
               {fiscalReview?.status === 'reviewed' && (
-                <div className="mb-4 rounded border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+                <div className="rounded border border-green-200 bg-green-50 p-3 text-sm text-green-800">
                   Revisado em {formatFiscalValue(fiscalReview.reviewedAt, 'date')} por {fiscalReview.reviewedBy || 'operador'}.
                   {fiscalReview.notes ? <span className="block mt-1">Observacao: {fiscalReview.notes}</span> : null}
                 </div>
               )}
 
               {extraction.issuerName && (
-                <div className="mb-4 rounded border bg-slate-50 p-3 text-sm text-slate-700">
+                <div className="rounded border bg-slate-50 p-3 text-sm text-slate-700">
                   <span className="font-semibold">Emissor identificado:</span> {extraction.issuerName}
                 </div>
               )}
@@ -4516,8 +4548,8 @@ export default function ContasReceber() {
                       return (
                         <tr key={item.label} className="border-b last:border-b-0">
                           <td className="px-3 py-2 font-medium text-slate-700">{item.label}</td>
-                          <td className="px-3 py-2 text-slate-700">{formatFiscalValue(item.xml, item.type)}</td>
-                          <td className="px-3 py-2 text-slate-700">{formatFiscalValue(item.saved, item.type)}</td>
+                          <td className="max-w-[240px] break-words px-3 py-2 text-slate-700">{formatFiscalValue(item.xml, item.type)}</td>
+                          <td className="max-w-[280px] break-words px-3 py-2 text-slate-700">{formatFiscalValue(item.saved, item.type)}</td>
                           <td className="px-3 py-2 text-center">
                             <span className={`rounded-full px-2 py-1 text-xs font-semibold ${matches ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
                               {matches ? 'OK' : 'Revisar'}
@@ -4531,12 +4563,12 @@ export default function ContasReceber() {
               </div>
 
               {Array.isArray(extraction.warnings) && extraction.warnings.length > 0 && (
-                <div className="mt-4 rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                <div className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
                   {extraction.warnings.join(' ')}
                 </div>
               )}
 
-              <div className="mt-4">
+              <div>
                 <label className="text-xs font-medium text-slate-600">Observacao da revisao fiscal</label>
                 <Input
                   className="mt-1"
@@ -4545,8 +4577,9 @@ export default function ContasReceber() {
                   placeholder="Ex.: conferido com XML original, ajustar guia, divergencia aceita"
                 />
               </div>
+              </div>
 
-              <div className="mt-4 flex justify-end gap-2">
+              <div className="flex flex-none flex-wrap justify-end gap-2 border-t border-slate-100 bg-white px-4 py-3 sm:px-5">
                 {documentDetailsRow.nf_document_url && (
                   <Button type="button" variant="outline" asChild>
                     <a href={documentDetailsRow.nf_document_url} target="_blank" rel="noreferrer">

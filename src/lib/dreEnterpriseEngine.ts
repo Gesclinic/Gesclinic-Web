@@ -93,6 +93,20 @@ const getLinkedAccount = (row: any, accountIndex: Map<string, any> | null): any 
   return accountIndex.get(String(key)) || null;
 };
 
+const getRowAccountText = (row: any, accountIndex: Map<string, any> | null = null): string => {
+  const account = getLinkedAccount(row, accountIndex);
+  return String(
+    account?.name
+    ?? account?.description
+    ?? account?.code
+    ?? row?.chart_account_name
+    ?? row?.account_plan_name
+    ?? row?.plano_contas_name
+    ?? row?.category_name
+    ?? '',
+  );
+};
+
 const getRowCostCenterId = (row: any): string | null => {
   const value = row?.cost_center_id ?? row?.centro_custo_id ?? row?.costCenterId ?? null;
   return value ? String(value) : null;
@@ -109,6 +123,84 @@ const getCostCenterName = (row: any): string => {
     ?? 'Centro sem nome',
   );
 };
+
+const getFirstNestedServiceName = (value: any): string => {
+  if (!value) return '';
+  if (Array.isArray(value)) {
+    return value.map(getFirstNestedServiceName).find(Boolean) || '';
+  }
+  if (typeof value !== 'object') return '';
+  return String(
+    value.service_name
+    ?? value.procedure_name
+    ?? value.procedimento_name
+    ?? value.services?.name
+    ?? value.service?.name
+    ?? '',
+  ).trim();
+};
+
+const classifyClinicalServiceName = (value: any): string => {
+  const name = String(value || '').trim();
+  const normalized = normalizeText(name);
+  if (!normalized) return 'Serviço não informado';
+  if (/\bconsulta\b|consultorio|teleconsulta/.test(normalized)) return 'Consulta';
+  if (/\bexame\b|eeg|eletr|ressonancia|tomografia|ultrassom|ecg|raio|laborator|analise clinica/.test(normalized)) return 'Exame';
+  if (/cirurgia|cirurgico|operacao|operatorio/.test(normalized)) return 'Cirurgia';
+  if (/procedimento|infiltracao|biopsia|curativo|sutura|puncao|aplicacao/.test(normalized)) return 'Procedimento';
+  return name;
+};
+
+const getRowServiceName = (row: any): string => {
+  const value = [
+    row?.service_name,
+    row?.procedure_name,
+    row?.procedimento_name,
+    row?.service?.name,
+    row?.services?.name,
+    getFirstNestedServiceName(row?.appointments),
+    getFirstNestedServiceName(row?.appointment_services),
+  ].map((item) => String(item || '').trim()).find(Boolean);
+  return classifyClinicalServiceName(value);
+};
+
+const getRowAppointmentId = (row: any): string | null => {
+  const value = row?.appointment_id ?? row?.appointmentId ?? row?.agendamento_id ?? row?.origin_id ?? null;
+  return value ? String(value) : null;
+};
+
+async function attachClinicalServicesToRows(rows: any[] = []): Promise<any[]> {
+  const appointmentIds = Array.from(new Set(rows.map(getRowAppointmentId).filter(Boolean)));
+  if (appointmentIds.length === 0) return rows;
+
+  try {
+    const { data, error } = await supabase
+      .from('appointment_services')
+      .select('*, services(name)')
+      .in('appointment_id', appointmentIds);
+
+    if (error) throw error;
+
+    const byAppointment = new Map<string, any[]>();
+    (data || []).forEach((service: any) => {
+      const appointmentId = String(service.appointment_id || '');
+      if (!appointmentId) return;
+      const current = byAppointment.get(appointmentId) || [];
+      current.push(service);
+      byAppointment.set(appointmentId, current);
+    });
+
+    return rows.map((row: any) => {
+      const appointmentId = getRowAppointmentId(row);
+      return appointmentId && byAppointment.has(appointmentId)
+        ? { ...row, appointment_services: byAppointment.get(appointmentId) }
+        : row;
+    });
+  } catch (err) {
+    console.warn('⚠️ Erro ao enriquecer serviços clínicos da DRE:', err);
+    return rows;
+  }
+}
 
 const buildCostCenterIndex = (centers: any[] = []): Map<string, any> => {
   const index = new Map<string, any>();
@@ -147,6 +239,47 @@ const getRowPayerId = (row: any): string | null => {
 
 const getRowPayerName = (row: any): string =>
   String(row?.payer_name ?? row?.convenio_name ?? row?.insurance_name ?? '');
+
+const getRowPayerDisplayName = (row: any): string =>
+  String(row?.payer_display ?? row?.payer_display_name ?? row?.payer_name ?? row?.convenio_name ?? row?.insurance_name ?? row?.patient_name ?? '');
+
+const isConvenioRevenueRow = (row: any, accountIndex: Map<string, any> | null = null): boolean => {
+  const payerType = normalizeText(row?.payer_type ?? row?.payerType ?? row?.tipo_pagador ?? '');
+  if (['convenio', 'convênio'].includes(payerType)) return true;
+
+  const account = getLinkedAccount(row, accountIndex);
+  const accountCode = getAccountCode(account || row);
+  const accountText = normalizeText(getRowAccountText(row, accountIndex));
+  return accountCode.startsWith('1.2') || accountText.includes('convenio') || accountText.includes('convênio');
+};
+
+const isParticularPayerName = (name: any): boolean => {
+  const normalized = normalizeText(name);
+  return !normalized || normalized === 'particular' || normalized.includes('particular');
+};
+
+const getPayerTraceGroup = (row: any, accountIndex: Map<string, any> | null = null): { id: string; name: string; isParticular: boolean } => {
+  const payerName = getRowPayerName(row).trim();
+  if (isConvenioRevenueRow(row, accountIndex)) {
+    const name = getRowPayerDisplayName(row).trim() || payerName || 'Convênio não informado';
+    return {
+      id: String(getRowPayerId(row) || `convenio:${normalizeText(name)}`),
+      name,
+      isParticular: false,
+    };
+  }
+
+  const isParticular = isParticularPayerName(payerName);
+  if (isParticular) {
+    return { id: 'particular', name: 'Particular', isParticular: true };
+  }
+
+  return {
+    id: String(getRowPayerId(row) || payerName),
+    name: payerName,
+    isParticular: false,
+  };
+};
 
 const matchesEnterpriseScope = (row: any, filters?: DREFilters): boolean => {
   if (!filters) return true;
@@ -328,22 +461,23 @@ export async function calculateDREVariant(
     const payables = Array.isArray(consolidated.payables) ? consolidated.payables : [];
 
     // 3. Buscar informações complementares baseado no variant
-    let complementaryData: Record<string, any> = {};
+    const chartAccountData = await fetchChartOfAccountsData(clinicId);
+    let complementaryData: Record<string, any> = { ...chartAccountData };
     
     if (variant === 'contabil') {
-      complementaryData = await fetchChartOfAccountsData(clinicId);
+      complementaryData = { ...complementaryData, ...chartAccountData };
     } else if (variant === 'centro') {
-      complementaryData = await fetchCostCenterData(clinicId, filters?.centroId);
+      complementaryData = { ...complementaryData, ...(await fetchCostCenterData(clinicId, filters?.centroId)) };
     } else if (variant === 'medico') {
-      complementaryData = await fetchMedicoData(clinicId, filters?.professionalId || filters?.medicoId);
+      complementaryData = { ...complementaryData, ...(await fetchMedicoData(clinicId, filters?.professionalId || filters?.medicoId)) };
     } else if (variant === 'convenio') {
-      complementaryData = await fetchConvenioData(clinicId, filters?.payerId || filters?.convenioId);
+      complementaryData = { ...complementaryData, ...(await fetchConvenioData(clinicId, filters?.payerId || filters?.convenioId)) };
     } else if (variant === 'unidade') {
-      complementaryData = await fetchUnidadeData(clinicId, filters?.unitId || filters?.unidadeId);
+      complementaryData = { ...complementaryData, ...(await fetchUnidadeData(clinicId, filters?.unitId || filters?.unidadeId)) };
     } else if (variant === 'especialidade') {
-      complementaryData = await fetchEspecialidadeData(clinicId, filters?.especialidadeId);
+      complementaryData = { ...complementaryData, ...(await fetchEspecialidadeData(clinicId, filters?.especialidadeId)) };
     } else if (variant === 'projetada') {
-      complementaryData = await fetchProjectedData(clinicId, period, filters);
+      complementaryData = { ...complementaryData, ...(await fetchProjectedData(clinicId, period, filters)) };
     }
 
     // 4. Calcular DRE base
@@ -405,9 +539,7 @@ function calculateDRELines(
   const lines: DRELineItem[] = [];
   const scopedReceivables = receivables.filter((row) => matchesEnterpriseScope(row, filters));
   const scopedPayables = payables.filter((row) => matchesEnterpriseScope(row, filters));
-  const accountIndex = variant === 'contabil'
-    ? buildAccountIndex(Array.isArray(complementaryData?.chartAccounts) ? complementaryData.chartAccounts : [])
-    : null;
+  const accountIndex = buildAccountIndex(Array.isArray(complementaryData?.chartAccounts) ? complementaryData.chartAccounts : []);
   const costCenterIndex = variant === 'centro'
     ? buildCostCenterIndex(Array.isArray(complementaryData?.costCenters) ? complementaryData.costCenters : [])
     : null;
@@ -738,28 +870,38 @@ function calculateReceitaByType(
   accountIndex: Map<string, any> | null = null,
   variant: DREVariantType = 'gerencial'
 ): Array<{ name: string; value: number; metadata?: any }> {
-  const byType: Record<string, number> = {};
+  const byType = new Map<string, { name: string; value: number; metadata: Record<string, any> }>();
   
   receivables
     .filter((r) => !filters?.convenioId || String(r.convenio_id || r.payer_id || '') === String(filters.convenioId))
     .filter((r) => !filters?.centroId || String(getRowCostCenterId(r) || '') === String(filters.centroId))
     .filter((r) => isActiveAccrualStatus(r.status))
     .forEach(r => {
-      let type = r.convenio_name || r.payer_name || 'Particular';
+      const payerGroup = getPayerTraceGroup(r, accountIndex);
+      let type = payerGroup.name;
+      let key = payerGroup.id;
+      let metadata: Record<string, any> = {
+        type: 'receita',
+        convenioId: payerGroup.id,
+        payerId: payerGroup.id,
+        payerName: type,
+        classificationPath: ['Receita Bruta', type],
+      };
       if (variant === 'contabil' && accountIndex) {
         const account = getLinkedAccount(r, accountIndex);
         if (account && isReceitaConta(account)) {
           type = `${getAccountCode(account)} - ${account.name || 'Receita'}`;
+          key = `account:${getAccountCode(account)}:${account.id || type}`;
+          metadata = { type: 'receita_contabil', chartAccountId: account.id, accountCode: getAccountCode(account) };
         }
       }
-      byType[type] = (byType[type] || 0) + getReceivableValue(r);
+
+      const current = byType.get(key) || { name: type, value: 0, metadata };
+      current.value += getReceivableValue(r);
+      byType.set(key, current);
     });
 
-  return Object.entries(byType).map(([name, value]) => ({
-    name,
-    value,
-    metadata: { type: 'receita' },
-  }));
+  return Array.from(byType.values());
 }
 
 function calculateDeducoes(receivables: any[], filters?: DREFilters): number {
@@ -1123,7 +1265,7 @@ function calculateReceitasFinanceiras(consolidated: any, filters?: DREFilters): 
 }
 
 function calculateImpostos(receitaBruta: number, ebit: number, complementaryData: Record<string, any>): number {
-  // TODO: Integrar com dreApi.js para cálculo de impostos por regime tributário
+  // TODO: Integrar cálculo de impostos por regime tributário
   return receitaBruta * 0.15; // Simplificado: 15%
 }
 
@@ -1691,7 +1833,7 @@ export async function compareDREPeriods(
 // DRILL-DOWN
 // ============================================================================
 
-export type DrillDownCriteria = 'convenio' | 'guia' | 'paciente' | 'atendimento' | 'centro' | 'medico';
+export type DrillDownCriteria = 'convenio' | 'guia' | 'profissional' | 'servico' | 'paciente' | 'atendimento' | 'centro' | 'medico';
 
 /**
  * Expande uma linha de receita por critério
@@ -1706,10 +1848,14 @@ export async function drillDownReceita(
       return await drillDownByConvenio(clinicId);
     } else if (drillBy === 'guia') {
       return await drillDownByGuia(clinicId, context?.convenioId);
+    } else if (drillBy === 'profissional') {
+      return await drillDownByProfissional(clinicId, context?.convenioId, context?.professionalId, context?.professionalName, context?.serviceName);
+    } else if (drillBy === 'servico') {
+      return await drillDownByServico(clinicId, context?.convenioId, context?.professionalId, context?.professionalName, context?.serviceName);
     } else if (drillBy === 'paciente') {
-      return await drillDownByPaciente(clinicId, context?.guiaId);
+      return await drillDownByPaciente(clinicId, context?.guiaId, context?.pacienteId, context?.patientName, context?.convenioId);
     } else if (drillBy === 'atendimento') {
-      return await drillDownByAtendimento(clinicId, context?.pacienteId);
+      return await drillDownByAtendimento(clinicId, context?.pacienteId, context?.appointmentId);
     }
 
     return [];
@@ -1721,6 +1867,8 @@ export async function drillDownReceita(
 
 async function drillDownByConvenio(clinicId: string): Promise<DRELineItem[]> {
   try {
+    const chartAccountData = await fetchChartOfAccountsData(clinicId);
+    const accountIndex = buildAccountIndex(Array.isArray(chartAccountData.chartAccounts) ? chartAccountData.chartAccounts : []);
     const { data, error } = await supabase
       .from('ar_invoices')
       .select('*')
@@ -1733,8 +1881,9 @@ async function drillDownByConvenio(clinicId: string): Promise<DRELineItem[]> {
     (data || [])
       .filter((row: any) => isActiveAccrualStatus(row.status))
       .forEach((row: any) => {
-        const id = String(row.convenio_id || row.payer_id || 'particular');
-        const name = row.convenio_name || row.payer_name || 'Particular';
+        const payerGroup = getPayerTraceGroup(row, accountIndex);
+        const id = payerGroup.id;
+        const name = payerGroup.name;
         const current = grouped.get(id) || { name, total: 0 };
         current.total += getReceivableValue(row);
         grouped.set(id, current);
@@ -1746,7 +1895,7 @@ async function drillDownByConvenio(clinicId: string): Promise<DRELineItem[]> {
       level: 2,
       value: money(row.total),
       drillAvailable: true,
-      metadata: { convenioId: id },
+      metadata: { convenioId: id, payerId: id, payerName: row.name, classificationPath: ['Receita Bruta', row.name] },
     }));
   } catch (err) {
     console.error('❌ Erro drill-down convenio:', err);
@@ -1756,34 +1905,48 @@ async function drillDownByConvenio(clinicId: string): Promise<DRELineItem[]> {
 
 async function drillDownByGuia(clinicId: string, convenioId?: string): Promise<DRELineItem[]> {
   try {
-    let query = supabase
-      .from('billing_guides')
+    const chartAccountData = await fetchChartOfAccountsData(clinicId);
+    const accountIndex = buildAccountIndex(Array.isArray(chartAccountData.chartAccounts) ? chartAccountData.chartAccounts : []);
+
+    let receivableQuery = supabase
+      .from('ar_invoices')
       .select('*')
       .eq('clinic_id', clinicId)
       .limit(5000);
 
-    if (convenioId) query = query.eq('health_insurance_id', convenioId);
+    const { data: receivables, error: receivablesError } = await receivableQuery;
+    if (receivablesError) throw receivablesError;
 
-    const { data, error } = await query;
+    const receivableRows = await attachClinicalServicesToRows((receivables || [])
+      .filter((row: any) => isActiveAccrualStatus(row.status))
+      .filter((row: any) => {
+        if (!convenioId || convenioId === 'particular') {
+          return getPayerTraceGroup(row, accountIndex).isParticular;
+        }
+        const payerGroup = getPayerTraceGroup(row, accountIndex);
+        return payerGroup.id === convenioId || [row.convenio_id, row.payer_id, row.health_insurance_id].some((value) => String(value || '') === String(convenioId));
+      }));
 
-    if (error) throw error;
-
-    const grouped = new Map<string, { name: string; total: number }>();
-    (data || []).forEach((row: any) => {
-      const id = String(row.id || row.guide_number || row.guide_id || 'sem_guia');
-      const name = row.guide_number ? `Guia ${row.guide_number}` : `Guia ${id}`;
-      const current = grouped.get(id) || { name, total: 0 };
-      current.total += money(row.amount ?? row.valor ?? row.value ?? row.total_amount);
-      grouped.set(id, current);
+    const byService = new Map<string, { name: string; total: number }>();
+    receivableRows.forEach((row: any) => {
+      const serviceName = getRowServiceName(row);
+      const key = `service:${normalizeText(serviceName)}`;
+      const current = byService.get(key) || { name: serviceName, total: 0 };
+      current.total += getReceivableValue(row);
+      byService.set(key, current);
     });
 
-    return Array.from(grouped.entries()).map(([id, row]) => ({
-      id: `guia_${id}`,
-      name: row.name,
-      level: 3,
+    return Array.from(byService.entries()).map(([key, row]) => ({
+      id: `servico_${key}`,
+      name: `Serviço ${row.name}`,
+      level: 3 as DRELineItem['level'],
       value: money(row.total),
       drillAvailable: true,
-      metadata: { guiaId: id },
+      metadata: {
+        convenioId: convenioId || 'particular',
+        serviceName: row.name,
+        sourceTable: 'ar_invoices',
+      },
     }));
   } catch (err) {
     console.error('❌ Erro drill-down guia:', err);
@@ -1791,8 +1954,173 @@ async function drillDownByGuia(clinicId: string, convenioId?: string): Promise<D
   }
 }
 
-async function drillDownByPaciente(clinicId: string, guiaId?: string): Promise<DRELineItem[]> {
+async function drillDownByProfissional(
+  clinicId: string,
+  convenioId?: string,
+  professionalId?: string,
+  professionalName?: string,
+  serviceName?: string,
+): Promise<DRELineItem[]> {
   try {
+    const chartAccountData = await fetchChartOfAccountsData(clinicId);
+    const accountIndex = buildAccountIndex(Array.isArray(chartAccountData.chartAccounts) ? chartAccountData.chartAccounts : []);
+    const { data, error } = await supabase
+      .from('ar_invoices')
+      .select('*')
+      .eq('clinic_id', clinicId)
+      .limit(5000);
+
+    if (error) throw error;
+
+    const receivableRows = await attachClinicalServicesToRows((data || [])
+      .filter((row: any) => isActiveAccrualStatus(row.status))
+      .filter((row: any) => {
+        if (convenioId === 'particular') return getPayerTraceGroup(row, accountIndex).isParticular;
+        if (convenioId) {
+          const payerGroup = getPayerTraceGroup(row, accountIndex);
+          return payerGroup.id === convenioId || [row.convenio_id, row.payer_id, row.health_insurance_id].some((value) => String(value || '') === String(convenioId));
+        }
+        return true;
+      })
+      .filter((row: any) => {
+        if (professionalId) return String(getRowProfessionalId(row) || '') === String(professionalId);
+        if (professionalName && normalizeText(professionalName) !== normalizeText('profissional não informado')) {
+          return normalizeText(getRowProfessionalName(row)) === normalizeText(professionalName);
+        }
+        if (professionalName) return !normalizeText(getRowProfessionalName(row));
+        return true;
+      })
+      .filter((row: any) => !serviceName || normalizeText(getRowServiceName(row)) === normalizeText(serviceName)));
+
+    const byPatient = new Map<string, { name: string; total: number; patientId: string | null; invoiceIds: string[] }>();
+    receivableRows.forEach((row: any) => {
+      const patientName = row.patient_name || 'paciente não informado';
+      const patientId = row.patient_id ? String(row.patient_id) : null;
+      const key = patientId || `name:${normalizeText(patientName)}`;
+      const current = byPatient.get(key) || { name: patientName, total: 0, patientId, invoiceIds: [] };
+      current.total += getReceivableValue(row);
+      if (row.id) current.invoiceIds.push(String(row.id));
+      byPatient.set(key, current);
+    });
+
+    return Array.from(byPatient.entries()).map(([key, row]) => {
+      const lineId = `paciente_${key}`;
+      const returnTo = `/clinica/financeiro/resultado#dre-line-${encodeURIComponent(lineId)}`;
+      const params = new URLSearchParams({
+        from: 'dre',
+        trace: 'resultado-paciente',
+        payer: row.name,
+        search: row.name,
+        returnTo,
+      });
+      if (professionalId) params.set('professionalId', professionalId);
+      const hasSingleInvoice = row.invoiceIds.length === 1;
+
+      return {
+        id: lineId,
+        name: `Paciente ${row.name}`,
+        level: 5 as DRELineItem['level'],
+        value: money(row.total),
+        drillAvailable: false,
+        metadata: {
+          convenioId: convenioId || 'particular',
+          pacienteId: row.patientId,
+          patientName: row.name,
+          professionalId: professionalId || null,
+          professionalName: professionalName || null,
+          serviceName: serviceName || null,
+          sourceTable: 'ar_invoices',
+          actionPath: hasSingleInvoice
+            ? `/clinica/financeiro/receber/${row.invoiceIds[0]}/editar?from=dre&trace=resultado-paciente&returnTo=${encodeURIComponent(returnTo)}`
+            : `/clinica/financeiro/receber?${params.toString()}`,
+          actionLabel: hasSingleInvoice ? 'Editar conta' : 'Abrir contas',
+        },
+      };
+    });
+  } catch (err) {
+    console.error('❌ Erro drill-down profissional:', err);
+    return [];
+  }
+}
+
+async function drillDownByServico(
+  clinicId: string,
+  convenioId?: string,
+  professionalId?: string,
+  professionalName?: string,
+  serviceName?: string,
+): Promise<DRELineItem[]> {
+  try {
+    const chartAccountData = await fetchChartOfAccountsData(clinicId);
+    const accountIndex = buildAccountIndex(Array.isArray(chartAccountData.chartAccounts) ? chartAccountData.chartAccounts : []);
+    const { data, error } = await supabase
+      .from('ar_invoices')
+      .select('*')
+      .eq('clinic_id', clinicId)
+      .limit(5000);
+
+    if (error) throw error;
+
+    const receivableRows = await attachClinicalServicesToRows((data || [])
+      .filter((row: any) => isActiveAccrualStatus(row.status))
+      .filter((row: any) => {
+        if (convenioId === 'particular') return getPayerTraceGroup(row, accountIndex).isParticular;
+        if (convenioId) {
+          const payerGroup = getPayerTraceGroup(row, accountIndex);
+          return payerGroup.id === convenioId || [row.convenio_id, row.payer_id, row.health_insurance_id].some((value) => String(value || '') === String(convenioId));
+        }
+        return true;
+      })
+      .filter((row: any) => {
+        if (professionalId) return String(getRowProfessionalId(row) || '') === String(professionalId);
+        if (professionalName && normalizeText(professionalName) !== normalizeText('profissional não informado')) {
+          return normalizeText(getRowProfessionalName(row)) === normalizeText(professionalName);
+        }
+        if (professionalName) return !normalizeText(getRowProfessionalName(row));
+        return true;
+      })
+      .filter((row: any) => !serviceName || normalizeText(getRowServiceName(row)) === normalizeText(serviceName)));
+
+    const byProfessional = new Map<string, { name: string; total: number; professionalId: string | null }>();
+    receivableRows.forEach((row: any) => {
+      const professionalName = getRowProfessionalName(row) || 'profissional não informado';
+      const rowProfessionalId = getRowProfessionalId(row);
+      const key = rowProfessionalId || `name:${normalizeText(professionalName)}`;
+      const current = byProfessional.get(key) || { name: professionalName, total: 0, professionalId: rowProfessionalId };
+      current.total += getReceivableValue(row);
+      byProfessional.set(key, current);
+    });
+
+    return Array.from(byProfessional.entries()).map(([key, row]) => ({
+      id: `profissional_${key}`,
+      name: `Profissional ${row.name}`,
+      level: 4 as DRELineItem['level'],
+      value: money(row.total),
+      drillAvailable: true,
+      metadata: {
+        convenioId: convenioId || 'particular',
+        professionalId: row.professionalId,
+        professionalName: row.name,
+        serviceName: serviceName || null,
+        sourceTable: 'ar_invoices',
+      },
+    }));
+  } catch (err) {
+    console.error('❌ Erro drill-down serviço:', err);
+    return [];
+  }
+}
+
+async function drillDownByPaciente(
+  clinicId: string,
+  guiaId?: string,
+  pacienteId?: string,
+  patientName?: string,
+  convenioId?: string,
+): Promise<DRELineItem[]> {
+  try {
+    const chartAccountData = await fetchChartOfAccountsData(clinicId);
+    const accountIndex = buildAccountIndex(Array.isArray(chartAccountData.chartAccounts) ? chartAccountData.chartAccounts : []);
     let query = supabase
       .from('ar_invoices')
       .select('*')
@@ -1800,35 +2128,56 @@ async function drillDownByPaciente(clinicId: string, guiaId?: string): Promise<D
       .limit(5000);
 
     if (guiaId) query = query.eq('billing_guide_id', guiaId);
+    if (pacienteId) query = query.eq('patient_id', pacienteId);
 
     const { data, error } = await query;
 
     if (error) throw error;
 
-    const grouped = new Map<string, { name: string; total: number }>();
-    (data || []).forEach((row: any) => {
-      const id = String(row.patient_id || 'sem_paciente');
-      const name = row.patient_name || 'Desconhecido';
-      const current = grouped.get(id) || { name, total: 0 };
-      current.total += getReceivableValue(row);
-      grouped.set(id, current);
-    });
-
-    return Array.from(grouped.entries()).map(([id, row]) => ({
-      id: `paciente_${id}`,
-      name: row.name,
-      level: 4,
-      value: money(row.total),
-      drillAvailable: true,
-      metadata: { pacienteId: id },
-    }));
+    return (data || [])
+      .filter((row: any) => {
+        if (patientName && !pacienteId && normalizeText(row.patient_name) !== normalizeText(patientName)) return false;
+        if (convenioId && convenioId !== 'particular') {
+          const payerGroup = getPayerTraceGroup(row, accountIndex);
+          return payerGroup.id === convenioId || [row.convenio_id, row.payer_id, row.health_insurance_id].some((value) => String(value || '') === String(convenioId));
+        }
+        if (convenioId === 'particular') {
+          return getPayerTraceGroup(row, accountIndex).isParticular;
+        }
+        return true;
+      })
+      .map((row: any) => {
+        const document = row.document_number || row.invoice_number || row.numero_documento || row.insurance_invoice_number || row.guide_number || row.nf_document_name || row.id;
+        const date = String(row.due_date || row.invoice_date || row.competency_date || row.created_at || '').split('T')[0] || 'sem data';
+        const appointmentId = row.appointment_id || row.appointmentId || row.agendamento_id || null;
+        const patient = row.patient_name || patientName || 'paciente não informado';
+        return {
+          id: `titulo_${row.id}`,
+          name: `Conta ${document}`,
+          level: 4 as DRELineItem['level'],
+          value: getReceivableValue(row),
+          drillAvailable: Boolean(appointmentId || row.patient_id),
+          metadata: {
+            invoiceId: row.id,
+            document,
+            pacienteId: row.patient_id || pacienteId || null,
+            patientName: patient,
+            appointmentId,
+            status: row.status || 'sem status',
+            date,
+            sourceTable: 'ar_invoices',
+            actionPath: `/clinica/financeiro/receber/${row.id}/editar?from=dre&trace=resultado`,
+            classificationPath: ['Receita Bruta', convenioId && convenioId !== 'particular' ? 'Convênio' : 'Particular', `Paciente ${patient}`, `Conta ${document}`],
+          },
+        };
+      });
   } catch (err) {
     console.error('❌ Erro drill-down paciente:', err);
     return [];
   }
 }
 
-async function drillDownByAtendimento(clinicId: string, pacienteId?: string): Promise<DRELineItem[]> {
+async function drillDownByAtendimento(clinicId: string, pacienteId?: string, appointmentId?: string): Promise<DRELineItem[]> {
   try {
     let query = supabase
       .from('appointments')
@@ -1836,7 +2185,8 @@ async function drillDownByAtendimento(clinicId: string, pacienteId?: string): Pr
       .eq('clinic_id', clinicId)
       .limit(5000);
 
-    if (pacienteId) query = query.eq('patient_id', pacienteId);
+    if (appointmentId) query = query.eq('id', appointmentId);
+    else if (pacienteId) query = query.eq('patient_id', pacienteId);
 
     const { data, error } = await query;
 
@@ -1844,11 +2194,11 @@ async function drillDownByAtendimento(clinicId: string, pacienteId?: string): Pr
 
     return (data || []).map((row: any) => ({
       id: `atendimento_${row.id}`,
-      name: String(row.appointment_date || row.date || row.created_at || row.id),
+      name: `Atendimento ${String(row.appointment_date || row.date || row.start_time || row.created_at || row.id).split('T')[0]} • ${row.patient_name || row.patient?.name || 'paciente não informado'} • ${row.status || 'sem status'}`,
       level: 5,
       value: money(row.amount ?? row.valor ?? row.price ?? row.total),
       drillAvailable: false,
-      metadata: { atendimentoId: row.id },
+      metadata: { atendimentoId: row.id, sourceTable: 'appointments' },
     }));
   } catch (err) {
     console.error('❌ Erro drill-down atendimento:', err);

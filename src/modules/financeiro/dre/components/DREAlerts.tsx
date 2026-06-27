@@ -11,6 +11,17 @@ type Props = {
 export default function DREAlerts({ summary, comparison }: Props) {
   if (!summary) return null;
 
+  if (summary.receitaBruta <= 0) {
+    return (
+      <Card className="p-4 border-l-4 border-slate-300 bg-slate-50">
+        <h3 className="font-semibold text-slate-900 mb-2">Inteligência Financeira</h3>
+        <p className="text-sm text-slate-600">
+          Sem receita consolidada no período para gerar alertas financeiros confiáveis.
+        </p>
+      </Card>
+    );
+  }
+
   const alerts: Array<{ message: string; severity: 'critical' | 'warning' | 'info' | 'success'; icon: React.ReactNode }> = [];
 
   // ETAPA 19: Inteligência Financeira - Detectar anomalias e sugerir ações
@@ -88,7 +99,7 @@ export default function DREAlerts({ summary, comparison }: Props) {
     const despFinPercent = (summary.despesasFinanceiras / summary.receitaBruta) * 100;
     if (despFinPercent > 5) {
       alerts.push({
-        message: `💳 Despesas financeiras altas (${despFinPercent.toFixed(1)}%). Considerar refinanciamento de dívidas.`,
+        message: `Despesas financeiras altas (${despFinPercent.toFixed(1)}%). Conferir classificação de taxas, juros e tarifas antes de tratar como dívida.`,
         severity: 'warning',
         icon: <Lightbulb className="w-4 h-4 text-blue-600" />,
       });
@@ -108,7 +119,7 @@ export default function DREAlerts({ summary, comparison }: Props) {
 
   if (alerts.length === 0) {
     alerts.push({
-      message: '✅ Sem alertas críticos. Indicadores dentro dos parâmetros normais.',
+      message: 'Sem alertas críticos gerados pela base consolidada do período.',
       severity: 'success',
       icon: <TrendingUp className="w-4 h-4 text-green-600" />,
     });
@@ -121,7 +132,7 @@ export default function DREAlerts({ summary, comparison }: Props) {
     <Card className={`p-4 border-l-4 ${criticalCount > 0 ? 'border-red-500 bg-red-50' : warningCount > 0 ? 'border-amber-500 bg-amber-50' : 'border-green-500 bg-green-50'}`}>
       <div className="flex items-center justify-between mb-3">
         <h3 className={`font-semibold ${criticalCount > 0 ? 'text-red-900' : warningCount > 0 ? 'text-amber-900' : 'text-green-900'}`}>
-          💡 Inteligência Financeira
+          Inteligência Financeira
         </h3>
         {(criticalCount > 0 || warningCount > 0) && (
           <span className="text-xs font-bold bg-red-100 text-red-700 px-2 py-1 rounded">

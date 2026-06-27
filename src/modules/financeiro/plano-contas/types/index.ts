@@ -47,6 +47,7 @@ export interface ChartOfAccount {
 export interface ChartOfAccountCreateInput {
   clinic_id: string;
   parent_id?: string | null;
+  parent_code?: string | null;
   code: string;
   name: string;
   description?: string;
