@@ -2609,7 +2609,7 @@ export function ConveniosPage() {
     try {
       setError(null);
 
-      await healthInsurancesApi.deleteHealthInsurance(id);
+      await healthInsurancesApi.deleteHealthInsurance(id, clinicId);
 
       setInsurances(insurances.filter((i) => i.id !== id));
     } catch (err) {

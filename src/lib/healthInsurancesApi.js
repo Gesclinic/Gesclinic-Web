@@ -554,6 +554,35 @@ export async function reactivateHealthInsurance(insuranceId, clinicId) {
 }
 
 /**
+ * Exclui um convênio
+ * @param {string} insuranceId
+ * @param {string} clinicId
+ * @returns {Promise<Object>}
+ */
+export async function deleteHealthInsurance(insuranceId, clinicId) {
+  const { data, error } = await supabase
+    .from('health_insurances')
+    .delete()
+    .eq('id', insuranceId)
+    .eq('clinic_id', clinicId)
+    .select()
+    .maybeSingle();
+
+  if (error) {
+    if (error.code === '23503') {
+      throw new Error('Este convênio possui vínculos e não pode ser excluído. Inative o convênio para removê-lo da operação.');
+    }
+    throw new Error(`Falha ao deletar convênio: ${error.message}`);
+  }
+
+  if (!data) {
+    throw new Error('Convênio não encontrado ou sem permissão');
+  }
+
+  return data;
+}
+
+/**
  * Busca convênio por código
  * @param {string} code
  * @param {string} clinicId
