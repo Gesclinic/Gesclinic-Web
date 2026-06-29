@@ -20,7 +20,6 @@ export default function EstoqueProdutos() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [deleteAlertOpen, setDeleteAlertOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
-  const [deleting, setDeleting] = useState(false);
 
   console.log(
     'EstoqueProdutos render. clinicId:',
@@ -99,25 +98,9 @@ export default function EstoqueProdutos() {
     if (!itemToDelete) {
       return;
     }
-    setDeleting(true);
-    toast({
-      title: 'Processando exclusao...',
-      description: 'Aguarde enquanto concluimos a operacao.',
-    });
-
     try {
-      const result = await stockItemsApi.remove(itemToDelete.id);
-
-      if (result?.action === 'inactivated_due_to_movements') {
-        toast({
-          title: 'Produto inativado',
-          description:
-            'Este produto possui movimentacoes de estoque e foi inativado para preservar o historico.',
-        });
-      } else {
-        toast({ title: 'Produto excluido com sucesso!' });
-      }
-
+      await stockItemsApi.remove(itemToDelete.id);
+      toast({ title: 'Produto excluído com sucesso!' });
       fetchItems();
     } catch (error) {
       toast({
@@ -126,7 +109,6 @@ export default function EstoqueProdutos() {
         description: error.message,
       });
     } finally {
-      setDeleting(false);
       setDeleteAlertOpen(false);
       setItemToDelete(null);
     }
@@ -248,8 +230,6 @@ export default function EstoqueProdutos() {
         onConfirm={handleDelete}
         title="Confirmar Exclusão"
         description={`Tem certeza que deseja excluir o produto "${itemToDelete?.name}"? Esta ação não pode ser desfeita.`}
-        confirmText={deleting ? 'Processando...' : 'Excluir'}
-        confirmDisabled={deleting}
       />
     </div>
   );

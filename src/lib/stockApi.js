@@ -25,15 +25,6 @@ const isUndefinedFunctionError = (error, fnName) => {
   );
 };
 
-// Helper: detect foreign key violations (Postgres code 23503)
-const isForeignKeyViolationError = (error) => {
-  return (
-    error &&
-    (error.code === '23503' ||
-      (typeof error.message === 'string' && /violates foreign key constraint/i.test(error.message)))
-  );
-};
-
 export const stockCategoriesApi = {
   list: async (clinicId) => {
     const { data, error } = await supabase
@@ -229,29 +220,7 @@ export const stockItemsApi = {
     return data[0];
   },
   remove: async (id) => {
-    const removeRes = await supabase.from('stock_items').delete().eq('id', id);
-
-    if (!removeRes.error) {
-      return { action: 'deleted' };
-    }
-
-    // If item has movements, keep historical integrity and inactivate the item instead.
-    if (isForeignKeyViolationError(removeRes.error)) {
-      const inactivateRes = await supabase
-        .from('stock_items')
-        .update({ is_active: false })
-        .eq('id', id)
-        .select('id, is_active')
-        .single();
-
-      if (inactivateRes.error) {
-        throw inactivateRes.error;
-      }
-
-      return { action: 'inactivated_due_to_movements' };
-    }
-
-    throw removeRes.error;
+    return handleResponse(await supabase.from('stock_items').delete().eq('id', id));
   },
 };
 
