@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo, useRef } from 'react';
+﻿import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -282,7 +282,6 @@ export default function AppointmentUnitedModal({
   const [selectedGuideForTiss, setSelectedGuideForTiss] = useState(null); // 📋 Guide selecionado para envio TISS
   const [filteredPayers, setFilteredPayers] = useState([]); // 🏥 Convênios filtrados por profissional
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false); // 📄 Invoice modal state
-  const saveChangesPromiseRef = useRef(null);
 
   // 📥 Load appointment from appointmentIdToEdit if appointment prop is not provided
   useEffect(() => {
@@ -2395,14 +2394,7 @@ export default function AppointmentUnitedModal({
 
   // Handle saving appointment changes
   const handleSaveChanges = async () => {
-    if (saveChangesPromiseRef.current) {
-      console.warn('⚠️ Salvamento de agendamento já em andamento. Reutilizando operação atual.');
-      return saveChangesPromiseRef.current;
-    }
-
-    const savePromise = (async () => {
     try {
-      setLoading(true);
       // � DEBUG ETAPA 6: Verificar formData
       console.log('═══════════════════════════════════════════════');
       console.log('🔧 [ETAPA 6] handleSaveChanges DISPARADO');
@@ -2814,14 +2806,7 @@ export default function AppointmentUnitedModal({
     } catch (err) {
       console.error('❌ Erro ao salvar agendamento:', err);
       throw err;
-    } finally {
-      setLoading(false);
-      saveChangesPromiseRef.current = null;
     }
-    })();
-
-    saveChangesPromiseRef.current = savePromise;
-    return savePromise;
   };
 
   const tabClass = (tab) => `

@@ -63,61 +63,6 @@ const extractTime = (timeStr) => {
   }
 };
 
-const appointmentCreateInFlight = new Map();
-
-const APPOINTMENT_WITH_RELATIONS_SELECT = `
-  *,
-  patients (id, name, phone),
-  professionals (id, name),
-  services (id, name),
-  payers (id, name),
-  rooms (id, name)
-`;
-
-const buildCreateAppointmentKey = (data) =>
-  [
-    data.clinic_id,
-    data.patient_id || data.lead_name || '',
-    data.lead_phone || '',
-    data.professional_id || '',
-    data.service_id || '',
-    data.payer_id || '',
-    data.room_id || '',
-    data.scheduled_date,
-    extractTime(data.scheduled_time),
-  ].join('|');
-
-async function findExistingEquivalentAppointment(data) {
-  let query = supabase
-    .from('appointments')
-    .select(APPOINTMENT_WITH_RELATIONS_SELECT)
-    .eq('clinic_id', data.clinic_id)
-    .eq('scheduled_date', data.scheduled_date)
-    .eq('scheduled_time', extractTime(data.scheduled_time))
-    .not('status', 'in', '(canceled,cancelado)')
-    .order('created_at', { ascending: false })
-    .limit(1);
-
-  const nullableFields = ['patient_id', 'professional_id', 'service_id', 'payer_id', 'room_id'];
-  nullableFields.forEach((field) => {
-    query = data[field] ? query.eq(field, data[field]) : query.is(field, null);
-  });
-
-  if (data.patient_id) {
-    query = query.is('lead_name', null).is('lead_phone', null);
-  } else {
-    query = query.eq('lead_name', data.lead_name || '').eq('lead_phone', data.lead_phone || '');
-  }
-
-  const { data: existing, error } = await query.maybeSingle();
-
-  if (error && error.code !== 'PGRST116') {
-    throw error;
-  }
-
-  return existing || null;
-}
-
 // ============================================================
 // VALIDA��O: Garantir dados v�lidos ANTES de salvar
 // ============================================================
@@ -806,45 +751,35 @@ export async function getAppointmentById(appointmentId) {
 export async function createAppointment(payload) {
   const data = mapToDatabase(payload);
 
-  const createKey = buildCreateAppointmentKey(data);
-  if (appointmentCreateInFlight.has(createKey)) {
-    console.warn('⚠️ [createAppointment] Criação duplicada em andamento. Reutilizando chamada atual.');
-    return appointmentCreateInFlight.get(createKey);
+  const { data: result, error } = await supabase
+    .from('appointments')
+    .insert([data])
+    .select(
+      `
+      *,
+      patients (id, name, phone),
+      professionals (id, name),
+      services (id, name),
+      payers (id, name),
+      rooms (id, name)
+    `,
+    )
+    .single();
+
+  if (error) {
+    throw error;
   }
 
-  const createPromise = (async () => {
-    const existing = await findExistingEquivalentAppointment(data);
-    if (existing) {
-      console.warn('⚠️ [createAppointment] Agendamento equivalente já existe. Retornando existente:', existing.id);
-      return mapFromDatabase(existing);
-    }
-
-    const { data: result, error } = await supabase
-      .from('appointments')
-      .insert([data])
-      .select(APPOINTMENT_WITH_RELATIONS_SELECT)
-      .single();
-
-    if (error) {
-      throw error;
-    }
-
-    console.log('✅ [createAppointment] Appointment created com relacionamentos:', {
-      appointmentId: result?.id,
-      patientName: result?.patients?.name,
-      professionalName: result?.professionals?.name,
-      serviceName: result?.services?.name,
-      payerName: result?.payers?.name,
-      roomName: result?.rooms?.name,
-    });
-
-    return mapFromDatabase(result);
-  })().finally(() => {
-    appointmentCreateInFlight.delete(createKey);
+  console.log('✅ [createAppointment] Appointment created com relacionamentos:', {
+    appointmentId: result?.id,
+    patientName: result?.patients?.name,
+    professionalName: result?.professionals?.name,
+    serviceName: result?.services?.name,
+    payerName: result?.payers?.name,
+    roomName: result?.rooms?.name,
   });
 
-  appointmentCreateInFlight.set(createKey, createPromise);
-  return createPromise;
+  return mapFromDatabase(result);
 }
 
 export async function updateAppointment(id, payload) {
