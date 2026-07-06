@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Edit, Eye, Lock, Unlock } from 'lucide-react';
+import { Edit, Eye, Lock, Trash2, Unlock } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import ModalCriarAgendamento from '../components/ModalCriarAgendamento';
 import AtendimentoModal from '../components/AtendimentoModal';
@@ -841,9 +841,9 @@ export default function AgendaDayView({
     onEditAppointment(aptId);
   };
 
-  const handleCancel = (aptId) => {
-    console.log('❌ Cancelar/Deletar:', aptId);
-    if (confirm('Tem certeza que deseja CANCELAR este agendamento?')) {
+  const handleDelete = (aptId) => {
+    console.log('🗑️ Excluir agendamento:', aptId);
+    if (confirm('Tem certeza que deseja EXCLUIR este agendamento? Esta ação remove o registro da agenda.')) {
       (async () => {
         try {
           const { error } = await supabase.from('appointments').delete().eq('id', aptId);
@@ -856,6 +856,7 @@ export default function AgendaDayView({
 
           console.log('✅ Agendamento deletado com sucesso');
           setDrawerOpen(false);
+          setContextMenu(null);
           onEditAppointment?.();
         } catch (err) {
           console.error('💥 Erro:', err);
@@ -1361,6 +1362,14 @@ export default function AgendaDayView({
             >
               <Eye className="w-4 h-4" />
               Detalhes
+            </button>
+
+            <button
+              onClick={() => handleDelete(contextMenu.appointment.id)}
+              className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2 border-t border-gray-100"
+            >
+              <Trash2 className="w-4 h-4" />
+              Excluir
             </button>
 
             {contextMenu.appointment.paciente && (
