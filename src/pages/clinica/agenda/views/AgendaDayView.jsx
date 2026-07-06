@@ -810,8 +810,7 @@ export default function AgendaDayView({
           }
         }
 
-        // Fechar drawer
-        setDrawerOpen(false);
+        setContextMenu(null);
         await new Promise((resolve) => setTimeout(resolve, 1000));
 
         // Recarregar agenda
@@ -850,7 +849,6 @@ export default function AgendaDayView({
           await deleteAppointment(aptId);
 
           console.log('✅ Agendamento deletado com sucesso');
-          setDrawerOpen(false);
           setContextMenu(null);
           onEditAppointment?.();
         } catch (err) {
