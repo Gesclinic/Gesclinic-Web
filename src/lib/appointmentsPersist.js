@@ -8,6 +8,11 @@ const norm = (v) =>
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
 
+const createInFlight = new Map();
+
+const buildCreateKey = (clinicId, body) =>
+  [clinicId, body.patient_id || norm(body.patient_name), body.start_time].join('|');
+
 const toDbStatus = (s) => {
   if (s == null || s === '') {
     return undefined;
@@ -133,6 +138,30 @@ function normalizeAppointmentPayload(payload, { includeClinicId = false, clinicI
 
 const RETURN_COLUMNS = APPOINTMENT_COLUMNS_SAFE;
 
+async function findExistingAppointment(clinicId, body) {
+  let query = supabase
+    .from('appointments')
+    .select(RETURN_COLUMNS)
+    .eq('clinic_id', clinicId)
+    .eq('start_time', body.start_time)
+    .not('status', 'in', '(canceled,cancelado,cancelled)')
+    .limit(1);
+
+  if (body.patient_id) {
+    query = query.eq('patient_id', body.patient_id);
+  } else if (body.patient_name) {
+    query = query.eq('patient_name', body.patient_name);
+  } else {
+    return null;
+  }
+
+  const { data, error } = await query.maybeSingle();
+  if (error && error.code !== 'PGRST116') {
+    throw error;
+  }
+  return data || null;
+}
+
 /* ------------------------------------------------------------
  * CREATE
  * ------------------------------------------------------------ */
@@ -159,13 +188,37 @@ export async function createAppointment(clinicId, payload) {
     body.status = 'scheduled';
   }
 
-  const { data, error } = await supabase
-    .from('appointments')
-    .insert(body)
-    .select(RETURN_COLUMNS)
-    .single();
+  const createKey = buildCreateKey(clinicId, body);
+  if (createInFlight.has(createKey)) {
+    return createInFlight.get(createKey);
+  }
 
-  if (error) {
+  const createPromise = (async () => {
+    const existing = await findExistingAppointment(clinicId, body);
+    if (existing) {
+      return existing;
+    }
+
+    const { data, error } = await supabase
+      .from('appointments')
+      .insert(body)
+      .select(RETURN_COLUMNS)
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  })().finally(() => {
+    createInFlight.delete(createKey);
+  });
+
+  createInFlight.set(createKey, createPromise);
+
+  try {
+    return await createPromise;
+  } catch (error) {
     console.error('Erro ao criar agendamento:', error);
     if (isOverlapError(error)) {
       throw new Error(
@@ -182,8 +235,6 @@ export async function createAppointment(clinicId, payload) {
     }
     throw new Error(`Falha ao criar agendamento: ${error.message}`);
   }
-
-  return data;
 }
 
 /* ------------------------------------------------------------

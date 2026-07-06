@@ -65,6 +65,68 @@ const extractTime = (timeStr) => {
 
 const appointmentCreateInFlight = new Map();
 
+const normalizeText = (value) =>
+  String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+const normalizePhone = (value) => String(value ?? '').replace(/\D/g, '');
+
+const getAppointmentPatientKey = (data) => {
+  if (data.patient_id) {
+    return `patient:${data.patient_id}`;
+  }
+
+  const name = normalizeText(data.lead_name || data.patient_name || data.patients?.name);
+  const phone = normalizePhone(data.lead_phone || data.patient_phone || data.patients?.phone);
+
+  if (!name && !phone) {
+    return '';
+  }
+
+  return `lead:${name}|${phone}`;
+};
+
+const getAppointmentDateKey = (data) =>
+  data.scheduled_date || extractDate(data.date || data.start_time || data.startTime);
+
+const getAppointmentTimeKey = (data) =>
+  extractTime(data.scheduled_time || data.time || data.start_time || data.startTime);
+
+const getAppointmentDuplicateKey = (data) => {
+  const clinicId = data.clinic_id || data.clinicId;
+  const patientKey = getAppointmentPatientKey(data);
+  const dateKey = getAppointmentDateKey(data);
+  const timeKey = getAppointmentTimeKey(data);
+
+  if (!clinicId || !patientKey || !dateKey || !timeKey) {
+    return data.id || '';
+  }
+
+  return [clinicId, patientKey, dateKey, timeKey].join('|');
+};
+
+function dedupeEquivalentAppointments(rows) {
+  const seen = new Set();
+  return (rows || []).filter((appointment) => {
+    const key = getAppointmentDuplicateKey(appointment);
+    if (!key || String(appointment.status || '').toLowerCase().includes('cancel')) {
+      return true;
+    }
+    if (seen.has(key)) {
+      console.warn('⚠️ [appointmentsApi] Agendamento duplicado omitido da listagem:', {
+        id: appointment.id,
+        key,
+      });
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
 const APPOINTMENT_WITH_RELATIONS_SELECT = `
   *,
   patients (id, name, phone),
@@ -75,13 +137,7 @@ const APPOINTMENT_WITH_RELATIONS_SELECT = `
 `;
 
 const buildCreateAppointmentKey = (data) =>
-  [
-    data.clinic_id,
-    data.patient_id || data.lead_name || '',
-    data.lead_phone || '',
-    data.scheduled_date,
-    extractTime(data.scheduled_time),
-  ].join('|');
+  getAppointmentDuplicateKey(data);
 
 async function findExistingEquivalentAppointment(data) {
   let query = supabase
@@ -90,7 +146,7 @@ async function findExistingEquivalentAppointment(data) {
     .eq('clinic_id', data.clinic_id)
     .eq('scheduled_date', data.scheduled_date)
     .eq('scheduled_time', extractTime(data.scheduled_time))
-    .not('status', 'in', '(canceled,cancelado)')
+    .not('status', 'in', '(canceled,cancelado,cancelled)')
     .order('created_at', { ascending: false })
     .limit(1);
 
@@ -213,6 +269,8 @@ function mapToDatabase(payload) {
     room_id: payload.roomId || payload.room_id,
     payer_id: payload.payerId || payload.payer_id,
     plan_id: payload.planId || payload.plan_id,
+    lead_name: payload.leadName || payload.lead_name || payload.patientName || payload.patient_name || null,
+    lead_phone: payload.leadPhone || payload.lead_phone || payload.patientPhone || payload.patient_phone || null,
     plano_contas_id:
       payload.plano_contas_id || payload.planosContasId || payload.planAccountId || null,
     scheduled_date: payload.date || payload.scheduled_date,
@@ -479,7 +537,7 @@ export async function listAppointmentsByDate(clinicId, date) {
     throw error;
   }
 
-  return data.map((apt) => {
+  return dedupeEquivalentAppointments(data).map((apt) => {
     const mapped = mapFromDatabase(apt);
     mapped.status = migrateStatus(mapped.status);
     return mapped;
@@ -692,7 +750,7 @@ export async function listAppointments({
     });
   }
 
-  const result = appointmentsWithRelations.map(normalizeAppointment);
+  const result = dedupeEquivalentAppointments(appointmentsWithRelations).map(normalizeAppointment);
 
   // Helpers function to normalize appointment with proper field mapping and display data
   function normalizeAppointment(apt) {
