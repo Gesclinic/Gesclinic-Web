@@ -994,6 +994,40 @@ export async function deleteAppointment(id) {
     // 🚀 BLOCKER 4 FIX: Cascade delete financial records first
     console.log('🔄 [DELETE] Limpando registros financeiros associados...');
 
+    const deleteByAppointmentId = async (tableName) => {
+      const { error } = await supabase.from(tableName).delete().eq('appointment_id', id);
+      if (error) {
+        console.warn(`⚠️ [DELETE] ${tableName} ignorado:`, error.message);
+      } else {
+        console.log(`✅ [DELETE] ${tableName} limpo`);
+      }
+    };
+
+    const unlinkByAppointmentId = async (tableName) => {
+      const { error } = await supabase.from(tableName).update({ appointment_id: null }).eq('appointment_id', id);
+      if (error) {
+        console.warn(`⚠️ [DELETE] ${tableName} ignorado:`, error.message);
+      } else {
+        console.log(`✅ [DELETE] ${tableName} desvinculado`);
+      }
+    };
+
+    await Promise.all([
+      deleteByAppointmentId('appointment_services'),
+      deleteByAppointmentId('appointment_items'),
+      deleteByAppointmentId('appointment_audit_logs'),
+      deleteByAppointmentId('appointment_financial_audit_logs'),
+      deleteByAppointmentId('financial_audit_logs'),
+      deleteByAppointmentId('billing_guides'),
+      deleteByAppointmentId('ar_invoices'),
+      unlinkByAppointmentId('accounts_receivable'),
+      unlinkByAppointmentId('journal_entries'),
+      unlinkByAppointmentId('financial_audits'),
+      unlinkByAppointmentId('discount_authorizations'),
+      unlinkByAppointmentId('ap_bills'),
+      unlinkByAppointmentId('invoices'),
+    ]);
+
     // Delete current operational receivables first.
     const { error: arError } = await supabase
       .from('ar_invoices')

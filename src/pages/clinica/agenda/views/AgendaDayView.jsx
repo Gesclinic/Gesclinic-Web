@@ -26,6 +26,7 @@ import {
 } from '@/lib/agendaUtils';
 import { useClinicContext } from '@/contexts/ClinicContext';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { deleteAppointment } from '@/lib/appointmentsApi';
 
 /**
  * AgendaDayView - Visualização diária da agenda
@@ -846,13 +847,7 @@ export default function AgendaDayView({
     if (confirm('Tem certeza que deseja EXCLUIR este agendamento? Esta ação remove o registro da agenda.')) {
       (async () => {
         try {
-          const { error } = await supabase.from('appointments').delete().eq('id', aptId);
-
-          if (error) {
-            console.error('❌ Erro ao deletar:', error);
-            alert('Erro ao deletar agendamento');
-            return;
-          }
+          await deleteAppointment(aptId);
 
           console.log('✅ Agendamento deletado com sucesso');
           setDrawerOpen(false);
@@ -860,7 +855,7 @@ export default function AgendaDayView({
           onEditAppointment?.();
         } catch (err) {
           console.error('💥 Erro:', err);
-          alert('Erro ao deletar agendamento');
+          alert(`Erro ao deletar agendamento: ${err.message || 'verifique permissões e vínculos do registro'}`);
         }
       })();
     }
