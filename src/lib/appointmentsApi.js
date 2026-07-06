@@ -79,10 +79,6 @@ const buildCreateAppointmentKey = (data) =>
     data.clinic_id,
     data.patient_id || data.lead_name || '',
     data.lead_phone || '',
-    data.professional_id || '',
-    data.service_id || '',
-    data.payer_id || '',
-    data.room_id || '',
     data.scheduled_date,
     extractTime(data.scheduled_time),
   ].join('|');
@@ -98,15 +94,13 @@ async function findExistingEquivalentAppointment(data) {
     .order('created_at', { ascending: false })
     .limit(1);
 
-  const nullableFields = ['patient_id', 'professional_id', 'service_id', 'payer_id', 'room_id'];
-  nullableFields.forEach((field) => {
-    query = data[field] ? query.eq(field, data[field]) : query.is(field, null);
-  });
-
   if (data.patient_id) {
-    query = query.is('lead_name', null).is('lead_phone', null);
+    query = query.eq('patient_id', data.patient_id);
   } else {
-    query = query.eq('lead_name', data.lead_name || '').eq('lead_phone', data.lead_phone || '');
+    query = query
+      .is('patient_id', null)
+      .eq('lead_name', data.lead_name || '')
+      .eq('lead_phone', data.lead_phone || '');
   }
 
   const { data: existing, error } = await query.maybeSingle();
