@@ -160,32 +160,49 @@ export async function recordFinancialEntry({
 
     const chartAccount = accountMap[accountingAccount] || '1.1.1.01';
 
-    // Criar lançamento (assuming journal_entries table exists)
-    const { data, error } = await supabase
-      .from('journal_entries')
-      .insert({
-        clinic_id: clinicId,
-        appointment_id: appointmentId,
-        chart_account: chartAccount,
-        debit_amount: amount, // Débito = receita entra (aumenta ativo)
-        credit_amount: 0,
-        description:
-          description || `Recebimento via ${paymentMethod} - Agendamento #${appointmentId}`,
-        entry_date: now,
-        entry_type: 'RECEIPT',
-        payment_method: paymentMethod,
-        cash_register_id: cashRegisterId,
-        created_at: now,
-      })
-      .select();
+    const entryData = {
+      clinic_id: clinicId,
+      appointment_id: appointmentId,
+      chart_account: chartAccount,
+      debit_amount: amount, // Débito = receita entra (aumenta ativo)
+      credit_amount: 0,
+      description:
+        description || `Recebimento via ${paymentMethod} - Agendamento #${appointmentId}`,
+      entry_date: now,
+      entry_type: 'RECEIPT',
+      payment_method: paymentMethod,
+      cash_register_id: cashRegisterId,
+    };
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
+    const { data: existingEntry, error: existingError } = await supabase
+      .from('journal_entries')
+      .select('id')
+      .eq('clinic_id', clinicId)
+      .eq('appointment_id', appointmentId)
+      .eq('entry_type', 'RECEIPT')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existingError && existingError.code !== 'PGRST116') {
+      throw existingError;
     }
-    return data[0];
+
+    const query = existingEntry
+      ? supabase.from('journal_entries').update(entryData).eq('id', existingEntry.id)
+      : supabase.from('journal_entries').insert({
+          ...entryData,
+          created_at: now,
+        });
+
+    const { data, error } = await query.select().single();
 
     if (error) {
       throw error;
+    }
+
+    if (!data) {
+      throw new Error('Record not found');
     }
 
     console.log('✅ Lançamento contábil registrado:', data.id);
