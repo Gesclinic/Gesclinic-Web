@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -14,14 +14,37 @@ export const PaymentSplitFields = ({ method, formData, onFieldChange }) => {
     return null;
   }
 
+  const installmentsCount = Math.max(1, parseInt(formData.installments || 1, 10) || 1);
+  const splitAmount = Number.parseFloat(formData.value || 0) || 0;
+  const regularInstallmentAmount = Number((splitAmount / installmentsCount).toFixed(2));
+  const firstInstallmentAmount = Number((splitAmount - (regularInstallmentAmount * (installmentsCount - 1))).toFixed(2));
+  const installmentAmounts = useMemo(
+    () => Array.from({ length: installmentsCount }, (_, index) => (
+      index === 0 ? firstInstallmentAmount : regularInstallmentAmount
+    )),
+    [installmentsCount, firstInstallmentAmount, regularInstallmentAmount],
+  );
+
   const handleChange = (field, value) => {
     onFieldChange(field, value);
   };
 
+  const getDefaultFirstInstallmentDate = () => {
+    const date = new Date();
+    date.setDate(date.getDate() + 30);
+    return date.toISOString().split('T')[0];
+  };
+
+  useEffect(() => {
+    if (method === 'CARTAO' && !formData.payment_due_date) {
+      handleChange('payment_due_date', getDefaultFirstInstallmentDate());
+    }
+  }, [method, formData.payment_due_date]);
+
   // ✨ AUTO-FILL: Quando 1ª parcela ou número de parcelas muda, preencher automaticamente
   useEffect(() => {
     if (method === 'CARTAO' && formData.payment_due_date && formData.installments) {
-      const numInstallments = parseInt(formData.installments || 1);
+      const numInstallments = installmentsCount;
 
       // Sempre regenerar as datas ao mudar a data da 1ª parcela ou quantidade de parcelas
       const baseDate = new Date(formData.payment_due_date);
@@ -51,25 +74,6 @@ export const PaymentSplitFields = ({ method, formData, onFieldChange }) => {
       }
     }
   }, [method, formData.payment_due_date, formData.installments]);
-
-  // ✨ AUTO-FILL VENCIMENTO: Quando validade do cartão é preenchida, usar para o vencimento
-  useEffect(() => {
-    if (method === 'CARTAO' && formData.card_expiry && !formData.payment_due_date) {
-      // card_expiry tem formato MM/YY
-      const [month, year] = formData.card_expiry.split('/');
-      if (month && year) {
-        // Converter YY para YYYY (assumindo 20XX)
-        const fullYear = `20${year}`;
-        // Usar o primeiro dia do mês de expiração como vencimento
-        const dueDateString = `${fullYear}-${month}-01`;
-        handleChange('payment_due_date', dueDateString);
-        console.log('✨ [AUTO-FILL VENCIMENTO] Vencimento preenchido da validade do cartão:', {
-          card_expiry: formData.card_expiry,
-          payment_due_date: dueDateString,
-        });
-      }
-    }
-  }, [method, formData.card_expiry]);
 
   return (
     <div className="space-y-3 bg-gray-50 p-3 rounded-lg border border-gray-200">
@@ -175,21 +179,25 @@ export const PaymentSplitFields = ({ method, formData, onFieldChange }) => {
           </div>
 
           {/* Vencimentos das parcelas subsequentes */}
-          {parseInt(formData.installments || 1) > 1 && (
+          {installmentsCount > 1 && (
             <div className="bg-white p-2 rounded border border-gray-300">
-              <Label className="text-xs font-semibold mb-2 block">📅 Vencimento das Parcelas</Label>
+              <Label className="text-xs font-semibold mb-2 block">Vencimento e valor das parcelas</Label>
               <div className="space-y-2">
-                {Array.from({ length: parseInt(formData.installments || 1) }, (_, i) => {
+                {Array.from({ length: installmentsCount }, (_, i) => {
                   const installmentNum = i + 1;
                   const datesArray = (formData.card_installment_dates || '')
                     .split('|')
                     .filter((d) => d);
                   const currentDate = datesArray[i] || '';
+                  const currentAmount = installmentAmounts[i] || 0;
 
                   return (
                     <div key={i} className="grid grid-cols-3 gap-2 items-end">
                       <Label className="text-xs font-semibold col-span-1">
-                        Parcela {installmentNum}
+                        Parcela {installmentNum}<br />
+                        <span className="font-normal text-gray-600">
+                          R$ {currentAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
                       </Label>
                       <Input
                         type="date"

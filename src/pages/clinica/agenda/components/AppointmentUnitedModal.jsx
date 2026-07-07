@@ -53,6 +53,7 @@ import PhotoCapture from '@/components/PhotoCapture';
 import { TISSSubmissionDialog } from '@/components/TISSSubmissionDialog';
 import InvoiceEmissionModal from './InvoiceEmissionModal';
 import { processPaymentComplete } from '@/lib/paymentRegistrationApi';
+import { createReceivable } from '@/lib/receivablesApi';
 import { getServicePrice } from '@/lib/getServicePrice';
 import { checkMultipleDates } from '@/lib/holidaysApi';
 import { supabase } from '@/lib/customSupabaseClient';
@@ -2802,6 +2803,193 @@ export default function AppointmentUnitedModal({
     }));
   };
 
+  const getDatePlusDays = (days) => {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    return date.toISOString().split('T')[0];
+  };
+
+  const splitAmountByInstallments = (total, installments) => {
+    const count = Math.max(1, Number.parseInt(installments || '1', 10) || 1);
+    const regularAmount = Number((Number(total || 0) / count).toFixed(2));
+    const firstAmount = Number((Number(total || 0) - (regularAmount * (count - 1))).toFixed(2));
+    return Array.from({ length: count }, (_, index) => (index === 0 ? firstAmount : regularAmount));
+  };
+
+  const getCardLast4 = (payment) => {
+    const digits = String(payment.card_last4 || payment.card_last_digits || payment.card_number || '').replace(/\D/g, '');
+    return digits.length >= 4 ? digits.slice(-4) : null;
+  };
+
+  const getCardPaymentsForFinancialSync = () => {
+    if (enableMultiplePayments) {
+      return pagamentoSplits
+        .filter((split) => split.payment_method === 'CARTAO' && Number(split.value || 0) > 0)
+        .map((split) => ({
+          ...split,
+          amount: Number(split.value || 0),
+          installments: split.installments || '1',
+          card_brand: split.card_brand || cardProcessorData.card_brand || 'VISA',
+          processor_id: split.processor_id || cardProcessorData.processor_id || null,
+          settlement_type: split.settlement_type || cardProcessorData.settlement_type || null,
+        }));
+    }
+
+    if (pagamentoData.payment_method !== 'CARTAO') {
+      return [];
+    }
+
+    const cardData = pagamentoData.cartao || {};
+    const discountAmount = Number(pagamentoData.discount || 0);
+    const amount = Math.max(0, Number(effectiveAppointmentValue || 0) - discountAmount);
+    if (amount <= 0) {
+      return [];
+    }
+
+    return [{
+      ...cardData,
+      payment_method: 'CARTAO',
+      amount,
+      value: amount,
+      installments: cardData.card_installments || '1',
+      card_brand: cardData.card_brand || cardProcessorData.card_brand || 'VISA',
+      card_last4: cardData.card_last_digits || null,
+      card_holder: cardData.card_holder_name || null,
+      processor_id: cardProcessorData.processor_id || null,
+      settlement_type: cardProcessorData.settlement_type || null,
+      payment_due_date: getDatePlusDays(30),
+      card_installment_dates: '',
+      observation: cardData.notes || '',
+    }];
+  };
+
+  const cleanupCardReceivablesForAppointment = async (appointmentId) => {
+    const { data: existingReceivables, error: selectError } = await supabase
+      .from('ar_invoices')
+      .select('id')
+      .eq('appointment_id', appointmentId)
+      .eq('payment_method', 'CARTAO');
+
+    if (selectError) {
+      throw new Error(selectError.message);
+    }
+
+    const receivableIds = (existingReceivables || []).map((item) => item.id).filter(Boolean);
+    if (!receivableIds.length) {
+      return;
+    }
+
+    await supabase
+      .from('financial_transactions')
+      .delete()
+      .eq('origin_module', 'accounts_receivable')
+      .in('origin_id', receivableIds);
+
+    const { error: deleteError } = await supabase
+      .from('ar_invoices')
+      .delete()
+      .in('id', receivableIds);
+
+    if (deleteError) {
+      throw new Error(deleteError.message);
+    }
+  };
+
+  const syncCardInstallmentsToFinancial = async ({ appointmentId, patientId }) => {
+    if (!appointmentId || !clinicId) {
+      return;
+    }
+
+    const cardPayments = getCardPaymentsForFinancialSync();
+    await cleanupCardReceivablesForAppointment(appointmentId);
+
+    if (!cardPayments.length) {
+      return;
+    }
+
+    const patientName = agendamentoData.patientName || selectedPatient?.patientName || selectedPatient?.name || cadastralData.name || 'Paciente nao informado';
+    const serviceName = appointmentServices.map((service) => service.service_name || service.name).filter(Boolean).join(', ')
+      || services.find((service) => service.id === agendamentoData.serviceId)?.name
+      || 'Servico do agendamento';
+    const feePercent = Number(cardProcessorData.fee_percent || 0);
+
+    for (const [paymentIndex, payment] of cardPayments.entries()) {
+      const installments = Math.max(1, Number.parseInt(payment.installments || '1', 10) || 1);
+      const installmentAmounts = splitAmountByInstallments(payment.amount || payment.value || 0, installments);
+      const installmentDates = String(payment.card_installment_dates || '')
+        .split('|')
+        .filter(Boolean);
+      const firstDueDate = payment.payment_due_date || installmentDates[0] || getDatePlusDays(30);
+
+      for (let index = 0; index < installments; index += 1) {
+        const dueDate = installmentDates[index] || (() => {
+          const date = new Date(firstDueDate);
+          date.setDate(date.getDate() + (index * 30));
+          return date.toISOString().split('T')[0];
+        })();
+        const amount = installmentAmounts[index] || 0;
+        const feeAmount = feePercent > 0 ? Number(((amount * feePercent) / 100).toFixed(2)) : 0;
+
+        await createReceivable(clinicId, {
+          appointment_id: appointmentId,
+          patient_id: patientId || agendamentoData.patientId || null,
+          patient_name: patientName,
+          description: `Agendamento - Cartao ${index + 1}/${installments} - ${patientName}`,
+          service_description: serviceName,
+          amount,
+          gross_amount: amount,
+          net_value: Math.max(0, Number((amount - feeAmount).toFixed(2))),
+          due_date: dueDate,
+          invoice_date: new Date().toISOString().split('T')[0],
+          competency_date: agendamentoData.date || dueDate,
+          status: 'open',
+          payment_method: 'CARTAO',
+          origem: 'appointment_card_installments',
+          professional_id: agendamentoData.professionalId || null,
+          payer_type: 'particular',
+          payer_id: agendamentoData.payerId || null,
+          chart_account_id: faturamentoData?.plano_contas_id || pagamentoData?.plano_contas_id || null,
+          plano_contas_id: faturamentoData?.plano_contas_id || pagamentoData?.plano_contas_id || null,
+          processor_id: payment.processor_id || cardProcessorData.processor_id || null,
+          card_brand: payment.card_brand || cardProcessorData.card_brand || null,
+          card_last4: getCardLast4(payment),
+          settlement_type: payment.settlement_type || cardProcessorData.settlement_type || null,
+          fee_percent: feePercent || null,
+          fee_amount: feeAmount,
+          total_parcelas: 1,
+          payment_split: [{
+            method: 'CARTAO',
+            amount,
+            gross_amount: amount,
+            installment_number: index + 1,
+            installments,
+            due_date: dueDate,
+            card_brand: payment.card_brand || cardProcessorData.card_brand || null,
+            card_last4: getCardLast4(payment),
+            processor_id: payment.processor_id || cardProcessorData.processor_id || null,
+            settlement_type: payment.settlement_type || cardProcessorData.settlement_type || null,
+            fee_amount: feeAmount,
+          }],
+          metadata: {
+            source: 'appointment_card_installments',
+            appointment_id: appointmentId,
+            payment_index: paymentIndex + 1,
+            installment_number: index + 1,
+            installments,
+            card: {
+              brand: payment.card_brand || cardProcessorData.card_brand || null,
+              last4: getCardLast4(payment),
+              holder: payment.card_holder || payment.card_holder_name || null,
+              processor_id: payment.processor_id || cardProcessorData.processor_id || null,
+              settlement_type: payment.settlement_type || cardProcessorData.settlement_type || null,
+            },
+          },
+          notes: payment.observation || payment.notes || null,
+        });
+      }
+    }
+  };
+
   // ? Handler para fechar a modal
   const handleCloseModal = () => {
     console.log('?? Fechando modal...');
@@ -3672,6 +3860,20 @@ export default function AppointmentUnitedModal({
         }
       } else {
         console.log('?? Agendamento criado para conv�nio (pagamento ser� administrado depois)');
+      }
+
+      if (isParticular || !agendamentoData.payerId) {
+        try {
+          await syncCardInstallmentsToFinancial({ appointmentId, patientId });
+          console.log('Recebiveis de cartao sincronizados com o financeiro.');
+        } catch (financialErr) {
+          console.error('Erro ao sincronizar parcelas de cartao com o financeiro:', financialErr);
+          alert(
+            'Agendamento salvo, mas houve erro ao gerar as parcelas no financeiro: ' +
+              financialErr.message,
+          );
+          throw financialErr;
+        }
       }
 
       console.log('? Agendamento processado com sucesso! Chamando callbacks...');
