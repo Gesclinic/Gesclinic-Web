@@ -1564,30 +1564,47 @@ export async function syncAppointmentServices(appointmentId, appointmentServices
       return [];
     }
 
-    // 1. Deletar serviços antigos (onde ID começa com 'new-' são novos, outros são do DB)
-    const oldServiceIds = appointmentServices
-      .filter((s) => s.id && !String(s.id).startsWith('new-') && !String(s.id).startsWith('temp-'))
-      .map((s) => s.id);
+    const uniqueServicesByServiceId = new Map();
+    appointmentServices
+      .filter((service) => service.service_id)
+      .forEach((service) => {
+        uniqueServicesByServiceId.set(service.service_id, service);
+      });
 
-    if (oldServiceIds.length > 0) {
+    const uniqueServices = Array.from(uniqueServicesByServiceId.values());
+    const requestedServiceIds = uniqueServices.map((service) => service.service_id);
+
+    const { data: existingServices, error: existingServicesError } = await supabase
+      .from('appointment_services')
+      .select('id, service_id')
+      .eq('appointment_id', appointmentId);
+
+    if (existingServicesError) {
+      throw existingServicesError;
+    }
+
+    const servicesToDelete = (existingServices || [])
+      .filter((service) => !requestedServiceIds.includes(service.service_id))
+      .map((service) => service.id);
+
+    if (servicesToDelete.length > 0) {
       console.log(
-        '🗑️ [syncAppointmentServices] Deletando',
-        oldServiceIds.length,
-        'serviços antigos',
+        '🗑️ [syncAppointmentServices] Removendo',
+        servicesToDelete.length,
+        'serviço(s) que saíram do agendamento',
       );
       const { error: deleteError } = await supabase
         .from('appointment_services')
         .delete()
-        .in('id', oldServiceIds);
+        .in('id', servicesToDelete);
 
       if (deleteError) {
-        console.warn('⚠️ Erro ao deletar serviços antigos:', deleteError);
+        console.warn('⚠️ Erro ao remover serviços antigos:', deleteError);
       }
     }
 
-    // 2. Preparar dados dos novos serviços (remover campos temporários)
-    const servicesData = appointmentServices
-      .filter((s) => s.service_id) // Filtrar apenas serviços válidos
+    // 2. Preparar dados dos serviços atuais (remover campos temporários)
+    const servicesData = uniqueServices
       .map((service, index) => ({
         clinic_id: clinicId, // ✅ clinic_id obrigatório
         appointment_id: appointmentId,
@@ -1609,28 +1626,28 @@ export async function syncAppointmentServices(appointmentId, appointmentServices
     }
 
     console.log(
-      '💾 [syncAppointmentServices] Inserindo',
+      '💾 [syncAppointmentServices] Salvando',
       servicesData.length,
       'serviço(s):',
       servicesData,
     );
 
-    // 3. Inserir novos serviços
-    const { data: insertedServices, error: insertError } = await supabase
+    // 3. Inserir ou atualizar serviços pela constraint unique_appointment_service
+    const { data: syncedServices, error: upsertError } = await supabase
       .from('appointment_services')
-      .insert(servicesData)
+      .upsert(servicesData, { onConflict: 'appointment_id,service_id' })
       .select();
 
-    if (insertError) {
-      console.error('❌ [syncAppointmentServices] Erro ao inserir:', insertError);
-      throw insertError;
+    if (upsertError) {
+      console.error('❌ [syncAppointmentServices] Erro ao salvar:', upsertError);
+      throw upsertError;
     }
 
     console.log(
       '✅ [syncAppointmentServices] Sucesso! Serviços sincronizados:',
-      insertedServices?.length || 0,
+      syncedServices?.length || 0,
     );
-    return insertedServices || [];
+    return syncedServices || [];
   } catch (error) {
     console.error('❌ [syncAppointmentServices] ERRO FINAL:', error.message, error);
     throw error;
