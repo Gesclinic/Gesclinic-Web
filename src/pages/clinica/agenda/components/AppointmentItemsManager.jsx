@@ -184,7 +184,9 @@ function AppointmentItemsManager({
         status: service.status || 'pending',
       }));
 
-      const totalsData = calculateTotals(formattedItems);
+      const effectiveItems =
+        formattedItems.length > 0 ? formattedItems : (savedServices || []).filter(Boolean);
+      const totalsData = calculateTotals(effectiveItems);
 
       console.log('📋 [loadItems] Itens carregados de appointment_services:', {
         count: formattedItems.length,
@@ -194,18 +196,19 @@ function AppointmentItemsManager({
           service_name: item.service_name,
           value: item.value,
         })),
+        fallbackCount: effectiveItems.length - formattedItems.length,
         totals: totalsData,
       });
       
       // ✨ CRITICAL: Resetar flag porque agora temos dados do banco
       hasLocalDraftItemsRef.current = false;
       
-      setItems(formattedItems);
+      setItems(effectiveItems);
       setTotals(totalsData);
       
       // ✅ CRÍTICO: Chamar onItemsChange com items carregados
-      console.log('📢 [loadItems] Chamando onItemsChange com', formattedItems.length, 'itens');
-      onItemsChange(formattedItems);
+      console.log('📢 [loadItems] Chamando onItemsChange com', effectiveItems.length, 'itens');
+      onItemsChange(effectiveItems);
     } catch (err) {
       console.error('❌ Erro ao carregar itens:', err);
       onError('Erro ao carregar itens do atendimento');

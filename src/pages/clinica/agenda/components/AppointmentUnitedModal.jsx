@@ -1571,23 +1571,96 @@ export default function AppointmentUnitedModal({
       const updated = {
         ...prev,
         id: finalAppointment.id || null, // ? NOVO: Propagar ID para AppointmentItemsManager
-        date: finalAppointment.scheduled_date || '',
-        time: finalAppointment.scheduled_time || '',
-        patientId: finalAppointment.patient_id || null,
-        patientName: finalAppointment.patient?.name || finalAppointment.patients?.name || '',
-        phone: finalAppointment.patient?.cell_phone || finalAppointment.patients?.cell_phone || finalAppointment.patients?.phone || '',
-        professionalId: finalAppointment.professional_id || '',
-        serviceId: finalAppointment.service_id || '',
-        payerId: finalAppointment.payer_id || '',
-        roomId: finalAppointment.room_id || '',
+        date: finalAppointment.date || finalAppointment.scheduled_date || prev.date || '',
+        time:
+          finalAppointment.startTime ||
+          finalAppointment.time ||
+          finalAppointment.scheduled_time ||
+          prev.time ||
+          '',
+        endTime: finalAppointment.endTime || finalAppointment.end_time || prev.endTime || '',
+        patientId: finalAppointment.patientId || finalAppointment.patient_id || prev.patientId || null,
+        patientName:
+          finalAppointment.patientName ||
+          finalAppointment.patient?.name ||
+          finalAppointment.patients?.name ||
+          finalAppointment.patient_name ||
+          prev.patientName ||
+          '',
+        phone:
+          finalAppointment.patientPhone ||
+          finalAppointment.patient?.cell_phone ||
+          finalAppointment.patient?.phone ||
+          finalAppointment.patients?.cell_phone ||
+          finalAppointment.patients?.phone ||
+          finalAppointment.patient_phone ||
+          prev.phone ||
+          '',
+        professionalId:
+          finalAppointment.professionalId || finalAppointment.professional_id || prev.professionalId || '',
+        serviceId: finalAppointment.serviceId || finalAppointment.service_id || prev.serviceId || '',
+        serviceCode:
+          finalAppointment.serviceCode ||
+          finalAppointment.services?.code ||
+          finalAppointment.service_code ||
+          prev.serviceCode ||
+          '',
+        payerId: finalAppointment.payerId || finalAppointment.payer_id || prev.payerId || '',
+        planId: finalAppointment.planId || finalAppointment.plan_id || prev.planId || '',
+        planCode: finalAppointment.planCode || finalAppointment.plans?.code || prev.planCode || '',
+        roomId: finalAppointment.roomId || finalAppointment.room_id || prev.roomId || '',
         status: finalAppointment.status || 'scheduled',
         notes: finalAppointment.notes || '',
         // N�O sobrescrever value se h� m�ltiplos servi�os
-        value: appointmentServices.length > 0 ? prev.value : finalAppointment.value || '0.00',
+        value:
+          appointmentServices.length > 0
+            ? prev.value
+            : finalAppointment.value?.toString() || prev.value || '0.00',
       };
       return updated;
     });
   }, [isOpen, mode, finalAppointment?.id, appointmentServices.length]);
+
+  const savedServicesForManager = useMemo(() => {
+    if (appointmentServices.length > 0) {
+      return appointmentServices;
+    }
+
+    const serviceId =
+      agendamentoData.serviceId || finalAppointment?.serviceId || finalAppointment?.service_id;
+    if (!serviceId) {
+      return [];
+    }
+
+    const serviceFromList = services.find((service) => service.id === serviceId);
+    const serviceName =
+      finalAppointment?.services?.name ||
+      finalAppointment?.serviceName ||
+      finalAppointment?.service_name ||
+      serviceFromList?.name ||
+      '';
+
+    return [
+      {
+        id: `fallback-${serviceId}`,
+        service_id: serviceId,
+        service_name: serviceName,
+        service_code:
+          finalAppointment?.services?.code ||
+          finalAppointment?.serviceCode ||
+          finalAppointment?.service_code ||
+          serviceFromList?.code ||
+          '',
+        value: agendamentoData.value || finalAppointment?.value || 0,
+        discount: finalAppointment?.discount || 0,
+        quantity: 1,
+        billing_type: 'per_consultation',
+        sessions_completed: 0,
+        status: 'pending',
+        is_fallback: true,
+      },
+    ];
+  }, [appointmentServices, agendamentoData.serviceId, agendamentoData.value, finalAppointment, services]);
 
   // ?? ETAPA 4.6: AUTO-SELECT: Preencher selectedPatient em modo EDIT
   // Garante que o paciente � selecionado automaticamente quando o modal abre em modo EDIT
@@ -4374,7 +4447,7 @@ export default function AppointmentUnitedModal({
                           payers?.find((p) => p.id === agendamentoData.payerId)?.name
                         }
                         onPayerChange={(payerId) => updateAgendamentoField('payerId', payerId)}
-                        savedServices={appointmentServices}
+                        savedServices={savedServicesForManager}
                         onItemsChange={(updatedServices) => {
                           console.log('? [AppointmentUnitedModal.onItemsChange] CHAMADO! Recebido:', {
                             updatedServices_length: updatedServices?.length || 0,
