@@ -95,6 +95,9 @@ const getStatus = (item) => {
   return 'pendentes';
 };
 
+const getPatientDisplayName = (item) =>
+  item?.patient_name || item?.patients?.name || item?.lead_name || 'Paciente não informado';
+
 const getStatusMeta = (status) => {
   const map = {
     pendentes: {
@@ -147,6 +150,7 @@ export default function AutorizacaoDescontos() {
         .select(
           `
           *,
+          patients (id, name),
           professionals!professional_id (id, name),
           services (name),
           payers (name)
@@ -290,8 +294,7 @@ export default function AutorizacaoDescontos() {
         }
 
         const searchable = normalizeText([
-          item.patient_name,
-          item.patients?.name,
+          getPatientDisplayName(item),
           item.professionals?.name,
           item.services?.name,
           item.payers?.name,
@@ -314,7 +317,7 @@ export default function AutorizacaoDescontos() {
           return `${b.scheduled_date || ''} ${b.scheduled_time || ''}`.localeCompare(`${a.scheduled_date || ''} ${a.scheduled_time || ''}`);
         }
         if (sortBy === 'patient_asc') {
-          return String(a.patient_name || '').localeCompare(String(b.patient_name || ''));
+          return getPatientDisplayName(a).localeCompare(getPatientDisplayName(b));
         }
         return new Date(b.discount_requested_at || b.created_at || 0) - new Date(a.discount_requested_at || a.created_at || 0);
       });
@@ -390,7 +393,7 @@ export default function AutorizacaoDescontos() {
             icon={AlertTriangle}
             title="Mais antigo pendente"
             value={summary.oldestPending ? formatDate(summary.oldestPending.discount_requested_at) : '-'}
-            detail={summary.oldestPending?.patient_name || 'Sem pendências'}
+            detail={summary.oldestPending ? getPatientDisplayName(summary.oldestPending) : 'Sem pendências'}
             tone="slate"
           />
         </div>
@@ -568,7 +571,7 @@ function DiscountRequestCard({ desconto, expanded, onToggle, onApprove, onReject
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-base font-bold text-slate-900">
-                {desconto.patient_name || desconto.patients?.name || 'Paciente não informado'}
+                {getPatientDisplayName(desconto)}
               </p>
               <Badge variant="outline" className={statusMeta.className}>
                 <StatusIcon className="mr-1 h-3.5 w-3.5" />
