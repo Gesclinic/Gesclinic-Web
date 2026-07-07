@@ -736,6 +736,22 @@ export default function AppointmentUnitedModal({
     return inAll?.name || null;
   };
 
+  const getDatePlusDays = (days) => {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    return date.toISOString().split('T')[0];
+  };
+
+  const buildInstallmentDates = (firstDueDate, installments) => {
+    const count = Math.max(1, Number.parseInt(installments || '1', 10) || 1);
+    const baseDate = new Date(firstDueDate || getDatePlusDays(30));
+    return Array.from({ length: count }, (_, index) => {
+      const date = new Date(baseDate);
+      date.setDate(baseDate.getDate() + (index * 30));
+      return date.toISOString().split('T')[0];
+    });
+  };
+
   // FUN��ES PARA M�LTIPLOS PAGAMENTOS
   const addPaymentSplit = () => {
     if (!splitFormData.value || parseFloat(splitFormData.value) <= 0) {
@@ -770,8 +786,17 @@ export default function AppointmentUnitedModal({
       return;
     }
 
+    const cardFirstDueDate = splitFormData.payment_method === 'CARTAO'
+      ? splitFormData.payment_due_date || getDatePlusDays(30)
+      : splitFormData.payment_due_date;
+    const cardInstallmentDates = splitFormData.payment_method === 'CARTAO'
+      ? splitFormData.card_installment_dates || buildInstallmentDates(cardFirstDueDate, splitFormData.installments).join('|')
+      : splitFormData.card_installment_dates;
+
     const newSplit = {
       ...splitFormData,
+      payment_due_date: cardFirstDueDate,
+      card_installment_dates: cardInstallmentDates,
       id: Date.now(),
       created_at: new Date().toISOString(),
     };
@@ -2803,12 +2828,6 @@ export default function AppointmentUnitedModal({
     }));
   };
 
-  const getDatePlusDays = (days) => {
-    const date = new Date();
-    date.setDate(date.getDate() + days);
-    return date.toISOString().split('T')[0];
-  };
-
   const splitAmountByInstallments = (total, installments) => {
     const count = Math.max(1, Number.parseInt(installments || '1', 10) || 1);
     const regularAmount = Number((Number(total || 0) / count).toFixed(2));
@@ -2922,11 +2941,7 @@ export default function AppointmentUnitedModal({
       const firstDueDate = payment.payment_due_date || installmentDates[0] || getDatePlusDays(30);
 
       for (let index = 0; index < installments; index += 1) {
-        const dueDate = installmentDates[index] || (() => {
-          const date = new Date(firstDueDate);
-          date.setDate(date.getDate() + (index * 30));
-          return date.toISOString().split('T')[0];
-        })();
+        const dueDate = installmentDates[index] || buildInstallmentDates(firstDueDate, installments)[index];
         const amount = installmentAmounts[index] || 0;
         const feeAmount = feePercent > 0 ? Number(((amount * feePercent) / 100).toFixed(2)) : 0;
 
@@ -3872,7 +3887,6 @@ export default function AppointmentUnitedModal({
             'Agendamento salvo, mas houve erro ao gerar as parcelas no financeiro: ' +
               financialErr.message,
           );
-          throw financialErr;
         }
       }
 
