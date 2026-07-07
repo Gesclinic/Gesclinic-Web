@@ -650,7 +650,21 @@ export default function AgendaDayView({
           }
         });
 
-
+        (groupedByTime[time] || []).forEach((apt) => {
+          const aptProfessionalId = apt.professional_id || apt.professionalId;
+          if (!aptProfessionalId || availableProfs.some((prof) => prof.id === aptProfessionalId)) {
+            return;
+          }
+          availableProfs.push({
+            id: aptProfessionalId,
+            name:
+              professionalsMap[aptProfessionalId]?.name ||
+              apt.professional_name ||
+              apt.professionalName ||
+              apt.profissional ||
+              aptProfessionalId,
+          });
+        });
 
         // Se há profissionais disponíveis, renderizar uma linha por profissional
         if (availableProfs.length > 0) {
@@ -675,7 +689,7 @@ export default function AgendaDayView({
       });
       return lines;
     }
-  }, [sortedTimes, filteredProfessionalId, professionalAvailability, professionalsMap]);
+  }, [sortedTimes, filteredProfessionalId, professionalAvailability, professionalsMap, groupedByTime]);
 
   const currentTimeStr = format(currentTime, 'HH:mm');
 
@@ -997,10 +1011,11 @@ export default function AgendaDayView({
             } else {
               // Sem filtro: agendamentos do profissional específico neste horário
               const allApptsForTime = groupedByTime[time] || [];
-              // FIX: Mostrar TODOS os agendamentos, não filtrar por professionalId
-              // Porque agendamentos já criados devem ser visíveis,
-              // mesmo que o profissional não esteja em "availability" para este horário
-              appointmentsForLine = allApptsForTime;
+              appointmentsForLine = professionalId
+                ? allApptsForTime.filter(
+                    (apt) => (apt.professional_id || apt.professionalId) === professionalId,
+                  )
+                : allApptsForTime;
             }
             const appointmentsForTime = appointmentsForLine;
 
