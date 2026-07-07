@@ -664,6 +664,14 @@ export default function AppointmentUnitedModal({
   // Dados de Pagamento (com estrutura completa)
   const [pagamentoData, setPagamentoData] = useState(defaultPaymentData);
 
+  const requestedDiscountAmount = parseFloat(pagamentoData.discount || 0) || 0;
+  const isDiscountApproved = requestedDiscountAmount > 0 && Boolean(pagamentoData.discount_authorized_by);
+  const isDiscountPending =
+    requestedDiscountAmount > 0 &&
+    !pagamentoData.discount_authorized_by &&
+    !pagamentoData.discount_rejected_at;
+  const effectiveDiscountAmount = isDiscountApproved ? requestedDiscountAmount : 0;
+
   // ? Estado para habilitar/desabilitar m�ltiplos pagamentos
   const [enableMultiplePayments, setEnableMultiplePayments] = useState(false);
 
@@ -849,11 +857,11 @@ export default function AppointmentUnitedModal({
       (sum, split) => sum + parseFloat(split.value || 0),
       0,
     );
-    const desconto = parseFloat(pagamentoData.discount || 0);
+    const desconto = effectiveDiscountAmount;
     const valorTotal = effectiveAppointmentValue - desconto;
     if (totalAtual + parseFloat(splitFormData.value) > valorTotal) {
       alert(
-        `Valor com desconto � ${formatCurrency(valorTotal)}. Valor total n�o pode exceder este valor.`,
+        `Valor permitido para recebimento é ${formatCurrency(valorTotal)}. Valor total não pode exceder este valor.`,
       );
       return;
     }
@@ -2353,7 +2361,7 @@ export default function AppointmentUnitedModal({
 
     if (isParticular && paymentMethod === 'DINHEIRO') {
       const totalValue = effectiveAppointmentValue;
-      const discount = parseFloat(pagamentoData.discount || 0);
+      const discount = effectiveDiscountAmount;
       const finalValue = Math.max(0, totalValue - discount);
 
       setPagamentoData((prev) => ({
@@ -2376,6 +2384,9 @@ export default function AppointmentUnitedModal({
     }
   }, [
     pagamentoData.discount,
+    pagamentoData.discount_authorized_by,
+    pagamentoData.discount_rejected_at,
+    effectiveDiscountAmount,
     effectiveAppointmentValue,
     agendamentoData.payerId,
     pagamentoData.payment_method,
@@ -2870,7 +2881,7 @@ export default function AppointmentUnitedModal({
 
   // Handler para c�lculo de troco (dinheiro)
   const handleCalculateChange = (sent, value) => {
-    const amount = parseFloat(agendamentoData.value) || 0;
+    const amount = Math.max(0, effectiveAppointmentValue - effectiveDiscountAmount);
     const sentAmount = parseFloat(sent) || 0;
     const change = sentAmount - amount;
 
@@ -2915,7 +2926,7 @@ export default function AppointmentUnitedModal({
     }
 
     const cardData = pagamentoData.cartao || {};
-    const discountAmount = Number(pagamentoData.discount || 0);
+    const discountAmount = Number(effectiveDiscountAmount || 0);
     const amount = Math.max(0, Number(effectiveAppointmentValue || 0) - discountAmount);
     if (amount <= 0) {
       return [];
@@ -3874,8 +3885,8 @@ export default function AppointmentUnitedModal({
             // N�o vai bloquear a cria��o do agendamento
           } else {
             // ?? Calcular valor com desconto
-            const originalValue = parseFloat(agendamentoData.value) || 0;
-            const discountAmount = parseFloat(pagamentoData.discount || 0);
+            const originalValue = effectiveAppointmentValue;
+            const discountAmount = effectiveDiscountAmount;
             const finalValue = originalValue - discountAmount;
 
             console.log(
@@ -5487,7 +5498,7 @@ export default function AppointmentUnitedModal({
                           </h3>
                           {/* Informa��o sobre saldo com desconto */}
                           {(() => {
-                            const desconto = parseFloat(pagamentoData.discount || 0);
+                            const desconto = effectiveDiscountAmount;
                             const valorOriginal = effectiveAppointmentValue;
                             const valorComDesconto = valorOriginal - desconto;
                             const totalPago = pagamentoSplits.reduce(
@@ -5685,7 +5696,7 @@ export default function AppointmentUnitedModal({
 
                           {/* GRID DE C�LCULO COM DESCONTO */}
                           {(() => {
-                            const desconto = parseFloat(pagamentoData.discount || 0);
+                            const desconto = effectiveDiscountAmount;
                             const valorOriginal = effectiveAppointmentValue;
                             const valorComDesconto = valorOriginal - desconto;
                             const totalPago = pagamentoSplits.reduce(
@@ -5822,14 +5833,16 @@ export default function AppointmentUnitedModal({
                     {/* SE��O DE DESCONTO - COM AUTORIZA��O - SEMPRE VIS�VEL */}
                     <div
                       className={`rounded-lg p-4 space-y-3 ${
-                        parseFloat(pagamentoData.discount || 0) > 0
+                        requestedDiscountAmount > 0
                           ? 'bg-yellow-50 border-l-4 border-yellow-500'
                           : 'bg-gray-50 border border-gray-200'
                       }`}
                     >
                       <div className="font-bold">
-                        {parseFloat(pagamentoData.discount || 0) > 0 ? (
-                          <span className="text-yellow-900">Desconto Aplicado</span>
+                        {requestedDiscountAmount > 0 ? (
+                          <span className="text-yellow-900">
+                            {isDiscountApproved ? 'Desconto Aplicado' : 'Desconto Solicitado'}
+                          </span>
                         ) : (
                           <span className="text-gray-900">Desconto e Observacoes</span>
                         )}
@@ -5837,7 +5850,7 @@ export default function AppointmentUnitedModal({
 
                       {/* AVISO: Desconto Autorizado - Campos Protegidos */}
                       {pagamentoData.discount_authorized_by &&
-                        parseFloat(pagamentoData.discount || 0) > 0 && (
+                        requestedDiscountAmount > 0 && (
                           <div className="bg-blue-50 border border-blue-300 rounded p-3">
                             <p className="text-sm text-blue-900 font-semibold mb-2">
                               Campos Protegidos - Desconto Ja Autorizado
@@ -6200,20 +6213,24 @@ export default function AppointmentUnitedModal({
                           {formatCurrency(effectiveAppointmentValue)}
                         </span>
                       </div>
-                      {parseFloat(pagamentoData.discount || 0) > 0 && (
+                      {requestedDiscountAmount > 0 && (
                         <>
-                          <div className="flex justify-between text-sm text-yellow-800">
-                            <span>Desconto:</span>
+                          <div className={`flex justify-between text-sm ${isDiscountApproved ? 'text-yellow-800' : 'text-orange-700'}`}>
+                            <span>{isDiscountApproved ? 'Desconto:' : 'Desconto solicitado:'}</span>
                             <span className="font-bold">
                               -{formatCurrency(pagamentoData.discount)}
                             </span>
                           </div>
+                          {isDiscountPending && (
+                            <div className="text-xs text-orange-700">
+                              Aguardando autorizacao. O valor ainda nao foi abatido do recebimento.
+                            </div>
+                          )}
                           <div className="border-t border-blue-300 pt-2 flex justify-between font-bold">
                             <span className="text-blue-900">Valor a Receber:</span>
                             <span className="text-green-700">
                               {formatCurrency(
-                                effectiveAppointmentValue -
-                                  parseFloat(pagamentoData.discount || 0),
+                                effectiveAppointmentValue - effectiveDiscountAmount,
                               )}
                             </span>
                           </div>
@@ -6560,15 +6577,20 @@ export default function AppointmentUnitedModal({
                               </p>
                             </div>
                           )}
-                          {parseFloat(pagamentoData.discount || 0) > 0 && (
+                          {requestedDiscountAmount > 0 && (
                             <>
                               <div>
                                 <span className="text-gray-600 block text-xs font-semibold">
-                                  Desconto
+                                  {isDiscountApproved ? 'Desconto' : 'Desconto solicitado'}
                                 </span>
-                                <p className="text-yellow-700 font-bold">
+                                <p className={`${isDiscountApproved ? 'text-yellow-700' : 'text-orange-700'} font-bold`}>
                                   -{formatCurrency(pagamentoData.discount)}
                                 </p>
+                                {isDiscountPending && (
+                                  <p className="text-xs text-orange-700">
+                                    Pendente de autorizacao
+                                  </p>
+                                )}
                               </div>
                               <div>
                                 <span className="text-gray-600 block text-xs font-semibold">
@@ -6576,8 +6598,7 @@ export default function AppointmentUnitedModal({
                                 </span>
                                 <p className="text-green-700 font-bold">
                                   {formatCurrency(
-                                    effectiveAppointmentValue -
-                                      parseFloat(pagamentoData.discount || 0),
+                                    effectiveAppointmentValue - effectiveDiscountAmount,
                                   )}
                                 </p>
                               </div>
