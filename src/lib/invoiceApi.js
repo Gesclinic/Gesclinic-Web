@@ -95,66 +95,91 @@ function normalizeInvoiceStatus(status) {
  */
 export async function createInvoice({
   clinicId,
+  clinic_id,
   appointmentId,
+  appointment_id,
   patientId,
+  patient_id,
   payerId,
-  payerType = 'insurance', // 'patient', 'insurance', 'company'
+  payer_id,
+  payerType, // 'patient', 'insurance', 'company'
+  payer_type,
   grossAmount,
+  gross_amount,
   discountAmount = 0,
+  discount_amount,
   description,
   professionalId,
+  professional_id,
   serviceId,
-  emissionDate = new Date(),
-  dueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 dias
+  service_id,
+  emissionDate,
+  emission_date,
+  dueDate,
+  due_date,
   notes = '',
+  fiscal = {},
+  financial = {},
+  emission = {},
 } = {}) {
   try {
+    const resolvedClinicId = clinicId || clinic_id;
+    const resolvedAppointmentId = appointmentId || appointment_id;
+    const resolvedPatientId = patientId || patient_id;
+    const resolvedPayerId = payerId || payer_id || null;
+    const resolvedPayerType = payerType || payer_type || emission.payer_type || 'insurance';
+    const resolvedGrossAmount = Number(grossAmount ?? gross_amount ?? financial.gross_value ?? financial.net_value ?? 0);
+    const resolvedDiscountAmount = Number(discountAmount ?? discount_amount ?? financial.discount ?? 0);
+    const resolvedDescription = description || fiscal.description || '';
+    const resolvedProfessionalId = professionalId || professional_id || null;
+    const resolvedServiceId = serviceId || service_id || null;
+    const resolvedEmissionDate = emissionDate || emission_date || emission.emission_date || new Date();
+    const resolvedDueDate = dueDate || due_date || emission.due_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const resolvedNotes = notes || emission.notes || '';
+
     // 🔍 VALIDAÇÕES
-    if (!clinicId) {
+    if (!resolvedClinicId) {
       throw new Error('Clínica obrigatória');
     }
-    if (!appointmentId) {
+    if (!resolvedAppointmentId) {
       throw new Error('Agendamento obrigatório');
     }
-    if (!patientId) {
+    if (!resolvedPatientId) {
       throw new Error('Paciente obrigatório');
     }
-    if (!payerId) {
-      throw new Error('Pagador obrigatório');
-    }
-    if (!grossAmount || grossAmount <= 0) {
+    if (!resolvedGrossAmount || resolvedGrossAmount <= 0) {
       throw new Error('Valor bruto deve ser maior que 0');
     }
-    if (!description) {
+    if (!resolvedDescription) {
       throw new Error('Descrição dos serviços obrigatória');
     }
 
-    const netAmount = Math.max(0, grossAmount - (discountAmount || 0));
-    const emissionDateStr = new Date(emissionDate).toISOString().split('T')[0];
-    const dueDateStr = new Date(dueDate).toISOString().split('T')[0];
+    const netAmount = Math.max(0, resolvedGrossAmount - (resolvedDiscountAmount || 0));
+    const emissionDateStr = new Date(resolvedEmissionDate).toISOString().split('T')[0];
+    const dueDateStr = new Date(resolvedDueDate).toISOString().split('T')[0];
 
     // 📝 Gerar número sequencial da NF
-    const invoiceNumber = await generateInvoiceNumber(clinicId);
+    const invoiceNumber = await generateInvoiceNumber(resolvedClinicId);
 
     // 💾 Inserir na tabela invoices
     const { data, error } = await supabase
       .from('invoices')
       .insert({
-        clinic_id: clinicId,
-        appointment_id: appointmentId,
-        patient_id: patientId,
-        payer_id: payerId,
-        payer_type: payerType,
+        clinic_id: resolvedClinicId,
+        appointment_id: resolvedAppointmentId,
+        patient_id: resolvedPatientId,
+        payer_id: resolvedPayerId,
+        payer_type: resolvedPayerType,
         invoice_number: invoiceNumber,
-        gross_amount: grossAmount,
-        discount_amount: discountAmount || 0,
+        gross_amount: resolvedGrossAmount,
+        discount_amount: resolvedDiscountAmount || 0,
         net_amount: netAmount,
-        description,
-        professional_id: professionalId,
-        service_id: serviceId,
+        description: resolvedDescription,
+        professional_id: resolvedProfessionalId,
+        service_id: resolvedServiceId,
         emission_date: emissionDateStr,
         due_date: dueDateStr,
-        notes: notes || '',
+        notes: resolvedNotes || '',
         status: 'draft',
         created_at: new Date().toISOString(),
       })
@@ -176,6 +201,87 @@ export async function createInvoice({
     console.error('❌ Erro ao criar NF:', err.message);
     throw err;
   }
+}
+
+export async function linkExternalInvoiceToAppointment({
+  clinicId,
+  appointmentId,
+  patientId,
+  invoiceNumber,
+  amount = 0,
+  description = 'NF emitida fora do sistema',
+  issuedDate = new Date(),
+  dueDate = new Date(),
+} = {}) {
+  const resolvedInvoiceNumber = String(invoiceNumber || '').trim();
+
+  if (!clinicId) {
+    throw new Error('Clínica obrigatória');
+  }
+  if (!appointmentId) {
+    throw new Error('Agendamento obrigatório');
+  }
+  if (!resolvedInvoiceNumber) {
+    throw new Error('Informe o número da NF');
+  }
+
+  const { data: existing, error: existingError } = await supabase
+    .from('invoices')
+    .select('*')
+    .eq('clinic_id', clinicId)
+    .eq('invoice_number', resolvedInvoiceNumber)
+    .maybeSingle();
+
+  if (existingError && existingError.code !== 'PGRST116') {
+    throw new Error(`Erro ao buscar NF existente: ${existingError.message}`);
+  }
+
+  if (existing) {
+    const { data, error } = await supabase
+      .from('invoices')
+      .update({
+        appointment_id: appointmentId,
+        patient_id: patientId || existing.patient_id || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', existing.id)
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Erro ao vincular NF existente: ${error.message}`);
+    }
+
+    return data;
+  }
+
+  const dateStr = new Date(issuedDate).toISOString().split('T')[0];
+  const dueDateStr = new Date(dueDate).toISOString().split('T')[0];
+  const numericAmount = Number(amount || 0);
+
+  const { data, error } = await supabase
+    .from('invoices')
+    .insert({
+      clinic_id: clinicId,
+      appointment_id: appointmentId,
+      patient_id: patientId || null,
+      invoice_number: resolvedInvoiceNumber,
+      description,
+      amount: numericAmount,
+      total: numericAmount,
+      issued_date: dateStr,
+      due_date: dueDateStr,
+      status: 'issued',
+      created_at: new Date().toISOString(),
+    })
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Erro ao vincular NF externa: ${error.message}`);
+  }
+
+  return data;
 }
 
 /**

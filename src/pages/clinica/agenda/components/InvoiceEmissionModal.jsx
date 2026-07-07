@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
-import { createInvoice, emitInvoiceAndCreateAR } from '@/lib/invoiceApi';
+import { createInvoice, emitInvoiceAndCreateAR, linkExternalInvoiceToAppointment } from '@/lib/invoiceApi';
 import { calcularRetencoes, getRetencoesPorExibir } from '@/lib/retentionCalculatorApi';
 import RetencaoDisplay from '@/components/ui/RetencaoDisplay';
 import { useClinicContext } from '@/contexts/ClinicContext';
@@ -53,6 +53,8 @@ function InvoiceEmissionModal({
   const [invoiceId, setInvoiceId] = useState('');
   const [retencoes, setRetencoes] = useState(null);
   const [emissionStep, setEmissionStep] = useState(0); // 0=idle, 1=creating, 2=emitting, 3=repasse, 4=success
+  const [invoiceMode, setInvoiceMode] = useState('system');
+  const [externalInvoiceNumber, setExternalInvoiceNumber] = useState('');
 
   // ⚠️ ESTADO INICIAL VAZIO - Será preenchido via useEffect quando a modal abre
   const [formData, setFormData] = useState({
@@ -111,6 +113,8 @@ function InvoiceEmissionModal({
     setSuccess('');
     setInvoiceId('');
     setEmissionStep(0);
+    setInvoiceMode('system');
+    setExternalInvoiceNumber('');
   };
 
   // ==========================================
@@ -374,6 +378,38 @@ function InvoiceEmissionModal({
     }
   };
 
+  const handleLinkExternalInvoice = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      setSuccess('');
+
+      const invoice = await linkExternalInvoiceToAppointment({
+        clinicId,
+        appointmentId: appointmentData.id,
+        patientId: patientData?.id || appointmentData?.patient_id || null,
+        invoiceNumber: externalInvoiceNumber,
+        amount: formData.net_value || formData.gross_value || appointmentData?.value || 0,
+        description: formData.description || `NF externa - Atendimento ${appointmentData.id}`,
+        issuedDate: formData.emission_date,
+        dueDate: formData.due_date,
+      });
+
+      setInvoiceId(invoice.id);
+      setSuccess(`NF ${invoice.invoice_number} vinculada ao atendimento.`);
+
+      setTimeout(() => {
+        onSuccess({ invoiceId: invoice.id, invoiceNumber: invoice.invoice_number, external: true });
+        onClose();
+      }, 1200);
+    } catch (err) {
+      console.error('Erro ao vincular NF externa:', err);
+      setError(err.message || 'Erro ao vincular NF externa');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // ==========================================
   // RENDERING
   // ==========================================
@@ -383,10 +419,51 @@ function InvoiceEmissionModal({
         <DialogHeader>
           <DialogTitle>📋 Emissão de Nota Fiscal</DialogTitle>
           <DialogDescription>
-            Verifique os dados automáticos da clínica e paciente, defina o tipo de tomador e emita a
-            NF
+            Emita a NF pelo sistema ou vincule uma NF emitida fora informando apenas o número.
           </DialogDescription>
         </DialogHeader>
+
+        <div className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => setInvoiceMode('system')}
+            className={`rounded-md border p-3 text-left text-sm ${
+              invoiceMode === 'system'
+                ? 'border-blue-500 bg-white text-blue-900 shadow-sm'
+                : 'border-slate-200 bg-white text-slate-700'
+            }`}
+          >
+            <span className="block font-bold">Gerar via sistema</span>
+            <span className="mt-1 block text-xs">Emite a NF e vincula automaticamente ao atendimento.</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setInvoiceMode('external')}
+            className={`rounded-md border p-3 text-left text-sm ${
+              invoiceMode === 'external'
+                ? 'border-orange-500 bg-white text-orange-900 shadow-sm'
+                : 'border-slate-200 bg-white text-slate-700'
+            }`}
+          >
+            <span className="block font-bold">NF emitida fora</span>
+            <span className="mt-1 block text-xs">Informe somente o número para rastrear o vínculo.</span>
+          </button>
+        </div>
+
+        {invoiceMode === 'external' && (
+          <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
+            <Label className="text-sm font-semibold text-orange-900">Número da NF externa *</Label>
+            <Input
+              value={externalInvoiceNumber}
+              onChange={(event) => setExternalInvoiceNumber(event.target.value)}
+              placeholder="Ex: 12345"
+              className="mt-2 bg-white"
+            />
+            <p className="mt-2 text-xs text-orange-800">
+              Este vínculo não gera novo financeiro. Ele registra a rastreabilidade entre atendimento e NF emitida fora do Gesclinic.
+            </p>
+          </div>
+        )}
 
         <div className="grid grid-cols-3 gap-4 py-4">
           {/* COLUNA 1: DADOS FISCAIS (READONLY) */}
@@ -597,8 +674,12 @@ function InvoiceEmissionModal({
             Cancelar
           </Button>
           <Button
-            onClick={handleEmitInvoice}
-            disabled={loading || !formData.clinic_cnpj || !formData.description}
+            onClick={invoiceMode === 'external' ? handleLinkExternalInvoice : handleEmitInvoice}
+            disabled={
+              loading ||
+              (invoiceMode === 'system' && (!formData.clinic_cnpj || !formData.description)) ||
+              (invoiceMode === 'external' && !externalInvoiceNumber.trim())
+            }
             className="bg-blue-600 hover:bg-blue-700"
           >
             {loading ? (
@@ -606,6 +687,8 @@ function InvoiceEmissionModal({
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Emitindo...
               </>
+            ) : invoiceMode === 'external' ? (
+              'Vincular NF Externa'
             ) : (
               '✅ Emitir Nota Fiscal'
             )}
