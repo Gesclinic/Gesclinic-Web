@@ -450,6 +450,11 @@ export function mapFromDatabase(record) {
         ? JSON.parse(record.payment_splits)
         : record.payment_splits
       : null,
+    payment_splits: record.payment_splits
+      ? typeof record.payment_splits === 'string'
+        ? JSON.parse(record.payment_splits)
+        : record.payment_splits
+      : null,
     paymentStatus: record.payment_status,
     billingData: record.billing_data,
     billingNotes: record.billing_notes,
@@ -805,6 +810,7 @@ export async function getAppointmentById(appointmentId) {
       value,
       duration,
       payment_method,
+      payment_splits,
       convenio_id,
       plano_contas_id,
       billing_notes,
