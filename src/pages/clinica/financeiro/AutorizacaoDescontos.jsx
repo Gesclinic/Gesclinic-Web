@@ -156,7 +156,7 @@ export default function AutorizacaoDescontos() {
         .select(
           `
           *,
-          patient:patients!appointments_patient_id_fkey (id, name, full_name),
+          patient:patients!appointments_patient_id_fkey (id, name),
           professionals!professional_id (id, name),
           services (name),
           payers (name)
