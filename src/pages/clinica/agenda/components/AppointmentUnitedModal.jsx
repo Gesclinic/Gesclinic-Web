@@ -367,7 +367,7 @@ export default function AppointmentUnitedModal({
   // ? Guardar profissional inicial que veio do slot (para proteger contra overrides)
   const initialSlotProfessionalIdRef = useRef(null);
 
-  // ??? Load appointment from appointmentIdToEdit if appointment prop is not provided
+  // ??? Load appointment details from appointmentIdToEdit in edit mode.
   useEffect(() => {
     console.log(
       '?? [AppointmentUnitedModal] useEffect DISPARO 1: appointmentIdToEdit?',
@@ -384,54 +384,34 @@ export default function AppointmentUnitedModal({
       return;
     }
 
-    if (appointmentIdToEdit && !appointment && isOpen) {
+    if (appointmentIdToEdit && isOpen) {
       console.log(
         '?? [AppointmentUnitedModal] Carregando agendamento via appointmentIdToEdit:',
         appointmentIdToEdit,
       );
 
+      let cancelled = false;
+
       (async () => {
         try {
-          const { data: apt, error } = await supabase
-            .from('appointments')
-            .select(
-              `
-              id, clinic_id, patient_id, professional_id, service_id, room_id,
-              payer_id, plan_id, scheduled_date, scheduled_time, end_time, status,
-              notes, value, duration, payment_method, convenio_id, plano_contas_id,
-              billing_notes, billing_data, guide_number, authorization_number,
-              authorization_expiry, authorization_verified, card_number, discount,
-              discount_reason, discount_authorized_by, discount_authorized_at,
-              discount_observation,
-              patients (id, name, phone, cell_phone, email, document_id, birthdate, gender, street, number, neighborhood, city, state, zip_code, record_number, photo_url),
-              professionals (id, name),
-              services (id, name, code),
-              payers (id, name),
-              plans (id, name, code),
-              rooms (id, name)
-            `,
-            )
-            .eq('id', appointmentIdToEdit)
-            .eq('clinic_id', clinicId)
-            .maybeSingle();
+          const mappedApt = await getAppointmentById(appointmentIdToEdit);
 
-          if (error) {
-            console.error('? Erro ao carregar agendamento:', error);
-            setLoadedAppointmentFromId(null);
-          } else if (!apt) {
+          if (cancelled) {
+            return;
+          }
+
+          if (!mappedApt) {
             console.warn('?? Agendamento n�o encontrado:', appointmentIdToEdit);
             setLoadedAppointmentFromId(null);
           } else {
-            console.log('? Agendamento carregado via appointmentIdToEdit:', apt);
+            console.log('? Agendamento carregado via appointmentIdToEdit:', mappedApt);
             // ?? DEBUG: Verificar se payer_id e room_id est�o sendo trazidos
             console.log('?? [DEBUG] Dados cr�ticos do banco:', {
-              payer_id: apt.payer_id,
-              room_id: apt.room_id,
-              payers: apt.payers,
-              rooms: apt.rooms,
+              payer_id: mappedApt.payer_id,
+              room_id: mappedApt.room_id,
+              payers: mappedApt.payers,
+              rooms: mappedApt.rooms,
             });
-            // ? Aplicar mapFromDatabase para normalizar campos em camelCase
-            const mappedApt = mapFromDatabase(apt);
             console.log('?? [DEBUG] Agendamento ap�s mapFromDatabase:', mappedApt);
             console.log('?? [DEBUG] payerId e roomId ap�s mapFromDatabase:', {
               payerId: mappedApt.payerId,
@@ -441,13 +421,19 @@ export default function AppointmentUnitedModal({
           }
         } catch (err) {
           console.error('? Exce��o ao carregar agendamento:', err);
-          setLoadedAppointmentFromId(null);
+          if (!cancelled) {
+            setLoadedAppointmentFromId(null);
+          }
         }
       })();
+
+      return () => {
+        cancelled = true;
+      };
     } else {
       setLoadedAppointmentFromId(null);
     }
-  }, [appointmentIdToEdit, appointment, isOpen]);
+  }, [appointmentIdToEdit, isOpen]);
 
   // ?? DEBUG - COMPREHENSIVE LOGGING
   console.log('='.repeat(70));
@@ -464,7 +450,7 @@ export default function AppointmentUnitedModal({
   );
   console.log('?? DADOS CR�TICOS DO APPOINTMENT:');
   if (appointment || loadedAppointmentFromId) {
-    const apt = appointment || loadedAppointmentFromId;
+    const apt = loadedAppointmentFromId || appointment;
     console.log('   payerId/payer_id:', apt.payerId || apt.payer_id);
     console.log('   roomId/room_id:', apt.roomId || apt.room_id);
     console.log('   professionalId/professional_id:', apt.professionalId || apt.professional_id);
@@ -483,7 +469,7 @@ export default function AppointmentUnitedModal({
 
   // ?? Consolidate appointment from both sources (prop or loaded via ID)
   const finalAppointment = useMemo(
-    () => appointment || loadedAppointmentFromId,
+    () => loadedAppointmentFromId || appointment,
     [appointment, loadedAppointmentFromId],
   );
 
