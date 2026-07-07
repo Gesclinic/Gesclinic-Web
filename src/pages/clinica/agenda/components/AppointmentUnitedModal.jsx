@@ -752,6 +752,45 @@ export default function AppointmentUnitedModal({
     });
   };
 
+  const getPaymentMethodLabel = (method) => ({
+    DINHEIRO: 'Dinheiro',
+    CARTAO: 'Cartao',
+    PIX: 'PIX',
+    CHEQUE: 'Cheque',
+    BOLETO: 'Boleto',
+    DOC: 'DOC',
+    TED: 'TED',
+    DEPOSITO: 'Deposito',
+  }[method] || method || '-');
+
+  const getPaymentSplitDetails = (split) => {
+    if (split.payment_method === 'CARTAO') {
+      return [
+        split.card_brand,
+        split.card_last4 ? `final ${split.card_last4}` : null,
+        split.installments ? `${split.installments}x` : null,
+      ].filter(Boolean).join(' - ');
+    }
+
+    if (split.payment_method === 'PIX') {
+      return split.pix_key ? `Chave: ${String(split.pix_key).slice(0, 24)}${String(split.pix_key).length > 24 ? '...' : ''}` : '';
+    }
+
+    if (split.payment_method === 'CHEQUE') {
+      return [split.cheque_bank, split.cheque_number ? `Cheque ${split.cheque_number}` : null].filter(Boolean).join(' - ');
+    }
+
+    if (['DOC', 'TED', 'DEPOSITO'].includes(split.payment_method)) {
+      return [split.bank_name, split.bank_account ? `Conta ${split.bank_account}` : null].filter(Boolean).join(' - ');
+    }
+
+    if (split.payment_method === 'BOLETO') {
+      return split.boleto_number ? `Boleto ${String(split.boleto_number).slice(0, 24)}${String(split.boleto_number).length > 24 ? '...' : ''}` : '';
+    }
+
+    return '';
+  };
+
   // FUN��ES PARA M�LTIPLOS PAGAMENTOS
   const addPaymentSplit = () => {
     if (!splitFormData.value || parseFloat(splitFormData.value) <= 0) {
@@ -1194,7 +1233,7 @@ export default function AppointmentUnitedModal({
         console.log('?? [AppointmentUnitedModal] Carregando m�ltiplos pagamentos');
         console.log('   payment_splits:', finalAppointment.payment_splits);
 
-        if (finalAppointment.payment_splits && Array.isArray(finalAppointment.payment_splits)) {
+        if (finalAppointment.payment_splits) {
           try {
             const splits =
               typeof finalAppointment.payment_splits === 'string'
@@ -6463,14 +6502,56 @@ export default function AppointmentUnitedModal({
                               {formatCurrency(effectiveAppointmentValue)}
                             </p>
                           </div>
-                          <div>
-                            <span className="text-gray-600 block text-xs font-semibold">
-                              Metodo
-                            </span>
-                            <p className="text-gray-900 font-bold">
-                              {pagamentoData.payment_method || '-'}
-                            </p>
-                          </div>
+                          {enableMultiplePayments && pagamentoSplits.length > 0 ? (
+                            <div className="col-span-2">
+                              <span className="text-gray-600 block text-xs font-semibold mb-2">
+                                Formas de pagamento
+                              </span>
+                              <div className="space-y-2">
+                                {pagamentoSplits.map((split) => {
+                                  const details = getPaymentSplitDetails(split);
+                                  return (
+                                    <div
+                                      key={split.id || `${split.payment_method}-${split.value}`}
+                                      className="flex items-center justify-between gap-3 rounded border border-orange-200 bg-white px-3 py-2"
+                                    >
+                                      <div>
+                                        <p className="text-gray-900 font-bold">
+                                          {getPaymentMethodLabel(split.payment_method)}
+                                        </p>
+                                        {details && (
+                                          <p className="text-xs text-gray-600">{details}</p>
+                                        )}
+                                      </div>
+                                      <p className="text-green-700 font-bold whitespace-nowrap">
+                                        {formatCurrency(split.value || 0)}
+                                      </p>
+                                    </div>
+                                  );
+                                })}
+                                <div className="flex items-center justify-between border-t border-orange-200 pt-2 text-sm">
+                                  <span className="font-semibold text-gray-700">Total informado</span>
+                                  <span className="font-bold text-green-700">
+                                    {formatCurrency(
+                                      pagamentoSplits.reduce(
+                                        (sum, split) => sum + parseFloat(split.value || 0),
+                                        0,
+                                      ),
+                                    )}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div>
+                              <span className="text-gray-600 block text-xs font-semibold">
+                                Metodo
+                              </span>
+                              <p className="text-gray-900 font-bold">
+                                {getPaymentMethodLabel(pagamentoData.payment_method)}
+                              </p>
+                            </div>
+                          )}
                           {parseFloat(pagamentoData.discount || 0) > 0 && (
                             <>
                               <div>
