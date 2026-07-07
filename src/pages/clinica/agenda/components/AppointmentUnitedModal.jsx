@@ -114,6 +114,14 @@ const formatCurrency = (value) => {
   }).format(numValue);
 };
 
+const calculateAppointmentServicesTotal = (servicesToCalculate = []) =>
+  servicesToCalculate.reduce((sum, item) => {
+    const value = parseFloat(item.value ?? item.unit_price ?? item.final_value ?? item.price ?? 0);
+    const quantity = parseFloat(item.quantity || 1);
+    const discount = parseFloat(item.discount || 0);
+    return sum + Math.max(0, value * quantity - discount);
+  }, 0);
+
 // ? DEPRECATED: Use helpers from @/utils/timezoneHelpers instead
 // - parseLocalDate ? use toLocalTime()
 // - formatDateToIso ? use formatLocalDate()
@@ -514,6 +522,15 @@ export default function AppointmentUnitedModal({
 
   // ?? Estado para m�ltiplos servi�os
   const [appointmentServices, setAppointmentServices] = useState([]);
+  const appointmentServicesTotal = useMemo(
+    () => calculateAppointmentServicesTotal(appointmentServices),
+    [appointmentServices],
+  );
+  const effectiveAppointmentValue =
+    appointmentServices.length > 0
+      ? appointmentServicesTotal
+      : parseFloat(agendamentoData.value || 0);
+  const effectiveAppointmentValueString = effectiveAppointmentValue.toString();
 
   // Dados Cadastrais
   const [cadastralData, setCadastralData] = useState({
@@ -744,7 +761,7 @@ export default function AppointmentUnitedModal({
       0,
     );
     const desconto = parseFloat(pagamentoData.discount || 0);
-    const valorTotal = parseFloat(agendamentoData.value || 0) - desconto;
+    const valorTotal = effectiveAppointmentValue - desconto;
     if (totalAtual + parseFloat(splitFormData.value) > valorTotal) {
       alert(
         `Valor com desconto � ${formatCurrency(valorTotal)}. Valor total n�o pode exceder este valor.`,
@@ -2230,22 +2247,22 @@ export default function AppointmentUnitedModal({
   useEffect(() => {
     const isParticular = checkIsParticular(agendamentoData.payerId);
     if (tabAtivo === 'pagamento' && isParticular) {
-      const value = parseFloat(agendamentoData.value) || 0;
+      const value = effectiveAppointmentValue;
       setPagamentoData((prev) => ({
         ...prev,
-        amount: agendamentoData.value,
+        amount: effectiveAppointmentValueString,
         dinheiro: {
           ...prev.dinheiro,
-          value_received: agendamentoData.value,
+          value_received: effectiveAppointmentValueString,
           change: '0.00',
         },
       }));
       console.log(
         '?? [AppointmentUnitedModal] Sincronizado valor de pagamento:',
-        agendamentoData.value,
+        effectiveAppointmentValueString,
       );
     }
-  }, [tabAtivo, agendamentoData.value, agendamentoData.payerId]);
+  }, [tabAtivo, effectiveAppointmentValueString, agendamentoData.payerId]);
 
   // ?? SINCRONIZAR DESCONTO COM VALOR RECEBIDO (dinheiro)
   useEffect(() => {
@@ -2253,7 +2270,7 @@ export default function AppointmentUnitedModal({
     const paymentMethod = pagamentoData.payment_method;
 
     if (isParticular && paymentMethod === 'DINHEIRO') {
-      const totalValue = parseFloat(agendamentoData.value) || 0;
+      const totalValue = effectiveAppointmentValue;
       const discount = parseFloat(pagamentoData.discount || 0);
       const finalValue = Math.max(0, totalValue - discount);
 
@@ -2277,7 +2294,7 @@ export default function AppointmentUnitedModal({
     }
   }, [
     pagamentoData.discount,
-    agendamentoData.value,
+    effectiveAppointmentValue,
     agendamentoData.payerId,
     pagamentoData.payment_method,
   ]);
@@ -2542,14 +2559,6 @@ export default function AppointmentUnitedModal({
       return updated;
     });
   };
-
-  const calculateServicesTotal = (servicesToCalculate = []) =>
-    servicesToCalculate.reduce((sum, item) => {
-      const value = parseFloat(item.value ?? item.unit_price ?? item.final_value ?? item.price ?? 0);
-      const quantity = parseFloat(item.quantity || 1);
-      const discount = parseFloat(item.discount || 0);
-      return sum + Math.max(0, value * quantity - discount);
-    }, 0);
 
   const updateCadastralField = (field, value) => {
     setCadastralData((prev) => ({ ...prev, [field]: value }));
@@ -2965,7 +2974,7 @@ export default function AppointmentUnitedModal({
         service_id: agendamentoData.serviceId || null,
         payer_id: agendamentoData.payerId || payers?.[0]?.id || null,
         room_id: agendamentoData.roomId || null,
-        value: agendamentoData.value ? parseFloat(agendamentoData.value) : null,
+        value: effectiveAppointmentValue,
         discount: discountValue,
         discount_reason: pagamentoData.discount_reason || null,
         ...discountRequestData,
@@ -3341,7 +3350,7 @@ export default function AppointmentUnitedModal({
           end_time: agendamentoData.endTime?.trim() ? agendamentoData.endTime : null,
           status: 'scheduled',
           notes: agendamentoData.notes,
-          value: agendamentoData.value ? parseFloat(agendamentoData.value) : null,
+          value: effectiveAppointmentValue,
           discount: discountValue,
           discount_reason: pagamentoData.discount_reason || null,
           ...discountRequested,
@@ -3439,7 +3448,7 @@ export default function AppointmentUnitedModal({
           payer_id: agendamentoData.payerId || payers?.[0]?.id || null,
           room_id: agendamentoData.roomId || null,
 
-          value: agendamentoData.value ? parseFloat(agendamentoData.value) : null,
+          value: effectiveAppointmentValue,
           discount: discountValue,
           discount_reason: pagamentoData.discount_reason || null,
           ...discountRequestData,
@@ -4504,7 +4513,7 @@ export default function AppointmentUnitedModal({
                             updatedServices: updatedServices?.map(s => ({ id: s.id, service_name: s.service_name })),
                           });
 
-                          const servicesTotal = calculateServicesTotal(updatedServices || []);
+                          const servicesTotal = calculateAppointmentServicesTotal(updatedServices || []);
 
                           // ?? CRITICAL: Show state change
                           setAppointmentServices((prev) => {
@@ -5216,7 +5225,7 @@ export default function AppointmentUnitedModal({
                           {/* Informa��o sobre saldo com desconto */}
                           {(() => {
                             const desconto = parseFloat(pagamentoData.discount || 0);
-                            const valorOriginal = parseFloat(agendamentoData.value || 0);
+                            const valorOriginal = effectiveAppointmentValue;
                             const valorComDesconto = valorOriginal - desconto;
                             const totalPago = pagamentoSplits.reduce(
                               (s, p) => s + parseFloat(p.value || 0),
@@ -5414,7 +5423,7 @@ export default function AppointmentUnitedModal({
                           {/* GRID DE C�LCULO COM DESCONTO */}
                           {(() => {
                             const desconto = parseFloat(pagamentoData.discount || 0);
-                            const valorOriginal = parseFloat(agendamentoData.value || 0);
+                            const valorOriginal = effectiveAppointmentValue;
                             const valorComDesconto = valorOriginal - desconto;
                             const totalPago = pagamentoSplits.reduce(
                               (s, p) => s + parseFloat(p.value || 0),
@@ -5533,7 +5542,7 @@ export default function AppointmentUnitedModal({
                         <Label>Valor Total (R$) *</Label>
                         <Input
                           type="text"
-                          value={formatCurrency(agendamentoData.value || 0)}
+                          value={formatCurrency(effectiveAppointmentValue)}
                           onChange={(e) => {
                             const numericValue = e.target.value.replace(/\D/g, '');
                             const decimalValue = numericValue
@@ -5925,7 +5934,7 @@ export default function AppointmentUnitedModal({
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-700">Valor Total:</span>
                         <span className="font-bold text-gray-900">
-                          {formatCurrency(agendamentoData.value || 0)}
+                          {formatCurrency(effectiveAppointmentValue)}
                         </span>
                       </div>
                       {parseFloat(pagamentoData.discount || 0) > 0 && (
@@ -5940,7 +5949,7 @@ export default function AppointmentUnitedModal({
                             <span className="text-blue-900">Valor a Receber:</span>
                             <span className="text-green-700">
                               {formatCurrency(
-                                parseFloat(agendamentoData.value || 0) -
+                                effectiveAppointmentValue -
                                   parseFloat(pagamentoData.discount || 0),
                               )}
                             </span>
@@ -5998,7 +6007,7 @@ export default function AppointmentUnitedModal({
                     <CardProcessorSelectorFields
                       clinicId={clinicId}
                       paymentMethod={pagamentoData.payment_method}
-                      grossAmount={agendamentoData.value}
+                      grossAmount={effectiveAppointmentValue}
                       processorId={cardProcessorData.processor_id}
                       cardBrand={cardProcessorData.card_brand}
                       settlementType={cardProcessorData.settlement_type}
@@ -6167,7 +6176,7 @@ export default function AppointmentUnitedModal({
                             <div>
                               <span className="text-gray-600 block text-xs font-semibold">Valor</span>
                               <p className="text-gray-900 font-bold">
-                                {formatCurrency(agendamentoData.value || 0)}
+                                {formatCurrency(effectiveAppointmentValue)}
                               </p>
                             </div>
                           </div>
@@ -6235,7 +6244,7 @@ export default function AppointmentUnitedModal({
                               Valor Total
                             </span>
                             <p className="text-gray-900 font-bold">
-                              {formatCurrency(agendamentoData.value || 0)}
+                              {formatCurrency(effectiveAppointmentValue)}
                             </p>
                           </div>
                           <div>
@@ -6262,7 +6271,7 @@ export default function AppointmentUnitedModal({
                                 </span>
                                 <p className="text-green-700 font-bold">
                                   {formatCurrency(
-                                    parseFloat(agendamentoData.value || 0) -
+                                    effectiveAppointmentValue -
                                       parseFloat(pagamentoData.discount || 0),
                                   )}
                                 </p>
