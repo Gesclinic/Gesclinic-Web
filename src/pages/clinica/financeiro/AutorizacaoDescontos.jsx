@@ -96,7 +96,13 @@ const getStatus = (item) => {
 };
 
 const getPatientDisplayName = (item) =>
-  item?.patient_name || item?.patients?.name || item?.lead_name || 'Paciente não informado';
+  item?.patient_name ||
+  item?.patient?.name ||
+  item?.patient?.full_name ||
+  item?.patients?.name ||
+  item?.patients?.full_name ||
+  item?.lead_name ||
+  'Paciente não informado';
 
 const getStatusMeta = (status) => {
   const map = {
@@ -150,7 +156,7 @@ export default function AutorizacaoDescontos() {
         .select(
           `
           *,
-          patients (id, name),
+          patient:patients!appointments_patient_id_fkey (id, name, full_name),
           professionals!professional_id (id, name),
           services (name),
           payers (name)
@@ -178,7 +184,10 @@ export default function AutorizacaoDescontos() {
         (item) => item.discount_requested_at || item.discount_authorized_by || item.discount_rejected_at,
       );
       const enrichedData = await enrichAppointmentsWithPrices(rows);
-      setDescontos(enrichedData || []);
+      setDescontos((enrichedData || []).map((item) => ({
+        ...item,
+        patient_name: getPatientDisplayName(item),
+      })));
     } catch (error) {
       console.error('Erro ao carregar descontos:', error);
       setDescontos([]);
