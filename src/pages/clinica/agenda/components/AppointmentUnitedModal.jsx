@@ -791,6 +791,39 @@ export default function AppointmentUnitedModal({
     return '';
   };
 
+  const getPersistedPaymentSplits = (source = finalAppointment || appointment) => {
+    const rawSplits = source?.paymentSplits ?? source?.payment_splits;
+    if (!rawSplits) {
+      return [];
+    }
+
+    try {
+      const parsed = typeof rawSplits === 'string' ? JSON.parse(rawSplits) : rawSplits;
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+      console.warn('Erro ao ler payment_splits persistido:', error);
+      return [];
+    }
+  };
+
+  const getPaymentSplitsForSave = () => {
+    if (enableMultiplePayments) {
+      return pagamentoSplits;
+    }
+
+    const persistedSplits = getPersistedPaymentSplits();
+    if (mode === 'edit' && pagamentoSplits.length === 0 && persistedSplits.length > 0) {
+      return persistedSplits;
+    }
+
+    return [];
+  };
+
+  const getPaymentSplitsPayload = () => {
+    const splitsToSave = getPaymentSplitsForSave();
+    return splitsToSave.length > 0 ? JSON.stringify(splitsToSave) : null;
+  };
+
   // FUN��ES PARA M�LTIPLOS PAGAMENTOS
   const addPaymentSplit = () => {
     if (!splitFormData.value || parseFloat(splitFormData.value) <= 0) {
@@ -1231,31 +1264,15 @@ export default function AppointmentUnitedModal({
 
         // ?? CARREGAR M�LTIPLOS PAGAMENTOS (payment_splits)
         console.log('?? [AppointmentUnitedModal] Carregando m�ltiplos pagamentos');
-        console.log('   payment_splits:', finalAppointment.payment_splits);
+        console.log('   payment_splits:', finalAppointment.paymentSplits ?? finalAppointment.payment_splits);
 
-        if (finalAppointment.payment_splits) {
-          try {
-            const splits =
-              typeof finalAppointment.payment_splits === 'string'
-                ? JSON.parse(finalAppointment.payment_splits)
-                : finalAppointment.payment_splits;
-
-            if (splits.length > 0) {
-              console.log('? [AppointmentUnitedModal] Splits carregados:', splits);
-              setPagamentoSplits(splits);
-              setEnableMultiplePayments(true);
-            } else {
-              console.log('?? [AppointmentUnitedModal] payment_splits est� vazio');
-              setPagamentoSplits([]);
-              setEnableMultiplePayments(false);
-            }
-          } catch (err) {
-            console.warn('?? Erro ao desserializar payment_splits:', err);
-            setPagamentoSplits([]);
-            setEnableMultiplePayments(false);
-          }
+        const persistedSplits = getPersistedPaymentSplits(finalAppointment);
+        if (persistedSplits.length > 0) {
+          console.log('? [AppointmentUnitedModal] Splits carregados:', persistedSplits);
+          setPagamentoSplits(persistedSplits);
+          setEnableMultiplePayments(true);
         } else {
-          console.log('?? [AppointmentUnitedModal] payment_splits � null/undefined');
+          console.log('?? [AppointmentUnitedModal] payment_splits vazio ou ausente');
           setPagamentoSplits([]);
           setEnableMultiplePayments(false);
         }
@@ -3233,10 +3250,7 @@ export default function AppointmentUnitedModal({
         convenio_id: faturamentoData?.convenio_id || null,
         plano_contas_id: planoContasValue,
         // ? M�LTIPLOS PAGAMENTOS
-        payment_splits:
-          enableMultiplePayments && pagamentoSplits.length > 0
-            ? JSON.stringify(pagamentoSplits)
-            : null,
+        payment_splits: getPaymentSplitsPayload(),
         // ??? DADOS DE LIBERA��O
         card_number: liberacaoData.card_number || null,
         authorization_number: liberacaoData.auth_number || null,
@@ -3602,10 +3616,7 @@ export default function AppointmentUnitedModal({
           convenio_id: faturamentoData?.convenio_id || null,
           plano_contas_id:
             faturamentoData?.plano_contas_id || pagamentoData?.plano_contas_id || null,
-          payment_splits:
-            enableMultiplePayments && pagamentoSplits.length > 0
-              ? JSON.stringify(pagamentoSplits)
-              : null,
+          payment_splits: getPaymentSplitsPayload(),
           // ?? Dados de processador de cart�o (se aplic�vel)
           processor_id: cardProcessorData.processor_id || null,
           card_brand: cardProcessorData.card_brand || null,
@@ -3704,10 +3715,7 @@ export default function AppointmentUnitedModal({
           discount_observation: pagamentoData.discount_observation || null,
 
           payment_method: pagamentoData.payment_method || null,
-          payment_splits:
-            enableMultiplePayments && pagamentoSplits.length > 0
-              ? JSON.stringify(pagamentoSplits)
-              : null,
+          payment_splits: getPaymentSplitsPayload(),
 
           status: agendamentoData.status,
           notes: agendamentoData.notes || null,
