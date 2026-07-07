@@ -1687,28 +1687,70 @@ export default function AppointmentUnitedModal({
       return;
     }
 
-    if (!finalAppointment.patient_id) {
-      console.log('?? [AUTO-SELECT PATIENT] Sem patient_id, n�o preenchendo selectedPatient');
+    const patientId = finalAppointment.patientId || finalAppointment.patient_id;
+
+    if (!patientId) {
+      console.log('?? [AUTO-SELECT PATIENT] Sem patientId, n�o preenchendo selectedPatient');
       setSelectedPatient(null);
       return;
     }
 
     console.log('?? [AUTO-SELECT PATIENT] Preenchendo selectedPatient em modo EDIT');
-    console.log('   patient_id:', finalAppointment.patient_id);
+    console.log('   patientId:', patientId);
     console.log('   finalAppointment.patients:', finalAppointment.patients);
     console.log('   finalAppointment.patient:', finalAppointment.patient);
 
     // Construir objeto de paciente a partir de finalAppointment
     const patientData = {
-      patientId: finalAppointment.patient_id,
-      name: finalAppointment.patients?.name || finalAppointment.patient?.name || '',
-      patientName: finalAppointment.patients?.name || finalAppointment.patient?.name || '',
-      phone: finalAppointment.patients?.phone || finalAppointment.patient?.phone || '',
-      cell_phone: finalAppointment.patients?.cell_phone || finalAppointment.patient?.cell_phone || '',
-      document_id: finalAppointment.patients?.document_id || finalAppointment.patient?.document_id || '',
-      birthdate: finalAppointment.patients?.birthdate || finalAppointment.patient?.birthdate || '',
-      gender: finalAppointment.patients?.gender || finalAppointment.patient?.gender || '',
-      email: finalAppointment.patients?.email || finalAppointment.patient?.email || '',
+      patientId,
+      name:
+        finalAppointment.patientName ||
+        finalAppointment.patients?.name ||
+        finalAppointment.patient?.name ||
+        finalAppointment.patient_name ||
+        '',
+      patientName:
+        finalAppointment.patientName ||
+        finalAppointment.patients?.name ||
+        finalAppointment.patient?.name ||
+        finalAppointment.patient_name ||
+        '',
+      phone:
+        finalAppointment.patientPhone ||
+        finalAppointment.patients?.phone ||
+        finalAppointment.patient?.phone ||
+        finalAppointment.patient_phone ||
+        '',
+      cell_phone:
+        finalAppointment.patientCellPhone ||
+        finalAppointment.patients?.cell_phone ||
+        finalAppointment.patient?.cell_phone ||
+        finalAppointment.patient_cell_phone ||
+        '',
+      document_id:
+        finalAppointment.patientCpf ||
+        finalAppointment.patients?.document_id ||
+        finalAppointment.patient?.document_id ||
+        finalAppointment.patient_cpf ||
+        '',
+      birthdate:
+        finalAppointment.patientBirthdate ||
+        finalAppointment.patients?.birthdate ||
+        finalAppointment.patient?.birthdate ||
+        finalAppointment.patient_birthdate ||
+        '',
+      gender:
+        finalAppointment.patientGender ||
+        finalAppointment.patients?.gender ||
+        finalAppointment.patient?.gender ||
+        finalAppointment.patient_gender ||
+        '',
+      email:
+        finalAppointment.patientEmail ||
+        finalAppointment.patients?.email ||
+        finalAppointment.patient?.email ||
+        finalAppointment.patient_email ||
+        '',
       street: finalAppointment.patients?.street || finalAppointment.patient?.street || '',
       number: finalAppointment.patients?.number || finalAppointment.patient?.number || '',
       neighborhood: finalAppointment.patients?.neighborhood || finalAppointment.patient?.neighborhood || '',
@@ -1724,7 +1766,7 @@ export default function AppointmentUnitedModal({
     });
 
     setSelectedPatient(patientData);
-  }, [isOpen, mode, finalAppointment?.patient_id, finalAppointment?.patients, finalAppointment?.patient, finalAppointment]);
+  }, [isOpen, mode, finalAppointment?.patientId, finalAppointment?.patient_id, finalAppointment?.patients, finalAppointment?.patient, finalAppointment]);
 
   // ??? AUTO-FETCH: Buscar valor quando profissional, servi�o ou conv�nio mudar
   // OU quando o valor est� vazio/zero (apenas quando h� service)
