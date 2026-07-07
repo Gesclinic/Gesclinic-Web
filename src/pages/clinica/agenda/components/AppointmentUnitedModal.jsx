@@ -2255,11 +2255,37 @@ export default function AppointmentUnitedModal({
   }, [isOpen, agendamentoData.professionalId, clinicId, initialSlotProfessionalIdRef.current]);
 
   const selectedProfessional = useMemo(
-    () =>
-      professionals.find((professional) => professional.id === agendamentoData.professionalId) ||
-      null,
-    [professionals, agendamentoData.professionalId],
+    () => {
+      const professionalFromList = professionals.find(
+        (professional) => professional.id === agendamentoData.professionalId,
+      );
+      if (professionalFromList) {
+        return professionalFromList;
+      }
+
+      const loadedProfessional = finalAppointment?.professionals;
+      if (loadedProfessional?.id === agendamentoData.professionalId) {
+        return loadedProfessional;
+      }
+
+      return null;
+    },
+    [professionals, agendamentoData.professionalId, finalAppointment?.professionals],
   );
+
+  const selectedRoom = useMemo(() => {
+    const roomFromList = rooms.find((room) => room.id === agendamentoData.roomId);
+    if (roomFromList) {
+      return roomFromList;
+    }
+
+    const loadedRoom = finalAppointment?.rooms;
+    if (loadedRoom?.id === agendamentoData.roomId) {
+      return loadedRoom;
+    }
+
+    return null;
+  }, [rooms, agendamentoData.roomId, finalAppointment?.rooms]);
 
   const availableWeekdayLabels = useMemo(() => {
     const dayIndexes = Array.from(
@@ -3927,16 +3953,16 @@ export default function AppointmentUnitedModal({
                           }}
                         >
                           <SelectTrigger>
-                            {agendamentoData.roomId &&
-                            rooms.find((r) => r.id === agendamentoData.roomId) ? (
-                              <span>
-                                {rooms.find((r) => r.id === agendamentoData.roomId)?.name}
-                              </span>
+                            {agendamentoData.roomId && selectedRoom ? (
+                              <span>{selectedRoom.name}</span>
                             ) : (
                               <SelectValue placeholder="Selecione sala" />
                             )}
                           </SelectTrigger>
                           <SelectContent>
+                            {selectedRoom && !rooms.some((room) => room.id === selectedRoom.id) && (
+                              <SelectItem value={selectedRoom.id}>{selectedRoom.name}</SelectItem>
+                            )}
                             {rooms.map((room) => (
                               <SelectItem key={room.id} value={room.id}>
                                 {room.name}
@@ -3976,19 +4002,19 @@ export default function AppointmentUnitedModal({
                         }}
                       >
                         <SelectTrigger>
-                          {agendamentoData.professionalId &&
-                          professionals.find((p) => p.id === agendamentoData.professionalId) ? (
-                            <span>
-                              {
-                                professionals.find((p) => p.id === agendamentoData.professionalId)
-                                  ?.name
-                              }
-                            </span>
+                          {agendamentoData.professionalId && selectedProfessional ? (
+                            <span>{selectedProfessional.name}</span>
                           ) : (
                             <SelectValue placeholder="Selecione profissional" />
                           )}
                         </SelectTrigger>
                         <SelectContent>
+                          {selectedProfessional &&
+                            !professionals.some((prof) => prof.id === selectedProfessional.id) && (
+                              <SelectItem value={selectedProfessional.id}>
+                                {selectedProfessional.name}
+                              </SelectItem>
+                            )}
                           {professionals.map((prof) => (
                             <SelectItem key={prof.id} value={prof.id}>
                               {prof.name}
