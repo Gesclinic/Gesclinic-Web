@@ -4052,7 +4052,11 @@ export default function AppointmentUnitedModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleCloseModal()}>
-        <DialogContent className="app-dialog-shell app-dialog-shell--content">
+        <DialogContent
+          className="app-dialog-shell app-dialog-shell--content"
+          onPointerDownOutside={(event) => event.preventDefault()}
+          onEscapeKeyDown={(event) => event.preventDefault()}
+        >
           <DialogHeader className="border-b border-gray-200 px-6 pb-4 pt-6 text-left">
             <DialogTitle className="flex items-center gap-3">
               <span>
