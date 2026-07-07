@@ -14,6 +14,67 @@ function getLocalDateString(date = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
+const normalizeText = (value) =>
+  String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+const normalizePhone = (value) => String(value ?? '').replace(/\D/g, '');
+
+const normalizeTime = (value) => {
+  if (!value) {
+    return '';
+  }
+  if (typeof value === 'string') {
+    return value.includes('T') ? value.split('T')[1]?.substring(0, 5) || '' : value.substring(0, 5);
+  }
+  return '';
+};
+
+const getDuplicateKey = (appointment) => {
+  if (!appointment) {
+    return '';
+  }
+
+  const patientKey = appointment.patient_id
+    ? `patient:${appointment.patient_id}`
+    : `patient:${normalizeText(appointment.patient_name || appointment.patientName || appointment.paciente)}|${normalizePhone(
+        appointment.patient_phone || appointment.phone || appointment.telefone,
+      )}`;
+  const dateKey = appointment.scheduled_date || appointment.date || appointment.start_time?.split?.('T')?.[0] || '';
+  const timeKey = normalizeTime(
+    appointment.scheduled_time || appointment.time || appointment.horário || appointment.start_time,
+  );
+
+  if (!patientKey || !dateKey || !timeKey) {
+    return appointment.id || '';
+  }
+
+  return [patientKey, dateKey, timeKey].join('|');
+};
+
+const dedupeAppointments = (rows = []) => {
+  const seen = new Set();
+
+  return rows.filter((appointment) => {
+    const key = getDuplicateKey(appointment);
+    if (!key || String(appointment.status || '').toLowerCase().includes('cancel')) {
+      return true;
+    }
+    if (seen.has(key)) {
+      console.warn('[useAgendaStore] Agendamento duplicado omitido:', {
+        id: appointment.id,
+        key,
+      });
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+};
+
 export function useAgendaStore() {
   // 📅 Data selecionada (formato ISO string - usando data LOCAL, não UTC)
   const [date, setDate] = useState(getLocalDateString());
@@ -33,6 +94,10 @@ export function useAgendaStore() {
 
   // 📊 Agendamentos carregados
   const [appointments, setAppointments] = useState([]);
+
+  const setDedupedAppointments = useCallback((rows) => {
+    setAppointments(dedupeAppointments(Array.isArray(rows) ? rows : []));
+  }, []);
 
   // ⏳ Estados de carregamento
   const [loading, setLoading] = useState(false);
@@ -138,7 +203,7 @@ export function useAgendaStore() {
 
   // 🎯 Adicionar agendamento na lista local
   const addAppointmentLocal = useCallback((appointment) => {
-    setAppointments((prev) => [...prev, appointment]);
+    setAppointments((prev) => dedupeAppointments([...prev, appointment]));
   }, []);
 
   /**
@@ -183,7 +248,7 @@ export function useAgendaStore() {
       );
     }
 
-    return result;
+    return dedupeAppointments(result);
   }, [appointments, filters]);
 
   /**
@@ -230,7 +295,7 @@ export function useAgendaStore() {
 
     // 📊 Agendamentos
     appointments,
-    setAppointments,
+    setAppointments: setDedupedAppointments,
     filteredAppointments,
     updateAppointmentLocal,
     removeAppointmentLocal,

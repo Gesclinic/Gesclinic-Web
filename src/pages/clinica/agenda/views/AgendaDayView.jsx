@@ -74,6 +74,60 @@ const getFirstAndLastName = (fullName) => {
 // ✅ FUNÇÃO HELPER PARA GERAR CLASSES DO GRID
 const getColSpanClass = (colName) => `col-span-${GRID_COLUMNS[colName] || 1}`;
 
+const normalizeDuplicateText = (value) =>
+  String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+const normalizeDuplicatePhone = (value) => String(value ?? '').replace(/\D/g, '');
+
+const normalizeDuplicateTime = (value) => {
+  if (!value || typeof value !== 'string') {
+    return '';
+  }
+  return value.includes('T') ? value.split('T')[1]?.substring(0, 5) || '' : value.substring(0, 5);
+};
+
+const getDuplicateAppointmentKey = (appointment) => {
+  const patientKey = appointment.patient_id
+    ? `patient:${appointment.patient_id}`
+    : `patient:${normalizeDuplicateText(
+        appointment.patient_name || appointment.patientName || appointment.paciente,
+      )}|${normalizeDuplicatePhone(appointment.patient_phone || appointment.phone || appointment.telefone)}`;
+  const dateKey = appointment.scheduled_date || appointment.date || appointment.start_time?.split?.('T')?.[0] || '';
+  const timeKey = normalizeDuplicateTime(
+    appointment.scheduled_time || appointment.time || appointment.horário || appointment.start_time,
+  );
+
+  if (!patientKey || !dateKey || !timeKey) {
+    return appointment.id || '';
+  }
+
+  return [patientKey, dateKey, timeKey].join('|');
+};
+
+const dedupeAppointments = (rows = []) => {
+  const seen = new Set();
+
+  return rows.filter((appointment) => {
+    const key = getDuplicateAppointmentKey(appointment);
+    if (!key || String(appointment.status || '').toLowerCase().includes('cancel')) {
+      return true;
+    }
+    if (seen.has(key)) {
+      console.warn('[AgendaDayView] Agendamento duplicado omitido da tela:', {
+        id: appointment.id,
+        key,
+      });
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+};
+
 const getAppointmentActionConfig = (apt, currentRole) => {
   if (!apt?.id) {
     return null;
@@ -373,7 +427,7 @@ export default function AgendaDayView({
 
   // Quando appointments prop muda, atualizar state local
   useEffect(() => {
-    setLocalAppointments(appointments || []);
+    setLocalAppointments(dedupeAppointments(appointments || []));
   }, [appointments]);
 
   // 🆕 Estado para disponibilidade de profissionais
