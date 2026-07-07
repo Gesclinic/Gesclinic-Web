@@ -1895,7 +1895,7 @@ const [atendimentoUnificadoOpen, setAtendimentoUnificadoOpen] = useState(false);
           agenda.deselectSlot();
         }}
         mode={agenda.selectedSlot?.id && agenda.selectedSlot?.type !== 'new' ? 'edit' : 'new'}
-        appointment={agenda.selectedSlot}
+        appointment={agenda.selectedSlot?.id && agenda.selectedSlot?.type !== 'new' ? null : agenda.selectedSlot}
         appointmentIdToEdit={agenda.selectedSlot?.id && agenda.selectedSlot?.type !== 'new' ? agenda.selectedSlot?.id : null}
         professionals={(() => {
           const result = filteredProfessionals !== null ? filteredProfessionals : agenda.metadata.professionals || [];
