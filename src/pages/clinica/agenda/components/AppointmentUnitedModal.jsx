@@ -2543,6 +2543,14 @@ export default function AppointmentUnitedModal({
     });
   };
 
+  const calculateServicesTotal = (servicesToCalculate = []) =>
+    servicesToCalculate.reduce((sum, item) => {
+      const value = parseFloat(item.value ?? item.unit_price ?? item.final_value ?? item.price ?? 0);
+      const quantity = parseFloat(item.quantity || 1);
+      const discount = parseFloat(item.discount || 0);
+      return sum + Math.max(0, value * quantity - discount);
+    }, 0);
+
   const updateCadastralField = (field, value) => {
     setCadastralData((prev) => ({ ...prev, [field]: value }));
   };
@@ -4496,18 +4504,23 @@ export default function AppointmentUnitedModal({
                             updatedServices: updatedServices?.map(s => ({ id: s.id, service_name: s.service_name })),
                           });
 
+                          const servicesTotal = calculateServicesTotal(updatedServices || []);
+
                           // ?? CRITICAL: Show state change
                           setAppointmentServices((prev) => {
                             console.log('?? [setAppointmentServices] STATE UPDATED:', {
                               prev_length: prev?.length || 0,
                               new_length: updatedServices?.length || 0,
+                              servicesTotal,
                             });
                             return updatedServices;
                           });
+
+                          updateAgendamentoField('value', servicesTotal.toString());
                         }}
                         onTotalsUpdate={(totals) => {
                           console.log('?? [AppointmentUnitedModal] Totais atualizados:', totals);
-                          if (totals?.grand_total) {
+                          if (totals?.grand_total !== undefined) {
                             updateAgendamentoField('value', totals.grand_total.toString());
                           }
                         }}
@@ -6091,37 +6104,75 @@ export default function AppointmentUnitedModal({
                       </div>
                     </div>
 
-                    {/* ?? SERVI�O */}
+                    {/* ?? SERVI�OS */}
                     <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
                       <p className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                        <span>Servico</span>
+                        <span>Servicos</span>
                       </p>
-                      <div className="grid grid-cols-1 gap-3 text-sm">
-                        <div>
-                          <span className="text-gray-600 block text-xs font-semibold">
-                            Nome do Servico
-                          </span>
-                          <p className="text-gray-900 font-bold">
-                            {services.find((s) => s.id === agendamentoData.serviceId)?.name || '-'}
-                          </p>
+                      {appointmentServices.length > 0 ? (
+                        <div className="space-y-2 text-sm">
+                          {appointmentServices.map((service, index) => (
+                            <div
+                              key={service.id || `${service.service_id}-${index}`}
+                              className="rounded border border-purple-100 bg-white p-3"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div>
+                                  <span className="text-gray-600 block text-xs font-semibold">
+                                    Servico {index + 1}
+                                  </span>
+                                  <p className="text-gray-900 font-bold">
+                                    {service.service_name || service.name || '-'}
+                                  </p>
+                                  {(service.service_code || service.code) && (
+                                    <p className="text-xs text-gray-600">
+                                      Codigo: {service.service_code || service.code}
+                                    </p>
+                                  )}
+                                </div>
+                                <p className="text-gray-900 font-bold whitespace-nowrap">
+                                  {formatCurrency(
+                                    Math.max(
+                                      0,
+                                      parseFloat(
+                                        service.value ?? service.unit_price ?? service.final_value ?? service.price ?? 0,
+                                      ) * parseFloat(service.quantity || 1) -
+                                        parseFloat(service.discount || 0),
+                                    ),
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
+                      ) : (
+                        <div className="grid grid-cols-1 gap-3 text-sm">
                           <div>
                             <span className="text-gray-600 block text-xs font-semibold">
-                              Codigo
+                              Nome do Servico
                             </span>
                             <p className="text-gray-900 font-bold">
-                              {agendamentoData.serviceCode || '-'}
+                              {services.find((s) => s.id === agendamentoData.serviceId)?.name || '-'}
                             </p>
                           </div>
-                          <div>
-                            <span className="text-gray-600 block text-xs font-semibold">Valor</span>
-                            <p className="text-gray-900 font-bold">
-                              {formatCurrency(agendamentoData.value || 0)}
-                            </p>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <span className="text-gray-600 block text-xs font-semibold">
+                                Codigo
+                              </span>
+                              <p className="text-gray-900 font-bold">
+                                {agendamentoData.serviceCode || '-'}
+                              </p>
+                            </div>
+                            <div>
+                              <span className="text-gray-600 block text-xs font-semibold">Valor</span>
+                              <p className="text-gray-900 font-bold">
+                                {formatCurrency(agendamentoData.value || 0)}
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      )}
                     </div>
 
                     {/* ?? PAGAMENTO / CONV�NIO */}
