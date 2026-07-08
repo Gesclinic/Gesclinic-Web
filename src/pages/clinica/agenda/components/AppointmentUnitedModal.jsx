@@ -820,6 +820,20 @@ export default function AppointmentUnitedModal({
       return [];
     }
 
+    const parseFinancialJson = (value, fallback) => {
+      if (!value) {
+        return fallback;
+      }
+      if (typeof value !== 'string') {
+        return value;
+      }
+      try {
+        return JSON.parse(value);
+      } catch {
+        return fallback;
+      }
+    };
+
     try {
       const { data, error } = await supabase
         .from('ar_invoices')
@@ -834,10 +848,14 @@ export default function AppointmentUnitedModal({
       }
 
       const installmentRows = (data || []).filter((row) => {
-        const source = row.origem || row.origin || row.metadata?.source || '';
+        const metadata = parseFinancialJson(row.metadata, {});
+        const paymentSplit = parseFinancialJson(row.payment_split, []);
+        const firstSplit = Array.isArray(paymentSplit) ? paymentSplit[0] : null;
+        const source = row.origem || row.origin || metadata?.source || '';
         const status = String(row.status || '').toLowerCase();
         return (
-          source === 'appointment_card_installments' &&
+          (source === 'appointment_card_installments' || firstSplit?.method === 'CARTAO') &&
+          String(row.payment_method || firstSplit?.method || '').toUpperCase() === 'CARTAO' &&
           !['canceled', 'cancelado', 'reversed', 'estornado'].includes(status)
         );
       });
@@ -855,9 +873,15 @@ export default function AppointmentUnitedModal({
       );
       const installmentDates = orderedRows.map((row) => row.due_date).filter(Boolean);
       const firstRow = orderedRows[0] || {};
+      const firstMetadata = parseFinancialJson(firstRow.metadata, {});
+      const firstPaymentSplit = parseFinancialJson(firstRow.payment_split, []);
+      const firstSplit = Array.isArray(firstPaymentSplit) ? firstPaymentSplit[0] : null;
       const installmentCount = Math.max(
         orderedRows.length,
-        Number.parseInt(firstRow.total_parcelas || firstRow.metadata?.installments || '0', 10) || 0,
+        Number.parseInt(
+          firstMetadata?.installments || firstSplit?.installments || firstRow.total_parcelas || '0',
+          10,
+        ) || 0,
       );
 
       return [{
@@ -867,10 +891,10 @@ export default function AppointmentUnitedModal({
         installments: String(installmentCount || orderedRows.length || 1),
         payment_due_date: installmentDates[0] || firstRow.due_date || '',
         card_installment_dates: installmentDates.join('|'),
-        card_brand: firstRow.card_brand || firstRow.metadata?.card?.brand || '',
-        card_last4: firstRow.card_last4 || firstRow.metadata?.card?.last4 || '',
-        processor_id: firstRow.processor_id || firstRow.metadata?.card?.processor_id || '',
-        settlement_type: firstRow.settlement_type || firstRow.metadata?.card?.settlement_type || '',
+        card_brand: firstRow.card_brand || firstMetadata?.card?.brand || firstSplit?.card_brand || '',
+        card_last4: firstRow.card_last4 || firstMetadata?.card?.last4 || firstSplit?.card_last4 || '',
+        processor_id: firstRow.processor_id || firstMetadata?.card?.processor_id || firstSplit?.processor_id || '',
+        settlement_type: firstRow.settlement_type || firstMetadata?.card?.settlement_type || firstSplit?.settlement_type || '',
         observation: 'Parcelamento recuperado do financeiro',
         source: 'financial_ar_invoices',
         financial_receivable_ids: orderedRows.map((row) => row.id),
@@ -879,6 +903,24 @@ export default function AppointmentUnitedModal({
       console.warn('Erro ao reconstruir parcelamento financeiro:', error);
       return [];
     }
+  };
+
+  const setSplitFormFromPayment = (split) => {
+    if (!split) {
+      return;
+    }
+
+    setSplitFormData((prev) => ({
+      ...prev,
+      ...split,
+      payment_method: split.payment_method || 'CARTAO',
+      value: split.value || split.amount || '',
+      installments: split.installments || '1',
+      payment_due_date: split.payment_due_date || String(split.card_installment_dates || '').split('|')[0] || '',
+      card_installment_dates: Array.isArray(split.card_installment_dates)
+        ? split.card_installment_dates.join('|')
+        : split.card_installment_dates || '',
+    }));
   };
 
   const getPaymentSplitsForSave = () => {
@@ -1346,6 +1388,9 @@ export default function AppointmentUnitedModal({
           console.log('? [AppointmentUnitedModal] Splits carregados:', persistedSplits);
           setPagamentoSplits(persistedSplits);
           setEnableMultiplePayments(true);
+          setSplitFormFromPayment(
+            persistedSplits.find((split) => split.payment_method === 'CARTAO') || persistedSplits[0],
+          );
         } else {
           console.log('?? [AppointmentUnitedModal] payment_splits vazio ou ausente');
           setPagamentoSplits([]);
@@ -1360,6 +1405,7 @@ export default function AppointmentUnitedModal({
                 ...prev,
                 payment_method: 'CARTAO',
               }));
+              setSplitFormFromPayment(financialSplits[0]);
             }
           });
         }
