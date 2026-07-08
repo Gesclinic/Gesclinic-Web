@@ -1372,7 +1372,7 @@ export default function AppointmentUnitedModal({
           discount_rejected_at: finalAppointment.discountRejectedAt || null,
           discount_rejected_amount: finalAppointment.discountRejectedAmount || 0,
           discount_observation: finalAppointment.discountObservation || '',
-          plano_contas_id: finalAppointment.planoContasId || '',
+          plano_contas_id: finalAppointment.planoContasId || finalAppointment.plano_contas_id || '',
           dinheiro: {
             ...defaultPaymentData.dinheiro,
             value_received: finalAppointment.value?.toString() || '0.00',
@@ -5948,28 +5948,6 @@ export default function AppointmentUnitedModal({
                     )}
 
                     <div>
-                      <Label>Forma de Pagamento *</Label>
-                      <Select
-                        value={pagamentoData.payment_method || 'DINHEIRO'}
-                        onValueChange={(value) => updatePagamentoField('payment_method', value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a forma de pagamento" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="DINHEIRO">Dinheiro</SelectItem>
-                          <SelectItem value="CARTAO">Cartao de Credito/Debito</SelectItem>
-                          <SelectItem value="PIX">PIX</SelectItem>
-                          <SelectItem value="CHEQUE">Cheque</SelectItem>
-                          <SelectItem value="BOLETO">Boleto</SelectItem>
-                          <SelectItem value="DOC">DOC</SelectItem>
-                          <SelectItem value="TED">TED</SelectItem>
-                          <SelectItem value="DEPOSITO">Deposito</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
                       <Label>Plano de Contas *</Label>
                       <Select
                         value={pagamentoData.plano_contas_id || ''}
@@ -5986,25 +5964,6 @@ export default function AppointmentUnitedModal({
                           ))}
                         </SelectContent>
                       </Select>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Valor Total (R$) *</Label>
-                        <Input
-                          type="text"
-                          value={formatCurrency(effectiveAppointmentValue)}
-                          onChange={(e) => {
-                            const numericValue = e.target.value.replace(/\D/g, '');
-                            const decimalValue = numericValue
-                              ? (parseFloat(numericValue) / 100).toFixed(2)
-                              : '0.00';
-                            updateAgendamentoField('value', decimalValue);
-                          }}
-                          placeholder="R$ 0,00"
-                          className="font-bold text-gray-900"
-                        />
-                      </div>
                     </div>
 
                     {/* SE��O DE DESCONTO - COM AUTORIZA��O - SEMPRE VIS�VEL */}
