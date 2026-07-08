@@ -674,7 +674,7 @@ export default function AppointmentUnitedModal({
   const effectiveDiscountAmount = isDiscountApproved ? requestedDiscountAmount : 0;
 
   // ? Estado para habilitar/desabilitar m�ltiplos pagamentos
-  const [enableMultiplePayments, setEnableMultiplePayments] = useState(false);
+  const [enableMultiplePayments, setEnableMultiplePayments] = useState(true);
 
   // Estado para splits de pagamento (multiplas formas)
   const [pagamentoSplits, setPagamentoSplits] = useState([]);
@@ -1394,7 +1394,7 @@ export default function AppointmentUnitedModal({
         } else {
           console.log('?? [AppointmentUnitedModal] payment_splits vazio ou ausente');
           setPagamentoSplits([]);
-          setEnableMultiplePayments(false);
+          setEnableMultiplePayments(true);
 
           loadCardInstallmentSplitsFromFinancial(finalAppointment.id).then((financialSplits) => {
             if (financialSplits.length > 0) {
@@ -5642,33 +5642,8 @@ export default function AppointmentUnitedModal({
                       <p className="text-sm font-semibold text-orange-900">Dados de Pagamento</p>
                     </div>
 
-                    {/* ? CHECKBOX: Habilitar M�ltiplos Pagamentos */}
-                    <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
-                      <label className="flex items-center gap-3 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={enableMultiplePayments}
-                          onChange={(e) => setEnableMultiplePayments(e.target.checked)}
-                          className="w-5 h-5 text-blue-600 cursor-pointer"
-                        />
-                        <div className="flex-1">
-                          <p className="font-semibold text-gray-900">
-                            {enableMultiplePayments
-                              ? 'Multiplos Pagamentos Habilitados'
-                              : 'Pagamento Unico'}
-                          </p>
-                          <p className="text-xs text-gray-600">
-                            {enableMultiplePayments
-                              ? 'Voce pode dividir o pagamento em varias formas (Cartao, PIX, Dinheiro, etc)'
-                              : 'Clique para habilitar e dividir o pagamento em multiplas formas'}
-                          </p>
-                        </div>
-                      </label>
-                    </div>
-
                     {/* INTERFACE PARA M�LTIPLOS PAGAMENTOS */}
-                    {enableMultiplePayments && (
-                      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-400 rounded-lg p-4 space-y-4">
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-400 rounded-lg p-4 space-y-4">
                         <div>
                           <h3 className="font-bold text-gray-900 flex items-center gap-2">
                             Adicionar Forma de Pagamento
@@ -5944,8 +5919,7 @@ export default function AppointmentUnitedModal({
                             );
                           })()}
                         </div>
-                      </div>
-                    )}
+                    </div>
 
                     <div>
                       <Label>Plano de Contas *</Label>
