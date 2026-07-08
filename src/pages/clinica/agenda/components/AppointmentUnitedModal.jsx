@@ -2934,7 +2934,7 @@ export default function AppointmentUnitedModal({
 
     const confirmed = window.confirm(
       'Confirma o estorno financeiro deste atendimento?\n\n' +
-        'A operacao tentara cancelar/estornar contas a receber, transacoes financeiras, caixa, NF/guia e registrar auditoria.',
+        'A operacao tentara cancelar/estornar contas a receber, transacoes financeiras, caixa, conciliacao/cartao, NF/guia e registrar auditoria.',
     );
 
     if (!confirmed) {

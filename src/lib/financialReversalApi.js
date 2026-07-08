@@ -8,7 +8,12 @@ import {
 
 function isMissingColumnError(error) {
   const text = String(error?.message || error?.details || '').toLowerCase();
-  return error?.code === '42703' || text.includes('column') && text.includes('does not exist');
+  return error?.code === '42703' || (text.includes('column') && text.includes('does not exist'));
+}
+
+function isMissingRelationError(error) {
+  const text = String(error?.message || error?.details || '').toLowerCase();
+  return error?.code === '42P01' || text.includes('does not exist') || text.includes('could not find the table');
 }
 
 function getMissingColumnName(error) {
@@ -31,11 +36,25 @@ function addStep(steps, name, status, details = {}) {
   steps.push({ name, status, ...details });
 }
 
+function parseMaybeJson(value, fallback) {
+  if (!value) {
+    return fallback;
+  }
+  if (typeof value !== 'string') {
+    return value;
+  }
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+}
+
 async function updateRowsWithFallback({ table, patch, filters, select = 'id' }) {
   const removedColumns = new Set();
   let updatePatch = { ...patch };
 
-  for (let attempt = 0; attempt < 20; attempt += 1) {
+  for (let attempt = 0; attempt < 25; attempt += 1) {
     let query = supabase.from(table).update(updatePatch);
     filters.forEach(([method, ...args]) => {
       query = query[method](...args);
@@ -74,8 +93,46 @@ async function listRows(table, filters, select = '*') {
   return data || [];
 }
 
+async function listRowsOptional(table, filters, select = '*') {
+  try {
+    return await listRows(table, filters, select);
+  } catch (error) {
+    if (isMissingRelationError(error) || isMissingColumnError(error)) {
+      return [];
+    }
+    throw error;
+  }
+}
+
+function uniqueRowsById(rows) {
+  const seen = new Set();
+  return rows.filter((row) => {
+    if (!row?.id || seen.has(row.id)) {
+      return false;
+    }
+    seen.add(row.id);
+    return true;
+  });
+}
+
 function getReceivableReversalAmount(row = {}) {
-  return Number(row.paid_total || row.received_value || row.net_value || row.amount || 0);
+  return Number(row.paid_total || row.received_value || row.net_value || row.gross_amount || row.amount || 0);
+}
+
+function isCardReceivable(row = {}) {
+  const method = String(row.payment_method || '').toLowerCase();
+  const metadata = parseMaybeJson(row.metadata, {});
+  const paymentSplit = parseMaybeJson(row.payment_split, []);
+  const split = Array.isArray(paymentSplit) ? paymentSplit[0] : null;
+  return Boolean(
+    row.processor_id
+      || row.card_brand
+      || metadata?.card
+      || split?.card_brand
+      || method.includes('cart')
+      || method.includes('credit')
+      || method.includes('debit'),
+  );
 }
 
 async function markAppointmentReversed({ appointmentId, clinicId, reason, userId, now, steps }) {
@@ -98,7 +155,9 @@ async function markAppointmentReversed({ appointmentId, clinicId, reason, userId
     select: 'id, status',
   });
 
-  addStep(steps, 'appointment', rows.length ? 'reversed' : 'not_found', { ids: rows.map((row) => row.id) });
+  addStep(steps, 'appointment', rows.length ? 'financially_reversed' : 'not_found', {
+    ids: rows.map((row) => row.id),
+  });
 }
 
 async function reverseReceivables({ appointmentId, clinicId, reason, userId, now, steps }) {
@@ -109,13 +168,15 @@ async function reverseReceivables({ appointmentId, clinicId, reason, userId, now
 
   const reversed = [];
   for (const row of rows) {
+    const currentMetadata = parseMaybeJson(row.metadata, {});
     try {
       const updated = await updateReceivable(row.id, {
         status: 'reversed',
         reversed_at: now,
+        cancellation_reason: reason,
         notes: `Estorno financeiro: ${reason}`,
         metadata: {
-          ...(row.metadata || {}),
+          ...currentMetadata,
           reversal: {
             reason,
             reversed_at: now,
@@ -128,13 +189,14 @@ async function reverseReceivables({ appointmentId, clinicId, reason, userId, now
       const updated = await updateReceivable(row.id, {
         status: 'canceled',
         canceled_at: now,
+        cancellation_reason: reason,
         notes: `Estorno financeiro: ${reason}`,
       }, clinicId);
       reversed.push(updated.id);
     }
   }
 
-  addStep(steps, 'ar_invoices', rows.length ? 'reversed' : 'none', {
+  addStep(steps, 'ar_invoices', rows.length ? 'reversed_or_canceled' : 'none', {
     ids: reversed,
     totalAmount: rows.reduce((sum, row) => sum + getReceivableReversalAmount(row), 0),
   });
@@ -142,30 +204,82 @@ async function reverseReceivables({ appointmentId, clinicId, reason, userId, now
   return rows;
 }
 
-async function reverseFinancialTransactions({ appointmentId, clinicId, reason, now, steps }) {
-  try {
-    const rows = await updateRowsWithFallback({
-      table: 'financial_transactions',
-      patch: {
-        status: 'canceled',
-        notes: `Estorno financeiro do atendimento ${appointmentId}: ${reason}`,
-        is_reconciled: false,
-        updated_at: now,
-      },
-      filters: [
-        ['eq', 'clinic_id', clinicId],
-        ['eq', 'appointment_id', appointmentId],
-      ],
-      select: 'id',
-    });
-    addStep(steps, 'financial_transactions', rows.length ? 'canceled' : 'none', { ids: rows.map((row) => row.id) });
-  } catch (error) {
-    addStep(steps, 'financial_transactions', 'skipped', { reason: error.message });
+async function reverseFinancialTransactions({ appointmentId, clinicId, receivables, reason, userId, now, steps }) {
+  const receivableIds = receivables.map((row) => row.id).filter(Boolean);
+  const directRows = await listRowsOptional('financial_transactions', [
+    ['eq', 'clinic_id', clinicId],
+    ['eq', 'appointment_id', appointmentId],
+  ]);
+  const originRows = receivableIds.length > 0
+    ? await listRowsOptional('financial_transactions', [
+      ['eq', 'clinic_id', clinicId],
+      ['in', 'origin_id', receivableIds],
+    ])
+    : [];
+  const rows = uniqueRowsById([...directRows, ...originRows]);
+
+  if (!rows.length) {
+    addStep(steps, 'financial_transactions', 'none', { reason: 'Sem transacoes vinculadas encontradas' });
+    return [];
   }
+
+  const ids = rows.map((row) => row.id);
+  const canceled = await updateRowsWithFallback({
+    table: 'financial_transactions',
+    patch: {
+      status: 'canceled',
+      notes: `Estorno financeiro do atendimento ${appointmentId}: ${reason}`,
+      is_reconciled: false,
+      reconciliation_id: null,
+      reversed_at: now,
+      reversal_reason: reason,
+      reversed_by: userId || null,
+      updated_at: now,
+    },
+    filters: [
+      ['eq', 'clinic_id', clinicId],
+      ['in', 'id', ids],
+    ],
+    select: 'id',
+  });
+
+  addStep(steps, 'financial_transactions', 'canceled', {
+    ids: canceled.map((row) => row.id),
+  });
+
+  return rows;
 }
 
 async function reverseCashMovements({ clinicId, appointmentId, reason, userId, amount, now, steps }) {
   const reversalAmount = Number(amount || 0);
+
+  try {
+    const linkedMovements = await listRowsOptional('cash_register_movements', [
+      ['eq', 'clinic_id', clinicId],
+      ['eq', 'appointment_id', appointmentId],
+    ]);
+
+    if (linkedMovements.length > 0) {
+      await updateRowsWithFallback({
+        table: 'cash_register_movements',
+        patch: {
+          status: 'reversed',
+          notes: `Estorno financeiro: ${reason}`,
+          reversed_at: now,
+          reversed_by: userId || null,
+          updated_at: now,
+        },
+        filters: [
+          ['eq', 'clinic_id', clinicId],
+          ['in', 'id', linkedMovements.map((row) => row.id)],
+        ],
+        select: 'id',
+      });
+    }
+  } catch (error) {
+    addStep(steps, 'cash_register_movements_mark', 'skipped', { reason: error.message });
+  }
+
   if (reversalAmount <= 0) {
     addStep(steps, 'cash_register_movements', 'none', { reason: 'Sem valor recebido para estornar' });
     return;
@@ -195,8 +309,9 @@ async function reverseCashMovements({ clinicId, appointmentId, reason, userId, a
       amount: -Math.abs(reversalAmount),
       payment_method: 'ESTORNO',
       received_by: userId || null,
-      description: `Estorno financeiro do atendimento ${appointmentId}`,
+      description: `Contrapartida de estorno financeiro do atendimento ${appointmentId}`,
       notes: reason,
+      appointment_id: appointmentId,
       recorded_at: now,
     })
     .select('id')
@@ -218,17 +333,68 @@ async function reverseCashMovements({ clinicId, appointmentId, reason, userId, a
   });
 }
 
-async function reverseCardAndConciliation({ appointmentId, steps, receivables }) {
-  const cardRows = receivables.filter((row) =>
-    row.processor_id || row.card_brand || String(row.payment_method || '').toLowerCase().includes('cart'),
-  );
+async function reverseConciliationLinks({ clinicId, appointmentId, receivables, financialTransactions, reason, now, steps }) {
+  const receivableIds = receivables.map((row) => row.id).filter(Boolean);
+  const transactionIds = financialTransactions.map((row) => row.id).filter(Boolean);
+  const linkedIds = [...new Set([...receivableIds, ...transactionIds])];
+  const cardRows = receivables.filter(isCardReceivable);
 
-  addStep(steps, 'card_conciliation', cardRows.length ? 'marked_in_audit' : 'none', {
-    reason: cardRows.length
-      ? 'Recebiveis de cartao identificados. Sem tabela de conciliacao com vinculo direto ao atendimento; estorno registrado na auditoria.'
-      : 'Nenhum recebivel de cartao vinculado ao atendimento',
-    appointmentId,
-    receivableIds: cardRows.map((row) => row.id),
+  if (!linkedIds.length && !cardRows.length) {
+    addStep(steps, 'card_conciliation', 'none', { reason: 'Sem cartao ou conciliacao vinculada' });
+    return;
+  }
+
+  const conciliationSteps = [];
+
+  if (linkedIds.length > 0) {
+    try {
+      const rows = await updateRowsWithFallback({
+        table: 'conciliation_bank_statements',
+        patch: {
+          status: 'pending',
+          linked_financial_id: null,
+          linked_type: null,
+          divergence_reason: `Desconciliado por estorno financeiro: ${reason}`,
+          updated_at: now,
+        },
+        filters: [
+          ['eq', 'clinic_id', clinicId],
+          ['in', 'linked_financial_id', linkedIds],
+        ],
+        select: 'id',
+      });
+      conciliationSteps.push({ table: 'conciliation_bank_statements', ids: rows.map((row) => row.id) });
+    } catch (error) {
+      conciliationSteps.push({ table: 'conciliation_bank_statements', skipped: error.message });
+    }
+  }
+
+  try {
+    const rows = await updateRowsWithFallback({
+      table: 'card_receivables',
+      patch: {
+        status: 'reversed',
+        reversal_reason: reason,
+        reversed_at: now,
+        updated_at: now,
+      },
+      filters: [
+        ['eq', 'clinic_id', clinicId],
+        ['eq', 'appointment_id', appointmentId],
+      ],
+      select: 'id',
+    });
+    conciliationSteps.push({ table: 'card_receivables', ids: rows.map((row) => row.id) });
+  } catch (error) {
+    if (!isMissingRelationError(error)) {
+      conciliationSteps.push({ table: 'card_receivables', skipped: error.message });
+    }
+  }
+
+  addStep(steps, 'card_conciliation', cardRows.length ? 'reversed_or_unlinked' : 'unlinked', {
+    cardReceivableIds: cardRows.map((row) => row.id),
+    linkedIds,
+    details: conciliationSteps,
   });
 }
 
@@ -256,6 +422,7 @@ async function cancelInvoicesAndGuides({ appointmentId, clinicId, reason, now, s
         status: 'Cancelada',
         observacoes: `Estorno financeiro: ${reason}`,
         data_atualizacao: now,
+        updated_at: now,
       },
       filters: [
         ['eq', 'clinic_id', clinicId],
@@ -280,6 +447,7 @@ async function registerAudit({ appointmentId, clinicId, patientId, reason, userI
     object_data: {
       reason,
       reversed_at: now,
+      reversed_by: userId || null,
       steps,
     },
     performed_by: userId,
@@ -300,13 +468,15 @@ async function registerAudit({ appointmentId, clinicId, patientId, reason, userI
   await logAppointmentFinancialAudit({
     appointmentId,
     financialEventType: FINANCIAL_EVENT_TYPES.FINANCIAL_REVERSAL,
-    relatedEntity: RELATED_ENTITY_TYPES.APPOINTMENT || 'appointments',
+    relatedEntity: RELATED_ENTITY_TYPES.APPOINTMENT,
     relatedEntityId: appointmentId,
     amount: amount || 0,
     status: 'reversed',
     context: {
       clinic_id: clinicId,
       reason,
+      reversed_by: userId || null,
+      reversed_at: now,
       steps,
     },
   });
@@ -333,6 +503,7 @@ export async function reverseAppointmentFinancialOperation({
 
   const now = new Date().toISOString();
   const steps = [];
+  const trimmedReason = String(reason).trim();
 
   const appointmentRows = await listRows('appointments', [
     ['eq', 'id', appointmentId],
@@ -341,15 +512,31 @@ export async function reverseAppointmentFinancialOperation({
   const appointment = appointmentRows[0] || null;
   const patientId = appointment?.patient_id || null;
 
-  await markAppointmentReversed({ appointmentId, clinicId, reason, userId, now, steps });
-  const receivables = await reverseReceivables({ appointmentId, clinicId, reason, userId, now, steps });
-  await reverseFinancialTransactions({ appointmentId, clinicId, reason, now, steps });
+  await markAppointmentReversed({ appointmentId, clinicId, reason: trimmedReason, userId, now, steps });
+  const receivables = await reverseReceivables({ appointmentId, clinicId, reason: trimmedReason, userId, now, steps });
+  const financialTransactions = await reverseFinancialTransactions({
+    appointmentId,
+    clinicId,
+    receivables,
+    reason: trimmedReason,
+    userId,
+    now,
+    steps,
+  });
 
   const reversalAmount = receivables.reduce((sum, row) => sum + getReceivableReversalAmount(row), 0);
-  await reverseCashMovements({ clinicId, appointmentId, reason, userId, amount: reversalAmount, now, steps });
-  await reverseCardAndConciliation({ appointmentId, steps, receivables });
-  await cancelInvoicesAndGuides({ appointmentId, clinicId, reason, now, steps });
-  await registerAudit({ appointmentId, clinicId, patientId, reason, userId, amount: reversalAmount, steps, now });
+  await reverseCashMovements({ clinicId, appointmentId, reason: trimmedReason, userId, amount: reversalAmount, now, steps });
+  await reverseConciliationLinks({
+    clinicId,
+    appointmentId,
+    receivables,
+    financialTransactions,
+    reason: trimmedReason,
+    now,
+    steps,
+  });
+  await cancelInvoicesAndGuides({ appointmentId, clinicId, reason: trimmedReason, now, steps });
+  await registerAudit({ appointmentId, clinicId, patientId, reason: trimmedReason, userId, amount: reversalAmount, steps, now });
 
   return {
     success: true,
