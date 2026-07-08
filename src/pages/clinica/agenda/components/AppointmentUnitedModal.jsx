@@ -54,6 +54,7 @@ import { TISSSubmissionDialog } from '@/components/TISSSubmissionDialog';
 import InvoiceEmissionModal from './InvoiceEmissionModal';
 import { processPaymentComplete } from '@/lib/paymentRegistrationApi';
 import { createReceivable } from '@/lib/receivablesApi';
+import { reverseAppointmentFinancialOperation } from '@/lib/financialReversalApi';
 import { getServicePrice } from '@/lib/getServicePrice';
 import { checkMultipleDates } from '@/lib/holidaysApi';
 import { supabase } from '@/lib/customSupabaseClient';
@@ -2787,6 +2788,54 @@ export default function AppointmentUnitedModal({
       }
     } catch (error) {
       alert(`Erro ao atualizar retorno da autorizacao: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReverseFinancialOperation = async () => {
+    const apt = finalAppointment || appointment || loadedAppointmentFromId;
+    const appointmentId = apt?.id || appointmentIdToEdit;
+
+    if (!appointmentId) {
+      alert('Nao foi possivel identificar o atendimento para estorno.');
+      return;
+    }
+
+    const reason = window.prompt('Informe o motivo do estorno financeiro:');
+    if (!reason || !reason.trim()) {
+      alert('Estorno cancelado. O motivo e obrigatorio para rastreabilidade.');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      'Confirma o estorno financeiro deste atendimento?\n\n' +
+        'A operacao tentara cancelar/estornar contas a receber, transacoes financeiras, caixa, NF/guia e registrar auditoria.',
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const result = await reverseAppointmentFinancialOperation({
+        appointmentId,
+        clinicId,
+        reason: reason.trim(),
+        userId: user?.id,
+      });
+
+      const resumo = result.steps
+        .map((step) => `- ${step.name}: ${step.status}`)
+        .join('\n');
+
+      alert(`Estorno financeiro processado.\n\n${resumo}`);
+      onSuccess?.();
+      onClose();
+    } catch (error) {
+      console.error('Erro ao estornar financeiro:', error);
+      alert(`Erro ao estornar financeiro: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -7054,6 +7103,14 @@ export default function AppointmentUnitedModal({
                     className="bg-orange-600 hover:bg-orange-700 text-white font-bold gap-2"
                   >
                     Emitir NF
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleReverseFinancialOperation}
+                    disabled={loading}
+                    className="border-red-300 text-red-700 hover:bg-red-50"
+                  >
+                    Estornar Financeiro
                   </Button>
                   <Button
                     onClick={() => {
