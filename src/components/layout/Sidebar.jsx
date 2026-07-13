@@ -1,6 +1,6 @@
 // src/components/layout/Sidebar.jsx
 import React, { useState, useMemo, useEffect, useLayoutEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Importar TODOS os novos ícones
@@ -35,7 +35,6 @@ import {
   ChevronRight,
   ChevronDown,
   ChevronUp,
-  LogOut,
   CalendarDays,
   UserCheck,
   DoorOpen,
@@ -170,7 +169,6 @@ const ICONS = {
   Shield,
   Building,
   UserCog,
-  LogOut,
   CalendarDays,
   UserCheck,
   DoorOpen,
@@ -217,10 +215,9 @@ const ICONS = {
 };
 
 export default function Sidebar({ isOpen, setIsOpen }) {
-  const { currentRole, handleLogout } = useAuth();
+  const { currentRole } = useAuth();
   const { canView, permissions, loading: loadingPermissions } = usePermissionsContext();
   const location = useLocation();
-  const navigate = useNavigate();
   const navRef = React.useRef(null);
   const scrollPosRef = React.useRef(null);
 
@@ -692,39 +689,6 @@ export default function Sidebar({ isOpen, setIsOpen }) {
           </div>
         )}
       </nav>
-
-      {/* LOGOUT */}
-      <motion.div
-        className="border-t border-[hsl(var(--primary))]/5 p-3 bg-white/50 backdrop-blur"
-        animate={{ padding: isOpen ? 12 : 8 }}
-        transition={{ duration: 0.25, ease: 'easeInOut' }}
-      >
-        <motion.button
-          whileHover={{ scale: 1.01 }}
-          whileTap={{ scale: 0.99 }}
-          onClick={handleLogout}
-          className={cn(
-            'w-full text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/10 transition-all duration-200',
-            'flex items-center gap-3 px-3 py-2 rounded-lg font-medium',
-            'hover:shadow-sm',
-            !isOpen && 'justify-center p-2',
-          )}
-        >
-          <LogOut className="h-5 w-5 flex-shrink-0" />
-          <AnimatePresence mode="wait">
-            {isOpen && (
-              <motion.span
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-              >
-                Sair
-              </motion.span>
-            )}
-          </AnimatePresence>
-        </motion.button>
-      </motion.div>
 
       {/* BOTÃO TOGGLE */}
       <motion.button
