@@ -659,6 +659,22 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         </motion.div>
       </div>
 
+      {isOpen && Object.keys(openItems).length > 0 && (
+        <div className="border-b border-[hsl(var(--primary))]/5 bg-white/90 px-3 py-2 backdrop-blur">
+          <button
+            type="button"
+            onClick={() => {
+              rememberNavScroll();
+              setOpenItems({});
+            }}
+            className="group flex w-full items-center justify-center gap-2 rounded-full border border-[hsl(var(--primary))]/10 bg-[hsl(var(--primary))]/5 px-3 py-2 text-xs font-semibold text-[hsl(var(--primary))] shadow-sm transition-all duration-200 hover:border-[hsl(var(--primary))]/20 hover:bg-[hsl(var(--primary))]/10 hover:shadow"
+          >
+            <ChevronUp className="h-3.5 w-3.5 transition-transform duration-200 group-hover:-translate-y-0.5" />
+            <span>Recolher Tudo</span>
+          </button>
+        </div>
+      )}
+
       {/* MENU */}
       <nav 
         ref={navRef}
@@ -667,19 +683,6 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-[hsl(var(--primary))]/20 scrollbar-track-[hsl(var(--primary))]/5 hover:scrollbar-thumb-[hsl(var(--primary))]/40 py-3 px-2 space-y-1"
         style={{ scrollPaddingTop: '0', scrollBehavior: 'auto' }}
       >
-        {isOpen && Object.keys(openItems).length > 0 && (
-          <button
-            type="button"
-            onClick={() => {
-              rememberNavScroll();
-              setOpenItems({});
-            }}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-[hsl(var(--primary))]/60 hover:text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/4 transition-all duration-200 mb-2"
-          >
-            <ChevronUp className="h-3 w-3" />
-            {isOpen && <span>Recolher Tudo</span>}
-          </button>
-        )}
         {menu && menu.length > 0 ? (
           menu.map((item) => <MenuItem key={item.id} item={item} level={0} />)
         ) : (
