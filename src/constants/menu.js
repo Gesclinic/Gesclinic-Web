@@ -877,10 +877,18 @@ export function getMenuItems(role = 'admin', options = {}) {
       id: 'configuracoes',
       label: 'Configurações',
       icon: 'Settings',
-      path: '/clinica/configuracoes/perfis',
+      path: '/clinica/configuracoes',
       roles: ['admin', 'gestor'],
       featurePath: 'configuracoes',
       children: [
+        {
+          id: 'configuracoes.gerais',
+          label: 'Gerais',
+          icon: 'Settings2',
+          path: '/clinica/configuracoes',
+          roles: ['admin', 'gestor'],
+          featurePath: 'configuracoes.gerais',
+        },
         {
           id: 'configuracoes.perfis',
           label: 'Perfis de Usuário',
