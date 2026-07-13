@@ -105,13 +105,6 @@ export default function ClinicCockpit({ summary, receivables = [], payables = []
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         {Object.entries(cockpitScores).map(([key, dimension]) => (
           <Card key={key} className={`p-6 bg-gradient-to-br ${getScoreBgColor(dimension.score)} border overflow-hidden`}>
-            {/* Gauge Background */}
-            <div className="absolute top-0 right-0 w-24 h-24 opacity-10">
-              <svg viewBox="0 0 100 100" className="w-full h-full">
-                <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="2" />
-              </svg>
-            </div>
-
             {/* Content */}
             <div className="relative z-10">
               {/* Icon & Label */}
