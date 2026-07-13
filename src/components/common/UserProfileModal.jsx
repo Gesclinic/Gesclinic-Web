@@ -5,12 +5,21 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useToast } from '@/components/ui/use-toast';
 
+const readSavedSession = () => {
+  try {
+    return JSON.parse(localStorage.getItem('gesclinic_session') || 'null');
+  } catch (err) {
+    return null;
+  }
+};
+
 const UserProfileModal = ({ isOpen, initialSection = 'profile', onClose }) => {
   const { user, reloadUser } = useAuth();
   const { toast } = useToast();
-  const [name, setName] = useState(user?.user_metadata?.full_name || '');
-  const [email] = useState(user?.email || '');
-  const [avatarPreview, setAvatarPreview] = useState(user?.user_metadata?.avatar_url || '');
+  const savedSession = readSavedSession();
+  const [name, setName] = useState(savedSession?.full_name || user?.user_metadata?.full_name || '');
+  const [email, setEmail] = useState(savedSession?.email || user?.email || '');
+  const [avatarPreview, setAvatarPreview] = useState(savedSession?.avatar_url || user?.user_metadata?.avatar_url || '');
   const [avatarFile, setAvatarFile] = useState(null);
   const [saving, setSaving] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
@@ -21,24 +30,21 @@ const UserProfileModal = ({ isOpen, initialSection = 'profile', onClose }) => {
 
   useEffect(() => {
     if (isOpen) {
+      const currentSession = readSavedSession();
+      setName(currentSession?.full_name || user?.user_metadata?.full_name || '');
+      setEmail(currentSession?.email || user?.email || '');
+      setAvatarPreview(currentSession?.avatar_url || user?.user_metadata?.avatar_url || '');
+      setAvatarFile(null);
       setActiveSection(initialSection);
     }
-  }, [isOpen, initialSection]);
+  }, [isOpen, initialSection, user]);
 
   if (!isOpen) {
     return null;
   }
 
-  const getSavedSession = () => {
-    try {
-      return JSON.parse(localStorage.getItem('gesclinic_session') || 'null');
-    } catch (err) {
-      return null;
-    }
-  };
-
   const updateSavedSession = (updates) => {
-    const savedSession = getSavedSession();
+    const savedSession = readSavedSession();
     if (!savedSession) {
       return;
     }
@@ -51,7 +57,9 @@ const UserProfileModal = ({ isOpen, initialSection = 'profile', onClose }) => {
     if (!file) {
       return;
     }
-    const filePath = `avatars/${user.id}-${Date.now()}-${file.name}`;
+    const savedSession = readSavedSession();
+    const ownerId = savedSession?.user_id || user?.id || savedSession?.email || 'user';
+    const filePath = `${ownerId}-${Date.now()}-${file.name}`;
     const { data, error } = await supabase.storage.from('avatars').upload(filePath, file);
     if (error) {
       throw error;
@@ -65,12 +73,21 @@ const UserProfileModal = ({ isOpen, initialSection = 'profile', onClose }) => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const savedSession = getSavedSession();
+      const savedSession = readSavedSession();
       const userId = savedSession?.user_id || user?.id;
       const userEmail = savedSession?.email || user?.email;
       let newAvatarUrl = avatarPreview;
+      let avatarUploadWarning = null;
+
       if (avatarFile) {
-        newAvatarUrl = await handleAvatarUpload(avatarFile);
+        try {
+          newAvatarUrl = await handleAvatarUpload(avatarFile);
+        } catch (avatarError) {
+          avatarUploadWarning = avatarError;
+          newAvatarUrl = savedSession?.avatar_url || user?.user_metadata?.avatar_url || '';
+          setAvatarPreview(newAvatarUrl);
+          setAvatarFile(null);
+        }
       }
 
       let profileUpdated = false;
@@ -122,9 +139,12 @@ const UserProfileModal = ({ isOpen, initialSection = 'profile', onClose }) => {
       await reloadUser?.();
 
       toast({
-        title: 'Perfil atualizado com sucesso!',
-        description: 'Suas informações foram salvas.',
-        className: 'bg-emerald-600 text-white border-none',
+        title: avatarUploadWarning ? 'Perfil salvo sem atualizar a foto' : 'Perfil atualizado com sucesso!',
+        description: avatarUploadWarning
+          ? 'O nome foi salvo, mas o bucket de avatars não está configurado no Supabase Storage.'
+          : 'Suas informações foram salvas.',
+        className: avatarUploadWarning ? undefined : 'bg-emerald-600 text-white border-none',
+        variant: avatarUploadWarning ? 'default' : undefined,
       });
 
       onClose();
