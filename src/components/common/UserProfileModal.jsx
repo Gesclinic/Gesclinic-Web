@@ -29,6 +29,23 @@ const UserProfileModal = ({ isOpen, initialSection = 'profile', onClose }) => {
     return null;
   }
 
+  const getSavedSession = () => {
+    try {
+      return JSON.parse(localStorage.getItem('gesclinic_session') || 'null');
+    } catch (err) {
+      return null;
+    }
+  };
+
+  const updateSavedSession = (updates) => {
+    const savedSession = getSavedSession();
+    if (!savedSession) {
+      return;
+    }
+
+    localStorage.setItem('gesclinic_session', JSON.stringify({ ...savedSession, ...updates }));
+  };
+
   /** 🔹 Upload de avatar para o Supabase Storage */
   const handleAvatarUpload = async (file) => {
     if (!file) {
@@ -48,22 +65,59 @@ const UserProfileModal = ({ isOpen, initialSection = 'profile', onClose }) => {
   const handleSave = async () => {
     setSaving(true);
     try {
+      const savedSession = getSavedSession();
+      const userId = savedSession?.user_id || user?.id;
+      const userEmail = savedSession?.email || user?.email;
       let newAvatarUrl = avatarPreview;
       if (avatarFile) {
         newAvatarUrl = await handleAvatarUpload(avatarFile);
       }
 
-      const updates = {
+      let profileUpdated = false;
+      let lastProfileError = null;
+
+      if (userId) {
+        const { data, error } = await supabase
+          .from('users')
+          .update({ full_name: name })
+          .eq('id', userId)
+          .select('id')
+          .maybeSingle();
+
+        if (error) {
+          lastProfileError = error;
+        } else {
+          profileUpdated = !!data;
+        }
+      }
+
+      if (!profileUpdated && userEmail) {
+        const { data, error } = await supabase
+          .from('users')
+          .update({ full_name: name })
+          .eq('email', userEmail)
+          .select('id')
+          .maybeSingle();
+
+        if (error) {
+          lastProfileError = error;
+        } else {
+          profileUpdated = !!data;
+        }
+      }
+
+      const { error: authError } = await supabase.auth.updateUser({
         data: {
           full_name: name,
           avatar_url: newAvatarUrl || '',
         },
-      };
+      });
 
-      const { error } = await supabase.auth.updateUser(updates);
-      if (error) {
-        throw error;
+      if (!profileUpdated && authError) {
+        throw lastProfileError || authError;
       }
+
+      updateSavedSession({ full_name: name, avatar_url: newAvatarUrl || '' });
 
       await reloadUser?.();
 
@@ -75,10 +129,10 @@ const UserProfileModal = ({ isOpen, initialSection = 'profile', onClose }) => {
 
       onClose();
     } catch (err) {
-      console.error('Erro ao atualizar perfil:', err.message);
+      console.error('Erro ao atualizar perfil:', err);
       toast({
         title: 'Erro ao salvar alterações',
-        description: 'Tente novamente mais tarde.',
+        description: err?.message || 'Tente novamente mais tarde.',
         variant: 'destructive',
       });
     } finally {
