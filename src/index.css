@@ -49,6 +49,36 @@
     --radius: 0.5rem;
   }
 
+  .dark {
+    --primary: 204 74% 68%;
+    --primary-light: 215 28% 18%;
+    --primary-soft: 214 32% 24%;
+    --primary-hover: 204 74% 78%;
+    --primary-border: 204 74% 58%;
+
+    --secondary: 114 35% 58%;
+    --secondary-hover: 114 35% 66%;
+
+    --background: 222 35% 7%;
+    --foreground: 213 31% 91%;
+
+    --card: 222 28% 11%;
+    --card-foreground: 213 31% 91%;
+
+    --popover: 222 28% 11%;
+    --popover-foreground: 213 31% 91%;
+
+    --muted: 220 25% 15%;
+    --muted-foreground: 215 18% 67%;
+
+    --accent: 215 28% 18%;
+    --accent-foreground: 204 74% 78%;
+
+    --border: 217 22% 23%;
+    --input: 217 22% 23%;
+    --ring: 204 74% 68%;
+  }
+
   body {
     @apply bg-[hsl(var(--background))] text-foreground antialiased;
   }
@@ -356,4 +386,133 @@ input[type='date']::-webkit-inner-spin-button {
 
 input[type='date']::-moz-calendar-picker-indicator {
   display: none !important;
+}
+
+/* -------------------------------------------------------
+   DARK MODE GLOBAL FALLBACKS
+   Cobre telas antigas que ainda usam classes neutras fixas.
+   Nao sobrescreve elementos que ja possuem variantes dark:*.
+------------------------------------------------------- */
+.dark body,
+.dark #root {
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+.dark .bg-white:not([class*='dark:bg-']),
+.dark [class*='bg-white/']:not([class*='dark:bg-']),
+.dark .bg-white\/80:not([class*='dark:bg-']),
+.dark .bg-white\/90:not([class*='dark:bg-']),
+.dark .bg-white\/95:not([class*='dark:bg-']),
+.dark .bg-gray-50:not([class*='dark:bg-']),
+.dark [class*='bg-gray-50/']:not([class*='dark:bg-']),
+.dark .bg-gray-100:not([class*='dark:bg-']),
+.dark .bg-slate-50:not([class*='dark:bg-']),
+.dark [class*='bg-slate-50/']:not([class*='dark:bg-']),
+.dark .bg-slate-100:not([class*='dark:bg-']) {
+  background-color: hsl(var(--card));
+}
+
+.dark .bg-gray-200:not([class*='dark:bg-']),
+.dark .bg-slate-200:not([class*='dark:bg-']) {
+  background-color: hsl(var(--muted));
+}
+
+.dark .text-gray-950:not([class*='dark:text-']),
+.dark .text-gray-900:not([class*='dark:text-']),
+.dark .text-gray-800:not([class*='dark:text-']),
+.dark .text-slate-950:not([class*='dark:text-']),
+.dark .text-slate-900:not([class*='dark:text-']),
+.dark .text-slate-800:not([class*='dark:text-']) {
+  color: hsl(var(--foreground));
+}
+
+.dark .text-gray-700:not([class*='dark:text-']),
+.dark .text-gray-600:not([class*='dark:text-']),
+.dark .text-slate-700:not([class*='dark:text-']),
+.dark .text-slate-600:not([class*='dark:text-']) {
+  color: hsl(var(--muted-foreground));
+}
+
+.dark .text-gray-500:not([class*='dark:text-']),
+.dark .text-gray-400:not([class*='dark:text-']),
+.dark .text-slate-500:not([class*='dark:text-']),
+.dark .text-slate-400:not([class*='dark:text-']) {
+  color: hsl(215 16% 62%);
+}
+
+.dark .border-gray-100:not([class*='dark:border-']),
+.dark .border-gray-200:not([class*='dark:border-']),
+.dark .border-gray-300:not([class*='dark:border-']),
+.dark .border-slate-100:not([class*='dark:border-']),
+.dark .border-slate-200:not([class*='dark:border-']),
+.dark .border-slate-300:not([class*='dark:border-']) {
+  border-color: hsl(var(--border));
+}
+
+.dark input:not([type='checkbox']):not([type='radio']):not([class*='dark:bg-']),
+.dark textarea:not([class*='dark:bg-']),
+.dark select:not([class*='dark:bg-']) {
+  background-color: hsl(222 28% 10%);
+  color: hsl(var(--foreground));
+  border-color: hsl(var(--input));
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: hsl(215 16% 55%);
+}
+
+.dark table:not([class*='dark:bg-']) {
+  color: hsl(var(--foreground));
+}
+
+.dark thead:not([class*='dark:bg-']),
+.dark .bg-gray-50 thead:not([class*='dark:bg-']),
+.dark .bg-slate-50 thead:not([class*='dark:bg-']) {
+  background-color: hsl(220 25% 15%);
+  color: hsl(var(--foreground));
+}
+
+.dark tbody tr:not([class*='dark:bg-']):hover {
+  background-color: hsl(220 24% 16% / 0.75);
+}
+
+.dark [role='dialog']:not([class*='dark:bg-']),
+.dark [data-radix-popper-content-wrapper] [role='menu']:not([class*='dark:bg-']),
+.dark [data-radix-popper-content-wrapper] [role='listbox']:not([class*='dark:bg-']) {
+  background-color: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  border-color: hsl(var(--border));
+}
+
+.dark .shadow,
+.dark .shadow-sm,
+.dark .shadow-md,
+.dark .shadow-lg,
+.dark .shadow-xl,
+.dark .shadow-2xl {
+  --tw-shadow-color: rgb(0 0 0 / 0.45);
+  --tw-shadow: var(--tw-shadow-colored);
+}
+
+.dark .scrollbar-custom::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+.dark .scrollbar-custom::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+.dark .modal-content-scroll::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
+.dark .modal-content-scroll::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-color: #0f172a;
+}
+
+.dark .modal-content-scroll {
+  scrollbar-color: #475569 #0f172a;
 }
