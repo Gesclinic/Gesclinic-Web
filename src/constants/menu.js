@@ -300,7 +300,7 @@ export function getMenuItems(role = 'admin', options = {}) {
               id: 'financeiro.fluxo',
               label: 'Fluxo de Caixa',
               icon: 'LineChart',
-              path: '/clinica/financeiro/fluxo-caixa?section=operational&depth=details&expand=all&periodicity=monthly&scenario=consolidated&display=income_expense',
+              path: '/clinica/financeiro/fluxo-caixa?section=operational&depth=groups&periodicity=monthly&scenario=consolidated&display=income_expense',
               roles: ['admin', 'gestor', 'financeiro'],
               featurePath: 'financeiro.fluxo',
             },

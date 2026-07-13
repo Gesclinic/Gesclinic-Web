@@ -61,8 +61,7 @@ import {
 
 const OPERATIONAL_DEFAULT_PARAMS = {
   section: 'operational',
-  depth: 'details',
-  expand: 'all',
+  depth: 'groups',
   periodicity: 'monthly',
   scenario: 'consolidated',
   display: 'income_expense',
@@ -457,6 +456,7 @@ export default function FluxoCaixaPage() {
     if (!validSections.includes(nextSection)) {
       const nextParams = new URLSearchParams(searchParams);
       Object.entries(OPERATIONAL_DEFAULT_PARAMS).forEach(([key, value]) => nextParams.set(key, value));
+      nextParams.delete('expand');
       setSearchParams(nextParams, { replace: true });
       setActiveSection('operational');
       return;
@@ -474,6 +474,11 @@ export default function FluxoCaixaPage() {
           changed = true;
         }
       });
+
+      if (nextParams.has('expand')) {
+        nextParams.delete('expand');
+        changed = true;
+      }
 
       if (changed) {
         setSearchParams(nextParams, { replace: true });
