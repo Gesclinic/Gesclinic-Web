@@ -301,24 +301,24 @@ export default function Sidebar({ isOpen, setIsOpen }) {
       return;
     }
 
-    const nextOpenItems = activeTrail.reduce((accumulator, itemId) => {
-      accumulator[itemId] = true;
-      return accumulator;
-    }, {});
-
-    if (pendingOpenItemId) {
-      nextOpenItems[pendingOpenItemId] = true;
-    }
-
     setOpenItems((prev) => {
-      const prevKeys = Object.keys(prev);
-      const nextKeys = Object.keys(nextOpenItems);
+      const next = { ...prev };
 
-      if (prevKeys.length === nextKeys.length && nextKeys.every((key) => prev[key])) {
+      activeTrail.forEach((itemId) => {
+        next[itemId] = true;
+      });
+
+      if (pendingOpenItemId) {
+        next[pendingOpenItemId] = true;
+      }
+
+      const hasChanged = Object.keys(next).some((key) => !prev[key]);
+
+      if (!hasChanged) {
         return prev;
       }
 
-      return nextOpenItems;
+      return next;
     });
 
     if (pendingOpenItemId) {
@@ -359,7 +359,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     restoreNavScroll();
   }, [openItems]);
 
-  const toggleItem = (item, siblingIds = []) => {
+  const toggleItem = (item) => {
     const shouldOpen = !openItems[item.id];
 
     rememberNavScroll();
@@ -374,20 +374,13 @@ export default function Sidebar({ isOpen, setIsOpen }) {
     setOpenItems((prev) => {
       const next = { ...prev };
 
-      siblingIds.forEach((siblingId) => {
-        delete next[siblingId];
-        descendantsById[siblingId]?.forEach((descendantId) => {
-          delete next[descendantId];
-        });
-      });
-
-      delete next[item.id];
-      descendantsById[item.id]?.forEach((descendantId) => {
-        delete next[descendantId];
-      });
-
       if (shouldOpen) {
         next[item.id] = true;
+      } else {
+        delete next[item.id];
+        descendantsById[item.id]?.forEach((descendantId) => {
+          delete next[descendantId];
+        });
       }
 
       return next;
@@ -402,16 +395,11 @@ export default function Sidebar({ isOpen, setIsOpen }) {
   };
 
   // Componente para renderizar item com até 3 níveis
-  const MenuItem = ({ item, level = 0, siblingIds = [] }) => {
+  const MenuItem = ({ item, level = 0 }) => {
     const hasChildren = item.children && item.children.length > 0;
     const isActive = isPathActive(item.path, location.pathname);
     const isBranchActive = activeTrail.includes(item.id);
     const isItemOpen = !!openItems[item.id];
-    const currentLevelSiblingIds =
-      level === 0
-        ? menu.filter((menuItem) => menuItem.children?.length).map((menuItem) => menuItem.id)
-        : siblingIds;
-
     // Level 0: Dashboard ou módulo principal
     // Level 1: Subitem principal
     // Level 2: Subitem aninhado (máximo)
@@ -461,7 +449,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         <div className="space-y-0.5">
           <button
             type="button"
-            onClick={() => toggleItem(item, currentLevelSiblingIds)}
+            onClick={() => toggleItem(item)}
             aria-expanded={isItemOpen}
             className={cn(
               'group flex items-center w-full rounded-xl transition-all duration-200 min-h-[48px]',
@@ -523,9 +511,6 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                       key={child.id}
                       item={child}
                       level={1}
-                      siblingIds={item.children
-                        .filter((childItem) => childItem.children?.length)
-                        .map((childItem) => childItem.id)}
                     />
                   ))}
                 </div>
@@ -563,7 +548,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         <div className="space-y-0.5">
           <button
             type="button"
-            onClick={() => toggleItem(item, currentLevelSiblingIds)}
+            onClick={() => toggleItem(item)}
             aria-expanded={isItemOpen}
             className={cn(
               'flex items-center w-full gap-2 px-3 py-2.5 rounded-lg text-sm transition-all duration-200',
