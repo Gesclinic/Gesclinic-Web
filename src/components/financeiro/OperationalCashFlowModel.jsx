@@ -1462,51 +1462,51 @@ export function buildOperationalModel(consolidation, accounts = [], returnTo = '
 }
 
 function rowClass(row) {
-  if (row.tone === 'positive') return 'bg-emerald-50 text-emerald-900 font-bold';
-  if (row.tone === 'negative') return 'bg-rose-50 text-rose-900 font-bold';
-  if (row.tone === 'warning') return 'bg-amber-50 text-amber-900 font-bold';
-  if (row.tone === 'forecast') return 'bg-sky-50 text-sky-900 font-semibold';
-  if (row.tone === 'projected') return 'bg-cyan-50 text-cyan-900 font-bold';
-  if (row.tone === 'balance') return 'bg-slate-50 text-slate-900 font-bold';
-  if (row.tone === 'result') return 'bg-blue-50 text-blue-950 font-bold';
-  if (row.tone === 'capital') return 'bg-violet-50 text-violet-900 font-bold';
-  if (row.tone === 'attention') return 'bg-orange-50 text-orange-900 font-semibold';
-  if (row.tone === 'account') return 'bg-white text-slate-800 font-semibold';
-  if (row.tone === 'counterparty') return 'bg-slate-50 text-slate-800 font-semibold';
-  if (row.tone === 'total') return 'bg-slate-100 text-slate-950 font-bold';
-  return 'bg-white text-slate-600';
+  if (row.tone === 'positive') return 'bg-emerald-50 text-emerald-900 font-bold dark:bg-emerald-950/55 dark:text-emerald-100';
+  if (row.tone === 'negative') return 'bg-rose-50 text-rose-900 font-bold dark:bg-rose-950/55 dark:text-rose-100';
+  if (row.tone === 'warning') return 'bg-amber-50 text-amber-900 font-bold dark:bg-amber-950/55 dark:text-amber-100';
+  if (row.tone === 'forecast') return 'bg-sky-50 text-sky-900 font-semibold dark:bg-sky-950/50 dark:text-sky-100';
+  if (row.tone === 'projected') return 'bg-cyan-50 text-cyan-900 font-bold dark:bg-cyan-950/50 dark:text-cyan-100';
+  if (row.tone === 'balance') return 'bg-slate-50 text-slate-900 font-bold dark:bg-slate-800 dark:text-slate-100';
+  if (row.tone === 'result') return 'bg-blue-50 text-blue-950 font-bold dark:bg-blue-950/55 dark:text-blue-100';
+  if (row.tone === 'capital') return 'bg-violet-50 text-violet-900 font-bold dark:bg-violet-950/50 dark:text-violet-100';
+  if (row.tone === 'attention') return 'bg-orange-50 text-orange-900 font-semibold dark:bg-orange-950/50 dark:text-orange-100';
+  if (row.tone === 'account') return 'bg-white text-slate-800 font-semibold dark:bg-slate-900 dark:text-slate-200';
+  if (row.tone === 'counterparty') return 'bg-slate-50 text-slate-800 font-semibold dark:bg-slate-900/85 dark:text-slate-300';
+  if (row.tone === 'total') return 'bg-slate-100 text-slate-950 font-bold dark:bg-slate-800 dark:text-slate-50';
+  return 'bg-white text-slate-600 dark:bg-slate-950 dark:text-slate-300';
 }
 
 function valueClass(value, row) {
-  if (row?.tone === 'total') return value < 0 ? 'text-rose-700' : 'text-emerald-700';
-  if (row?.tone === 'negative' && value !== 0) return 'text-rose-700';
-  if (row?.tone === 'forecast' && value !== 0) return 'text-blue-700';
-  if (row?.tone === 'projected' && value !== 0) return value < 0 ? 'text-rose-700' : 'text-indigo-700';
-  if (row?.tone === 'balance' && value !== 0) return value < 0 ? 'text-rose-700' : 'text-slate-800';
-  if (row?.tone === 'result' && value !== 0) return value < 0 ? 'text-rose-700' : 'text-emerald-700';
-  if (value < 0) return 'text-rose-700';
-  if (value > 0) return 'text-emerald-700';
-  return 'text-slate-400';
+  if (row?.tone === 'total') return value < 0 ? 'text-rose-700 dark:text-rose-300' : 'text-emerald-700 dark:text-emerald-300';
+  if (row?.tone === 'negative' && value !== 0) return 'text-rose-700 dark:text-rose-300';
+  if (row?.tone === 'forecast' && value !== 0) return 'text-blue-700 dark:text-blue-300';
+  if (row?.tone === 'projected' && value !== 0) return value < 0 ? 'text-rose-700 dark:text-rose-300' : 'text-indigo-700 dark:text-indigo-300';
+  if (row?.tone === 'balance' && value !== 0) return value < 0 ? 'text-rose-700 dark:text-rose-300' : 'text-slate-800 dark:text-slate-100';
+  if (row?.tone === 'result' && value !== 0) return value < 0 ? 'text-rose-700 dark:text-rose-300' : 'text-emerald-700 dark:text-emerald-300';
+  if (value < 0) return 'text-rose-700 dark:text-rose-300';
+  if (value > 0) return 'text-emerald-700 dark:text-emerald-300';
+  return 'text-slate-400 dark:text-slate-500';
 }
 
 function StatBlock({ icon: Icon, label, value, hint, tone = 'slate' }) {
   const toneClasses = {
-    slate: 'border-slate-200 bg-slate-50 text-slate-900',
-    green: 'border-emerald-200 bg-emerald-50 text-emerald-950',
-    red: 'border-rose-200 bg-rose-50 text-rose-950',
-    amber: 'border-amber-200 bg-amber-50 text-amber-950',
-    blue: 'border-blue-200 bg-blue-50 text-blue-950',
+    slate: 'border-slate-200 bg-slate-50 text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-50',
+    green: 'border-emerald-200 bg-emerald-50 text-emerald-950 dark:border-emerald-700/70 dark:bg-emerald-950/50 dark:text-emerald-100',
+    red: 'border-rose-200 bg-rose-50 text-rose-950 dark:border-rose-700/70 dark:bg-rose-950/50 dark:text-rose-100',
+    amber: 'border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-700/70 dark:bg-amber-950/50 dark:text-amber-100',
+    blue: 'border-blue-200 bg-blue-50 text-blue-950 dark:border-blue-700/70 dark:bg-blue-950/50 dark:text-blue-100',
   };
 
   return (
     <div className={`min-h-[56px] rounded-lg border px-3 py-2 shadow-sm ${toneClasses[tone] || toneClasses.slate}`}>
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[11px] font-semibold uppercase text-slate-500">{label}</p>
+        <p className="text-[11px] font-semibold uppercase text-slate-500 dark:text-slate-400">{label}</p>
         <Icon className="h-4 w-4 opacity-80" />
       </div>
       <div className="mt-1 flex flex-wrap items-end gap-x-2 gap-y-0.5">
         <p className="text-base font-bold tracking-normal">{value}</p>
-        {hint ? <p className="truncate text-[11px] text-slate-500">{hint}</p> : null}
+        {hint ? <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">{hint}</p> : null}
       </div>
     </div>
   );
@@ -1514,8 +1514,8 @@ function StatBlock({ icon: Icon, label, value, hint, tone = 'slate' }) {
 
 function ControlGroup({ label, value, options, onChange }) {
   return (
-    <div className="min-w-0 rounded-lg border border-slate-200 bg-white p-1.5 shadow-sm">
-      <p className="mb-1 px-1 text-[10px] font-bold uppercase tracking-wide text-slate-500">{label}</p>
+    <div className="min-w-0 rounded-lg border border-slate-200 bg-white p-1.5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+      <p className="mb-1 px-1 text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</p>
       <div className="flex flex-wrap gap-1">
         {options.map((option) => (
           <button
@@ -1524,8 +1524,8 @@ function ControlGroup({ label, value, options, onChange }) {
             onClick={() => onChange(option.value)}
             className={`rounded-md px-2 py-1 text-[11px] font-semibold transition ${
               value === option.value
-                ? 'bg-slate-900 text-white shadow-sm'
-                : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                ? 'bg-slate-900 text-white shadow-sm dark:bg-blue-500 dark:text-white'
+                : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white'
             }`}
           >
             {option.label}
@@ -1683,19 +1683,19 @@ export default function OperationalCashFlowModel({ consolidation, clinicId, load
 
   if (loading) {
     return (
-      <Card className="mb-6 border-slate-200 bg-white p-5">
-        <div className="h-72 animate-pulse rounded-md bg-slate-100" />
+      <Card className="mb-6 border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
+        <div className="h-72 animate-pulse rounded-md bg-slate-100 dark:bg-slate-800" />
       </Card>
     );
   }
 
   return (
-    <Card className="mb-6 overflow-hidden border-slate-200 bg-white p-0 shadow-sm dark:border-gray-700 dark:bg-gray-900">
-      <div className="border-b border-slate-200 bg-white px-4 py-2.5 sm:px-5 dark:border-gray-700 dark:bg-gray-900">
+    <Card className="mb-6 overflow-hidden border-slate-200 bg-white p-0 shadow-sm dark:border-slate-700 dark:bg-slate-950">
+      <div className="border-b border-slate-200 bg-white px-4 py-2.5 sm:px-5 dark:border-slate-700 dark:bg-slate-950">
         <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="max-w-3xl">
           <div className="flex items-center gap-2">
-            <ClipboardList className="h-4 w-4 text-slate-700" />
+            <ClipboardList className="h-4 w-4 text-slate-700 dark:text-slate-300" />
             <h3 className="text-base font-bold text-slate-950 dark:text-white">Painel Gerencial Operacional</h3>
           </div>
           <p className="mt-0.5 text-xs text-slate-600 dark:text-gray-300">
@@ -1703,9 +1703,9 @@ export default function OperationalCashFlowModel({ consolidation, clinicId, load
           </p>
         </div>
         <div className="flex flex-wrap gap-1.5 text-[11px] font-semibold">
-          <span className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-slate-700">{model.months.length} competencia(s)</span>
-          <span className="rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-blue-800">{model.totals.movements} movimento(s)</span>
-          <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-emerald-800">Plano: {accountsLoading ? 'carregando' : `${accounts.length} conta(s)`}</span>
+          <span className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">{model.months.length} competencia(s)</span>
+          <span className="rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-blue-800 dark:border-blue-700/70 dark:bg-blue-950/50 dark:text-blue-200">{model.totals.movements} movimento(s)</span>
+          <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-emerald-800 dark:border-emerald-700/70 dark:bg-emerald-950/50 dark:text-emerald-200">Plano: {accountsLoading ? 'carregando' : `${accounts.length} conta(s)`}</span>
         </div>
       </div>
       </div>
@@ -1721,12 +1721,12 @@ export default function OperationalCashFlowModel({ consolidation, clinicId, load
       </div>
 
       {accountsError ? (
-        <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-700/70 dark:bg-amber-950/50 dark:text-amber-100">
           O plano de contas nao foi carregado agora; a visao continua usando classificacao gerencial de fallback. Detalhe: {accountsError}
         </div>
       ) : null}
 
-      <div className="mb-3 rounded-xl border border-slate-200 bg-slate-100/70 p-1.5 shadow-inner">
+      <div className="mb-3 rounded-xl border border-slate-200 bg-slate-100/70 p-1.5 shadow-inner dark:border-slate-700 dark:bg-slate-900/70">
         <div className="grid gap-2 xl:grid-cols-[1fr_1.35fr_1.2fr_.9fr_auto]">
           <ControlGroup label="Visualizacao" value={tablePeriodicity} options={PERIODICITY_OPTIONS} onChange={setTablePeriodicity} />
           <ControlGroup label="Cenario" value={tableScenario} options={SCENARIO_OPTIONS} onChange={setTableScenario} />
@@ -1741,11 +1741,11 @@ export default function OperationalCashFlowModel({ consolidation, clinicId, load
             ]}
             onChange={setDepth}
           />
-          <div className="flex flex-wrap items-end gap-1.5 rounded-lg border border-slate-200 bg-white p-1.5 shadow-sm xl:justify-end">
+          <div className="flex flex-wrap items-end gap-1.5 rounded-lg border border-slate-200 bg-white p-1.5 shadow-sm xl:justify-end dark:border-slate-700 dark:bg-slate-900">
             <button
               type="button"
               onClick={expandAll}
-              className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-100"
+              className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white"
             >
               <ChevronDown className="h-3.5 w-3.5" />
               Expandir
@@ -1753,7 +1753,7 @@ export default function OperationalCashFlowModel({ consolidation, clinicId, load
             <button
               type="button"
               onClick={collapseAll}
-              className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-100"
+              className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white"
             >
               <ChevronRight className="h-3.5 w-3.5" />
               Recolher
@@ -1762,36 +1762,36 @@ export default function OperationalCashFlowModel({ consolidation, clinicId, load
         </div>
       </div>
 
-      <div className="max-h-[62vh] overflow-auto rounded-xl border border-slate-200 bg-white shadow-sm dark:border-gray-700">
+      <div className="max-h-[62vh] overflow-auto rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-950">
         <table className="w-full min-w-[1080px] border-separate border-spacing-0 text-xs">
-          <thead className="sticky top-0 z-30 bg-slate-100 text-slate-700 shadow-sm">
+          <thead className="sticky top-0 z-30 bg-slate-100 text-slate-700 shadow-sm dark:bg-slate-800 dark:text-slate-200">
             <tr>
-              <th className="sticky left-0 z-40 min-w-[360px] border-b border-slate-200 bg-slate-100 px-3 py-2.5 text-left font-bold">Plano de Contas / Classificacao</th>
-              <th className="min-w-[120px] border-b border-slate-200 px-3 py-2 text-right font-bold">Saldo inicial</th>
+              <th className="sticky left-0 z-40 min-w-[360px] border-b border-slate-200 bg-slate-100 px-3 py-2.5 text-left font-bold dark:border-slate-700 dark:bg-slate-800">Plano de Contas / Classificacao</th>
+              <th className="min-w-[120px] border-b border-slate-200 px-3 py-2 text-right font-bold dark:border-slate-700">Saldo inicial</th>
               {model.months.map((month) => (
-                <th key={month} className="min-w-[105px] border-b border-slate-200 px-3 py-2 text-right font-bold">
+                <th key={month} className="min-w-[105px] border-b border-slate-200 px-3 py-2 text-right font-bold dark:border-slate-700">
                   {model.periodLabels[month] || month}
                 </th>
               ))}
-              <th className="sticky right-0 z-20 min-w-[120px] border-b border-slate-200 bg-slate-200 px-3 py-2 text-right font-bold text-slate-900">Total</th>
+              <th className="sticky right-0 z-20 min-w-[120px] border-b border-slate-200 bg-slate-200 px-3 py-2 text-right font-bold text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-50">Total</th>
             </tr>
           </thead>
           <tbody>
             {model.rows.length === 1 ? (
               <tr>
-                <td className="px-3 py-6 text-center text-slate-500" colSpan={model.months.length + 3}>
+                <td className="px-3 py-6 text-center text-slate-500 dark:text-slate-400" colSpan={model.months.length + 3}>
                   Sem movimentos para montar a visao operacional no periodo.
                 </td>
               </tr>
             ) : visibleRows.map((row) => (
-              <tr key={row.key} className={`${rowClass(row)} border-b border-slate-100 hover:bg-slate-50/80`}>
-                <td className={`${rowClass(row)} sticky left-0 z-10 border-r border-slate-100 px-3 py-2 align-top`} style={{ paddingLeft: `${12 + row.level * 18}px` }}>
+              <tr key={row.key} className={`${rowClass(row)} border-b border-slate-100 hover:bg-slate-50/80 dark:border-slate-800 dark:hover:bg-slate-800/70`}>
+                <td className={`${rowClass(row)} sticky left-0 z-10 border-r border-slate-100 px-3 py-2 align-top dark:border-slate-800`} style={{ paddingLeft: `${12 + row.level * 18}px` }}>
                   <div className="flex items-start gap-2 font-semibold leading-5">
                     {row.hasChildren ? (
                       <button
                         type="button"
                         onClick={() => toggleRow(row)}
-                        className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-100"
+                        className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white"
                         aria-label={expandedRows.has(row.key) ? `Recolher ${row.label}` : `Expandir ${row.label}`}
                       >
                         {expandedRows.has(row.key) ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
@@ -1803,7 +1803,7 @@ export default function OperationalCashFlowModel({ consolidation, clinicId, load
                       <button
                         type="button"
                         onClick={() => navigate(row.actionPath)}
-                        className="inline-flex items-start gap-1.5 text-left font-semibold text-blue-700 underline-offset-2 hover:text-blue-900 hover:underline"
+                        className="inline-flex items-start gap-1.5 text-left font-semibold text-blue-700 underline-offset-2 hover:text-blue-900 hover:underline dark:text-blue-300 dark:hover:text-blue-200"
                         title="Abrir conta para editar e classificar"
                       >
                         <span>{row.label}</span>
@@ -1814,29 +1814,29 @@ export default function OperationalCashFlowModel({ consolidation, clinicId, load
                     )}
                   </div>
                   {row.meta || row.statusLabel || row.warning ? (
-                    <div className="mt-1 flex flex-wrap items-center gap-1 pl-7 text-[10px] font-semibold uppercase tracking-normal text-slate-500">
+                    <div className="mt-1 flex flex-wrap items-center gap-1 pl-7 text-[10px] font-semibold uppercase tracking-normal text-slate-500 dark:text-slate-400">
                       {row.statusLabel ? (
-                        <span className={`rounded border px-1.5 py-0.5 ${row.warning ? 'border-orange-200 bg-orange-50 text-orange-700' : 'border-slate-200 bg-white text-slate-600'}`}>
+                        <span className={`rounded border px-1.5 py-0.5 ${row.warning ? 'border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-700/70 dark:bg-orange-950/50 dark:text-orange-200' : 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'}`}>
                           {row.statusLabel}
                         </span>
                       ) : null}
-                      {row.warning ? <span className="rounded border border-orange-200 bg-orange-50 px-1.5 py-0.5 text-orange-700">{row.warning}</span> : null}
-                      {row.meta ? <span className="normal-case text-slate-500">{row.meta}</span> : null}
+                      {row.warning ? <span className="rounded border border-orange-200 bg-orange-50 px-1.5 py-0.5 text-orange-700 dark:border-orange-700/70 dark:bg-orange-950/50 dark:text-orange-200">{row.warning}</span> : null}
+                      {row.meta ? <span className="normal-case text-slate-500 dark:text-slate-400">{row.meta}</span> : null}
                     </div>
                   ) : null}
                 </td>
-                <td className={`border-l border-slate-50 px-3 py-2 text-right font-mono ${valueClass(row.openingBalance, row)}`}>
+                <td className={`border-l border-slate-50 px-3 py-2 text-right font-mono dark:border-slate-800 ${valueClass(row.openingBalance, row)}`}>
                   {row.openingBalance === 0 && !row.isSubtotal ? '-' : formatCurrency(row.openingBalance)}
                 </td>
                 {model.months.map((month) => {
                   const value = row.values[month] || 0;
                   return (
-                    <td key={month} className={`border-l border-slate-50 px-3 py-2 text-right font-mono ${valueClass(value, row)}`}>
+                    <td key={month} className={`border-l border-slate-50 px-3 py-2 text-right font-mono dark:border-slate-800 ${valueClass(value, row)}`}>
                       {value === 0 ? '-' : formatCurrency(value)}
                     </td>
                   );
                 })}
-                <td className={`${rowClass(row)} sticky right-0 z-10 border-l border-slate-200 px-3 py-2 text-right font-mono font-bold ${valueClass(row.values.total, row)}`}>
+                <td className={`${rowClass(row)} sticky right-0 z-10 border-l border-slate-200 px-3 py-2 text-right font-mono font-bold dark:border-slate-700 ${valueClass(row.values.total, row)}`}>
                   {row.values.total === 0 ? '-' : formatCurrency(row.values.total)}
                 </td>
               </tr>
@@ -1845,7 +1845,7 @@ export default function OperationalCashFlowModel({ consolidation, clinicId, load
         </table>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-500">
+      <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
         <span className="inline-flex items-center gap-1"><Table2 className="h-3.5 w-3.5" /> Base: contas a receber, contas a pagar e lancamentos financeiros.</span>
         <span>Linhas sem conta vinculada usam classificacao inferida; Sem Classificacao fica para movimentos sem conta e sem categoria.</span>
       </div>
