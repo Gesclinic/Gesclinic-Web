@@ -21,7 +21,13 @@ export default function Header() {
   const navigate = useNavigate();
   const [headerData, setHeaderData] = useState({ userName: 'Usuário', clinicName: 'Clínica' });
   const [showUserProfileModal, setShowUserProfileModal] = useState(false);
+  const [userProfileSection, setUserProfileSection] = useState('profile');
   const [logoUrl, setLogoUrl] = useState('');
+
+  const openUserProfileModal = (section) => {
+    setUserProfileSection(section);
+    setShowUserProfileModal(true);
+  };
 
   // Efeito para carregar dados sempre que mudar
   useEffect(() => {
@@ -140,11 +146,11 @@ export default function Header() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setShowUserProfileModal(true)}>
+                <DropdownMenuItem onClick={() => openUserProfileModal('profile')}>
                   <UserCircle2 className="w-4 h-4 mr-2" />
                   Meu perfil
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setShowUserProfileModal(true)}>
+                <DropdownMenuItem onClick={() => openUserProfileModal('password')}>
                   <KeyRound className="w-4 h-4 mr-2" />
                   Alterar senha
                 </DropdownMenuItem>
@@ -163,7 +169,11 @@ export default function Header() {
         </div>
       </header>
 
-      <UserProfileModal isOpen={showUserProfileModal} onClose={() => setShowUserProfileModal(false)} />
+      <UserProfileModal
+        isOpen={showUserProfileModal}
+        initialSection={userProfileSection}
+        onClose={() => setShowUserProfileModal(false)}
+      />
     </>
   );
 }
