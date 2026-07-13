@@ -1,5 +1,5 @@
 // src/components/layout/Sidebar.jsx
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useLayoutEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -265,6 +265,31 @@ export default function Sidebar({ isOpen, setIsOpen }) {
   const [openItems, setOpenItems] = useState({});
   const [pendingOpenItemId, setPendingOpenItemId] = useState(null);
 
+  const rememberNavScroll = () => {
+    if (navRef.current) {
+      scrollPosRef.current = navRef.current.scrollTop;
+    }
+  };
+
+  const restoreNavScroll = () => {
+    const navElement = navRef.current;
+    const scrollTop = scrollPosRef.current;
+
+    if (!navElement || scrollTop === null) {
+      return;
+    }
+
+    const applyScroll = () => {
+      if (navRef.current) {
+        navRef.current.scrollTop = scrollTop;
+      }
+    };
+
+    applyScroll();
+    requestAnimationFrame(applyScroll);
+    setTimeout(applyScroll, 0);
+  };
+
   useEffect(() => {
     if (!isOpen) {
       setOpenItems({});
@@ -316,43 +341,31 @@ export default function Sidebar({ isOpen, setIsOpen }) {
       // Não interceptar links externos ou especiais
       if (linkElement.hasAttribute('download') || linkElement.target === '_blank') return;
 
-      // Capturar scroll position
-      scrollPosRef.current = navElement.scrollTop;
+      rememberNavScroll();
 
       // Extrair o path (remover leading slash se houver)
       const href = linkElement.getAttribute('href');
       if (!href) return;
 
-      // Deixar React Router handleLink fazer o seu trabalho
-      // Mas vamos restaurar o scroll após a navegação
-      requestAnimationFrame(() => {
-        // Verificar se a URL mudou (após React Router processar)
-        if (location.pathname !== href) {
-          // A navegação vai acontecer, restaurar scroll no próximo frame
-          setTimeout(() => {
-            if (navElement && scrollPosRef.current !== null) {
-              navElement.scrollTop = scrollPosRef.current;
-              // Restaurar novamente após reflow
-              setTimeout(() => {
-                if (navElement && scrollPosRef.current !== null) {
-                  navElement.scrollTop = scrollPosRef.current;
-                }
-              }, 0);
-            }
-          }, 0);
-        }
-      });
+      restoreNavScroll();
     };
 
     navElement.addEventListener('click', handleLinkClick, true);
     return () => navElement.removeEventListener('click', handleLinkClick, true);
   }, [location.pathname]);
 
+  useLayoutEffect(() => {
+    restoreNavScroll();
+  }, [location.pathname, location.search]);
+
+  useLayoutEffect(() => {
+    restoreNavScroll();
+  }, [openItems]);
+
   const toggleItem = (item, siblingIds = []) => {
     const shouldOpen = !openItems[item.id];
 
-    // Preservar posição de scroll antes de atualizar o estado
-    const scrollPos = navRef.current?.scrollTop;
+    rememberNavScroll();
 
     if (!isOpen) {
       setPendingOpenItemId(item.id);
@@ -383,14 +396,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
       return next;
     });
 
-    // Restaurar posição de scroll após renderização
-    if (scrollPos !== undefined) {
-      requestAnimationFrame(() => {
-        if (navRef.current) {
-          navRef.current.scrollTop = scrollPos;
-        }
-      });
-    }
+    restoreNavScroll();
   };
 
   const renderIcon = (name, size = 'h-5 w-5') => {
@@ -659,13 +665,18 @@ export default function Sidebar({ isOpen, setIsOpen }) {
       {/* MENU */}
       <nav 
         ref={navRef}
+        onScroll={rememberNavScroll}
+        onPointerDownCapture={rememberNavScroll}
         className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-[hsl(var(--primary))]/20 scrollbar-track-[hsl(var(--primary))]/5 hover:scrollbar-thumb-[hsl(var(--primary))]/40 py-3 px-2 space-y-1"
         style={{ scrollPaddingTop: '0', scrollBehavior: 'auto' }}
       >
         {isOpen && Object.keys(openItems).length > 0 && (
           <button
             type="button"
-            onClick={() => setOpenItems({})}
+            onClick={() => {
+              rememberNavScroll();
+              setOpenItems({});
+            }}
             className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-[hsl(var(--primary))]/60 hover:text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))]/4 transition-all duration-200 mb-2"
           >
             <ChevronUp className="h-3 w-3" />
