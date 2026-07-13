@@ -59,6 +59,21 @@ import {
 //   calculatePayableByPeriod,
 // } from '@/lib/financialCalculations';
 
+const OPERATIONAL_DEFAULT_PARAMS = {
+  section: 'operational',
+  depth: 'details',
+  expand: 'all',
+  periodicity: 'monthly',
+  scenario: 'consolidated',
+  display: 'income_expense',
+};
+
+const OPERATIONAL_PARAM_OPTIONS = {
+  periodicity: ['daily', 'weekly', 'monthly', 'yearly'],
+  scenario: ['realized', 'forecast', 'projected', 'consolidated'],
+  display: ['income_expense', 'result', 'balances'],
+};
+
 /**
  * 💰 FLUXO DE CAIXA - Dashboard Executivo Consolidado (PHASE 1)
  *
@@ -441,19 +456,29 @@ export default function FluxoCaixaPage() {
 
     if (!validSections.includes(nextSection)) {
       const nextParams = new URLSearchParams(searchParams);
-      nextParams.set('section', 'operational');
-      nextParams.set('depth', 'details');
-      nextParams.set('expand', 'all');
+      Object.entries(OPERATIONAL_DEFAULT_PARAMS).forEach(([key, value]) => nextParams.set(key, value));
       setSearchParams(nextParams, { replace: true });
       setActiveSection('operational');
       return;
     }
 
-    if (nextSection === 'operational' && (searchParams.get('depth') !== 'details' || searchParams.get('expand') !== 'all')) {
+    if (nextSection === 'operational') {
       const nextParams = new URLSearchParams(searchParams);
-      nextParams.set('depth', 'details');
-      nextParams.set('expand', 'all');
-      setSearchParams(nextParams, { replace: true });
+      let changed = false;
+
+      Object.entries(OPERATIONAL_DEFAULT_PARAMS).forEach(([key, value]) => {
+        const current = nextParams.get(key);
+        const options = OPERATIONAL_PARAM_OPTIONS[key];
+        if ((options && !options.includes(current)) || (!options && current !== value)) {
+          nextParams.set(key, value);
+          changed = true;
+        }
+      });
+
+      if (changed) {
+        setSearchParams(nextParams, { replace: true });
+        return;
+      }
     }
 
     setActiveSection(nextSection);

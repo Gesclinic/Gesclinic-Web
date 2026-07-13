@@ -52,6 +52,10 @@ const DISPLAY_OPTIONS = [
   { value: 'balances', label: 'Saldos' },
 ];
 
+const PERIODICITY_VALUES = PERIODICITY_OPTIONS.map((option) => option.value);
+const SCENARIO_VALUES = SCENARIO_OPTIONS.map((option) => option.value);
+const DISPLAY_VALUES = DISPLAY_OPTIONS.map((option) => option.value);
+
 const MAIN_SECTIONS = {
   income: { key: 'income', code: '1', label: 'Receitas', tone: 'positive' },
   expense: { key: 'expense', code: '2', label: 'Despesas', tone: 'negative' },
@@ -1537,13 +1541,16 @@ export default function OperationalCashFlowModel({ consolidation, clinicId, load
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const depthParam = searchParams.get('depth');
+  const periodicityParam = searchParams.get('periodicity');
+  const scenarioParam = searchParams.get('scenario');
+  const displayParam = searchParams.get('display');
   const [accounts, setAccounts] = useState([]);
   const [accountsLoading, setAccountsLoading] = useState(false);
   const [accountsError, setAccountsError] = useState('');
   const [viewDepth, setViewDepth] = useState(['groups', 'accounts', 'details'].includes(depthParam) ? depthParam : 'accounts');
-  const [tablePeriodicity, setTablePeriodicity] = useState('monthly');
-  const [tableScenario, setTableScenario] = useState('consolidated');
-  const [tableDisplay, setTableDisplay] = useState('income_expense');
+  const [tablePeriodicity, setTablePeriodicity] = useState(PERIODICITY_VALUES.includes(periodicityParam) ? periodicityParam : 'monthly');
+  const [tableScenario, setTableScenario] = useState(SCENARIO_VALUES.includes(scenarioParam) ? scenarioParam : 'consolidated');
+  const [tableDisplay, setTableDisplay] = useState(DISPLAY_VALUES.includes(displayParam) ? displayParam : 'income_expense');
   const [expandedRows, setExpandedRows] = useState(() => new Set());
 
   useEffect(() => {
@@ -1617,6 +1624,14 @@ export default function OperationalCashFlowModel({ consolidation, clinicId, load
     const params = new URLSearchParams(location.search);
     const nextDepth = params.get('depth');
     const expand = params.get('expand');
+    const nextPeriodicity = params.get('periodicity');
+    const nextScenario = params.get('scenario');
+    const nextDisplay = params.get('display');
+
+    if (PERIODICITY_VALUES.includes(nextPeriodicity)) setTablePeriodicity(nextPeriodicity);
+    if (SCENARIO_VALUES.includes(nextScenario)) setTableScenario(nextScenario);
+    if (DISPLAY_VALUES.includes(nextDisplay)) setTableDisplay(nextDisplay);
+
     if (nextDepth === 'groups') {
       setViewDepth('groups');
       setExpandedRows(new Set());

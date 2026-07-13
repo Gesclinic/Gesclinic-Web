@@ -539,7 +539,7 @@ export default function AppRoutes() {
           />
           <Route
             path="financeiro/fluxo"
-            element={<Navigate to="/clinica/financeiro/fluxo-caixa" replace />}
+            element={<Navigate to="/clinica/financeiro/fluxo-caixa?section=operational&depth=details&expand=all&periodicity=monthly&scenario=consolidated&display=income_expense" replace />}
           />
           <Route
             path="financeiro/plano-contas"
