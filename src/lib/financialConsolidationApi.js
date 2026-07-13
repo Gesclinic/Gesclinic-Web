@@ -35,6 +35,15 @@ function isPaidStatus(status) {
   );
 }
 
+function isCashDrawerSettledPayable(row = {}) {
+  return Boolean(
+    row?.metadata?.drawer_movement_id
+      || row?.metadata?.origem === 'Caixa Diario'
+      || String(row?.notes || '').includes('Movimento do caixa:')
+      || String(row?.description || '').toLowerCase().includes('despesa manual do caixa'),
+  );
+}
+
 function getReceivableCompetenceDate(row) {
   return dateOnly(row.competency_date || row.invoice_date || row.due_date || row.received_date || row.created_at);
 }
@@ -51,7 +60,7 @@ function getPayableCompetenceDate(row) {
 }
 
 function getPayableMovementDate(row) {
-  if (isPaidStatus(row.status)) {
+  if (isPaidStatus(row.status) || isCashDrawerSettledPayable(row)) {
     return dateOnly(row.paid_date || row.paid_at || row.payment_date || row.due_date || row.issue_date || row.created_at);
   }
   return dateOnly(row.due_date || row.competency_date || row.issue_date || row.created_at);
@@ -59,6 +68,10 @@ function getPayableMovementDate(row) {
 
 function getTransactionCompetenceDate(row) {
   return dateOnly(row.transaction_date || row.competency_date || row.scheduled_date || row.due_date || row.created_at);
+}
+
+function getDrawerMovementDate(row) {
+  return dateOnly(row.drawer_date || row.date_opened || row.transaction_date || row.created_at);
 }
 
 function getReceivableGross(row) {
@@ -100,11 +113,18 @@ function getReceivableOpen(row) {
 }
 
 function getPayableAmount(row) {
-  return money(row.net_amount ?? row.balance_amount ?? row.amount ?? row.value ?? row.valor);
+  return money(row.net_amount ?? row.amount ?? row.value ?? row.valor ?? row.total ?? row.balance_amount);
 }
 
 function getPayablePaid(row) {
-  return money(row.paid_amount ?? row.paid_value ?? (isPaidStatus(row.status) ? getPayableAmount(row) : 0));
+  const explicitPaid = money(row.paid_amount ?? row.paid_value ?? row.payment_amount);
+  if (explicitPaid > 0) return explicitPaid;
+  return (isPaidStatus(row.status) || isCashDrawerSettledPayable(row)) ? getPayableAmount(row) : 0;
+}
+
+function getPayableOpen(row, amount = getPayableAmount(row), paid = getPayablePaid(row)) {
+  if (isCashDrawerSettledPayable(row)) return 0;
+  return Math.max(0, amount - paid);
 }
 
 function classifyExpense(row = {}) {
@@ -128,6 +148,13 @@ function getTransactionType(row = {}) {
   return type || transactionType.toLowerCase();
 }
 
+function getDrawerMovementType(row = {}) {
+  const type = lowerText(row.payment_type, row.type, row.movement_type);
+  if (/entrada|income|revenue|receita|credito|credit/.test(type)) return 'revenue';
+  if (/saida|expense|despesa|debito|debit/.test(type)) return 'expense';
+  return money(row.amount) >= 0 ? 'revenue' : 'expense';
+}
+
 function getReceivablePayerName(row = {}) {
   return row.payer_name
     || row.convenio_name
@@ -136,6 +163,87 @@ function getReceivablePayerName(row = {}) {
     || row.empresa_name
     || row.patient_name
     || 'Pagador nao informado';
+}
+
+function getReceivableAppointment(row = {}) {
+  return Array.isArray(row.appointments) ? row.appointments[0] : row.appointments;
+}
+
+function getReceivableAppointmentId(row = {}) {
+  const metadata = row.metadata || {};
+  return row.appointment_id
+    || row.agendamento_id
+    || metadata.appointment_id
+    || metadata.agendamento_id
+    || metadata.appointment?.id
+    || metadata.payment_data?.appointment_id
+    || metadata.last_payment?.appointment_id
+    || null;
+}
+
+async function hydrateReceivableAppointmentsForConsolidation(clinicId, rows = []) {
+  const appointmentIds = [...new Set(rows.map(getReceivableAppointmentId).filter(Boolean))];
+  if (!clinicId || appointmentIds.length === 0) return rows;
+
+  const { data, error } = await supabase
+    .from('appointments')
+    .select(`
+      id,
+      scheduled_date,
+      service_id,
+      patient_id,
+      professional_id,
+      room_id,
+      payment_method,
+      payment_splits,
+      plano_contas_id,
+      payer_id,
+      patients!left(name),
+      professionals!left(id, name),
+      services!left(id, name),
+      rooms!left(id, name)
+    `)
+    .eq('clinic_id', clinicId)
+    .in('id', appointmentIds);
+
+  if (error) {
+    console.warn('getFinancialConsolidation appointment hydration skipped:', error.message);
+    return rows;
+  }
+
+  const appointmentsById = new Map((data || []).map((appointment) => [appointment.id, appointment]));
+
+  return rows.map((row) => {
+    const appointmentId = getReceivableAppointmentId(row);
+    const appointment = appointmentId ? appointmentsById.get(appointmentId) : null;
+    if (!appointment) return row;
+
+    const currentAppointment = getReceivableAppointment(row) || {};
+    const hydratedAppointment = {
+      ...currentAppointment,
+      ...appointment,
+      patients: currentAppointment.patients || appointment.patients,
+      professionals: currentAppointment.professionals || appointment.professionals,
+      services: currentAppointment.services || appointment.services,
+      rooms: currentAppointment.rooms || appointment.rooms,
+    };
+
+    return {
+      ...row,
+      appointment_id: row.appointment_id || appointment.id,
+      appointments: [hydratedAppointment],
+      patient_id: row.patient_id || row.paciente_id || appointment.patient_id || null,
+      patient_name: row.patient_name || appointment.patients?.name || currentAppointment.patient_name || null,
+      professional_id: row.professional_id || row.profissional_id || appointment.professional_id || null,
+      professional_name: row.professional_name || row.profissional_name || appointment.professionals?.name || null,
+      service_id: row.service_id || row.procedure_id || appointment.service_id || null,
+      procedure_id: row.procedure_id || row.service_id || appointment.service_id || null,
+      service_name: row.service_name || row.procedure_name || appointment.services?.name || null,
+      procedure_name: row.procedure_name || row.service_name || appointment.services?.name || null,
+      payment_method: row.payment_method || appointment.payment_method || null,
+      plano_contas_id: row.plano_contas_id || appointment.plano_contas_id || null,
+    };
+  });
 }
 
 function getPayableRecipientName(row = {}) {
@@ -164,6 +272,12 @@ function isReceivableOrPayableOrigin(row = {}) {
     'ar_invoices',
     'ap_bills',
   ].includes(origin);
+}
+
+function getRepresentedDrawerMovementId(row = {}) {
+  if (row.metadata?.drawer_movement_id) return row.metadata.drawer_movement_id;
+  const text = lowerText(row.notes, row.description);
+  return text.match(/movimento do caixa:\s*([0-9a-f-]+)/i)?.[1] || null;
 }
 
 function isDerivedSyncDescription(row = {}) {
@@ -263,10 +377,11 @@ async function listLegacyInvoicesForConsolidation(clinicId) {
 export async function getFinancialConsolidation(clinicId, startDate, endDate) {
   if (!clinicId) return buildEmptyConsolidation(startDate, endDate);
 
-  const [receivablesResult, payablesResult, transactionsResult] = await Promise.all([
+  const [receivablesResult, payablesResult, transactionsResult, drawerMovementsResult] = await Promise.all([
     supabase.from('ar_invoices').select('*').eq('clinic_id', clinicId).order('created_at', { ascending: false }).limit(20000),
     supabase.from('ap_bills').select('*').eq('clinic_id', clinicId).order('created_at', { ascending: false }).limit(20000),
     supabase.from('financial_transactions').select('*').eq('clinic_id', clinicId).order('created_at', { ascending: false }).limit(20000),
+    supabase.from('drawer_movements').select('*').eq('clinic_id', clinicId).order('created_at', { ascending: false }).limit(20000),
   ]);
 
   if (receivablesResult.error) throw receivablesResult.error;
@@ -294,6 +409,8 @@ export async function getFinancialConsolidation(clinicId, startDate, endDate) {
     if (fallbackReceivables.length) rawReceivables = fallbackReceivables;
   }
 
+  rawReceivables = await hydrateReceivableAppointmentsForConsolidation(clinicId, rawReceivables);
+
   const receivables = rawReceivables.filter(
     (row) => !isCanceledStatus(row.status) && inRange(getReceivableCompetenceDate(row), startDate, endDate),
   );
@@ -306,6 +423,62 @@ export async function getFinancialConsolidation(clinicId, startDate, endDate) {
       && !isDerivedSyncDescription(row)
       && inRange(getTransactionCompetenceDate(row), startDate, endDate),
   );
+
+  let drawerMovements = [];
+  if (drawerMovementsResult.error) {
+    console.warn('getFinancialConsolidation drawer movements skipped:', drawerMovementsResult.error?.message || drawerMovementsResult.error);
+  } else {
+    const representedAppointmentIds = new Set(receivables.map((row) => row.appointment_id).filter(Boolean));
+    const representedDrawerMovementIds = new Set([
+      ...receivables.map(getRepresentedDrawerMovementId),
+      ...payables.map(getRepresentedDrawerMovementId),
+    ].filter(Boolean));
+    const rawDrawerMovements = drawerMovementsResult.data || [];
+    const drawerIds = [...new Set(rawDrawerMovements.map((row) => row.drawer_id).filter(Boolean))];
+    let drawersById = new Map();
+
+    if (drawerIds.length) {
+      const { data: drawers, error: drawersError } = await supabase
+        .from('cash_drawers')
+        .select('id,date_opened')
+        .eq('clinic_id', clinicId)
+        .in('id', drawerIds);
+
+      if (drawersError) {
+        console.warn('getFinancialConsolidation drawer dates skipped:', drawersError?.message || drawersError);
+      } else {
+        drawersById = new Map((drawers || []).map((drawer) => [drawer.id, drawer.date_opened]));
+      }
+    }
+
+    drawerMovements = rawDrawerMovements
+      .filter((row) => !representedAppointmentIds.has(row.appointment_id))
+      .filter((row) => !representedDrawerMovementIds.has(row.id))
+      .map((row) => {
+        const type = getDrawerMovementType(row);
+        const drawerDate = drawersById.get(row.drawer_id) || null;
+        const transactionDate = getDrawerMovementDate({ ...row, drawer_date: drawerDate });
+
+        return {
+          ...row,
+          drawer_date: drawerDate,
+          type,
+          transaction_type: type === 'revenue' ? 'INCOME' : 'EXPENSE',
+          status: 'paid',
+          movement_type: 'REALIZED',
+          category: 'cash_drawer',
+          description: row.description || 'Movimento de caixa',
+          amount: Math.abs(money(row.amount)),
+          transaction_date: transactionDate,
+          competency_date: transactionDate,
+          origin_module: 'drawer_movements',
+          origin_id: row.id,
+        };
+      })
+      .filter((row) => inRange(getTransactionCompetenceDate(row), startDate, endDate));
+  }
+
+  transactions.push(...drawerMovements);
 
   const summary = buildEmptyConsolidation(startDate, endDate);
   summary.receivables = receivables;
@@ -336,9 +509,9 @@ export async function getFinancialConsolidation(clinicId, startDate, endDate) {
 
     summary.expenses[bucket] += amount;
     summary.expenses.paid += paid;
-    summary.expenses.open += Math.max(0, amount - paid);
+    summary.expenses.open += getPayableOpen(row, amount, paid);
     summary.expenses.payableCount += 1;
-    if (paid > 0 || isPaidStatus(row.status)) summary.expenses.paidPayableCount += 1;
+    if (paid > 0 || isPaidStatus(row.status) || isCashDrawerSettledPayable(row)) summary.expenses.paidPayableCount += 1;
   });
 
   transactions.forEach((row) => {
@@ -420,8 +593,14 @@ export function buildDerivedFinancialTransactions(consolidation) {
       counterparty_name: payerName,
       counterparty_role: 'Pagador',
       payer_name: payerName,
+      payer_type: row.payer_type || row.tipo_pagador || null,
+      convenio_name: row.convenio_name || row.payer_contract_name || null,
+      company_name: row.company_name || row.empresa_name || null,
       patient_name: row.patient_name || null,
-      service_name: row.service_name || row.service_description || null,
+      professional_name: row.professional_name || row.profissional_name || row.doctor_name || null,
+      service_name: row.service_name || row.procedure_name || row.service_description || null,
+      procedure_name: row.procedure_name || null,
+      service_description: row.service_description || null,
       document_number: row.document_number
         || row.invoice_number
         || row.numero_documento
@@ -519,7 +698,7 @@ export function buildDerivedFinancialTransactions(consolidation) {
       clinic_id: row.clinic_id,
       type: 'expense',
       transaction_type: 'EXPENSE',
-      status: isPaidStatus(row.status) ? 'paid' : 'scheduled',
+      status: (isPaidStatus(row.status) || isCashDrawerSettledPayable(row)) ? 'paid' : 'scheduled',
       category: classifyExpense(row),
       chart_account_id: row.chart_account_id || row.plano_contas_id || row.category_id || null,
       chart_account_name: row.chart_account_name || row.plano_contas_name || row.category_name || null,
@@ -561,6 +740,14 @@ export function buildDerivedFinancialTransactions(consolidation) {
       counterparty_name: counterpartyName,
       counterparty_role: type === 'revenue' ? 'Pagador' : 'Destinatario',
       payer_name: row.payer_name || null,
+      payer_type: row.payer_type || row.tipo_pagador || null,
+      convenio_name: row.convenio_name || row.payer_contract_name || null,
+      company_name: row.company_name || row.empresa_name || null,
+      patient_name: row.patient_name || row.paciente_name || null,
+      professional_name: row.professional_name || row.profissional_name || row.doctor_name || null,
+      service_name: row.service_name || row.procedure_name || row.service_description || null,
+      procedure_name: row.procedure_name || null,
+      service_description: row.service_description || null,
       recipient_name: row.recipient_name || row.vendor_name || null,
       document_number: row.document_number || row.reference_document || null,
       flow_detail_name: row.flow_detail_name || row.category_name || row.category || 'Lancamento manual',

@@ -21,8 +21,18 @@ function isOpenPayableStatus(status) {
   return OPEN_PAYABLE_STATUSES.includes(String(status || '').toLowerCase());
 }
 
+function isCashDrawerSettledPayable(payable = {}) {
+  return Boolean(
+    payable?.metadata?.drawer_movement_id
+      || payable?.metadata?.origem === 'Caixa Diario'
+      || String(payable?.notes || '').includes('Movimento do caixa:')
+      || String(payable?.description || '').toLowerCase().includes('despesa manual do caixa'),
+  );
+}
+
 export function getOpenPayableBalance(payable = {}) {
   if (!isOpenPayableStatus(payable.status)) return 0;
+  if (isCashDrawerSettledPayable(payable)) return 0;
   const explicitBalance = payable.balance_amount ?? payable.open_amount ?? payable.remaining_amount;
   if (explicitBalance !== null && explicitBalance !== undefined) {
     return Math.max(0, Number(explicitBalance || 0));

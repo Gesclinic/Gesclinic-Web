@@ -16,6 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useClinicContext } from '@/contexts/ClinicContext';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { usePermissions } from '@/contexts/PermissionsContext';
 import Calendar from 'react-calendar';
 import { AlertCircle, CalendarDays, ChevronLeft, ChevronRight, Clock3, FileText, PlayCircle, PlusCircle, Send } from 'lucide-react';
 import {
@@ -51,10 +52,13 @@ import ServiceAddRow from './ServiceAddRow';
 import AppointmentItemsManager from './AppointmentItemsManager';
 import PhotoCapture from '@/components/PhotoCapture';
 import { TISSSubmissionDialog } from '@/components/TISSSubmissionDialog';
-import InvoiceEmissionModal from './InvoiceEmissionModal';
 import { processPaymentComplete } from '@/lib/paymentRegistrationApi';
 import { createReceivable } from '@/lib/receivablesApi';
-import { reverseAppointmentFinancialOperation } from '@/lib/financialReversalApi';
+import {
+  cancelFinancialReversalRequest,
+  getLatestAppointmentFinancialReversalRequest,
+  requestAppointmentFinancialReversalApproval,
+} from '@/lib/financialReversalApi';
 import { getServicePrice } from '@/lib/getServicePrice';
 import { checkMultipleDates } from '@/lib/holidaysApi';
 import { supabase } from '@/lib/customSupabaseClient';
@@ -119,10 +123,43 @@ const formatCurrency = (value) => {
 const calculateAppointmentServicesTotal = (servicesToCalculate = []) =>
   servicesToCalculate.reduce((sum, item) => {
     const value = parseFloat(item.value ?? item.unit_price ?? item.final_value ?? item.price ?? 0);
-    const quantity = parseFloat(item.quantity || 1);
+    const quantity = item.package_billable_quantity !== undefined && item.package_billable_quantity !== null
+      ? Math.max(0, parseFloat(item.package_billable_quantity || 0))
+      : parseFloat(item.quantity || 1);
     const discount = parseFloat(item.discount || 0);
     return sum + Math.max(0, value * quantity - discount);
   }, 0);
+
+const calculateAppointmentServicesDiscountTotal = (servicesToCalculate = []) =>
+  servicesToCalculate.reduce((sum, item) => sum + (parseFloat(item.discount || 0) || 0), 0);
+
+const calculateAppointmentServicesGrossTotal = (servicesToCalculate = []) =>
+  servicesToCalculate.reduce((sum, item) => {
+    const value = parseFloat(item.value ?? item.unit_price ?? item.final_value ?? item.price ?? 0);
+    const quantity = parseFloat(item.quantity || 1);
+    return sum + Math.max(0, value * quantity);
+  }, 0);
+
+const getAppointmentServiceTotal = (service = {}) => {
+  const value = parseFloat(service.value ?? service.unit_price ?? service.final_value ?? service.price ?? 0);
+  const quantity = service.package_billable_quantity !== undefined && service.package_billable_quantity !== null
+    ? Math.max(0, parseFloat(service.package_billable_quantity || 0))
+    : parseFloat(service.quantity || 1);
+  const discount = parseFloat(service.discount || 0);
+  return Math.max(0, value * quantity - discount);
+};
+
+const getPackageSummaryText = (service = {}) => {
+  const balance = service.package_balance;
+  if (!balance) return '';
+
+  const used = Number(balance.used_sessions || 0) || 0;
+  const total = Number(balance.total_sessions || 0) || 0;
+  const remaining = Math.max(0, total - used);
+
+  if (total <= 0) return '';
+  return `${used} de ${total} usado${used === 1 ? '' : 's'} (${remaining} restante${remaining === 1 ? '' : 's'})`;
+};
 
 // ? DEPRECATED: Use helpers from @/utils/timezoneHelpers instead
 // - parseLocalDate ? use toLocalTime()
@@ -342,10 +379,14 @@ export default function AppointmentUnitedModal({
   services = [],
   payers = [],
   rooms = [],
+  initialTab = undefined,
 }) {
   const navigate = useNavigate();
   const { clinicId } = useClinicContext();
-  const { user } = useAuth();
+  const { user, currentRole } = useAuth();
+  const permissionsContext = usePermissions();
+  const canApproveFinancialReversal = ['admin', 'gestor', 'financeiro'].includes(String(currentRole || '').toLowerCase())
+    || permissionsContext?.hasPermission?.('financeiro.estorno', 'edit');
 
   // ?? DEBUG: Log de props ao inicializar ou mudar
   console.log('?? [AppointmentUnitedModal] PROPS RECEBIDAS:', {
@@ -357,6 +398,13 @@ export default function AppointmentUnitedModal({
   });
 
   const [tabAtivo, setTabAtivo] = useState('dados');
+  const defaultInitialTab = initialTab === 'resumo' ? 'resumo' : 'dados';
+
+  useEffect(() => {
+    if (isOpen && initialTab) {
+      setTabAtivo(initialTab);
+    }
+  }, [isOpen, initialTab]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null); // ? Paciente selecionado
@@ -370,7 +418,19 @@ export default function AppointmentUnitedModal({
   const [tissDialogOpen, setTissDialogOpen] = useState(false); // ?? TISS Dialog state
   const [selectedGuideForTiss, setSelectedGuideForTiss] = useState(null); // ?? Guide selecionado para envio TISS
   const [filteredPayers, setFilteredPayers] = useState([]); // ?? Conv�nios filtrados por profissional
-  const [invoiceModalOpen, setInvoiceModalOpen] = useState(false); // ?? Invoice modal state
+  const [financialReversalDialogOpen, setFinancialReversalDialogOpen] = useState(false);
+  const [financialReversalReason, setFinancialReversalReason] = useState('');
+  const [financialReversalCancelDialogOpen, setFinancialReversalCancelDialogOpen] = useState(false);
+  const [financialReversalCancelReason, setFinancialReversalCancelReason] = useState('');
+  const [financialStatus, setFinancialStatus] = useState({
+    loading: false,
+    generated: false,
+    unknown: false,
+    receivableIds: [],
+    total: 0,
+    generatedAt: null,
+    reversalRequest: null,
+  });
   const [businessHoursWarning, setBusinessHoursWarning] = useState(false); // ? PHASE 2: Aviso de hor�rio fora do expediente
   const saveChangesPromiseRef = useRef(null);
 
@@ -390,6 +450,7 @@ export default function AppointmentUnitedModal({
 
     // ?? Guard: Se � novo agendamento, N�O tentar carregar
     if (!appointmentIdToEdit) {
+      setLoadedAppointmentFromId(null);
       console.log('? [AppointmentUnitedModal] NOVO AGENDAMENTO - N�o carregando via appointmentIdToEdit');
       return;
     }
@@ -479,8 +540,8 @@ export default function AppointmentUnitedModal({
 
   // ?? Consolidate appointment from both sources (prop or loaded via ID)
   const finalAppointment = useMemo(
-    () => loadedAppointmentFromId || appointment,
-    [appointment, loadedAppointmentFromId],
+    () => (mode === 'new' ? appointment : loadedAppointmentFromId || appointment),
+    [appointment, loadedAppointmentFromId, mode],
   );
 
   // ?? DEBUG: Modo NEW - permitindo cria��o de novo agendamento
@@ -528,10 +589,22 @@ export default function AppointmentUnitedModal({
     () => calculateAppointmentServicesTotal(appointmentServices),
     [appointmentServices],
   );
+  const appointmentServicesGrossTotal = useMemo(
+    () => calculateAppointmentServicesGrossTotal(appointmentServices),
+    [appointmentServices],
+  );
+  const appointmentServicesDiscountTotal = useMemo(
+    () => calculateAppointmentServicesDiscountTotal(appointmentServices),
+    [appointmentServices],
+  );
   const effectiveAppointmentValue =
     appointmentServices.length > 0
-      ? appointmentServicesTotal
+      ? appointmentServicesGrossTotal
       : parseFloat(agendamentoData.value || 0);
+  const effectiveDiscountAmount = appointmentServices.length > 0
+    ? appointmentServicesDiscountTotal
+    : 0;
+  const effectiveNetAppointmentValue = Math.max(0, effectiveAppointmentValue - effectiveDiscountAmount);
   const effectiveAppointmentValueString = effectiveAppointmentValue.toString();
 
   // Dados Cadastrais
@@ -671,7 +744,6 @@ export default function AppointmentUnitedModal({
     requestedDiscountAmount > 0 &&
     !pagamentoData.discount_authorized_by &&
     !pagamentoData.discount_rejected_at;
-  const effectiveDiscountAmount = isDiscountApproved ? requestedDiscountAmount : 0;
 
   // ? Estado para habilitar/desabilitar m�ltiplos pagamentos
   const [enableMultiplePayments, setEnableMultiplePayments] = useState(true);
@@ -941,6 +1013,11 @@ export default function AppointmentUnitedModal({
     return splitsToSave.length > 0 ? JSON.stringify(splitsToSave) : null;
   };
 
+  const getPaymentDataForFinancial = () => ({
+    ...pagamentoData,
+    payment_splits: getPaymentSplitsForSave(),
+  });
+
   // FUN��ES PARA M�LTIPLOS PAGAMENTOS
   const addPaymentSplit = () => {
     if (!splitFormData.value || parseFloat(splitFormData.value) <= 0) {
@@ -966,8 +1043,7 @@ export default function AppointmentUnitedModal({
       (sum, split) => sum + parseFloat(split.value || 0),
       0,
     );
-    const desconto = effectiveDiscountAmount;
-    const valorTotal = effectiveAppointmentValue - desconto;
+    const valorTotal = effectiveNetAppointmentValue;
     if (totalAtual + parseFloat(splitFormData.value) > valorTotal) {
       alert(
         `Valor permitido para recebimento é ${formatCurrency(valorTotal)}. Valor total não pode exceder este valor.`,
@@ -1066,7 +1142,7 @@ export default function AppointmentUnitedModal({
             '   *** finalAppointment.professionalId (camelCase):',
             finalAppointment.professionalId,
           );
-          setTabAtivo('dados');
+          setTabAtivo(defaultInitialTab);
           setSelectedPatient(null);
           console.log('? TIME FINAL:', finalAppointment.time, finalAppointment.scheduled_time);
           const newAgendamentoData = {
@@ -1171,7 +1247,7 @@ export default function AppointmentUnitedModal({
           console.log('   Reason: finalAppointment falsy OR has an id');
           console.log('?? [AppointmentUnitedModal] ? Entrando no ELSE - Resetando dados (sem slot data)',
           );
-          setTabAtivo('dados');
+          setTabAtivo(defaultInitialTab);
           setSelectedPatient(null); // ? Limpar paciente selecionado
           setAgendamentoData({
             date: '',
@@ -1262,7 +1338,7 @@ export default function AppointmentUnitedModal({
           '?? [CRITICAL] Conv�nio (payer) detectado?',
           finalAppointment.payerId ? '? SIM' : '? N�O',
         );
-        setTabAtivo('dados');
+        setTabAtivo(defaultInitialTab);
         const newData = {
           id: finalAppointment.id || finalAppointment.appointment_id || null,
           date: finalAppointment.date || '',
@@ -1276,7 +1352,13 @@ export default function AppointmentUnitedModal({
             finalAppointment.patientProntuario || finalAppointment.patients?.record_number || finalAppointment.prontuario_numero || '',
           professionalId: finalAppointment.professionalId || finalAppointment.professional_id || '',
           serviceId: finalAppointment.serviceId || finalAppointment.service_id || '',
-          serviceCode: finalAppointment.serviceName || finalAppointment.services?.code || finalAppointment.service_name || '',
+          serviceCode:
+            finalAppointment.serviceCode ||
+            finalAppointment.service_code ||
+            finalAppointment.services?.tuss_code ||
+            finalAppointment.services?.code ||
+            finalAppointment.services?.codigo ||
+            '',
           payerId: finalAppointment.payerId || finalAppointment.payer_id || '',
           planId: finalAppointment.planId || finalAppointment.plan_id || '',
           planCode: finalAppointment.planCode || finalAppointment.plans?.code || finalAppointment.plan_code || '',
@@ -1650,21 +1732,36 @@ export default function AppointmentUnitedModal({
   );
 
   const appointmentServiceLoadedRef = React.useRef(null);
+  const appointmentServicesDirtyRef = React.useRef(false);
 
   // ?? Reset ref quando modal fecha (para poder recarregar na pr�xima abertura)
   useEffect(() => {
     if (!isOpen) {
       appointmentServiceLoadedRef.current = null;
+      appointmentServicesDirtyRef.current = false;
       console.log('?? [loadAppointmentServices] Modal fechada - resetando ref');
     }
   }, [isOpen]);
 
   useEffect(() => {
     const loadAppointmentServices = async () => {
-      // ?? NOTA: AppointmentItemsManager cuida de carregar os servi�os via onItemsChange
-      // Este m�todo N�O precisa mais carregar servi�os separadamente
-      console.log('?? [loadAppointmentServices] AppointmentItemsManager gerencia os servi�os agora');
-      return;
+      if (!isOpen || mode !== 'edit' || !appointmentIdForServiceLoad) {
+        return;
+      }
+
+      if (appointmentServiceLoadedRef.current === appointmentIdForServiceLoad) {
+        return;
+      }
+
+      try {
+        appointmentServiceLoadedRef.current = appointmentIdForServiceLoad;
+        appointmentServicesDirtyRef.current = false;
+        console.log('?? [loadAppointmentServices] Carregando serviços do agendamento:', appointmentIdForServiceLoad);
+        const loadedServices = await getAppointmentServices(appointmentIdForServiceLoad);
+        setAppointmentServices(loadedServices || []);
+      } catch (err) {
+        console.error('❌ [loadAppointmentServices] Erro ao carregar serviços:', err);
+      }
     };
 
     loadAppointmentServices();
@@ -1673,22 +1770,21 @@ export default function AppointmentUnitedModal({
   // ?? ETAPA 3.5: Recalcular total quando appointmentServices muda
   useEffect(() => {
     if (appointmentServices && appointmentServices.length > 0) {
-      const totalValue = appointmentServices.reduce((sum, item) => {
+      const grossValue = appointmentServices.reduce((sum, item) => {
         const value = parseFloat(item.value || 0);
-        const discount = parseFloat(item.discount || 0);
         const qty = parseInt(item.quantity || 1);
-        return sum + (value * qty - discount * qty);
+        return sum + (value * qty);
       }, 0);
       console.log(
-        '?? [useEffect appointmentServices] Recalculando total:',
-        totalValue,
+        '?? [useEffect appointmentServices] Recalculando valor bruto:',
+        grossValue,
         'com',
         appointmentServices.length,
         'servi�os',
       );
       setAgendamentoData((prev) => ({
         ...prev,
-        value: totalValue.toString(),
+        value: grossValue.toString(),
       }));
     }
   }, [appointmentServices]);
@@ -1697,11 +1793,12 @@ export default function AppointmentUnitedModal({
   // Este useEffect garante que os servi�os s�o salvos automaticamente quando alterados
   // Isso previne perda de dados ao mudar de aba
   useEffect(() => {
-    if (!isOpen || !finalAppointment?.id || appointmentServices.length === 0) {
+    if (!isOpen || !finalAppointment?.id || appointmentServices.length === 0 || !appointmentServicesDirtyRef.current) {
       console.log('?? [AUTO-SYNC SERVICES] Condi��es n�o atendidas:', {
         isOpen,
         hasAppointmentId: !!finalAppointment?.id,
         servicesCount: appointmentServices.length,
+        dirty: appointmentServicesDirtyRef.current,
       });
       return;
     }
@@ -2462,22 +2559,22 @@ export default function AppointmentUnitedModal({
   useEffect(() => {
     const isParticular = checkIsParticular(agendamentoData.payerId);
     if (tabAtivo === 'pagamento' && isParticular) {
-      const value = effectiveAppointmentValue;
+      const value = effectiveNetAppointmentValue;
       setPagamentoData((prev) => ({
         ...prev,
-        amount: effectiveAppointmentValueString,
+        amount: effectiveNetAppointmentValue.toString(),
         dinheiro: {
           ...prev.dinheiro,
-          value_received: effectiveAppointmentValueString,
+          value_received: effectiveNetAppointmentValue.toString(),
           change: '0.00',
         },
       }));
       console.log(
         '?? [AppointmentUnitedModal] Sincronizado valor de pagamento:',
-        effectiveAppointmentValueString,
+        effectiveNetAppointmentValue,
       );
     }
-  }, [tabAtivo, effectiveAppointmentValueString, agendamentoData.payerId]);
+  }, [tabAtivo, effectiveNetAppointmentValue, agendamentoData.payerId]);
 
   // ?? SINCRONIZAR DESCONTO COM VALOR RECEBIDO (dinheiro)
   useEffect(() => {
@@ -2526,6 +2623,134 @@ export default function AppointmentUnitedModal({
     SERVICE_STATUSES.AWAITING_PROFESSIONAL,
     SERVICE_STATUSES.IN_SERVICE,
   ].includes(appointmentStatus);
+
+  const loadFinancialStatus = async (appointmentId) => {
+    if (!clinicId || !appointmentId) {
+      setFinancialStatus({
+        loading: false,
+        generated: false,
+        unknown: false,
+        receivableIds: [],
+        total: 0,
+        generatedAt: null,
+        reversalRequest: null,
+      });
+      return { generated: false, unknown: false, receivableIds: [], total: 0, generatedAt: null, reversalRequest: null };
+    }
+
+    setFinancialStatus((prev) => ({ ...prev, loading: true }));
+
+    try {
+      let { data, error } = await supabase
+        .from('ar_invoices')
+        .select('id, status, amount, net_value, created_at')
+        .eq('clinic_id', clinicId)
+        .eq('appointment_id', appointmentId);
+
+      if (error) {
+        const rpcResult = await supabase.rpc('get_ar_invoices_for_appointment', {
+          p_clinic_id: clinicId,
+          p_appointment_id: appointmentId,
+          p_user_id: user?.id || null,
+          p_email: user?.email || null,
+        });
+        data = rpcResult.data;
+        error = rpcResult.error;
+      }
+
+      if (!error && (!data || data.length === 0)) {
+        const rpcResult = await supabase.rpc('get_ar_invoices_for_appointment', {
+          p_clinic_id: clinicId,
+          p_appointment_id: appointmentId,
+          p_user_id: user?.id || null,
+          p_email: user?.email || null,
+        });
+        if (!rpcResult.error && rpcResult.data?.length) {
+          data = rpcResult.data;
+        }
+      }
+
+      if (error) {
+        throw error;
+      }
+
+      const activeRows = (data || []).filter(
+        (row) => !['canceled', 'cancelado', 'reversed', 'estornado'].includes(String(row.status || '').toLowerCase()),
+      );
+      const reversalRequest = await getLatestAppointmentFinancialReversalRequest({ clinicId, appointmentId });
+      const nextStatus = {
+        loading: false,
+        generated: activeRows.length > 0,
+        unknown: false,
+        receivableIds: activeRows.map((row) => row.id),
+        total: activeRows.reduce((sum, row) => sum + Number(row.net_value ?? row.amount ?? 0), 0),
+        generatedAt: activeRows[0]?.created_at || null,
+        reversalRequest,
+      };
+
+      setFinancialStatus(nextStatus);
+      return nextStatus;
+    } catch (error) {
+      console.warn('Nao foi possivel consultar financeiro do agendamento:', error);
+      const fallbackStatus = {
+        loading: false,
+        generated: false,
+        unknown: true,
+        receivableIds: [],
+        total: 0,
+        generatedAt: null,
+        reversalRequest: null,
+      };
+      setFinancialStatus(fallbackStatus);
+      return fallbackStatus;
+    }
+  };
+
+  useEffect(() => {
+    const appointmentId = agendamentoData.id || finalAppointment?.id || appointment?.id;
+
+    if (!isOpen || !appointmentId) {
+      setFinancialStatus({
+        loading: false,
+        generated: false,
+        unknown: false,
+        receivableIds: [],
+        total: 0,
+        generatedAt: null,
+        reversalRequest: null,
+      });
+      return;
+    }
+
+    loadFinancialStatus(appointmentId);
+  }, [isOpen, clinicId, agendamentoData.id, finalAppointment?.id, appointment?.id]);
+
+  useEffect(() => {
+    const appointmentId = agendamentoData.id || finalAppointment?.id || appointment?.id || appointmentIdToEdit;
+
+    if (!isOpen || tabAtivo !== 'resumo' || !clinicId || !appointmentId) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadPendingFinancialReversalRequest() {
+      try {
+        const reversalRequest = await getLatestAppointmentFinancialReversalRequest({ clinicId, appointmentId });
+        if (!cancelled) {
+          setFinancialStatus((prev) => ({ ...prev, reversalRequest }));
+        }
+      } catch (error) {
+        console.warn('Não foi possível consultar solicitação de estorno pendente:', error);
+      }
+    }
+
+    loadPendingFinancialReversalRequest();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, tabAtivo, clinicId, agendamentoData.id, finalAppointment?.id, appointment?.id, appointmentIdToEdit]);
 
   useEffect(() => {
     let isMounted = true;
@@ -2917,6 +3142,88 @@ export default function AppointmentUnitedModal({
     }
   };
 
+  const handleOpenFinancialReversalDialog = async () => {
+    const apt = finalAppointment || appointment || loadedAppointmentFromId;
+    const appointmentId = apt?.id || appointmentIdToEdit;
+
+    if (!appointmentId) {
+      alert('Não foi possível identificar o atendimento para estorno.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const existingRequest = await getLatestAppointmentFinancialReversalRequest({ clinicId, appointmentId });
+
+      if (existingRequest?.request_status === 'pending') {
+        setFinancialStatus((prev) => ({ ...prev, reversalRequest: existingRequest }));
+        alert('Já existe uma solicitação de estorno pendente para este atendimento. Cancele a solicitação atual no Resumo e NF antes de abrir uma nova.');
+        return;
+      }
+
+      setFinancialReversalReason('');
+      setFinancialReversalDialogOpen(true);
+    } catch (error) {
+      console.error('Erro ao verificar solicitação de estorno pendente:', error);
+      alert(`Erro ao verificar solicitação de estorno pendente: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelPendingFinancialReversal = async () => {
+    const request = financialStatus.reversalRequest;
+
+    if (!request?.id || request.request_status !== 'pending') {
+      alert('Não há solicitação de estorno pendente para cancelar.');
+      return;
+    }
+
+    setFinancialReversalCancelReason('');
+    setFinancialReversalCancelDialogOpen(true);
+  };
+
+  const handleConfirmCancelPendingFinancialReversal = async () => {
+    const request = financialStatus.reversalRequest;
+    const apt = finalAppointment || appointment || loadedAppointmentFromId;
+    const appointmentId = apt?.id || appointmentIdToEdit;
+    const reason = financialReversalCancelReason.trim();
+
+    if (!request?.id || request.request_status !== 'pending') {
+      alert('Não há solicitação de estorno pendente para cancelar.');
+      return;
+    }
+
+    if (!reason) {
+      alert('Motivo do cancelamento é obrigatório.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await cancelFinancialReversalRequest({
+        requestId: request.id,
+        clinicId,
+        userId: user?.id,
+        note: reason,
+      });
+
+      if (appointmentId) {
+        await loadFinancialStatus(appointmentId);
+      }
+
+      setFinancialReversalCancelDialogOpen(false);
+      setFinancialReversalCancelReason('');
+      alert('Solicitação de estorno cancelada. Você já pode abrir uma nova solicitação, se necessário.');
+      onSuccess?.();
+    } catch (error) {
+      console.error('Erro ao cancelar solicitação de estorno:', error);
+      alert(`Erro ao cancelar solicitação de estorno: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleReverseFinancialOperation = async () => {
     const apt = finalAppointment || appointment || loadedAppointmentFromId;
     const appointmentId = apt?.id || appointmentIdToEdit;
@@ -2926,40 +3233,29 @@ export default function AppointmentUnitedModal({
       return;
     }
 
-    const reason = window.prompt('Informe o motivo do estorno financeiro:');
-    if (!reason || !reason.trim()) {
-      alert('Estorno cancelado. O motivo e obrigatorio para rastreabilidade.');
-      return;
-    }
-
-    const confirmed = window.confirm(
-      'Confirma o estorno financeiro deste atendimento?\n\n' +
-        'A operacao tentara cancelar/estornar contas a receber, transacoes financeiras, caixa, conciliacao/cartao, NF/guia e registrar auditoria.',
-    );
-
-    if (!confirmed) {
+    const reason = financialReversalReason.trim();
+    if (!reason) {
+      alert('Informe o motivo do estorno financeiro. O motivo e obrigatorio para rastreabilidade.');
       return;
     }
 
     try {
       setLoading(true);
-      const result = await reverseAppointmentFinancialOperation({
+
+      await requestAppointmentFinancialReversalApproval({
         appointmentId,
         clinicId,
         reason: reason.trim(),
         userId: user?.id,
+        userRole: currentRole,
       });
-
-      const resumo = result.steps
-        .map((step) => `- ${step.name}: ${step.status}`)
-        .join('\n');
-
-      alert(`Estorno financeiro processado.\n\n${resumo}`);
+      await loadFinancialStatus(appointmentId);
+      setFinancialReversalDialogOpen(false);
+      alert('Solicitacao de estorno registrada. Um administrador, gestor ou perfil com permissao financeira deve aprovar, rejeitar ou cancelar na tela Financeiro > Solicitacoes de Estorno.');
       onSuccess?.();
-      onClose();
     } catch (error) {
       console.error('Erro ao estornar financeiro:', error);
-      alert(`Erro ao estornar financeiro: ${error.message}`);
+      alert(`Erro ao solicitar estorno financeiro: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -3650,6 +3946,119 @@ export default function AppointmentUnitedModal({
     }
   };
 
+  const handleGenerateFinancial = async () => {
+    const apt = finalAppointment || appointment;
+    const appointmentId = agendamentoData.id || apt?.id;
+    const patientId = agendamentoData.patientId || apt?.patient_id || apt?.patientId;
+
+    if (!appointmentId) {
+      alert('Salve o agendamento antes de gerar o financeiro.');
+      return;
+    }
+
+    const currentFinancialStatus = financialStatus.generated
+      ? financialStatus
+      : await loadFinancialStatus(appointmentId);
+
+    if (currentFinancialStatus.generated) {
+      alert('Financeiro ja gerado para este atendimento. Para refazer, estorne o financeiro primeiro.');
+      return;
+    }
+
+    if (currentFinancialStatus.unknown) {
+      alert('Nao foi possivel verificar se o financeiro ja existe. Atualize a tela e tente novamente antes de gerar.');
+      return;
+    }
+
+    if (!user?.id) {
+      alert('Usuario nao identificado. Entre novamente para gerar o financeiro.');
+      return;
+    }
+
+    const selectedService = services.find((service) => service.id === agendamentoData.serviceId);
+    const serviceName = String(
+      selectedService?.name || apt?.serviceName || apt?.services?.name || '',
+    ).toLowerCase();
+    const appointmentType = String(
+      agendamentoData.appointment_type || agendamentoData.tipo_atendimento || apt?.appointment_type || apt?.tipo_atendimento || '',
+    ).toLowerCase();
+    const isReturnAppointment = serviceName.includes('retorno') || appointmentType.includes('retorno');
+    const originalValue = effectiveAppointmentValue;
+    const discountAmount = effectiveDiscountAmount;
+    const finalValue = Math.max(0, originalValue - discountAmount);
+
+    if (isReturnAppointment || finalValue <= 0) {
+      alert('Atendimento de retorno ou sem valor: nenhum recebivel financeiro sera gerado.');
+      return;
+    }
+
+    if (!pagamentoData.payment_method) {
+      alert('Selecione a forma de pagamento antes de gerar o financeiro.');
+      setTabAtivo('pagamento');
+      return;
+    }
+
+    const validation = validatePaymentData(pagamentoData.payment_method, pagamentoData);
+    if (!validation.valid) {
+      alert(`Complete os dados da forma de pagamento antes de gerar o financeiro:\n${validation.errors.join('\n')}`);
+      setTabAtivo('pagamento');
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const paymentResult = await processPaymentComplete({
+        clinicId,
+        appointmentId,
+        patientId,
+        amount: finalValue,
+        paymentMethod: pagamentoData.payment_method,
+        paymentData: getPaymentDataForFinancial(),
+        operatorId: user.id,
+        appointmentDetails: {
+          patientName: agendamentoData.patientName,
+          patientId,
+          serviceName: selectedService?.name || null,
+          serviceGroup: selectedService?.group_name || selectedService?.service_group || selectedService?.category || null,
+          professionalId: agendamentoData.professionalId || selectedProfessional?.id || null,
+          professionalName: selectedProfessional?.name || finalAppointment?.professionals?.name || null,
+          unitId: selectedRoom?.unit_id || null,
+          unitName: selectedRoom?.unit_name || selectedRoom?.name || null,
+          roomName: selectedRoom?.name || null,
+          specialtyName: selectedProfessional?.specialty_name || selectedProfessional?.specialty || null,
+          payerId: pagamentoData.payer_id || selectedService?.payer_id || null,
+        },
+      });
+
+      if (!paymentResult.success) {
+        alert(`Nao foi possivel gerar o financeiro: ${paymentResult.error}`);
+        return;
+      }
+
+      if (discountAmount > 0) {
+        await registerDiscountIfNeeded(appointmentId);
+      }
+
+      await loadFinancialStatus(appointmentId);
+      setFinancialStatus({
+        loading: false,
+        generated: true,
+        unknown: false,
+        receivableIds: paymentResult.receivableId ? [paymentResult.receivableId] : [],
+        total: finalValue,
+        generatedAt: new Date().toISOString(),
+      });
+      alert('Financeiro gerado com sucesso.');
+      onSuccess?.();
+    } catch (error) {
+      console.error('Erro ao gerar financeiro:', error);
+      alert(`Erro ao gerar financeiro: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Handle saving appointment changes
   const handleSaveChanges = async () => {
     if (saveChangesPromiseRef.current) {
@@ -4037,89 +4446,7 @@ export default function AppointmentUnitedModal({
         }
       }
 
-      // ??? SE FOR PARTICULAR E HOUVER DADOS DE PAGAMENTO, PROCESSAR
-      if (
-        (isParticular || !agendamentoData.payerId) &&
-        appointmentId &&
-        user?.id &&
-        pagamentoData.payment_method
-      ) {
-        console.log('?? Processando pagamento para appointmentId:', appointmentId);
-
-        // ?? Validar pagamento APENAS se h� dados preenchidos
-        if (pagamentoData.payment_method !== 'DINHEIRO' || pagamentoData.dinheiro?.value_received) {
-          const validation = validatePaymentData(pagamentoData.payment_method, pagamentoData);
-
-          if (!validation.valid) {
-            console.warn(
-              '?? Dados de pagamento incompletos (ser� preenchido na recep��o):',
-              validation.errors,
-            );
-            // N�o vai bloquear a cria��o do agendamento
-          } else {
-            // ?? Calcular valor com desconto
-            const originalValue = effectiveAppointmentValue;
-            const discountAmount = effectiveDiscountAmount;
-            const finalValue = originalValue - discountAmount;
-
-            console.log(
-              `?? Valor original: ${originalValue}, Desconto: ${discountAmount}, Valor final: ${finalValue}`,
-            );
-
-            try {
-              const paymentResult = await processPaymentComplete({
-                clinicId,
-                appointmentId: appointmentId,
-                patientId: patientId,
-                amount: finalValue > 0 ? finalValue : 0,
-                paymentMethod: pagamentoData.payment_method,
-                paymentData: pagamentoData,
-                operatorId: user.id,
-                appointmentDetails: {
-                  patientName: agendamentoData.patientName,
-                  serviceName: agendamentoData.serviceId
-                    ? services.find((s) => s.id === agendamentoData.serviceId)?.name
-                    : null,
-                },
-              });
-
-              if (!paymentResult.success) {
-                console.warn('?? Pagamento n�o processado:', paymentResult.error);
-              } else {
-                console.log('? Pagamento processado com sucesso!', paymentResult);
-
-                // ?? Registrar desconto (se houver)
-                if (discountAmount > 0) {
-                  try {
-                    await registerDiscountIfNeeded(appointmentId);
-                  } catch (discountErr) {
-                    console.error('?? Desconto n�o foi registrado:', discountErr);
-                  }
-                }
-              }
-            } catch (paymentErr) {
-              console.warn('?? Erro ao processar pagamento (ser� feito na recep��o):', paymentErr);
-            }
-          }
-        } else {
-          console.log('?? Agendamento criado sem pagamento (ser� feito na recep��o)');
-        }
-      } else {
-        console.log('?? Agendamento criado para conv�nio (pagamento ser� administrado depois)');
-      }
-
-      if (isParticular || !agendamentoData.payerId) {
-        try {
-          await syncCardInstallmentsToFinancial({ appointmentId, patientId });
-          console.log('Recebiveis de cartao sincronizados com o financeiro.');
-        } catch (financialErr) {
-          console.error('Erro ao sincronizar parcelas de cartao com o financeiro:', financialErr);
-          alert(
-            'Agendamento salvo, mas houve erro ao gerar as parcelas no financeiro: ' +
-              financialErr.message,
-          );
-        }
-      }
+      console.log('Financeiro nao gerado no salvamento. Use o botao Gerar Financeiro.');
 
       console.log('? Agendamento processado com sucesso! Chamando callbacks...');
 
@@ -4950,6 +5277,7 @@ export default function AppointmentUnitedModal({
                             : servicePayers;
                         })()}
                         clinicId={clinicId}
+                        patientId={agendamentoData.patientId || finalAppointment?.patient_id || finalAppointment?.patientId || null}
                         professionalId={agendamentoData.professionalId}
                         payerId={agendamentoData.payerId}
                         payerName={
@@ -4967,6 +5295,7 @@ export default function AppointmentUnitedModal({
                           const servicesTotal = calculateAppointmentServicesTotal(updatedServices || []);
 
                           // ?? CRITICAL: Show state change
+                          appointmentServicesDirtyRef.current = true;
                           setAppointmentServices((prev) => {
                             console.log('?? [setAppointmentServices] STATE UPDATED:', {
                               prev_length: prev?.length || 0,
@@ -5652,12 +5981,12 @@ export default function AppointmentUnitedModal({
                           {(() => {
                             const desconto = effectiveDiscountAmount;
                             const valorOriginal = effectiveAppointmentValue;
-                            const valorComDesconto = valorOriginal - desconto;
+                            const valorComDesconto = effectiveNetAppointmentValue;
                             const totalPago = pagamentoSplits.reduce(
                               (s, p) => s + parseFloat(p.value || 0),
                               0,
                             );
-                            const saldoRestante = valorComDesconto - totalPago;
+                            const saldoRestante = Math.max(0, valorComDesconto - totalPago);
 
                             return (
                               <div className="mt-2 p-2 bg-white rounded border border-blue-200">
@@ -5850,12 +6179,14 @@ export default function AppointmentUnitedModal({
                           {(() => {
                             const desconto = effectiveDiscountAmount;
                             const valorOriginal = effectiveAppointmentValue;
-                            const valorComDesconto = valorOriginal - desconto;
+                            const valorComDesconto = effectiveNetAppointmentValue;
                             const totalPago = pagamentoSplits.reduce(
                               (s, p) => s + parseFloat(p.value || 0),
                               0,
                             );
-                            const saldo = valorComDesconto - totalPago;
+                            const diferenca = valorComDesconto - totalPago;
+                            const saldo = Math.max(0, diferenca);
+                            const isPagamentoCompleto = Math.abs(diferenca) < 0.01;
 
                             return (
                               <div className="mt-3 pt-2 border-t border-gray-200 space-y-2">
@@ -5909,9 +6240,9 @@ export default function AppointmentUnitedModal({
                                   <div className="bg-gray-50 p-2 rounded text-center">
                                     <p className="text-gray-600 font-semibold">Status</p>
                                     <p
-                                      className={`font-bold text-sm ${Math.abs(saldo) < 0.01 ? 'text-green-600' : 'text-orange-600'}`}
+                                      className={`font-bold text-sm ${isPagamentoCompleto ? 'text-green-600' : 'text-orange-600'}`}
                                     >
-                                      {Math.abs(saldo) < 0.01 ? 'Completo' : 'Incompleto'}
+                                      {isPagamentoCompleto ? 'Completo' : 'Incompleto'}
                                     </p>
                                   </div>
                                 </div>
@@ -6317,6 +6648,66 @@ export default function AppointmentUnitedModal({
                     {/* RESUMO FINANCEIRO */}
                     <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-300 rounded-lg p-4 space-y-2 mt-6">
                       <p className="font-semibold text-blue-900">Resumo Financeiro</p>
+                      {financialStatus.generated && (
+                        <div className="rounded-md border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-900">
+                          <p className="font-semibold">Financeiro gerado</p>
+                          <p>
+                            Recebivel criado no valor de {formatCurrency(financialStatus.total)}.
+                            Para gerar novamente, estorne o financeiro primeiro.
+                          </p>
+                        </div>
+                      )}
+                      {!financialStatus.generated && financialStatus.loading && (
+                        <div className="rounded-md border border-blue-200 bg-white/70 px-3 py-2 text-sm text-blue-800">
+                          Verificando financeiro do atendimento...
+                        </div>
+                      )}
+                      {financialStatus.unknown && (
+                        <div className="rounded-md border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-yellow-900">
+                          Nao foi possivel verificar se o financeiro ja foi gerado. Atualize a tela antes de gerar novamente.
+                        </div>
+                      )}
+                      {financialStatus.reversalRequest && (
+                        <div className={`rounded-md border px-3 py-2 text-sm ${
+                          financialStatus.reversalRequest.request_status === 'pending'
+                            ? 'border-amber-300 bg-amber-50 text-amber-900'
+                            : financialStatus.reversalRequest.request_status === 'approved'
+                              ? 'border-green-300 bg-green-50 text-green-900'
+                              : financialStatus.reversalRequest.request_status === 'rejected'
+                                ? 'border-red-300 bg-red-50 text-red-900'
+                                : 'border-slate-300 bg-slate-50 text-slate-800'
+                        }`}
+                        >
+                          <p className="font-semibold">Solicitacao de estorno</p>
+                          {financialStatus.reversalRequest.request_status === 'pending' && (
+                            <div className="mt-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                              <p>Aguardando aprovação do perfil financeiro. Você pode cancelar esta solicitação para abrir uma nova.</p>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={handleCancelPendingFinancialReversal}
+                                disabled={loading}
+                                className="border-amber-400 bg-white text-amber-800 hover:bg-amber-100"
+                              >
+                                Cancelar solicitação
+                              </Button>
+                            </div>
+                          )}
+                          {financialStatus.reversalRequest.request_status === 'approved' && (
+                            <p>Estorno autorizado e executado pelo Financeiro.</p>
+                          )}
+                          {financialStatus.reversalRequest.request_status === 'rejected' && (
+                            <p>Solicitacao rejeitada pelo Financeiro. O financeiro permanece gerado.</p>
+                          )}
+                          {financialStatus.reversalRequest.request_status === 'canceled' && (
+                            <p>Solicitacao cancelada pelo Financeiro. O financeiro permanece gerado.</p>
+                          )}
+                          {financialStatus.reversalRequest.resolution?.object_data?.note && (
+                            <p className="mt-1 text-xs">Observacao: {financialStatus.reversalRequest.resolution.object_data.note}</p>
+                          )}
+                        </div>
+                      )}
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-700">Valor Total:</span>
                         <span className="font-bold text-gray-900">
@@ -6383,38 +6774,6 @@ export default function AppointmentUnitedModal({
                         {loading ? 'Criando atendimento...' : 'Criar Atendimento'}
                       </Button>
                     )}
-                  </div>
-                )}
-
-                {/* ABA: PAGAMENTO */}
-                {tabAtivo === 'pagamento' && (
-                  <div className="space-y-4 overflow-y-auto max-h-[600px]">
-                    <div className="bg-blue-50 border border-blue-300 rounded-lg p-3 mb-4">
-                      <p className="text-sm font-semibold text-blue-900">Informacoes de Pagamento</p>
-                    </div>
-
-                    {/* Card Processor Selector para pagamentos em cart�o */}
-                    <CardProcessorSelectorFields
-                      clinicId={clinicId}
-                      paymentMethod={pagamentoData.payment_method}
-                      grossAmount={effectiveAppointmentValue}
-                      processorId={cardProcessorData.processor_id}
-                      cardBrand={cardProcessorData.card_brand}
-                      settlementType={cardProcessorData.settlement_type}
-                      onProcessorChange={(id) => setCardProcessorData((prev) => ({ ...prev, processor_id: id }))}
-                      onCardBrandChange={(brand) => setCardProcessorData((prev) => ({ ...prev, card_brand: brand }))}
-                      onSettlementTypeChange={(type) => setCardProcessorData((prev) => ({ ...prev, settlement_type: type }))}
-                      onFeeCalculated={(fee) => {
-                        if (fee) {
-                          setCardProcessorData((prev) => ({
-                            ...prev,
-                            fee_percent: fee.feePercent,
-                            fee_amount: fee.feeAmount,
-                            net_amount: fee.netAmount,
-                          }));
-                        }
-                      }}
-                    />
                   </div>
                 )}
 
@@ -6529,18 +6888,27 @@ export default function AppointmentUnitedModal({
                                     </p>
                                   )}
                                 </div>
-                                <p className="text-gray-900 font-bold whitespace-nowrap">
-                                  {formatCurrency(
-                                    Math.max(
-                                      0,
-                                      parseFloat(
-                                        service.value ?? service.unit_price ?? service.final_value ?? service.price ?? 0,
-                                      ) * parseFloat(service.quantity || 1) -
-                                        parseFloat(service.discount || 0),
-                                    ),
+                                <div className="text-right whitespace-nowrap">
+                                  <p className="text-gray-900 font-bold">
+                                    {formatCurrency(getAppointmentServiceTotal(service))}
+                                  </p>
+                                  {Number(service.package_covered_value || 0) > 0 && (
+                                    <p className="text-xs font-semibold text-green-700">
+                                      Coberto pelo pacote: {formatCurrency(service.package_covered_value)}
+                                    </p>
                                   )}
-                                </p>
+                                </div>
                               </div>
+                              {getPackageSummaryText(service) && (
+                                <div className="mt-2 rounded border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-800">
+                                  <p className="font-bold">Pacote: {getPackageSummaryText(service)}</p>
+                                  {Number(service.package_consumed_sessions || 0) > 0 && (
+                                    <p>
+                                      Este atendimento consumiu {service.package_consumed_sessions} sessão{Number(service.package_consumed_sessions) === 1 ? '' : 'ões'} do pacote e nao gerou nova cobrança para essa sessão.
+                                    </p>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -6631,12 +6999,38 @@ export default function AppointmentUnitedModal({
                         <div className="grid grid-cols-2 gap-3 text-sm">
                           <div>
                             <span className="text-gray-600 block text-xs font-semibold">
-                              Valor Total
+                              {appointmentServices.some((service) => Number(service.package_covered_value || 0) > 0)
+                                ? 'Valor do serviço'
+                                : 'Valor Total'}
                             </span>
                             <p className="text-gray-900 font-bold">
-                              {formatCurrency(effectiveAppointmentValue)}
+                              {formatCurrency(
+                                appointmentServices.some((service) => Number(service.package_covered_value || 0) > 0)
+                                  ? calculateAppointmentServicesGrossTotal(appointmentServices)
+                                  : effectiveAppointmentValue,
+                              )}
                             </p>
                           </div>
+                          {appointmentServices.some((service) => Number(service.package_covered_value || 0) > 0) && (
+                            <>
+                              <div>
+                                <span className="text-gray-600 block text-xs font-semibold">
+                                  Coberto por pacote
+                                </span>
+                                <p className="text-green-700 font-bold">
+                                  -{formatCurrency(appointmentServices.reduce((sum, service) => sum + (Number(service.package_covered_value || 0) || 0), 0))}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="text-gray-600 block text-xs font-semibold">
+                                  Valor a receber
+                                </span>
+                                <p className="text-green-700 font-bold">
+                                  {formatCurrency(calculateAppointmentServicesTotal(appointmentServices))}
+                                </p>
+                              </div>
+                            </>
+                          )}
                           {enableMultiplePayments && pagamentoSplits.length > 0 ? (
                             <div className="col-span-2">
                               <span className="text-gray-600 block text-xs font-semibold mb-2">
@@ -7154,20 +7548,53 @@ export default function AppointmentUnitedModal({
                   </Button>
                   <Button
                     onClick={() => {
-                      // Abrir modal de emiss�o de NF
-                      setInvoiceModalOpen(true);
+                      const appointmentId = finalAppointment?.id || appointment?.id || agendamentoData.id;
+                      if (!appointmentId) {
+                        alert('Salve o agendamento antes de emitir a nota fiscal.');
+                        return;
+                      }
+                      handleCloseModal();
+                      navigate(`/clinica/faturamento/centro-fiscal?appointmentId=${appointmentId}&origin=agenda`);
                     }}
                     className="bg-orange-600 hover:bg-orange-700 text-white font-bold gap-2"
                   >
                     Emitir NF
                   </Button>
+                  {financialStatus.reversalRequest?.request_status === 'pending' ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleCancelPendingFinancialReversal}
+                      disabled={loading}
+                      className="border-amber-400 text-amber-800 hover:bg-amber-50"
+                    >
+                      Cancelar Solicitação de Estorno
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      onClick={handleOpenFinancialReversalDialog}
+                      disabled={loading || financialStatus.loading}
+                      className="border-red-300 text-red-700 hover:bg-red-50"
+                    >
+                      Estornar Financeiro
+                    </Button>
+                  )}
                   <Button
-                    variant="outline"
-                    onClick={handleReverseFinancialOperation}
-                    disabled={loading}
-                    className="border-red-300 text-red-700 hover:bg-red-50"
+                    onClick={handleGenerateFinancial}
+                    disabled={loading || financialStatus.loading || financialStatus.generated || financialStatus.unknown}
+                    className="h-10 min-w-[170px] bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-600 text-white font-semibold gap-2 whitespace-nowrap"
                   >
-                    Estornar Financeiro
+                    <FileText className="h-4 w-4 flex-shrink-0" />
+                    <span>
+                      {loading
+                        ? 'Gerando...'
+                        : financialStatus.generated
+                          ? 'Financeiro Gerado'
+                          : financialStatus.unknown
+                            ? 'Verificacao Pendente'
+                          : 'Gerar Financeiro'}
+                    </span>
                   </Button>
                   <Button
                     onClick={() => {
@@ -7186,18 +7613,91 @@ export default function AppointmentUnitedModal({
         </DialogContent>
       </Dialog>
 
-      {/* INVOICE EMISSION MODAL */}
-      <InvoiceEmissionModal
-        isOpen={invoiceModalOpen}
-        onClose={() => setInvoiceModalOpen(false)}
-        onSuccess={(invoiceData) => {
-          console.log('? NF emitida com sucesso:', invoiceData);
-          // Fechar o modal de NF automaticamente
-          // O callback j� fecha ap�s 2 segundos
-        }}
-        appointmentData={finalAppointment || appointment}
-        patientData={selectedPatient || cadastralData}
-      />
+      <Dialog open={financialReversalDialogOpen} onOpenChange={setFinancialReversalDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Estornar Financeiro</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">
+              {canApproveFinancialReversal
+                ? 'Ao confirmar, será registrada uma solicitação para decisão em Financeiro > Solicitações de Estorno. Se houver NF vinculada, cancele primeiro a nota no sistema e na prefeitura. O estorno financeiro será executado somente após aprovação.'
+                : 'Ao confirmar, será registrada uma solicitação para que um administrador, gestor ou perfil autorizado aprove, rejeite ou cancele o pedido. Se houver NF vinculada, cancele primeiro a nota no sistema e na prefeitura.'}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="financial-reversal-reason">Motivo do estorno *</Label>
+              <Textarea
+                id="financial-reversal-reason"
+                value={financialReversalReason}
+                onChange={(event) => setFinancialReversalReason(event.target.value)}
+                placeholder="Descreva o motivo do estorno para rastreabilidade"
+                rows={4}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setFinancialReversalDialogOpen(false)}
+                disabled={loading}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={handleReverseFinancialOperation}
+                disabled={loading || !financialReversalReason.trim()}
+                className="bg-red-600 hover:bg-red-700 disabled:bg-gray-300 disabled:text-gray-600 text-white"
+              >
+                {loading
+                  ? 'Processando...'
+                  : 'Solicitar Liberação'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={financialReversalCancelDialogOpen} onOpenChange={setFinancialReversalCancelDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Cancelar Solicitação de Estorno</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+              Essa solicitação ainda está aguardando aprovação. Informe o motivo do cancelamento para liberar a criação de uma nova solicitação, se necessário.
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="financial-reversal-cancel-reason">Motivo do cancelamento *</Label>
+              <Textarea
+                id="financial-reversal-cancel-reason"
+                value={financialReversalCancelReason}
+                onChange={(event) => setFinancialReversalCancelReason(event.target.value)}
+                placeholder="Descreva por que esta solicitação deve ser cancelada"
+                rows={4}
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setFinancialReversalCancelDialogOpen(false)}
+                disabled={loading}
+              >
+                Voltar
+              </Button>
+              <Button
+                type="button"
+                onClick={handleConfirmCancelPendingFinancialReversal}
+                disabled={loading || !financialReversalCancelReason.trim()}
+                className="bg-amber-600 text-white hover:bg-amber-700 disabled:bg-gray-300 disabled:text-gray-600"
+              >
+                {loading ? 'Cancelando...' : 'Confirmar Cancelamento'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* TISS SUBMISSION DIALOG */}
       {selectedGuideForTiss && (

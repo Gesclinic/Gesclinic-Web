@@ -3,11 +3,19 @@ import { X, CheckCircle, Phone, Clock, MapPin, User, AlertCircle } from 'lucide-
 import { supabase } from '@/lib/customSupabaseClient';
 import { listPayers } from '@/lib/payersApi';
 import { getServicePrice } from '@/lib/getServicePrice';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+import cashDrawerApi from '@/lib/cashDrawerApi';
 import {
   STATUS_CONFIG,
   APPOINTMENT_STATUSES,
   migrateStatus,
 } from '@/lib/appointmentStatusConstants';
+
+const padDatePart = (value) => String(value).padStart(2, '0');
+const getTodayIsoLocal = () => {
+  const today = new Date();
+  return `${today.getFullYear()}-${padDatePart(today.getMonth() + 1)}-${padDatePart(today.getDate())}`;
+};
 
 /**
  * AppointmentDrawer - Drawer lateral para ações de atendimento
@@ -32,6 +40,7 @@ export default function AppointmentDrawer({
   onBill,
   onEdit,
 }) {
+  const { user } = useAuth();
   const [selectedAction, setSelectedAction] = useState(null);
   const [checkinOpen, setCheckinOpen] = useState(false);
   const [checkinCPF, setCheckinCPF] = useState('');
@@ -67,6 +76,53 @@ export default function AppointmentDrawer({
   const [payers, setPayers] = useState([]);
   const [plans, setPlans] = useState([]);
   const [loadingPayers, setLoadingPayers] = useState(false);
+  const [openCashDrawer, setOpenCashDrawer] = useState(null);
+  const [cashDrawerLoading, setCashDrawerLoading] = useState(false);
+  const [cashDrawerError, setCashDrawerError] = useState('');
+
+  const clinicId = appointment?.clinic_id;
+  const hasOpenCashDrawer = Boolean(openCashDrawer?.id);
+
+  const refreshOpenCashDrawer = async () => {
+    if (!clinicId || !user?.id) {
+      setOpenCashDrawer(null);
+      return null;
+    }
+
+    setCashDrawerLoading(true);
+    setCashDrawerError('');
+    try {
+      const drawer = await cashDrawerApi.getDrawerForDate(clinicId, user.id, getTodayIsoLocal());
+      setOpenCashDrawer(drawer);
+      return drawer;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erro ao verificar caixa aberto.';
+      setCashDrawerError(message);
+      setOpenCashDrawer(null);
+      return null;
+    } finally {
+      setCashDrawerLoading(false);
+    }
+  };
+
+  const handleOpenCashDrawerShortcut = async () => {
+    if (!clinicId || !user?.id) {
+      setCashDrawerError('Não foi possível identificar usuário ou clínica para abrir o caixa.');
+      return;
+    }
+
+    setCashDrawerLoading(true);
+    setCashDrawerError('');
+    try {
+      const drawer = await cashDrawerApi.getOrCreateDrawer(clinicId, user.id, getTodayIsoLocal());
+      setOpenCashDrawer(drawer);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erro ao abrir caixa do dia.';
+      setCashDrawerError(message);
+    } finally {
+      setCashDrawerLoading(false);
+    }
+  };
 
   // Sincronizar dados do appointment quando modal abre
   useEffect(() => {
@@ -125,6 +181,12 @@ export default function AppointmentDrawer({
       setCheckinTab('essencial');
     }
   }, [checkinOpen, appointment]);
+
+  useEffect(() => {
+    if (checkinOpen && checkinTab === 'financeiro') {
+      refreshOpenCashDrawer();
+    }
+  }, [checkinOpen, checkinTab, clinicId, user?.id]);
 
   // 🆕 Carregar convênios quando check-in abre
   useEffect(() => {
@@ -363,6 +425,19 @@ export default function AppointmentDrawer({
         alert('❌ Valor inválido! Use apenas números e pontos.');
         setCheckinProcessing(false);
         return;
+      }
+
+      const requiresCashDrawer = checkinTab === 'financeiro'
+        || Boolean(checkinPaymentMethod || checkinCopayment || checkinDiscount);
+
+      if (requiresCashDrawer && !hasOpenCashDrawer) {
+        const drawer = await refreshOpenCashDrawer();
+        if (!drawer) {
+          setCheckinTab('financeiro');
+          setCashDrawerError('Abra o caixa do dia antes de registrar pagamento ou qualquer movimentação financeira do atendimento.');
+          setCheckinProcessing(false);
+          return;
+        }
       }
 
       console.log('[handleQuickCheckIn] ✅ Check-in com dados completos:', {
@@ -877,6 +952,32 @@ export default function AppointmentDrawer({
               {/* 🆕 Aba: Financeiro */}
               {checkinTab === 'financeiro' && (
                 <div className="space-y-4">
+                  <div className={`border rounded-lg p-3 text-sm ${hasOpenCashDrawer ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold">
+                          {hasOpenCashDrawer ? '✅ Caixa aberto para movimentações financeiras' : '🚫 Caixa fechado'}
+                        </p>
+                        <p className="text-xs mt-1">
+                          {hasOpenCashDrawer
+                            ? `Caixa do dia ${getTodayIsoLocal().split('-').reverse().join('/')} liberado para registrar pagamento e movimentações do atendimento.`
+                            : 'Abra o caixa do dia antes de registrar pagamento, coparticipação, desconto ou qualquer movimentação financeira do atendimento.'}
+                        </p>
+                        {cashDrawerError && <p className="text-xs font-semibold mt-2">{cashDrawerError}</p>}
+                      </div>
+                      {!hasOpenCashDrawer && (
+                        <button
+                          type="button"
+                          onClick={handleOpenCashDrawerShortcut}
+                          disabled={cashDrawerLoading}
+                          className="shrink-0 px-3 py-2 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                        >
+                          {cashDrawerLoading ? 'Abrindo...' : 'Abrir caixa do dia'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
                   {/* Tipo de Convênio */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1103,7 +1204,7 @@ export default function AppointmentDrawer({
                   </button>
                   <button
                     onClick={handleQuickCheckIn}
-                    disabled={checkinProcessing || !essentialDataStatus.isComplete || !checkinPlan}
+                    disabled={checkinProcessing || !essentialDataStatus.isComplete || !checkinPlan || (checkinTab === 'financeiro' && !hasOpenCashDrawer)}
                     className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {checkinProcessing ? '⏳' : '✅'}{' '}

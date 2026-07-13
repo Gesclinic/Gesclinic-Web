@@ -6,7 +6,7 @@
  * FASE 4-5: UI Enterprise
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 
 /**
  * BillingTypeSelector - Seletor de tipo de cobrança
@@ -15,19 +15,27 @@ import React, { useState } from 'react';
 function BillingTypeSelector({
   billingType = 'per_consultation',
   onBillingTypeChange = () => {},
-  repayPercentage = 0,
-  repayType = 'discount', // 'discount' ou 'percentage'
-  onRepayChange = () => {},
+  billingParams = {},
+  onBillingParamsChange = () => {},
 }) {
-  const [showRepayOptions, setShowRepayOptions] = useState(false);
-
   const billingOptions = [
-    { value: 'per_consultation', label: '💼 Por Consulta', icon: '📋' },
-    { value: 'package', label: '📦 Pacote', icon: '📦' },
-    { value: 'sessions', label: '🔄 Sessões', icon: '🔄' },
-    { value: 'class', label: '🎓 Aula', icon: '🎓' },
-    { value: 'fixed', label: '🔒 Valor Fixo', icon: '🔒' },
+    { value: 'per_consultation', label: '💼 Por Consulta', icon: '📋', description: 'Cobra valor unitário por consulta.' },
+    { value: 'package', label: '📦 Pacote', icon: '📦', description: 'Cobra um valor fechado dividido pela quantidade de sessões do pacote.' },
+    { value: 'sessions', label: '🔄 Sessões', icon: '🔄', description: 'Cobra valor unitário multiplicado pela quantidade de sessões.' },
+    { value: 'class', label: '🎓 Aula', icon: '🎓', description: 'Cobra valor unitário multiplicado pela quantidade de aulas.' },
+    { value: 'fixed', label: '🔒 Valor Fixo', icon: '🔒', description: 'Cobra um valor total fixo, independente do preço do serviço.' },
   ];
+
+  const selectedOption = billingOptions.find((option) => option.value === billingType) || billingOptions[0];
+  const updateParam = (name, value) => onBillingParamsChange({ ...billingParams, [name]: value });
+  const fieldStyle = {
+    width: '100%',
+    padding: '6px',
+    fontSize: '12px',
+    border: '1px solid #dee2e6',
+    borderRadius: '3px',
+    boxSizing: 'border-box',
+  };
 
   return (
     <div style={{
@@ -89,110 +97,114 @@ function BillingTypeSelector({
         </div>
       </div>
 
-      {/* Opções de Repasse Médico */}
       <div style={{
-        borderTop: '1px solid #dee2e6',
-        paddingTop: '12px',
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: '12px',
+        marginTop: '8px',
+        padding: '12px',
+        backgroundColor: '#fff',
+        borderRadius: '4px',
+        border: '1px solid #dee2e6',
       }}>
-        <label style={{
-          display: 'flex',
-          alignItems: 'center',
-          cursor: 'pointer',
-          fontWeight: 600,
-          fontSize: '13px',
-          color: '#333',
-          marginBottom: '8px',
-          userSelect: 'none',
-        }}>
-          <input
-            type="checkbox"
-            checked={showRepayOptions}
-            onChange={(e) => setShowRepayOptions(e.target.checked)}
-            style={{ 
-              marginRight: '8px', 
-              cursor: 'pointer',
-              width: '16px',
-              height: '16px',
-            }}
-          />
-          📊 Configurar Repasse Médico
-        </label>
+        <div style={{ gridColumn: '1 / -1', fontSize: '12px', color: '#4b5563' }}>
+          {selectedOption.description}
+        </div>
 
-        {showRepayOptions && (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '12px',
-            marginTop: '8px',
-            padding: '12px',
-            backgroundColor: '#fff',
-            borderRadius: '4px',
-            border: '1px solid #dee2e6',
-          }}>
-            {/* Tipo de Repasse */}
-            <div>
-              <label style={{ 
-                display: 'block', 
-                fontSize: '11px', 
-                fontWeight: 600, 
-                marginBottom: '4px',
-                color: '#333'
-              }}>
-                📌 Tipo de Repasse
-              </label>
-              <select
-                value={repayType}
-                onChange={(e) => onRepayChange({ repayType: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '6px',
-                  fontSize: '12px',
-                  border: '1px solid #dee2e6',
-                  borderRadius: '3px',
-                  backgroundColor: '#fff',
-                  cursor: 'pointer',
-                }}
-              >
-                <option value="discount">💰 Desconto Fixo (R$)</option>
-                <option value="percentage">📊 Percentual (%)</option>
-              </select>
-            </div>
+        {billingType === 'per_consultation' && (
+          <div>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px', color: '#333' }}>
+              Quantidade de consultas
+            </label>
+            <input
+              type="number"
+              min="1"
+              step="1"
+              value={billingParams.quantity ?? 1}
+              onChange={(event) => updateParam('quantity', event.target.value)}
+              style={fieldStyle}
+            />
+          </div>
+        )}
 
-            {/* Valor/Percentual */}
+        {billingType === 'package' && (
+          <>
             <div>
-              <label style={{ 
-                display: 'block', 
-                fontSize: '11px', 
-                fontWeight: 600, 
-                marginBottom: '4px',
-                color: '#333'
-              }}>
-                💵 Valor / Percentual
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px', color: '#333' }}>
+                Sessões no pacote
               </label>
               <input
                 type="number"
-                value={repayPercentage}
-                onChange={(e) => onRepayChange({ repayPercentage: e.target.value })}
-                placeholder={repayType === 'percentage' ? '0.00' : '0.00'}
-                step={repayType === 'percentage' ? '0.01' : '0.01'}
-                min="0"
-                style={{
-                  width: '100%',
-                  padding: '6px',
-                  fontSize: '12px',
-                  border: '1px solid #dee2e6',
-                  borderRadius: '3px',
-                  boxSizing: 'border-box',
-                }}
+                min="1"
+                step="1"
+                value={billingParams.packageSessions ?? 10}
+                onChange={(event) => updateParam('packageSessions', event.target.value)}
+                style={fieldStyle}
               />
-              <div style={{
-                fontSize: '10px',
-                color: '#999',
-                marginTop: '2px',
-              }}>
-                {repayType === 'percentage' ? 'Usar valores 0-100' : 'Digite o valor em R$'}
-              </div>
             </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px', color: '#333' }}>
+                Valor fechado do pacote (R$)
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={billingParams.packageValue ?? ''}
+                onChange={(event) => updateParam('packageValue', event.target.value)}
+                placeholder="Usa preço x sessões se vazio"
+                style={fieldStyle}
+              />
+            </div>
+          </>
+        )}
+
+        {billingType === 'sessions' && (
+          <div>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px', color: '#333' }}>
+              Quantidade de sessões
+            </label>
+            <input
+              type="number"
+              min="1"
+              step="1"
+              value={billingParams.sessions ?? 1}
+              onChange={(event) => updateParam('sessions', event.target.value)}
+              style={fieldStyle}
+            />
+          </div>
+        )}
+
+        {billingType === 'class' && (
+          <div>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px', color: '#333' }}>
+              Quantidade de aulas
+            </label>
+            <input
+              type="number"
+              min="1"
+              step="1"
+              value={billingParams.classCount ?? 1}
+              onChange={(event) => updateParam('classCount', event.target.value)}
+              style={fieldStyle}
+            />
+          </div>
+        )}
+
+        {billingType === 'fixed' && (
+          <div>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, marginBottom: '4px', color: '#333' }}>
+              Valor fixo total (R$)
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={billingParams.fixedValue ?? ''}
+              onChange={(event) => updateParam('fixedValue', event.target.value)}
+              placeholder="Informe o total a cobrar"
+              style={fieldStyle}
+            />
           </div>
         )}
       </div>
@@ -207,7 +219,7 @@ function BillingTypeSelector({
         color: '#27ae60',
         borderRadius: '2px',
       }}>
-        ℹ️ Essas configurações serão aplicadas ao faturamento. Repasse médico será calculado automaticamente.
+        ℹ️ O tipo de cobrança será aplicado ao faturamento. Repasse médico será calculado pelas regras do módulo de Repasse.
       </div>
     </div>
   );

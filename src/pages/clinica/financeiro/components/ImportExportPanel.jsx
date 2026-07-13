@@ -15,6 +15,7 @@ export const ImportExportPanel = ({
   templateFilename = 'template.xlsx',
   requiredFields = [],
   title = 'Importação e Exportação',
+  buttonClassName = '',
 }) => {
   const [showPanel, setShowPanel] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -27,7 +28,9 @@ export const ImportExportPanel = ({
 
   const handleFileSelect = async (e) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      return;
+    }
 
     setIsLoading(true);
     setImportMessage({ type: '', text: '' });
@@ -90,7 +93,7 @@ export const ImportExportPanel = ({
       {/* Botão para abrir painel */}
       <button
         onClick={() => setShowPanel(!showPanel)}
-        className="flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg text-sm font-medium hover:bg-purple-200 transition-colors"
+        className={`flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg text-sm font-medium hover:bg-purple-200 transition-colors ${buttonClassName}`}
       >
         <Upload size={16} />
         Importar / Exportar

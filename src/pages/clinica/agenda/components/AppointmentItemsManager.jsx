@@ -22,6 +22,10 @@ import {
   syncAppointmentServices,
 } from '@/lib/appointmentsApi';
 import { calculateAppointmentItemsTotals } from '@/lib/appointmentItemsApi';
+import {
+  listAppointmentPackageConsumptionMovements,
+  listPatientServicePackageBalances,
+} from '@/lib/appointmentPackagesApi';
 import ServiceAddRow from './ServiceAddRow';
 import AppointmentItemsTable from './AppointmentItemsTable';         // ✨ FASE 4-5
 import AppointmentItemsFooter from './AppointmentItemsFooter';       // ✨ FASE 4-5
@@ -56,11 +60,90 @@ const normalizeItemForSync = (item = {}) => ({
   professional_repay_type: item.professional_repay_type || item.repay_type || 'percentage',
 });
 
+const toPositiveNumber = (value, fallback = 1) => {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+const getBillingTypeLabel = (type) => ({
+  per_consultation: 'Por Consulta',
+  package: 'Pacote',
+  sessions: 'Sessões',
+  class: 'Aula',
+  fixed: 'Valor Fixo',
+}[type] || 'Por Consulta');
+
+const applyBillingTypeToItem = (itemData, billingType, billingParams) => {
+  const baseValue = Number.parseFloat(itemData.value ?? itemData.unit_price ?? itemData.price ?? 0) || 0;
+
+  if (billingType === 'package') {
+    const packageSessions = toPositiveNumber(billingParams.packageSessions, 10);
+    const packageTotal = toPositiveNumber(billingParams.packageValue, baseValue * packageSessions);
+    return {
+      ...itemData,
+      billing_type: 'package',
+      quantity: packageSessions,
+      value: packageTotal / packageSessions,
+      unit_price: packageTotal / packageSessions,
+      sessions_completed: 0,
+      billing_summary: `Pacote com ${packageSessions} sessões`,
+    };
+  }
+
+  if (billingType === 'sessions') {
+    const sessions = toPositiveNumber(billingParams.sessions, 1);
+    return {
+      ...itemData,
+      billing_type: 'sessions',
+      quantity: sessions,
+      value: baseValue,
+      unit_price: baseValue,
+      sessions_completed: 0,
+      billing_summary: `${sessions} sessão${sessions > 1 ? 'ões' : ''}`,
+    };
+  }
+
+  if (billingType === 'class') {
+    const classCount = toPositiveNumber(billingParams.classCount, 1);
+    return {
+      ...itemData,
+      billing_type: 'class',
+      quantity: classCount,
+      value: baseValue,
+      unit_price: baseValue,
+      billing_summary: `${classCount} aula${classCount > 1 ? 's' : ''}`,
+    };
+  }
+
+  if (billingType === 'fixed') {
+    const fixedValue = toPositiveNumber(billingParams.fixedValue, baseValue);
+    return {
+      ...itemData,
+      billing_type: 'fixed',
+      quantity: 1,
+      value: fixedValue,
+      unit_price: fixedValue,
+      billing_summary: 'Valor fixo total',
+    };
+  }
+
+  const quantity = toPositiveNumber(billingParams.quantity, 1);
+  return {
+    ...itemData,
+    billing_type: 'per_consultation',
+    quantity,
+    value: baseValue,
+    unit_price: baseValue,
+    billing_summary: `${quantity} consulta${quantity > 1 ? 's' : ''}`,
+  };
+};
+
 function AppointmentItemsManager({
   appointmentId,
   services = [],
   payers = [],
   clinicId,
+  patientId,
   professionalId,
   payerId,
   payerName,
@@ -114,10 +197,82 @@ function AppointmentItemsManager({
   const [editingItemId, setEditingItemId] = useState(null);
   const [isDraft, setIsDraft] = useState(!appointmentId); // Flag para modo rascunho
   
-  // ✨ FASE 4-5: Estados para Tipo de Cobrança e Repasse Médico
+  // ✨ FASE 4-5: Estado para Tipo de Cobrança
   const [billingType, setBillingType] = useState('per_consultation');
-  const [repayPercentage, setRepayPercentage] = useState(0);
-  const [repayType, setRepayType] = useState('discount');
+  const [billingParams, setBillingParams] = useState({
+    quantity: 1,
+    packageSessions: 10,
+    packageValue: '',
+    sessions: 1,
+    classCount: 1,
+    fixedValue: '',
+  });
+
+  const enrichItemsWithPackageBalances = async (itemsToEnrich = []) => {
+    if (!clinicId || !patientId || itemsToEnrich.length === 0) {
+      return itemsToEnrich;
+    }
+
+    const serviceIds = itemsToEnrich.map((item) => item.service_id).filter(Boolean);
+    if (serviceIds.length === 0) {
+      return itemsToEnrich;
+    }
+
+    const [packages, consumptionMovements] = await Promise.all([
+      listPatientServicePackageBalances({ clinicId, patientId, serviceIds }),
+      listAppointmentPackageConsumptionMovements(appointmentId),
+    ]);
+    const packagesByService = new Map();
+    const consumedByAppointmentService = new Map();
+
+    consumptionMovements.forEach((movement) => {
+      if (!movement.appointment_service_id) return;
+      const current = consumedByAppointmentService.get(movement.appointment_service_id) || 0;
+      consumedByAppointmentService.set(
+        movement.appointment_service_id,
+        current + (Number(movement.quantity || 0) || 0),
+      );
+    });
+
+    packages.forEach((pkg) => {
+      const current = packagesByService.get(pkg.service_id) || {
+        total_sessions: 0,
+        used_sessions: 0,
+        remaining_sessions: 0,
+        status: pkg.status,
+        package_ids: [],
+      };
+
+      const totalSessions = Number(pkg.total_sessions || 0) || 0;
+      const usedSessions = Number(pkg.used_sessions || 0) || 0;
+
+      current.total_sessions += totalSessions;
+      current.used_sessions += usedSessions;
+      current.remaining_sessions += Math.max(0, totalSessions - usedSessions);
+      current.status = current.remaining_sessions > 0 ? 'active' : pkg.status;
+      current.package_ids.push(pkg.id);
+      packagesByService.set(pkg.service_id, current);
+    });
+
+    return itemsToEnrich.map((item) => {
+      const packageBalance = packagesByService.get(item.service_id);
+      const consumedSessions = consumedByAppointmentService.get(item.id) || 0;
+      if (!packageBalance && consumedSessions <= 0) {
+        return item;
+      }
+
+      const quantity = Number(item.quantity || 1) || 1;
+      const unitValue = Number(item.value ?? item.unit_price ?? item.price ?? 0) || 0;
+
+      return {
+        ...item,
+        package_balance: packageBalance,
+        package_consumed_sessions: consumedSessions,
+        package_billable_quantity: Math.max(0, quantity - consumedSessions),
+        package_covered_value: consumedSessions * unitValue,
+      };
+    });
+  };
   
   // 🔴 DEBUG
   useEffect(() => {
@@ -184,8 +339,9 @@ function AppointmentItemsManager({
         status: service.status || 'pending',
       }));
 
-      const effectiveItems =
+      const effectiveItemsBase =
         formattedItems.length > 0 ? formattedItems : (savedServices || []).filter(Boolean);
+      const effectiveItems = await enrichItemsWithPackageBalances(effectiveItemsBase);
       const totalsData = calculateTotals(effectiveItems);
 
       console.log('📋 [loadItems] Itens carregados de appointment_services:', {
@@ -220,8 +376,9 @@ function AppointmentItemsManager({
   // Adicionar novo item
   const handleAddItem = async (itemData) => {
     try {
+      const itemWithBilling = applyBillingTypeToItem(itemData, billingType, billingParams);
       console.log('📝 [handleAddItem] Adicionando item:', {
-        itemData,
+        itemData: itemWithBilling,
         isDraft,
         appointmentId,
       });
@@ -237,7 +394,7 @@ function AppointmentItemsManager({
         const tempId = createTemporaryId();
         const tempItem = {
           id: tempId,
-          ...itemData,
+          ...itemWithBilling,
           is_temporary: true,
         };
         
@@ -269,7 +426,7 @@ function AppointmentItemsManager({
       
       // ✅ FIX: Usar syncAppointmentServices ao invés de createAppointmentItem
       // syncAppointmentServices sincroniza TODOS os serviços
-      const formattedItem = normalizeItemForSync(itemData);
+      const formattedItem = normalizeItemForSync(itemWithBilling);
       
       const updatedItems = [...items, formattedItem];
       
@@ -448,6 +605,13 @@ function AppointmentItemsManager({
           📋 SERVIÇOS DO ATENDIMENTO
         </h3>
 
+        <BillingTypeSelector
+          billingType={billingType}
+          onBillingTypeChange={setBillingType}
+          billingParams={billingParams}
+          onBillingParamsChange={setBillingParams}
+        />
+
         {/* ✨ LINHA COMPACTA DE ADIÇÃO */}
         <ServiceAddRow
           services={services}
@@ -550,7 +714,36 @@ function AppointmentItemsManager({
 
                 <div style={{ marginBottom: '16px' }}>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4, color: '#666' }}>
-                    📊 Quantidade
+                    💵 Tipo de Cobrança
+                  </label>
+                  <select
+                    value={itemToEdit.billing_type || 'per_consultation'}
+                    onChange={(e) => {
+                      const updatedItems = items.map(item =>
+                        item.id === editingItemId ? { ...item, billing_type: e.target.value } : item
+                      );
+                      setItems(updatedItems);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      border: '1px solid #ddd',
+                      borderRadius: 4,
+                      fontSize: 13,
+                      boxSizing: 'border-box',
+                    }}
+                  >
+                    <option value="per_consultation">Por Consulta</option>
+                    <option value="package">Pacote</option>
+                    <option value="sessions">Sessões</option>
+                    <option value="class">Aula</option>
+                    <option value="fixed">Valor Fixo</option>
+                  </select>
+                </div>
+
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4, color: '#666' }}>
+                    📊 Quantidade / Sessões / Aulas
                   </label>
                   <input
                     type="number"
@@ -643,6 +836,7 @@ function AppointmentItemsManager({
                   <button
                     onClick={() => {
                       handleUpdateItem(editingItemId, {
+                        billing_type: items.find(i => i.id === editingItemId)?.billing_type || 'per_consultation',
                         quantity: items.find(i => i.id === editingItemId)?.quantity || 1,
                         value: items.find(i => i.id === editingItemId)?.value || 0,
                         discount: items.find(i => i.id === editingItemId)?.discount || 0,
@@ -691,17 +885,6 @@ function AppointmentItemsManager({
         })()}
       </div>
 
-      <BillingTypeSelector
-        billingType={billingType}
-        onBillingTypeChange={setBillingType}
-        repayPercentage={repayPercentage}
-        repayType={repayType}
-        onRepayChange={(changes) => {
-          if (changes.repayType) setRepayType(changes.repayType);
-          if (changes.repayPercentage !== undefined) setRepayPercentage(changes.repayPercentage);
-        }}
-      />
-      
       {isDraft && items.length > 0 && (
         <div style={{
           padding: '12px',

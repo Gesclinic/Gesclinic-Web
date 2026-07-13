@@ -52,11 +52,11 @@ export default function FinancialAlertsPanel(props) {
 
   if (loading) {
     return (
-      <Card className="p-6 mb-6 dark:bg-gray-800 dark:border-gray-700">
-        <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded mb-4 animate-pulse" />
-        <div className="space-y-3">
+      <Card className="mb-3 p-4 dark:bg-gray-800 dark:border-gray-700">
+        <div className="mb-3 h-7 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+        <div className="space-y-2">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+            <div key={i} className="h-10 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
           ))}
         </div>
       </Card>
@@ -67,14 +67,27 @@ export default function FinancialAlertsPanel(props) {
     return null;
   }
 
+  if (alerts.length === 1 && alerts[0].severity === 'success') {
+    const alert = alerts[0];
+    return (
+      <Card className="mb-3 border-green-200 bg-green-50/60 p-3 dark:border-green-800 dark:bg-green-900/20 animate-slide-up">
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+          <span className="font-semibold text-green-700 dark:text-green-300">{alert.title}</span>
+          <span className="text-xs text-gray-700 dark:text-gray-300">{alert.message}</span>
+        </div>
+      </Card>
+    );
+  }
+
   return (
-    <Card className="p-6 mb-6 border-l-4 border-gray-300 dark:bg-gray-800 dark:border-l-gray-700 dark:border-gray-700 animate-slide-up">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-        <AlertCircle className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+    <Card className="mb-3 border-gray-200 p-4 dark:bg-gray-800 dark:border-gray-700 animate-slide-up">
+      <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
+        <AlertCircle className="h-4 w-4 text-gray-600 dark:text-gray-400" />
         Alertas Financeiros
       </h2>
 
-      <div className="space-y-3">
+      <div className="space-y-2">
         {alerts.map((alert) => (
           <AlertItem key={alert.id} alert={alert} navigate={navigate} />
         ))}
@@ -147,23 +160,23 @@ function AlertItem({ alert, navigate }) {
   };
 
   return (
-    <div className={`border rounded-lg p-4 ${getSeverityBgClass(alert.severity)}`}>
-      <div className="flex gap-3">
+    <div className={`rounded-md border p-3 ${getSeverityBgClass(alert.severity)}`}>
+      <div className="flex gap-2.5">
         {/* Ícone */}
         <div className={`flex-shrink-0 ${getSeverityIconClass(alert.severity)}`}>
           {getAlertIcon(alert.severity)}
         </div>
 
         {/* Conteúdo */}
-        <div className="flex-1">
-          <h3 className={`font-semibold ${getSeverityTextClass(alert.severity)} mb-1`}>
+        <div className="min-w-0 flex-1">
+          <h3 className={`mb-0.5 text-sm font-semibold ${getSeverityTextClass(alert.severity)}`}>
             {alert.title}
           </h3>
-          <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">{alert.message}</p>
+          <p className="mb-1 text-xs text-gray-700 dark:text-gray-300">{alert.message}</p>
 
           {alert.impactEstimate && (
-            <p className="text-xs font-medium text-gray-600 mb-2">
-              💡 {alert.impactEstimate}
+            <p className="mb-1 text-xs font-medium text-gray-600">
+              {alert.impactEstimate}
             </p>
           )}
 
@@ -176,7 +189,7 @@ function AlertItem({ alert, navigate }) {
                   navigate(actionLink);
                 }
               }}
-              className="gap-1"
+              className="h-7 gap-1 px-2 text-xs"
             >
               {alert.action}
               <ArrowRight className="w-3 h-3" />

@@ -44,6 +44,7 @@ export const ACCOUNT_TYPE_ICONS: Record<AccountType, string> = {
  */
 export interface FinancialAccount {
   id: string;
+  source_table?: 'financial_accounts' | 'finance_accounts';
   clinic_id: string;
   bank_code?: string;
   bank_name: string;
@@ -58,6 +59,7 @@ export interface FinancialAccount {
   is_default: boolean;
   is_active: boolean;
   account_chart_code?: string;
+  account_chart_name?: string;
   default_cost_center?: string;
   participates_cashflow?: boolean;
   allows_reconciliation?: boolean;
@@ -87,6 +89,12 @@ export interface FinancialAccountCreateInput {
   initial_balance: number;
   currency?: string;
   is_default?: boolean;
+  account_chart_code?: string;
+  account_chart_name?: string;
+  balance_date?: string;
+  credit_limit?: number;
+  participates_cashflow?: boolean;
+  allows_reconciliation?: boolean;
 }
 
 /**
@@ -103,6 +111,12 @@ export interface FinancialAccountUpdateInput {
   initial_balance?: number;
   is_default?: boolean;
   is_active?: boolean;
+  account_chart_code?: string;
+  account_chart_name?: string;
+  balance_date?: string;
+  credit_limit?: number;
+  participates_cashflow?: boolean;
+  allows_reconciliation?: boolean;
 }
 
 /**

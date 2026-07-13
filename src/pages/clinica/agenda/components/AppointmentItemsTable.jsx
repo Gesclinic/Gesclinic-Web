@@ -31,12 +31,38 @@ function AppointmentItemsTable({
 }) {
   const getUnitValue = (item) => Number(item.value ?? item.unit_price ?? item.price ?? 0) || 0;
   const getQuantity = (item) => Number(item.quantity || 1) || 1;
+  const getBillableQuantity = (item) => {
+    if (item.package_billable_quantity !== undefined && item.package_billable_quantity !== null) {
+      return Math.max(0, Number(item.package_billable_quantity) || 0);
+    }
+    return getQuantity(item);
+  };
   const getDiscount = (item) => Number(item.discount || 0) || 0;
-  const getProfessionalRepay = (item) => {
-    const base = Math.max(0, getUnitValue(item) * getQuantity(item) - getDiscount(item));
-    const fixed = Number(item.professional_discount || item.professional_value || 0) || 0;
-    const percent = Number(item.professional_percentage || item.repasse_percent || 0) || 0;
-    return fixed > 0 ? fixed : base * (percent / 100);
+  const getBillingLabel = (item) => ({
+    per_consultation: 'Por Consulta',
+    package: 'Pacote',
+    sessions: 'Sessões',
+    class: 'Aula',
+    fixed: 'Valor Fixo',
+  }[item.billing_type] || 'Por Consulta');
+  const getBillingDetails = (item) => {
+    const quantity = getQuantity(item);
+    if (item.billing_type === 'package') return `${quantity} sessões incluídas`;
+    if (item.billing_type === 'sessions') return `${quantity} sessão${quantity > 1 ? 'ões' : ''}`;
+    if (item.billing_type === 'class') return `${quantity} aula${quantity > 1 ? 's' : ''}`;
+    if (item.billing_type === 'fixed') return 'Total fixo';
+    return `${quantity} consulta${quantity > 1 ? 's' : ''}`;
+  };
+  const getPackageBalanceText = (item) => {
+    const balance = item.package_balance;
+    if (!balance) return '';
+
+    const used = Number(balance.used_sessions || 0) || 0;
+    const total = Number(balance.total_sessions || 0) || 0;
+    const remaining = Math.max(0, total - used);
+
+    if (total <= 0) return '';
+    return `${used} de ${total} usado${used === 1 ? '' : 's'} (${remaining} restante${remaining === 1 ? '' : 's'})`;
   };
 
   return (
@@ -100,7 +126,7 @@ function AppointmentItemsTable({
               borderBottom: '2px solid #dee2e6',
               width: '18%',
               color: '#333'
-            }}>Repasse Previsto</th>
+            }}>Cobrança</th>
             <th style={{ 
               padding: '8px', 
               textAlign: 'center', 
@@ -143,10 +169,38 @@ function AppointmentItemsTable({
                   -{formatCurrency(getDiscount(item))}
                 </td>
                 <td style={{ padding: '8px', textAlign: 'right', fontWeight: 700, color: '#27ae60' }}>
-                  {formatCurrency(Math.max(0, getUnitValue(item) * getQuantity(item) - getDiscount(item)))}
+                  {formatCurrency(Math.max(0, getUnitValue(item) * getBillableQuantity(item) - getDiscount(item)))}
+                  {Number(item.package_covered_value || 0) > 0 && (
+                    <div style={{ fontSize: '11px', color: '#047857', fontWeight: 600 }}>
+                      Coberto: {formatCurrency(item.package_covered_value)}
+                    </div>
+                  )}
                 </td>
-                <td style={{ padding: '8px', textAlign: 'right', color: '#6b7280', fontWeight: 600 }}>
-                  {formatCurrency(getProfessionalRepay(item))}
+                <td style={{ padding: '8px', textAlign: 'center', color: '#4b5563', fontWeight: 600 }}>
+                  <div>{getBillingLabel(item)}</div>
+                  <div style={{ fontSize: '11px', color: '#6b7280', fontWeight: 400 }}>
+                    {getBillingDetails(item)}
+                  </div>
+                  {getPackageBalanceText(item) && (
+                    <div style={{
+                      display: 'inline-block',
+                      marginTop: '4px',
+                      padding: '2px 6px',
+                      borderRadius: '999px',
+                      backgroundColor: '#ecfdf5',
+                      color: '#047857',
+                      border: '1px solid #a7f3d0',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                    }}>
+                      Pacote: {getPackageBalanceText(item)}
+                    </div>
+                  )}
+                  {Number(item.package_consumed_sessions || 0) > 0 && (
+                    <div style={{ fontSize: '11px', color: '#047857', fontWeight: 700, marginTop: '3px' }}>
+                      Este atendimento consumiu {item.package_consumed_sessions} sessão{Number(item.package_consumed_sessions) === 1 ? '' : 'ões'} do pacote
+                    </div>
+                  )}
                 </td>
                 <td style={{ padding: '8px', textAlign: 'center' }}>
                   <button 

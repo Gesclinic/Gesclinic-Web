@@ -11,6 +11,62 @@
 import { supabase } from '@/lib/customSupabaseClient';
 import { createReceivable, registerReceivablePayment } from '@/lib/receivablesApi';
 import { getAccountingAccountForPayment } from '@/lib/paymentMethodsConfig';
+import cashDrawerApi from '@/lib/cashDrawerApi';
+
+function normalizeCashPaymentMethod(paymentMethod) {
+  const method = String(paymentMethod || '').toUpperCase();
+
+  if (['DINHEIRO', 'CARTAO', 'PIX', 'CHEQUE'].includes(method)) {
+    return method;
+  }
+
+  if (['BOLETO'].includes(method)) {
+    return 'CHEQUE';
+  }
+
+  if (['DOC', 'TED', 'DEPOSITO', 'TRANSFERENCIA', 'BANCO'].includes(method)) {
+    return 'BANCO';
+  }
+
+  return 'DINHEIRO';
+}
+
+function buildPaymentMethodsForReceivable(paymentMethod, amount, paymentData = {}) {
+  const splitRows = Array.isArray(paymentData?.payment_splits) ? paymentData.payment_splits : [];
+  const normalizedSplits = splitRows
+    .map((split) => ({
+      method: split.payment_method || split.method || paymentMethod,
+      amount: Number(split.value ?? split.amount ?? 0),
+      reference: split.pix_transaction_id || split.cheque_number || split.boleto_number || split.reference || null,
+      installments: split.installments || null,
+      installment_dates: split.card_installment_dates || null,
+      payment_due_date: split.payment_due_date || split.cheque_due_date || null,
+      card_brand: split.card_brand || null,
+      observation: split.observation || null,
+    }))
+    .filter((split) => split.method && split.amount > 0);
+
+  if (normalizedSplits.length > 0) {
+    return normalizedSplits;
+  }
+
+  const paymentReference = paymentData?.reference
+    || paymentData?.transaction_id
+    || paymentData?.authorization_code
+    || paymentData?.nsu
+    || null;
+
+  return [{
+    method: paymentMethod,
+    amount: Number(amount || 0),
+    reference: paymentReference,
+    installments: paymentData?.installments || null,
+    installment_dates: paymentData?.card_installment_dates || null,
+    payment_due_date: paymentData?.payment_due_date || null,
+    card_brand: paymentData?.card_brand || null,
+    observation: paymentData?.observation || paymentData?.notes || null,
+  }];
+}
 
 /**
  * 1️⃣ CRIAR/ATUALIZAR CONTA A RECEBER
@@ -24,6 +80,7 @@ export async function registerOrUpdateReceivable({
   paymentMethod,
   paymentData,
   receivedBy, // ID do operador/caixa
+  appointmentDetails = null,
 }) {
   try {
     console.log('💰 Registrando conta a receber...', {
@@ -52,11 +109,18 @@ export async function registerOrUpdateReceivable({
     const now = new Date().toISOString();
     const paymentDate = now.split('T')[0];
     const paymentAmount = Number(amount || 0);
-    const paymentReference = paymentData?.reference
-      || paymentData?.transaction_id
-      || paymentData?.authorization_code
-      || paymentData?.nsu
-      || null;
+    const receivablePayments = buildPaymentMethodsForReceivable(paymentMethod, paymentAmount, paymentData);
+    const patientName = appointmentDetails?.patientName || paymentData?.patientName || null;
+    const serviceName = appointmentDetails?.serviceName || paymentData?.serviceName || null;
+    const totalInstallments = Math.max(
+      0,
+      ...receivablePayments.map((payment) => Number.parseInt(payment.installments || 0, 10) || 0),
+    );
+    const receivableDescription = serviceName && patientName
+      ? `${serviceName} - ${patientName}`
+      : patientName
+        ? `Recebimento de ${patientName}`
+        : 'Recebimento registrado pela agenda';
 
     if (existing) {
       // Baixar conta existente no fluxo canonico
@@ -69,13 +133,10 @@ export async function registerOrUpdateReceivable({
       return registerReceivablePayment({
         clinicId,
         receivableId: existing.id,
+        receivable: existing,
         amount: paymentAmount,
         paymentDate,
-        payments: [{
-          method: paymentMethod,
-          amount: paymentAmount,
-          reference: paymentReference,
-        }],
+        payments: receivablePayments,
         notes: paymentData?.notes || 'Pagamento registrado pela agenda',
         createdBy: receivedBy || 'system',
       });
@@ -87,15 +148,30 @@ export async function registerOrUpdateReceivable({
     const created = await createReceivable(clinicId, {
       appointment_id: appointmentId,
       patient_id: patientId,
+      patient_name: patientName,
+      payer_name: patientName,
+      payer_type: 'PARTICULAR',
+      payer_id: appointmentDetails?.payerId || paymentData?.payerId || null,
+      professional_id: appointmentDetails?.professionalId || paymentData?.professionalId || null,
+      professional_name: appointmentDetails?.professionalName || paymentData?.professionalName || null,
       amount: paymentAmount,
       net_value: paymentAmount,
       status: 'open',
       due_date: paymentDate,
       payment_method: paymentMethod,
-      description: 'Recebimento registrado pela agenda',
+      payment_split: receivablePayments,
+      total_parcelas: totalInstallments > 1 ? totalInstallments : null,
+      description: receivableDescription,
+      service_description: serviceName || receivableDescription,
+      procedure_name: serviceName,
+      service_group: appointmentDetails?.serviceGroup || paymentData?.serviceGroup || null,
+      specialty_name: appointmentDetails?.specialtyName || paymentData?.specialtyName || null,
+      unit_id: appointmentDetails?.unitId || paymentData?.unitId || null,
+      unit_name: appointmentDetails?.unitName || appointmentDetails?.roomName || paymentData?.unitName || paymentData?.roomName || null,
       metadata: {
         source: 'payment_registration_api',
         payment_data: paymentData || {},
+        appointment: appointmentDetails || {},
         received_by: receivedBy || null,
         received_at: now,
       },
@@ -108,13 +184,10 @@ export async function registerOrUpdateReceivable({
     const receivable = await registerReceivablePayment({
       clinicId,
       receivableId: created.id,
+      receivable: created,
       amount: paymentAmount,
       paymentDate,
-      payments: [{
-        method: paymentMethod,
-        amount: paymentAmount,
-        reference: paymentReference,
-      }],
+      payments: receivablePayments,
       notes: paymentData?.notes || 'Pagamento registrado pela agenda',
       createdBy: receivedBy || 'system',
     });
@@ -274,15 +347,15 @@ export async function recordToCashRegister({
         })
         .select('id');
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
-
       if (sessionError) {
         throw sessionError;
       }
-      sessionId = newSession.id;
+
+      if (!newSession || newSession.length === 0) {
+        throw new Error('Record not found');
+      }
+
+      sessionId = newSession[0].id;
     }
 
     // Registrar movimento específico
@@ -295,6 +368,7 @@ export async function recordToCashRegister({
         amount: amount,
         payment_method: paymentMethod,
         received_by: receivedBy,
+        created_by: receivedBy,
         description: appointmentDetails?.patientName
           ? `Recebimento de ${appointmentDetails.patientName} - ${paymentMethod}`
           : `Recebimento via ${paymentMethod}`,
@@ -302,21 +376,153 @@ export async function recordToCashRegister({
       })
       .select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
-
     if (movementError) {
       throw movementError;
     }
 
-    console.log('✅ Caixa atualizado:', { sessionId, movementId: movement.id });
-    return { sessionId, movementId: movement.id };
+    if (!movement || movement.length === 0) {
+      throw new Error('Record not found');
+    }
+
+    console.log('✅ Caixa atualizado:', { sessionId, movementId: movement[0].id });
+    return { sessionId, movementId: movement[0].id };
   } catch (error) {
     console.error('❌ Erro ao registrar no caixa:', error);
     throw error;
   }
+}
+
+async function recordToOperatorCashDrawer({
+  clinicId,
+  appointmentId,
+  patientId,
+  amount,
+  paymentMethod,
+  paymentData,
+  receivedBy,
+  appointmentDetails = null,
+}) {
+  if (!clinicId || !receivedBy || !appointmentId) {
+    return null;
+  }
+
+  const today = new Date().toISOString().split('T')[0];
+  const drawer = await cashDrawerApi.getOrCreateDrawer(clinicId, receivedBy, today);
+  const patientName = appointmentDetails?.patientName || paymentData?.patientName || null;
+  const serviceName = appointmentDetails?.serviceName || paymentData?.serviceName || null;
+  const baseDescription = [
+    `Atendimento #${appointmentId}`,
+    patientName ? `Paciente: ${patientName}` : null,
+    serviceName ? `Serviço: ${serviceName}` : null,
+  ].filter(Boolean).join(' - ');
+
+  const paymentsByMethod = buildPaymentMethodsForReceivable(paymentMethod, amount, paymentData).reduce(
+    (acc, payment) => {
+      const method = normalizeCashPaymentMethod(payment.method || paymentMethod);
+      acc[method] = (acc[method] || 0) + Number(payment.amount || 0);
+      return acc;
+    },
+    {},
+  );
+
+  const registeredMovements = [];
+
+  for (const [cashMethod, paymentAmount] of Object.entries(paymentsByMethod)) {
+    if (paymentAmount <= 0) {
+      continue;
+    }
+
+    const description = `${baseDescription} - ${cashMethod}`;
+
+    const { data: existingDrawerMovement, error: drawerLookupError } = await supabase
+      .from('drawer_movements')
+      .select('id')
+      .eq('clinic_id', clinicId)
+      .eq('drawer_id', drawer.id)
+      .eq('appointment_id', appointmentId)
+      .eq('payment_method', cashMethod)
+      .eq('payment_type', 'entrada')
+      .limit(1)
+      .maybeSingle();
+
+    if (drawerLookupError && drawerLookupError.code !== 'PGRST116') {
+      throw drawerLookupError;
+    }
+
+    const drawerPayload = {
+      drawer_id: drawer.id,
+      clinic_id: clinicId,
+      appointment_id: appointmentId,
+      payment_method: cashMethod,
+      payment_type: 'entrada',
+      amount: paymentAmount,
+      description,
+    };
+
+    const drawerQuery = existingDrawerMovement
+      ? supabase.from('drawer_movements').update(drawerPayload).eq('id', existingDrawerMovement.id)
+      : supabase.from('drawer_movements').insert(drawerPayload);
+
+    const { data: drawerMovement, error: drawerError } = await drawerQuery.select('id').single();
+
+    if (drawerError) {
+      throw drawerError;
+    }
+
+    const { data: existingCashMovement, error: cashLookupError } = await supabase
+      .from('cash_movements')
+      .select('id')
+      .eq('clinic_id', clinicId)
+      .eq('drawer_id', drawer.id)
+      .eq('origin', 'agenda')
+      .eq('payment_method', cashMethod)
+      .eq('description', description)
+      .limit(1)
+      .maybeSingle();
+
+    if (cashLookupError && cashLookupError.code !== 'PGRST116') {
+      throw cashLookupError;
+    }
+
+    const cashPayload = {
+      drawer_id: drawer.id,
+      clinic_id: clinicId,
+      type: 'entrada',
+      amount: paymentAmount,
+      patient_id: patientId || null,
+      professional_id: appointmentDetails?.professionalId || paymentData?.professionalId || null,
+      payer_type: appointmentDetails?.payerId || paymentData?.payerId ? 'convenio' : 'particular',
+      payer_id: appointmentDetails?.payerId || paymentData?.payerId || null,
+      status: 'confirmado',
+      payment_method: cashMethod,
+      description,
+      origin: 'agenda',
+      created_by: receivedBy,
+    };
+
+    const cashQuery = existingCashMovement
+      ? supabase.from('cash_movements').update(cashPayload).eq('id', existingCashMovement.id)
+      : supabase.from('cash_movements').insert(cashPayload);
+
+    const { data: cashMovement, error: cashError } = await cashQuery.select('id').single();
+
+    if (cashError) {
+      throw cashError;
+    }
+
+    registeredMovements.push({
+      drawerId: drawer.id,
+      drawerMovementId: drawerMovement?.id || null,
+      cashMovementId: cashMovement?.id || null,
+      paymentMethod: cashMethod,
+      amount: paymentAmount,
+    });
+  }
+
+  return {
+    drawerId: drawer.id,
+    movements: registeredMovements,
+  };
 }
 
 /**
@@ -359,17 +565,16 @@ export async function auditPaymentRecord({
       })
       .select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
-
     if (error) {
       throw error;
     }
 
-    console.log('✅ Auditoria registrada:', data.id);
-    return data;
+    if (!data || data.length === 0) {
+      throw new Error('Record not found');
+    }
+
+    console.log('✅ Auditoria registrada:', data[0].id);
+    return data[0];
   } catch (error) {
     console.error('❌ Erro ao registrar auditoria:', error);
     throw error;
@@ -402,6 +607,7 @@ export async function processPaymentComplete({
       paymentMethod,
       paymentData,
       receivedBy: operatorId,
+      appointmentDetails,
     });
 
     // 2. Registrar lançamento contábil
@@ -415,38 +621,74 @@ export async function processPaymentComplete({
         : undefined,
     });
 
-    // 3. Registrar no caixa
-    const cashEntry = await recordToCashRegister({
-      clinicId,
-      amount,
-      paymentMethod,
-      receivedBy: operatorId,
-      appointmentDetails,
-    });
+    // 3. Registrar no caixa (complementar; nao bloqueia o financeiro principal)
+    let cashEntry = null;
+    let cashWarning = null;
+    try {
+      cashEntry = await recordToCashRegister({
+        clinicId,
+        amount,
+        paymentMethod,
+        receivedBy: operatorId,
+        appointmentDetails,
+      });
+    } catch (cashError) {
+      cashWarning = cashError?.message || 'Falha ao registrar no caixa';
+      console.warn('⚠️ Caixa nao registrado, financeiro principal mantido:', cashWarning);
+    }
 
-    // 4. Registrar auditoria
-    const audit = await auditPaymentRecord({
-      clinicId,
-      appointmentId,
-      patientId,
-      amount,
-      paymentMethod,
-      paymentDetails: paymentData,
-      performedBy: operatorId,
-    });
+    let operatorCashEntry = null;
+    let operatorCashWarning = null;
+    try {
+      operatorCashEntry = await recordToOperatorCashDrawer({
+        clinicId,
+        appointmentId,
+        patientId,
+        amount,
+        paymentMethod,
+        paymentData,
+        receivedBy: operatorId,
+        appointmentDetails,
+      });
+    } catch (operatorCashError) {
+      operatorCashWarning = operatorCashError?.message || 'Falha ao registrar no caixa individual';
+      console.warn('⚠️ Caixa individual nao registrado, financeiro principal mantido:', operatorCashWarning);
+    }
+
+    // 4. Registrar auditoria (complementar; nao bloqueia o financeiro principal)
+    let audit = null;
+    let auditWarning = null;
+    try {
+      audit = await auditPaymentRecord({
+        clinicId,
+        appointmentId,
+        patientId,
+        amount,
+        paymentMethod,
+        paymentDetails: paymentData,
+        performedBy: operatorId,
+      });
+    } catch (auditError) {
+      auditWarning = auditError?.message || 'Falha ao registrar auditoria';
+      console.warn('⚠️ Auditoria nao registrada, financeiro principal mantido:', auditWarning);
+    }
 
     console.log('✅ Pagamento processado com sucesso!', {
       receivableId: receivable.id,
       entryId: financialEntry.id,
-      cashMovementId: cashEntry.movementId,
-      auditId: audit.id,
+      cashMovementId: cashEntry?.movementId || null,
+      operatorCashDrawerId: operatorCashEntry?.drawerId || null,
+      auditId: audit?.id || null,
     });
 
     return {
       receivableId: receivable.id,
       entryId: financialEntry.id,
-      cashMovementId: cashEntry.movementId,
-      auditId: audit.id,
+      cashMovementId: cashEntry?.movementId || null,
+      operatorCashDrawerId: operatorCashEntry?.drawerId || null,
+      operatorCashMovements: operatorCashEntry?.movements || [],
+      auditId: audit?.id || null,
+      warnings: [cashWarning, operatorCashWarning, auditWarning].filter(Boolean),
       success: true,
     };
   } catch (error) {

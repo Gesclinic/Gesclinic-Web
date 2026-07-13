@@ -371,7 +371,7 @@ export async function emitInvoiceAndCreateAR(invoiceId, options = {}) {
       .select(
         `
         *,
-        appointments(id, patient_id, professional_id, appointment_date),
+        appointments(id, patient_id, professional_id, scheduled_date),
         patients(name)
       `,
       )
@@ -536,7 +536,7 @@ export async function listInvoices(clinicId, filters = {}) {
         `
         *,
         patients(id, name),
-        appointments(id, appointment_date)
+        appointments(id, scheduled_date)
       `,
       )
       .eq('clinic_id', clinicId)
@@ -581,7 +581,7 @@ export async function getInvoice(invoiceId) {
         `
         *,
         patients(id, name, email, phone),
-        appointments(id, appointment_date, professional_id, service_id),
+        appointments(id, scheduled_date, professional_id, service_id),
         professionals(id, name, license_number)
       `,
       )

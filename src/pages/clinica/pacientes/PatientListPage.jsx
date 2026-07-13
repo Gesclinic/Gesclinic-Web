@@ -45,6 +45,7 @@ import {
   Download,
   X,
   ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
@@ -445,6 +446,12 @@ export default function PatientListPage() {
 
   const hasActiveFilters =
     searchTerm || filterType !== 'all' || filterCity !== 'all-cities' || filterStatus !== 'all';
+  const activeFilterCount = [
+    searchTerm,
+    filterType !== 'all' ? filterType : '',
+    filterCity !== 'all-cities' ? filterCity : '',
+    filterStatus !== 'all' ? filterStatus : '',
+  ].filter(Boolean).length;
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -479,59 +486,59 @@ export default function PatientListPage() {
               </Button>
             </div>
 
-            {/* Barra de busca e filtro */}
-            <div className="flex gap-3 items-end flex-wrap">
-              <div className="flex-1 min-w-[250px] relative">
-                <Search className="absolute left-3 top-3.5 text-gray-400" size={18} />
-                <Input
-                  placeholder="Buscar por nome, CPF, email ou telefone..."
-                  className="pl-10 border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
+            <Card className="p-6 w-full border border-slate-100 shadow-sm rounded-xl bg-white">
+              <button
+                type="button"
+                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                className="flex w-full items-center justify-between gap-3 text-left"
+                aria-expanded={showAdvancedFilters}
+              >
+                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                  <Filter className="h-5 w-5 text-slate-600" />
+                  Filtros Avançados
+                  <span className="rounded bg-slate-100 px-2 py-1 text-xs font-normal text-slate-500">
+                    {activeFilterCount} ativo(s)
+                  </span>
+                </h3>
+                {showAdvancedFilters ? <ChevronUp className="h-5 w-5 text-slate-600" /> : <ChevronDown className="h-5 w-5 text-slate-600" />}
+              </button>
 
-              {/* Botões de filtro rápido */}
-              <div className="flex gap-2">
-                <Button
-                  variant={filterType === 'all' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setFilterType('all')}
-                  className={filterType === 'all' ? 'bg-blue-600' : ''}
-                >
-                  Todos
-                </Button>
-                <Button
-                  variant={filterType === 'recent' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setFilterType('recent')}
-                  className={filterType === 'recent' ? 'bg-emerald-600' : ''}
-                >
-                  <TrendingUp size={16} className="mr-1" />
-                  Últimos 30d
-                </Button>
-              </div>
+              {showAdvancedFilters && (
+                <div className="mt-4 space-y-4 border-t border-slate-100 pt-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3.5 text-gray-400" size={18} />
+                    <Input
+                      placeholder="Buscar por nome, CPF, email ou telefone..."
+                      className="pl-10 border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
 
-              {/* Filtros avançados */}
-              <Popover open={showAdvancedFilters} onOpenChange={setShowAdvancedFilters}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={hasActiveFilters ? 'default' : 'outline'}
-                    size="sm"
-                    className={hasActiveFilters ? 'bg-purple-600' : ''}
-                  >
-                    <Filter size={16} className="mr-1" />
-                    Filtros
-                    {hasActiveFilters && (
-                      <span className="ml-1 text-xs bg-white/20 px-1.5 py-0.5 rounded">✓</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-64" align="end">
-                  <div className="space-y-4">
-                    <h3 className="font-semibold text-sm">Filtros Avançados</h3>
+                  <div className="grid gap-3 md:grid-cols-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-2 block">Recorte</label>
+                      <div className="flex gap-2">
+                        <Button
+                          variant={filterType === 'all' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setFilterType('all')}
+                          className={filterType === 'all' ? 'bg-blue-600' : ''}
+                        >
+                          Todos
+                        </Button>
+                        <Button
+                          variant={filterType === 'recent' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setFilterType('recent')}
+                          className={filterType === 'recent' ? 'bg-emerald-600' : ''}
+                        >
+                          <TrendingUp size={16} className="mr-1" />
+                          Últimos 30d
+                        </Button>
+                      </div>
+                    </div>
 
-                    {/* Filtro por Cidade */}
                     <div>
                       <label className="text-sm font-medium text-gray-700 mb-2 block">Cidade</label>
                       <Select value={filterCity} onValueChange={setFilterCity}>
@@ -549,7 +556,6 @@ export default function PatientListPage() {
                       </Select>
                     </div>
 
-                    {/* Filtro por Status */}
                     <div>
                       <label className="text-sm font-medium text-gray-700 mb-2 block">Status</label>
                       <Select value={filterStatus} onValueChange={setFilterStatus}>
@@ -564,18 +570,20 @@ export default function PatientListPage() {
                       </Select>
                     </div>
 
-                    {/* Botão de limpar */}
-                    {hasActiveFilters && (
-                      <Button onClick={clearFilters} variant="outline" size="sm" className="w-full">
-                        <X size={14} className="mr-1" />
-                        Limpar filtros
-                      </Button>
-                    )}
+                    <div className="flex items-end">
+                      {hasActiveFilters && (
+                        <Button onClick={clearFilters} variant="outline" size="sm" className="w-full">
+                          <X size={14} className="mr-1" />
+                          Limpar filtros
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                </PopoverContent>
-              </Popover>
+                </div>
+              )}
+            </Card>
 
-              {/* Botão de exportação */}
+            <div className="flex justify-end">
               <Button
                 onClick={exportToCSV}
                 variant="outline"

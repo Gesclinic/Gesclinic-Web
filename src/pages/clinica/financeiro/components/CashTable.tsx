@@ -1,10 +1,11 @@
 ﻿import React from 'react';
-import { User, Stethoscope, Trash2, Activity, Building2, Wallet } from 'lucide-react';
+import { User, Stethoscope, Trash2, Activity, Building2, Wallet, FileText, Pencil } from 'lucide-react';
 import type { CashMovement, CashMovementStatus } from '../types/CashMovement';
 
 interface CashTableProps {
   movements: CashMovement[];
   loading: boolean;
+  onEdit?: (movement: CashMovement) => void;
   onDelete?: (id: string) => Promise<void>;
 }
 
@@ -45,7 +46,7 @@ const formatTime = (dateString: string) => {
   });
 };
 
-export const CashTable: React.FC<CashTableProps> = ({ movements, loading, onDelete }) => {
+export const CashTable: React.FC<CashTableProps> = ({ movements, loading, onEdit, onDelete }) => {
   if (loading) {
     return (
       <div className="flex justify-center py-12">
@@ -94,6 +95,9 @@ export const CashTable: React.FC<CashTableProps> = ({ movements, loading, onDele
             <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
               <Wallet className="inline mr-1 w-4 h-4" /> Forma Pgto
             </th>
+            <th className="px-4 py-4 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">
+              <FileText className="inline mr-1 w-4 h-4" /> Descrição / Ref.
+            </th>
             <th className="px-4 py-4 text-right text-xs font-bold text-slate-600 uppercase tracking-wider">
               💰 Valor
             </th>
@@ -128,13 +132,19 @@ export const CashTable: React.FC<CashTableProps> = ({ movements, loading, onDele
               </td>
               <td className="px-4 py-3 text-sm">
                 <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
-                  {movement.type === 'entrada' ? 'Entrada' : 'Saida'}
+                  {movement.type === 'entrada' ? 'Receita' : 'Despesa'}
                 </span>
               </td>
               <td className="px-4 py-3 text-sm text-slate-700">
                 {movement.professional?.name || '—'}
               </td>
               <td className="px-4 py-3 text-sm text-slate-700">{movement.payment_method || '—'}</td>
+              <td className="px-4 py-3 text-sm text-slate-700 min-w-56">
+                <div className="font-medium text-slate-700">{movement.description || '—'}</div>
+                {movement.reference_document && (
+                  <div className="text-xs text-slate-500 mt-0.5">Ref.: {movement.reference_document}</div>
+                )}
+              </td>
               <td className="px-4 py-3 text-sm text-right">
                 {formatCurrency(movement.amount, movement.type === 'entrada')}
               </td>
@@ -146,15 +156,26 @@ export const CashTable: React.FC<CashTableProps> = ({ movements, loading, onDele
                 </span>
               </td>
               <td className="px-4 py-3 text-center sticky right-0 bg-white z-10 border-l border-slate-100">
-                {onDelete && (
-                  <button
-                    onClick={() => onDelete(movement.id)}
-                    className="text-slate-400 hover:text-red-600 transition"
-                    title="Deletar movimento"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
+                <div className="flex items-center justify-center gap-2">
+                  {onEdit && movement.origin === 'manual' && (
+                    <button
+                      onClick={() => onEdit(movement)}
+                      className="text-slate-400 hover:text-blue-600 transition"
+                      title="Editar movimento"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                  )}
+                  {onDelete && (
+                    <button
+                      onClick={() => onDelete(movement.id)}
+                      className="text-slate-400 hover:text-red-600 transition"
+                      title="Deletar movimento"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               </td>
             </tr>
           ))}

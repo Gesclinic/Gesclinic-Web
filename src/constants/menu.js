@@ -222,7 +222,7 @@ export function getMenuItems(role = 'admin', options = {}) {
           children: [
             {
               id: 'financeiro.caixa',
-              label: 'Caixa Individual',
+              label: 'Caixa Diário',
               icon: 'WalletCards',
               path: '/clinica/financeiro/caixa',
               roles: ['admin', 'gestor', 'financeiro', 'recepcao'],
@@ -230,7 +230,7 @@ export function getMenuItems(role = 'admin', options = {}) {
             },
             {
               id: 'financeiro.caixa_geral',
-              label: 'Caixa Geral',
+              label: 'Caixa Gerencial',
               icon: 'Landmark',
               path: '/clinica/financeiro/caixa-gerencial',
               roles: ['admin', 'gestor', 'financeiro'],
@@ -263,6 +263,14 @@ export function getMenuItems(role = 'admin', options = {}) {
               path: '/clinica/financeiro/autorizacoes-descontos',
               roles: ['admin', 'gestor', 'financeiro'],
               featurePath: 'financeiro.autorizacoes_descontos',
+            },
+            {
+              id: 'financeiro.solicitacoes_estorno',
+              label: 'Solicitações de Estorno',
+              icon: 'RotateCcw',
+              path: '/clinica/financeiro/solicitacoes-estorno',
+              roles: ['admin', 'gestor', 'financeiro'],
+              featurePath: 'financeiro.estorno',
             },
             {
               id: 'financeiro.lancamentos',
@@ -310,7 +318,7 @@ export function getMenuItems(role = 'admin', options = {}) {
           children: [
             {
               id: 'financeiro.contas_bancarias',
-              label: 'Contas Bancárias',
+              label: 'Contas Financeiras',
               icon: 'Landmark',
               path: '/clinica/financeiro/contas-financeiras',
               roles: ['admin', 'gestor', 'financeiro'],
@@ -720,6 +728,48 @@ export function getMenuItems(role = 'admin', options = {}) {
           path: '/clinica/faturamento/dashboard',
           roles: ['admin', 'gestor'],
           featurePath: 'faturamento.dashboard',
+        },
+        {
+          id: 'faturamento.centro_fiscal',
+          label: 'Centro Fiscal',
+          icon: 'ReceiptText',
+          path: '/clinica/faturamento/centro-fiscal',
+          roles: ['admin', 'gestor', 'financeiro'],
+          featurePath: 'faturamento.centro_fiscal',
+          children: [
+            {
+              id: 'faturamento.centro_fiscal.emissao',
+              label: 'Emissão Inteligente',
+              icon: 'Send',
+              path: '/clinica/faturamento/centro-fiscal',
+              roles: ['admin', 'gestor', 'financeiro'],
+              featurePath: 'faturamento.centro_fiscal',
+            },
+            {
+              id: 'faturamento.centro_fiscal.notas',
+              label: 'Notas Fiscais',
+              icon: 'FileText',
+              path: '/clinica/faturamento/notas-fiscais',
+              roles: ['admin', 'gestor', 'financeiro'],
+              featurePath: 'faturamento.centro_fiscal',
+            },
+            {
+              id: 'faturamento.centro_fiscal.xml_pdf',
+              label: 'XML e PDF',
+              icon: 'FileArchive',
+              path: '/clinica/faturamento/xml-pdf',
+              roles: ['admin', 'gestor', 'financeiro'],
+              featurePath: 'faturamento.centro_fiscal',
+            },
+            {
+              id: 'faturamento.centro_fiscal.integracoes',
+              label: 'Integrações Fiscais',
+              icon: 'PlugZap',
+              path: '/clinica/faturamento/integracoes-fiscais',
+              roles: ['admin', 'gestor'],
+              featurePath: 'faturamento.centro_fiscal',
+            },
+          ],
         },
         {
           id: 'faturamento.producao',

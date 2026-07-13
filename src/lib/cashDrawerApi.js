@@ -3,6 +3,36 @@ import { customSupabaseClient } from './customSupabaseClient';
 
 const client = customSupabaseClient;
 
+async function enrichDrawersWithOperators(drawers, clinicId) {
+  const operatorIds = [...new Set((drawers || []).map((drawer) => drawer.operator_id).filter(Boolean))];
+
+  if (operatorIds.length === 0) {
+    return drawers || [];
+  }
+
+  const { data: users } = await client
+    .from('users')
+    .select('id, name, full_name, email')
+    .eq('clinic_id', clinicId)
+    .in('id', operatorIds);
+
+  const usersById = new Map((users || []).map((user) => [user.id, user]));
+
+  return (drawers || []).map((drawer) => {
+    const operator = usersById.get(drawer.operator_id);
+    return {
+      ...drawer,
+      operator: operator
+        ? {
+            id: operator.id,
+            name: operator.full_name || operator.name || operator.email || 'Operador',
+            email: operator.email,
+          }
+        : null,
+    };
+  });
+}
+
 export const cashDrawerApi = {
   // ==================== CASH DRAWERS ====================
 
@@ -19,6 +49,7 @@ export const cashDrawerApi = {
         .eq('clinic_id', clinicId)
         .eq('operator_id', operatorId)
         .eq('date_opened', date)
+        .eq('status', 'open')
         .order('created_at', { ascending: false })
         .limit(1);
 
@@ -36,16 +67,10 @@ export const cashDrawerApi = {
   async getOrCreateDrawer(clinicId, operatorId, date = new Date().toISOString().split('T')[0]) {
     try {
       // Verificar se existe caixa aberta para o operador neste dia
-      const { data, error } = await client
-        .from('cash_drawers')
-        .select('*')
-        .eq('clinic_id', clinicId)
-        .eq('operator_id', operatorId)
-        .eq('date_opened', date)
-        .single();
+      const drawer = await this.getDrawerForDate(clinicId, operatorId, date);
 
-      if (!error && data) {
-        return data;
+      if (drawer) {
+        return drawer;
       }
 
       // Criar novo caixa
@@ -62,6 +87,26 @@ export const cashDrawerApi = {
     openingBalance = 0,
   ) {
     try {
+      const { data: openDrawers, error: openDrawersError } = await client
+        .from('cash_drawers')
+        .select('*')
+        .eq('clinic_id', clinicId)
+        .eq('operator_id', operatorId)
+        .eq('status', 'open')
+        .order('date_opened', { ascending: false })
+        .limit(1);
+
+      if (openDrawersError) {
+        throw openDrawersError;
+      }
+
+      if (openDrawers?.[0]) {
+        if (openDrawers[0].date_opened === date) {
+          return openDrawers[0];
+        }
+        throw new Error('Já existe um caixa aberto para este operador. Feche o caixa aberto antes de abrir outro.');
+      }
+
       const { data, error } = await client
         .from('cash_drawers')
         .insert([
@@ -77,6 +122,9 @@ export const cashDrawerApi = {
         .single();
 
       if (error) {
+        if (error.code === '23505') {
+          throw new Error('Já existe um caixa aberto para este operador. Feche o caixa aberto antes de abrir outro.');
+        }
         throw error;
       }
       return data;
@@ -148,7 +196,7 @@ export const cashDrawerApi = {
       if (error) {
         throw error;
       }
-      return data || [];
+      return enrichDrawersWithOperators(data || [], clinicId);
     } catch (err) {
       throw new Error(`Erro ao listar caixas: ${err.message}`);
     }
@@ -213,9 +261,14 @@ export const cashDrawerApi = {
 
   async getMovementSummary(drawerId) {
     try {
-      const movements = await this.getMovements(drawerId);
+      const [drawer, movements] = await Promise.all([
+        this.getDrawerById(drawerId),
+        this.getMovements(drawerId),
+      ]);
+      const openingBalance = Number(drawer?.opening_balance || 0);
 
       const summary = {
+        openingBalance,
         totalEntrada: 0,
         totalSaida: 0,
         byMethod: {},
@@ -239,7 +292,7 @@ export const cashDrawerApi = {
         }
       });
 
-      summary.balance = summary.totalEntrada - summary.totalSaida;
+      summary.balance = openingBalance + summary.totalEntrada - summary.totalSaida;
       return summary;
     } catch (err) {
       throw new Error(`Erro ao calcular resumo: ${err.message}`);
@@ -356,15 +409,14 @@ export const cashDrawerApi = {
         .eq('id', transferId)
         .select();
 
+      if (error) {
+        throw error;
+      }
+
       if (!data || data.length === 0) {
         throw new Error('Record not found');
       }
       return data[0];
-
-      if (error) {
-        throw error;
-      }
-      return data;
     } catch (err) {
       throw new Error(`Erro ao confirmar transferência: ${err.message}`);
     }

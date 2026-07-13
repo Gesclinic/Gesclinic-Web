@@ -59,18 +59,18 @@ const MetricCard: React.FC<MetricCardProps> = ({ title, value, icon, color, chan
   const colors = colorClasses[color];
 
   return (
-    <div className={`${colors.bg} border rounded-xl shadow-sm hover:shadow-md transition-all duration-200 p-6 group`}>
-      <div className="flex items-start justify-between gap-4">
+    <div className={`${colors.bg} border rounded-lg shadow-sm hover:shadow-md transition-all duration-200 p-4 group`}>
+      <div className="flex items-start justify-between gap-3">
         <div className="flex-1">
-          <p className="text-sm font-medium text-gray-600 tracking-wide uppercase">{title}</p>
-          <p className={`${colors.text} text-3xl font-bold mt-3 transition-colors`}>{value}</p>
-          {subtitle && <p className="text-xs text-gray-500 mt-2">{subtitle}</p>}
+          <p className="text-xs font-semibold text-gray-600 tracking-wide uppercase">{title}</p>
+          <p className={`${colors.text} text-xl font-bold mt-2 transition-colors whitespace-nowrap`}>{value}</p>
+          {subtitle && <p className="text-[11px] text-gray-500 mt-1 leading-tight">{subtitle}</p>}
           {change !== undefined && (
-            <div className={`${colors.badge} inline-flex items-center gap-1.5 mt-3 px-3 py-1 rounded-full`}>
+            <div className={`${colors.badge} inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-full`}>
               {change > 0 ? (
-                <TrendingUp className="w-4 h-4 text-green-600" />
+                <TrendingUp className="w-3 h-3 text-green-600" />
               ) : change < 0 ? (
-                <TrendingDown className="w-4 h-4 text-red-600" />
+                <TrendingDown className="w-3 h-3 text-red-600" />
               ) : (
                 <span className="text-xs font-medium">→</span>
               )}
@@ -80,8 +80,8 @@ const MetricCard: React.FC<MetricCardProps> = ({ title, value, icon, color, chan
             </div>
           )}
         </div>
-        <div className={`${colors.icon} p-4 rounded-xl flex-shrink-0 transition-transform duration-200 group-hover:scale-110`}>
-          {React.cloneElement(icon as React.ReactElement, { className: 'w-8 h-8' })}
+        <div className={`${colors.icon} p-2.5 rounded-lg flex-shrink-0 transition-transform duration-200 group-hover:scale-105`}>
+          {React.cloneElement(icon as React.ReactElement, { className: 'w-5 h-5' })}
         </div>
       </div>
     </div>
@@ -157,19 +157,19 @@ export const DashboardMetricsCards = React.memo<DashboardMetricsCardsProps>(
 
     if (loading) {
       return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 animate-pulse"
+              className="bg-white border border-slate-200 rounded-lg shadow-sm p-4 animate-pulse"
             >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 space-y-3">
-                  <div className="h-4 bg-gray-200 rounded w-24" />
-                  <div className="h-8 bg-gray-300 rounded w-32" />
-                  <div className="h-3 bg-gray-100 rounded w-40" />
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 bg-gray-200 rounded w-20" />
+                  <div className="h-6 bg-gray-300 rounded w-28" />
+                  <div className="h-3 bg-gray-100 rounded w-24" />
                 </div>
-                <div className="h-12 w-12 bg-gray-200 rounded-xl flex-shrink-0" />
+                <div className="h-10 w-10 bg-gray-200 rounded-lg flex-shrink-0" />
               </div>
             </div>
           ))}
@@ -178,7 +178,7 @@ export const DashboardMetricsCards = React.memo<DashboardMetricsCardsProps>(
     }
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
         {memoizedCards.map((card, index) => (
           <MetricCard
             key={index}

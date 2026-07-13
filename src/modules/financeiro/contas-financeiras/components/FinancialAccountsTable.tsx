@@ -66,6 +66,41 @@ export const FinancialAccountsTable = React.memo<FinancialAccountsTableProps>(({
     return year && month && day ? `${day}/${month}/${year}` : '—';
   };
 
+  const getAccountTypeLabel = (account: FinancialAccount) => ACCOUNT_TYPE_LABELS[account.account_type] || 'Conta financeira';
+
+  const getAccountTypeIcon = (account: FinancialAccount) => ACCOUNT_TYPE_ICONS[account.account_type] || '🏦';
+
+  const getBankDisplayName = (account: FinancialAccount) => {
+    if (account.bank_name && account.bank_name !== 'Conta financeira') {
+      return account.bank_name;
+    }
+    if (account.account_type === 'CASH') {
+      return 'Caixa interno';
+    }
+    if (account.account_type === 'DIGITAL_WALLET') {
+      return 'Carteira digital';
+    }
+    if (account.account_type === 'CREDIT_CARD') {
+      return 'Cartão / operadora';
+    }
+    return 'Banco não informado';
+  };
+
+  const getAccountDisplayName = (account: FinancialAccount) => (
+    account.account_name || account.bank_name || getAccountTypeLabel(account)
+  );
+
+  const getAccountNumberDisplay = (account: FinancialAccount) => {
+    const parts = [];
+    if (account.agency) {
+      parts.push(`Ag: ${account.agency}`);
+    }
+    if (account.account_number) {
+      parts.push(`Conta: ${account.account_number}`);
+    }
+    return parts.length > 0 ? parts.join(' | ') : 'Dados bancários não informados';
+  };
+
   const handleDeactivateClick = (account: FinancialAccount) => {
     setDeleteConfirm(account);
   };
@@ -76,7 +111,7 @@ export const FinancialAccountsTable = React.memo<FinancialAccountsTableProps>(({
         await onDeactivate(deleteConfirm);
         setDeleteConfirm(null);
       } catch (error) {
-        console.error('Error deactivating account:', error);
+        console.error('Error deleting account:', error);
       }
     }
   };
@@ -133,32 +168,38 @@ export const FinancialAccountsTable = React.memo<FinancialAccountsTableProps>(({
               >
                 {/* Bank Code */}
                 <TableCell className="text-center font-mono font-bold text-sm">
-                  <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-lg">{account.bank_code || '—'}</span>
+                  {account.bank_code ? (
+                    <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-lg">{account.bank_code}</span>
+                  ) : (
+                    <span className="text-xs font-semibold text-slate-400">Não informado</span>
+                  )}
                 </TableCell>
 
                 {/* Bank Info */}
                 <TableCell>
-                  <p className="truncate font-medium text-gray-900" title={account.bank_name}>{account.bank_name}</p>
+                  <p className="truncate font-medium text-gray-900" title={getBankDisplayName(account)}>{getBankDisplayName(account)}</p>
                   <p className="text-xs text-gray-500">Moeda: {account.currency || 'BRL'}</p>
                 </TableCell>
 
                 {/* Account Info */}
                 <TableCell>
                   <div className="min-w-0">
-                    <p className="truncate font-medium text-gray-900" title={account.account_name}>{account.account_name}</p>
-                    <p className="text-xs text-gray-500">
-                      {account.agency && `Ag: ${account.agency} `}
-                      | Conta: {account.account_number || 'N/A'}
-                    </p>
+                    <p className="truncate font-medium text-gray-900" title={getAccountDisplayName(account)}>{getAccountDisplayName(account)}</p>
+                    <p className="text-xs text-gray-500">{getAccountNumberDisplay(account)}</p>
                     {account.pix_key && <p className="truncate text-xs text-gray-500" title={account.pix_key}>Pix: {account.pix_key}</p>}
+                    {(account.account_chart_name || account.account_chart_code) && (
+                      <p className="truncate text-xs text-gray-500" title={account.account_chart_name || account.account_chart_code}>
+                        Plano: {account.account_chart_name || account.account_chart_code}
+                      </p>
+                    )}
                   </div>
                 </TableCell>
 
                 {/* Type */}
                 <TableCell>
                   <span className="flex items-center gap-2">
-                    <span className="text-lg">{ACCOUNT_TYPE_ICONS[account.account_type]}</span>
-                    <span className="text-sm text-gray-700">{ACCOUNT_TYPE_LABELS[account.account_type]}</span>
+                    <span className="text-lg">{getAccountTypeIcon(account)}</span>
+                    <span className="text-sm text-gray-700">{getAccountTypeLabel(account)}</span>
                   </span>
                 </TableCell>
 
@@ -264,7 +305,7 @@ export const FinancialAccountsTable = React.memo<FinancialAccountsTableProps>(({
                         </Tooltip>
                       )}
 
-                      {onDeactivate && account.is_active && (
+                      {onDeactivate && (
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
@@ -277,7 +318,7 @@ export const FinancialAccountsTable = React.memo<FinancialAccountsTableProps>(({
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent>Desativar</TooltipContent>
+                          <TooltipContent>Excluir</TooltipContent>
                         </Tooltip>
                       )}
                     </TooltipProvider>
@@ -294,10 +335,9 @@ export const FinancialAccountsTable = React.memo<FinancialAccountsTableProps>(({
       <AlertDialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Desativar Conta?</AlertDialogTitle>
+            <AlertDialogTitle>Excluir ou Desativar Conta?</AlertDialogTitle>
             <AlertDialogDescription>
-              Você está prestes a desativar a conta <strong>{deleteConfirm?.account_name}</strong> (
-              {deleteConfirm?.bank_name}). Esta ação não pode ser desfeita.
+              A conta <strong>{deleteConfirm?.account_name}</strong> ({deleteConfirm?.bank_name}) será excluída se não tiver nenhum vínculo de movimentação. Se houver histórico financeiro, ela será apenas desativada e poderá ser consultada no filtro de inativas.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex gap-3 justify-end">
@@ -306,7 +346,7 @@ export const FinancialAccountsTable = React.memo<FinancialAccountsTableProps>(({
               onClick={handleConfirmDeactivate}
               className="bg-red-600 hover:bg-red-700"
             >
-              Desativar
+              Confirmar
             </AlertDialogAction>
           </div>
         </AlertDialogContent>

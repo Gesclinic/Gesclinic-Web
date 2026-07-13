@@ -329,6 +329,17 @@ export default function ContasPagar() {
 
   // Hook para gerenciar filtros salvos
   const { savedFilters, saveFilter, deleteFilter, getFilter } = useSavedFilters('contas_pagar_filters');
+  const activeFilterCount = [
+    vendorFilter,
+    paymentMethodFilter,
+    startFilter,
+    endFilter,
+    searchFilter,
+    statusFilter,
+    amountMinFilter,
+    amountMaxFilter,
+    costCenterFilter,
+  ].filter(Boolean).length;
   const fmtBR = (iso) => {
     if (!iso) {
       return '';
@@ -1099,21 +1110,39 @@ export default function ContasPagar() {
           templateFileName="contas_pagar"
         />
 
-        <Card className="p-4 w-full">
+        <Card className="p-6 w-full border border-slate-100 shadow-sm rounded-xl">
           {/* 🔍 FILTROS COM COLLAPSE */}
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold flex items-center gap-2">
-              <Filter className="w-4 h-4" /> Filtros avançados
+          <button
+            type="button"
+            onClick={() => setShowFilters(!showFilters)}
+            className="mb-4 flex w-full items-center justify-between gap-3 text-left"
+            aria-expanded={showFilters}
+          >
+            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+              <Filter className="h-5 w-5 text-slate-600" />
+              Filtros Avançados
+              <span className="rounded bg-slate-100 px-2 py-1 text-xs font-normal text-slate-500">
+                {activeFilterCount} ativo(s)
+              </span>
             </h3>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="text-sm text-blue-600 hover:text-blue-700"
-            >
-              {showFilters ? '▼ Ocultar' : '▶ Mostrar'}
-            </button>
+            {showFilters ? <ChevronUp className="h-5 w-5 text-slate-600" /> : <ChevronDown className="h-5 w-5 text-slate-600" />}
+          </button>
+
+          {showFilters && (
+            <div className="space-y-4 border-t border-slate-100 pt-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="relative flex-1">
+              <Search className="absolute w-4 h-4 left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Input
+                placeholder="Buscar fornecedor, descrição..."
+                className="pl-9"
+                value={searchFilter}
+                onChange={(e) => setSearchFilter(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && triggerLoad(false)}
+              />
+            </div>
           </div>
 
-          {showFilters ? (
             <div>
               {/* LINHA 1: Fornecedor, Centro de custo, Método */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4 pb-4 border-b">
@@ -1242,15 +1271,10 @@ export default function ContasPagar() {
                 </div>
               </div>
 
-              {/* BARRA DE AÇÕES */}
-              <div className="flex gap-2 flex-wrap">
-                <Button
-                  size="sm"
-                  className="bg-blue-600"
-                  onClick={() => triggerLoad(autoSelectNext)}
-                  disabled={loading}
-                >
-                  {loading ? 'Filtrando...' : 'Pesquisar'}
+              <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
+                <Button size="sm" onClick={() => triggerLoad(autoSelectNext)} disabled={loading} className="gap-2">
+                  <Filter className="h-4 w-4" />
+                  {loading ? 'Filtrando...' : 'Filtrar'}
                 </Button>
                 <Button
                   size="sm"
@@ -1283,21 +1307,19 @@ export default function ContasPagar() {
                     });
                   }}
                 >
-                  Limpar
+                  Limpar Filtros
                 </Button>
-
-                {/* Salvar Filtro */}
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => setSaveFilterDialogOpen(true)}
                   disabled={loading}
                   title="Salvar configuração atual como filtro"
+                  className="gap-2"
                 >
-                  <Save className="w-4 h-4" />
+                  <Save className="h-4 w-4" />
+                  Salvar Filtro
                 </Button>
-
-                {/* Carregar Filtro */}
                 {savedFilters.length > 0 && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -1306,8 +1328,10 @@ export default function ContasPagar() {
                         variant="outline"
                         disabled={loading}
                         title="Carregar um filtro salvo"
+                        className="gap-2"
                       >
-                        <Download className="w-4 h-4" />
+                        <Download className="h-4 w-4" />
+                        Carregar
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -1332,7 +1356,6 @@ export default function ContasPagar() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
-
                 <Button size="sm" variant="ghost" className="ml-auto">
                   <Download className="w-4 h-4 mr-2" />
                   Exportar
@@ -1348,20 +1371,6 @@ export default function ContasPagar() {
                 loading={loading}
               />
             </div>
-          ) : (
-            <div className="flex gap-2 items-center">
-              <div className="relative flex-1">
-                <Search className="absolute w-4 h-4 left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <Input
-                  placeholder="Buscar fornecedor, descrição..."
-                  className="pl-9"
-                  value={searchFilter}
-                  onChange={(e) => setSearchFilter(e.target.value)}
-                />
-              </div>
-              <Button size="sm" onClick={() => triggerLoad(false)} disabled={loading}>
-                Buscar
-              </Button>
             </div>
           )}
           {/* Favoritos: abaixo do Status em linha */}

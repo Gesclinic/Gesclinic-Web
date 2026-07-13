@@ -88,20 +88,6 @@ function AppointmentItemsFooter({ totals = {} }) {
           </span>
         </div>
       </div>
-
-      {/* Informações Adicionais */}
-      {totals.professional_total && parseFloat(totals.professional_total) > 0 && (
-        <div style={{
-          marginTop: '8px',
-          padding: '8px',
-          backgroundColor: '#fff3cd',
-          borderLeft: '3px solid #ffc107',
-          fontSize: '12px',
-          color: '#856404',
-        }}>
-          👨‍⚕️ Repasse Médico: <strong>{formatCurrency(totals.professional_total)}</strong>
-        </div>
-      )}
     </div>
   );
 }

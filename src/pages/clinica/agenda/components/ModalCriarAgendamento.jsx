@@ -11,6 +11,7 @@ export default function ModalCriarAgendamento({
   clinicId = null,
   data = null,
   appointmentIdToEdit = null,
+  initialTab = undefined,
   professionals = [],
   services = [],
   payers = [],
@@ -247,6 +248,7 @@ export default function ModalCriarAgendamento({
       mode={determinedMode}
       appointment={finalAppointment}
       appointmentIdToEdit={appointmentIdToEdit}
+      initialTab={initialTab}
       arrivals={arrivals}
       onArrivalsUpdate={onArrivalsUpdate}
       onSuccess={handleSuccess}

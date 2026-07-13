@@ -15,6 +15,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { financialAccountsApi as chartAccountsApi } from '@/lib/financialAccountsApi';
+import { useClinicContext } from '@/contexts/ClinicContext';
 import {
   Select,
   SelectContent,
@@ -53,10 +55,12 @@ export const FinancialAccountForm = React.memo<FinancialAccountFormProps>(({
   onCancel,
 }) => {
   const isEdit = !!account;
+  const { clinicId } = useClinicContext();
+  const [chartAccounts, setChartAccounts] = useState<Array<{ id: string; name: string; type?: string }>>([]);
 
   // Form state
   const [formData, setFormData] = useState<
-    FinancialAccountCreateInput & { is_active?: boolean; is_default?: boolean; bank_code?: string; account_chart_code?: string; participates_cashflow?: boolean; allows_reconciliation?: boolean; balance_date?: string; credit_limit?: number }
+    FinancialAccountCreateInput & { is_active?: boolean; is_default?: boolean; bank_code?: string; account_chart_code?: string; account_chart_name?: string; participates_cashflow?: boolean; allows_reconciliation?: boolean; balance_date?: string; credit_limit?: number }
   >({
     bank_name: '',
     account_name: '',
@@ -68,6 +72,7 @@ export const FinancialAccountForm = React.memo<FinancialAccountFormProps>(({
     currency: 'BRL',
     bank_code: '',
     account_chart_code: '',
+    account_chart_name: '',
     participates_cashflow: true,
     allows_reconciliation: true,
     balance_date: new Date().toISOString().split('T')[0],
@@ -87,12 +92,13 @@ export const FinancialAccountForm = React.memo<FinancialAccountFormProps>(({
         agency: account.agency || '',
         account_number: account.account_number,
         pix_key: account.pix_key || '',
-        initial_balance: account.initial_balance,
+        initial_balance: Number(account.initial_balance ?? account.current_balance ?? 0),
         currency: account.currency,
         is_default: account.is_default,
         is_active: account.is_active,
         bank_code: (account as any).bank_code || '',
         account_chart_code: (account as any).account_chart_code || '',
+        account_chart_name: (account as any).account_chart_name || '',
         participates_cashflow: (account as any).participates_cashflow !== false,
         allows_reconciliation: (account as any).allows_reconciliation !== false,
         balance_date: (account as any).balance_date || new Date().toISOString().split('T')[0],
@@ -110,6 +116,7 @@ export const FinancialAccountForm = React.memo<FinancialAccountFormProps>(({
         currency: 'BRL',
         bank_code: '',
         account_chart_code: '',
+        account_chart_name: '',
         participates_cashflow: true,
         allows_reconciliation: true,
         balance_date: new Date().toISOString().split('T')[0],
@@ -119,6 +126,37 @@ export const FinancialAccountForm = React.memo<FinancialAccountFormProps>(({
     setLocalError(null);
     setValidationErrors({});
   }, [account, isEdit, open]);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadChartAccounts = async () => {
+      if (!clinicId) {
+        setChartAccounts([]);
+        return;
+      }
+
+      try {
+        const data = await chartAccountsApi.listAccounts(clinicId);
+        if (!active) return;
+        setChartAccounts((data || []).map((item: any) => ({
+          id: item.id,
+          name: item.name || item.account_name || 'Conta sem nome',
+          type: item.type || item.account_type,
+        })));
+      } catch (error: any) {
+        if (!active) return;
+        console.warn('Erro ao carregar plano de contas:', error?.message || error);
+        setChartAccounts([]);
+      }
+    };
+
+    loadChartAccounts();
+
+    return () => {
+      active = false;
+    };
+  }, [clinicId]);
 
   // Validate form
   const validate = (): boolean => {
@@ -161,6 +199,7 @@ export const FinancialAccountForm = React.memo<FinancialAccountFormProps>(({
       setLocalError(null);
 
       // Prepare submission data
+      const selectedChartAccount = chartAccounts.find((chartAccount) => chartAccount.id === formData.account_chart_code);
       const submitData = isEdit
         ? {
             bank_name: formData.bank_name,
@@ -174,6 +213,7 @@ export const FinancialAccountForm = React.memo<FinancialAccountFormProps>(({
             is_active: (formData as any).is_active,
             bank_code: formData.bank_code || undefined,
             account_chart_code: formData.account_chart_code || undefined,
+            account_chart_name: selectedChartAccount?.name || formData.account_chart_name || undefined,
             participates_cashflow: formData.participates_cashflow,
             allows_reconciliation: formData.allows_reconciliation,
             balance_date: formData.balance_date || undefined,
@@ -190,6 +230,7 @@ export const FinancialAccountForm = React.memo<FinancialAccountFormProps>(({
             currency: formData.currency,
             bank_code: formData.bank_code || undefined,
             account_chart_code: formData.account_chart_code || undefined,
+            account_chart_name: selectedChartAccount?.name || formData.account_chart_name || undefined,
             participates_cashflow: formData.participates_cashflow,
             allows_reconciliation: formData.allows_reconciliation,
             balance_date: formData.balance_date || undefined,
@@ -437,15 +478,33 @@ export const FinancialAccountForm = React.memo<FinancialAccountFormProps>(({
 
               <div className="space-y-2">
                 <Label htmlFor="account_chart_code">Conta Contábil</Label>
-                <Input
-                  id="account_chart_code"
-                  placeholder="ex: 1.1.2.010"
-                  value={formData.account_chart_code || ''}
-                  onChange={(e) =>
-                    setFormData({ ...formData, account_chart_code: e.target.value })
-                  }
-                />
-                <p className="text-xs text-gray-500">Código do plano de contas</p>
+                {chartAccounts.length > 0 ? (
+                  <Select
+                    value={formData.account_chart_code || ''}
+                    onValueChange={(value) => setFormData({ ...formData, account_chart_code: value })}
+                  >
+                    <SelectTrigger id="account_chart_code">
+                      <SelectValue placeholder="Selecione uma conta do plano" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {chartAccounts.map((chartAccount) => (
+                        <SelectItem key={chartAccount.id} value={chartAccount.id}>
+                          {chartAccount.name} {chartAccount.type ? `(${chartAccount.type})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    id="account_chart_code"
+                    placeholder="Nenhuma conta cadastrada no plano"
+                    value={formData.account_chart_code || ''}
+                    onChange={(e) =>
+                      setFormData({ ...formData, account_chart_code: e.target.value })
+                    }
+                  />
+                )}
+                <p className="text-xs text-gray-500">Conta cadastrada em Configurações &gt; Plano de Contas</p>
               </div>
             </div>
           </div>

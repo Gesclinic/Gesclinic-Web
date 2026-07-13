@@ -57,6 +57,11 @@ const TECHNICAL_PERMISSION_MODULES = {
         label: 'Editar Contas Financeiras',
         description: 'Acessar edição técnica de contas financeiras por ID',
       },
+      {
+        id: 'financeiro.estorno',
+        label: 'Aprovar Estorno Financeiro',
+        description: 'Acessar e decidir solicitações de estorno financeiro de atendimentos',
+      },
     ],
   },
   administracao: {
@@ -105,6 +110,7 @@ const EXPLICIT_ROUTE_RULES = [
 
   // Financeiro technical aliases
   { match: /^\/clinica\/financeiro\/dashboard(\/|$)/, permission: 'financeiro.visao_geral', level: 'view' },
+  { match: /^\/clinica\/financeiro\/solicitacoes-estorno(\/|$)/, permission: 'financeiro.estorno', level: 'view' },
   { match: /^\/clinica\/financeiro\/dre(\/|$)/, permission: 'financeiro.resultado', level: 'view' },
   { match: /^\/clinica\/financeiro\/contas-receber(\/|$)/, permission: 'financeiro.receber', level: 'view' },
   {

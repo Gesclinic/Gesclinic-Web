@@ -1,553 +1,737 @@
 import { supabase } from '@/lib/customSupabaseClient';
-import { updateReceivable } from '@/lib/receivablesApi';
-import {
-  FINANCIAL_EVENT_TYPES,
-  RELATED_ENTITY_TYPES,
-  logAppointmentFinancialAudit,
-} from '@/lib/auditFinancialApi';
 
 function isMissingColumnError(error) {
-  const text = String(error?.message || error?.details || '').toLowerCase();
-  return error?.code === '42703' || (text.includes('column') && text.includes('does not exist'));
-}
-
-function isMissingRelationError(error) {
-  const text = String(error?.message || error?.details || '').toLowerCase();
-  return error?.code === '42P01' || text.includes('does not exist') || text.includes('could not find the table');
+	const text = String(error?.message || error?.details || '').toLowerCase();
+	return error?.code === '42703' || text.includes('could not find') || (text.includes('column') && text.includes('does not exist'));
 }
 
 function getMissingColumnName(error) {
-  const text = String(error?.message || error?.details || '');
-  return text.match(/column "?([a-zA-Z0-9_]+)"? of relation/i)?.[1]
-    || text.match(/column "?([a-zA-Z0-9_]+)"? does not exist/i)?.[1]
-    || text.match(/Could not find the '([^']+)' column/i)?.[1]
-    || null;
+	const text = String(error?.message || error?.details || '');
+	return text.match(/Could not find the '([^']+)' column/i)?.[1]
+		|| text.match(/column "?([a-zA-Z0-9_]+)"? of relation/i)?.[1]
+		|| text.match(/column "?([a-zA-Z0-9_]+)"? does not exist/i)?.[1]
+		|| null;
 }
 
-function omitColumn(row, columnName) {
-  if (!columnName || !(columnName in row)) {
-    return row;
-  }
-  const { [columnName]: _removed, ...rest } = row;
-  return rest;
+function omitColumn(payload, columnName) {
+	if (!columnName || !(columnName in payload)) return payload;
+	const { [columnName]: _removed, ...rest } = payload;
+	return rest;
 }
 
-function addStep(steps, name, status, details = {}) {
-  steps.push({ name, status, ...details });
+async function updateRowsWithOptionalColumns(table, ids, payload) {
+	if (!ids.length) {
+		return { updated: 0, skipped: true };
+	}
+
+	let updatePayload = payload;
+	let { data, error } = await supabase
+		.from(table)
+		.update(updatePayload)
+		.in('id', ids)
+		.select('id');
+
+	const removedColumns = new Set();
+	for (let attempt = 0; attempt < 12 && error && isMissingColumnError(error); attempt += 1) {
+		const missingColumn = getMissingColumnName(error);
+		if (!missingColumn || removedColumns.has(missingColumn)) {
+			break;
+		}
+
+		removedColumns.add(missingColumn);
+		updatePayload = omitColumn(updatePayload, missingColumn);
+		const retry = await supabase
+			.from(table)
+			.update(updatePayload)
+			.in('id', ids)
+			.select('id');
+		data = retry.data;
+		error = retry.error;
+	}
+
+	if (error) {
+		throw error;
+	}
+
+	return { updated: data?.length || 0, removedColumns: Array.from(removedColumns) };
 }
 
-function parseMaybeJson(value, fallback) {
-  if (!value) {
-    return fallback;
-  }
-  if (typeof value !== 'string') {
-    return value;
-  }
-  try {
-    return JSON.parse(value);
-  } catch {
-    return fallback;
-  }
+async function safeSelect(stepName, queryBuilder) {
+	try {
+		const { data, error } = await queryBuilder;
+		if (error) throw error;
+		return { data: data || [], error: null };
+	} catch (error) {
+		console.warn(`[financialReversalApi] ${stepName} skipped:`, error?.message || error);
+		return { data: [], error };
+	}
 }
 
-async function updateRowsWithFallback({ table, patch, filters, select = 'id' }) {
-  const removedColumns = new Set();
-  let updatePatch = { ...patch };
-
-  for (let attempt = 0; attempt < 25; attempt += 1) {
-    let query = supabase.from(table).update(updatePatch);
-    filters.forEach(([method, ...args]) => {
-      query = query[method](...args);
-    });
-
-    const { data, error } = await query.select(select);
-    if (!error) {
-      return data || [];
-    }
-
-    if (!isMissingColumnError(error)) {
-      throw error;
-    }
-
-    const missingColumn = getMissingColumnName(error);
-    if (!missingColumn || removedColumns.has(missingColumn)) {
-      throw error;
-    }
-
-    removedColumns.add(missingColumn);
-    updatePatch = omitColumn(updatePatch, missingColumn);
-  }
-
-  throw new Error(`Nao foi possivel atualizar ${table}`);
+function isInvoiceCanceled(invoice) {
+	const status = String(invoice?.status || '').toLowerCase().trim();
+	return ['canceled', 'cancelled', 'cancelada', 'cancelado'].includes(status) || Boolean(invoice?.canceled_at);
 }
 
-async function listRows(table, filters, select = '*') {
-  let query = supabase.from(table).select(select);
-  filters.forEach(([method, ...args]) => {
-    query = query[method](...args);
-  });
-  const { data, error } = await query;
-  if (error) {
-    throw error;
-  }
-  return data || [];
+function formatInvoiceLabel(invoice) {
+	return invoice?.invoice_number || invoice?.number || invoice?.id || 'sem numero';
 }
 
-async function listRowsOptional(table, filters, select = '*') {
-  try {
-    return await listRows(table, filters, select);
-  } catch (error) {
-    if (isMissingRelationError(error) || isMissingColumnError(error)) {
-      return [];
-    }
-    throw error;
-  }
+function indexById(rows) {
+	return new Map((rows || []).filter((row) => row?.id).map((row) => [row.id, row]));
 }
 
-function uniqueRowsById(rows) {
-  const seen = new Set();
-  return rows.filter((row) => {
-    if (!row?.id || seen.has(row.id)) {
-      return false;
-    }
-    seen.add(row.id);
-    return true;
-  });
+async function assertNoActiveInvoicesForAppointment({ clinicId, appointmentId }) {
+	const { data, error } = await supabase
+		.from('invoices')
+		.select('id, invoice_number, status, canceled_at')
+		.eq('clinic_id', clinicId)
+		.eq('appointment_id', appointmentId);
+
+	if (error) {
+		throw new Error(`Erro ao verificar NF vinculada ao atendimento: ${error.message}`);
+	}
+
+	const activeInvoices = (data || []).filter((invoice) => !isInvoiceCanceled(invoice));
+	if (activeInvoices.length > 0) {
+		const invoiceLabels = activeInvoices.map(formatInvoiceLabel).join(', ');
+		throw new Error(
+			`Existe NF vinculada ao atendimento (${invoiceLabels}). Cancele primeiro a NF no sistema e na prefeitura antes de solicitar ou executar o estorno financeiro.`,
+		);
+	}
 }
 
-function getReceivableReversalAmount(row = {}) {
-  return Number(row.paid_total || row.received_value || row.net_value || row.gross_amount || row.amount || 0);
+async function insertFinancialAudit({ clinicId, appointmentId, patientId, amount, paymentMethod, reason, userId, snapshot, steps }) {
+	const { error } = await supabase.from('financial_audits').insert({
+		clinic_id: clinicId,
+		appointment_id: appointmentId,
+		patient_id: patientId || null,
+		action: 'APPOINTMENT_FINANCIAL_REVERSED',
+		amount,
+		payment_method: paymentMethod || null,
+		object_data: {
+			reason,
+			snapshot,
+			steps,
+			reversed_at: new Date().toISOString(),
+		},
+		performed_by: userId,
+		performed_at: new Date().toISOString(),
+		user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+	});
+
+	if (error) throw error;
 }
 
-function isCardReceivable(row = {}) {
-  const method = String(row.payment_method || '').toLowerCase();
-  const metadata = parseMaybeJson(row.metadata, {});
-  const paymentSplit = parseMaybeJson(row.payment_split, []);
-  const split = Array.isArray(paymentSplit) ? paymentSplit[0] : null;
-  return Boolean(
-    row.processor_id
-      || row.card_brand
-      || metadata?.card
-      || split?.card_brand
-      || method.includes('cart')
-      || method.includes('credit')
-      || method.includes('debit'),
-  );
+export async function requestAppointmentFinancialReversalApproval({ appointmentId, clinicId, reason, userId, userRole }) {
+	if (!appointmentId || !clinicId) {
+		throw new Error('Atendimento e clinica sao obrigatorios para solicitar estorno.');
+	}
+	if (!reason?.trim()) {
+		throw new Error('Informe o motivo do estorno para solicitar liberacao.');
+	}
+	if (!userId) {
+		throw new Error('Usuario nao identificado para registrar a solicitacao.');
+	}
+
+	await assertNoActiveInvoicesForAppointment({ clinicId, appointmentId });
+
+	const { data: receivables, error } = await supabase
+		.from('ar_invoices')
+		.select('id, patient_id, status, amount, net_value, payment_method')
+		.eq('clinic_id', clinicId)
+		.eq('appointment_id', appointmentId);
+
+	if (error) {
+		throw new Error(`Erro ao localizar financeiro do atendimento: ${error.message}`);
+	}
+
+	const activeReceivables = (receivables || []).filter(
+		(row) => !['canceled', 'cancelado', 'reversed', 'estornado'].includes(String(row.status || '').toLowerCase()),
+	);
+
+	if (activeReceivables.length === 0) {
+		throw new Error('Nao ha financeiro ativo para solicitar estorno neste atendimento.');
+	}
+
+	const existingRequests = await listFinancialReversalRequests({ clinicId, status: 'pending' });
+	const alreadyPending = existingRequests.some((request) => request.appointment_id === appointmentId);
+	if (alreadyPending) {
+		throw new Error('Ja existe uma solicitacao de estorno pendente para este atendimento. Aguarde a decisao no Financeiro.');
+	}
+
+	const amount = activeReceivables.reduce((sum, row) => sum + Number(row.net_value ?? row.amount ?? 0), 0);
+	const paymentMethod = activeReceivables.map((row) => row.payment_method).filter(Boolean).join(' + ');
+	const patientId = activeReceivables.find((row) => row.patient_id)?.patient_id || null;
+
+	const { error: auditError } = await supabase.from('financial_audits').insert({
+		clinic_id: clinicId,
+		appointment_id: appointmentId,
+		patient_id: patientId || null,
+		action: 'APPOINTMENT_FINANCIAL_REVERSAL_REQUESTED',
+		amount,
+		payment_method: paymentMethod || null,
+		object_data: {
+			reason: reason.trim(),
+			status: 'pending_approval',
+			requested_by_role: userRole || null,
+			required_roles: ['admin', 'gestor', 'financeiro'],
+			required_permission: 'financeiro.estorno',
+			receivable_ids: activeReceivables.map((row) => row.id),
+			requested_at: new Date().toISOString(),
+		},
+		performed_by: userId,
+		performed_at: new Date().toISOString(),
+		user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+	});
+
+	if (auditError) {
+		throw auditError;
+	}
+
+	return {
+		success: true,
+		status: 'pending_approval',
+		amount,
+		receivableIds: activeReceivables.map((row) => row.id),
+	};
 }
 
-async function markAppointmentReversed({ appointmentId, clinicId, reason, userId, now, steps }) {
-  const rows = await updateRowsWithFallback({
-    table: 'appointments',
-    patch: {
-      status: 'canceled',
-      cancellation_reason: `Estorno financeiro: ${reason}`,
-      canceled_at: now,
-      financial_status: 'reversed',
-      financial_reversed_at: now,
-      financial_reversal_reason: reason,
-      financial_reversed_by: userId || null,
-      updated_at: now,
-    },
-    filters: [
-      ['eq', 'id', appointmentId],
-      ['eq', 'clinic_id', clinicId],
-    ],
-    select: 'id, status',
-  });
+async function createCashReversal({ clinicId, amount, paymentMethod, userId, reason, appointmentId }) {
+	if (!amount || amount <= 0) {
+		return { created: 0, skipped: true };
+	}
 
-  addStep(steps, 'appointment', rows.length ? 'financially_reversed' : 'not_found', {
-    ids: rows.map((row) => row.id),
-  });
+	const today = new Date().toISOString().split('T')[0];
+	const now = new Date().toISOString();
+	const { data: cashSession, error: sessionError } = await supabase
+		.from('cash_register_sessions')
+		.select('id, current_balance')
+		.eq('clinic_id', clinicId)
+		.eq('session_date', today)
+		.eq('status', 'open')
+		.maybeSingle();
+
+	if (sessionError) {
+		throw sessionError;
+	}
+
+	if (!cashSession?.id) {
+		return { created: 0, skipped: true, reason: 'Nenhum caixa aberto hoje para movimento compensatorio.' };
+	}
+
+	await supabase
+		.from('cash_register_sessions')
+		.update({ current_balance: Number(cashSession.current_balance || 0) - Number(amount || 0) })
+		.eq('id', cashSession.id);
+
+	const { data, error } = await supabase
+		.from('cash_register_movements')
+		.insert({
+			cash_session_id: cashSession.id,
+			clinic_id: clinicId,
+			movement_type: 'EXPENSE',
+			amount,
+			payment_method: paymentMethod || 'ESTORNO',
+			received_by: userId,
+			created_by: userId,
+			description: `Estorno financeiro do atendimento ${appointmentId}. Motivo: ${reason}`,
+			recorded_at: now,
+		})
+		.select('id');
+
+	if (error) throw error;
+	return { created: data?.length || 0, movementIds: (data || []).map((row) => row.id) };
 }
 
-async function reverseReceivables({ appointmentId, clinicId, reason, userId, now, steps }) {
-  const rows = await listRows('ar_invoices', [
-    ['eq', 'clinic_id', clinicId],
-    ['eq', 'appointment_id', appointmentId],
-  ]);
+async function reverseOperatorCashDrawerMovements({ clinicId, appointmentId, userId, reason }) {
+	const { data: drawerMovements, error: drawerError } = await supabase
+		.from('drawer_movements')
+		.select('*')
+		.eq('clinic_id', clinicId)
+		.eq('appointment_id', appointmentId)
+		.eq('payment_type', 'entrada');
 
-  const reversed = [];
-  for (const row of rows) {
-    const currentMetadata = parseMaybeJson(row.metadata, {});
-    try {
-      const updated = await updateReceivable(row.id, {
-        status: 'reversed',
-        reversed_at: now,
-        cancellation_reason: reason,
-        notes: `Estorno financeiro: ${reason}`,
-        metadata: {
-          ...currentMetadata,
-          reversal: {
-            reason,
-            reversed_at: now,
-            reversed_by: userId || null,
-          },
-        },
-      }, clinicId);
-      reversed.push(updated.id);
-    } catch (_error) {
-      const updated = await updateReceivable(row.id, {
-        status: 'canceled',
-        canceled_at: now,
-        cancellation_reason: reason,
-        notes: `Estorno financeiro: ${reason}`,
-      }, clinicId);
-      reversed.push(updated.id);
-    }
-  }
+	if (drawerError) throw drawerError;
 
-  addStep(steps, 'ar_invoices', rows.length ? 'reversed_or_canceled' : 'none', {
-    ids: reversed,
-    totalAmount: rows.reduce((sum, row) => sum + getReceivableReversalAmount(row), 0),
-  });
+	const activeDrawerMovements = (drawerMovements || []).filter(
+		(row) => !String(row.description || '').toLowerCase().includes('estorno'),
+	);
 
-  return rows;
+	const reversalRows = activeDrawerMovements.map((movement) => ({
+		drawer_id: movement.drawer_id,
+		clinic_id: clinicId,
+		appointment_id: appointmentId,
+		payment_method: movement.payment_method,
+		payment_type: 'saida',
+		amount: Number(movement.amount || 0),
+		description: `Estorno do atendimento #${appointmentId}. Motivo: ${reason}`,
+	})).filter((movement) => movement.amount > 0);
+
+	let insertedDrawerReversals = [];
+	if (reversalRows.length > 0) {
+		const { data, error } = await supabase
+			.from('drawer_movements')
+			.insert(reversalRows)
+			.select('id');
+
+		if (error) throw error;
+		insertedDrawerReversals = data || [];
+	}
+
+	const descriptions = activeDrawerMovements.map((movement) => movement.description).filter(Boolean);
+	let cashMovementIds = [];
+	if (descriptions.length > 0) {
+		const { data: cashMovements, error: cashError } = await supabase
+			.from('cash_movements')
+			.select('id')
+			.eq('clinic_id', clinicId)
+			.eq('origin', 'agenda')
+			.in('description', descriptions);
+
+		if (cashError) throw cashError;
+
+		cashMovementIds = (cashMovements || []).map((row) => row.id).filter(Boolean);
+		if (cashMovementIds.length > 0) {
+			await updateRowsWithOptionalColumns('cash_movements', cashMovementIds, {
+				status: 'estornado',
+				description: `Estornado pelo atendimento #${appointmentId}. Motivo: ${reason}`,
+				updated_by: userId,
+				updated_at: new Date().toISOString(),
+			});
+		}
+	}
+
+	return {
+		cashMovementsReversed: cashMovementIds.length,
+		drawerReversalMovementsCreated: insertedDrawerReversals.length,
+	};
 }
 
-async function reverseFinancialTransactions({ appointmentId, clinicId, receivables, reason, userId, now, steps }) {
-  const receivableIds = receivables.map((row) => row.id).filter(Boolean);
-  const directRows = await listRowsOptional('financial_transactions', [
-    ['eq', 'clinic_id', clinicId],
-    ['eq', 'appointment_id', appointmentId],
-  ]);
-  const originRows = receivableIds.length > 0
-    ? await listRowsOptional('financial_transactions', [
-      ['eq', 'clinic_id', clinicId],
-      ['in', 'origin_id', receivableIds],
-    ])
-    : [];
-  const rows = uniqueRowsById([...directRows, ...originRows]);
+export async function reverseAppointmentFinancialOperation({ appointmentId, clinicId, reason, userId }) {
+	if (!appointmentId || !clinicId) {
+		throw new Error('Atendimento e clinica sao obrigatorios para estornar.');
+	}
+	if (!reason?.trim()) {
+		throw new Error('Informe o motivo do estorno para rastreabilidade.');
+	}
+	if (!userId) {
+		throw new Error('Usuario nao identificado para registrar a rastreabilidade do estorno.');
+	}
 
-  if (!rows.length) {
-    addStep(steps, 'financial_transactions', 'none', { reason: 'Sem transacoes vinculadas encontradas' });
-    return [];
-  }
+	await assertNoActiveInvoicesForAppointment({ clinicId, appointmentId });
 
-  const ids = rows.map((row) => row.id);
-  const canceled = await updateRowsWithFallback({
-    table: 'financial_transactions',
-    patch: {
-      status: 'canceled',
-      notes: `Estorno financeiro do atendimento ${appointmentId}: ${reason}`,
-      is_reconciled: false,
-      reconciliation_id: null,
-      reversed_at: now,
-      reversal_reason: reason,
-      reversed_by: userId || null,
-      updated_at: now,
-    },
-    filters: [
-      ['eq', 'clinic_id', clinicId],
-      ['in', 'id', ids],
-    ],
-    select: 'id',
-  });
+	const now = new Date().toISOString();
+	const steps = [];
+	const reversalMetadata = {
+		reversed: true,
+		reversed_at: now,
+		reversed_by: userId,
+		reversal_reason: reason.trim(),
+		source: 'appointment_financial_reversal',
+	};
 
-  addStep(steps, 'financial_transactions', 'canceled', {
-    ids: canceled.map((row) => row.id),
-  });
+	const { data: receivables, error: receivableError } = await supabase
+		.from('ar_invoices')
+		.select('*')
+		.eq('clinic_id', clinicId)
+		.eq('appointment_id', appointmentId);
 
-  return rows;
+	if (receivableError) {
+		throw new Error(`Erro ao localizar financeiro do atendimento: ${receivableError.message}`);
+	}
+
+	const activeReceivables = (receivables || []).filter(
+		(row) => !['canceled', 'cancelado', 'reversed', 'estornado'].includes(String(row.status || '').toLowerCase()),
+	);
+
+	if (activeReceivables.length === 0) {
+		throw new Error('Nao ha financeiro ativo para estornar neste atendimento.');
+	}
+
+	const receivableIds = activeReceivables.map((row) => row.id);
+	const patientId = activeReceivables.find((row) => row.patient_id)?.patient_id || null;
+	const totalAmount = activeReceivables.reduce((sum, row) => sum + Number(row.net_value ?? row.amount ?? 0), 0);
+	const paymentMethod = activeReceivables.map((row) => row.payment_method).filter(Boolean).join(' + ');
+
+	const { data: payments } = await safeSelect(
+		'receivable_payments',
+		supabase.from('receivable_payments').select('*').in('ar_invoice_id', receivableIds),
+	);
+	const { data: transactionsByReceivable } = await safeSelect(
+		'financial_transactions by receivable',
+		supabase.from('financial_transactions').select('*').eq('clinic_id', clinicId).in('origin_id', receivableIds),
+	);
+	const { data: transactionsByAppointment } = await safeSelect(
+		'financial_transactions by appointment',
+		supabase.from('financial_transactions').select('*').eq('clinic_id', clinicId).eq('origin_id', appointmentId),
+	);
+	const { data: journalEntries } = await safeSelect(
+		'journal_entries',
+		supabase.from('journal_entries').select('*').eq('clinic_id', clinicId).eq('appointment_id', appointmentId),
+	);
+
+	const snapshot = {
+		receivables: activeReceivables,
+		receivable_payments: payments,
+		financial_transactions: [...transactionsByReceivable, ...transactionsByAppointment],
+		journal_entries: journalEntries,
+	};
+
+	const receivableResults = [];
+	for (const receivable of activeReceivables) {
+		const balance = Number(receivable.net_value ?? receivable.amount ?? 0);
+		const metadata = {
+			...(receivable.metadata || {}),
+			reversal: reversalMetadata,
+			reversal_snapshot: {
+				status: receivable.status,
+				received_value: receivable.received_value,
+				paid_total: receivable.paid_total,
+				balance_amount: receivable.balance_amount,
+			},
+		};
+
+		receivableResults.push(await updateRowsWithOptionalColumns('ar_invoices', [receivable.id], {
+			status: 'reversed',
+			enterprise_status: 'ESTORNADO',
+			received_value: 0,
+			paid_total: 0,
+			balance_amount: balance,
+			reversed_at: now,
+			metadata,
+		}));
+	}
+	steps.push({ name: 'Contas a receber', status: `estornado (${receivableResults.length})` });
+
+	if (payments.length > 0) {
+		await updateRowsWithOptionalColumns('receivable_payments', payments.map((row) => row.id), {
+			status: 'reversed',
+			reversed_at: now,
+			metadata: { reversal: reversalMetadata },
+		});
+	}
+	steps.push({ name: 'Historico de pagamentos', status: payments.length ? `estornado (${payments.length})` : 'sem registros' });
+
+	const transactionIds = [...new Set([...transactionsByReceivable, ...transactionsByAppointment].map((row) => row.id).filter(Boolean))];
+	if (transactionIds.length > 0) {
+		await updateRowsWithOptionalColumns('financial_transactions', transactionIds, {
+			status: 'canceled',
+			canceled_at: now,
+			reversed_at: now,
+			notes: `Estornado pelo atendimento ${appointmentId}. Motivo: ${reason.trim()}`,
+			metadata: { reversal: reversalMetadata },
+		});
+	}
+	steps.push({ name: 'Transacoes financeiras', status: transactionIds.length ? `canceladas (${transactionIds.length})` : 'sem registros' });
+
+	if (journalEntries.length > 0) {
+		await updateRowsWithOptionalColumns('journal_entries', journalEntries.map((row) => row.id), {
+			entry_type: 'REVERSED_RECEIPT',
+			description: `Estornado: ${journalEntries[0]?.description || 'recebimento do atendimento'}`,
+			debit_amount: 0,
+			credit_amount: 0,
+			reversed_at: now,
+			reversal_reason: reason.trim(),
+		});
+	}
+	steps.push({ name: 'Lancamentos contabeis', status: journalEntries.length ? `zerados/estornados (${journalEntries.length})` : 'sem registros' });
+
+	try {
+		const cashResult = await createCashReversal({
+			clinicId,
+			amount: totalAmount,
+			paymentMethod,
+			userId,
+			reason: reason.trim(),
+			appointmentId,
+		});
+		steps.push({ name: 'Caixa', status: cashResult.skipped ? `sem movimento compensatorio (${cashResult.reason || 'nao aplicavel'})` : `movimento compensatorio criado (${cashResult.created})` });
+	} catch (error) {
+		steps.push({ name: 'Caixa', status: `pendente: ${error.message}` });
+	}
+
+	try {
+		const operatorCashResult = await reverseOperatorCashDrawerMovements({
+			clinicId,
+			appointmentId,
+			userId,
+			reason: reason.trim(),
+		});
+		steps.push({
+			name: 'Caixa individual/geral',
+			status: operatorCashResult.drawerReversalMovementsCreated || operatorCashResult.cashMovementsReversed
+				? `estornado (${operatorCashResult.cashMovementsReversed} movimentos, ${operatorCashResult.drawerReversalMovementsCreated} compensacoes)`
+				: 'sem movimentos vinculados',
+		});
+	} catch (error) {
+		steps.push({ name: 'Caixa individual/geral', status: `pendente: ${error.message}` });
+	}
+
+	await insertFinancialAudit({
+		clinicId,
+		appointmentId,
+		patientId,
+		amount: totalAmount,
+		paymentMethod,
+		reason: reason.trim(),
+		userId,
+		snapshot,
+		steps,
+	});
+	steps.push({ name: 'Auditoria', status: 'registrada com snapshot' });
+
+	return {
+		success: true,
+		appointmentId,
+		receivableIds,
+		amount: totalAmount,
+		steps,
+	};
 }
 
-async function reverseCashMovements({ clinicId, appointmentId, reason, userId, amount, now, steps }) {
-  const reversalAmount = Number(amount || 0);
-
-  try {
-    const linkedMovements = await listRowsOptional('cash_register_movements', [
-      ['eq', 'clinic_id', clinicId],
-      ['eq', 'appointment_id', appointmentId],
-    ]);
-
-    if (linkedMovements.length > 0) {
-      await updateRowsWithFallback({
-        table: 'cash_register_movements',
-        patch: {
-          status: 'reversed',
-          notes: `Estorno financeiro: ${reason}`,
-          reversed_at: now,
-          reversed_by: userId || null,
-          updated_at: now,
-        },
-        filters: [
-          ['eq', 'clinic_id', clinicId],
-          ['in', 'id', linkedMovements.map((row) => row.id)],
-        ],
-        select: 'id',
-      });
-    }
-  } catch (error) {
-    addStep(steps, 'cash_register_movements_mark', 'skipped', { reason: error.message });
-  }
-
-  if (reversalAmount <= 0) {
-    addStep(steps, 'cash_register_movements', 'none', { reason: 'Sem valor recebido para estornar' });
-    return;
-  }
-
-  const { data: sessions, error: sessionError } = await supabase
-    .from('cash_register_sessions')
-    .select('id, current_balance')
-    .eq('clinic_id', clinicId)
-    .order('created_at', { ascending: false })
-    .limit(1);
-
-  if (sessionError || !sessions?.length) {
-    addStep(steps, 'cash_register_movements', 'skipped', {
-      reason: sessionError?.message || 'Nenhum caixa encontrado para contrapartida',
-    });
-    return;
-  }
-
-  const session = sessions[0];
-  const { data: movement, error } = await supabase
-    .from('cash_register_movements')
-    .insert({
-      cash_session_id: session.id,
-      clinic_id: clinicId,
-      movement_type: 'ADJUSTMENT',
-      amount: -Math.abs(reversalAmount),
-      payment_method: 'ESTORNO',
-      received_by: userId || null,
-      description: `Contrapartida de estorno financeiro do atendimento ${appointmentId}`,
-      notes: reason,
-      appointment_id: appointmentId,
-      recorded_at: now,
-    })
-    .select('id')
-    .single();
-
-  if (error) {
-    addStep(steps, 'cash_register_movements', 'skipped', { reason: error.message });
-    return;
-  }
-
-  await supabase
-    .from('cash_register_sessions')
-    .update({ current_balance: Number(session.current_balance || 0) - Math.abs(reversalAmount) })
-    .eq('id', session.id);
-
-  addStep(steps, 'cash_register_movements', 'counter_entry_created', {
-    ids: [movement.id],
-    amount: -Math.abs(reversalAmount),
-  });
+function parseObjectData(value) {
+	if (!value) return {};
+	if (typeof value === 'string') {
+		try {
+			return JSON.parse(value);
+		} catch (_error) {
+			return {};
+		}
+	}
+	return value;
 }
 
-async function reverseConciliationLinks({ clinicId, appointmentId, receivables, financialTransactions, reason, now, steps }) {
-  const receivableIds = receivables.map((row) => row.id).filter(Boolean);
-  const transactionIds = financialTransactions.map((row) => row.id).filter(Boolean);
-  const linkedIds = [...new Set([...receivableIds, ...transactionIds])];
-  const cardRows = receivables.filter(isCardReceivable);
-
-  if (!linkedIds.length && !cardRows.length) {
-    addStep(steps, 'card_conciliation', 'none', { reason: 'Sem cartao ou conciliacao vinculada' });
-    return;
-  }
-
-  const conciliationSteps = [];
-
-  if (linkedIds.length > 0) {
-    try {
-      const rows = await updateRowsWithFallback({
-        table: 'conciliation_bank_statements',
-        patch: {
-          status: 'pending',
-          linked_financial_id: null,
-          linked_type: null,
-          divergence_reason: `Desconciliado por estorno financeiro: ${reason}`,
-          updated_at: now,
-        },
-        filters: [
-          ['eq', 'clinic_id', clinicId],
-          ['in', 'linked_financial_id', linkedIds],
-        ],
-        select: 'id',
-      });
-      conciliationSteps.push({ table: 'conciliation_bank_statements', ids: rows.map((row) => row.id) });
-    } catch (error) {
-      conciliationSteps.push({ table: 'conciliation_bank_statements', skipped: error.message });
-    }
-  }
-
-  try {
-    const rows = await updateRowsWithFallback({
-      table: 'card_receivables',
-      patch: {
-        status: 'reversed',
-        reversal_reason: reason,
-        reversed_at: now,
-        updated_at: now,
-      },
-      filters: [
-        ['eq', 'clinic_id', clinicId],
-        ['eq', 'appointment_id', appointmentId],
-      ],
-      select: 'id',
-    });
-    conciliationSteps.push({ table: 'card_receivables', ids: rows.map((row) => row.id) });
-  } catch (error) {
-    if (!isMissingRelationError(error)) {
-      conciliationSteps.push({ table: 'card_receivables', skipped: error.message });
-    }
-  }
-
-  addStep(steps, 'card_conciliation', cardRows.length ? 'reversed_or_unlinked' : 'unlinked', {
-    cardReceivableIds: cardRows.map((row) => row.id),
-    linkedIds,
-    details: conciliationSteps,
-  });
+function getRequestStatus(request, resolutionByRequestId) {
+	const resolution = resolutionByRequestId.get(request.id);
+	if (resolution?.action === 'APPOINTMENT_FINANCIAL_REVERSAL_CANCELED') return 'canceled';
+	if (resolution?.action === 'APPOINTMENT_FINANCIAL_REVERSAL_REJECTED') return 'rejected';
+	if (resolution?.action === 'APPOINTMENT_FINANCIAL_REVERSAL_APPROVED') return 'approved';
+	if (resolution?.action === 'APPOINTMENT_FINANCIAL_REVERSED') return 'approved';
+	return 'pending';
 }
 
-async function cancelInvoicesAndGuides({ appointmentId, clinicId, reason, now, steps }) {
-  const invoices = await updateRowsWithFallback({
-    table: 'invoices',
-    patch: {
-      status: 'canceled',
-      cancellation_reason: reason,
-      canceled_at: now,
-      updated_at: now,
-    },
-    filters: [
-      ['eq', 'clinic_id', clinicId],
-      ['eq', 'appointment_id', appointmentId],
-    ],
-    select: 'id, invoice_number',
-  });
-  addStep(steps, 'invoices', invoices.length ? 'canceled' : 'none', { ids: invoices.map((row) => row.id) });
+export async function listFinancialReversalRequests({ clinicId, status = 'pending' } = {}) {
+	if (!clinicId) {
+		return [];
+	}
 
-  try {
-    const guides = await updateRowsWithFallback({
-      table: 'billing_guides',
-      patch: {
-        status: 'Cancelada',
-        observacoes: `Estorno financeiro: ${reason}`,
-        data_atualizacao: now,
-        updated_at: now,
-      },
-      filters: [
-        ['eq', 'clinic_id', clinicId],
-        ['eq', 'appointment_id', appointmentId],
-      ],
-      select: 'id',
-    });
-    addStep(steps, 'billing_guides', guides.length ? 'canceled' : 'none', { ids: guides.map((row) => row.id) });
-  } catch (error) {
-    addStep(steps, 'billing_guides', 'skipped', { reason: error.message });
-  }
+	const { data, error } = await supabase
+		.from('financial_audits')
+		.select('*')
+		.eq('clinic_id', clinicId)
+		.in('action', [
+			'APPOINTMENT_FINANCIAL_REVERSAL_REQUESTED',
+			'APPOINTMENT_FINANCIAL_REVERSAL_APPROVED',
+			'APPOINTMENT_FINANCIAL_REVERSAL_REJECTED',
+			'APPOINTMENT_FINANCIAL_REVERSAL_CANCELED',
+			'APPOINTMENT_FINANCIAL_REVERSED',
+		])
+		.order('performed_at', { ascending: false })
+		.limit(500);
+
+	if (error) {
+		throw new Error(error.message);
+	}
+
+	const rows = (data || []).map((row) => ({ ...row, object_data: parseObjectData(row.object_data) }));
+	const requests = rows.filter((row) => row.action === 'APPOINTMENT_FINANCIAL_REVERSAL_REQUESTED');
+	const resolutions = rows.filter((row) => row.action !== 'APPOINTMENT_FINANCIAL_REVERSAL_REQUESTED');
+	const resolutionByRequestId = new Map();
+
+	resolutions.forEach((row) => {
+		const requestId = row.object_data?.request_audit_id;
+		if (requestId && !resolutionByRequestId.has(requestId)) {
+			resolutionByRequestId.set(requestId, row);
+		}
+	});
+
+	const enrichedRequests = requests
+		.map((request) => {
+			const requestStatus = getRequestStatus(request, resolutionByRequestId);
+			return {
+				...request,
+				request_status: requestStatus,
+				resolution: resolutionByRequestId.get(request.id) || null,
+			};
+		})
+		.filter((request) => status === 'all' || request.request_status === status);
+
+	const appointmentIds = Array.from(new Set(enrichedRequests.map((request) => request.appointment_id).filter(Boolean)));
+	const patientIdsFromRequests = enrichedRequests.map((request) => request.patient_id).filter(Boolean);
+	const receivableIds = Array.from(new Set(enrichedRequests.flatMap((request) => request.object_data?.receivable_ids || []).filter(Boolean)));
+	const userIds = Array.from(new Set(enrichedRequests.map((request) => request.performed_by).filter(Boolean)));
+
+	const { data: appointments } = await safeSelect(
+		'listFinancialReversalRequests.appointments',
+		supabase
+			.from('appointments')
+			.select('id, scheduled_date, scheduled_time, patient_id, service_id, status')
+			.in('id', appointmentIds),
+	);
+
+	const serviceIds = Array.from(new Set((appointments || []).map((appointment) => appointment.service_id).filter(Boolean)));
+	const patientIds = Array.from(new Set([...patientIdsFromRequests, ...(appointments || []).map((appointment) => appointment.patient_id).filter(Boolean)]));
+
+	const [{ data: patients }, { data: services }, { data: receivables }, { data: users }] = await Promise.all([
+		safeSelect(
+			'listFinancialReversalRequests.patients',
+			supabase.from('patients').select('id, name, phone, cell_phone, document_id').in('id', patientIds),
+		),
+		safeSelect(
+			'listFinancialReversalRequests.services',
+			supabase.from('services').select('id, name, code, tuss_code').in('id', serviceIds),
+		),
+		safeSelect(
+			'listFinancialReversalRequests.receivables',
+			supabase.from('ar_invoices').select('id, status, amount, net_value, payment_method').in('id', receivableIds),
+		),
+		safeSelect(
+			'listFinancialReversalRequests.users',
+			supabase.from('users').select('id, full_name, email, username').in('id', userIds),
+		),
+	]);
+
+	const appointmentsById = indexById(appointments);
+	const patientsById = indexById(patients);
+	const servicesById = indexById(services);
+	const receivablesById = indexById(receivables);
+	const usersById = indexById(users);
+
+	return enrichedRequests.map((request) => {
+		const appointment = appointmentsById.get(request.appointment_id) || null;
+		const patient = patientsById.get(request.patient_id || appointment?.patient_id) || null;
+		const service = servicesById.get(appointment?.service_id) || null;
+		const requestReceivables = (request.object_data?.receivable_ids || [])
+			.map((id) => receivablesById.get(id))
+			.filter(Boolean);
+
+		return {
+			...request,
+			appointment,
+			patient,
+			service,
+			requester: usersById.get(request.performed_by) || null,
+			receivables: requestReceivables,
+		};
+	});
 }
 
-async function registerAudit({ appointmentId, clinicId, patientId, reason, userId, amount, steps, now }) {
-  const payload = {
-    clinic_id: clinicId,
-    appointment_id: appointmentId,
-    patient_id: patientId || null,
-    action: 'FINANCIAL_REVERSAL',
-    amount: amount || 0,
-    payment_method: 'ESTORNO',
-    object_data: {
-      reason,
-      reversed_at: now,
-      reversed_by: userId || null,
-      steps,
-    },
-    performed_by: userId,
-    performed_at: now,
-    user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
-  };
+export async function getLatestAppointmentFinancialReversalRequest({ clinicId, appointmentId } = {}) {
+	if (!clinicId || !appointmentId) {
+		return null;
+	}
 
-  try {
-    const { data, error } = await supabase.from('financial_audits').insert(payload).select('id').single();
-    if (error) {
-      throw error;
-    }
-    addStep(steps, 'financial_audits', 'created', { ids: [data.id] });
-  } catch (error) {
-    addStep(steps, 'financial_audits', 'skipped', { reason: error.message });
-  }
-
-  await logAppointmentFinancialAudit({
-    appointmentId,
-    financialEventType: FINANCIAL_EVENT_TYPES.FINANCIAL_REVERSAL,
-    relatedEntity: RELATED_ENTITY_TYPES.APPOINTMENT,
-    relatedEntityId: appointmentId,
-    amount: amount || 0,
-    status: 'reversed',
-    context: {
-      clinic_id: clinicId,
-      reason,
-      reversed_by: userId || null,
-      reversed_at: now,
-      steps,
-    },
-  });
+	const requests = await listFinancialReversalRequests({ clinicId, status: 'all' });
+	return requests.find((request) => request.appointment_id === appointmentId) || null;
 }
 
-export async function reverseAppointmentFinancialOperation({
-  appointmentId,
-  clinicId,
-  reason,
-  userId,
-} = {}) {
-  if (!appointmentId) {
-    throw new Error('Atendimento obrigatorio');
-  }
-  if (!clinicId) {
-    throw new Error('Clinica obrigatoria');
-  }
-  if (!String(reason || '').trim()) {
-    throw new Error('Motivo do estorno obrigatorio');
-  }
-  if (!userId) {
-    throw new Error('Usuario obrigatorio para rastreabilidade do estorno');
-  }
+async function insertReversalDecisionAudit({ request, action, userId, note, result = null }) {
+	const objectData = parseObjectData(request.object_data);
+	const { error } = await supabase.from('financial_audits').insert({
+		clinic_id: request.clinic_id,
+		appointment_id: request.appointment_id,
+		patient_id: request.patient_id || null,
+		action,
+		amount: request.amount,
+		payment_method: request.payment_method || null,
+		object_data: {
+			request_audit_id: request.id,
+			reason: objectData.reason || null,
+			note: note || null,
+			result,
+			decided_at: new Date().toISOString(),
+		},
+		performed_by: userId,
+		performed_at: new Date().toISOString(),
+		user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+	});
 
-  const now = new Date().toISOString();
-  const steps = [];
-  const trimmedReason = String(reason).trim();
-
-  const appointmentRows = await listRows('appointments', [
-    ['eq', 'id', appointmentId],
-    ['eq', 'clinic_id', clinicId],
-  ]);
-  const appointment = appointmentRows[0] || null;
-  const patientId = appointment?.patient_id || null;
-
-  await markAppointmentReversed({ appointmentId, clinicId, reason: trimmedReason, userId, now, steps });
-  const receivables = await reverseReceivables({ appointmentId, clinicId, reason: trimmedReason, userId, now, steps });
-  const financialTransactions = await reverseFinancialTransactions({
-    appointmentId,
-    clinicId,
-    receivables,
-    reason: trimmedReason,
-    userId,
-    now,
-    steps,
-  });
-
-  const reversalAmount = receivables.reduce((sum, row) => sum + getReceivableReversalAmount(row), 0);
-  await reverseCashMovements({ clinicId, appointmentId, reason: trimmedReason, userId, amount: reversalAmount, now, steps });
-  await reverseConciliationLinks({
-    clinicId,
-    appointmentId,
-    receivables,
-    financialTransactions,
-    reason: trimmedReason,
-    now,
-    steps,
-  });
-  await cancelInvoicesAndGuides({ appointmentId, clinicId, reason: trimmedReason, now, steps });
-  await registerAudit({ appointmentId, clinicId, patientId, reason: trimmedReason, userId, amount: reversalAmount, steps, now });
-
-  return {
-    success: true,
-    appointmentId,
-    clinicId,
-    reversedAt: now,
-    amount: reversalAmount,
-    steps,
-  };
+	if (error) throw error;
 }
 
-export default {
-  reverseAppointmentFinancialOperation,
-};
+export async function approveFinancialReversalRequest({ requestId, clinicId, userId, note = '' } = {}) {
+	if (!requestId || !clinicId || !userId) {
+		throw new Error('Solicitacao, clinica e usuario sao obrigatorios para aprovar.');
+	}
+
+	const { data: request, error } = await supabase
+		.from('financial_audits')
+		.select('*')
+		.eq('id', requestId)
+		.eq('clinic_id', clinicId)
+		.eq('action', 'APPOINTMENT_FINANCIAL_REVERSAL_REQUESTED')
+		.maybeSingle();
+
+	if (error) throw new Error(error.message);
+	if (!request) throw new Error('Solicitacao de estorno nao encontrada.');
+
+	const objectData = parseObjectData(request.object_data);
+	const result = await reverseAppointmentFinancialOperation({
+		appointmentId: request.appointment_id,
+		clinicId,
+		reason: objectData.reason || 'Estorno aprovado pela fila de solicitacoes.',
+		userId,
+	});
+
+	await insertReversalDecisionAudit({
+		request,
+		action: 'APPOINTMENT_FINANCIAL_REVERSAL_APPROVED',
+		userId,
+		note,
+		result,
+	});
+
+	return result;
+}
+
+export async function rejectFinancialReversalRequest({ requestId, clinicId, userId, note = '' } = {}) {
+	if (!requestId || !clinicId || !userId) {
+		throw new Error('Solicitacao, clinica e usuario sao obrigatorios para rejeitar.');
+	}
+
+	const { data: request, error } = await supabase
+		.from('financial_audits')
+		.select('*')
+		.eq('id', requestId)
+		.eq('clinic_id', clinicId)
+		.eq('action', 'APPOINTMENT_FINANCIAL_REVERSAL_REQUESTED')
+		.maybeSingle();
+
+	if (error) throw new Error(error.message);
+	if (!request) throw new Error('Solicitacao de estorno nao encontrada.');
+
+	await insertReversalDecisionAudit({
+		request,
+		action: 'APPOINTMENT_FINANCIAL_REVERSAL_REJECTED',
+		userId,
+		note,
+	});
+
+	return { success: true };
+}
+
+export async function cancelFinancialReversalRequest({ requestId, clinicId, userId, note = '' } = {}) {
+	if (!requestId || !clinicId || !userId) {
+		throw new Error('Solicitacao, clinica e usuario sao obrigatorios para cancelar.');
+	}
+
+	const { data: request, error } = await supabase
+		.from('financial_audits')
+		.select('*')
+		.eq('id', requestId)
+		.eq('clinic_id', clinicId)
+		.eq('action', 'APPOINTMENT_FINANCIAL_REVERSAL_REQUESTED')
+		.maybeSingle();
+
+	if (error) throw new Error(error.message);
+	if (!request) throw new Error('Solicitacao de estorno nao encontrada.');
+
+	await insertReversalDecisionAudit({
+		request,
+		action: 'APPOINTMENT_FINANCIAL_REVERSAL_CANCELED',
+		userId,
+		note,
+	});
+
+	return { success: true };
+}

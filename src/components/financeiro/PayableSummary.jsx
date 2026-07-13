@@ -41,11 +41,11 @@ export default function PayableSummary(props) {
 
   if (loading) {
     return (
-      <Card className="p-6 mb-6 dark:bg-gray-800 dark:border-gray-700">
-        <div className="h-12 bg-gray-200 dark:bg-gray-700 rounded mb-4 animate-pulse" />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <Card className="mb-3 p-4 dark:bg-gray-800 dark:border-gray-700">
+        <div className="mb-3 h-8 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+        <div className="grid grid-cols-2 gap-2">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+            <div key={i} className="h-12 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
           ))}
         </div>
       </Card>
@@ -53,30 +53,30 @@ export default function PayableSummary(props) {
   }
 
   return (
-    <Card className="p-6 mb-6 bg-gradient-to-br from-orange-50 to-white border-orange-200 dark:from-gray-800 dark:to-gray-900 dark:border-gray-700 animate-slide-up">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-          <CreditCard className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+    <Card className="mb-3 border-orange-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900 animate-slide-up">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
+          <CreditCard className="h-4 w-4 text-orange-600 dark:text-orange-400" />
           Contas a Pagar
         </h2>
         <Button
           variant="outline"
           size="sm"
           onClick={() => navigate(detailsUrl)}
-          className="gap-2"
+          className="h-8 gap-1.5 px-2.5 text-xs"
         >
           Ver Detalhes
-          <ArrowRight className="w-4 h-4" />
+          <ArrowRight className="h-3.5 w-3.5" />
         </Button>
       </div>
 
       {total === 0 ? (
-        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-          <p className="text-sm">Nenhuma conta a pagar aberta</p>
+        <div className="rounded-md border border-orange-100 bg-orange-50/40 px-3 py-2 text-center text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+          <p className="text-xs">Nenhuma conta a pagar aberta</p>
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+          <div className="mb-3 grid grid-cols-2 gap-2 xl:grid-cols-4">
             {/* Hoje */}
             <PayableWindow
               title="Hoje"
@@ -107,8 +107,8 @@ export default function PayableSummary(props) {
             />
           </div>
 
-          <div className="pt-4 border-t border-orange-200 dark:border-gray-700">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="border-t border-orange-100 pt-2 dark:border-gray-700">
+            <p className="text-xs text-gray-600 dark:text-gray-400">
               Total a Pagar: <span className="font-bold text-gray-900 dark:text-white number-transition">{formatCurrency(total)}</span>
             </p>
           </div>
@@ -144,13 +144,13 @@ function PayableWindow({ title, value, color, alert = false }) {
   };
 
   return (
-    <div className={`${bgClasses[color]} border ${borderClasses[color]} rounded-lg p-4 animate-slide-up card-hover`}>
-      <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">{title}</p>
-      <p className={`text-lg font-bold ${textClasses[color]} number-transition`}>
+    <div className={`${bgClasses[color]} border ${borderClasses[color]} rounded-md p-2.5 animate-slide-up card-hover`}>
+      <p className="mb-1 text-[11px] font-medium text-gray-600 dark:text-gray-400">{title}</p>
+      <p className={`text-sm font-bold ${textClasses[color]} number-transition`}>
         {formatCurrency(value)}
       </p>
       {alert && (
-        <p className="text-xs text-red-600 dark:text-red-400 mt-2">⚠️ Atenção necessária</p>
+        <p className="mt-1 text-[11px] text-red-600 dark:text-red-400">Atenção necessária</p>
       )}
     </div>
   );

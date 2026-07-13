@@ -23,7 +23,7 @@ export interface Service {
 export interface Payer {
   id: string;
   name: string;
-  type: string;
+  type?: string;
 }
 
 export const useCashFormData = (clinicId: string) => {
@@ -88,14 +88,44 @@ export const useCashFormData = (clinicId: string) => {
     if (!clinicId) return;
 
     try {
-      const { data, error } = await supabase
-        .from('payers')
-        .select('id, name')
+      const [{ data: healthInsurances, error: healthInsurancesError }, { data: payersData, error: payersError }] = await Promise.all([
+        supabase
+        .from('health_insurances')
+        .select('id, name, active')
         .eq('clinic_id', clinicId)
-        .order('name');
+        .eq('active', true)
+          .order('name'),
+        supabase
+          .from('payers')
+          .select('id, name')
+          .eq('clinic_id', clinicId)
+          .eq('active', true)
+          .order('name'),
+      ]);
 
-      if (error) throw error;
-      setPayers(data || []);
+      if (healthInsurancesError && payersError) {
+        throw payersError;
+      }
+
+      const payerMap = new Map<string, Payer>();
+
+      if (!healthInsurancesError) {
+        (healthInsurances || []).forEach((payer) => payerMap.set(payer.id, {
+          id: payer.id,
+          name: payer.name || 'Convênio',
+          type: 'convenio',
+        }));
+      }
+
+      if (!payersError) {
+        (payersData || []).forEach((payer) => {
+          if (!payerMap.has(payer.id)) {
+            payerMap.set(payer.id, { ...payer, type: 'convenio' });
+          }
+        });
+      }
+
+      setPayers(Array.from(payerMap.values()).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')));
     } catch (err) {
       console.error('Erro ao buscar convênios:', err);
     }

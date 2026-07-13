@@ -32,16 +32,16 @@ export function PeriodFilter({ onPeriodChange, currentPeriod = '30d' }) {
   };
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2">
       {/* Período rápido */}
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex flex-wrap gap-1.5">
         {periods.map((period) => (
           <Button
             key={period.id}
             onClick={() => handlePeriodClick(period.id)}
             variant={currentPeriod === period.id ? 'default' : 'outline'}
             size="sm"
-            className={`transition ${
+            className={`h-8 px-2.5 text-xs transition ${
               currentPeriod === period.id
                 ? 'bg-blue-600 text-white'
                 : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
@@ -56,20 +56,20 @@ export function PeriodFilter({ onPeriodChange, currentPeriod = '30d' }) {
           onClick={() => setShowCustom(!showCustom)}
           variant={currentPeriod === 'custom' ? 'default' : 'outline'}
           size="sm"
-          className={`transition flex items-center gap-1 ${
+          className={`flex h-8 items-center gap-1 px-2.5 text-xs transition ${
             currentPeriod === 'custom'
               ? 'bg-blue-600 text-white'
               : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
           }`}
         >
-          <Calendar size={16} />
+          <Calendar size={14} />
           Custom
         </Button>
       </div>
 
       {/* Custom date picker */}
       {showCustom && (
-        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 flex gap-3 items-end">
+        <div className="flex items-end gap-2 rounded-lg border border-gray-200 bg-gray-50 p-2">
           <div className="flex-1">
             <label className="text-xs font-semibold text-gray-600">Data Início</label>
             <input

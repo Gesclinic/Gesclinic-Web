@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { ChevronDown, Search, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Filter, Search, X } from 'lucide-react';
 import { useAgendaFilters } from '../hooks/useAgendaFilters';
 
 /**
@@ -41,6 +41,9 @@ export default function AgendaFiltersNew({
     if (filters.service_id) {
       count++;
     }
+    if (filters.search) {
+      count++;
+    }
     return count;
   }, [filters]);
 
@@ -56,42 +59,36 @@ export default function AgendaFiltersNew({
   return (
     <div className="bg-white border-b border-gray-200 sticky top-32 z-10">
       <div className="w-full mx-auto px-4 py-3">
-        {/* Linha Sempre Visível */}
-        <div className="flex items-center gap-3">
-          {/* Campo de Busca Global */}
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Buscar paciente, telefone ou serviço..."
-              value={filters.search || ''}
-              onChange={(e) => onFilterChange?.('search', e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-
-          {/* Botão Filtros */}
+        <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
           <button
+            type="button"
             onClick={toggleOpen}
-            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-all ${
-              isOpen
-                ? 'bg-blue-100 text-blue-600 border border-blue-300'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
-            }`}
+            className="flex w-full items-center justify-between gap-3 text-left"
+            aria-expanded={isOpen}
           >
-            <span>🔍 Filtros</span>
-            {activeFiltersCount > 0 && (
-              <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-blue-600 rounded-full">
-                {activeFiltersCount}
+            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+              <Filter className="h-5 w-5 text-slate-600" />
+              Filtros Avançados
+              <span className="rounded bg-slate-100 px-2 py-1 text-xs font-normal text-slate-500">
+                {activeFiltersCount} ativo(s)
               </span>
-            )}
-            <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </h3>
+            {isOpen ? <ChevronUp className="h-5 w-5 text-slate-600" /> : <ChevronDown className="h-5 w-5 text-slate-600" />}
           </button>
-        </div>
 
-        {/* Filtros Avançados */}
-        {isOpen && (
-          <div className="mt-4 pt-4 border-t border-gray-200 space-y-4">
+          {isOpen && (
+          <div className="mt-4 pt-4 border-t border-slate-100 space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Buscar paciente, telefone ou serviço..."
+                value={filters.search || ''}
+                onChange={(e) => onFilterChange?.('search', e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
               {/* Filtro: Paciente */}
               <div>
@@ -213,6 +210,7 @@ export default function AgendaFiltersNew({
             )}
           </div>
         )}
+        </div>
       </div>
     </div>
   );

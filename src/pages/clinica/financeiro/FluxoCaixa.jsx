@@ -66,7 +66,7 @@ import {
  * Integra 7 componentes principais + utilitários de cálculo
  */
 export default function FluxoCaixaPage() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const sectionParam = searchParams.get('section');
   const breadcrumbs = useBreadcrumbs([
     { label: 'Financeiro', path: '/clinica/financeiro' },
@@ -83,29 +83,29 @@ export default function FluxoCaixaPage() {
   const [accountingMode, setAccountingMode] = useState('accrual');
   const [customDateRange, setCustomDateRange] = useState(null);
   const [flowPreviewMode, setFlowPreviewMode] = useState('executive');
-  const [activeSection, setActiveSection] = useState(['overview', 'operational', 'model', 'analytics'].includes(sectionParam) ? sectionParam : 'overview');
+  const [activeSection, setActiveSection] = useState(['overview', 'operational', 'model', 'analytics'].includes(sectionParam) ? sectionParam : 'operational');
   const [modelExpanded, setModelExpanded] = useState(false);
   const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
 
   const sectionActiveStyles = {
-    overview: 'border-blue-700 bg-blue-700 text-white shadow-md ring-2 ring-blue-200',
-    operational: 'border-emerald-700 bg-emerald-700 text-white shadow-md ring-2 ring-emerald-200',
-    model: 'border-amber-700 bg-amber-600 text-white shadow-md ring-2 ring-amber-200',
-    analytics: 'border-violet-700 bg-violet-700 text-white shadow-md ring-2 ring-violet-200',
+    overview: 'border-blue-600 bg-blue-50 text-blue-800',
+    operational: 'border-emerald-600 bg-emerald-50 text-emerald-800',
+    model: 'border-amber-600 bg-amber-50 text-amber-800',
+    analytics: 'border-violet-600 bg-violet-50 text-violet-800',
   };
 
-  const sectionInactiveStyle = 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200';
+  const sectionInactiveStyle = 'border-transparent bg-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-200 dark:hover:bg-gray-800';
 
-  const getSectionButtonClass = (section) => `inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold transition-all ${activeSection === section ? sectionActiveStyles[section] : sectionInactiveStyle}`;
+  const getSectionButtonClass = (section) => `inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-semibold transition-all ${activeSection === section ? sectionActiveStyles[section] : sectionInactiveStyle}`;
 
   const sectionPanelStyles = {
-    overview: 'border-blue-200 bg-blue-50/30 dark:border-blue-900/40 dark:bg-blue-950/10',
-    operational: 'border-emerald-200 bg-emerald-50/30 dark:border-emerald-900/40 dark:bg-emerald-950/10',
-    model: 'border-amber-200 bg-amber-50/30 dark:border-amber-900/40 dark:bg-amber-950/10',
-    analytics: 'border-violet-200 bg-violet-50/30 dark:border-violet-900/40 dark:bg-violet-950/10',
+    overview: 'border-slate-200 bg-white dark:border-gray-700 dark:bg-gray-900',
+    operational: 'border-slate-200 bg-white dark:border-gray-700 dark:bg-gray-900',
+    model: 'border-slate-200 bg-white dark:border-gray-700 dark:bg-gray-900',
+    analytics: 'border-slate-200 bg-white dark:border-gray-700 dark:bg-gray-900',
   };
 
-  const getSectionPanelClass = (section) => `rounded-xl border p-4 md:p-5 ${sectionPanelStyles[section]}`;
+  const getSectionPanelClass = (section) => `rounded-lg border p-3 md:p-4 ${sectionPanelStyles[section]}`;
 
   // Consolidated dashboard data
   const [dashboardData, setDashboardData] = useState(null);
@@ -134,6 +134,17 @@ export default function FluxoCaixaPage() {
     ['paid', 'received', 'processed', 'pago', 'paga', 'recebido', 'quitado'].includes(String(status || '').toLowerCase())
   ), []);
 
+  const isCashDrawerSettledPayable = React.useCallback((item = {}) => Boolean(
+    item?.metadata?.drawer_movement_id
+      || item?.metadata?.origem === 'Caixa Diario'
+      || String(item?.notes || '').includes('Movimento do caixa:')
+      || String(item?.description || '').toLowerCase().includes('despesa manual do caixa')
+  ), []);
+
+  const isRealizedPayable = React.useCallback((item = {}) => (
+    isRealizedStatus(item.status) || isCashDrawerSettledPayable(item)
+  ), [isRealizedStatus, isCashDrawerSettledPayable]);
+
   const modeReceivables = React.useMemo(() => {
     if (accountingMode === 'accrual') return receivables;
     return receivables.filter((item) => isRealizedStatus(item.status));
@@ -141,8 +152,8 @@ export default function FluxoCaixaPage() {
 
   const modePayables = React.useMemo(() => {
     if (accountingMode === 'accrual') return payables;
-    return payables.filter((item) => isRealizedStatus(item.status));
-  }, [accountingMode, payables, isRealizedStatus]);
+    return payables.filter(isRealizedPayable);
+  }, [accountingMode, payables, isRealizedPayable]);
 
   const projectedPeriod = React.useMemo(() => {
     const toIso = (value) => {
@@ -255,7 +266,7 @@ export default function FluxoCaixaPage() {
 
     const derivedRows = buildDerivedFinancialTransactions(consolidation);
     const realizedStatuses = new Set(['paid', 'received', 'processed', 'pago', 'recebido', 'quitado']);
-    const realizedRows = derivedRows.filter((item) => realizedStatuses.has(String(item.status || '').toLowerCase()));
+    const realizedRows = derivedRows.filter((item) => realizedStatuses.has(String(item.status || '').toLowerCase()) || (item.sourceType === 'accounts_payable' && isCashDrawerSettledPayable(item.raw)));
     const realizedInflows = round2(realizedRows.filter((item) => item.type === 'revenue').reduce((sum, item) => sum + Number(item.amount || 0), 0));
     const realizedOutflows = round2(realizedRows.filter((item) => item.type !== 'revenue').reduce((sum, item) => sum + Number(item.amount || 0), 0));
 
@@ -294,7 +305,7 @@ export default function FluxoCaixaPage() {
         fluxoVsLancamentosNet: round2((summary.net_balance || 0) - (realizedInflows - realizedOutflows)),
       },
     };
-  }, [consolidation, summary, receivables, payables]);
+  }, [consolidation, summary, receivables, payables, isCashDrawerSettledPayable]);
 
   const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -426,10 +437,27 @@ export default function FluxoCaixaPage() {
 
   useEffect(() => {
     const nextSection = searchParams.get('section');
-    if (['overview', 'operational', 'model', 'analytics'].includes(nextSection)) {
-      setActiveSection(nextSection);
+    const validSections = ['overview', 'operational', 'model', 'analytics'];
+
+    if (!validSections.includes(nextSection)) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.set('section', 'operational');
+      nextParams.set('depth', 'details');
+      nextParams.set('expand', 'all');
+      setSearchParams(nextParams, { replace: true });
+      setActiveSection('operational');
+      return;
     }
-  }, [searchParams]);
+
+    if (nextSection === 'operational' && (searchParams.get('depth') !== 'details' || searchParams.get('expand') !== 'all')) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.set('depth', 'details');
+      nextParams.set('expand', 'all');
+      setSearchParams(nextParams, { replace: true });
+    }
+
+    setActiveSection(nextSection);
+  }, [searchParams, setSearchParams]);
 
   // ========================
   // RENDER
@@ -480,47 +508,41 @@ export default function FluxoCaixaPage() {
         }
       >
         {/* Phase 3: Advanced Period Filter */}
-        <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">📅 Selecione o Período</h3>
-            <span className="text-xs text-gray-500 dark:text-gray-400">
-              {lastUpdatedAt ? `Atualizado em ${new Date(lastUpdatedAt).toLocaleString('pt-BR')}` : 'Aguardando atualização'}
-            </span>
-          </div>
-          <PeriodFilter onPeriodChange={handlePeriodChange} currentPeriod={period} />
-
-          <div className="mt-4 border-t border-gray-200 dark:border-gray-700 pt-3">
-            <div className="flex flex-wrap items-center gap-2">
+        <div className="mb-3 rounded-lg border border-gray-200 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-900">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">Periodo</span>
+            <PeriodFilter onPeriodChange={handlePeriodChange} currentPeriod={period} />
+            <div className="flex flex-wrap items-center gap-2 border-l border-gray-200 pl-3 dark:border-gray-700">
               <span className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">Regime</span>
               <button
                 type="button"
                 onClick={() => setAccountingMode('realized')}
-                className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${accountingMode === 'realized'
+                className={`rounded-md border px-2.5 py-1.5 text-xs font-semibold transition-colors ${accountingMode === 'realized'
                   ? 'border-blue-700 bg-blue-700 text-white'
                   : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800'
                 }`}
               >
-                Caixa (Realizado)
+                Caixa
               </button>
               <button
                 type="button"
                 onClick={() => setAccountingMode('accrual')}
-                className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${accountingMode === 'accrual'
+                className={`rounded-md border px-2.5 py-1.5 text-xs font-semibold transition-colors ${accountingMode === 'accrual'
                   ? 'border-emerald-700 bg-emerald-700 text-white'
                   : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800'
                 }`}
               >
-                Competência
+                Competencia
               </button>
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                Competência inclui previstos/importados; Caixa mostra apenas realizados.
-              </span>
             </div>
+            <span className="ml-auto text-xs text-gray-500 dark:text-gray-400">
+              {lastUpdatedAt ? `Atualizado em ${new Date(lastUpdatedAt).toLocaleString('pt-BR')}` : 'Aguardando atualização'}
+            </span>
           </div>
         </div>
 
         {/* Navegação entre seções do fluxo */}
-        <div className="mb-6 rounded-lg border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-gray-900">
+        <div className="mb-4 rounded-lg border border-gray-200 bg-white p-1.5 dark:border-gray-700 dark:bg-gray-900">
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
@@ -703,13 +725,15 @@ export default function FluxoCaixaPage() {
                   <OperationalCashFlowModel consolidation={consolidation} clinicId={clinicId} loading={loading} accountingMode={accountingMode} />
                 </ErrorBoundary>
 
-                <ErrorBoundary>
-                  <ReceivableSummary receivables={modeReceivables} loading={loading} />
-                </ErrorBoundary>
+                <div className="grid gap-3 xl:grid-cols-2">
+                  <ErrorBoundary>
+                    <ReceivableSummary receivables={modeReceivables} loading={loading} />
+                  </ErrorBoundary>
 
-                <ErrorBoundary>
-                  <PayableSummary payables={modePayables} loading={loading} />
-                </ErrorBoundary>
+                  <ErrorBoundary>
+                    <PayableSummary payables={modePayables} loading={loading} />
+                  </ErrorBoundary>
+                </div>
 
                 <ErrorBoundary>
                   <FinancialAlertsPanel

@@ -287,17 +287,62 @@ export const reconciliationApi = {
     try {
       const { data, error } = await supabase
         .from('cash_transfers')
-        .select(`
-          *,
-          from_drawer:cash_drawers(id, date_opened, operator:users(name, email)),
-          to_account:finance_accounts(account_name, account_type)
-        `)
+        .select('*')
         .eq('clinic_id', clinicId)
         .eq('status', 'pending_approval')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+
+      const transfers = data || [];
+      const drawerIds = [...new Set(transfers.map((transfer) => transfer.from_drawer_id).filter(Boolean))];
+      const accountIds = [...new Set(transfers.map((transfer) => transfer.to_account_id).filter(Boolean))];
+
+      const [drawersRes, financialAccountsRes, legacyAccountsRes] = await Promise.all([
+        drawerIds.length > 0
+          ? supabase.from('cash_drawers').select('*').eq('clinic_id', clinicId).in('id', drawerIds)
+          : Promise.resolve({ data: [] }),
+        accountIds.length > 0
+          ? supabase.from('financial_accounts').select('*').eq('clinic_id', clinicId).in('id', accountIds)
+          : Promise.resolve({ data: [] }),
+        accountIds.length > 0
+          ? supabase.from('finance_accounts').select('*').eq('clinic_id', clinicId).in('id', accountIds)
+          : Promise.resolve({ data: [] }),
+      ]);
+
+      const drawers = drawersRes.data || [];
+      const operatorIds = [...new Set(drawers.map((drawer) => drawer.operator_id).filter(Boolean))];
+      const { data: users } = operatorIds.length > 0
+        ? await supabase.from('users').select('id, name, full_name, email').eq('clinic_id', clinicId).in('id', operatorIds)
+        : { data: [] };
+
+      const usersById = new Map((users || []).map((user) => [user.id, user]));
+      const drawersById = new Map(drawers.map((drawer) => {
+        const operator = usersById.get(drawer.operator_id);
+        return [
+          drawer.id,
+          {
+            ...drawer,
+            operator: operator
+              ? {
+                  id: operator.id,
+                  name: operator.full_name || operator.name || operator.email || 'Operador',
+                  email: operator.email,
+                }
+              : null,
+          },
+        ];
+      }));
+      const accountsById = new Map([
+        ...(financialAccountsRes.data || []),
+        ...(legacyAccountsRes.data || []),
+      ].map((account) => [account.id, account]));
+
+      return transfers.map((transfer) => ({
+        ...transfer,
+        from_drawer: drawersById.get(transfer.from_drawer_id) || null,
+        to_account: accountsById.get(transfer.to_account_id) || null,
+      }));
     } catch (error) {
       console.error('❌ Erro ao listar transferências pendentes:', error.message);
       return [];

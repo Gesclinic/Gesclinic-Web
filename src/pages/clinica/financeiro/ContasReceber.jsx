@@ -11,6 +11,7 @@ import {
   Download,
   Filter,
   ChevronDown,
+  ChevronUp,
   Check,
   AlertCircle,
   Clock,
@@ -1940,7 +1941,7 @@ export default function ContasReceber() {
     if (!rows.length) return;
 
     // Check if already enriched
-    if (rows[0]?.convenio_name !== undefined) {
+    if (rows[0]?.__receivableDisplayEnriched) {
       console.log('✅ Already enriched, skipping');
       return;
     }
@@ -1975,21 +1976,36 @@ export default function ContasReceber() {
         const planoIds = new Set();
         const payerIds = new Set();
         const professionalIds = new Set();
+        const patientIds = new Set();
+        const serviceIds = new Set();
+        const roomIds = new Set();
         enrichedWithDescription.forEach((r) => {
-          const payerId = r.payer_id || r.convenio_id || r.empresa_id;
-          const professionalId = r.professional_id || r.profissional_id;
+          const apt = Array.isArray(r.appointments) ? r.appointments[0] : r.appointments;
+          const payerId = r.payer_id || r.convenio_id || r.empresa_id || apt?.payer_id;
+          const professionalId = r.professional_id || r.profissional_id || apt?.professional_id;
+          const patientId = r.patient_id || r.paciente_id || apt?.patient_id;
+          const serviceId = r.service_id || r.procedure_id || apt?.service_id;
+          const roomId = r.room_id || apt?.room_id;
           if (payerId) {
             payerIds.add(payerId);
           }
           if (professionalId) {
             professionalIds.add(professionalId);
           }
+          if (patientId) {
+            patientIds.add(patientId);
+          }
+          if (serviceId) {
+            serviceIds.add(serviceId);
+          }
+          if (roomId) {
+            roomIds.add(roomId);
+          }
           // Try ar_invoices column first
           if (r.plano_contas_id || r.chart_account_id) {
             planoIds.add(r.plano_contas_id || r.chart_account_id);
           } else {
             // Fall back to appointments
-            const apt = r.appointments?.[0];
             if (apt?.plano_contas_id) {
               planoIds.add(apt.plano_contas_id);
             }
@@ -2055,21 +2071,158 @@ export default function ContasReceber() {
           }
         }
 
+        const patientMap = {};
+        if (patientIds.size > 0) {
+          try {
+            const { data: patientData, error } = await supabase
+              .from('patients')
+              .select('id, name')
+              .in('id', Array.from(patientIds));
+            if (error) {
+              console.error('❌ Error fetching patients:', error);
+            } else {
+              patientData?.forEach((patient) => {
+                patientMap[patient.id] = patient.name;
+              });
+            }
+          } catch (err) {
+            console.error('❌ Exception fetching patients:', err);
+          }
+        }
+
+        const serviceMap = {};
+        if (serviceIds.size > 0) {
+          try {
+            const { data: serviceData, error } = await supabase
+              .from('services')
+              .select('id, name')
+              .in('id', Array.from(serviceIds));
+            if (error) {
+              console.error('❌ Error fetching services:', error);
+            } else {
+              serviceData?.forEach((service) => {
+                serviceMap[service.id] = service.name;
+              });
+            }
+          } catch (err) {
+            console.error('❌ Exception fetching services:', err);
+          }
+        }
+
+        const roomMap = {};
+        if (roomIds.size > 0) {
+          try {
+            const { data: roomData, error } = await supabase
+              .from('rooms')
+              .select('id, name')
+              .in('id', Array.from(roomIds));
+            if (error) {
+              console.error('❌ Error fetching rooms:', error);
+            } else {
+              roomData?.forEach((room) => {
+                roomMap[room.id] = room.name;
+              });
+            }
+          } catch (err) {
+            console.error('❌ Exception fetching rooms:', err);
+          }
+        }
+
+        const pickReceivableText = (...values) => values.find((value) => {
+          if (value === null || value === undefined) {
+            return false;
+          }
+          const text = String(value).trim();
+          return text && text !== '—';
+        });
+
         // Step 4: Apply enriched data
         const finalRows = enrichedWithDescription.map((r) => {
-          const planoId = r.plano_contas_id || r.chart_account_id || r.appointments?.[0]?.plano_contas_id;
-          const payerId = r.payer_id || r.convenio_id || r.empresa_id;
-          const professionalId = r.professional_id || r.profissional_id;
+          const appointment = Array.isArray(r.appointments) ? r.appointments[0] : r.appointments;
+          const metadata = r.metadata || {};
+          const paymentData = metadata.payment_data || {};
+          const appointmentData = metadata.appointment || paymentData.appointment || {};
+          const patientId = r.patient_id || r.paciente_id || appointment?.patient_id;
+          const serviceId = r.service_id || r.procedure_id || appointment?.service_id;
+          const roomId = r.room_id || appointment?.room_id;
+          const appointmentPatientName = pickReceivableText(patientId ? patientMap[patientId] : null, appointment?.patients?.name, appointment?.patient_name, appointmentData.patientName);
+          const appointmentServiceName = pickReceivableText(
+            serviceId ? serviceMap[serviceId] : null,
+            appointmentData.serviceName,
+            paymentData.serviceName,
+            appointment?.services?.name,
+            appointment?.service_name,
+            r.procedure_name,
+            r.service_description,
+            r.description
+          );
+          const appointmentProfessionalName = pickReceivableText(
+            appointmentData.professionalName,
+            paymentData.professionalName,
+            appointment?.professionals?.name,
+            appointment?.professional_name
+          );
+          const appointmentUnitName = pickReceivableText(
+            appointmentData.unitName,
+            appointmentData.roomName,
+            paymentData.unitName,
+            paymentData.roomName,
+            appointment?.unit_name,
+            roomId ? roomMap[roomId] : null,
+            appointment?.rooms?.unit_name,
+            appointment?.rooms?.name
+          );
+          const appointmentSpecialtyName = pickReceivableText(
+            appointmentData.specialtyName,
+            paymentData.specialtyName,
+            appointment?.professionals?.specialty_name,
+            appointment?.professionals?.specialty,
+            appointment?.specialty_name
+          );
+          const appointmentServiceGroup = pickReceivableText(
+            appointmentData.serviceGroup,
+            paymentData.serviceGroup,
+            appointment?.services?.group_name,
+            appointment?.services?.service_group,
+            appointment?.services?.category,
+            r.registered_service_group,
+            r.service_group
+          );
+          const planoId = r.plano_contas_id || r.chart_account_id || appointment?.plano_contas_id;
+          const payerId = r.payer_id || r.convenio_id || r.empresa_id || appointment?.payer_id;
+          const professionalId = r.professional_id || r.profissional_id || appointment?.professional_id;
           const plano_contas_name = planoId ? planoMap[planoId] : 'Operacional';
           const payerName = payerId ? payerMap[payerId] : null;
-          const professionalName = professionalId ? professionalMap[professionalId] : null;
+          const professionalName = pickReceivableText(professionalId ? professionalMap[professionalId] : null, appointmentProfessionalName);
+          const patientName = pickReceivableText(r.patient_name, r.payer_name, appointmentPatientName);
+          const serviceName = pickReceivableText(r.registered_service_name, appointmentServiceName);
+          const isGenericAgendaDescription = r.description === 'Recebimento registrado pela agenda';
+          const serviceDescription = pickReceivableText(isGenericAgendaDescription ? serviceName : r.service_description, serviceName);
+          const procedureName = pickReceivableText(r.procedure_name, serviceName);
+          const description = isGenericAgendaDescription
+            ? pickReceivableText(serviceDescription && patientName ? `${serviceDescription} - ${patientName}` : null, serviceDescription, r.description)
+            : r.description;
 
           console.log(`✓ Final ${r.id}: convenio=${r.convenio_name}, plano=${plano_contas_name}, forma=${r.forma_prevista}`);
 
           return {
             ...r,
-            convenio_name: formatReceivableText(payerName || r.convenio_name),
-            professional_name: formatReceivableText(professionalName || r.professional_name || r.profissional_name),
+            __receivableDisplayEnriched: true,
+            payer_display: formatReceivableText(pickReceivableText(r.payer_display, patientName)),
+            payer_name: formatReceivableText(pickReceivableText(r.payer_name, patientName)),
+            patient_name: formatReceivableText(patientName),
+            description: formatReceivableText(description),
+            service_description: formatReceivableText(serviceDescription),
+            procedure_name: formatReceivableText(procedureName),
+            registered_service_name: formatReceivableText(serviceName),
+            service_group: formatReceivableText(appointmentServiceGroup || r.service_group),
+            registered_service_group: formatReceivableText(appointmentServiceGroup || r.registered_service_group),
+            convenio_name: formatReceivableText(pickReceivableText(payerName, r.convenio_name)),
+            professional_name: formatReceivableText(pickReceivableText(professionalName, r.professional_name, r.profissional_name)),
+            profissional_name: formatReceivableText(pickReceivableText(professionalName, r.profissional_name, r.professional_name)),
+            unit_name: formatReceivableText(pickReceivableText(r.unit_name, r.unidade_name, appointmentUnitName)),
+            unidade_name: formatReceivableText(pickReceivableText(r.unidade_name, r.unit_name, appointmentUnitName)),
+            specialty_name: formatReceivableText(pickReceivableText(r.specialty_name, appointmentSpecialtyName)),
             plano_contas_name: formatReceivableText(plano_contas_name),
             forma_prevista: r.forma_prevista,
           };
@@ -3324,20 +3477,38 @@ export default function ContasReceber() {
       </Card>
 
       {/* FILTROS */}
-      <Card className="p-4 mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold flex items-center gap-2">
-            <Filter className="w-4 h-4" /> Filtros avançados
+      <Card className="p-6 mb-6 border border-slate-100 shadow-sm rounded-xl">
+        <button
+          type="button"
+          onClick={() => setShowFilters(!showFilters)}
+          className="mb-4 flex w-full items-center justify-between gap-3 text-left"
+          aria-expanded={showFilters}
+        >
+          <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <Filter className="h-5 w-5 text-slate-600" />
+            Filtros Avançados
+            <span className="rounded bg-slate-100 px-2 py-1 text-xs font-normal text-slate-500">
+              {activeFilterChips.length} ativo(s)
+            </span>
           </h3>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="text-sm text-blue-600 hover:text-blue-700"
-          >
-            {showFilters ? '▼ Ocultar' : '▶ Mostrar'}
-          </button>
-        </div>
+          {showFilters ? <ChevronUp className="h-5 w-5 text-slate-600" /> : <ChevronDown className="h-5 w-5 text-slate-600" />}
+        </button>
 
         {showFilters && (
+          <div className="space-y-4 border-t border-slate-100 pt-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Input
+              placeholder="Buscar por descrição..."
+              className="pl-9"
+              value={filters.search}
+              onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
+              onKeyPress={(e) => e.key === 'Enter' && load(filters)}
+            />
+          </div>
+        </div>
+
           <div>
             <div className="grid md:grid-cols-4 gap-3 mb-4 pb-4 border-b">
               <Input
@@ -3592,29 +3763,28 @@ export default function ContasReceber() {
               </div>
             </div>
 
-            <div className="flex gap-2 flex-wrap">
-              <Button className="bg-blue-600" onClick={() => load(filters)} disabled={loading}>
-                {loading ? 'Filtrando...' : 'Aplicar filtros'}
+            <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
+              <Button className="gap-2" onClick={() => load(filters)} disabled={loading}>
+                <Filter className="h-4 w-4" />
+                {loading ? 'Filtrando...' : 'Filtrar'}
               </Button>
               <Button
                 variant="outline"
                 onClick={() => applyFiltersAndLoad(emptyFilters)}
               >
-                Limpar
+                Limpar Filtros
               </Button>
-
-              {/* Salvar Filtro */}
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => setSaveFilterDialogOpen(true)}
                 disabled={loading}
                 title="Salvar configuração atual como filtro"
+                className="gap-2"
               >
-                <Save className="w-4 h-4" />
+                <Save className="h-4 w-4" />
+                Salvar Filtro
               </Button>
-
-              {/* Carregar Filtro */}
               {savedFilters.length > 0 && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -3623,8 +3793,10 @@ export default function ContasReceber() {
                       variant="outline"
                       disabled={loading}
                       title="Carregar um filtro salvo"
+                      className="gap-2"
                     >
-                      <Download className="w-4 h-4" />
+                      <Download className="h-4 w-4" />
+                      Carregar
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
@@ -3649,37 +3821,22 @@ export default function ContasReceber() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
-
               <Button variant="ghost" className="ml-auto">
                 <Download className="w-4 h-4 mr-2" />
                 Exportar
               </Button>
             </div>
-
-            {/* SaveFilterDialog */}
-            <SaveFilterDialog
-              open={saveFilterDialogOpen}
-              onOpenChange={setSaveFilterDialogOpen}
-              onSave={handleSaveFilter}
-              existingNames={savedFilters.map((f) => f.name)}
-              loading={loading}
-            />
+          </div>
           </div>
         )}
 
-        {!showFilters && (
-          <div className="flex gap-2 items-center">
-            <Input
-              placeholder="Buscar por descrição..."
-              className="flex-1"
-              value={filters.search}
-              onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
-            />
-            <Button variant="outline" onClick={() => load(filters)} disabled={loading}>
-              Buscar
-            </Button>
-          </div>
-        )}
+        <SaveFilterDialog
+          open={saveFilterDialogOpen}
+          onOpenChange={setSaveFilterDialogOpen}
+          onSave={handleSaveFilter}
+          existingNames={savedFilters.map((f) => f.name)}
+          loading={loading}
+        />
       </Card>
 
       {/* 📋 TABELA */}

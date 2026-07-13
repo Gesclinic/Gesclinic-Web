@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import { DollarSign, CreditCard, CheckCheck, Landmark } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { labelForStatus, statusToCanonical } from '@/lib/statusLabels';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
+import cashDrawerApi from '@/lib/cashDrawerApi';
 
 const fmtHour = (iso) =>
   iso ? new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
@@ -17,6 +19,11 @@ const fmtCurrency = (value) =>
   value == null || Number.isNaN(+value)
     ? null
     : Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const padDatePart = (value) => String(value).padStart(2, '0');
+const getTodayIsoLocal = () => {
+  const today = new Date();
+  return `${today.getFullYear()}-${padDatePart(today.getMonth() + 1)}-${padDatePart(today.getDate())}`;
+};
 
 const statusBadge = (status) => {
   const s = (status || '').toLowerCase();
@@ -52,12 +59,71 @@ export default function CheckinDialog({
   onPayment,
 }) {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [openCashDrawer, setOpenCashDrawer] = useState(null);
+  const [cashDrawerLoading, setCashDrawerLoading] = useState(false);
+  const [cashDrawerError, setCashDrawerError] = useState('');
+
+  const clinicId = appointment?.clinic_id;
+  const hasOpenCashDrawer = Boolean(openCashDrawer?.id);
+
+  const refreshOpenCashDrawer = async () => {
+    if (!clinicId || !user?.id) {
+      setOpenCashDrawer(null);
+      return null;
+    }
+
+    setCashDrawerLoading(true);
+    setCashDrawerError('');
+    try {
+      const drawer = await cashDrawerApi.getDrawerForDate(clinicId, user.id, getTodayIsoLocal());
+      setOpenCashDrawer(drawer);
+      return drawer;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erro ao verificar caixa aberto.';
+      setCashDrawerError(message);
+      setOpenCashDrawer(null);
+      return null;
+    } finally {
+      setCashDrawerLoading(false);
+    }
+  };
+
+  const handleOpenCashDrawerShortcut = async () => {
+    if (!clinicId || !user?.id) {
+      setCashDrawerError('Não foi possível identificar usuário ou clínica para abrir o caixa.');
+      return;
+    }
+
+    setCashDrawerLoading(true);
+    setCashDrawerError('');
+    try {
+      const drawer = await cashDrawerApi.getOrCreateDrawer(clinicId, user.id, getTodayIsoLocal());
+      setOpenCashDrawer(drawer);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erro ao abrir caixa do dia.';
+      setCashDrawerError(message);
+    } finally {
+      setCashDrawerLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (open) {
+      refreshOpenCashDrawer();
+    }
+  }, [open, clinicId, user?.id]);
 
   if (!appointment) {
     return null;
   }
 
   const handlePayment = (method) => {
+    if (!hasOpenCashDrawer) {
+      setCashDrawerError('Abra o caixa do dia antes de registrar pagamento do atendimento.');
+      return;
+    }
+
     toast({
       title: 'Pagamento Registrado',
       description: `Pagamento com ${method} registrado para ${appointment.patient_name}.`,
@@ -143,20 +209,43 @@ export default function CheckinDialog({
 
           <div className="border-t pt-4 mt-4 space-y-2">
             <p className="font-semibold">Registrar Pagamento:</p>
+            <div className={`rounded-md border p-3 text-sm ${hasOpenCashDrawer ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="font-semibold">{hasOpenCashDrawer ? 'Caixa aberto' : 'Caixa fechado'}</p>
+                  <p className="text-xs mt-1">
+                    {hasOpenCashDrawer
+                      ? 'Pagamento liberado para o caixa do dia.'
+                      : 'Abra o caixa do dia antes de registrar pagamento.'}
+                  </p>
+                  {cashDrawerError && <p className="text-xs font-semibold mt-2">{cashDrawerError}</p>}
+                </div>
+                {!hasOpenCashDrawer && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleOpenCashDrawerShortcut}
+                    disabled={cashDrawerLoading}
+                  >
+                    {cashDrawerLoading ? 'Abrindo...' : 'Abrir caixa do dia'}
+                  </Button>
+                )}
+              </div>
+            </div>
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={() => handlePayment('Dinheiro')}>
+              <Button variant="outline" disabled={!hasOpenCashDrawer} onClick={() => handlePayment('Dinheiro')}>
                 <DollarSign className="w-4 h-4 mr-2" />
                 Dinheiro
               </Button>
-              <Button variant="outline" onClick={() => handlePayment('Cartão')}>
+              <Button variant="outline" disabled={!hasOpenCashDrawer} onClick={() => handlePayment('Cartão')}>
                 <CreditCard className="w-4 h-4 mr-2" />
                 Cartão
               </Button>
-              <Button variant="outline" onClick={() => handlePayment('Pix')}>
+              <Button variant="outline" disabled={!hasOpenCashDrawer} onClick={() => handlePayment('Pix')}>
                 <CheckCheck className="w-4 h-4 mr-2" />
                 Pix
               </Button>
-              <Button variant="outline" onClick={() => handlePayment('TED')}>
+              <Button variant="outline" disabled={!hasOpenCashDrawer} onClick={() => handlePayment('TED')}>
                 <Landmark className="w-4 h-4 mr-2" />
                 TED
               </Button>

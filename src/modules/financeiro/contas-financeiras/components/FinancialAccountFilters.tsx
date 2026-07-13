@@ -113,7 +113,7 @@ export const FinancialAccountFilters = React.memo<FinancialAccountFiltersProps>(
     setSortBy('account_name');
     setSortOrder('asc');
     setHasFilters(false);
-    onReset?.();
+    onFilter({ is_active: true, sortBy: 'account_name', sortOrder: 'asc' });
   };
 
   return (

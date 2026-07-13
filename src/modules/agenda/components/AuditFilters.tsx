@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Search, Filter, X, Calendar } from 'lucide-react';
+import { Search, Filter, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -71,6 +71,7 @@ export const AuditFilters: React.FC<AuditFiltersProps> = ({
   };
 
   const hasActiveFilters = Object.values(filters).some(v => v !== undefined && v !== '');
+  const activeFilterCount = Object.values(filters).filter(v => v !== undefined && v !== '').length;
 
   const formatDateForInput = (date?: Date): string => {
     if (!date) return '';
@@ -78,29 +79,26 @@ export const AuditFilters: React.FC<AuditFiltersProps> = ({
   };
 
   return (
-    <div className={`bg-white border border-gray-200 rounded-lg p-4 ${className}`}>
-      {/* Header with expand button */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Filter size={18} className="text-gray-600" />
-          <h3 className="text-sm font-semibold text-gray-700">Filtros Avançados</h3>
-          {hasActiveFilters && (
-            <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
-              {Object.values(filters).filter(v => v !== undefined && v !== '').length} ativo
-            </span>
-          )}
-        </div>
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="text-gray-500 hover:text-gray-700 transition-colors"
-        >
-          {isExpanded ? <X size={18} /> : <Filter size={18} />}
-        </button>
-      </div>
+    <div className={`bg-white border border-slate-100 rounded-xl p-6 shadow-sm ${className}`}>
+      <button
+        type="button"
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="flex w-full items-center justify-between gap-3 text-left"
+        aria-expanded={isExpanded}
+      >
+        <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+          <Filter className="h-5 w-5 text-slate-600" />
+          Filtros Avançados
+          <span className="rounded bg-slate-100 px-2 py-1 text-xs font-normal text-slate-500">
+            {activeFilterCount} ativo(s)
+          </span>
+        </h3>
+        {isExpanded ? <ChevronUp className="h-5 w-5 text-slate-600" /> : <ChevronDown className="h-5 w-5 text-slate-600" />}
+      </button>
 
       {/* Expanded filters */}
       {isExpanded && (
-        <div className="space-y-4">
+        <div className="mt-4 space-y-4 border-t border-slate-100 pt-4">
           {/* Search text */}
           <div>
             <label className="text-xs font-medium text-gray-600 block mb-2">
@@ -209,35 +207,6 @@ export const AuditFilters: React.FC<AuditFiltersProps> = ({
         </div>
       )}
 
-      {/* Collapsed view - show active filters as chips */}
-      {!isExpanded && hasActiveFilters && (
-        <div className="flex flex-wrap gap-2">
-          {filters.operationType && (
-            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-              filters.operationType === 'CREATE' ? 'bg-green-100 text-green-700' :
-              filters.operationType === 'UPDATE' ? 'bg-blue-100 text-blue-700' :
-              'bg-red-100 text-red-700'
-            }`}>
-              {filters.operationType}
-            </span>
-          )}
-          {filters.dateFrom && (
-            <span className="px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
-              De: {filters.dateFrom.toLocaleDateString('pt-BR')}
-            </span>
-          )}
-          {filters.dateTo && (
-            <span className="px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
-              Até: {filters.dateTo.toLocaleDateString('pt-BR')}
-            </span>
-          )}
-          {filters.searchText && (
-            <span className="px-3 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
-              🔍 {filters.searchText.substring(0, 20)}...
-            </span>
-          )}
-        </div>
-      )}
     </div>
   );
 };

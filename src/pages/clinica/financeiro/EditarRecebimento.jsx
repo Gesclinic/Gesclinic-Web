@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import PageLayout from '@/components/ui/PageLayout';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { getReceivableById, updateReceivable, uploadReceivableNfFile, arStatusOptions } from '@/lib/receivablesApi';
+import { getReceivableById, listReceivables, updateReceivable, uploadReceivableNfFile, arStatusOptions } from '@/lib/receivablesApi';
 import { listRevenueAccountPlans, listCostCenters } from '@/lib/financeApi';
 import { listProfessionals } from '@/lib/professionalsApi';
 import { listPayers } from '@/lib/payersApi';
@@ -107,7 +107,174 @@ function cleanBrokenTextDeep(value) {
   return cleanBrokenText(value);
 }
 
+function pickText(...values) {
+  return values.find((value) => {
+    if (value === null || value === undefined) {
+      return false;
+    }
+    return String(value).trim() !== '';
+  }) || '';
+}
+
+function normalizePaymentMethodForForm(value) {
+  if (!value) {
+    return '';
+  }
+  const normalize = (text) => String(text || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[_-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const normalizedValue = normalize(value);
+  return paymentMethodOptions.find((option) => {
+    const normalizedOptionValue = normalize(option.value);
+    const normalizedOptionLabel = normalize(option.label);
+    return normalizedOptionValue === normalizedValue || normalizedOptionLabel === normalizedValue;
+  })?.value || value;
+}
+
+function normalizePaymentBreakdownItem(item = {}, fallbackDate = '') {
+  const method = normalizePaymentMethodForForm(item.method || item.payment_method || item.paymentMethod || '');
+  const amount = Number(item.amount ?? item.value ?? item.valor ?? 0);
+  const installments = item.installments || item.parcelas || item.total_parcelas || '';
+  const installmentDates = item.installment_dates || item.card_installment_dates || '';
+  return {
+    method,
+    amount,
+    reference: item.reference || item.pix_transaction_id || item.cheque_number || item.boleto_number || '',
+    installments,
+    installmentDates: Array.isArray(installmentDates) ? installmentDates : String(installmentDates || '').split('|').filter(Boolean),
+    dueDate: item.payment_due_date || item.cheque_due_date || item.payment_date || fallbackDate || '',
+    cardBrand: item.card_brand || '',
+    observation: item.observation || item.notes || '',
+  };
+}
+
+function normalizePaymentBreakdownRows(rows) {
+  if (!rows) return [];
+  if (Array.isArray(rows)) return rows;
+  try {
+    const parsed = JSON.parse(rows);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_error) {
+    return [];
+  }
+}
+
+function getPaymentBreakdown(data = {}) {
+  const receivable = data || {};
+  const appointment = Array.isArray(receivable.appointments) ? receivable.appointments[0] : receivable.appointments;
+  const metadata = receivable.metadata || {};
+  const paymentData = metadata.payment_data || {};
+  const receivableSplit = normalizePaymentBreakdownRows(receivable.payment_split);
+  const lastPaymentMethods = normalizePaymentBreakdownRows(metadata.last_payment?.methods);
+  const paymentDataSplits = normalizePaymentBreakdownRows(paymentData.payment_splits);
+  const appointmentSplits = normalizePaymentBreakdownRows(appointment?.payment_splits);
+  const rawItems = receivableSplit.length > 0
+    ? receivableSplit
+    : lastPaymentMethods.length > 0
+      ? lastPaymentMethods
+      : paymentDataSplits.length > 0
+        ? paymentDataSplits
+        : appointmentSplits.length > 0
+          ? appointmentSplits
+        : [];
+
+  return rawItems
+    .map((item) => normalizePaymentBreakdownItem(item, receivable.received_date || metadata.last_payment?.payment_date))
+    .filter((item) => item.method || item.amount > 0);
+}
+
+function formatMoney(value) {
+  return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function formatPaymentDate(value) {
+  return isoToDisplayDate(value) || value || '';
+}
+
+function buildReceivableBreadcrumbLabel(receivable = {}) {
+  const safeReceivable = receivable || {};
+  const label = pickText(
+    safeReceivable.patient_name,
+    safeReceivable.payer_name,
+    safeReceivable.payer_display,
+    safeReceivable.procedure_name,
+    safeReceivable.service_description,
+    safeReceivable.description,
+  );
+
+  if (!label || label === 'Recebimento registrado pela agenda') {
+    return 'Recebimento';
+  }
+
+  return label.length > 42 ? `${label.slice(0, 39)}...` : label;
+}
+
+function getReceivableAppointment(receivable = {}) {
+  return Array.isArray(receivable.appointments) ? receivable.appointments[0] : receivable.appointments;
+}
+
+function getReceivableAppointmentId(receivable = {}) {
+  const safeReceivable = receivable || {};
+  const metadata = safeReceivable.metadata || {};
+  return safeReceivable.appointment_id
+    || safeReceivable.agendamento_id
+    || getReceivableAppointment(safeReceivable)?.id
+    || metadata.appointment_id
+    || metadata.agendamento_id
+    || metadata.appointment?.id
+    || metadata.payment_data?.appointment_id
+    || metadata.last_payment?.appointment_id
+    || null;
+}
+
+function getReceivableAppointmentDate(receivable = {}) {
+  const safeReceivable = receivable || {};
+  const appointment = getReceivableAppointment(safeReceivable) || {};
+  const metadata = safeReceivable.metadata || {};
+  const paymentData = metadata.payment_data || {};
+  const appointmentData = metadata.appointment || paymentData.appointment || {};
+  return pickText(
+    appointment.scheduled_date,
+    appointmentData.scheduledDate,
+    appointmentData.scheduled_date,
+    paymentData.scheduledDate,
+    paymentData.scheduled_date,
+    safeReceivable.due_date,
+    safeReceivable.invoice_date,
+    safeReceivable.competency_date,
+  ).split('T')[0];
+}
+
+function buildReceivableOriginPath(receivable = {}) {
+  const safeReceivable = receivable || {};
+  const appointmentId = getReceivableAppointmentId(safeReceivable);
+  const isAgendaReceivable = Boolean(
+    appointmentId
+    || safeReceivable.origem === 'Agenda'
+    || safeReceivable.origin === 'Agenda'
+    || safeReceivable.metadata?.source === 'payment_registration_api',
+  );
+
+  if (!isAgendaReceivable || !appointmentId) {
+    return undefined;
+  }
+
+  const appointmentDate = getReceivableAppointmentDate(safeReceivable);
+  const params = new URLSearchParams({ appointmentId, mode: 'edit', appointmentTab: 'resumo' });
+  if (appointmentDate) {
+    params.set('appointmentDate', appointmentDate);
+  }
+  return `/clinica/agenda?${params.toString()}`;
+}
+
 function getServiceCategoryLabel(service = {}) {
+  if (!service) {
+    return '';
+  }
   const labels = {
     consultation: 'Consultas',
     exam: 'Exames',
@@ -116,6 +283,118 @@ function getServiceCategoryLabel(service = {}) {
     other: 'Outros',
   };
   return labels[service.service_category] || '';
+}
+
+function getStoredClinicId() {
+  try {
+    return JSON.parse(localStorage.getItem('gesclinic_session') || '{}')?.clinic_id || null;
+  } catch {
+    return null;
+  }
+}
+
+function isMissingReceivableText(value) {
+  const text = String(value || '').trim().toLowerCase();
+  return !text
+    || text === 'não informado'
+    || text === 'nao informado'
+    || text === 'não identificado'
+    || text === 'nao identificado'
+    || text === 'recebimento registrado pela agenda';
+}
+
+function mergeEditableReceivable(base = {}, enriched = {}) {
+  if (!enriched) return base;
+
+  const merged = { ...base };
+  const textFields = [
+    'payer_display',
+    'patient_name',
+    'payer_name',
+    'description',
+    'service_description',
+    'procedure_name',
+    'professional_name',
+    'profissional_name',
+    'unit_name',
+    'unidade_name',
+    'specialty_name',
+    'service_group',
+    'registered_service_name',
+    'registered_service_group',
+    'convenio_name',
+    'plano_contas_name',
+  ];
+  const idFields = [
+    'appointment_id',
+    'patient_id',
+    'payer_id',
+    'professional_id',
+    'profissional_id',
+    'procedure_id',
+    'unit_id',
+    'room_id',
+    'specialty_id',
+    'chart_account_id',
+    'plano_contas_id',
+    'centro_custo_id',
+    'cost_center_id',
+  ];
+
+  textFields.forEach((field) => {
+    if (isMissingReceivableText(merged[field]) && !isMissingReceivableText(enriched[field])) {
+      merged[field] = enriched[field];
+    }
+  });
+
+  idFields.forEach((field) => {
+    if (!merged[field] && enriched[field]) {
+      merged[field] = enriched[field];
+    }
+  });
+
+  if (isMissingReceivableText(merged.description) && !isMissingReceivableText(merged.service_description)) {
+    merged.description = merged.service_description;
+  }
+  if (isMissingReceivableText(merged.patient_name) && !isMissingReceivableText(merged.payer_display)) {
+    merged.patient_name = merged.payer_display;
+    merged.payer_name = merged.payer_display;
+  }
+  if (!merged.profissional_id && merged.professional_id) {
+    merged.profissional_id = merged.professional_id;
+  }
+  if (!merged.professional_id && merged.profissional_id) {
+    merged.professional_id = merged.profissional_id;
+  }
+
+  return merged;
+}
+
+async function getEditableReceivableById(id, clinicId) {
+  const clinicIds = Array.from(new Set([clinicId, getStoredClinicId()].filter(Boolean)));
+  let lastError = null;
+
+  for (const currentClinicId of clinicIds) {
+    try {
+      const detail = await getReceivableById(id, currentClinicId);
+      const rows = await listReceivables({ clinicId: currentClinicId, limit: 20000, offset: 0 });
+      const enriched = (rows || []).find((row) => row.id === id || row.appointment_id === id || row.id === detail?.id || row.appointment_id === detail?.appointment_id);
+      return mergeEditableReceivable(detail, enriched);
+    } catch (error) {
+      lastError = error;
+      const rows = await listReceivables({ clinicId: currentClinicId, limit: 20000, offset: 0 });
+      const found = (rows || []).find((row) => row.id === id || row.appointment_id === id);
+      if (found) {
+        return found;
+      }
+    }
+  }
+
+  try {
+    return await getReceivableById(id);
+  } catch (error) {
+    throw lastError || error;
+  }
 }
 
 export default function EditarRecebimento() {
@@ -149,26 +428,70 @@ export default function EditarRecebimento() {
   const [documentExtraction, setDocumentExtraction] = useState(null);
 
   useEffect(() => {
-    if (!clinicId || !id) {
+    const activeClinicId = clinicId || getStoredClinicId();
+    if (!activeClinicId || !id) {
       return;
     }
     setLoading(true);
     (async () => {
       try {
         const [rec, ps, cs, professionalsData, payersData, processorsData, servicesData] = await Promise.all([
-          getReceivableById(id, clinicId),
-          listRevenueAccountPlans(clinicId),
-          listCostCenters(clinicId),
-          listProfessionals(clinicId),
-          listPayers(clinicId),
-          listCardProcessors(clinicId),
-          listServices(clinicId),
+          getEditableReceivableById(id, activeClinicId),
+          listRevenueAccountPlans(activeClinicId),
+          listCostCenters(activeClinicId),
+          listProfessionals(activeClinicId),
+          listPayers(activeClinicId),
+          listCardProcessors(activeClinicId),
+          listServices(activeClinicId),
         ]);
 
         const metadataExtraction = rec.metadata?.document_extraction || null;
         const extractionFields = metadataExtraction?.fields || {};
-        const selectedService = (servicesData || []).find((service) => service.id === rec.procedure_id) || null;
+        const appointment = Array.isArray(rec.appointments) ? rec.appointments[0] : rec.appointments;
+        const paymentData = rec.metadata?.payment_data || {};
+        const appointmentData = rec.metadata?.appointment || paymentData.appointment || {};
+        const appointmentServiceId = appointment?.service_id || appointment?.services?.id;
+        const appointmentProfessionalId = appointment?.professional_id
+          || appointment?.professionals?.id
+          || appointmentData.professionalId
+          || appointmentData.professional_id
+          || paymentData.professionalId
+          || paymentData.professional_id;
+        const appointmentRoomId = appointment?.room_id || appointment?.rooms?.id;
+        const selectedService = (servicesData || []).find((service) => service.id === (rec.procedure_id || appointmentServiceId)) || null;
+        const metadataProfessionalName = pickText(
+          appointmentData.professionalName,
+          appointmentData.professional_name,
+          paymentData.professionalName,
+          paymentData.professional_name,
+          appointment?.professionals?.name,
+          appointment?.professional_name,
+          rec.professional_name,
+          rec.profissional_name,
+        );
+        const professionalIdFromName = metadataProfessionalName
+          ? findProfessionalIdByDocumentName(professionalsData || [], metadataProfessionalName)
+          : '';
+        const selectedProfessional = (professionalsData || []).find((professional) => professional.id === (rec.professional_id || rec.profissional_id || appointmentProfessionalId || professionalIdFromName)) || null;
         const metadataText = JSON.stringify(rec.metadata || {});
+        const paymentMethod = normalizePaymentMethodForForm(
+          rec.payment_method
+          || rec.received_payment_method
+          || rec.forma_prevista
+          || appointment?.payment_method
+          || rec.metadata?.last_payment?.methods?.[0]?.method
+        );
+        const savedPaymentRows = getPaymentBreakdown(rec);
+        const maxInstallments = Math.max(
+          0,
+          ...savedPaymentRows.map((payment) => Number.parseInt(payment.installments || 0, 10) || 0),
+        );
+        const patientName = pickText(rec.patient_name, rec.payer_name, appointment?.patients?.name, appointment?.patient_name, appointmentData.patientName, appointmentData.patient_name);
+        const serviceName = pickText(rec.procedure_name, selectedService?.name, appointmentData.serviceName, appointmentData.service_name, paymentData.serviceName, paymentData.service_name, appointment?.services?.name, appointment?.service_name);
+        const professionalId = rec.professional_id || rec.profissional_id || appointmentProfessionalId || professionalIdFromName || '';
+        const professionalName = pickText(rec.professional_name, rec.profissional_name, selectedProfessional?.name, metadataProfessionalName);
+        const unitName = pickText(rec.unit_name, rec.unidade_name, appointmentData.unitName, appointmentData.unit_name, appointmentData.roomName, appointmentData.room_name, paymentData.unitName, paymentData.unit_name, paymentData.roomName, paymentData.room_name, appointment?.rooms?.unit_name, appointment?.rooms?.name, appointment?.unit_name);
+        const isAgendaReceivable = Boolean(rec.appointment_id || appointment?.id || rec.origem === 'Agenda' || rec.metadata?.source === 'payment_registration_api');
         const inferredInvoiceNumber = rec.insurance_invoice_number
           || extractionFields.invoice_number
           || extractionFields.guide_number
@@ -178,24 +501,33 @@ export default function EditarRecebimento() {
           || inferReceivableInvoiceNumberFromFileName(metadataText);
         const baseData = {
           ...rec,
-          origem: rec.origem || rec.origin || 'Manual',
-          payer_type: rec.payer_type || 'manual',
-          profissional_id: rec.professional_id || rec.profissional_id || '',
+          origem: isAgendaReceivable ? 'Agenda' : rec.origem || rec.origin || 'Manual',
+          payer_type: rec.payer_type || (rec.patient_id || appointment?.patient_id ? 'paciente' : 'manual'),
+          patient_id: rec.patient_id || appointment?.patient_id || '',
+          patient_name: patientName,
+          payer_name: patientName,
+          payment_method: paymentMethod,
+          profissional_id: professionalId,
+          professional_id: professionalId,
+          professional_name: professionalName,
           centro_custo_id: rec.centro_custo_id || rec.cost_center_id || '',
-          total_parcelas: rec.total_parcelas || '',
-          parcelado: !!rec.total_parcelas && Number(rec.total_parcelas) > 1,
-          is_card_payment: isCardPaymentMethod(rec.payment_method) || !!rec.processor_id,
+          total_parcelas: rec.total_parcelas || (maxInstallments > 1 ? String(maxInstallments) : ''),
+          parcelado: (Number(rec.total_parcelas || 0) > 1) || maxInstallments > 1,
+          is_card_payment: isCardPaymentMethod(paymentMethod) || !!rec.processor_id,
           card_brand: rec.card_brand || 'Visa',
           settlement_type: rec.settlement_type || 'D+1',
           competency_date: rec.competency_date || rec.invoice_date || rec.due_date || '',
           guide_number: rec.guide_number || '',
           insurance_invoice_number: inferredInvoiceNumber || '',
           batch_number: rec.batch_number || '',
-          procedure_id: rec.procedure_id || '',
-          procedure_name: selectedService?.name || '',
+          description: rec.description === 'Recebimento registrado pela agenda' ? serviceName || rec.description : rec.description,
+          service_description: rec.service_description === 'Recebimento registrado pela agenda' ? serviceName || rec.service_description : rec.service_description,
+          procedure_id: rec.procedure_id || appointmentServiceId || '',
+          procedure_name: serviceName,
           service_group: rec.service_group || getServiceCategoryLabel(selectedService) || rec.metadata?.service_group || '',
-          specialty_name: rec.specialty_name || '',
-          unit_name: rec.unit_name || '',
+          specialty_name: pickText(rec.specialty_name, appointmentData.specialtyName, appointmentData.specialty_name, paymentData.specialtyName, paymentData.specialty_name, appointment?.professionals?.specialty_name, appointment?.specialty_name),
+          unit_id: rec.unit_id || appointmentRoomId || '',
+          unit_name: unitName,
         };
         setDocumentExtraction(metadataExtraction);
         setData(cleanBrokenTextDeep({
@@ -308,6 +640,15 @@ export default function EditarRecebimento() {
     : 0;
   const netValue = useMemo(() => Math.max(0, amount - discount - cardFee), [amount, discount, cardFee]);
   const isReceived = data?.status === 'received';
+  const paymentBreakdown = useMemo(() => getPaymentBreakdown(data), [data]);
+  const paymentBreakdownTotal = paymentBreakdown.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const breadcrumbs = useMemo(() => ([
+    { label: 'Clinica', path: '/clinica' },
+    { label: 'Financeiro', path: '/clinica/financeiro' },
+    { label: 'Receber', path: '/clinica/financeiro/receber' },
+    { label: buildReceivableBreadcrumbLabel(data), path: buildReceivableOriginPath(data) },
+    { label: 'Editar' },
+  ]), [data]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -434,14 +775,14 @@ export default function EditarRecebimento() {
 
   if (loading) {
     return (
-      <PageLayout title="Editar Recebimento">
+      <PageLayout title="Editar Recebimento" breadcrumbs={breadcrumbs}>
         <div>Carregando...</div>
       </PageLayout>
     );
   }
   if (error && !data) {
     return (
-      <PageLayout title="Editar Recebimento">
+      <PageLayout title="Editar Recebimento" breadcrumbs={breadcrumbs}>
         <Card className="max-w-2xl p-5">
           <div className="flex items-start gap-3">
             <AlertCircle className="mt-0.5 h-5 w-5 text-amber-600" />
@@ -466,7 +807,7 @@ export default function EditarRecebimento() {
   }
 
   return (
-    <PageLayout title="Editar Recebimento" subtitle="Atualize os dados do titulo mantendo a rastreabilidade financeira.">
+    <PageLayout title="Editar Recebimento" subtitle="Atualize os dados do titulo mantendo a rastreabilidade financeira." breadcrumbs={breadcrumbs}>
       <div className="w-full mx-auto space-y-4">
         <Card className="overflow-hidden border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-100 bg-slate-50/80 px-4 py-3">
@@ -759,6 +1100,37 @@ export default function EditarRecebimento() {
               )}
             </div>
           </div>
+
+          {paymentBreakdown.length > 0 && (
+            <div className="rounded border border-emerald-200 bg-emerald-50 p-3">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-emerald-900">Formas registradas no financeiro</p>
+                  <p className="text-xs text-emerald-700">Métodos e parcelas recuperados do atendimento.</p>
+                </div>
+                <p className="text-sm font-semibold text-emerald-900">Total: {formatMoney(paymentBreakdownTotal)}</p>
+              </div>
+              <div className="mt-3 space-y-2">
+                {paymentBreakdown.map((item, index) => (
+                  <div key={`${item.method}-${index}`} className="rounded border border-emerald-100 bg-white px-3 py-2 text-sm">
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="font-semibold text-slate-900">
+                        {item.method || 'Forma nao informada'} {item.installments && item.installments !== '1' ? `- ${item.installments}x` : ''}
+                      </p>
+                      <p className="font-semibold text-slate-900">{formatMoney(item.amount)}</p>
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
+                      {item.dueDate && <span>Vencimento: {formatPaymentDate(item.dueDate)}</span>}
+                      {item.reference && <span>Referência: {item.reference}</span>}
+                      {item.cardBrand && <span>Bandeira: {item.cardBrand}</span>}
+                      {item.installmentDates.length > 0 && <span>Parcelas: {item.installmentDates.map(formatPaymentDate).join(', ')}</span>}
+                      {item.observation && <span>Obs.: {item.observation}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           </FormSection>
 
           <FormSection title="Rastreabilidade e anexos">

@@ -75,13 +75,15 @@ export const FinancialAccountsPage: React.FC = () => {
     navigate(`/clinica/financeiro/contas-financeiras/${account.id}/editar`);
   }, [navigate]);
 
-  // Handle deactivate
+  // Handle delete
   const handleDeactivate = async (account: FinancialAccount) => {
     try {
       setDeactivatingId(account.id);
-      await deactivate(account.id);
+      await deactivate(account);
+      alert('Conta financeira removida ou desativada com sucesso.');
     } catch (err: any) {
-      console.error('Error deactivating account:', err);
+      console.error('Error deleting account:', err);
+      alert(`Erro ao remover/desativar conta financeira: ${err?.message || 'tente novamente.'}`);
     } finally {
       setDeactivatingId(null);
     }
@@ -158,13 +160,13 @@ export const FinancialAccountsPage: React.FC = () => {
   }, [refetchMetrics, refetchMovements]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Contas Financeiras</h1>
-          <p className="text-gray-600 mt-1">
-            Gestão enterprise de contas, movimentações e conciliações
+          <h1 className="text-2xl font-bold text-gray-900">Contas Financeiras</h1>
+          <p className="text-sm text-gray-600 mt-1">
+            Gestão de contas bancárias, caixas, cartões e carteiras digitais
           </p>
         </div>
         <div className="flex gap-2">
@@ -184,15 +186,15 @@ export const FinancialAccountsPage: React.FC = () => {
 
       {/* Dashboard Metrics */}
       {metrics && (
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Dashboard</h2>
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <h2 className="text-base font-semibold text-gray-900 mb-3">Dashboard</h2>
           <DashboardMetricsCards metrics={metrics} loading={loadingMetrics} />
         </div>
       )}
 
       {/* Balance Summary */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Resumo de Saldos</h2>
+      <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <h2 className="text-base font-semibold text-gray-900 mb-3">Resumo de Saldos</h2>
         <FinancialBalanceSummary summary={balanceSummary} loading={loadingBalance} />
       </div>
 

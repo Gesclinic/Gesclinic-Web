@@ -126,6 +126,153 @@ function normalizeReceivableText(...values) {
   return values.filter(Boolean).join(' ').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
+function getReceivableAppointment(row = {}) {
+  return Array.isArray(row.appointments) ? row.appointments[0] : row.appointments;
+}
+
+function getReceivableAppointmentId(row = {}) {
+  const metadata = row.metadata || {};
+  return row.appointment_id
+    || row.agendamento_id
+    || metadata.appointment_id
+    || metadata.agendamento_id
+    || metadata.appointment?.id
+    || metadata.payment_data?.appointment_id
+    || metadata.last_payment?.appointment_id
+    || null;
+}
+
+function getReceivableProfessionalId(row = {}) {
+  const appointment = getReceivableAppointment(row) || {};
+  const metadata = row.metadata || {};
+  return row.professional_id
+    || row.profissional_id
+    || appointment.professional_id
+    || appointment.professionals?.id
+    || metadata.professional_id
+    || metadata.profissional_id
+    || metadata.appointment?.professional_id
+    || metadata.appointment?.professionals?.id
+    || null;
+}
+
+function getReceivableProfessionalName(row = {}) {
+  const appointment = getReceivableAppointment(row) || {};
+  const metadata = row.metadata || {};
+  return row.professional_name
+    || row.profissional_name
+    || appointment.professionals?.name
+    || metadata.professional_name
+    || metadata.profissional_name
+    || metadata.appointment?.professional_name
+    || metadata.appointment?.professionals?.name
+    || null;
+}
+
+function getReceivablePatientId(row = {}) {
+  const appointment = getReceivableAppointment(row) || {};
+  const metadata = row.metadata || {};
+  return row.patient_id
+    || row.paciente_id
+    || appointment.patient_id
+    || metadata.patient_id
+    || metadata.paciente_id
+    || metadata.appointment?.patient_id
+    || metadata.payment_data?.patient_id
+    || null;
+}
+
+function getReceivablePatientName(row = {}) {
+  const appointment = getReceivableAppointment(row) || {};
+  const metadata = row.metadata || {};
+  return row.patient_name
+    || row.payer_name
+    || row.payer_display
+    || appointment.patients?.name
+    || appointment.patient_name
+    || metadata.patient_name
+    || metadata.payer_name
+    || metadata.appointment?.patientName
+    || metadata.appointment?.patient_name
+    || metadata.appointment?.patients?.name
+    || metadata.payment_data?.patientName
+    || metadata.payment_data?.patient_name
+    || metadata.payment_data?.payer_name
+    || null;
+}
+
+async function hydrateReceivableAppointments(clinicId, rows = []) {
+  const appointmentIds = [...new Set(rows
+    .map(getReceivableAppointmentId)
+    .filter(Boolean))];
+
+  if (!clinicId || appointmentIds.length === 0) {
+    return rows;
+  }
+
+  const { data, error } = await supabase
+    .from('appointments')
+    .select(`
+      id,
+      scheduled_date,
+      service_id,
+      patient_id,
+      professional_id,
+      room_id,
+      payment_method,
+      payment_splits,
+      plano_contas_id,
+      payer_id,
+      patients!left(name),
+      professionals!left(id, name),
+      services!left(id, name),
+      rooms!left(id, name)
+    `)
+    .eq('clinic_id', clinicId)
+    .in('id', appointmentIds);
+
+  if (error) {
+    console.warn('hydrateReceivableAppointments skipped:', error.message);
+    return rows;
+  }
+
+  const appointmentsById = new Map((data || []).map((appointment) => [appointment.id, appointment]));
+
+  return rows.map((row) => {
+    const appointmentId = getReceivableAppointmentId(row);
+    const appointment = appointmentId ? appointmentsById.get(appointmentId) : null;
+
+    if (!appointment) {
+      return row;
+    }
+
+    const currentAppointment = getReceivableAppointment(row) || {};
+    const hydratedAppointment = {
+      ...currentAppointment,
+      ...appointment,
+      patients: currentAppointment.patients || appointment.patients,
+      professionals: currentAppointment.professionals || appointment.professionals,
+      services: currentAppointment.services || appointment.services,
+      rooms: currentAppointment.rooms || appointment.rooms,
+      scheduled_date: currentAppointment.scheduled_date || appointment.scheduled_date,
+      professional_id: currentAppointment.professional_id || appointment.professional_id,
+      patient_id: currentAppointment.patient_id || appointment.patient_id,
+      service_id: currentAppointment.service_id || appointment.service_id,
+      room_id: currentAppointment.room_id || appointment.room_id,
+    };
+
+    return {
+      ...row,
+      appointment_id: row.appointment_id || appointment.id,
+      appointments: [hydratedAppointment],
+      patient_id: row.patient_id || row.paciente_id || appointment.patient_id || null,
+      professional_id: row.professional_id || row.profissional_id || appointment.professional_id || null,
+      procedure_id: row.procedure_id || row.service_id || appointment.service_id || null,
+      unit_id: row.unit_id || row.room_id || appointment.room_id || null,
+    };
+  });
+}
+
 function mapLegacyInvoiceToReceivable(row, clinicId) {
   const amount = Number(row.amount ?? row.total ?? row.valor ?? row.value ?? 0);
   const received = ['paid', 'received', 'pago', 'recebido', 'quitado'].includes(String(row.status || '').toLowerCase());
@@ -691,6 +838,44 @@ function isMissingColumnError(error) {
   return error?.code === '42703' || text.includes('could not find') || text.includes('column') && text.includes('does not exist');
 }
 
+function isRlsPolicyError(error) {
+  const text = String(error?.message || error?.details || '').toLowerCase();
+  return error?.code === '42501' || text.includes('row-level security policy');
+}
+
+async function insertArInvoicesViaRpc(clinicId, rows) {
+  const { sessionUserId, sessionEmail } = getCustomSessionIdentity();
+  const { data, error } = await supabase.rpc('create_ar_invoices_from_json', {
+    p_clinic_id: clinicId,
+    p_rows: rows,
+    p_user_id: sessionUserId,
+    p_email: sessionEmail,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data || []).sort((left, right) => String(left.due_date || '').localeCompare(String(right.due_date || '')));
+}
+
+async function updateArInvoiceViaRpc(id, clinicId, patch) {
+  const { sessionUserId, sessionEmail } = getCustomSessionIdentity();
+  const { data, error } = await supabase.rpc('update_ar_invoice_from_json', {
+    p_ar_invoice_id: id,
+    p_clinic_id: clinicId,
+    p_patch: patch,
+    p_user_id: sessionUserId,
+    p_email: sessionEmail,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return Array.isArray(data) ? data[0] : data;
+}
+
 function getMissingColumnName(error) {
   const text = String(error?.message || error?.details || '');
   return text.match(/Could not find the '([^']+)' column/i)?.[1]
@@ -833,15 +1018,32 @@ async function attachLatestGlosas(clinicId, rows = []) {
     return rows || [];
   }
 
+  const appointmentHydratedRows = await hydrateReceivableAppointments(clinicId, rows);
+  const normalizedRows = appointmentHydratedRows.map((row) => {
+    const professionalId = getReceivableProfessionalId(row);
+    const professionalName = getReceivableProfessionalName(row);
+    const patientId = getReceivablePatientId(row);
+    const patientName = getReceivablePatientName(row);
+    return {
+      ...row,
+      patient_id: patientId || row.patient_id || null,
+      patient_name: patientName || row.patient_name || null,
+      payer_name: patientName || row.payer_name || null,
+      payer_display: patientName || row.payer_display || null,
+      professional_id: professionalId || row.professional_id || null,
+      professional_name: professionalName || row.professional_name || null,
+    };
+  });
+
   // Extrair IDs únicos de payers e professionals
-  const payerIds = [...new Set(rows.map(r => r.payer_id).filter(Boolean))];
-  const professionalIds = [...new Set(rows.map(r => r.professional_id).filter(Boolean))];
-  const chartAccountIds = [...new Set(rows.map(r => r.chart_account_id).filter(Boolean))];
-  const serviceIds = [...new Set(rows.map(getRegisteredServiceId).filter(Boolean))];
-  const hasRowsWithoutService = rows.some((row) => !getRegisteredServiceId(row));
+  const payerIds = [...new Set(normalizedRows.map(r => r.payer_id).filter(Boolean))];
+  const professionalIds = [...new Set(normalizedRows.map(r => r.professional_id).filter(Boolean))];
+  const chartAccountIds = [...new Set(normalizedRows.map(r => r.chart_account_id).filter(Boolean))];
+  const serviceIds = [...new Set(normalizedRows.map(getRegisteredServiceId).filter(Boolean))];
+  const hasRowsWithoutService = normalizedRows.some((row) => !getRegisteredServiceId(row));
   
   // Contar quantos têm chart_account_id NULL (precisam classificação automática)
-  const needsClassification = rows.filter(r => !r.chart_account_id).length;
+  const needsClassification = normalizedRows.filter(r => !r.chart_account_id).length;
 
   console.log('🔍 [attachLatestGlosas] Enriquecimento de dados:', {
     payerIds: payerIds.length,
@@ -849,7 +1051,7 @@ async function attachLatestGlosas(clinicId, rows = []) {
     chartAccountIds: chartAccountIds.length,
     serviceIds: serviceIds.length,
     needsClassification,
-    totalRows: rows.length,
+    totalRows: normalizedRows.length,
   });
 
   // Buscar nomes de payers, professionals e chart_of_accounts
@@ -870,7 +1072,7 @@ async function attachLatestGlosas(clinicId, rows = []) {
   });
 
   // Enriquecer rows com nomes E classificação automática
-  const enrichedRows = await Promise.all(rows.map(async (row, idx) => {
+  const enrichedRows = await Promise.all(normalizedRows.map(async (row, idx) => {
     // Se chart_account_id for NULL, classificar automaticamente
     let classifiedChartAccountId = row.chart_account_id;
     let classifiedChartName = null;
@@ -1138,9 +1340,15 @@ export async function listReceivables({
       *,
       appointments!left(
         id,
+        scheduled_date,
         service_id,
         patient_id,
+        professional_id,
+        room_id,
         patients!left(name),
+        professionals!left(id, name),
+        services!left(id, name),
+        rooms!left(id, name),
         payment_method,
         plano_contas_id,
         payer_id
@@ -1308,8 +1516,11 @@ export async function listReceivables({
           *,
           appointments!left(
             id,
+            scheduled_date,
             service_id,
             patient_id,
+            professional_id,
+            room_id,
             patients!left(name),
             payment_method,
             plano_contas_id,
@@ -1481,7 +1692,10 @@ export async function createReceivable(clinicId, payload) {
     .order('due_date', { ascending: true });
 
   if (error) {
-    if (!isMissingColumnError(error)) {
+    if (isRlsPolicyError(error)) {
+      data = await insertArInvoicesViaRpc(clinicId, rows);
+      error = null;
+    } else if (!isMissingColumnError(error)) {
       throw new Error(error.message);
     }
 
@@ -1496,13 +1710,21 @@ export async function createReceivable(clinicId, payload) {
     }
 
     if (error) {
+      const fallbackRows = rows.map(omitOptionalReceivableColumns);
       const fallback = await supabase
         .from('ar_invoices')
-        .insert(rows.map(omitOptionalReceivableColumns))
+        .insert(fallbackRows)
         .select()
         .order('due_date', { ascending: true });
       data = fallback.data;
       error = fallback.error;
+      if (error) {
+        if (isRlsPolicyError(error)) {
+          data = await insertArInvoicesViaRpc(clinicId, fallbackRows);
+          error = null;
+        }
+      }
+
       if (error) {
         throw new Error(error.message);
       }
@@ -1546,7 +1768,10 @@ export async function updateReceivable(id, patch, clinicId = null) {
   let { data, error } = await runUpdate(updateData);
 
   if (error) {
-    if (!isMissingColumnError(error)) {
+    if (isRlsPolicyError(error) && clinicId) {
+      data = [await updateArInvoiceViaRpc(id, clinicId, updateData)];
+      error = null;
+    } else if (!isMissingColumnError(error)) {
       throw new Error(error.message);
     }
 
@@ -1563,9 +1788,18 @@ export async function updateReceivable(id, patch, clinicId = null) {
       const fallback = await runUpdate(updateData);
       data = fallback.data;
       error = fallback.error;
+
+      if (isRlsPolicyError(error) && clinicId) {
+        data = [await updateArInvoiceViaRpc(id, clinicId, updateData)];
+        error = null;
+      }
     }
 
     if (error) throw new Error(error.message);
+  }
+
+  if ((!data || data.length === 0) && clinicId) {
+    data = [await updateArInvoiceViaRpc(id, clinicId, updateData)];
   }
 
   if (!data || data.length === 0) {
@@ -1627,9 +1861,29 @@ export async function deleteReceivable(id, clinicId = null) {
  * Get a receivable by ID from ar_invoices
  */
 export async function getReceivableById(id, clinicId = null) {
+  const receivableSelect = `
+    *,
+    appointments!left(
+      id,
+      scheduled_date,
+      service_id,
+      patient_id,
+      professional_id,
+      room_id,
+      patients!left(name),
+      professionals!left(id, name),
+      services!left(id, name),
+      rooms!left(id, name),
+      payment_method,
+      payment_splits,
+      plano_contas_id,
+      payer_id
+    )
+  `;
+
   let query = supabase
     .from('ar_invoices')
-    .select('*')
+    .select(receivableSelect)
     .eq('id', id)
     .limit(1);
 
@@ -1637,17 +1891,66 @@ export async function getReceivableById(id, clinicId = null) {
     query = query.eq('clinic_id', clinicId);
   }
 
-  const { data, error } = await query;
+  let { data, error } = await query;
 
   if (error) {
     throw new Error(error.message);
+  }
+
+  if ((!data || data.length === 0) && clinicId) {
+    const fallback = await supabase
+      .from('ar_invoices')
+      .select(receivableSelect)
+      .eq('id', id)
+      .limit(1);
+
+    data = fallback.data;
+    error = fallback.error;
+
+    if (error) {
+      throw new Error(error.message);
+    }
+  }
+
+  if ((!data || data.length === 0) && clinicId) {
+    const rpcRows = await listArInvoicesViaRpc(clinicId, { limit: 20000, offset: 0 });
+    const rpcRow = (rpcRows || []).find((row) => row.id === id || row.appointment_id === id);
+    if (rpcRow) {
+      return rpcRow;
+    }
+  }
+
+  if ((!data || data.length === 0) && clinicId) {
+    const appointmentFallback = await supabase
+      .from('ar_invoices')
+      .select(receivableSelect)
+      .eq('clinic_id', clinicId)
+      .eq('appointment_id', id)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    data = appointmentFallback.data;
+    error = appointmentFallback.error;
+
+    if (error) {
+      throw new Error(error.message);
+    }
   }
 
   if (!data || data.length === 0) {
     throw new Error('Recebivel nao encontrado');
   }
 
-  return data[0];
+  if (clinicId) {
+    const enriched = await attachLatestGlosas(clinicId, data);
+    return enriched[0] || data[0];
+  }
+
+  return {
+    ...data[0],
+    professional_id: getReceivableProfessionalId(data[0]),
+    professional_name: getReceivableProfessionalName(data[0]),
+  };
 }
 
 export async function registerReceivablePayment({
@@ -1658,12 +1961,13 @@ export async function registerReceivablePayment({
   paymentDate = new Date().toISOString().split('T')[0],
   notes = '',
   createdBy = 'system',
+  receivable: providedReceivable = null,
 } = {}) {
   if (!clinicId || !receivableId) {
     throw new Error('Recebivel e clinica sao obrigatorios');
   }
 
-  const receivable = await getReceivableById(receivableId, clinicId);
+  const receivable = providedReceivable || await getReceivableById(receivableId, clinicId);
   const netValue = Number(receivable.net_value || receivable.amount || 0);
   const currentReceived = Number(receivable.received_value || receivable.paid_total || 0);
   const normalizedPayments = (payments.length ? payments : [{ method: receivable.payment_method || 'pix', amount }])
@@ -1673,6 +1977,11 @@ export async function registerReceivablePayment({
       enumMethod: normalizePaymentMethodForEnum(payment.method),
       amount: Number(payment.amount || 0),
       reference: payment.reference || null,
+      installments: payment.installments || null,
+      installment_dates: payment.installment_dates || null,
+      payment_due_date: payment.payment_due_date || null,
+      card_brand: payment.card_brand || null,
+      observation: payment.observation || null,
     }));
 
   const totalPaidNow = normalizedPayments.reduce((sum, payment) => sum + payment.amount, 0);
@@ -1689,6 +1998,11 @@ export async function registerReceivablePayment({
     amount: payment.amount,
     reference: payment.reference,
     payment_date: paymentDate,
+    installments: payment.installments,
+    installment_dates: payment.installment_dates,
+    payment_due_date: payment.payment_due_date,
+    card_brand: payment.card_brand,
+    observation: payment.observation,
   }));
 
   try {
@@ -1703,7 +2017,14 @@ export async function registerReceivablePayment({
       status: 'completed',
       created_by: createdBy,
       notes,
-      metadata: { source: 'contas_receber_enterprise' },
+      metadata: {
+        source: 'contas_receber_enterprise',
+        installments: payment.installments,
+        installment_dates: payment.installment_dates,
+        payment_due_date: payment.payment_due_date,
+        card_brand: payment.card_brand,
+        observation: payment.observation,
+      },
     }));
     const { error: paymentError } = await supabase.from('receivable_payments').insert(rows);
     if (paymentError) {

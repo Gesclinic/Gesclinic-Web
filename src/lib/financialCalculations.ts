@@ -43,6 +43,9 @@ export interface Payable {
   due_date: string;
   status: string;
   vendor_name?: string;
+  description?: string;
+  notes?: string;
+  metadata?: Record<string, any>;
 }
 
 export interface PeriodWindow {
@@ -57,6 +60,7 @@ function getReceivableCashAmount(receivable: Receivable): number {
 }
 
 function getPayableOpenAmount(payable: Payable): number {
+  if (isCashDrawerSettledPayable(payable)) return 0;
   const explicitBalance = payable.balance_amount ?? payable.open_amount ?? payable.remaining_amount;
   if (explicitBalance !== null && explicitBalance !== undefined) {
     return Math.max(0, Number(explicitBalance || 0));
@@ -64,6 +68,15 @@ function getPayableOpenAmount(payable: Payable): number {
   const amount = Number(payable.net_amount ?? payable.amount ?? 0);
   const paid = Number(payable.paid_amount ?? payable.paid_value ?? 0);
   return Math.max(0, amount - paid);
+}
+
+function isCashDrawerSettledPayable(payable: Payable): boolean {
+  return Boolean(
+    payable?.metadata?.drawer_movement_id
+      || payable?.metadata?.origem === 'Caixa Diario'
+      || String(payable?.notes || '').includes('Movimento do caixa:')
+      || String(payable?.description || '').toLowerCase().includes('despesa manual do caixa'),
+  );
 }
 
 // ============================================

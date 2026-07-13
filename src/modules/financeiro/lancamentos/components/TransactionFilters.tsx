@@ -156,77 +156,54 @@ export const TransactionFilters = React.memo<TransactionFiltersProps>(({
     dateTo ||
     reconciled !== '';
 
-  return (
-    <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4 space-y-4">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
-          <Filter className="w-5 h-5 text-gray-600" />
-          <h3 className="text-sm font-semibold text-gray-900">Filtros Avançados</h3>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setFiltersOpen((open) => !open)}
-            aria-expanded={filtersOpen}
-          >
-            {filtersOpen ? <ChevronUp className="mr-2 h-4 w-4" /> : <ChevronDown className="mr-2 h-4 w-4" />}
-            {filtersOpen ? 'Fechar filtros' : 'Abrir filtros'}
-          </Button>
-          {hasActiveFilters && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleReset}
-              className="text-xs"
-            >
-              <X className="w-4 h-4 mr-1" />
-              Limpar
-            </Button>
-          )}
-        </div>
-      </div>
+  const activeFilterCount = [
+    search,
+    accountId,
+    type,
+    movementType,
+    status,
+    categoryId,
+    costCenterId,
+    dateFrom,
+    dateTo,
+    reconciled,
+  ].filter(Boolean).length;
 
-      {!filtersOpen && (
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <Input
-              placeholder="Buscar por descrição ou documento..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleApplyFilters()}
-              className="pl-10"
-            />
-          </div>
-          <Button onClick={handleApplyFilters} disabled={loading}>
-            <Filter className="w-4 h-4 mr-2" />
-            Filtrar
-          </Button>
-        </div>
-      )}
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 space-y-4">
+      {/* Header */}
+      <button
+        type="button"
+        onClick={() => setFiltersOpen((open) => !open)}
+        className="flex w-full items-center justify-between gap-3 text-left"
+        aria-expanded={filtersOpen}
+      >
+        <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+          <Filter className="h-5 w-5 text-slate-600" />
+          Filtros Avançados
+          <span className="rounded bg-slate-100 px-2 py-1 text-xs font-normal text-slate-500">
+            {activeFilterCount} ativo(s)
+          </span>
+        </h3>
+        {filtersOpen ? <ChevronUp className="h-5 w-5 text-slate-600" /> : <ChevronDown className="h-5 w-5 text-slate-600" />}
+      </button>
 
       {filtersOpen && (
-        <>
-
-      {/* Row 1: Busca e Conta */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700">Buscar</label>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input
-              placeholder="Descrição, documento..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleApplyFilters()}
-              className="pl-10"
-            />
+        <div className="space-y-4 border-t border-slate-100 pt-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Input
+                placeholder="Buscar por descrição ou documento..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleApplyFilters()}
+                className="pl-10"
+              />
+            </div>
           </div>
-        </div>
 
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700">Conta Financeira</label>
           <Select value={accountId} onValueChange={setAccountId}>
@@ -242,10 +219,7 @@ export const TransactionFilters = React.memo<TransactionFiltersProps>(({
             </SelectContent>
           </Select>
         </div>
-      </div>
 
-      {/* Row 2: Tipo, Movimento, Status */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700">Tipo</label>
           <Select value={type} onValueChange={setType}>
@@ -293,10 +267,7 @@ export const TransactionFilters = React.memo<TransactionFiltersProps>(({
             </SelectContent>
           </Select>
         </div>
-      </div>
 
-      {/* Row 3: Datas, Categoria e Centro de Custo */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700">Data De</label>
           <Input
@@ -350,10 +321,7 @@ export const TransactionFilters = React.memo<TransactionFiltersProps>(({
             </SelectContent>
           </Select>
         </div>
-      </div>
 
-      {/* Row 4: Conciliação e Botões */}
-      <div className="flex flex-col md:flex-row gap-4 items-end md:items-center">
         <div className="space-y-2 flex-1">
           <label className="text-sm font-medium text-gray-700">Conciliação</label>
           <Select value={reconciled} onValueChange={setReconciled}>
@@ -366,69 +334,71 @@ export const TransactionFilters = React.memo<TransactionFiltersProps>(({
             </SelectContent>
           </Select>
         </div>
-
-        <div className="flex gap-2 w-full md:w-auto">
-          <Button
-            onClick={handleApplyFilters}
-            disabled={loading}
-            className="flex-1 md:flex-none"
-          >
-            <Filter className="w-4 h-4 mr-2" />
-            Filtrar
-          </Button>
-
-          {/* Salvar Filtro */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setSaveDialogOpen(true)}
-            disabled={loading}
-            title="Salvar configuração atual como filtro"
-          >
-            <Save className="w-4 h-4" />
-          </Button>
-
-          {/* Carregar Filtro */}
-          {savedFilters.length > 0 && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={loading}
-                  title="Carregar um filtro salvo"
-                >
-                  <Download className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Filtros Salvos</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {savedFilters.map((filter) => (
-                  <div key={filter.name} className="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-100">
-                    <button
-                      onClick={() => handleLoadFilter(filter.name)}
-                      className="flex-1 text-left text-sm hover:text-blue-600"
-                    >
-                      {filter.name}
-                    </button>
-                    <button
-                      onClick={() => deleteFilter(filter.name)}
-                      aria-label={`Excluir filtro ${filter.name}`}
-                      title={`Excluir filtro ${filter.name}`}
-                      className="text-gray-400 hover:text-red-600"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
       </div>
+          <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
+            <Button onClick={handleApplyFilters} disabled={loading} className="gap-2">
+              <Filter className="h-4 w-4" />
+              Filtrar
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleReset}
+              className="gap-2"
+            >
+              <X className="h-4 w-4" />
+              Limpar Filtros
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setSaveDialogOpen(true)}
+              disabled={loading}
+              className="gap-2"
+              title="Salvar configuração atual como filtro"
+            >
+              <Save className="h-4 w-4" />
+              Salvar Filtro
+            </Button>
+            {savedFilters.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    disabled={loading}
+                    className="gap-2"
+                    title="Carregar um filtro salvo"
+                  >
+                    <Download className="h-4 w-4" />
+                    Carregar
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Filtros Salvos</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {savedFilters.map((filter) => (
+                    <div key={filter.name} className="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-100">
+                      <button
+                        onClick={() => handleLoadFilter(filter.name)}
+                        className="flex-1 text-left text-sm hover:text-blue-600"
+                      >
+                        {filter.name}
+                      </button>
+                      <button
+                        onClick={() => deleteFilter(filter.name)}
+                        aria-label={`Excluir filtro ${filter.name}`}
+                        title={`Excluir filtro ${filter.name}`}
+                        className="text-gray-400 hover:text-red-600"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+        </div>
+      )}
 
-      {/* SaveFilterDialog */}
       <SaveFilterDialog
         open={saveDialogOpen}
         onOpenChange={setSaveDialogOpen}
@@ -436,8 +406,6 @@ export const TransactionFilters = React.memo<TransactionFiltersProps>(({
         existingNames={savedFilters.map((f) => f.name)}
         loading={loading}
       />
-        </>
-      )}
     </div>
   );
 });

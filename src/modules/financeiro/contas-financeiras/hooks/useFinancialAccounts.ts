@@ -60,7 +60,7 @@ export interface UseFinancialAccountsReturn {
   refetchReconciliations: (accountId: string) => Promise<void>;
   create: (input: FinancialAccountCreateInput) => Promise<FinancialAccount>;
   update: (accountId: string, input: FinancialAccountUpdateInput) => Promise<FinancialAccount>;
-  deactivate: (accountId: string) => Promise<FinancialAccount>;
+  deactivate: (account: string | FinancialAccount) => Promise<FinancialAccount>;
   setDefault: (accountId: string) => Promise<FinancialAccount>;
   addMovement: (accountId: string, data: any) => Promise<AccountMovement>;
   createReconcile: (accountId: string, data: any) => Promise<AccountReconciliation>;
@@ -92,7 +92,7 @@ export function useFinancialAccounts(
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<FinancialAccountsFilterOptions>(
-    initialFilters || { limit: DEFAULT_PAGE_SIZE, offset: 0 }
+    initialFilters || { limit: DEFAULT_PAGE_SIZE, offset: 0, is_active: true }
   );
 
   // Fetch accounts
@@ -180,18 +180,18 @@ export function useFinancialAccounts(
     [clinicId, refetch, refetchBalance]
   );
 
-  // Deactivate account
+  // Delete account
   const deactivate = useCallback(
-    async (accountId: string): Promise<FinancialAccount> => {
+    async (account: string | FinancialAccount): Promise<FinancialAccount> => {
       if (!clinicId) throw new Error('Clinic not available');
 
       try {
-        const updated = await deactivateFinancialAccount(clinicId, accountId);
+        const updated = await deactivateFinancialAccount(clinicId, account);
         await refetch();
         await refetchBalance();
         return updated;
       } catch (err: any) {
-        const message = err?.message || 'Erro ao desativar conta financeira';
+        const message = err?.message || 'Erro ao excluir conta financeira';
         setError(message);
         throw err;
       }

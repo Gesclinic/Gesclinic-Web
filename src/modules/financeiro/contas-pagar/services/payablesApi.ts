@@ -630,12 +630,25 @@ function scorePayableTransaction(payable: Payable, transaction: any): { score: n
  */
 function transformPayable(data: any): Payable {
   const amount = Number(data.amount ?? data.value ?? data.valor ?? 0);
-  const paidValue = Number(data.paid_value ?? data.paid_amount ?? 0);
+  const rawStatus = normalizePayableStatus(data.status);
+  const isPaidStatus = rawStatus === PayableStatus.PAID;
+  const isCashDrawerSettled = Boolean(
+    data?.metadata?.drawer_movement_id
+    || data?.metadata?.origem === 'Caixa Diario'
+    || String(data?.notes || '').includes('Movimento do caixa:')
+    || String(data?.description || '').toLowerCase().includes('despesa manual do caixa')
+  );
   const discountAmount = Number(data.discount_amount ?? data.discount ?? 0);
   const interestAmount = Number(data.interest_amount ?? data.interest ?? 0);
   const fineAmount = Number(data.fine_amount ?? data.fine ?? 0);
   const netAmount = Number(data.net_amount ?? Math.max(0, amount + interestAmount + fineAmount - discountAmount));
-  const balanceAmount = Number(data.balance_amount ?? Math.max(0, netAmount - paidValue));
+  const paidValue = isCashDrawerSettled
+    ? netAmount
+    : Number(data.paid_value ?? data.paid_amount ?? (isPaidStatus ? netAmount : 0));
+  const balanceAmount = isCashDrawerSettled ? 0 : Number(data.balance_amount ?? Math.max(0, netAmount - paidValue));
+  const paymentDate = data.payment_date
+    || (data.paid_at ? String(data.paid_at).split('T')[0] : undefined)
+    || (isCashDrawerSettled ? String(data.due_date || data.issue_date || data.created_at || '').split('T')[0] : undefined);
 
   return {
     ...data,
@@ -648,8 +661,8 @@ function transformPayable(data: any): Payable {
     paid_value: paidValue,
     net_amount: netAmount,
     balance_amount: balanceAmount,
-    payment_date: data.payment_date || (data.paid_at ? String(data.paid_at).split('T')[0] : undefined),
-    status: normalizePayableStatus(data.status),
+    payment_date: paymentDate,
+    status: isCashDrawerSettled || isPaidStatus || balanceAmount <= 0 && paidValue > 0 ? PayableStatus.PAID : rawStatus,
     type: data.type as PayableType,
     payment_method: data.payment_method as PaymentMethodType,
   };
@@ -712,6 +725,80 @@ function sortPayables(payables: Payable[], orderBy = 'due_date.asc'): Payable[] 
   const [field, direction = 'asc'] = orderBy.split('.');
   const multiplier = direction.toLowerCase() === 'desc' ? -1 : 1;
   return [...payables].sort((left: any, right: any) => String(left?.[field] || '').localeCompare(String(right?.[field] || '')) * multiplier);
+}
+
+function payableAmount(payable: Payable): number {
+  return Number(payable.balance_amount ?? payable.net_amount ?? payable.amount ?? 0) || 0;
+}
+
+function isPayableSettled(payable: Payable): boolean {
+  return payable.status === PayableStatus.PAID
+    || payable.status === PayableStatus.CANCELED
+    || payable.status === PayableStatus.REVERSED
+    || Number(payable.balance_amount || 0) <= 0;
+}
+
+function payableDueDate(payable: Payable): string {
+  return String(payable.due_date || '').split('T')[0];
+}
+
+function buildNormalizedPayablesSummary(clinicId: string, rows: any[]): PayablesSummary {
+  const payables = (rows || []).map(transformPayable);
+  const today = new Date().toISOString().split('T')[0];
+  const next7 = new Date();
+  next7.setDate(next7.getDate() + 7);
+  const next7Date = next7.toISOString().split('T')[0];
+  const next30 = new Date();
+  next30.setDate(next30.getDate() + 30);
+  const next30Date = next30.toISOString().split('T')[0];
+
+  const activePayables = payables.filter((payable) => !isPayableSettled(payable));
+  const paidThisMonthPrefix = today.slice(0, 7);
+  const paidThisMonth = payables.filter((payable) => {
+    const paymentDate = String(payable.payment_date || payable.paid_at || '').slice(0, 10);
+    return payable.status === PayableStatus.PAID && paymentDate.startsWith(paidThisMonthPrefix);
+  });
+  const dueToday = activePayables.filter((payable) => payableDueDate(payable) === today);
+  const overdue = activePayables.filter((payable) => {
+    const dueDate = payableDueDate(payable);
+    return dueDate && dueDate < today;
+  });
+  const dueNext7 = activePayables.filter((payable) => {
+    const dueDate = payableDueDate(payable);
+    return dueDate && dueDate >= today && dueDate <= next7Date;
+  });
+  const dueNext30 = activePayables.filter((payable) => {
+    const dueDate = payableDueDate(payable);
+    return dueDate && dueDate >= today && dueDate <= next30Date;
+  });
+
+  const sumBalance = (items: Payable[]) => items.reduce((sum, payable) => sum + payableAmount(payable), 0);
+  const sumPaid = (items: Payable[]) => items.reduce((sum, payable) => sum + Number(payable.paid_value || payable.net_amount || payable.amount || 0), 0);
+  const byStatus = (status: PayableStatus) => activePayables.filter((payable) => payable.status === status);
+
+  return {
+    clinic_id: clinicId,
+    total_payables: payables.length,
+    open_amount: sumBalance(byStatus(PayableStatus.OPEN)),
+    approving_amount: sumBalance(byStatus(PayableStatus.APPROVING)),
+    approved_amount: sumBalance(byStatus(PayableStatus.APPROVED)),
+    overdue_amount: sumBalance(overdue),
+    paid_amount: sumPaid(paidThisMonth),
+    partial_amount: sumBalance(byStatus(PayableStatus.PARTIAL)),
+    due_today_amount: sumBalance(dueToday),
+    due_next_7_days_amount: sumBalance(dueNext7),
+    due_next_30_days_amount: sumBalance(dueNext30),
+    forecast_outflow_amount: sumBalance(activePayables),
+    realized_outflow_amount: sumPaid(payables.filter((payable) => payable.status === PayableStatus.PAID)),
+    operational_amount: sumBalance(activePayables.filter((payable) => String(payable.dre_classification || payable.category || '').toUpperCase().includes('OPER'))),
+    administrative_amount: sumBalance(activePayables.filter((payable) => String(payable.dre_classification || payable.category || '').toUpperCase().includes('ADMIN'))),
+    assistential_amount: sumBalance(activePayables.filter((payable) => String(payable.dre_classification || payable.category || '').toUpperCase().includes('ASSIST'))),
+    blocked_amount: sumBalance(byStatus(PayableStatus.BLOCKED)),
+    overdue_count: overdue.length,
+    due_today_count: dueToday.length,
+    due_next_7_days_count: dueNext7.length,
+    due_next_30_days_count: dueNext30.length,
+  };
 }
 
 async function listPayablesViaRpc(params: PayableFilterParams): Promise<PayablesPageResponse> {
@@ -908,10 +995,14 @@ export async function listPayables(
       }
     }
 
+    const normalizedPayables = (data || [])
+      .map(transformPayable)
+      .filter((payable) => matchesPayableClientFilters(payable, params));
+
     return {
-      payables: (data || []).map(transformPayable),
-      total: count || 0,
-      has_more: (count || 0) > offset + limit,
+      payables: normalizedPayables,
+      total: normalizedPayables.length < (data || []).length ? normalizedPayables.length : count || 0,
+      has_more: normalizedPayables.length === (data || []).length && (count || 0) > offset + limit,
     };
   } catch (error) {
     console.error('Error listing payables:', error);
@@ -1713,13 +1804,13 @@ export async function getPayablesSummary(
 ): Promise<PayablesSummary | null> {
   try {
     const { data, error } = await supabase
-      .from('payables_summary')
+      .from('ap_bills')
       .select('*')
       .eq('clinic_id', clinicId)
-      .limit(1);
+      .limit(20000);
 
     if (error) throw error;
-    return data?.[0] || null;
+    return buildNormalizedPayablesSummary(clinicId, data || []);
   } catch (error) {
     console.error('Error getting payables summary:', error);
     // Retorna null ao invés de lançar erro - permite que a página continue funcionando
@@ -1732,14 +1823,8 @@ export async function getPayablesSummary(
  */
 export async function getOverdueCount(clinicId: string): Promise<number> {
   try {
-    const { data, error } = await supabase
-      .from('payables_summary')
-      .select('overdue_count')
-      .eq('clinic_id', clinicId)
-      .limit(1);
-
-    if (error) throw error;
-    return Number(data?.[0]?.overdue_count || 0);
+    const summary = await getPayablesSummary(clinicId);
+    return Number(summary?.overdue_count || 0);
   } catch (error) {
     console.error('Error getting overdue count:', error);
     return 0;

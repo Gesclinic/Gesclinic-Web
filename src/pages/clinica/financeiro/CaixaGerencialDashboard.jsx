@@ -9,6 +9,7 @@ import {
   Users,
   Building2,
   Percent,
+  Filter,
   RefreshCw,
   Download,
   Calendar,
@@ -200,6 +201,7 @@ export default function CaixaGerencialDashboard() {
   const uniqueProfessionals = [...new Set(movements.map((m) => m.professional_id).filter(Boolean))];
   const uniquePayers = [...new Set(movements.map((m) => m.payer_id).filter(Boolean))];
   const uniquePaymentMethods = [...new Set(movements.map((m) => m.payment_method).filter(Boolean))];
+  const activeFilterCount = Object.values(filters).filter(Boolean).length;
 
   const saveFilterWithName = () => {
     if (!filterName.trim()) {
@@ -429,17 +431,25 @@ doc.setFontSize(16);
         </div>
 
         {/* Filtros Avançados */}
-        <div className="bg-white rounded-lg border border-slate-100 shadow-sm p-4 mb-8">
+        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6 mb-8">
           <button
+            type="button"
             onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg font-semibold hover:bg-slate-200 transition-colors mb-4 w-full md:w-auto"
+            className="flex w-full items-center justify-between gap-3 text-left"
+            aria-expanded={showFilters}
           >
-            {showFilters ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-            {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
+            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+              <Filter className="h-5 w-5 text-slate-600" />
+              Filtros Avançados
+              <span className="rounded bg-slate-100 px-2 py-1 text-xs font-normal text-slate-500">
+                {activeFilterCount} ativo(s)
+              </span>
+            </h3>
+            {showFilters ? <ChevronUp className="h-5 w-5 text-slate-600" /> : <ChevronDown className="h-5 w-5 text-slate-600" />}
           </button>
 
           {showFilters && (
-            <>
+            <div className="mt-4 border-t border-slate-100 pt-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-200">
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-2">
@@ -538,17 +548,23 @@ doc.setFontSize(16);
                     ))}
                   </select>
                 </div>
-                <div className="flex items-end">
-                  <button
-                    onClick={clearFilters}
-                    className="w-full px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-300 transition-colors"
-                  >
-                    Limpar Filtros
-                  </button>
-                </div>
               </div>
 
-              <div className="flex gap-2 mt-4 flex-wrap">
+              <div className="flex gap-2 mt-4 flex-wrap border-t border-slate-100 pt-4">
+                <button
+                  onClick={loadData}
+                  disabled={loading}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-60"
+                >
+                  <Filter size={16} />
+                  {loading ? 'Filtrando...' : 'Filtrar'}
+                </button>
+                <button
+                  onClick={clearFilters}
+                  className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-300 transition-colors"
+                >
+                  Limpar Filtros
+                </button>
                 <button
                   onClick={() => setShowSaveModal(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
@@ -589,7 +605,7 @@ doc.setFontSize(16);
                   </div>
                 )}
               </div>
-            </>
+            </div>
           )}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">

@@ -71,6 +71,7 @@ import { FinancialAccountsPage, FinancialAccountFormPage } from '@/modules/finan
 import ContasApagarPage from '@/modules/financeiro/contas-pagar/pages';
 import NovaContaPagarPage from '@/modules/financeiro/contas-pagar/pages/NovaContaPagarPage';
 import AutorizacaoDescontos from '@/pages/clinica/financeiro/AutorizacaoDescontos';
+import SolicitacoesEstorno from '@/pages/clinica/financeiro/SolicitacoesEstorno';
 import CaixaIndividual from '@/pages/clinica/financeiro/CaixaIndividual';
 import CaixaGerencial from '@/pages/clinica/financeiro/CaixaGerencial';
 import DivergenciasAnalytics from '@/pages/clinica/financeiro/DivergenciasAnalytics';
@@ -105,6 +106,10 @@ import RelatoriosPage from '@/pages/clinica/faturamento/RelatoriosPage';
 import TISSPage from '@/pages/clinica/faturamento/TISSPage';
 import FaturamentoDashboard from '@/pages/clinica/faturamento/FaturamentoDashboard';
 import FaturamentoEnterprisePage from '@/pages/clinica/faturamento/FaturamentoEnterprisePage';
+import CentroFiscal from '@/pages/clinica/faturamento/CentroFiscal';
+import NotasFiscais from '@/pages/clinica/faturamento/NotasFiscais';
+import IntegracoesFiscais from '@/pages/clinica/faturamento/IntegracoesFiscais';
+import XmlPdfFiscal from '@/pages/clinica/faturamento/XmlPdfFiscal';
 
 // Dashboards
 import DashboardAtendimentos from '@/pages/clinica/dashboard/DashboardAtendimentos';
@@ -582,6 +587,7 @@ export default function AppRoutes() {
             element={<AppointmentFinancialIntegrationConfig />}
           />
           <Route path="financeiro/autorizacoes-descontos" element={<AutorizacaoDescontos />} />
+          <Route path="financeiro/solicitacoes-estorno" element={<SolicitacoesEstorno />} />
           <Route path="financeiro/repasse/*" element={<RepasseMedicoLayout />}>
             <Route index element={<Navigate to="dashboard-executivo" replace />} />
             <Route path=":section" element={<RepasseEnterprisePage />} />
@@ -608,6 +614,10 @@ export default function AppRoutes() {
           {/* FATURAMENTO */}
           <Route path="faturamento" element={<Navigate to="/clinica/faturamento/dashboard" replace />} />
           <Route path="faturamento/dashboard" element={<FaturamentoDashboard />} />
+          <Route path="faturamento/centro-fiscal" element={<CentroFiscal />} />
+          <Route path="faturamento/notas-fiscais" element={<NotasFiscais />} />
+          <Route path="faturamento/xml-pdf" element={<XmlPdfFiscal />} />
+          <Route path="faturamento/integracoes-fiscais" element={<IntegracoesFiscais />} />
           <Route path="faturamento/producao" element={<FaturamentoEnterprisePage page="producao" />} />
           <Route path="faturamento/atendimentos" element={<FaturamentoEnterprisePage page="atendimentos" />} />
           <Route path="faturamento/convenios" element={<FaturamentoEnterprisePage page="convenios" />} />

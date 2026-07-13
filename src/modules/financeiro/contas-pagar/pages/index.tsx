@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/use-toast';
-import { Plus, Filter, X, Save, AlertCircle, Check, Calendar, ReceiptText, ShieldCheck, WalletCards, RefreshCw, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Plus, Filter, X, Save, AlertCircle, Check, Calendar, ReceiptText, ShieldCheck, WalletCards, RefreshCw, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { usePayable, usePayableManagement } from '../hooks/usePayables';
 import { PayablesExtendedDashboard } from '../components/PayablesDashboard';
 import { PayablesTable } from '../components/PayablesTable';
@@ -249,7 +249,15 @@ export default function ContasApagarPage() {
     isFetched: isLegacyEditFetched,
   } = usePayable(legacyEditId);
   const operationalSummary = useMemo(() => {
-    const totalFilteredAmount = payables.reduce((sum, payable) => sum + Number(payable.net_amount || payable.amount || 0), 0);
+    const totalFilteredAmount = payables.reduce((sum, payable) => {
+      const balanceAmount = Number(payable.balance_amount ?? payable.net_amount ?? payable.amount ?? 0);
+      const isSettled = payable.status === PayableStatus.PAID
+        || payable.status === PayableStatus.CANCELED
+        || payable.status === PayableStatus.REVERSED
+        || balanceAmount <= 0;
+
+      return isSettled ? sum : sum + balanceAmount;
+    }, 0);
     const withInvoiceCount = payables.filter((payable) => payable.has_invoice || payable.invoice_xml_url || payable.invoice_pdf_url || payable.attachment_url).length;
     const medicationTraceCount = payables.filter((payable) => {
       const traceability = payable.medication_traceability || payable.metadata?.nfe?.medication_traceability;
@@ -919,31 +927,35 @@ export default function ContasApagarPage() {
           </div>
         </Card>
 
-        <Card className="p-4 border-slate-200 bg-white">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold flex items-center gap-2">
-              <Filter className="w-4 h-4" /> Filtros avançados
+        <Card className="p-6 w-full border border-slate-100 shadow-sm rounded-xl bg-white">
+          <button
+            type="button"
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex w-full items-center justify-between gap-3 text-left"
+            aria-expanded={showFilters}
+          >
+            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+              <Filter className="h-5 w-5 text-slate-600" />
+              Filtros Avançados
+              <span className="rounded bg-slate-100 px-2 py-1 text-xs font-normal text-slate-500">
+                {activeFilterLabels.length} ativo(s)
+              </span>
             </h3>
-            <button
-              type="button"
-              onClick={() => setShowFilters(!showFilters)}
-              className="text-sm text-blue-600 hover:text-blue-700"
-            >
-              {showFilters ? '▼ Ocultar' : '▶ Mostrar'}
-            </button>
-          </div>
-            {activeFilterLabels.length > 0 && (
-              <div className="mb-4 flex flex-wrap gap-2">
-                {activeFilterLabels.map((label) => (
-                  <Badge key={label} variant="outline" className="bg-blue-50 text-blue-800 border-blue-200">
-                    {label}
-                  </Badge>
-                ))}
-              </div>
-            )}
+            {showFilters ? <ChevronUp className="h-5 w-5 text-slate-600" /> : <ChevronDown className="h-5 w-5 text-slate-600" />}
+          </button>
 
           {showFilters && (
-            <div>
+            <div className="mt-4 space-y-4 border-t border-slate-100 pt-4">
+              {activeFilterLabels.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {activeFilterLabels.map((label) => (
+                    <Badge key={label} variant="outline" className="bg-blue-50 text-blue-800 border-blue-200">
+                      {label}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
               <div className="grid md:grid-cols-4 gap-3 mb-4 pb-4 border-b">
                 <Input
                   placeholder="Fornecedor, descrição ou documento..."
@@ -1126,10 +1138,10 @@ export default function ContasApagarPage() {
 
               <div className="flex gap-2 flex-wrap">
                 <Button className="bg-blue-600 text-white" onClick={() => setPage(1)} disabled={isLoading}>
-                  {isLoading ? 'Filtrando...' : 'Aplicar filtros'}
+                  {isLoading ? 'Filtrando...' : 'Filtrar'}
                 </Button>
                 <Button variant="outline" onClick={handleClearFilters}>
-                  Limpar
+                  Limpar Filtros
                 </Button>
                 {hasActiveFilters && (
                   <Button
@@ -1141,26 +1153,13 @@ export default function ContasApagarPage() {
                     className="gap-2"
                   >
                     <Save className="w-4 h-4" />
-                    Salvar filtro
+                    Salvar Filtro
                   </Button>
                 )}
               </div>
             </div>
           )}
 
-          {!showFilters && (
-            <div className="flex gap-2 items-center">
-              <Input
-                placeholder="Buscar por fornecedor, descrição ou documento..."
-                className="flex-1"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <Button variant="outline" onClick={() => setPage(1)} disabled={isLoading}>
-                Buscar
-              </Button>
-            </div>
-          )}
         </Card>
 
         {/* Payables Table */}

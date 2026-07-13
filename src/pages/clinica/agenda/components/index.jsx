@@ -62,9 +62,11 @@ export default function AgendaIndex() {
 
   //  Capturar appointmentDate do state OU query params (vindo de Contas a Receber)
   const appointmentDateFromQuery = searchParams.get('appointmentDate');
+  const appointmentIdFromQuery = searchParams.get('appointmentId');
   const appointmentDateFromState = location.state?.appointmentDate;
   const appointmentIdFromState = location.state?.appointmentId;
   const modeParam = searchParams.get('mode'); // ?? Ler o modo (edit, new, etc.)
+  const appointmentTabParam = searchParams.get('appointmentTab');
 
   //  Tentar recuperar do localStorage (backup se state/params foram perdidos)
   const appointmentDateFromLocalStorage =
@@ -75,7 +77,7 @@ export default function AgendaIndex() {
   // Prioridade: query param > state > localStorage
   const appointmentDateFinal =
     appointmentDateFromQuery || appointmentDateFromState || appointmentDateFromLocalStorage;
-  const appointmentIdFinal = appointmentIdFromState || appointmentIdFromLocalStorage;
+  const appointmentIdFinal = appointmentIdFromQuery || appointmentIdFromState || appointmentIdFromLocalStorage;
 
   console.log('+---------------------------------------------------------------+');
   console.log('�            [AgendaIndex] STARTUP DIAGNOSTICS              �');
@@ -1551,6 +1553,7 @@ export default function AgendaIndex() {
         clinicId={clinicId}
         data={novoAgendamentoInfo}
         appointmentIdToEdit={appointmentIdToEdit}
+        initialTab={appointmentTabParam === 'resumo' ? 'resumo' : undefined}
         professionals={professionals}
         services={services}
         payers={payers}

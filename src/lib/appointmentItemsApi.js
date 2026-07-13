@@ -9,9 +9,12 @@ function toNumber(value, fallback = 0) {
 function normalizeServiceItem(item = {}) {
   const unitPrice = toNumber(item.value ?? item.unit_price ?? item.price, 0);
   const quantity = toNumber(item.quantity, 1);
+  const billableQuantity = item.package_billable_quantity !== undefined && item.package_billable_quantity !== null
+    ? Math.max(0, toNumber(item.package_billable_quantity, 0))
+    : quantity;
   const discount = toNumber(item.discount, 0);
   const additions = toNumber(item.additions, 0);
-  const totalPrice = Math.max(0, unitPrice * quantity - discount + additions);
+  const totalPrice = Math.max(0, unitPrice * billableQuantity - discount + additions);
   const professionalPercentage = toNumber(item.professional_percentage ?? item.repasse_percent, 0);
   const professionalFixed = toNumber(item.professional_discount ?? item.professional_value, 0);
 
@@ -22,6 +25,7 @@ function normalizeServiceItem(item = {}) {
     value: unitPrice,
     unit_price: unitPrice,
     quantity,
+    package_billable_quantity: billableQuantity,
     discount,
     additions,
     total_price: totalPrice,

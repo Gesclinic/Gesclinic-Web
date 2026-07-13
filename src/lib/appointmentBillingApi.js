@@ -9,12 +9,83 @@
 import { supabase } from './customSupabaseClient';
 import { createReceivable } from './receivablesApi';
 import { orchestrateAppointmentFinancialAutomations } from './appointmentFinancialAutomations';
+import { calculateAutomaticRepasse } from './financeIntegrationApi';
 import {
   logAppointmentFinancialAudit,
   FINANCIAL_EVENT_TYPES,
   RELATED_ENTITY_TYPES,
 } from './auditFinancialApi';
 import { calculateProcessingFee } from './processingFeeCalculator';
+import {
+  commitPackageConsumption,
+  createPackagesFromAppointmentServices,
+  preparePackageConsumption,
+} from './appointmentPackagesApi';
+
+const APPOINTMENT_BILLING_SELECT_BASE = `
+  id,
+  clinic_id,
+  patient_id,
+  professional_id,
+  service_id,
+  payer_id,
+  plan_id,
+  scheduled_date,
+  value,
+  discount,
+  payment_method,
+  payment_status,
+  authorization_number,
+  authorization_date,
+  guide_number,
+  payer_name,
+  plan_name,
+  patients:patient_id(id, name),
+  payers:payer_id(id, name),
+  plans:plan_id(id, name, code),
+  appointment_services(
+    id,
+    service_id,
+    quantity,
+    value,
+    discount,
+    status,
+    billing_type,
+    professional_percentage,
+    professional_discount,
+    professional_repay_type,
+    services(id, name, price, code, tuss_code)
+  )
+`;
+
+const APPOINTMENT_BILLING_SELECT_WITH_CARD = APPOINTMENT_BILLING_SELECT_BASE.replace(
+  'patients:patient_id',
+  'card_processor_id,\n  card_brand,\n  settlement_type,\n  patients:patient_id',
+);
+
+async function loadAppointmentForBilling(appointmentId) {
+  const withCard = await supabase
+    .from('appointments')
+    .select(APPOINTMENT_BILLING_SELECT_WITH_CARD)
+    .eq('id', appointmentId)
+    .single();
+
+  if (!withCard.error) {
+    return withCard;
+  }
+
+  const message = String(withCard.error.message || '');
+  if (!message.includes('card_processor_id') && !message.includes('card_brand') && !message.includes('settlement_type')) {
+    return withCard;
+  }
+
+  console.warn('Campos de cartao nao existem em appointments; carregando faturamento sem dados de processadora.');
+  return supabase
+    .from('appointments')
+    .select(APPOINTMENT_BILLING_SELECT_BASE)
+    .eq('id', appointmentId)
+    .single();
+}
 
 function parseDateOnly(value) {
   if (!value) return new Date().toISOString().split('T')[0];
@@ -38,17 +109,62 @@ function getServiceUnitValue(item) {
   return Number(item.value ?? item.unit_price ?? item.services?.price ?? 0) || 0;
 }
 
+function getServiceBillableQuantity(item) {
+  const quantity = Number(item.package_billable_quantity ?? item.quantity ?? 1);
+  return Number.isFinite(quantity) ? quantity : 1;
+}
+
 function getServiceTotal(item) {
-  const quantity = Number(item.quantity || 1) || 1;
+  const quantity = getServiceBillableQuantity(item);
   const discount = Number(item.discount || 0) || 0;
   return Math.max(0, getServiceUnitValue(item) * quantity - discount);
+}
+
+function getServiceGrossTotal(item) {
+  const quantity = getServiceBillableQuantity(item);
+  return getServiceUnitValue(item) * quantity;
 }
 
 function getServiceRepasse(item) {
   const total = getServiceTotal(item);
   const fixed = Number(item.professional_discount || item.professional_value || 0) || 0;
-  const percentage = Number(item.professional_percentage || 0) || 0;
+  const percentage = Number(item.professional_percentage || item.professional_percent || 0) || 0;
   return fixed > 0 ? fixed : total * (percentage / 100);
+}
+
+async function calculateRepasseExpectedFromRules(appointment, appointmentServices) {
+  if (!appointment?.clinic_id || !appointment?.professional_id) {
+    return { amount: 0, ruleIds: [], warnings: ['Profissional não identificado para regra de repasse'] };
+  }
+
+  const results = await Promise.all(
+    appointmentServices.map(async (item) => {
+      if (!item.service_id) {
+        return { amount: 0, ruleId: null, warnings: ['Serviço não identificado para regra de repasse'] };
+      }
+
+      const result = await calculateAutomaticRepasse({
+        clinicId: appointment.clinic_id,
+        professionalId: appointment.professional_id,
+        serviceId: item.service_id,
+        baseAmount: getServiceTotal(item),
+        appointmentStatus: appointment.status || 'completed',
+        healthInsuranceId: appointment.payer_id || null,
+      });
+
+      return {
+        amount: Number(result.repasse || 0),
+        ruleId: result.rule?.ruleId || result.rule?.id || null,
+        warnings: result.warnings || [],
+      };
+    }),
+  );
+
+  return {
+    amount: results.reduce((sum, item) => sum + Number(item.amount || 0), 0),
+    ruleIds: results.map((item) => item.ruleId).filter(Boolean),
+    warnings: results.flatMap((item) => item.warnings || []),
+  };
 }
 
 /**
@@ -62,50 +178,7 @@ export const syncAppointmentBilling = async (appointmentId) => {
     console.log('💳 [syncAppointmentBilling] Iniciando sincronização para:', appointmentId);
 
     // 1️⃣ Carregar appointment com detalhes
-    const { data: appointment, error: aptError } = await supabase
-      .from('appointments')
-      .select(
-        `
-        id,
-        clinic_id,
-        patient_id,
-        professional_id,
-        service_id,
-        payer_id,
-        plan_id,
-        scheduled_date,
-        value,
-        discount,
-        payment_method,
-        payment_status,
-        authorization_number,
-        authorization_date,
-        guide_number,
-        payer_name,
-        plan_name,
-        card_processor_id,
-        card_brand,
-        settlement_type,
-        patients:patient_id(id, name),
-        payers:payer_id(id, name),
-        plans:plan_id(id, name, code),
-        appointment_services(
-          id,
-          service_id,
-          quantity,
-          value,
-          discount,
-          status,
-          billing_type,
-          professional_percentage,
-          professional_discount,
-          professional_repay_type,
-          services(id, name, price, code, tuss_code)
-        )
-      `,
-      )
-      .eq('id', appointmentId)
-      .single();
+    const { data: appointment, error: aptError } = await loadAppointmentForBilling(appointmentId);
 
     if (aptError || !appointment) {
       throw new Error(`Appointment não encontrado: ${aptError?.message}`);
@@ -118,8 +191,8 @@ export const syncAppointmentBilling = async (appointmentId) => {
       paymentMethod: appointment.payment_method,
     });
 
-    const appointmentServices = appointment.appointment_services || [];
-    if (appointmentServices.length === 0) {
+    const originalAppointmentServices = appointment.appointment_services || [];
+    if (originalAppointmentServices.length === 0) {
       throw new Error('Agendamento sem appointment_services para faturar');
     }
 
@@ -150,15 +223,23 @@ export const syncAppointmentBilling = async (appointmentId) => {
     const payerName = appointment.payer_name || appointment.payers?.name;
     const isParticular = !appointment.payer_id || payerName === 'Particular';
     const isConvenio = appointment.payer_id && !isParticular;
+    const packageConsumption = await preparePackageConsumption(appointment, originalAppointmentServices);
+    const appointmentServices = packageConsumption.services;
+
     const grossServicesValue = appointmentServices.reduce(
-      (sum, item) => sum + getServiceUnitValue(item) * (Number(item.quantity || 1) || 1),
+      (sum, item) => sum + getServiceGrossTotal(item),
       0,
     );
     const servicesDiscount = appointmentServices.reduce(
       (sum, item) => sum + (Number(item.discount || 0) || 0),
       0,
     );
-    const finalValue = Number(appointment.value || 0) > 0 ? Number(appointment.value) : grossServicesValue;
+    const hasPackageConsumption = packageConsumption.consumptionPlans.length > 0;
+    const finalValue = hasPackageConsumption
+      ? grossServicesValue
+      : Number(appointment.value || 0) > 0
+        ? Number(appointment.value)
+        : grossServicesValue;
     const discountValue = Number(appointment.discount || 0) || servicesDiscount;
     const netValue = Math.max(0, finalValue - discountValue);
 
@@ -190,7 +271,7 @@ export const syncAppointmentBilling = async (appointmentId) => {
     const serviceDescription = appointmentServices
       .map((item) => item.services?.name || 'Servico')
       .join(', ');
-    const repasseExpected = appointmentServices.reduce((sum, item) => sum + getServiceRepasse(item), 0);
+    const repasseExpected = await calculateRepasseExpectedFromRules(appointment, appointmentServices);
 
     const receivableData = {
       patient_id: appointment.patient_id,
@@ -220,13 +301,16 @@ export const syncAppointmentBilling = async (appointmentId) => {
       competency_date: appointmentDate,
       insurance_billing_status: isConvenio ? 'pendente' : null,
       tiss_xml_status: isConvenio ? 'nao_gerado' : null,
-      repasse_expected: repasseExpected,
+      repasse_expected: repasseExpected.amount,
       repasse_percent: null,
-      repasse_model: appointmentServices.some((item) => Number(item.professional_discount || 0) > 0)
-        ? 'fixed'
-        : 'percentage',
+      repasse_model: 'module_rules',
       metadata: {
         source: 'appointment_services',
+        repasse: {
+          source: 'module_rules',
+          rule_ids: repasseExpected.ruleIds,
+          warnings: repasseExpected.warnings,
+        },
         services: appointmentServices.map((item) => ({
           appointment_service_id: item.id,
           service_id: item.service_id,
@@ -235,8 +319,18 @@ export const syncAppointmentBilling = async (appointmentId) => {
           quantity: item.quantity || 1,
           unit_value: getServiceUnitValue(item),
           total: getServiceTotal(item),
+          billing_type: item.billing_type || 'per_consultation',
+          sessions_completed: item.sessions_completed || 0,
+          package_consumed_sessions: item.package_consumed_sessions || 0,
+          package_billable_quantity: item.package_billable_quantity ?? item.quantity ?? 1,
+          package_covered_value: item.package_covered_value || 0,
+          package_ids: (item.package_consumption_plans || []).map((plan) => plan.packageId),
           status: item.status,
         })),
+        packages: {
+          consumptions: packageConsumption.consumptionPlans,
+          warnings: packageConsumption.warnings,
+        },
       },
       // Card processor data
       processor_id: appointment.card_processor_id || null,
@@ -251,6 +345,17 @@ export const syncAppointmentBilling = async (appointmentId) => {
 
     const receivable = await createReceivable(appointment.clinic_id, receivableData);
     console.log('✅ Conta a Receber criada:', receivable?.id);
+
+    const packageMovements = await commitPackageConsumption({
+      appointment,
+      consumptionPlans: packageConsumption.consumptionPlans,
+      receivableId: receivable?.id,
+    });
+    const createdPackages = await createPackagesFromAppointmentServices({
+      appointment,
+      appointmentServices: originalAppointmentServices,
+      receivableId: receivable?.id,
+    });
 
     await orchestrateAppointmentFinancialAutomations(appointment.id, appointment.clinic_id, {
       ...appointment,
@@ -313,6 +418,8 @@ export const syncAppointmentBilling = async (appointmentId) => {
       message: '✅ Faturamento sincronizado: Conta a Receber criada a partir de appointment_services',
       receivableId: receivable?.id,
       servicesCount: appointmentServices.length,
+      packageMovementsCount: packageMovements.length,
+      createdPackagesCount: createdPackages.length,
       grossValue: finalValue,
       netValue: receivableData.net_value,
     };

@@ -43,12 +43,12 @@ export const FinancialBalanceSummary = React.memo<FinancialBalanceSummaryProps>(
   }).format(summary.total_balance);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
       {/* Total Balance Card */}
-      <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200 p-6">
-        <p className="text-sm font-medium text-blue-700 mb-2">Saldo Total</p>
-        <h2 className="text-3xl font-bold text-blue-900">{totalBalance}</h2>
-        <p className="text-xs text-blue-600 mt-2">
+      <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200 p-4">
+        <p className="text-xs font-semibold text-blue-700 mb-1">Saldo Total</p>
+        <h2 className="text-2xl font-bold text-blue-900 whitespace-nowrap">{totalBalance}</h2>
+        <p className="text-xs text-blue-600 mt-1">
           {summary.active_account_count} conta{summary.active_account_count !== 1 ? 's' : ''} ativa
           {summary.active_account_count !== 1 ? 's' : ''}
         </p>
@@ -64,18 +64,18 @@ export const FinancialBalanceSummary = React.memo<FinancialBalanceSummaryProps>(
         return (
           <div
             key={type.type}
-            className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow"
+            className="bg-white rounded-lg border border-gray-200 p-3 hover:shadow-md transition-shadow"
           >
-            <div className="flex items-center gap-3 mb-3">
-              <span className="text-2xl">{type.icon}</span>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xl">{type.icon}</span>
               <div>
                 <p className="text-xs font-medium text-gray-500">{type.label}</p>
                 <p className="text-sm font-semibold text-gray-700">{type.count} conta{type.count !== 1 ? 's' : ''}</p>
               </div>
             </div>
-            <p className="text-lg font-bold text-gray-900">{formattedBalance}</p>
+            <p className="text-base font-bold text-gray-900">{formattedBalance}</p>
             {type.default_account && (
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="text-xs text-gray-500 mt-1">
                 Padrão: <span className="font-medium">{type.default_account.account_name}</span>
               </p>
             )}
@@ -85,14 +85,14 @@ export const FinancialBalanceSummary = React.memo<FinancialBalanceSummaryProps>(
 
       {/* By Bank Cards */}
       {Object.entries(summary.total_by_bank).length > 0 && (
-        <div className="md:col-span-2 border-t pt-6">
-          <div className="flex items-center gap-2 mb-4">
-            <BarChart3 className="w-5 h-5 text-slate-600" />
+        <div className="md:col-span-2 lg:col-span-4 border-t pt-4">
+          <div className="flex items-center gap-2 mb-3">
+            <BarChart3 className="w-4 h-4 text-slate-600" />
             <h3 className="text-sm font-semibold text-gray-800">Consolidação por Banco</h3>
           </div>
 
           {/* Bank Summary with Bars */}
-          <div className="space-y-3">
+          <div className="space-y-2">
             {Object.entries(summary.total_by_bank)
               .sort(([, a], [, b]) => b - a) // Sort descending by balance
               .map(([bank, balance], idx) => {
@@ -113,11 +113,11 @@ export const FinancialBalanceSummary = React.memo<FinancialBalanceSummaryProps>(
                 const color = BANK_COLORS[idx % BANK_COLORS.length];
 
                 return (
-                  <div key={bank} className={`${color.bg} rounded-lg p-4 border border-slate-200`}>
-                    <div className="flex items-baseline justify-between mb-2">
+                  <div key={bank} className={`${color.bg} rounded-lg p-3 border border-slate-200`}>
+                    <div className="flex items-baseline justify-between mb-1.5">
                       <p className="text-sm font-semibold text-gray-800 flex-1 truncate">{bank}</p>
                       <div className="flex items-baseline gap-2 ml-3">
-                        <span className={`text-lg font-bold ${color.text}`}>{formattedBalance}</span>
+                        <span className={`text-base font-bold ${color.text}`}>{formattedBalance}</span>
                         <span className="text-xs font-medium text-gray-500 bg-white/60 px-2 py-0.5 rounded">
                           {percentage}%
                         </span>
@@ -152,11 +152,11 @@ export const FinancialBalanceSummary = React.memo<FinancialBalanceSummaryProps>(
           </div>
 
           {/* Legend / Total Info */}
-          <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
+          <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-medium text-gray-600">Total em Bancos</p>
-                <p className="text-lg font-bold text-gray-900">
+                <p className="text-base font-bold text-gray-900">
                   {new Intl.NumberFormat('pt-BR', {
                     style: 'currency',
                     currency: 'BRL',
@@ -165,7 +165,7 @@ export const FinancialBalanceSummary = React.memo<FinancialBalanceSummaryProps>(
               </div>
               <div className="text-right">
                 <p className="text-xs font-medium text-gray-600">Bancos Ativos</p>
-                <p className="text-lg font-bold text-slate-700">{Object.keys(summary.total_by_bank).length}</p>
+                <p className="text-base font-bold text-slate-700">{Object.keys(summary.total_by_bank).length}</p>
               </div>
             </div>
           </div>

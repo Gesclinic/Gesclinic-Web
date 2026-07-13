@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { Search, X, RotateCcw } from 'lucide-react';
+import { Search, X, RotateCcw, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 import { ChartOfAccountFilter, AccountType, AccountNature } from '../types';
 
 interface ChartOfAccountsFiltersProps {
@@ -59,53 +59,57 @@ export const ChartOfAccountsFilters: React.FC<ChartOfAccountsFiltersProps> = ({
     filters.is_active !== true ||
     filters.accepts_entries !== undefined;
 
-  return (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-      {/* Search Bar */}
-      <div className="p-4 border-b border-gray-200">
-        <div className="relative">
-          <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Buscar por código ou nome..."
-            value={filters.search || ''}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          {filters.search && (
-            <button
-              type="button"
-              aria-label="Limpar busca"
-              title="Limpar busca"
-              onClick={() => handleSearchChange('')}
-              className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-      </div>
+  const activeFilterCount = [
+    filters.search,
+    filters.type,
+    filters.nature,
+    filters.level,
+    filters.is_active !== true ? filters.is_active : undefined,
+    filters.accepts_entries,
+  ].filter((value) => value !== undefined && value !== '').length;
 
-      {/* Expandable Filters */}
+  return (
+    <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-6">
       <button
+        type="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-4 py-3 flex items-center justify-between text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+        className="flex w-full items-center justify-between gap-3 text-left"
+        aria-expanded={isExpanded}
       >
-        <span className="flex items-center gap-2">
+        <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+          <Filter className="h-5 w-5 text-slate-600" />
           Filtros Avançados
-          {hasActiveFilters && (
-            <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-blue-600 rounded-full">
-              {[filters.type, filters.nature, filters.accepts_entries].filter(Boolean).length}
-            </span>
-          )}
-        </span>
-        <span className={`transform transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
-          ▼
-        </span>
+          <span className="rounded bg-slate-100 px-2 py-1 text-xs font-normal text-slate-500">
+            {activeFilterCount} ativo(s)
+          </span>
+        </h3>
+        {isExpanded ? <ChevronUp className="h-5 w-5 text-slate-600" /> : <ChevronDown className="h-5 w-5 text-slate-600" />}
       </button>
 
       {isExpanded && (
-        <div className="px-4 py-4 border-t border-gray-200 space-y-4">
+        <div className="mt-4 border-t border-slate-100 pt-4 space-y-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Buscar por código ou nome..."
+              value={filters.search || ''}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            {filters.search && (
+              <button
+                type="button"
+                aria-label="Limpar busca"
+                title="Limpar busca"
+                onClick={() => handleSearchChange('')}
+                className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
           {/* Type Filter */}
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">

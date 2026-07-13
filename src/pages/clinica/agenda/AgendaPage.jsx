@@ -78,6 +78,7 @@ export default function AgendaPage() {
   const [searchParams] = useSearchParams();
   const patientIdFromUrl = searchParams.get('patientId');
   const modeParam = searchParams.get('mode');
+  const appointmentTabParam = searchParams.get('appointmentTab');
   const appointmentIdFromUrl = searchParams.get('appointmentId') || location.state?.appointmentId;
   const appointmentDateFromUrl = searchParams.get('appointmentDate'); // 📅 Query param
   const appointmentDateFromState = location.state?.appointmentDate; // 📅 State
@@ -102,6 +103,7 @@ export default function AgendaPage() {
   // 🚩 Flag para rastrear se o modal foi fechado intencionalmente
   const hasModalBeenClosed = useRef(false); // 🔍 Rastrear o patientId anterior para detectar mudanças
   const prevPatientIdRef = useRef(null);
+  const autoOpenEditFallbackRef = useRef(null);
   // 🔐 Controle de acesso aos diferentes modos
   // Recepção: modo simplificado operacional
   // Profissional: modo focado apenas seus atendimentos
@@ -618,8 +620,11 @@ const [atendimentoUnificadoOpen, setAtendimentoUnificadoOpen] = useState(false);
     const displayDate = slot.date || agenda.date;
     const displayTime = slot.time || '09:00';
 
+    const slotProfessionalId = slot.professionalId || slot.professional_id;
+    const slotRoomId = slot.roomId || slot.room_id;
+
     // ✅ PROCURAR PROFISSIONAL NA LISTA
-    const professional = metadataFromCache?.professionals?.find((p) => p.id === slot.professionalId);
+    const professional = metadataFromCache?.professionals?.find((p) => p.id === slotProfessionalId);
     const profesionalName = professional?.name || 'Profissional a definir';
 
     // Converter data YYYY-MM-DD para DD/MM/YYYY
@@ -646,8 +651,10 @@ const [atendimentoUnificadoOpen, setAtendimentoUnificadoOpen] = useState(false);
       type: 'new',
       date: slot.date || agenda.date,
       time: slot.time || '09:00',
-      professional_id: slot.professional_id || undefined,
-      room_id: slot.room_id || undefined,
+      professionalId: slotProfessionalId || undefined,
+      professional_id: slotProfessionalId || undefined,
+      roomId: slotRoomId || undefined,
+      room_id: slotRoomId || undefined,
       // Garantir que NÃO temos 'id' de um agendamento anterior
       id: undefined,
     };
@@ -964,9 +971,11 @@ const [atendimentoUnificadoOpen, setAtendimentoUnificadoOpen] = useState(false);
 
         agenda.selectSlot({
           type: 'existing',
+          id: appointmentIdFromUrl,
           appointmentId: appointmentIdFromUrl,
           appointment: foundAppointment,
           mode: 'edit',
+          initialTab: appointmentTabParam === 'resumo' ? 'resumo' : undefined,
         });
 
         console.log('✅ selectSlot chamado. Modal deve abrir agora.');
@@ -976,6 +985,36 @@ const [atendimentoUnificadoOpen, setAtendimentoUnificadoOpen] = useState(false);
           appointmentIdFromUrl,
         );
         console.log('   IDs disponíveis:', allAppointments.map((a) => a.id).join(', '));
+
+        if (clinicId && autoOpenEditFallbackRef.current !== appointmentIdFromUrl) {
+          autoOpenEditFallbackRef.current = appointmentIdFromUrl;
+          console.log('🔎 [AutoOpen Edit Modal] Buscando appointment por ID no banco...');
+          supabase
+            .from('appointments')
+            .select('*')
+            .eq('id', appointmentIdFromUrl)
+            .eq('clinic_id', clinicId)
+            .maybeSingle()
+            .then(({ data, error }) => {
+              if (error) {
+                console.warn('⚠️ [AutoOpen Edit Modal] Erro ao buscar fallback:', error.message);
+                return;
+              }
+              if (!data) {
+                console.warn('⚠️ [AutoOpen Edit Modal] Fallback sem appointment:', appointmentIdFromUrl);
+                return;
+              }
+              agenda.selectSlot({
+                type: 'existing',
+                id: appointmentIdFromUrl,
+                appointmentId: appointmentIdFromUrl,
+                appointment: data,
+                mode: 'edit',
+                initialTab: appointmentTabParam === 'resumo' ? 'resumo' : undefined,
+              });
+              console.log('✅ [AutoOpen Edit Modal] Modal aberto via fallback do banco.');
+            });
+        }
       }
     } else {
       if (modeParam !== 'edit') {
@@ -989,10 +1028,12 @@ const [atendimentoUnificadoOpen, setAtendimentoUnificadoOpen] = useState(false);
     modeParam,
     appointmentIdFromUrl,
     appointmentDateFromStateOrUrl,
+    appointmentTabParam,
     agenda.date,
     agenda.loading,
     agenda.appointments,
     agenda.selectSlot,
+    clinicId,
   ]);
 
   // 🎯 NOVO: Abrir AtendimentoUnificado quando mode=unified
@@ -1007,6 +1048,29 @@ const [atendimentoUnificadoOpen, setAtendimentoUnificadoOpen] = useState(false);
       }
     }
   }, [modeParam, appointmentIdFromUrl, agenda.appointments, atendimentoUnificadoOpen, handleOpenAtendimentoUnificado]);
+
+  useEffect(() => {
+    if (modeParam !== 'edit' || !appointmentIdFromUrl || agenda.selectedSlot || agenda.loading) {
+      return;
+    }
+
+    const foundAppointment = [...(agenda.appointments || []), ...(agenda.filteredAppointments || [])]
+      .find((appointment) => appointment.id === appointmentIdFromUrl);
+
+    if (!foundAppointment) {
+      return;
+    }
+
+    agenda.selectSlot({
+      ...foundAppointment,
+      type: 'existing',
+      id: foundAppointment.id,
+      appointmentId: foundAppointment.id,
+      appointment: foundAppointment,
+      mode: 'edit',
+      initialTab: appointmentTabParam === 'resumo' ? 'resumo' : undefined,
+    });
+  }, [modeParam, appointmentIdFromUrl, appointmentTabParam, agenda.selectedSlot, agenda.loading, agenda.appointments, agenda.filteredAppointments, agenda.selectSlot]);
 
   const handleSlotClick = (slot) => {
     console.log('🔵 [handleSlotClick] Slot clicado:', {
@@ -1909,6 +1973,7 @@ const [atendimentoUnificadoOpen, setAtendimentoUnificadoOpen] = useState(false);
         services={agenda.metadata.services || []}
         payers={agenda.metadata.payers || []}
         rooms={agenda.metadata.rooms || []}
+        initialTab={agenda.selectedSlot?.initialTab}
         onSuccess={handleAppointmentSuccess}
       />
 

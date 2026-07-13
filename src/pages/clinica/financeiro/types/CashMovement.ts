@@ -6,8 +6,11 @@ export type CashMovement = {
   id: string;
   clinic_id: string;
   drawer_id: string;
+  appointment_id?: string;
+  appointment_start_time?: string;
   type: CashMovementType;
   amount: number;
+  appointment_id?: string;
   patient_id?: string;
   patient?: { name: string };
   professional_id?: string;
@@ -20,9 +23,18 @@ export type CashMovement = {
   status: CashMovementStatus;
   payment_method: string;
   description?: string;
+  reference_document?: string;
+  counterparty_name?: string;
+  expense_supplier_name?: string;
+  expense_provider_name?: string;
+  expense_service_description?: string;
+  financial_category?: string;
   origin: 'manual' | 'agenda';
   created_at: string;
   created_by?: string;
+  prior_repasse_adjustment?: boolean;
+  adjustment_delta?: number;
+  appointment_scheduled_date?: string;
 };
 
 export type CashMovementInput = {
@@ -36,6 +48,16 @@ export type CashMovementInput = {
   status: CashMovementStatus;
   payment_method: string;
   description?: string;
+  reference_document?: string;
+  counterparty_name?: string;
+  expense_supplier_name?: string;
+  expense_provider_name?: string;
+  expense_service_description?: string;
+  financial_category?: string;
   origin: 'manual' | 'agenda';
   discount?: number;
+  surcharge?: number;
+  prior_repasse_adjustment?: boolean;
+  adjustment_delta?: number;
+  appointment_scheduled_date?: string;
 };
