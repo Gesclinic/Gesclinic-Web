@@ -1620,10 +1620,43 @@ export default function OperationalCashFlowModel({ consolidation, clinicId, load
     return true;
   }), [expandedRows, model.parentMap, model.rows, viewDepth]);
 
+  const updateOperationalUrl = (updates = {}) => {
+    const params = new URLSearchParams(location.search);
+    params.set('section', 'operational');
+
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null || value === undefined || value === '') {
+        params.delete(key);
+      } else {
+        params.set(key, value);
+      }
+    });
+
+    if (params.get('depth') !== 'details') {
+      params.delete('expand');
+    }
+
+    navigate(`${location.pathname}?${params.toString()}${location.hash || ''}`, { replace: true });
+  };
+
+  const setPeriodicity = (periodicity) => {
+    setTablePeriodicity(periodicity);
+    updateOperationalUrl({ periodicity });
+  };
+
+  const setScenario = (scenario) => {
+    setTableScenario(scenario);
+    updateOperationalUrl({ scenario });
+  };
+
+  const setDisplay = (display) => {
+    setTableDisplay(display);
+    updateOperationalUrl({ display });
+  };
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const nextDepth = params.get('depth');
-    const expand = params.get('expand');
     const nextPeriodicity = params.get('periodicity');
     const nextScenario = params.get('scenario');
     const nextDisplay = params.get('display');
@@ -1632,36 +1665,49 @@ export default function OperationalCashFlowModel({ consolidation, clinicId, load
     if (SCENARIO_VALUES.includes(nextScenario)) setTableScenario(nextScenario);
     if (DISPLAY_VALUES.includes(nextDisplay)) setTableDisplay(nextDisplay);
 
-    if (nextDepth === 'groups') {
-      setViewDepth('groups');
+    const resolvedDepth = ['groups', 'accounts', 'details'].includes(nextDepth) ? nextDepth : 'accounts';
+    setViewDepth((current) => (current === resolvedDepth ? current : resolvedDepth));
+  }, [location.search]);
+
+  useEffect(() => {
+    if (viewDepth === 'groups') {
       setExpandedRows(new Set());
       return;
     }
-    if (nextDepth === 'details') {
-      setViewDepth('details');
-      setExpandedRows(new Set(expand === 'all' ? model.expandableKeys : model.groupKeys));
+
+    if (viewDepth === 'details') {
+      setExpandedRows(new Set(model.expandableKeys));
       return;
     }
-    setViewDepth('accounts');
+
     setExpandedRows(new Set(model.groupKeys));
-  }, [location.search, model.expandableKeys.join('|'), model.groupKeys.join('|'), tableDisplay, tablePeriodicity, tableScenario]);
+  }, [model.expandableKeys.join('|'), model.groupKeys.join('|'), viewDepth]);
 
   const setDepth = (depth) => {
     setViewDepth(depth);
     if (depth === 'groups') {
       setExpandedRows(new Set());
+      updateOperationalUrl({ depth, expand: null });
       return;
     }
     if (depth === 'accounts') {
       setExpandedRows(new Set(model.groupKeys));
+      updateOperationalUrl({ depth, expand: null });
       return;
     }
     setExpandedRows(new Set(model.expandableKeys));
+    updateOperationalUrl({ depth, expand: 'all' });
   };
 
   const toggleRow = (row) => {
-    if (row.nodeKind === 'group' && viewDepth === 'groups') setViewDepth('accounts');
-    if (row.nodeKind === 'account' && viewDepth !== 'details') setViewDepth('details');
+    if (row.nodeKind === 'group' && viewDepth === 'groups') {
+      setViewDepth('accounts');
+      updateOperationalUrl({ depth: 'accounts', expand: null });
+    }
+    if (row.nodeKind === 'account' && viewDepth !== 'details') {
+      setViewDepth('details');
+      updateOperationalUrl({ depth: 'details', expand: 'all' });
+    }
 
     setExpandedRows((current) => {
       const next = new Set(current);
@@ -1674,11 +1720,13 @@ export default function OperationalCashFlowModel({ consolidation, clinicId, load
   const expandAll = () => {
     setViewDepth('details');
     setExpandedRows(new Set(model.expandableKeys));
+    updateOperationalUrl({ depth: 'details', expand: 'all' });
   };
 
   const collapseAll = () => {
     setViewDepth('groups');
     setExpandedRows(new Set());
+    updateOperationalUrl({ depth: 'groups', expand: null });
   };
 
   if (loading) {
@@ -1728,9 +1776,9 @@ export default function OperationalCashFlowModel({ consolidation, clinicId, load
 
       <div className="mb-3 rounded-xl border border-slate-200 bg-slate-100/70 p-1.5 shadow-inner dark:border-slate-700 dark:bg-slate-900/70">
         <div className="grid gap-2 xl:grid-cols-[1fr_1.35fr_1.2fr_.9fr_auto]">
-          <ControlGroup label="Visualizacao" value={tablePeriodicity} options={PERIODICITY_OPTIONS} onChange={setTablePeriodicity} />
-          <ControlGroup label="Cenario" value={tableScenario} options={SCENARIO_OPTIONS} onChange={setTableScenario} />
-          <ControlGroup label="Exibir" value={tableDisplay} options={DISPLAY_OPTIONS} onChange={setTableDisplay} />
+          <ControlGroup label="Visualizacao" value={tablePeriodicity} options={PERIODICITY_OPTIONS} onChange={setPeriodicity} />
+          <ControlGroup label="Cenario" value={tableScenario} options={SCENARIO_OPTIONS} onChange={setScenario} />
+          <ControlGroup label="Exibir" value={tableDisplay} options={DISPLAY_OPTIONS} onChange={setDisplay} />
           <ControlGroup
             label="Nivel"
             value={viewDepth}
