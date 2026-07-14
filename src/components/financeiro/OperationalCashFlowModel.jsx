@@ -1462,33 +1462,36 @@ export function buildOperationalModel(consolidation, accounts = [], returnTo = '
 }
 
 function rowClass(row) {
-  if (row.key === 'final:realized' || row.key === 'result:realized' || row.key === 'result:consolidated') return 'bg-blue-50 text-blue-950 font-bold dark:bg-blue-950/55 dark:text-blue-100';
-  if (row.key === 'final:forecast' || row.key === 'result:forecast') return 'bg-amber-50 text-amber-950 font-bold dark:bg-amber-950/55 dark:text-amber-100';
-  if (row.key === 'final:projected' || row.key === 'balance:projected') return 'bg-cyan-50 text-cyan-950 font-bold dark:bg-cyan-950/55 dark:text-cyan-100';
-  if (row.key === 'section:income') return 'bg-emerald-50 text-emerald-950 font-bold dark:bg-emerald-950/55 dark:text-emerald-100';
-  if (row.key === 'section:expense') return 'bg-rose-50 text-rose-950 font-bold dark:bg-rose-950/55 dark:text-rose-100';
+  if (row.key === 'final:realized' || row.key === 'result:realized' || row.key === 'result:consolidated') return 'bg-white text-blue-800 font-bold dark:bg-slate-950 dark:text-blue-300';
+  if (row.key === 'final:forecast' || row.key === 'result:forecast') return 'bg-white text-amber-800 font-bold dark:bg-slate-950 dark:text-amber-300';
+  if (row.key === 'final:projected' || row.key === 'balance:projected') return 'bg-white text-cyan-800 font-bold dark:bg-slate-950 dark:text-cyan-300';
+  if (row.key === 'section:income') return 'bg-white text-emerald-800 font-bold dark:bg-slate-950 dark:text-emerald-300';
+  if (row.key === 'section:expense') return 'bg-white text-rose-800 font-bold dark:bg-slate-950 dark:text-rose-300';
   if (row.groupKey === 'section:income') return row.hasChildren
-    ? 'bg-emerald-50/70 text-emerald-950 font-bold dark:bg-emerald-950/40 dark:text-emerald-100'
-    : 'bg-emerald-50/25 text-slate-800 dark:bg-emerald-950/20 dark:text-slate-200';
+    ? 'bg-white text-emerald-800 font-bold dark:bg-slate-950 dark:text-emerald-300'
+    : 'bg-white text-emerald-700 dark:bg-slate-950 dark:text-emerald-300';
   if (row.groupKey === 'section:expense') return row.hasChildren
-    ? 'bg-rose-50/75 text-rose-950 font-bold dark:bg-rose-950/40 dark:text-rose-100'
-    : 'bg-rose-50/30 text-slate-800 dark:bg-rose-950/20 dark:text-slate-200';
-  if (row.tone === 'positive') return 'bg-emerald-50 text-emerald-900 font-bold dark:bg-emerald-950/55 dark:text-emerald-100';
-  if (row.tone === 'negative') return 'bg-rose-50 text-rose-900 font-bold dark:bg-rose-950/55 dark:text-rose-100';
-  if (row.tone === 'warning') return 'bg-amber-50 text-amber-900 font-bold dark:bg-amber-950/55 dark:text-amber-100';
-  if (row.tone === 'forecast') return 'bg-sky-50 text-sky-900 font-semibold dark:bg-sky-950/50 dark:text-sky-100';
-  if (row.tone === 'projected') return 'bg-cyan-50 text-cyan-900 font-bold dark:bg-cyan-950/50 dark:text-cyan-100';
-  if (row.tone === 'balance') return 'bg-slate-50 text-slate-900 font-bold dark:bg-slate-800 dark:text-slate-100';
-  if (row.tone === 'result') return 'bg-blue-50 text-blue-950 font-bold dark:bg-blue-950/55 dark:text-blue-100';
-  if (row.tone === 'capital') return 'bg-violet-50 text-violet-900 font-bold dark:bg-violet-950/50 dark:text-violet-100';
-  if (row.tone === 'attention') return 'bg-orange-50 text-orange-900 font-semibold dark:bg-orange-950/50 dark:text-orange-100';
-  if (row.tone === 'account') return 'bg-white text-slate-800 font-semibold dark:bg-slate-900 dark:text-slate-200';
-  if (row.tone === 'counterparty') return 'bg-slate-50 text-slate-800 font-semibold dark:bg-slate-900/85 dark:text-slate-300';
-  if (row.tone === 'total') return 'bg-slate-100 text-slate-950 font-bold dark:bg-slate-800 dark:text-slate-50';
+    ? 'bg-white text-rose-800 font-bold dark:bg-slate-950 dark:text-rose-300'
+    : 'bg-white text-rose-700 dark:bg-slate-950 dark:text-rose-300';
+  if (row.tone === 'positive') return 'bg-white text-emerald-800 font-bold dark:bg-slate-950 dark:text-emerald-300';
+  if (row.tone === 'negative') return 'bg-white text-rose-800 font-bold dark:bg-slate-950 dark:text-rose-300';
+  if (row.tone === 'warning') return 'bg-white text-amber-800 font-bold dark:bg-slate-950 dark:text-amber-300';
+  if (row.tone === 'forecast') return 'bg-white text-sky-800 font-semibold dark:bg-slate-950 dark:text-sky-300';
+  if (row.tone === 'projected') return 'bg-white text-cyan-800 font-bold dark:bg-slate-950 dark:text-cyan-300';
+  if (row.tone === 'balance') return 'bg-white text-slate-900 font-bold dark:bg-slate-950 dark:text-slate-100';
+  if (row.tone === 'result') return 'bg-white text-blue-800 font-bold dark:bg-slate-950 dark:text-blue-300';
+  if (row.tone === 'capital') return 'bg-white text-violet-800 font-bold dark:bg-slate-950 dark:text-violet-300';
+  if (row.tone === 'attention') return 'bg-white text-orange-800 font-semibold dark:bg-slate-950 dark:text-orange-300';
+  if (row.tone === 'account') return 'bg-white text-slate-800 font-semibold dark:bg-slate-950 dark:text-slate-200';
+  if (row.tone === 'counterparty') return 'bg-white text-slate-800 font-semibold dark:bg-slate-950 dark:text-slate-300';
+  if (row.tone === 'total') return 'bg-white text-slate-950 font-bold dark:bg-slate-950 dark:text-slate-50';
   return 'bg-white text-slate-600 dark:bg-slate-950 dark:text-slate-300';
 }
 
 function valueClass(value, row) {
+  if (row?.key === 'final:realized' || row?.key === 'result:realized' || row?.key === 'result:consolidated') return 'text-blue-800 dark:text-blue-300';
+  if (row?.key === 'final:forecast' || row?.key === 'result:forecast') return 'text-amber-800 dark:text-amber-300';
+  if (row?.key === 'final:projected' || row?.key === 'balance:projected') return 'text-cyan-800 dark:text-cyan-300';
   if (row?.tone === 'total') return value < 0 ? 'text-rose-700 dark:text-rose-300' : value > 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-500 dark:text-slate-400';
   if (row?.tone === 'negative' && value !== 0) return 'text-rose-700 dark:text-rose-300';
   if ((row?.key === 'section:expense' || row?.groupKey === 'section:expense') && value !== 0) return 'text-rose-700 dark:text-rose-300';
