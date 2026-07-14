@@ -63,7 +63,7 @@ const MAIN_SECTIONS = {
   balance: { key: 'balance', code: '4', label: 'Saldos', tone: 'balance' },
 };
 
-const WEEKDAY_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
+const WEEKDAY_LABELS = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
 
 function money(value) {
   const parsed = Number(value || 0);
@@ -1480,6 +1480,7 @@ function rowClass(row) {
 function valueClass(value, row) {
   if (row?.tone === 'total') return value < 0 ? 'text-rose-700 dark:text-rose-300' : 'text-emerald-700 dark:text-emerald-300';
   if (row?.tone === 'negative' && value !== 0) return 'text-rose-700 dark:text-rose-300';
+  if ((row?.key === 'section:expense' || row?.groupKey === 'section:expense') && value !== 0) return 'text-rose-700 dark:text-rose-300';
   if (row?.tone === 'forecast' && value !== 0) return 'text-blue-700 dark:text-blue-300';
   if (row?.tone === 'projected' && value !== 0) return value < 0 ? 'text-rose-700 dark:text-rose-300' : 'text-indigo-700 dark:text-indigo-300';
   if (row?.tone === 'balance' && value !== 0) return value < 0 ? 'text-rose-700 dark:text-rose-300' : 'text-slate-800 dark:text-slate-100';
@@ -1487,6 +1488,11 @@ function valueClass(value, row) {
   if (value < 0) return 'text-rose-700 dark:text-rose-300';
   if (value > 0) return 'text-emerald-700 dark:text-emerald-300';
   return 'text-slate-400 dark:text-slate-500';
+}
+
+function rowLabelWeightClass(row) {
+  if (row?.hasChildren || row?.nodeKind === 'group' || row?.nodeKind === 'total') return 'font-bold';
+  return 'font-normal';
 }
 
 function StatBlock({ icon: Icon, label, value, hint, tone = 'slate' }) {
@@ -1847,7 +1853,7 @@ export default function OperationalCashFlowModel({ consolidation, clinicId, load
             ) : visibleRows.map((row) => (
               <tr key={row.key} className={`${rowClass(row)} border-b border-slate-100 hover:bg-slate-50/80 dark:border-slate-800 dark:hover:bg-slate-800/70`}>
                 <td className={`${rowClass(row)} sticky left-0 z-10 border-r border-slate-100 px-3 py-2 align-top dark:border-slate-800`} style={{ paddingLeft: `${12 + row.level * 18}px` }}>
-                  <div className="flex items-start gap-2 font-semibold leading-5">
+                  <div className={`flex items-start gap-2 leading-5 ${rowLabelWeightClass(row)}`}>
                     {row.hasChildren ? (
                       <button
                         type="button"
@@ -1864,7 +1870,7 @@ export default function OperationalCashFlowModel({ consolidation, clinicId, load
                       <button
                         type="button"
                         onClick={() => navigate(row.actionPath)}
-                        className="inline-flex items-start gap-1.5 text-left font-semibold text-blue-700 underline-offset-2 hover:text-blue-900 hover:underline dark:text-blue-300 dark:hover:text-blue-200"
+                        className={`inline-flex items-start gap-1.5 text-left ${rowLabelWeightClass(row)} text-blue-700 underline-offset-2 hover:text-blue-900 hover:underline dark:text-blue-300 dark:hover:text-blue-200`}
                         title="Abrir conta para editar e classificar"
                       >
                         <span>{row.label}</span>
