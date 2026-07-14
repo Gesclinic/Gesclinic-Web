@@ -1542,7 +1542,7 @@ function ControlGroup({ label, value, options, onChange }) {
             key={option.value}
             type="button"
             onClick={() => onChange(option.value)}
-            className={`rounded-md px-2 py-1 text-[11px] font-semibold transition ${
+            className={`whitespace-nowrap rounded-md px-1.5 py-1 text-[10px] font-semibold transition ${
               value === option.value
                 ? 'bg-slate-900 text-white shadow-sm dark:bg-blue-500 dark:text-white'
                 : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white'
@@ -1556,7 +1556,40 @@ function ControlGroup({ label, value, options, onChange }) {
   );
 }
 
-export default function OperationalCashFlowModel({ consolidation, clinicId, loading = false, accountingMode = 'realized' }) {
+function toDateInputValue(value) {
+  if (!value) return '';
+  if (typeof value === 'string') return formatFullDate(value.split('T')[0]);
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return formatFullDate(toIsoDate(value));
+  return '';
+}
+
+function formatDateMask(value) {
+  const digits = String(value || '').replace(/\D/g, '').slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+}
+
+function parseBrazilDate(value) {
+  const digits = String(value || '').replace(/\D/g, '');
+  if (digits.length !== 8) return '';
+  const day = Number(digits.slice(0, 2));
+  const month = Number(digits.slice(2, 4));
+  const year = Number(digits.slice(4, 8));
+  const isoDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  const parsed = parseLocalDate(isoDate);
+  if (!parsed || parsed.getFullYear() !== year || parsed.getMonth() + 1 !== month || parsed.getDate() !== day) return '';
+  return isoDate;
+}
+
+export default function OperationalCashFlowModel({
+  consolidation,
+  clinicId,
+  loading = false,
+  accountingMode = 'realized',
+  dateRange = null,
+  onDateRangeChange = null,
+}) {
   const navigate = useNavigate();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
@@ -1572,6 +1605,13 @@ export default function OperationalCashFlowModel({ consolidation, clinicId, load
   const [tableScenario, setTableScenario] = useState(SCENARIO_VALUES.includes(scenarioParam) ? scenarioParam : 'consolidated');
   const [tableDisplay, setTableDisplay] = useState(DISPLAY_VALUES.includes(displayParam) ? displayParam : 'income_expense');
   const [expandedRows, setExpandedRows] = useState(() => new Set());
+  const [dateStart, setDateStart] = useState(() => toDateInputValue(dateRange?.start));
+  const [dateEnd, setDateEnd] = useState(() => toDateInputValue(dateRange?.end));
+
+  useEffect(() => {
+    setDateStart(toDateInputValue(dateRange?.start));
+    setDateEnd(toDateInputValue(dateRange?.end));
+  }, [dateRange?.start, dateRange?.end]);
 
   useEffect(() => {
     let active = true;
@@ -1762,6 +1802,20 @@ export default function OperationalCashFlowModel({ consolidation, clinicId, load
     updateOperationalUrl({ depth: 'groups', expand: null });
   };
 
+  const normalizedDateStart = parseBrazilDate(dateStart);
+  const normalizedDateEnd = parseBrazilDate(dateEnd);
+
+  const applyDateRange = () => {
+    if (!onDateRangeChange || !normalizedDateStart || !normalizedDateEnd) return;
+    onDateRangeChange(normalizedDateStart, normalizedDateEnd);
+  };
+
+  const clearDateRange = () => {
+    setDateStart('');
+    setDateEnd('');
+    onDateRangeChange?.(null, null);
+  };
+
   if (loading) {
     return (
       <Card className="mb-6 border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
@@ -1808,7 +1862,7 @@ export default function OperationalCashFlowModel({ consolidation, clinicId, load
       ) : null}
 
       <div className="mb-3 rounded-xl border border-slate-200 bg-slate-100/70 p-1.5 shadow-inner dark:border-slate-700 dark:bg-slate-900/70">
-        <div className="grid gap-2 xl:grid-cols-[1fr_1.35fr_1.2fr_.9fr_auto]">
+        <div className="grid gap-2 lg:grid-cols-2 xl:grid-cols-[205px_285px_230px_170px_184px_96px]">
           <ControlGroup label="Visualizacao" value={tablePeriodicity} options={PERIODICITY_OPTIONS} onChange={setPeriodicity} />
           <ControlGroup label="Cenario" value={tableScenario} options={SCENARIO_OPTIONS} onChange={setScenario} />
           <ControlGroup label="Exibir" value={tableDisplay} options={DISPLAY_OPTIONS} onChange={setDisplay} />
@@ -1822,11 +1876,56 @@ export default function OperationalCashFlowModel({ consolidation, clinicId, load
             ]}
             onChange={setDepth}
           />
-          <div className="flex flex-wrap items-end gap-1.5 rounded-lg border border-slate-200 bg-white p-1.5 shadow-sm xl:justify-end dark:border-slate-700 dark:bg-slate-900">
+          <div className="min-w-0 rounded-lg border border-slate-200 bg-white p-1 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+            <p className="mb-0.5 px-1 text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Periodo</p>
+            <div className="grid gap-1">
+              <div className="grid grid-cols-[86px_86px] gap-1">
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="dd/mm/aaaa"
+                aria-label="Data inicial"
+                maxLength={10}
+                value={dateStart}
+                onChange={(event) => setDateStart(formatDateMask(event.target.value))}
+                className="h-6 w-[86px] min-w-0 rounded-md border border-slate-300 bg-white px-1.5 text-[10px] font-semibold text-slate-700 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              />
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="dd/mm/aaaa"
+                aria-label="Data final"
+                maxLength={10}
+                value={dateEnd}
+                onChange={(event) => setDateEnd(formatDateMask(event.target.value))}
+                className="h-6 w-[86px] min-w-0 rounded-md border border-slate-300 bg-white px-1.5 text-[10px] font-semibold text-slate-700 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              />
+              </div>
+              <div className="grid grid-cols-[70px_70px] gap-1">
+              <button
+                type="button"
+                onClick={applyDateRange}
+                disabled={!normalizedDateStart || !normalizedDateEnd || !onDateRangeChange}
+                className="inline-flex h-6 w-[70px] items-center justify-center rounded-md border border-blue-600 bg-blue-600 px-2 text-[10px] font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-100 disabled:text-slate-400 dark:disabled:border-slate-700 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
+              >
+                Aplicar
+              </button>
+              <button
+                type="button"
+                onClick={clearDateRange}
+                disabled={!dateStart && !dateEnd}
+                className="inline-flex h-6 w-[70px] items-center justify-center rounded-md border border-slate-300 bg-white px-2 text-[10px] font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white dark:disabled:text-slate-500"
+              >
+                Limpar
+              </button>
+              </div>
+            </div>
+          </div>
+          <div className="flex min-w-0 flex-col justify-end gap-1.5 rounded-lg border border-slate-200 bg-white p-1.5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
             <button
               type="button"
               onClick={expandAll}
-              className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white"
+              className="inline-flex h-7 w-[86px] items-center justify-center gap-1 rounded-md border border-slate-300 bg-white px-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white"
             >
               <ChevronDown className="h-3.5 w-3.5" />
               Expandir
@@ -1834,7 +1933,7 @@ export default function OperationalCashFlowModel({ consolidation, clinicId, load
             <button
               type="button"
               onClick={collapseAll}
-              className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white"
+              className="inline-flex h-7 w-[86px] items-center justify-center gap-1 rounded-md border border-slate-300 bg-white px-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white"
             >
               <ChevronRight className="h-3.5 w-3.5" />
               Recolher

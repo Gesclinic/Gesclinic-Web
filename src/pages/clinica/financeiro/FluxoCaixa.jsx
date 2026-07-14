@@ -434,6 +434,17 @@ export default function FluxoCaixaPage() {
     setLoading(true);
   }
 
+  function handleOperationalDateRangeChange(start, end) {
+    if (start && end) {
+      setPeriod('custom');
+      setCustomDateRange({ start: new Date(`${start}T00:00:00`), end: new Date(`${end}T00:00:00`) });
+    } else {
+      setPeriod('30d');
+      setCustomDateRange(null);
+    }
+    setLoading(true);
+  }
+
   async function handleRefresh() {
     setRefreshing(true);
     await loadData();
@@ -781,7 +792,14 @@ export default function FluxoCaixaPage() {
             {/* 2. Operacional */}
             {activeSection === 'operational' && (
               <ErrorBoundary>
-                <OperationalCashFlowModel consolidation={consolidation} clinicId={clinicId} loading={loading} accountingMode={accountingMode} />
+                <OperationalCashFlowModel
+                  consolidation={consolidation}
+                  clinicId={clinicId}
+                  loading={loading}
+                  accountingMode={accountingMode}
+                  dateRange={customDateRange}
+                  onDateRangeChange={handleOperationalDateRangeChange}
+                />
               </ErrorBoundary>
             )}
 
