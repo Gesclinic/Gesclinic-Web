@@ -1639,7 +1639,17 @@ export default function OperationalCashFlowModel({ consolidation, clinicId, load
     navigate(`${location.pathname}?${params.toString()}${location.hash || ''}`, { replace: true });
   };
 
-  const getAccountDepthExpandedRows = () => new Set([...model.groupKeys, ...model.accountKeys]);
+  const getAccountDepthExpandedRows = () => new Set(
+    model.rows
+      .filter((row) => row.hasChildren && (row.nodeKind === 'group' || row.level <= 1))
+      .map((row) => row.key)
+  );
+
+  const getDetailsDepthExpandedRows = () => new Set(
+    model.rows
+      .filter((row) => row.hasChildren)
+      .map((row) => row.key)
+  );
 
   const setPeriodicity = (periodicity) => {
     setTablePeriodicity(periodicity);
@@ -1678,12 +1688,12 @@ export default function OperationalCashFlowModel({ consolidation, clinicId, load
     }
 
     if (viewDepth === 'details') {
-      setExpandedRows(new Set(model.expandableKeys));
+      setExpandedRows(getDetailsDepthExpandedRows());
       return;
     }
 
     setExpandedRows(getAccountDepthExpandedRows());
-  }, [model.accountKeys.join('|'), model.expandableKeys.join('|'), model.groupKeys.join('|'), viewDepth]);
+  }, [model.rows, viewDepth]);
 
   const setDepth = (depth) => {
     setViewDepth(depth);
@@ -1697,7 +1707,7 @@ export default function OperationalCashFlowModel({ consolidation, clinicId, load
       updateOperationalUrl({ depth, expand: null });
       return;
     }
-    setExpandedRows(new Set(model.expandableKeys));
+    setExpandedRows(getDetailsDepthExpandedRows());
     updateOperationalUrl({ depth, expand: 'all' });
   };
 
@@ -1722,7 +1732,7 @@ export default function OperationalCashFlowModel({ consolidation, clinicId, load
 
   const expandAll = () => {
     setViewDepth('details');
-    setExpandedRows(new Set(model.expandableKeys));
+    setExpandedRows(getDetailsDepthExpandedRows());
     updateOperationalUrl({ depth: 'details', expand: 'all' });
   };
 

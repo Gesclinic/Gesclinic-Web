@@ -68,6 +68,7 @@ const OPERATIONAL_DEFAULT_PARAMS = {
 };
 
 const OPERATIONAL_PARAM_OPTIONS = {
+  depth: ['groups', 'accounts', 'details'],
   periodicity: ['daily', 'weekly', 'monthly', 'yearly'],
   scenario: ['realized', 'forecast', 'projected', 'consolidated'],
   display: ['income_expense', 'result', 'balances'],
@@ -475,7 +476,7 @@ export default function FluxoCaixaPage() {
         }
       });
 
-      if (nextParams.has('expand')) {
+      if (nextParams.get('depth') !== 'details' && nextParams.has('expand')) {
         nextParams.delete('expand');
         changed = true;
       }
