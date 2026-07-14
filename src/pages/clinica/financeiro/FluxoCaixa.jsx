@@ -62,7 +62,7 @@ import {
 const OPERATIONAL_DEFAULT_PARAMS = {
   section: 'operational',
   depth: 'groups',
-  periodicity: 'monthly',
+  periodicity: 'yearly',
   scenario: 'consolidated',
   display: 'income_expense',
 };
