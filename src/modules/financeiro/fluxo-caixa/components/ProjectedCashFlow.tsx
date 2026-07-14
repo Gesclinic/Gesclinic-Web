@@ -11,7 +11,7 @@
  *  - financial_accounts (saldo atual)
  */
 import React, { useCallback } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { ChevronDown, RefreshCw } from 'lucide-react';
 import { useProjectedCashFlow, ForecastDays } from '../hooks/useProjectedCashFlow';
 import ProjectionKpiCards from './ProjectionKpiCards';
 import CashCurveChart from './CashCurveChart';
@@ -75,9 +75,9 @@ export default function ProjectedCashFlow({ externalStartDate, externalEndDate, 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Fluxo de Caixa</p>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white">Projeção Financeira Enterprise</h2>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">Projeção Financeira</h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Integra AR · AP · Faturamento · Repasse Médico em tempo real. Usa o período selecionado no topo; cenários são próprios da projeção.
+            Integra recebíveis, contas a pagar, faturamento pendente, repasses e saldo das contas financeiras. Títulos vencidos entram no primeiro dia da janela projetada.
           </p>
         </div>
         <button
@@ -140,55 +140,79 @@ export default function ProjectedCashFlow({ externalStartDate, externalEndDate, 
         </div>
       )}
 
-      {/* Alertas */}
-      <ProjectionAlerts projection={projection} loading={loading} />
+      <ProjectionDisclosure title="Alertas e KPIs" subtitle="Leitura executiva da projeção atual.">
+        <div className="space-y-4">
+          <ProjectionAlerts projection={projection} loading={loading} />
+          <ProjectionKpiCards kpis={kpis} loading={loading} />
+        </div>
+      </ProjectionDisclosure>
 
-      {/* KPIs */}
-      <ProjectionKpiCards kpis={kpis} loading={loading} />
+      <ProjectionDisclosure title="Curva de caixa" subtitle="Evolução prevista do saldo acumulado no período.">
+        <CashCurveChart data={chartData} loading={loading} />
+      </ProjectionDisclosure>
 
-      {/* Gráfico curva de caixa */}
-      <CashCurveChart data={chartData} loading={loading} />
+      <ProjectionDisclosure title="Cenários e forecast" subtitle="Comparativo conservador, realista e otimista com horizonte de previsão." defaultOpen={false}>
+        <div className="space-y-4">
+          <ScenarioPanel
+            comparison={scenarioComparison}
+            activeScenario={scenario}
+            onScenarioChange={setScenario}
+          />
 
-      {/* Cenários */}
-      <ScenarioPanel
-        comparison={scenarioComparison}
-        activeScenario={scenario}
-        onScenarioChange={setScenario}
-      />
+          <ForecastPanel
+            horizon={forecastHorizon as ForecastDays}
+            onHorizonChange={(h) => setForecastHorizon(h as ForecastDays)}
+            forecast={forecast}
+            loading={loading}
+          />
+        </div>
+      </ProjectionDisclosure>
 
-      {/* Forecast */}
-      <ForecastPanel
-        horizon={forecastHorizon as ForecastDays}
-        onHorizonChange={(h) => setForecastHorizon(h as ForecastDays)}
-        forecast={forecast}
-        loading={loading}
-      />
-
-      {/* Breakdowns */}
       {projection && (
-        <BreakdownTables
-          byConvenio={projection.byConvenio}
-          byDoctor={projection.byDoctor}
-          byCostCenter={projection.byCostCenter}
+        <ProjectionDisclosure title="Detalhamento por origem" subtitle="Convênio, médico/repasse e centro de custo." defaultOpen={false}>
+          <BreakdownTables
+            byConvenio={projection.byConvenio}
+            byDoctor={projection.byDoctor}
+            byCostCenter={projection.byCostCenter}
+            loading={loading}
+          />
+        </ProjectionDisclosure>
+      )}
+
+      <ProjectionDisclosure title="Simulador" subtitle="Inclua hipóteses de entradas ou saídas recorrentes." defaultOpen={false}>
+        <FinancialSimulator
+          simulations={simulations}
+          onAdd={handleAddSim}
+          onRemove={removeSimulation}
+          onClear={clearSimulations}
+          onRun={reload}
           loading={loading}
         />
-      )}
+      </ProjectionDisclosure>
 
-      {/* Simulador */}
-      <FinancialSimulator
-        simulations={simulations}
-        onAdd={handleAddSim}
-        onRemove={removeSimulation}
-        onClear={clearSimulations}
-        onRun={reload}
-        loading={loading}
-      />
-
-      {/* Tabela diária resumida */}
       {projection && !loading && (
-        <DailyProjectionTable days={projection.days} />
+        <ProjectionDisclosure title="Tabela diária" subtitle="Conferência dia a dia dos valores projetados." defaultOpen={false}>
+          <DailyProjectionTable days={projection.days} />
+        </ProjectionDisclosure>
       )}
     </div>
+  );
+}
+
+function ProjectionDisclosure({ title, subtitle, children, defaultOpen = false }: { title: string; subtitle?: string; children: React.ReactNode; defaultOpen?: boolean }) {
+  return (
+    <details open={defaultOpen} className="group rounded-xl border border-slate-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{title}</h3>
+          {subtitle ? <p className="mt-0.5 text-xs text-slate-500 dark:text-gray-400">{subtitle}</p> : null}
+        </div>
+        <ChevronDown className="h-4 w-4 shrink-0 text-slate-500 transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="border-t border-slate-100 p-4 dark:border-gray-800">
+        {children}
+      </div>
+    </details>
   );
 }
 

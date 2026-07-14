@@ -5,7 +5,7 @@ import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 import { useClinicContext } from '@/contexts/useClinicContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, RefreshCw, Download, BarChart3, Activity, Table2, Sparkles } from 'lucide-react';
+import { AlertCircle, RefreshCw, Download, BarChart3, Activity, Table2, Sparkles, ChevronDown } from 'lucide-react';
 
 // UI Components
 import { DashboardGridSkeleton, CardSkeleton, ChartSkeleton } from '@/components/ui/skeleton';
@@ -335,7 +335,11 @@ export default function FluxoCaixaPage() {
     + Number(receivableWindows['7d']?.value || 0)
     + Number(receivableWindows['30d']?.value || 0);
   const payable30d = payables.reduce((sum, bill) => sum + getOpenPayableBalance(bill), 0);
-  const projectedBalance = projection?.[0]?.saldo_projetado || 0;
+  const projectedBalance = React.useMemo(() => {
+    if (!Array.isArray(projection) || projection.length === 0) return 0;
+    const lastProjection = projection[projection.length - 1] || {};
+    return Number(lastProjection.saldo_projetado ?? lastProjection.projected_balance ?? lastProjection.balance ?? 0);
+  }, [projection]);
 
   // Health scores (calculados do dashboardDataService)
   const healthScores = metrics ? {
@@ -666,50 +670,59 @@ export default function FluxoCaixaPage() {
             )}
 
             {activeSection === 'overview' && (
-              <ErrorBoundary>
-                <CashFlowChartPanel dailyData={modeDailyData} projection={projection} loading={loading} />
-              </ErrorBoundary>
-            )}
-
-            {activeSection === 'overview' && (
-              <ErrorBoundary>
-                <ExecutiveSummary
-                  summary={modeSummary}
-                  receivable30d={receivable30d}
-                  payable30d={payable30d}
-                  projectedBalance={projectedBalance}
-                  receivables={receivables}
-                  loading={loading}
-                />
-              </ErrorBoundary>
-            )}
-
-            {activeSection === 'overview' && (
-              <div className="grid gap-3 xl:grid-cols-2">
+              <DashboardDisclosure title="Evolucao do caixa" subtitle="Entradas, saidas e saldo no periodo selecionado.">
                 <ErrorBoundary>
-                  <ReceivableSummary receivables={modeReceivables} loading={loading} />
+                  <CashFlowChartPanel dailyData={modeDailyData} projection={projection} loading={loading} />
                 </ErrorBoundary>
-
-                <ErrorBoundary>
-                  <PayableSummary payables={modePayables} loading={loading} />
-                </ErrorBoundary>
-              </div>
+              </DashboardDisclosure>
             )}
 
             {activeSection === 'overview' && (
-              <ErrorBoundary>
-                <FinancialAlertsPanel
-                  summary={modeSummary}
-                  receivables={modeReceivables}
-                  payables={modePayables}
-                  previousSummary={previousSummary}
-                  loading={loading}
-                />
-              </ErrorBoundary>
+              <DashboardDisclosure title="Resumo executivo e acoes" subtitle="Leitura operacional do periodo, proximos vencimentos e recomendacoes.">
+                <ErrorBoundary>
+                  <ExecutiveSummary
+                    summary={modeSummary}
+                    receivable30d={receivable30d}
+                    payable30d={payable30d}
+                    projectedBalance={projectedBalance}
+                    receivables={receivables}
+                    loading={loading}
+                  />
+                </ErrorBoundary>
+              </DashboardDisclosure>
+            )}
+
+            {activeSection === 'overview' && (
+              <DashboardDisclosure title="Contas abertas" subtitle="Janelas de recebimentos e pagamentos para conferencia." defaultOpen={false}>
+                <div className="grid gap-3 xl:grid-cols-2">
+                  <ErrorBoundary>
+                    <ReceivableSummary receivables={modeReceivables} loading={loading} />
+                  </ErrorBoundary>
+
+                  <ErrorBoundary>
+                    <PayableSummary payables={modePayables} loading={loading} />
+                  </ErrorBoundary>
+                </div>
+              </DashboardDisclosure>
+            )}
+
+            {activeSection === 'overview' && (
+              <DashboardDisclosure title="Alertas financeiros" subtitle="Riscos e avisos gerados a partir dos lancamentos do periodo." defaultOpen={false}>
+                <ErrorBoundary>
+                  <FinancialAlertsPanel
+                    summary={modeSummary}
+                    receivables={modeReceivables}
+                    payables={modePayables}
+                    previousSummary={previousSummary}
+                    loading={loading}
+                  />
+                </ErrorBoundary>
+              </DashboardDisclosure>
             )}
 
             {activeSection === 'overview' && reconciliation && (
-              <Card className="mb-6 border-slate-300 bg-white p-5 dark:border-gray-700 dark:bg-gray-900">
+              <DashboardDisclosure title="Reconciliação entre módulos" subtitle="Comparativo tecnico para conferir se dashboard, consolidacao e lancamentos estao alinhados." defaultOpen={false}>
+              <Card className="border-slate-300 bg-white p-5 dark:border-gray-700 dark:bg-gray-900">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                   <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Painel de Reconciliação entre Módulos</h3>
                   <span className="text-xs text-gray-500 dark:text-gray-400">Base: {accountingMode === 'accrual' ? 'Competência selecionada' : 'Realizado selecionado'}</span>
@@ -787,6 +800,7 @@ export default function FluxoCaixaPage() {
                   </table>
                 </div>
               </Card>
+              </DashboardDisclosure>
             )}
 
             {/* 2. Operacional */}
@@ -805,7 +819,7 @@ export default function FluxoCaixaPage() {
 
             {/* 3. Análises avançadas */}
             {activeSection === 'analytics' && (
-              <div className="space-y-6 mt-2">
+              <div className="space-y-4 mt-2">
                 <div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900">
                   <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                     <Sparkles className="h-6 w-6 text-violet-600" />
@@ -816,42 +830,52 @@ export default function FluxoCaixaPage() {
                   </p>
                 </div>
 
-                <ErrorBoundary>
-                  <GesclinicInsights
-                    summary={modeSummary}
-                    receivables={modeReceivables}
-                    payables={modePayables}
-                    previousSummary={previousSummary}
-                    loading={loading}
-                  />
-                </ErrorBoundary>
+                <DashboardDisclosure title="Insights e saude financeira" subtitle="Resumo executivo, riscos e indicadores principais.">
+                  <div className="space-y-4">
+                    <ErrorBoundary>
+                      <GesclinicInsights
+                        summary={modeSummary}
+                        receivables={modeReceivables}
+                        payables={modePayables}
+                        previousSummary={previousSummary}
+                        loading={loading}
+                      />
+                    </ErrorBoundary>
 
-                <ErrorBoundary>
-                  <ClinicCockpit
-                    summary={modeSummary}
-                    receivables={modeReceivables}
-                    payables={modePayables}
-                    healthScores={modeHealthScores}
-                    loading={loading}
-                  />
-                </ErrorBoundary>
+                    <ErrorBoundary>
+                      <ClinicCockpit
+                        summary={modeSummary}
+                        receivables={modeReceivables}
+                        payables={modePayables}
+                        healthScores={modeHealthScores}
+                        loading={loading}
+                      />
+                    </ErrorBoundary>
+                  </div>
+                </DashboardDisclosure>
 
-                <ErrorBoundary>
-                  <CovenantRadar receivables={modeReceivables} loading={loading} />
-                </ErrorBoundary>
+                <DashboardDisclosure title="Convênios e rentabilidade" subtitle="Radar de recebimentos por convênio e leitura de margem." defaultOpen={false}>
+                  <div className="space-y-4">
+                    <ErrorBoundary>
+                      <CovenantRadar receivables={modeReceivables} loading={loading} />
+                    </ErrorBoundary>
 
-                <ErrorBoundary>
-                  <ProfitMap dailyData={modeDailyData} payables={modePayables} loading={loading} />
-                </ErrorBoundary>
+                    <ErrorBoundary>
+                      <ProfitMap dailyData={modeDailyData} payables={modePayables} loading={loading} />
+                    </ErrorBoundary>
+                  </div>
+                </DashboardDisclosure>
 
-                <ErrorBoundary>
-                  <PerformanceRanking
-                    receivables={modeReceivables}
-                    payables={modePayables}
-                    dailyData={modeDailyData}
-                    loading={loading}
-                  />
-                </ErrorBoundary>
+                <DashboardDisclosure title="Ranking de desempenho" subtitle="Comparativos e listas para analise aprofundada." defaultOpen={false}>
+                  <ErrorBoundary>
+                    <PerformanceRanking
+                      receivables={modeReceivables}
+                      payables={modePayables}
+                      dailyData={modeDailyData}
+                      loading={loading}
+                    />
+                  </ErrorBoundary>
+                </DashboardDisclosure>
               </div>
             )}
 
@@ -872,5 +896,22 @@ export default function FluxoCaixaPage() {
         />
       )}
     </ErrorBoundary>
+  );
+}
+
+function DashboardDisclosure({ title, subtitle, children, defaultOpen = false }) {
+  return (
+    <details open={defaultOpen} className="group mb-4 rounded-lg border border-slate-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{title}</h3>
+          {subtitle ? <p className="mt-0.5 text-xs text-slate-500 dark:text-gray-400">{subtitle}</p> : null}
+        </div>
+        <ChevronDown className="h-4 w-4 shrink-0 text-slate-500 transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="border-t border-slate-100 p-4 dark:border-gray-800">
+        {children}
+      </div>
+    </details>
   );
 }

@@ -70,13 +70,6 @@ export default function ExecutiveSummary(props) {
 
           <div className="space-y-3 text-sm">
             <div>
-              <p className="text-gray-600 dark:text-gray-400">Saldo Atual</p>
-              <p className={`text-lg font-bold number-transition ${summary.net_balance >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
-                {formatCurrency(summary.net_balance)}
-              </p>
-            </div>
-
-            <div>
               <p className="text-gray-600 dark:text-gray-400">Resultado Período</p>
               <div className="flex items-center gap-2 mt-1">
                 <p className={`text-lg font-bold number-transition ${summary.net_balance >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
@@ -88,6 +81,20 @@ export default function ExecutiveSummary(props) {
                   <TrendingDown className="w-4 h-4 text-red-600 dark:text-red-400" />
                 )}
               </div>
+            </div>
+
+            <div>
+              <p className="text-gray-600 dark:text-gray-400">Entradas Realizadas</p>
+              <p className="text-lg font-bold text-green-700 dark:text-green-400 number-transition">
+                {formatCurrency(summary.total_inflows)}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-gray-600 dark:text-gray-400">Saídas Realizadas</p>
+              <p className="text-lg font-bold text-red-700 dark:text-red-400 number-transition">
+                {formatCurrency(summary.total_outflows)}
+              </p>
             </div>
 
             <div>

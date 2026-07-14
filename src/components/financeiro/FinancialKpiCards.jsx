@@ -14,14 +14,13 @@ import { calculateVariation, formatCurrency } from '@/lib/financialCalculations'
  * 💳 KPI Cards - 8 cards principais do painel
  * 
  * Cards exibidos:
- * 1. Saldo Atual
- * 2. Entradas Realizadas
- * 3. Saídas Realizadas
- * 4. Resultado do Período
- * 5. A Vencer (30 dias)
- * 6. A Pagar (30 dias)
- * 7. Saldo Projetado (30 dias)
- * 8. Liquidez / Dias Cobertura
+ * 1. Entradas realizadas
+ * 2. Saidas realizadas
+ * 3. Resultado do periodo
+ * 4. A vencer (30 dias)
+ * 5. A pagar (30 dias)
+ * 6. Saldo projetado (30 dias)
+ * 7. Liquidez / dias cobertura
  */
 export default function FinancialKpiCards(props) {
   const {
@@ -75,17 +74,8 @@ export default function FinancialKpiCards(props) {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      {/* Card 1: Saldo Atual */}
-      <KpiCard
-        title="Saldo Atual"
-        value={summary.net_balance}
-        variation={variations.balance}
-        icon={<DollarSign className="w-5 h-5" />}
-        color="blue"
-      />
-
-      {/* Card 2: Entradas Realizadas */}
+    <div className="mb-4 grid grid-cols-1 items-start gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+      {/* Card 1: Entradas Realizadas */}
       <KpiCard
         title="Entradas Realizadas"
         value={summary.total_inflows}
@@ -94,7 +84,7 @@ export default function FinancialKpiCards(props) {
         color="green"
       />
 
-      {/* Card 3: Saídas Realizadas */}
+      {/* Card 2: Saídas Realizadas */}
       <KpiCard
         title="Saídas Realizadas"
         value={summary.total_outflows}
@@ -103,7 +93,7 @@ export default function FinancialKpiCards(props) {
         color="red"
       />
 
-      {/* Card 4: Resultado do Período */}
+      {/* Card 3: Resultado do Período */}
       <KpiCard
         title="Resultado do Período"
         value={summary.net_balance}
@@ -112,7 +102,7 @@ export default function FinancialKpiCards(props) {
         color={summary.net_balance >= 0 ? 'green' : 'red'}
       />
 
-      {/* Card 5: A Vencer 30d */}
+      {/* Card 4: A Vencer 30d */}
       <KpiCard
         title="A Vencer (30d)"
         value={receivable30d}
@@ -121,7 +111,7 @@ export default function FinancialKpiCards(props) {
         color="blue"
       />
 
-      {/* Card 6: A Pagar 30d */}
+      {/* Card 5: A Pagar 30d */}
       <KpiCard
         title="A Pagar (30d)"
         value={payable30d}
@@ -130,7 +120,7 @@ export default function FinancialKpiCards(props) {
         color="orange"
       />
 
-      {/* Card 7: Saldo Projetado */}
+      {/* Card 6: Saldo Projetado */}
       <KpiCard
         title="Saldo Projetado (30d)"
         value={projectedBalance}
@@ -139,23 +129,25 @@ export default function FinancialKpiCards(props) {
         color={projectedBalance >= 0 ? 'green' : 'red'}
       />
 
-      {/* Card 8: Liquidez / Dias de Cobertura */}
-      <Card className="p-4 border-l-4 border-purple-500 bg-purple-50 dark:bg-purple-900/10 animate-slide-up card-hover transition-all duration-300">
-        <div className="flex items-start justify-between mb-2">
-          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Saúde Financeira</h3>
-          <Activity className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+      {/* Card 7: Liquidez / Dias de Cobertura */}
+      <Card className="min-h-[64px] border-l-4 border-purple-500 bg-purple-50 p-2 dark:bg-purple-900/10 animate-slide-up card-hover transition-all duration-300">
+        <div className="mb-1 flex items-start justify-between gap-2">
+          <h3 className="text-[11px] font-semibold leading-tight text-gray-700 dark:text-gray-300">Saúde Financeira</h3>
+          <Activity className="h-4 w-4 text-purple-600 dark:text-purple-400" />
         </div>
-        <div className="mb-3">
-          <p className="text-xs text-gray-600 dark:text-gray-400">Liquidez</p>
-          <p className="text-lg font-bold text-gray-900 dark:text-white number-transition">
-            {summary.liquidity_ratio.toFixed(2)}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-gray-600 dark:text-gray-400">Dias de Cobertura</p>
-          <p className="text-lg font-bold text-gray-900 dark:text-white number-transition">
-            {summary.coverage_days} dias
-          </p>
+        <div className="grid grid-cols-2 gap-1">
+          <div>
+            <p className="text-[9px] leading-tight text-gray-600 dark:text-gray-400">Liquidez</p>
+            <p className="text-xs font-bold leading-tight text-gray-900 dark:text-white number-transition">
+              {summary.liquidity_ratio.toFixed(2)}
+            </p>
+          </div>
+          <div>
+            <p className="text-[9px] leading-tight text-gray-600 dark:text-gray-400">Cobertura</p>
+            <p className="text-xs font-bold leading-tight text-gray-900 dark:text-white number-transition">
+              {summary.coverage_days} dias
+            </p>
+          </div>
         </div>
       </Card>
     </div>
@@ -195,18 +187,18 @@ function KpiCard({ title, value, variation, icon, color }) {
   const variationBg = variation >= 0 ? 'bg-green-100 dark:bg-green-900/30' : 'bg-red-100 dark:bg-red-900/30';
 
   return (
-    <Card className={`p-4 border-l-4 ${colorClasses[color]} animate-slide-up card-hover transition-all duration-300`}>
-      <div className="flex items-start justify-between mb-2">
-        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">{title}</h3>
-        <div className={iconColorClasses[color]}>{icon}</div>
+    <Card className={`min-h-[64px] border-l-4 p-2 ${colorClasses[color]} animate-slide-up card-hover transition-all duration-300`}>
+      <div className="mb-1 flex items-start justify-between gap-2">
+        <h3 className="text-[11px] font-semibold leading-tight text-gray-700 dark:text-gray-300">{title}</h3>
+        <div className={`${iconColorClasses[color]} [&>svg]:h-4 [&>svg]:w-4`}>{icon}</div>
       </div>
 
-      <p className={`text-xl font-bold ${textColorClasses[color]} mb-2 number-transition`}>
+      <p className={`mb-0.5 text-sm font-bold leading-tight ${textColorClasses[color]} number-transition`}>
         {formatCurrency(value)}
       </p>
 
       {variation !== 0 && (
-        <div className={`text-xs font-semibold px-2 py-1 rounded ${variationBg} ${variationColor} inline-block`}>
+        <div className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-semibold ${variationBg} ${variationColor}`}>
           {variation > 0 ? '↑' : '↓'} {Math.abs(variation).toFixed(1)}%
         </div>
       )}
