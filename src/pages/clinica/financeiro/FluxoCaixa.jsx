@@ -120,7 +120,9 @@ export default function FluxoCaixaPage() {
     analytics: 'border-slate-200 bg-white dark:border-gray-700 dark:bg-gray-900',
   };
 
-  const getSectionPanelClass = (section) => `rounded-lg border p-3 md:p-4 ${sectionPanelStyles[section]}`;
+  const getSectionPanelClass = (section) => (section === 'operational'
+    ? 'space-y-3'
+    : `rounded-lg border p-3 md:p-4 ${sectionPanelStyles[section]}`);
 
   // Consolidated dashboard data
   const [dashboardData, setDashboardData] = useState(null);
@@ -519,6 +521,8 @@ export default function FluxoCaixaPage() {
     );
   }
 
+  const isOperationalSection = activeSection === 'operational';
+
   return (
     <ErrorBoundary onReset={() => window.location.reload()}>
       <PageLayout
@@ -538,39 +542,40 @@ export default function FluxoCaixaPage() {
           </div>
         }
       >
-        {/* Phase 3: Advanced Period Filter */}
-        <div className="mb-3 rounded-lg border border-gray-200 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-900">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">Periodo</span>
-            <PeriodFilter onPeriodChange={handlePeriodChange} currentPeriod={period} />
-            <div className="flex flex-wrap items-center gap-2 border-l border-gray-200 pl-3 dark:border-gray-700">
-              <span className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">Regime</span>
-              <button
-                type="button"
-                onClick={() => setAccountingMode('realized')}
-                className={`rounded-md border px-2.5 py-1.5 text-xs font-semibold transition-colors ${accountingMode === 'realized'
-                  ? 'border-blue-700 bg-blue-700 text-white'
-                  : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800'
-                }`}
-              >
-                Caixa
-              </button>
-              <button
-                type="button"
-                onClick={() => setAccountingMode('accrual')}
-                className={`rounded-md border px-2.5 py-1.5 text-xs font-semibold transition-colors ${accountingMode === 'accrual'
-                  ? 'border-emerald-700 bg-emerald-700 text-white'
-                  : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800'
-                }`}
-              >
-                Competencia
-              </button>
+        {!isOperationalSection && (
+          <div className="mb-3 rounded-lg border border-gray-200 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-900">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">Periodo</span>
+              <PeriodFilter onPeriodChange={handlePeriodChange} currentPeriod={period} />
+              <div className="flex flex-wrap items-center gap-2 border-l border-gray-200 pl-3 dark:border-gray-700">
+                <span className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">Regime</span>
+                <button
+                  type="button"
+                  onClick={() => setAccountingMode('realized')}
+                  className={`rounded-md border px-2.5 py-1.5 text-xs font-semibold transition-colors ${accountingMode === 'realized'
+                    ? 'border-blue-700 bg-blue-700 text-white'
+                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800'
+                  }`}
+                >
+                  Caixa
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAccountingMode('accrual')}
+                  className={`rounded-md border px-2.5 py-1.5 text-xs font-semibold transition-colors ${accountingMode === 'accrual'
+                    ? 'border-emerald-700 bg-emerald-700 text-white'
+                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800'
+                  }`}
+                >
+                  Competencia
+                </button>
+              </div>
+              <span className="ml-auto text-xs text-gray-500 dark:text-gray-400">
+                {lastUpdatedAt ? `Atualizado em ${new Date(lastUpdatedAt).toLocaleString('pt-BR')}` : 'Aguardando atualização'}
+              </span>
             </div>
-            <span className="ml-auto text-xs text-gray-500 dark:text-gray-400">
-              {lastUpdatedAt ? `Atualizado em ${new Date(lastUpdatedAt).toLocaleString('pt-BR')}` : 'Aguardando atualização'}
-            </span>
           </div>
-        </div>
+        )}
 
         {/* Navegação entre seções do fluxo */}
         <div className="mb-4 rounded-lg border border-gray-200 bg-white p-1.5 dark:border-gray-700 dark:bg-gray-900">
@@ -668,6 +673,30 @@ export default function FluxoCaixaPage() {
               </ErrorBoundary>
             )}
 
+            {activeSection === 'overview' && (
+              <div className="grid gap-3 xl:grid-cols-2">
+                <ErrorBoundary>
+                  <ReceivableSummary receivables={modeReceivables} loading={loading} />
+                </ErrorBoundary>
+
+                <ErrorBoundary>
+                  <PayableSummary payables={modePayables} loading={loading} />
+                </ErrorBoundary>
+              </div>
+            )}
+
+            {activeSection === 'overview' && (
+              <ErrorBoundary>
+                <FinancialAlertsPanel
+                  summary={modeSummary}
+                  receivables={modeReceivables}
+                  payables={modePayables}
+                  previousSummary={previousSummary}
+                  loading={loading}
+                />
+              </ErrorBoundary>
+            )}
+
             {activeSection === 'overview' && reconciliation && (
               <Card className="mb-6 border-slate-300 bg-white p-5 dark:border-gray-700 dark:bg-gray-900">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -751,31 +780,9 @@ export default function FluxoCaixaPage() {
 
             {/* 2. Operacional */}
             {activeSection === 'operational' && (
-              <>
-                <ErrorBoundary>
-                  <OperationalCashFlowModel consolidation={consolidation} clinicId={clinicId} loading={loading} accountingMode={accountingMode} />
-                </ErrorBoundary>
-
-                <div className="grid gap-3 xl:grid-cols-2">
-                  <ErrorBoundary>
-                    <ReceivableSummary receivables={modeReceivables} loading={loading} />
-                  </ErrorBoundary>
-
-                  <ErrorBoundary>
-                    <PayableSummary payables={modePayables} loading={loading} />
-                  </ErrorBoundary>
-                </div>
-
-                <ErrorBoundary>
-                  <FinancialAlertsPanel
-                    summary={modeSummary}
-                    receivables={modeReceivables}
-                    payables={modePayables}
-                    previousSummary={previousSummary}
-                    loading={loading}
-                  />
-                </ErrorBoundary>
-              </>
+              <ErrorBoundary>
+                <OperationalCashFlowModel consolidation={consolidation} clinicId={clinicId} loading={loading} accountingMode={accountingMode} />
+              </ErrorBoundary>
             )}
 
             {/* 3. Análises avançadas */}
