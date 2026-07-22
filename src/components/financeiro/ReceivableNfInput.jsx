@@ -30,6 +30,19 @@ export default function ReceivableNfInput({
     onFileSelected?.(files[0] || null);
   };
 
+  const handleDragFile = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setDraggingFile(true);
+  };
+
+  const handleDropFile = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setDraggingFile(false);
+    processFiles(Array.from(event.dataTransfer.files || []));
+  };
+
   const stopCamera = () => {
     streamRef.current?.getTracks?.().forEach((track) => track.stop());
     streamRef.current = null;
@@ -116,18 +129,14 @@ export default function ReceivableNfInput({
   return (
     <div
       className={`rounded border bg-white p-3 transition ${draggingFile ? 'border-sky-500 bg-sky-50 ring-2 ring-sky-100' : ''}`}
-      onDragOver={(event) => {
-        event.preventDefault();
-        setDraggingFile(true);
-      }}
+      onDragEnter={handleDragFile}
+      onDragOver={handleDragFile}
       onDragLeave={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
         if (!event.currentTarget.contains(event.relatedTarget)) setDraggingFile(false);
       }}
-      onDrop={(event) => {
-        event.preventDefault();
-        setDraggingFile(false);
-        processFiles(Array.from(event.dataTransfer.files || []));
-      }}
+      onDrop={handleDropFile}
     >
       <Label className="flex items-center gap-2 text-sm font-semibold text-slate-800">
         <FileText className="w-4 h-4 text-blue-600" />

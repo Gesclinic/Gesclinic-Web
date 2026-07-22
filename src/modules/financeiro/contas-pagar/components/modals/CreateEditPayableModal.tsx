@@ -1490,6 +1490,7 @@ function NfeReviewPanel({
 
   const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
+    event.stopPropagation();
     setDragging(false);
     const files = Array.from(event.dataTransfer.files || []);
     if (files.length) {
@@ -1497,15 +1498,21 @@ function NfeReviewPanel({
     }
   };
 
+  const handleDrag = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setDragging(true);
+  };
+
   if (!review.hasXmlData) {
     return (
       <div
         className={`rounded-lg border border-dashed p-4 transition ${dragging ? 'border-sky-500 bg-sky-50 ring-2 ring-sky-100' : 'bg-slate-50'}`}
-        onDragOver={(event) => {
-          event.preventDefault();
-          setDragging(true);
-        }}
+        onDragEnter={handleDrag}
+        onDragOver={handleDrag}
         onDragLeave={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
           if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false);
         }}
         onDrop={handleDrop}
@@ -1527,7 +1534,17 @@ function NfeReviewPanel({
   }
 
   return (
-    <div className="rounded-lg border bg-white p-4 space-y-4">
+    <div
+      className={`rounded-lg border bg-white p-4 space-y-4 transition ${dragging ? 'border-sky-500 bg-sky-50 ring-2 ring-sky-100' : ''}`}
+      onDragEnter={handleDrag}
+      onDragOver={handleDrag}
+      onDragLeave={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false);
+      }}
+      onDrop={handleDrop}
+    >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <FileSearch className="h-5 w-5 text-blue-600" />

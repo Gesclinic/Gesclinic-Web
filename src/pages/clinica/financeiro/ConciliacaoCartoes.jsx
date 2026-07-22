@@ -112,9 +112,16 @@ export default function ConciliacaoCartoes() {
 
   const handleStatementDrop = async (event) => {
     event.preventDefault();
+    event.stopPropagation();
     setDraggingStatementFile(false);
     const file = event.dataTransfer.files?.[0];
     await importStatementFile(file);
+  };
+
+  const handleStatementDrag = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setDraggingStatementFile(true);
   };
 
   const grouped = useMemo(() => {
@@ -188,11 +195,11 @@ export default function ConciliacaoCartoes() {
 
       <div
         className={`rounded-lg border p-4 transition ${draggingStatementFile ? 'border-sky-500 bg-sky-100 ring-2 ring-sky-200' : 'border-sky-100 bg-sky-50'}`}
-        onDragOver={(event) => {
-          event.preventDefault();
-          setDraggingStatementFile(true);
-        }}
+        onDragEnter={handleStatementDrag}
+        onDragOver={handleStatementDrag}
         onDragLeave={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
           if (!event.currentTarget.contains(event.relatedTarget)) setDraggingStatementFile(false);
         }}
         onDrop={handleStatementDrop}
