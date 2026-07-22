@@ -9,6 +9,7 @@ import {
   listAccountPlans,
   listCostCenters,
 } from '@/lib/financeApi';
+import { listFinancialPlanAccounts } from '@/modules/financeiro/plano-financeiro/services/financialPlanApi';
 
 // ============================================================
 // QUERY KEYS
@@ -18,6 +19,7 @@ export const financeOptionsQueryKeys = {
   all: ['financeOptions'],
   accountPlans: (clinicId: string) => ['financeOptions', 'accountPlans', clinicId],
   costCenters: (clinicId: string) => ['financeOptions', 'costCenters', clinicId],
+  financialPlanAccounts: (clinicId: string) => ['financeOptions', 'financialPlanAccounts', clinicId],
 };
 
 // ============================================================
@@ -37,6 +39,14 @@ interface CostCenter {
   name: string;
   code?: string;
   is_active?: boolean;
+}
+
+interface FinancialPlanAccount {
+  id: string;
+  name: string;
+  code?: string;
+  is_active?: boolean;
+  accepts_entries?: boolean;
 }
 
 // ============================================================
@@ -83,6 +93,22 @@ export function useCostCenters() {
   });
 }
 
+export function useFinancialPlanAccounts() {
+  const { clinicId } = useClinicContext();
+
+  return useQuery({
+    queryKey: financeOptionsQueryKeys.financialPlanAccounts(clinicId!),
+    queryFn: async () => {
+      if (!clinicId) return [];
+      const accounts = await listFinancialPlanAccounts(clinicId);
+      return (accounts || []).filter((account: FinancialPlanAccount) => account.is_active !== false && account.accepts_entries !== false);
+    },
+    enabled: !!clinicId,
+    staleTime: 1000 * 60 * 30,
+    gcTime: 1000 * 60 * 60,
+  });
+}
+
 /**
  * Hook combinado para carregar ambas as listas em paralelo
  * Útil para modals que precisam de ambas as opções
@@ -90,15 +116,18 @@ export function useCostCenters() {
 export function useFinanceOptions() {
   const accountPlans = useAccountPlans();
   const costCenters = useCostCenters();
+  const financialPlanAccounts = useFinancialPlanAccounts();
 
   return {
     accountPlans: accountPlans.data || [],
     costCenters: costCenters.data || [],
-    isLoading: accountPlans.isLoading || costCenters.isLoading,
-    error: accountPlans.error || costCenters.error,
+    financialPlanAccounts: financialPlanAccounts.data || [],
+    isLoading: accountPlans.isLoading || costCenters.isLoading || financialPlanAccounts.isLoading,
+    error: accountPlans.error || costCenters.error || financialPlanAccounts.error,
     refetch: () => {
       accountPlans.refetch();
       costCenters.refetch();
+      financialPlanAccounts.refetch();
     },
   };
 }

@@ -20,7 +20,6 @@ import AgendaFinanceDashboard from './components/AgendaFinanceDashboard';
 import AgendaProfessionalView from './components/AgendaProfessionalView';
 import AgendaProfessionalFilters from './components/AgendaProfessionalFilters';
 import CheckinDrawer from './components/CheckinDrawer';
-import AtendimentoModal from './components/AtendimentoModal';
 import AtendimentoUnificado from './components/AtendimentoUnificado';
 import AuditTrail, { AuditIndicator, ChangeNotification } from '@/modules/agenda/components/AuditTrail';
 import { useRealtimeAppointmentChanges } from '@/modules/agenda/hooks/useRealtimeAppointmentChanges';
@@ -173,10 +172,6 @@ export default function AgendaPage() {
   // 📋 Estado para Check-in Drawer
   const [checkinOpen, setCheckinOpen] = useState(false);
   const [checkinAppointment, setCheckinAppointment] = useState(null);
-
-  // � Estado para AtendimentoModal (TISS)
-  const [atendimentoModalOpen, setAtendimentoModalOpen] = useState(false);
-  const [atendimentoModalAppointment, setAtendimentoModalAppointment] = useState(null);
 
   // �👤 Estado para paciente pré-selecionado
   const [preSelectedPatient, setPreSelectedPatient] = useState(null);
@@ -682,7 +677,7 @@ const [atendimentoUnificadoOpen, setAtendimentoUnificadoOpen] = useState(false);
   };
 
   /**
-   * 📋 Abrir AtendimentoModal (TISS) para um agendamento
+   * 📋 Abrir tela correta de atendimento/check-out no modal unificado
    */
   const handleOpenAtendimento = (appointment) => {
     const normalizedStatus = migrateStatus(appointment?.status);
@@ -707,8 +702,15 @@ const [atendimentoUnificadoOpen, setAtendimentoUnificadoOpen] = useState(false);
       return;
     }
 
-    setAtendimentoModalAppointment(appointment);
-    setAtendimentoModalOpen(true);
+    agenda.selectSlot({
+      ...appointment,
+      type: 'existing',
+      id: appointment.id,
+      appointmentId: appointment.id,
+      appointment,
+      mode: 'edit',
+      initialTab: 'pagamento',
+    });
   };
 
   /**
@@ -717,16 +719,6 @@ const [atendimentoUnificadoOpen, setAtendimentoUnificadoOpen] = useState(false);
   const handleCloseCheckin = () => {
     setCheckinOpen(false);
     setCheckinAppointment(null);
-    // Recarregar agendamentos após mudança de status
-    loadAgendaData();
-  };
-
-  /**
-   * 📋 Fechar AtendimentoModal e recarregar agenda
-   */
-  const handleCloseAtendimento = () => {
-    setAtendimentoModalOpen(false);
-    setAtendimentoModalAppointment(null);
     // Recarregar agendamentos após mudança de status
     loadAgendaData();
   };
@@ -1983,15 +1975,6 @@ const [atendimentoUnificadoOpen, setAtendimentoUnificadoOpen] = useState(false);
         appointment={checkinAppointment}
         onClose={handleCloseCheckin}
         onStatusChange={handleCloseCheckin}
-      />
-
-      {/* 📋 AtendimentoModal - TISS Compliant Check-in (from Agenda) */}
-      <AtendimentoModal
-        isOpen={atendimentoModalOpen}
-        onClose={handleCloseAtendimento}
-        appointment={atendimentoModalAppointment}
-        arrivals={[]}
-        onArrivalsUpdate={handleCloseAtendimento}
       />
 
       {/* 🎯 AtendimentoUnificado - Nova Tela Unificada de Atendimento */}

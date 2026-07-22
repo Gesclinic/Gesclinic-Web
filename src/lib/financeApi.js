@@ -144,6 +144,7 @@ async function insertAPFinancialTransactionVariants(rows) {
   const newSchemaRows = rows.map((row) => ({
     clinic_id: row.clinic_id,
     financial_account_id: row.financial_account_id,
+    financial_plan_account_id: row.financial_plan_account_id,
     created_by: row.created_by,
     updated_by: row.updated_by,
     transaction_type: row.transaction_type,
@@ -239,6 +240,7 @@ export async function syncAPFinancialTransactions(row) {
         competency_date: competencyDate,
         reference_document: documentNumber,
         document_number: documentNumber,
+        financial_plan_account_id: row.financial_plan_account_id || null,
         origin_module: 'accounts_payable',
         origin_id: row.id,
         cost_center_id: item.target_cost_center_id,
@@ -385,6 +387,7 @@ export async function createAP(clinicId, payload) {
     notes: asStringOrNull(payload.notes),
     status,
     document_url: asStringOrNull(payload.document_url),
+    financial_plan_account_id: asUuidOrNull(payload.financial_plan_account_id),
   };
 
   if (!baseInsert.category_id) {
@@ -538,6 +541,9 @@ export async function updateAP(id, patch) {
   if ('category_id' in upd) {
     upd.category_id = asUuidOrNull(upd.category_id);
   }
+  if ('financial_plan_account_id' in upd) {
+    upd.financial_plan_account_id = asUuidOrNull(upd.financial_plan_account_id);
+  }
   if ('method_id' in upd) {
     upd.method_id = asUuidOrNull(upd.method_id);
   }
@@ -591,6 +597,7 @@ export async function updateAP(id, patch) {
     'linked_revenue',
     'cost_center_id',
     'centro_custo_id',
+    'financial_plan_account_id',
   ];
   const looksLikeMissingCol =
     error.code === '42703' ||

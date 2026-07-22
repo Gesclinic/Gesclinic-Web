@@ -292,6 +292,91 @@ export async function createProfessional(clinicId, payload) {
   }
 }
 
+function normalizeProfessionalNameForMatch(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function isMeaningfulProfessionalName(value) {
+  const normalized = normalizeProfessionalNameForMatch(value);
+  return normalized
+    && normalized.length >= 4
+    && ![
+      '-',
+      'nao identificado',
+      'nao informado',
+      'sem profissional',
+      'profissional nao informado',
+      'profissional',
+    ].includes(normalized);
+}
+
+export async function ensureBasicProfessionalFromFiscalDocument(clinicId, professional = {}) {
+  const rawName = String(professional.name || '').replace(/\s+/g, ' ').trim();
+  const name = isMeaningfulProfessionalName(rawName) ? rawName : '';
+  const cpf = String(professional.document || '').replace(/\D/g, '');
+  const crm = String(professional.crm || '').replace(/\s+/g, ' ').trim();
+  const state = String(professional.state || '').replace(/\s+/g, ' ').trim().toUpperCase();
+
+  if (!clinicId || !name) {
+    return null;
+  }
+
+  const selectColumns = 'id,name,cpf,crm,state,specialization,active,clinic_id';
+
+  if (cpf) {
+    const { data, error } = await supabase
+      .from('professionals')
+      .select(selectColumns)
+      .eq('clinic_id', clinicId)
+      .eq('cpf', cpf)
+      .limit(1);
+    if (!error && data?.[0]) return normalizeProfessionalProfile(data[0]);
+  }
+
+  if (crm) {
+    let query = supabase
+      .from('professionals')
+      .select(selectColumns)
+      .eq('clinic_id', clinicId)
+      .eq('crm', crm)
+      .limit(5);
+    if (state) {
+      query = query.eq('state', state);
+    }
+    const { data, error } = await query;
+    if (!error && data?.[0]) return normalizeProfessionalProfile(data[0]);
+  }
+
+  if (name) {
+    const { data, error } = await supabase
+      .from('professionals')
+      .select(selectColumns)
+      .eq('clinic_id', clinicId)
+      .ilike('name', name)
+      .limit(5);
+    if (!error) {
+      const normalizedName = normalizeProfessionalNameForMatch(name);
+      const existing = (data || []).find((row) => normalizeProfessionalNameForMatch(row.name) === normalizedName) || data?.[0];
+      if (existing) return normalizeProfessionalProfile(existing);
+    }
+  }
+
+  return normalizeProfessionalProfile(await createProfessional(clinicId, {
+    name,
+    cpf: cpf || null,
+    crm: crm || null,
+    state: state || null,
+    specialization: 'Profissional importado por XML fiscal',
+    active: true,
+    schedule_notes: 'Cadastro básico criado automaticamente a partir de XML fiscal para geração de repasse.',
+  }));
+}
+
 /* ----------------------------------------
  * ATUALIZAR PROFISSIONAL
  * ---------------------------------------- */

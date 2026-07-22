@@ -29,6 +29,20 @@ function isCanceledStatus(status) {
   );
 }
 
+function isInactiveFinancialRow(row = {}) {
+  return Boolean(
+    isCanceledStatus(row.status)
+      || row.deleted_at
+      || row.soft_deleted_at
+      || row.canceled_at
+      || row.cancelled_at
+      || row.reversed_at
+      || row.voided_at
+      || row.is_deleted
+      || row.deleted,
+  );
+}
+
 function isPaidStatus(status) {
   return ['paid', 'pago', 'paga', 'received', 'recebido', 'quitado', 'processed'].includes(
     String(status || '').toLowerCase(),
@@ -50,13 +64,41 @@ function getReceivableCompetenceDate(row) {
 
 function getReceivableMovementDate(row) {
   if (isPaidStatus(row.status)) {
-    return dateOnly(row.received_date || row.received_at || row.due_date || row.invoice_date || row.created_at);
+    return dateOnly(row.received_date || row.received_at || row.payment_date || row.paid_at || row.transaction_date || row.competency_date || row.due_date || row.invoice_date || row.created_at);
   }
   return dateOnly(row.due_date || row.competency_date || row.invoice_date || row.created_at);
 }
 
+function receivableInFinancialRange(row, startDate, endDate) {
+  return [
+    row.competency_date,
+    row.transaction_date,
+    row.invoice_date,
+    row.due_date,
+    row.received_date,
+    row.received_at,
+    row.payment_date,
+    row.paid_date,
+    row.paid_at,
+    row.created_at,
+  ].some((value) => inRange(value, startDate, endDate));
+}
+
 function getPayableCompetenceDate(row) {
   return dateOnly(row.competency_date || row.issue_date || row.due_date || row.paid_at || row.created_at);
+}
+
+function payableInFinancialRange(row, startDate, endDate) {
+  return [
+    row.competency_date,
+    row.issue_date,
+    row.due_date,
+    row.paid_date,
+    row.paid_at,
+    row.payment_date,
+    row.transaction_date,
+    row.created_at,
+  ].some((value) => inRange(value, startDate, endDate));
 }
 
 function getPayableMovementDate(row) {
@@ -75,7 +117,7 @@ function getDrawerMovementDate(row) {
 }
 
 function getReceivableGross(row) {
-  return money(row.gross_amount ?? row.amount ?? row.service_value);
+  return money(row.gross_amount ?? row.net_value ?? row.amount ?? row.service_value ?? row.total ?? row.value ?? row.valor ?? row.balance_amount);
 }
 
 function isCardReceivable(row = {}) {
@@ -374,14 +416,81 @@ async function listLegacyInvoicesForConsolidation(clinicId) {
   }
 }
 
+async function listReceivablesForConsolidation(clinicId) {
+  try {
+    const { data, error } = await supabase
+      .from('ar_receivables')
+      .select('*')
+      .eq('clinic_id', clinicId)
+      .order('created_at', { ascending: false })
+      .limit(20000);
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.warn('getFinancialConsolidation ar_receivables skipped:', error?.message || error);
+    return [];
+  }
+}
+
+function mergeReceivablesForConsolidation(...groups) {
+  const merged = [];
+  const seen = new Set();
+
+  groups.flat().filter(Boolean).forEach((row) => {
+    const key = row.id || row.origin_id || `${row.description || row.descricao || ''}|${row.due_date || row.data_vencimento || ''}|${row.amount || row.total || row.valor || ''}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    merged.push(row);
+  });
+
+  return merged;
+}
+
+async function hydrateFinancialAccountNames(clinicId, rows = []) {
+  const accountIds = [...new Set((rows || [])
+    .flatMap((row) => [row.financial_account_id, row.account_id, row.bank_account_id, row.cash_drawer_id, row.drawer_id])
+    .filter(Boolean))];
+
+  if (!clinicId || accountIds.length === 0) return rows || [];
+
+  try {
+    const { data, error } = await supabase
+      .from('financial_accounts')
+      .select('*')
+      .eq('clinic_id', clinicId)
+      .in('id', accountIds);
+
+    if (error) throw error;
+
+    const accountById = new Map((data || []).map((account) => [account.id, account]));
+    return (rows || []).map((row) => {
+      const accountId = row.financial_account_id || row.account_id || row.bank_account_id || row.cash_drawer_id || row.drawer_id;
+      const account = accountId ? accountById.get(accountId) : null;
+      if (!account) return row;
+      const accountName = account.name || account.account_name || account.bank_name || account.description || null;
+      return {
+        ...row,
+        financial_account_name: row.financial_account_name || row.account_name || row.bank_account_name || accountName,
+        account_name: row.account_name || accountName,
+        bank_account_name: row.bank_account_name || account.bank_name || accountName,
+      };
+    });
+  } catch (error) {
+    console.warn('getFinancialConsolidation financial account hydration skipped:', error?.message || error);
+    return rows || [];
+  }
+}
+
 export async function getFinancialConsolidation(clinicId, startDate, endDate) {
   if (!clinicId) return buildEmptyConsolidation(startDate, endDate);
 
-  const [receivablesResult, payablesResult, transactionsResult, drawerMovementsResult] = await Promise.all([
+  const [receivablesResult, currentReceivables, payablesResult, transactionsResult, drawerMovementsResult] = await Promise.all([
     supabase.from('ar_invoices').select('*').eq('clinic_id', clinicId).order('created_at', { ascending: false }).limit(20000),
+    listReceivablesForConsolidation(clinicId),
     supabase.from('ap_bills').select('*').eq('clinic_id', clinicId).order('created_at', { ascending: false }).limit(20000),
     supabase.from('financial_transactions').select('*').eq('clinic_id', clinicId).order('created_at', { ascending: false }).limit(20000),
-    supabase.from('drawer_movements').select('*').eq('clinic_id', clinicId).order('created_at', { ascending: false }).limit(20000),
+    Promise.resolve({ data: [], error: null }),
   ]);
 
   if (receivablesResult.error) throw receivablesResult.error;
@@ -403,26 +512,33 @@ export async function getFinancialConsolidation(clinicId, startDate, endDate) {
     }
   }
 
-  let rawReceivables = receivablesResult.data || [];
-  if (rawReceivables.length === 0) {
-    const fallbackReceivables = await listLegacyInvoicesForConsolidation(clinicId);
-    if (fallbackReceivables.length) rawReceivables = fallbackReceivables;
-  }
+  const fallbackReceivables = await listLegacyInvoicesForConsolidation(clinicId);
+  let rawReceivables = mergeReceivablesForConsolidation(
+    currentReceivables,
+    receivablesResult.data || [],
+    fallbackReceivables,
+  );
 
   rawReceivables = await hydrateReceivableAppointmentsForConsolidation(clinicId, rawReceivables);
 
-  const receivables = rawReceivables.filter(
-    (row) => !isCanceledStatus(row.status) && inRange(getReceivableCompetenceDate(row), startDate, endDate),
+  let receivables = rawReceivables.filter(
+    (row) => !isInactiveFinancialRow(row) && receivableInFinancialRange(row, startDate, endDate),
   );
-  const payables = rawPayables.filter(
-    (row) => !isCanceledStatus(row.status) && inRange(getPayableCompetenceDate(row), startDate, endDate),
+  let payables = rawPayables.filter(
+    (row) => !isInactiveFinancialRow(row) && payableInFinancialRange(row, startDate, endDate),
   );
-  const transactions = (transactionsResult.data || []).filter(
-    (row) => !isCanceledStatus(row.status)
+  let transactions = (transactionsResult.data || []).filter(
+    (row) => !isInactiveFinancialRow(row)
       && !isReceivableOrPayableOrigin(row)
       && !isDerivedSyncDescription(row)
       && inRange(getTransactionCompetenceDate(row), startDate, endDate),
   );
+
+  [receivables, payables, transactions] = await Promise.all([
+    hydrateFinancialAccountNames(clinicId, receivables),
+    hydrateFinancialAccountNames(clinicId, payables),
+    hydrateFinancialAccountNames(clinicId, transactions),
+  ]);
 
   let drawerMovements = [];
   if (drawerMovementsResult.error) {
@@ -452,6 +568,7 @@ export async function getFinancialConsolidation(clinicId, startDate, endDate) {
     }
 
     drawerMovements = rawDrawerMovements
+      .filter((row) => !isInactiveFinancialRow(row))
       .filter((row) => !representedAppointmentIds.has(row.appointment_id))
       .filter((row) => !representedDrawerMovementIds.has(row.id))
       .map((row) => {
@@ -622,6 +739,10 @@ export function buildDerivedFinancialTransactions(consolidation) {
         chart_account_name: row.chart_account_name || row.plano_contas_name || row.category_name || null,
         category_id: row.category_id || row.chart_account_id || row.plano_contas_id || null,
         category_name: row.category_name || row.chart_account_name || row.plano_contas_name || null,
+        financial_account_id: row.financial_account_id || row.account_id || null,
+        account_id: row.account_id || row.financial_account_id || null,
+        cost_center_id: row.cost_center_id || row.centro_custo_id || null,
+        centro_custo_id: row.centro_custo_id || row.cost_center_id || null,
         ...receivableMeta,
         flow_detail_name: 'Receita bruta',
         description: `Receita bruta - ${description}`,
@@ -648,6 +769,10 @@ export function buildDerivedFinancialTransactions(consolidation) {
         chart_account_name: row.chart_account_name || row.plano_contas_name || row.category_name || null,
         category_id: row.category_id || row.chart_account_id || row.plano_contas_id || null,
         category_name: row.category_name || row.chart_account_name || row.plano_contas_name || null,
+        financial_account_id: row.financial_account_id || row.account_id || null,
+        account_id: row.account_id || row.financial_account_id || null,
+        cost_center_id: row.cost_center_id || row.centro_custo_id || null,
+        centro_custo_id: row.centro_custo_id || row.cost_center_id || null,
         ...receivableMeta,
         flow_detail_name: 'Desconto concedido',
         description: `Desconto concedido - ${description}`,
@@ -674,6 +799,10 @@ export function buildDerivedFinancialTransactions(consolidation) {
         chart_account_name: row.chart_account_name || row.plano_contas_name || row.category_name || null,
         category_id: row.category_id || row.chart_account_id || row.plano_contas_id || null,
         category_name: row.category_name || row.chart_account_name || row.plano_contas_name || null,
+        financial_account_id: row.financial_account_id || row.account_id || null,
+        account_id: row.account_id || row.financial_account_id || null,
+        cost_center_id: row.cost_center_id || row.centro_custo_id || null,
+        centro_custo_id: row.centro_custo_id || row.cost_center_id || null,
         ...receivableMeta,
         flow_detail_name: 'Taxa de cartao',
         description: `Taxa de cartão - ${description}`,
@@ -704,6 +833,10 @@ export function buildDerivedFinancialTransactions(consolidation) {
       chart_account_name: row.chart_account_name || row.plano_contas_name || row.category_name || null,
       category_id: row.category_id || row.chart_account_id || row.plano_contas_id || null,
       category_name: row.category_name || row.chart_account_name || row.plano_contas_name || null,
+      financial_account_id: row.financial_account_id || row.account_id || null,
+      account_id: row.account_id || row.financial_account_id || null,
+      cost_center_id: row.cost_center_id || row.centro_custo_id || null,
+      centro_custo_id: row.centro_custo_id || row.cost_center_id || null,
       counterparty_name: recipientName,
       counterparty_role: 'Destinatario',
       recipient_name: recipientName,

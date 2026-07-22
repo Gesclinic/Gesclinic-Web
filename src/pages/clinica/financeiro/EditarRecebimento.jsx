@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { getReceivableById, listReceivables, updateReceivable, uploadReceivableNfFile, arStatusOptions } from '@/lib/receivablesApi';
 import { listRevenueAccountPlans, listCostCenters } from '@/lib/financeApi';
+import { listFinancialPlanAccounts } from '@/modules/financeiro/plano-financeiro/services/financialPlanApi';
 import { listProfessionals } from '@/lib/professionalsApi';
 import { listPayers } from '@/lib/payersApi';
 import { listCardProcessors } from '@/lib/cardProcessorsApi';
@@ -133,6 +134,17 @@ function normalizePaymentMethodForForm(value) {
     const normalizedOptionLabel = normalize(option.label);
     return normalizedOptionValue === normalizedValue || normalizedOptionLabel === normalizedValue;
   })?.value || value;
+}
+
+function normalizePayerTypeForForm(value) {
+  const normalized = String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  if (['paciente', 'patient', 'particular'].includes(normalized)) return 'paciente';
+  if (['convenio', 'insurance', 'health_insurance', 'plano'].includes(normalized)) return 'convenio';
+  if (['empresa', 'company', 'corporativo'].includes(normalized)) return 'empresa';
+  return normalized || 'manual';
 }
 
 function normalizePaymentBreakdownItem(item = {}, fallbackDate = '') {
@@ -337,6 +349,7 @@ function mergeEditableReceivable(base = {}, enriched = {}) {
     'specialty_id',
     'chart_account_id',
     'plano_contas_id',
+    'financial_plan_account_id',
     'centro_custo_id',
     'cost_center_id',
   ];
@@ -417,6 +430,7 @@ export default function EditarRecebimento() {
   const [error, setError] = useState('');
   const [data, setData] = useState(null);
   const [plans, setPlans] = useState([]);
+  const [financialPlanAccounts, setFinancialPlanAccounts] = useState([]);
   const [costCenters, setCostCenters] = useState([]);
   const [professionals, setProfessionals] = useState([]);
   const [convenios, setConvenios] = useState([]);
@@ -435,10 +449,11 @@ export default function EditarRecebimento() {
     setLoading(true);
     (async () => {
       try {
-        const [rec, ps, cs, professionalsData, payersData, processorsData, servicesData] = await Promise.all([
+        const [rec, ps, cs, financialPlanRows, professionalsData, payersData, processorsData, servicesData] = await Promise.all([
           getEditableReceivableById(id, activeClinicId),
           listRevenueAccountPlans(activeClinicId),
           listCostCenters(activeClinicId),
+          listFinancialPlanAccounts(activeClinicId),
           listProfessionals(activeClinicId),
           listPayers(activeClinicId),
           listCardProcessors(activeClinicId),
@@ -502,7 +517,7 @@ export default function EditarRecebimento() {
         const baseData = {
           ...rec,
           origem: isAgendaReceivable ? 'Agenda' : rec.origem || rec.origin || 'Manual',
-          payer_type: rec.payer_type || (rec.patient_id || appointment?.patient_id ? 'paciente' : 'manual'),
+          payer_type: normalizePayerTypeForForm(rec.payer_type || (rec.patient_id || appointment?.patient_id ? 'paciente' : 'manual')),
           patient_id: rec.patient_id || appointment?.patient_id || '',
           patient_name: patientName,
           payer_name: patientName,
@@ -510,6 +525,7 @@ export default function EditarRecebimento() {
           profissional_id: professionalId,
           professional_id: professionalId,
           professional_name: professionalName,
+          financial_plan_account_id: rec.financial_plan_account_id || '',
           centro_custo_id: rec.centro_custo_id || rec.cost_center_id || '',
           total_parcelas: rec.total_parcelas || (maxInstallments > 1 ? String(maxInstallments) : ''),
           parcelado: (Number(rec.total_parcelas || 0) > 1) || maxInstallments > 1,
@@ -537,6 +553,7 @@ export default function EditarRecebimento() {
           notes: mergeDocumentNotes(baseData.notes, extractionFields),
         }));
         setPlans(cleanBrokenTextDeep(ps || []));
+        setFinancialPlanAccounts(cleanBrokenTextDeep((financialPlanRows || []).filter((account) => account.is_active !== false && account.accepts_entries !== false)));
         setCostCenters(cleanBrokenTextDeep(cs || []));
         setProfessionals(cleanBrokenTextDeep(professionalsData || []));
         setConvenios(cleanBrokenTextDeep(payersData || []));
@@ -576,6 +593,17 @@ export default function EditarRecebimento() {
 
   const handleChange = (field, value) => {
     setData((current) => ({ ...current, [field]: cleanBrokenText(value) }));
+  };
+
+  const handlePayerTypeChange = (payerType) => {
+    setData((current) => ({
+      ...current,
+      payer_type: payerType,
+      payer_id: payerType === 'convenio' || payerType === 'empresa' ? current.payer_id || null : null,
+      convenio_id: payerType === 'convenio' ? current.convenio_id || current.payer_id || null : null,
+      empresa_id: payerType === 'empresa' ? current.empresa_id || current.payer_id || null : null,
+      patient_id: payerType === 'paciente' ? current.patient_id || null : null,
+    }));
   };
 
   const handleServiceChange = (serviceId) => {
@@ -696,6 +724,8 @@ export default function EditarRecebimento() {
         : data.payer_type === 'empresa'
           ? data.payer_id || data.empresa_id || null
           : null;
+      const convenioId = data.payer_type === 'convenio' ? data.payer_id || data.convenio_id || null : null;
+      const companyId = data.payer_type === 'empresa' ? data.payer_id || data.empresa_id || null : null;
 
       await withTimeout(updateReceivable(id, {
         origem: data.origem || 'Manual',
@@ -714,10 +744,14 @@ export default function EditarRecebimento() {
         status: data.status,
         payment_method: data.payment_method || null,
         chart_account_id: data.chart_account_id || data.plano_contas_id || null,
+        plano_contas_id: data.chart_account_id || data.plano_contas_id || null,
+        financial_plan_account_id: data.financial_plan_account_id || null,
         centro_custo_id: data.centro_custo_id || null,
         professional_id: data.profissional_id || data.professional_id || null,
         payer_type: data.payer_type || null,
         payer_id: payerId,
+        convenio_id: convenioId,
+        company_id: companyId,
         invoice_date: invoiceDate || null,
         competency_date: competencyDate || invoiceDate || dueDate,
         due_date: dueDate,
@@ -919,7 +953,7 @@ export default function EditarRecebimento() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
               <Label>Tipo de Pagador</Label>
-              <select className="w-full border rounded h-9 px-2 text-sm" value={data.payer_type || 'manual'} onChange={(e) => handleChange('payer_type', e.target.value)}>
+              <select className="w-full border rounded h-9 px-2 text-sm" value={data.payer_type || 'manual'} onChange={(e) => handlePayerTypeChange(e.target.value)}>
                 <option value="manual">Manual</option>
                 <option value="paciente">Paciente</option>
                 <option value="convenio">Convênio</option>
@@ -937,7 +971,14 @@ export default function EditarRecebimento() {
             </div>
             <div>
               <Label>Plano de Contas</Label>
-              <select className="w-full border rounded h-9 px-2 text-sm" value={data.chart_account_id || data.plano_contas_id || ''} onChange={(e) => handleChange('chart_account_id', e.target.value)}>
+              <select
+                className="w-full border rounded h-9 px-2 text-sm"
+                value={data.chart_account_id || data.plano_contas_id || ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setData((current) => ({ ...current, chart_account_id: value, plano_contas_id: value }));
+                }}
+              >
                 <option value="">Selecione uma receita</option>
                 {plans.map((plan) => (
                   <option key={plan.id} value={plan.id}>{plan.code ? `${plan.code} - ${plan.name}` : plan.name}</option>
@@ -949,6 +990,15 @@ export default function EditarRecebimento() {
 
           <FormSection title="Classificação financeira">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <Label>Plano Financeiro</Label>
+              <select className="w-full border rounded h-9 px-2 text-sm" value={data.financial_plan_account_id || ''} onChange={(e) => handleChange('financial_plan_account_id', e.target.value)}>
+                <option value="">Selecione</option>
+                {financialPlanAccounts.map((account) => (
+                  <option key={account.id} value={account.id}>{account.code ? `${account.code} - ${account.name}` : account.name}</option>
+                ))}
+              </select>
+            </div>
             <div>
               <Label>Centro de Custo</Label>
               <select className="w-full border rounded h-9 px-2 text-sm" value={data.centro_custo_id || ''} onChange={(e) => handleChange('centro_custo_id', e.target.value)}>

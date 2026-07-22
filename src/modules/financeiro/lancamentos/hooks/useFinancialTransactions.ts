@@ -30,6 +30,22 @@ interface UseFinancialTransactionsOptions {
   pageSize?: number;
 }
 
+function withTimeout<T>(promise: Promise<T>, message: string, timeoutMs = 20000): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = window.setTimeout(() => reject(new Error(message)), timeoutMs);
+    promise.then(
+      (value) => {
+        window.clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        window.clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
 const TYPE_TO_DB: Record<string, string> = {
   INCOME: 'revenue',
   EXPENSE: 'expense',
@@ -62,6 +78,85 @@ const STATUS_ALIASES: Record<string, string[]> = {
   CANCELED: ['canceled', 'cancelado', 'cancelada', 'cancelled'],
   PARTIAL: ['partial', 'parcial'],
 };
+
+async function enrichApRowsWithConciliationStatus(clinicId: string, rows: any[]) {
+  const payableIds = (rows || []).map((row) => row.id).filter(Boolean);
+  if (!payableIds.length) return rows || [];
+
+  const { data, error } = await customSupabaseClient
+    .from('conciliation_bank_statements')
+    .select('id,linked_financial_id,status,amount,statement_date,updated_at')
+    .eq('clinic_id', clinicId)
+    .eq('linked_type', 'payable')
+    .eq('status', 'conciliated')
+    .in('linked_financial_id', payableIds);
+
+  if (error) {
+    console.warn('Lancamentos AP conciliation enrichment skipped:', error);
+    return rows || [];
+  }
+
+  const conciliatedByPayableId = new Map((data || []).map((statement: any) => [statement.linked_financial_id, statement]));
+
+  return (rows || []).map((row) => {
+    const statement = conciliatedByPayableId.get(row.id);
+    if (!statement) return row;
+
+    return {
+      ...row,
+      status: 'PAID',
+      paid_value: Math.max(Number(row.paid_value || row.paid_amount || 0), Math.abs(Number(statement.amount || row.net_amount || row.amount || 0))),
+      paid_amount: Math.max(Number(row.paid_amount || row.paid_value || 0), Math.abs(Number(statement.amount || row.net_amount || row.amount || 0))),
+      balance_amount: 0,
+      open_amount: 0,
+      remaining_amount: 0,
+      payment_date: row.payment_date || String(statement.statement_date || statement.updated_at || '').split('T')[0],
+      paid_at: row.paid_at || statement.updated_at,
+      metadata: {
+        ...(row.metadata || {}),
+        enterprise: {
+          ...(row.metadata?.enterprise || {}),
+          reconciliation: {
+            ...(row.metadata?.enterprise?.reconciliation || {}),
+            status: 'MATCHED',
+            bank_statement_id: statement.id,
+            payment_date: String(statement.statement_date || statement.updated_at || '').split('T')[0],
+          },
+        },
+      },
+    };
+  });
+}
+
+function getPayableOriginIdFromTransaction(item: any) {
+  const originId = String(item?.origin_id || '').trim();
+  if (originId) return originId;
+  const id = String(item?.id || '');
+  if (id.startsWith('ap-')) return id.slice(3);
+  return '';
+}
+
+async function getConciliatedPayableStatements(clinicId: string, payableIds: string[]) {
+  const ids = Array.from(new Set(payableIds.filter(Boolean)));
+  if (!ids.length) return new Map<string, any>();
+
+  const { data, error } = await customSupabaseClient
+    .from('conciliation_bank_statements')
+    .select('id,linked_financial_id,amount,statement_date,updated_at')
+    .eq('clinic_id', clinicId)
+    .eq('linked_type', 'payable')
+    .eq('status', 'conciliated')
+    .in('linked_financial_id', ids);
+
+  if (error) {
+    console.warn('Lancamentos conciliated AP id lookup skipped:', error);
+    return new Map<string, any>();
+  }
+
+  return new Map((data || [])
+    .filter((row: any) => row.linked_financial_id)
+    .map((row: any) => [String(row.linked_financial_id), row]));
+}
 
 function isDerivedTransaction(transaction?: FinancialTransaction | null) {
   if (!transaction) return false;
@@ -142,6 +237,22 @@ function matchesMovementType(item: any, filterMovementType?: string) {
   return String(filterMovementType).toUpperCase() === (isRealized ? 'REALIZED' : 'PREDICTED');
 }
 
+function isReconciledLikeTable(item: any) {
+  const status = normalizeTransactionStatus(item?.status);
+  return item?.is_reconciled === true || ['paid', 'received', 'processed', 'pago', 'recebido', 'quitado'].includes(status);
+}
+
+function getComparableTokens(...values: unknown[]) {
+  return values
+    .flatMap((value) => [String(value || '').trim(), normalizeText(value)])
+    .filter(Boolean);
+}
+
+function hasMatchingToken(filterValue: unknown, ...itemValues: unknown[]) {
+  const accepted = new Set(getComparableTokens(...itemValues));
+  return getComparableTokens(filterValue).some((value) => accepted.has(value));
+}
+
 function normalizeDate(item: any) {
   return String(item?.transaction_date || item?.competency_date || item?.scheduled_date || item?.due_date || '').split('T')[0];
 }
@@ -158,24 +269,44 @@ function matchesClientFilters(item: any, filters: TransactionFilters) {
   const category = (filters as any).category_id || (filters as any).category;
 
   if (filters.financial_account_id) {
-    const itemAccountId = item?.financial_account_id || item?.account_id;
-    if (itemAccountId !== filters.financial_account_id) return false;
+    if (!hasMatchingToken(filters.financial_account_id, item?.financial_account_id, item?.account_id, item?.bank_account_id)) return false;
   }
   if (!matchesTransactionType(item, filters.transaction_type)) return false;
   if (!matchesStatusFilter(item?.status, filters.status)) return false;
-  if (category && item?.category !== category && item?.category_id !== category) return false;
+  if (category && !hasMatchingToken(
+    category,
+    item?.category_id,
+    item?.category,
+    item?.category_name,
+    item?.chart_account_id,
+    item?.chart_account_name,
+    item?.plano_contas_id,
+    item?.plano_contas_name,
+  )) return false;
   if (filters.cost_center_id) {
-    const itemCostCenterId =
-      item?.cost_center_id
-      || item?.centro_custo_id
-      || item?.metadata?.allocation?.target_cost_center_id;
-    if (String(itemCostCenterId || '') !== String(filters.cost_center_id)) return false;
+    if (!hasMatchingToken(
+      filters.cost_center_id,
+      item?.cost_center_id,
+      item?.centro_custo_id,
+      item?.cost_center_name,
+      item?.centro_custo_name,
+      item?.metadata?.allocation?.target_cost_center_id,
+    )) return false;
   }
   if (!matchesMovementType(item, filters.movement_type)) return false;
-  if (filters.is_reconciled !== undefined && Boolean(item?.is_reconciled) !== filters.is_reconciled) return false;
+  if (filters.is_reconciled !== undefined && isReconciledLikeTable(item) !== filters.is_reconciled) return false;
   if (!matchesDateRange(item, filters.date_from, filters.date_to)) return false;
   if (filters.search) {
-    const haystack = normalizeText(item?.description, item?.reference_document, item?.document_number, item?.notes);
+    const haystack = normalizeText(
+      item?.description,
+      item?.reference_document,
+      item?.document_number,
+      item?.notes,
+      item?.counterparty_name,
+      item?.payer_name,
+      item?.recipient_name,
+      item?.vendor_name,
+    );
     if (!haystack.includes(normalizeText(filters.search))) return false;
   }
   return true;
@@ -385,38 +516,18 @@ export const useFinancialTransactions = (options: UseFinancialTransactionsOption
           .select('*', { count: 'exact' })
           .eq('clinic_id', clinicId);
 
-        // Aplicar filtros sobre o schema real atual.
-        if (finalFilters.financial_account_id) {
-          query = query.or(`financial_account_id.eq.${finalFilters.financial_account_id},account_id.eq.${finalFilters.financial_account_id}`);
-        }
-        if (finalFilters.transaction_type) {
-          const dbType = TYPE_TO_DB[finalFilters.transaction_type as string] || finalFilters.transaction_type;
-          query = query.eq('type', dbType);
-        }
-        if (finalFilters.status) {
-          const dbStatuses = getStatusFilterValues(finalFilters.status as string);
-          if (dbStatuses.length) query = query.in('status', dbStatuses);
-        }
-        if (finalFilters.category_id || finalFilters.category) {
-          // OLD schema usa 'category' (texto), não category_id
-          query = query.eq('category', finalFilters.category_id || finalFilters.category);
-        }
-        if (finalFilters.is_reconciled !== undefined) {
-          query = query.eq('is_reconciled', finalFilters.is_reconciled);
-        }
-        if (finalFilters.search) {
-          query = query.or(
-            `description.ilike.%${finalFilters.search}%,reference_document.ilike.%${finalFilters.search}%`
-          );
-        }
-
-        // Ordenação. A paginação é aplicada depois do merge com lançamentos derivados.
+        // Filtros são aplicados depois do merge entre lançamentos persistidos e derivados.
+        // Evita erros em clínicas com schemas diferentes/colunas opcionais ausentes.
         query = query
           .order(sortBy, { ascending: sortOrder === 'asc' })
           .limit(5000);
 
         console.log('📊 Query prepared, executing...');
-        const { data, count, error: fetchError } = await query;
+        const { data, count, error: fetchError } = await withTimeout(
+          query,
+          'Tempo excedido ao carregar lançamentos financeiros. Tente reduzir os filtros ou atualizar a página.',
+          25000,
+        );
 
         console.log('✅ Query result:', {
           dataLength: data?.length || 0,
@@ -430,10 +541,14 @@ export const useFinancialTransactions = (options: UseFinancialTransactionsOption
         const persisted = data || [];
         let allMergedTransactions = persisted;
         try {
-          const consolidation = await getFinancialConsolidation(
-            clinicId,
-            finalFilters.date_from || '1900-01-01',
-            finalFilters.date_to || '2999-12-31',
+          const consolidation = await withTimeout(
+            getFinancialConsolidation(
+              clinicId,
+              finalFilters.date_from || '1900-01-01',
+              finalFilters.date_to || '2999-12-31',
+            ),
+            'Tempo excedido ao calcular lançamentos derivados.',
+            15000,
           );
           const existingKeys = new Set(persisted.map(getOriginKey));
           const existingSemanticKeys = new Set(persisted.map(getSemanticKey));
@@ -472,13 +587,6 @@ export const useFinancialTransactions = (options: UseFinancialTransactionsOption
               // Keep AP rows by strict origin key; use semantic dedupe for other modules.
               if (!isApDerived && existingSemanticKeys.has(getSemanticKey(item))) return false;
               if (hasEquivalentPersisted(item)) return false;
-              if (!matchesTransactionType(item, finalFilters.transaction_type)) return false;
-              if (!matchesStatusFilter(item.status, finalFilters.status)) return false;
-              if ((finalFilters.category_id || finalFilters.category) && item.category !== (finalFilters.category_id || finalFilters.category)) return false;
-              if (!matchesMovementType(item, finalFilters.movement_type)) return false;
-              if (finalFilters.is_reconciled !== undefined && item.is_reconciled !== finalFilters.is_reconciled) return false;
-              if (!matchesDateRange(item, finalFilters.date_from, finalFilters.date_to)) return false;
-              if (finalFilters.search && !String(item.description || '').toLowerCase().includes(String(finalFilters.search).toLowerCase())) return false;
               return true;
             });
           allMergedTransactions = [...persisted, ...derived]
@@ -880,16 +988,16 @@ export const useFinancialTransactions = (options: UseFinancialTransactionsOption
             await deleteReceivable(originId, clinicId);
             setTransactions(trans => trans.filter(t => t.id !== id && t.origin_id !== originId));
             setMetricTransactions(trans => trans.filter(t => t.id !== id && t.origin_id !== originId));
+            setTotalCount((current) => Math.max(0, current - 1));
             invalidateDashboardDataCache(clinicId);
-            await fetchTransactions();
             return;
           }
           if (origin === 'accounts_payable') {
             await deleteAP(originId);
             setTransactions(trans => trans.filter(t => t.id !== id && t.origin_id !== originId));
             setMetricTransactions(trans => trans.filter(t => t.id !== id && t.origin_id !== originId));
+            setTotalCount((current) => Math.max(0, current - 1));
             invalidateDashboardDataCache(clinicId);
-            await fetchTransactions();
             return;
           }
         }
@@ -906,13 +1014,14 @@ export const useFinancialTransactions = (options: UseFinancialTransactionsOption
         invalidateDashboardDataCache(clinicId);
         setTransactions(trans => trans.filter(t => t.id !== id && getPersistedTransactionId(t) !== persistedId));
         setMetricTransactions(trans => trans.filter(t => t.id !== id && getPersistedTransactionId(t) !== persistedId));
+        setTotalCount((current) => Math.max(0, current - 1));
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Erro ao deletar transação';
         setError(message);
         throw err;
       }
     },
-    [clinicId, transactions, fetchTransactions]
+    [clinicId, transactions]
   );
 
   // =====================================================
@@ -938,7 +1047,28 @@ export const useFinancialTransactions = (options: UseFinancialTransactionsOption
       const isPredictedStatus = (transaction: any) => !isRealizedStatus(transaction);
       const isReconciledTransaction = (transaction: any) => transaction.is_reconciled === true || isRealizedStatus(transaction);
 
-      const sourceTransactions = metricTransactions;
+      const conciliatedPayableStatements = await getConciliatedPayableStatements(
+        clinicId,
+        metricTransactions
+          .filter((transaction: any) => isAccountsPayableDerived(transaction))
+          .map((transaction: any) => getPayableOriginIdFromTransaction(transaction)),
+      );
+      const sourceTransactions = metricTransactions.map((transaction: any) => {
+        if (!isAccountsPayableDerived(transaction)) return transaction;
+        const payableId = getPayableOriginIdFromTransaction(transaction);
+        const statement = payableId ? conciliatedPayableStatements.get(payableId) : null;
+        if (!statement) return transaction;
+
+        return {
+          ...transaction,
+          amount: Math.abs(Number(statement.amount || transaction.amount || 0)),
+          status: 'paid',
+          movement_type: 'REALIZED',
+          is_reconciled: true,
+          transaction_date: transaction.transaction_date || statement.statement_date,
+          paid_at: transaction.paid_at || statement.updated_at,
+        };
+      });
 
       const income = sourceTransactions
         .filter((t: any) => {
@@ -995,14 +1125,19 @@ export const useFinancialTransactions = (options: UseFinancialTransactionsOption
         })
         .reduce((sum, t) => sum + (t.amount || 0), 0);
 
-      const apRows = await listAPQuery({
+      const apRowsRaw = await listAPQuery({
         clinicId,
         statusList: ['open', 'partial', 'approved', 'overdue'],
         limit: 5000,
         offset: 0,
       }).catch(() => []);
+      const apRows = await enrichApRowsWithConciliationStatus(clinicId, apRowsRaw || []);
 
       const apOpenTotal = (apRows || []).reduce((sum: number, row: any) => {
+        const status = String(row.status || '').toLowerCase();
+        if (['paid', 'pago', 'quitado', 'canceled', 'cancelado', 'reversed', 'estornado'].includes(status)) {
+          return sum;
+        }
         const explicitBalance = row.balance_amount ?? row.open_amount ?? row.remaining_amount;
         if (explicitBalance !== null && explicitBalance !== undefined) {
           return sum + Math.max(0, Number(explicitBalance || 0));

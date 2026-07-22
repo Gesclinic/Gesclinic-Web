@@ -251,6 +251,66 @@ async function enrichAccountsWithTransferBalances(clinicId: string, accounts: Fi
   });
 }
 
+async function enrichAccountsWithLatestStatementBalances(
+  clinicId: string,
+  accounts: FinancialAccount[],
+): Promise<FinancialAccount[]> {
+  if (accounts.length === 0) {
+    return accounts;
+  }
+
+  const accountIds = accounts.map((account) => account.id).filter(Boolean);
+  if (accountIds.length === 0) {
+    return accounts;
+  }
+
+  const { data, error } = await supabase
+    .from('conciliation_bank_statements')
+    .select('bank_account_id, statement_date, created_at, metadata')
+    .eq('clinic_id', clinicId)
+    .in('bank_account_id', accountIds)
+    .order('statement_date', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(5000);
+
+  if (error) {
+    console.warn('Error loading latest statement balances:', error.message);
+    return accounts;
+  }
+
+  const latestBalanceByAccountId = new Map<string, number>();
+
+  (data || []).forEach((row: any) => {
+    const accountId = row.bank_account_id;
+    if (!accountId || latestBalanceByAccountId.has(accountId)) {
+      return;
+    }
+
+    const balance = Number(row.metadata?.end_balance);
+    if (Number.isFinite(balance)) {
+      latestBalanceByAccountId.set(accountId, balance);
+    }
+  });
+
+  if (latestBalanceByAccountId.size === 0) {
+    return accounts;
+  }
+
+  return accounts.map((account) => {
+    if (!latestBalanceByAccountId.has(account.id)) {
+      return account;
+    }
+
+    const statementBalance = latestBalanceByAccountId.get(account.id) || 0;
+
+    return {
+      ...account,
+      current_balance: statementBalance,
+      balance_reconciled: statementBalance,
+    };
+  });
+}
+
 function accountMatchesFilters(account: FinancialAccount, options?: FinancialAccountsFilterOptions): boolean {
   if (options?.search) {
     const search = options.search.toLowerCase();
@@ -358,7 +418,8 @@ export async function listFinancialAccounts(
     const uniqueAccounts = Array.from(
       new Map(accounts.map((account) => [`${account.source_table || 'financial_accounts'}:${account.id}:${account.account_name}`, account])).values(),
     );
-    const accountsWithBalances = await enrichAccountsWithTransferBalances(clinicId, uniqueAccounts);
+    const accountsWithStatementBalances = await enrichAccountsWithLatestStatementBalances(clinicId, uniqueAccounts);
+    const accountsWithBalances = await enrichAccountsWithTransferBalances(clinicId, accountsWithStatementBalances);
 
     return {
       accounts: accountsWithBalances,

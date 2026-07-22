@@ -189,8 +189,8 @@ export const loadDashboardData = async (
 
     // Keep a single source of truth whenever consolidation is available.
     // This avoids mismatches between Fluxo de Caixa, Lançamentos and DRE.
-    const receivablesSource = consolidatedReceivables.length ? consolidatedReceivables : (receivablesData || []);
-    const payablesSource = consolidatedPayables.length ? consolidatedPayables : (apBillsData || []);
+    const receivablesSource = consolidated ? consolidatedReceivables : (receivablesData || []);
+    const payablesSource = consolidated ? consolidatedPayables : (apBillsData || []);
     const receivablesProcessed = processReceivables(receivablesSource);
 
     // Processar dados e consolidar
@@ -495,7 +495,7 @@ export const invalidateDashboardDataCache = (clinicId = null) => {
 };
 
 export const loadDashboardDataWithCache = async (clinicId, period, customStartDate, customEndDate) => {
-  const cacheKey = `dashboard_v2_${clinicId}_${period}_${customStartDate}_${customEndDate}`;
+  const cacheKey = `dashboard_v3_${clinicId}_${period}_${customStartDate}_${customEndDate}`;
   const cached = cache[cacheKey];
 
   if (cached && new Date() - cached.timestamp < 60000) {

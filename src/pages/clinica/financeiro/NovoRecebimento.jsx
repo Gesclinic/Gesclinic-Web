@@ -14,6 +14,7 @@ import {
   listReceivables,
 } from '@/lib/receivablesApi';
 import { listRevenueAccountPlans, listCostCenters } from '@/lib/financeApi';
+import { listFinancialPlanAccounts } from '@/modules/financeiro/plano-financeiro/services/financialPlanApi';
 import { listProfessionals } from '@/lib/professionalsApi';
 import { listPatients } from '@/lib/patientsApi';
 import { ensurePayerFromDocument, listPayers } from '@/lib/payersApi';
@@ -75,6 +76,7 @@ export default function NovoRecebimento() {
     total_parcelas: '',
     profissional_id: '',
     plano_contas_id: '',
+    financial_plan_account_id: '',
     centro_custo_id: '',
     competency_date: new Date().toISOString().slice(0, 10),
     guide_number: '',
@@ -102,6 +104,7 @@ export default function NovoRecebimento() {
     settlement_type: 'D+1',
   });
   const [plans, setPlans] = useState([]);
+  const [financialPlanAccounts, setFinancialPlanAccounts] = useState([]);
   const [costCenters, setCostCenters] = useState([]);
   const [professionals, setProfessionals] = useState([]);
   const [patientResults, setPatientResults] = useState([]);
@@ -127,12 +130,14 @@ export default function NovoRecebimento() {
     }
     (async () => {
       try {
-        const [revenuePlans, centers] = await Promise.all([
+        const [revenuePlans, centers, financialPlanRows] = await Promise.all([
           listRevenueAccountPlans(clinicId),
           listCostCenters(clinicId),
+          listFinancialPlanAccounts(clinicId),
         ]);
         setPlans(revenuePlans || []);
         setCostCenters(centers || []);
+        setFinancialPlanAccounts((financialPlanRows || []).filter((account) => account.is_active !== false && account.accepts_entries !== false));
       } catch {}
     })();
   }, [clinicId]);
@@ -338,6 +343,7 @@ export default function NovoRecebimento() {
       payer_id: fields.payer_id || null,
       convenio_id: fields.payer_id || null,
       payer_type: fields.payer_id ? 'CONVENIO' : 'manual',
+      financial_plan_account_id: form.financial_plan_account_id || null,
       descricao: fields.description || (invoiceNumber ? `NF ${invoiceNumber}` : file.name),
       valor_bruto: amount,
       descontos: '0',
@@ -1050,6 +1056,21 @@ export default function NovoRecebimento() {
 
           <FormSection title="Classificação financeira">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <Label>Plano Financeiro</Label>
+              <select
+                className="w-full border rounded h-9 px-2 text-sm"
+                value={form.financial_plan_account_id || ''}
+                onChange={(e) => setForm((f) => ({ ...f, financial_plan_account_id: e.target.value }))}
+              >
+                <option value="">Selecione</option>
+                {financialPlanAccounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.code ? `${account.code} - ${account.name}` : account.name}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div>
               <Label>Centro de Custo</Label>
               <select

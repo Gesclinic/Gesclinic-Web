@@ -455,6 +455,7 @@ function normalizeReceivablePayload(clinicId, payload) {
     appointment_id: payload.appointment_id || null,
     payment_method: payload.payment_method || payload.forma_prevista || null,
     chart_account_id: payload.chart_account_id || payload.plano_contas_id || null,
+    financial_plan_account_id: payload.financial_plan_account_id || null,
     financial_account_id: payload.financial_account_id || null,
     origem: payload.origem || payload.origin || null,
     centro_custo_id: payload.centro_custo_id || payload.cost_center_id || null,
@@ -572,6 +573,7 @@ async function insertFinancialTransactionVariants(rows) {
   const newSchemaRows = rows.map((row) => ({
     clinic_id: row.clinic_id,
     financial_account_id: row.financial_account_id,
+    financial_plan_account_id: row.financial_plan_account_id,
     created_by: row.created_by,
     updated_by: row.updated_by,
     transaction_type: row.transaction_type,
@@ -663,6 +665,7 @@ async function syncReceivableFinancialTransactions(row) {
       competency_date: competencyDate,
       reference_document: documentNumber,
       document_number: documentNumber,
+      financial_plan_account_id: row.financial_plan_account_id || null,
       professional_id: row.professional_id || null,
       origin_module: 'accounts_receivable',
       origin_id: row.id,
@@ -767,11 +770,29 @@ function normalizeReceivablePatch(patch) {
   if ('plano_contas_id' in normalized && !('chart_account_id' in normalized)) {
     normalized.chart_account_id = normalized.plano_contas_id || null;
   }
+  if ('chart_account_id' in normalized && !('plano_contas_id' in normalized)) {
+    normalized.plano_contas_id = normalized.chart_account_id || null;
+  }
+  if ('financial_plan_account_id' in normalized) {
+    normalized.financial_plan_account_id = normalized.financial_plan_account_id || null;
+  }
   if ('payer_name' in normalized && !('patient_name' in normalized)) {
     normalized.patient_name = normalized.payer_name;
   }
   if ('profissional_id' in normalized && !('professional_id' in normalized)) {
     normalized.professional_id = normalized.profissional_id || null;
+  }
+  if ('payer_type' in normalized) {
+    const payerType = String(normalized.payer_type || '').toLowerCase();
+    if (!['convenio', 'empresa'].includes(payerType)) {
+      normalized.payer_id = null;
+    }
+    if (payerType !== 'convenio') {
+      normalized.convenio_id = null;
+    }
+    if (payerType !== 'empresa') {
+      normalized.company_id = null;
+    }
   }
   if ('origin' in normalized && !('origem' in normalized)) {
     normalized.origem = normalized.origin;
@@ -820,7 +841,6 @@ function normalizeReceivablePatch(patch) {
   delete normalized.data_emissao;
   delete normalized.data_recebimento;
   delete normalized.forma_prevista;
-  delete normalized.plano_contas_id;
   delete normalized.profissional_id;
   delete normalized.cost_center_id;
   delete normalized.origin;

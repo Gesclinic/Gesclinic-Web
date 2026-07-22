@@ -20,6 +20,8 @@ import FinancialAlertsPanel from '@/components/financeiro/FinancialAlertsPanel';
 import ExecutiveSummary from '@/components/financeiro/ExecutiveSummary';
 import HelpTermsModal from '@/components/financeiro/HelpTermsModal';
 import OperationalCashFlowModel from '@/components/financeiro/OperationalCashFlowModel';
+import FinancialGlobalFilters from '@/components/financeiro/FinancialGlobalFilters';
+import FinancialExecutiveDashboard from '@/components/financeiro/FinancialExecutiveDashboard';
 
 // Componentes de análises avançadas
 import GesclinicInsights from '@/components/financeiro/GesclinicInsights';
@@ -27,9 +29,6 @@ import ClinicCockpit from '@/components/financeiro/ClinicCockpit';
 import CovenantRadar from '@/components/financeiro/CovenantRadar';
 import ProfitMap from '@/components/financeiro/ProfitMap';
 import PerformanceRanking from '@/components/financeiro/PerformanceRanking';
-
-// Phase 3: Period Filter
-import { PeriodFilter } from '@/components/financeiro/PeriodFilter';
 
 // Phase 3: Export & Reporting
 import ExportReportingPanel from '@/components/financeiro/ExportReportingPanel';
@@ -74,6 +73,57 @@ const OPERATIONAL_PARAM_OPTIONS = {
   display: ['income_expense', 'result', 'balances'],
 };
 
+const GLOBAL_FILTER_STORAGE_KEY = 'gesclinic:financeiro:fluxo-caixa:global-filters';
+
+const DEFAULT_GLOBAL_FILTERS = {
+  company: '',
+  branch: '',
+  competence: '',
+  period: '30d',
+  startDate: '',
+  endDate: '',
+  bank: '',
+  bankAccount: '',
+  financialAccount: '',
+  chartAccount: '',
+  costCenter: '',
+  category: '',
+  nature: '',
+  project: '',
+  insurance: '',
+  professional: '',
+  patient: '',
+  supplier: '',
+  status: '',
+  receiptMethod: '',
+  paymentMethod: '',
+  user: '',
+  search: '',
+};
+
+const GLOBAL_FILTER_QUERY_KEYS = Object.keys(DEFAULT_GLOBAL_FILTERS).map((key) => `f_${key}`);
+
+function readStoredGlobalFilters() {
+  if (typeof window === 'undefined') return {};
+  try {
+    return JSON.parse(window.localStorage.getItem(GLOBAL_FILTER_STORAGE_KEY) || '{}') || {};
+  } catch (_error) {
+    return {};
+  }
+}
+
+function buildGlobalFiltersFromSearch(searchParams) {
+  const stored = readStoredGlobalFilters();
+  const next = { ...DEFAULT_GLOBAL_FILTERS, ...stored };
+
+  Object.keys(DEFAULT_GLOBAL_FILTERS).forEach((key) => {
+    const value = searchParams.get(`f_${key}`);
+    if (value !== null) next[key] = value;
+  });
+
+  return next;
+}
+
 /**
  * 💰 FLUXO DE CAIXA - Dashboard Executivo Consolidado (PHASE 1)
  *
@@ -83,6 +133,14 @@ const OPERATIONAL_PARAM_OPTIONS = {
 export default function FluxoCaixaPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const sectionParam = searchParams.get('section');
+  const normalizedInitialSection = sectionParam === 'model' ? 'projected' : sectionParam;
+  const isValidInitialSection = ['overview', 'operational', 'projected', 'analytics'].includes(normalizedInitialSection);
+  const hasInvalidOperationalParam = normalizedInitialSection === 'operational' && Object.entries(OPERATIONAL_DEFAULT_PARAMS).some(([key]) => {
+    const current = searchParams.get(key);
+    const options = OPERATIONAL_PARAM_OPTIONS[key];
+    return (options && !options.includes(current)) || (!options && current !== OPERATIONAL_DEFAULT_PARAMS[key]);
+  });
+  const shouldNormalizeRoute = !isValidInitialSection || sectionParam === 'model' || hasInvalidOperationalParam;
   const breadcrumbs = useBreadcrumbs([
     { label: 'Financeiro', path: '/clinica/financeiro' },
     { label: 'Fluxo de Caixa' },
@@ -94,18 +152,22 @@ export default function FluxoCaixaPage() {
   // STATES - Phase 3 Updated
   // ========================
 
-  const [period, setPeriod] = useState('30d');
+  const [globalFilters, setGlobalFilters] = useState(() => buildGlobalFiltersFromSearch(searchParams));
+  const [period, setPeriod] = useState(() => globalFilters.period || '30d');
   const [accountingMode, setAccountingMode] = useState('accrual');
-  const [customDateRange, setCustomDateRange] = useState(null);
+  const [customDateRange, setCustomDateRange] = useState(() => (globalFilters.startDate && globalFilters.endDate
+    ? { start: new Date(`${globalFilters.startDate}T00:00:00`), end: new Date(`${globalFilters.endDate}T00:00:00`) }
+    : null));
   const [flowPreviewMode, setFlowPreviewMode] = useState('executive');
-  const [activeSection, setActiveSection] = useState(['overview', 'operational', 'model', 'analytics'].includes(sectionParam) ? sectionParam : 'operational');
+  const normalizedSectionParam = sectionParam === 'model' ? 'projected' : sectionParam;
+  const [activeSection, setActiveSection] = useState(['overview', 'operational', 'projected', 'analytics'].includes(normalizedSectionParam) ? normalizedSectionParam : 'operational');
   const [modelExpanded, setModelExpanded] = useState(false);
   const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
 
   const sectionActiveStyles = {
     overview: 'border-blue-600 bg-blue-50 text-blue-800',
     operational: 'border-emerald-600 bg-emerald-50 text-emerald-800',
-    model: 'border-amber-600 bg-amber-50 text-amber-800',
+    projected: 'border-amber-600 bg-amber-50 text-amber-800',
     analytics: 'border-violet-600 bg-violet-50 text-violet-800',
   };
 
@@ -116,7 +178,7 @@ export default function FluxoCaixaPage() {
   const sectionPanelStyles = {
     overview: 'border-slate-200 bg-white dark:border-gray-700 dark:bg-gray-900',
     operational: 'border-slate-200 bg-white dark:border-gray-700 dark:bg-gray-900',
-    model: 'border-slate-200 bg-white dark:border-gray-700 dark:bg-gray-900',
+    projected: 'border-slate-200 bg-white dark:border-gray-700 dark:bg-gray-900',
     analytics: 'border-slate-200 bg-white dark:border-gray-700 dark:bg-gray-900',
   };
 
@@ -132,6 +194,7 @@ export default function FluxoCaixaPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [showExportPanel, setShowExportPanel] = useState(false);
+  const operationalScenario = searchParams.get('scenario');
 
   // ========================
   // CÁLCULOS DERIVADOS (Mapeamento para componentes)
@@ -401,12 +464,25 @@ export default function FluxoCaixaPage() {
       console.log('  - Period:', period);
       console.log('  - Custom Range:', customDateRange);
 
+      const customStart = customDateRange?.start || null;
+      const customEnd = customDateRange?.end || null;
+      const shouldUseFutureOperationalRange = activeSection === 'operational'
+        && !customStart
+        && !customEnd
+        && ['forecast', 'projected'].includes(operationalScenario);
+      const daysByPeriod = { '7d': 7, '30d': 30, '90d': 90, '12m': 365 };
+      const days = daysByPeriod[period] || 30;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const futureEnd = new Date(today);
+      futureEnd.setDate(today.getDate() + days - 1);
+
       // Carregar dados consolidados via data service
       const data = await loadDashboardDataWithCache(
         clinicId,
         period,
-        customDateRange?.start || null,
-        customDateRange?.end || null
+        shouldUseFutureOperationalRange ? today : customStart,
+        shouldUseFutureOperationalRange ? futureEnd : customEnd
       );
 
       console.log('[FluxoCaixa] Dados carregados:', data);
@@ -449,6 +525,64 @@ export default function FluxoCaixaPage() {
     setLoading(true);
   }
 
+  function handleGlobalFiltersChange(nextFilters) {
+    const normalizedFilters = {
+      ...DEFAULT_GLOBAL_FILTERS,
+      ...nextFilters,
+    };
+
+    if (normalizedFilters.period !== 'custom') {
+      normalizedFilters.startDate = '';
+      normalizedFilters.endDate = '';
+    }
+
+    setGlobalFilters(normalizedFilters);
+    setPeriod(normalizedFilters.period || '30d');
+    if (normalizedFilters.startDate && normalizedFilters.endDate) {
+      setCustomDateRange({
+        start: new Date(`${normalizedFilters.startDate}T00:00:00`),
+        end: new Date(`${normalizedFilters.endDate}T00:00:00`),
+      });
+    } else {
+      setCustomDateRange(null);
+    }
+
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(GLOBAL_FILTER_STORAGE_KEY, JSON.stringify(normalizedFilters));
+    }
+
+    const nextParams = new URLSearchParams(searchParams);
+    Object.entries(normalizedFilters).forEach(([key, value]) => {
+      if (value) nextParams.set(`f_${key}`, value);
+      else nextParams.delete(`f_${key}`);
+    });
+    setSearchParams(nextParams, { replace: true });
+    setLoading(true);
+  }
+
+  function handleGlobalFiltersReset() {
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(GLOBAL_FILTER_STORAGE_KEY);
+    }
+    const nextParams = new URLSearchParams(searchParams);
+    GLOBAL_FILTER_QUERY_KEYS.forEach((key) => nextParams.delete(key));
+    setSearchParams(nextParams, { replace: true });
+    setGlobalFilters(DEFAULT_GLOBAL_FILTERS);
+    setPeriod('30d');
+    setCustomDateRange(null);
+    setLoading(true);
+  }
+
+  function handleSectionChange(section) {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('section', section);
+    if (section !== 'operational') {
+      nextParams.delete('expand');
+    }
+    setSearchParams(nextParams, { replace: false });
+    setActiveSection(section);
+  }
+
   async function handleRefresh() {
     setRefreshing(true);
     await loadData();
@@ -465,11 +599,11 @@ export default function FluxoCaixaPage() {
 
     setLoading(true);
     loadData();
-  }, [clinicId, loadingClinic, period, customDateRange]);
+  }, [clinicId, loadingClinic, period, customDateRange, activeSection, operationalScenario]);
 
   useEffect(() => {
     const nextSection = searchParams.get('section');
-    const validSections = ['overview', 'operational', 'model', 'analytics'];
+    const validSections = ['overview', 'operational', 'projected', 'model', 'analytics'];
 
     if (!validSections.includes(nextSection)) {
       const nextParams = new URLSearchParams(searchParams);
@@ -477,6 +611,14 @@ export default function FluxoCaixaPage() {
       nextParams.delete('expand');
       setSearchParams(nextParams, { replace: true });
       setActiveSection('operational');
+      return;
+    }
+
+    if (nextSection === 'model') {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.set('section', 'projected');
+      setSearchParams(nextParams, { replace: true });
+      setActiveSection('projected');
       return;
     }
 
@@ -536,6 +678,10 @@ export default function FluxoCaixaPage() {
     );
   }
 
+  if (shouldNormalizeRoute) {
+    return null;
+  }
+
   const isOperationalSection = activeSection === 'operational';
 
   return (
@@ -557,40 +703,18 @@ export default function FluxoCaixaPage() {
           </div>
         }
       >
-        {!isOperationalSection && (
-          <div className="mb-3 rounded-lg border border-gray-200 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-900">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">Periodo</span>
-              <PeriodFilter onPeriodChange={handlePeriodChange} currentPeriod={period} />
-              <div className="flex flex-wrap items-center gap-2 border-l border-gray-200 pl-3 dark:border-gray-700">
-                <span className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">Regime</span>
-                <button
-                  type="button"
-                  onClick={() => setAccountingMode('realized')}
-                  className={`rounded-md border px-2.5 py-1.5 text-xs font-semibold transition-colors ${accountingMode === 'realized'
-                    ? 'border-blue-700 bg-blue-700 text-white'
-                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800'
-                  }`}
-                >
-                  Caixa
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAccountingMode('accrual')}
-                  className={`rounded-md border px-2.5 py-1.5 text-xs font-semibold transition-colors ${accountingMode === 'accrual'
-                    ? 'border-emerald-700 bg-emerald-700 text-white'
-                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800'
-                  }`}
-                >
-                  Competencia
-                </button>
-              </div>
-              <span className="ml-auto text-xs text-gray-500 dark:text-gray-400">
-                {lastUpdatedAt ? `Atualizado em ${new Date(lastUpdatedAt).toLocaleString('pt-BR')}` : 'Aguardando atualização'}
-              </span>
-            </div>
-          </div>
-        )}
+        <FinancialGlobalFilters
+          filters={globalFilters}
+          clinic={clinic}
+          accountingMode={accountingMode}
+          onAccountingModeChange={setAccountingMode}
+          onChange={handleGlobalFiltersChange}
+          onReset={handleGlobalFiltersReset}
+        />
+
+        <div className="mb-3 flex justify-end text-xs text-gray-500 dark:text-gray-400">
+          {lastUpdatedAt ? `Atualizado em ${new Date(lastUpdatedAt).toLocaleString('pt-BR')}` : 'Aguardando atualização'}
+        </div>
 
         {/* Navegação entre seções do fluxo */}
         <div className="mb-4 rounded-lg border border-gray-200 bg-white p-1.5 dark:border-gray-700 dark:bg-gray-900">
@@ -598,7 +722,7 @@ export default function FluxoCaixaPage() {
             <button
               type="button"
               className={getSectionButtonClass('overview')}
-              onClick={() => setActiveSection('overview')}
+              onClick={() => handleSectionChange('overview')}
             >
               <BarChart3 className="h-4 w-4" />
               Visão Geral
@@ -606,15 +730,15 @@ export default function FluxoCaixaPage() {
             <button
               type="button"
               className={getSectionButtonClass('operational')}
-              onClick={() => setActiveSection('operational')}
+              onClick={() => handleSectionChange('operational')}
             >
               <Activity className="h-4 w-4" />
               Operacional
             </button>
             <button
               type="button"
-              className={getSectionButtonClass('model')}
-              onClick={() => setActiveSection('model')}
+              className={getSectionButtonClass('projected')}
+              onClick={() => handleSectionChange('projected')}
             >
               <Table2 className="h-4 w-4" />
               Fluxo Projetado
@@ -622,7 +746,7 @@ export default function FluxoCaixaPage() {
             <button
               type="button"
               className={getSectionButtonClass('analytics')}
-              onClick={() => setActiveSection('analytics')}
+              onClick={() => handleSectionChange('analytics')}
             >
               <Sparkles className="h-4 w-4" />
               Análises Avançadas
@@ -632,7 +756,7 @@ export default function FluxoCaixaPage() {
 
         <div className={getSectionPanelClass(activeSection)}>
         {/* 💹 FLUXO PROJETADO ENTERPRISE */}
-        {activeSection === 'model' && (
+        {activeSection === 'projected' && (
           <ErrorBoundary>
             <ProjectedCashFlow
               externalStartDate={projectedPeriod.start}
@@ -658,149 +782,17 @@ export default function FluxoCaixaPage() {
             {/* 1. Visão geral */}
             {activeSection === 'overview' && (
               <ErrorBoundary>
-                <FinancialKpiCards
+                <FinancialExecutiveDashboard
                   summary={modeSummary}
-                  previousSummary={previousSummary}
                   projectedBalance={projectedBalance}
                   receivable30d={receivable30d}
                   payable30d={payable30d}
-                  loading={loading}
+                  receivables={modeReceivables}
+                  payables={modePayables}
+                  dailyData={modeDailyData}
+                  consolidation={consolidation}
                 />
               </ErrorBoundary>
-            )}
-
-            {activeSection === 'overview' && (
-              <DashboardDisclosure title="Evolucao do caixa" subtitle="Entradas, saidas e saldo no periodo selecionado.">
-                <ErrorBoundary>
-                  <CashFlowChartPanel dailyData={modeDailyData} projection={projection} loading={loading} />
-                </ErrorBoundary>
-              </DashboardDisclosure>
-            )}
-
-            {activeSection === 'overview' && (
-              <DashboardDisclosure title="Resumo executivo e acoes" subtitle="Leitura operacional do periodo, proximos vencimentos e recomendacoes.">
-                <ErrorBoundary>
-                  <ExecutiveSummary
-                    summary={modeSummary}
-                    receivable30d={receivable30d}
-                    payable30d={payable30d}
-                    projectedBalance={projectedBalance}
-                    receivables={receivables}
-                    loading={loading}
-                  />
-                </ErrorBoundary>
-              </DashboardDisclosure>
-            )}
-
-            {activeSection === 'overview' && (
-              <DashboardDisclosure title="Contas abertas" subtitle="Janelas de recebimentos e pagamentos para conferencia." defaultOpen={false}>
-                <div className="grid gap-3 xl:grid-cols-2">
-                  <ErrorBoundary>
-                    <ReceivableSummary receivables={modeReceivables} loading={loading} />
-                  </ErrorBoundary>
-
-                  <ErrorBoundary>
-                    <PayableSummary payables={modePayables} loading={loading} />
-                  </ErrorBoundary>
-                </div>
-              </DashboardDisclosure>
-            )}
-
-            {activeSection === 'overview' && (
-              <DashboardDisclosure title="Alertas financeiros" subtitle="Riscos e avisos gerados a partir dos lancamentos do periodo." defaultOpen={false}>
-                <ErrorBoundary>
-                  <FinancialAlertsPanel
-                    summary={modeSummary}
-                    receivables={modeReceivables}
-                    payables={modePayables}
-                    previousSummary={previousSummary}
-                    loading={loading}
-                  />
-                </ErrorBoundary>
-              </DashboardDisclosure>
-            )}
-
-            {activeSection === 'overview' && reconciliation && (
-              <DashboardDisclosure title="Reconciliação entre módulos" subtitle="Comparativo tecnico para conferir se dashboard, consolidacao e lancamentos estao alinhados." defaultOpen={false}>
-              <Card className="border-slate-300 bg-white p-5 dark:border-gray-700 dark:bg-gray-900">
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Painel de Reconciliação entre Módulos</h3>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">Base: {accountingMode === 'accrual' ? 'Competência selecionada' : 'Realizado selecionado'}</span>
-                </div>
-
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-3 mb-4">
-                  <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm dark:border-blue-900/40 dark:bg-blue-950/20">
-                    <p className="font-semibold text-blue-900 dark:text-blue-100">DRE (Competência)</p>
-                    <p className="text-blue-800 dark:text-blue-200">Receita líquida: {formatCurrency(reconciliation.dreLike.receitaLiquida)}</p>
-                    <p className="text-blue-800 dark:text-blue-200">Resultado líquido: {formatCurrency(reconciliation.dreLike.liquido)}</p>
-                  </div>
-                  <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm dark:border-emerald-900/40 dark:bg-emerald-950/20">
-                    <p className="font-semibold text-emerald-900 dark:text-emerald-100">Fluxo (Caixa)</p>
-                    <p className="text-emerald-800 dark:text-emerald-200">Entradas realizadas: {formatCurrency(reconciliation.fluxoLike.inflows)}</p>
-                    <p className="text-emerald-800 dark:text-emerald-200">Saídas realizadas: {formatCurrency(reconciliation.fluxoLike.outflows)}</p>
-                  </div>
-                  <div className="rounded-md border border-violet-200 bg-violet-50 p-3 text-sm dark:border-violet-900/40 dark:bg-violet-950/20">
-                    <p className="font-semibold text-violet-900 dark:text-violet-100">Lançamentos Realizados</p>
-                    <p className="text-violet-800 dark:text-violet-200">Entradas: {formatCurrency(reconciliation.realizedFromLancamentos.inflows)}</p>
-                    <p className="text-violet-800 dark:text-violet-200">Saídas: {formatCurrency(reconciliation.realizedFromLancamentos.outflows)}</p>
-                  </div>
-                </div>
-
-                <div className="overflow-auto rounded-md border border-slate-200 dark:border-gray-700">
-                  <table className="w-full min-w-[680px] text-sm">
-                    <thead className="bg-slate-50 dark:bg-gray-800">
-                      <tr>
-                        <th className="px-3 py-2 text-left font-semibold text-slate-700 dark:text-gray-200">Métrica</th>
-                        <th className="px-3 py-2 text-right font-semibold text-slate-700 dark:text-gray-200">Delta</th>
-                        <th className="px-3 py-2 text-left font-semibold text-slate-700 dark:text-gray-200">Leitura</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[
-                        {
-                          key: 'receivablesCount',
-                          label: 'Contas a Receber (dashboard vs consolidação)',
-                          value: reconciliation.deltas.receivablesCount,
-                          note: 'Deve ser 0 quando as fontes estão alinhadas.',
-                        },
-                        {
-                          key: 'payablesCount',
-                          label: 'Contas a Pagar (dashboard vs consolidação)',
-                          value: reconciliation.deltas.payablesCount,
-                          note: 'Deve ser 0 quando as fontes estão alinhadas.',
-                        },
-                        {
-                          key: 'fluxoVsLancamentosInflows',
-                          label: 'Entradas realizadas (fluxo vs lançamentos)',
-                          value: reconciliation.deltas.fluxoVsLancamentosInflows,
-                          note: 'Idealmente 0 para mesma janela e regra de status.',
-                        },
-                        {
-                          key: 'fluxoVsLancamentosOutflows',
-                          label: 'Saídas realizadas (fluxo vs lançamentos)',
-                          value: reconciliation.deltas.fluxoVsLancamentosOutflows,
-                          note: 'Idealmente 0 para mesma janela e regra de status.',
-                        },
-                        {
-                          key: 'fluxoVsLancamentosNet',
-                          label: 'Saldo realizado (fluxo vs lançamentos)',
-                          value: reconciliation.deltas.fluxoVsLancamentosNet,
-                          note: 'Idealmente 0 para mesma janela e regra de status.',
-                        },
-                      ].map((row) => (
-                        <tr key={row.key} className="border-t border-slate-100 dark:border-gray-800">
-                          <td className="px-3 py-2 text-slate-700 dark:text-gray-200">{row.label}</td>
-                          <td className={`px-3 py-2 text-right font-semibold ${Number(row.value || 0) === 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                            {Number(row.value || 0).toFixed(2)}
-                          </td>
-                          <td className="px-3 py-2 text-xs text-slate-500 dark:text-gray-400">{row.note}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Card>
-              </DashboardDisclosure>
             )}
 
             {/* 2. Operacional */}
@@ -813,6 +805,7 @@ export default function FluxoCaixaPage() {
                   accountingMode={accountingMode}
                   dateRange={customDateRange}
                   onDateRangeChange={handleOperationalDateRangeChange}
+                  showDateControls={false}
                 />
               </ErrorBoundary>
             )}

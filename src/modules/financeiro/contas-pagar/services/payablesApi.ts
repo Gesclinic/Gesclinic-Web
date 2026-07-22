@@ -221,6 +221,62 @@ function expandStatusFilter(statuses?: PayableStatus[]): string[] {
   return Array.from(new Set(statuses.flatMap((status) => getStatusQueryVariants(status))));
 }
 
+function normalizePayableType(type?: string | null): PayableType | undefined {
+  const normalized = String(type || '').toUpperCase();
+  return Object.values(PayableType).includes(normalized as PayableType) ? normalized as PayableType : undefined;
+}
+
+function normalizePaymentMethod(method?: string | null): PaymentMethodType | undefined {
+  const normalized = String(method || '').toUpperCase();
+  const aliases: Record<string, PaymentMethodType> = {
+    PIX: PaymentMethodType.PIX,
+    TED: PaymentMethodType.TED,
+    DOC: PaymentMethodType.DOC,
+    CASH: PaymentMethodType.CASH,
+    DINHEIRO: PaymentMethodType.CASH,
+    CREDIT_CARD: PaymentMethodType.CREDIT_CARD,
+    CARTAO_CREDITO: PaymentMethodType.CREDIT_CARD,
+    CARTAO_DE_CREDITO: PaymentMethodType.CREDIT_CARD,
+    DEBIT_CARD: PaymentMethodType.DEBIT_CARD,
+    CARTAO_DEBITO: PaymentMethodType.DEBIT_CARD,
+    CARTAO_DE_DEBITO: PaymentMethodType.DEBIT_CARD,
+    BANK_SLIP: PaymentMethodType.BANK_SLIP,
+    BOLETO: PaymentMethodType.BANK_SLIP,
+    OTHER: PaymentMethodType.OTHER,
+    OUTRO: PaymentMethodType.OTHER,
+  };
+
+  return aliases[normalized] || undefined;
+}
+
+function hasExplicitPayableFilters(params: PayableFilterParams, normalizedStatusFilter = expandStatusFilter(params.status)): boolean {
+  return normalizedStatusFilter.length > 0
+    || !!params.type?.length
+    || !!params.supplier_id
+    || !!params.supplier_name
+    || !!params.category
+    || !!params.subcategory
+    || !!params.chart_account_id
+    || !!params.cost_center_id
+    || !!params.financial_plan_account_id
+    || !!params.financial_account_id
+    || !!params.payment_method?.length
+    || !!params.unit_id
+    || !!params.due_date_start
+    || !!params.due_date_end
+    || !!params.issue_date_start
+    || !!params.issue_date_end
+    || !!params.payment_date_start
+    || !!params.payment_date_end
+    || !!params.competency_date_start
+    || !!params.competency_date_end
+    || params.amount_min !== undefined
+    || params.amount_max !== undefined
+    || !!params.search
+    || params.is_recurring !== undefined
+    || params.is_overdue !== undefined;
+}
+
 function isUuid(value?: string | null): boolean {
   return !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
@@ -351,6 +407,7 @@ async function syncEditedPayableInstallments(updatedPayable: any, input: Payable
       chart_account_id: updatedPayable.chart_account_id || null,
       cost_center_id: updatedPayable.cost_center_id || null,
       financial_account_id: updatedPayable.financial_account_id || null,
+      financial_plan_account_id: updatedPayable.financial_plan_account_id || null,
       dre_classification: updatedPayable.dre_classification || null,
       cost_allocations: updatedPayable.cost_allocations || [],
       is_recurring: updatedPayable.is_recurring || false,
@@ -492,7 +549,7 @@ function isDocumentBackedPayableInput(input: PayableCreateInput): boolean {
 async function findHistoricalPayableClassification(clinicId: string, input: PayableCreateInput): Promise<Partial<PayableCreateInput> | null> {
   const document = normalizeDocument(input.supplier_document || input.document_number);
   const supplierName = normalizeText(input.supplier_name);
-  const selectColumns = 'category,subcategory,chart_account_id,cost_center_id,financial_account_id,dre_classification,cost_allocations,updated_at,created_at';
+  const selectColumns = 'category,subcategory,chart_account_id,cost_center_id,financial_plan_account_id,financial_account_id,dre_classification,cost_allocations,updated_at,created_at';
 
   const fetchRows = async (query: any) => {
     const { data, error } = await query
@@ -539,6 +596,7 @@ async function findHistoricalPayableClassification(clinicId: string, input: Paya
     subcategory: match.subcategory || undefined,
     chart_account_id: match.chart_account_id || undefined,
     cost_center_id: match.cost_center_id || undefined,
+    financial_plan_account_id: match.financial_plan_account_id || undefined,
     financial_account_id: match.financial_account_id || undefined,
     dre_classification: match.dre_classification || undefined,
     cost_allocations: Array.isArray(match.cost_allocations) && match.cost_allocations.length ? match.cost_allocations : undefined,
@@ -559,6 +617,7 @@ async function applyHistoricalPayableClassification(clinicId: string, input: Pay
     subcategory: input.subcategory || historical.subcategory,
     chart_account_id: input.chart_account_id || historical.chart_account_id,
     cost_center_id: input.cost_center_id || historical.cost_center_id,
+    financial_plan_account_id: input.financial_plan_account_id || historical.financial_plan_account_id,
     financial_account_id: input.financial_account_id || historical.financial_account_id,
     dre_classification: shouldUseHistoricalDre ? historical.dre_classification as any : input.dre_classification,
     cost_allocations: input.cost_allocations?.length ? input.cost_allocations : historical.cost_allocations,
@@ -663,8 +722,8 @@ function transformPayable(data: any): Payable {
     balance_amount: balanceAmount,
     payment_date: paymentDate,
     status: isCashDrawerSettled || isPaidStatus || balanceAmount <= 0 && paidValue > 0 ? PayableStatus.PAID : rawStatus,
-    type: data.type as PayableType,
-    payment_method: data.payment_method as PaymentMethodType,
+    type: normalizePayableType(data.type) || data.type as PayableType,
+    payment_method: normalizePaymentMethod(data.payment_method) || data.payment_method as PaymentMethodType,
   };
 }
 
@@ -689,6 +748,7 @@ function matchesPayableClientFilters(payable: Payable, params: PayableFilterPara
   if (params.subcategory && !payableText(payable.subcategory).includes(payableText(params.subcategory))) return false;
   if (params.chart_account_id && payable.chart_account_id !== params.chart_account_id) return false;
   if (params.cost_center_id && payable.cost_center_id !== params.cost_center_id) return false;
+  if (params.financial_plan_account_id && payable.financial_plan_account_id !== params.financial_plan_account_id) return false;
   if (params.financial_account_id && payable.financial_account_id !== params.financial_account_id) return false;
   if (params.payment_method?.length && (!payable.payment_method || !params.payment_method.includes(payable.payment_method))) return false;
   if (params.unit_id && payable.unit_id !== params.unit_id) return false;
@@ -742,8 +802,7 @@ function payableDueDate(payable: Payable): string {
   return String(payable.due_date || '').split('T')[0];
 }
 
-function buildNormalizedPayablesSummary(clinicId: string, rows: any[]): PayablesSummary {
-  const payables = (rows || []).map(transformPayable);
+function buildNormalizedPayablesSummary(clinicId: string, payables: Payable[]): PayablesSummary {
   const today = new Date().toISOString().split('T')[0];
   const next7 = new Date();
   next7.setDate(next7.getDate() + 7);
@@ -803,12 +862,97 @@ function buildNormalizedPayablesSummary(clinicId: string, rows: any[]): Payables
 
 async function listPayablesViaRpc(params: PayableFilterParams): Promise<PayablesPageResponse> {
   const rows = await listAP({ clinicId: params.clinic_id, limit: 20000, offset: 0 });
+  const payables = await enrichPayablesWithConciliationStatements((rows || []).map(transformPayable), params.clinic_id);
   const filtered = sortPayables(
-    (rows || []).map(transformPayable).filter((payable) => matchesPayableClientFilters(payable, params)),
+    payables.filter((payable) => matchesPayableClientFilters(payable, params)),
     params.order_by || 'due_date.asc',
   );
   const limit = params.limit || 50;
   const offset = params.offset || 0;
+  return {
+    payables: filtered.slice(offset, offset + limit),
+    total: filtered.length,
+    has_more: filtered.length > offset + limit,
+  };
+}
+
+async function enrichPayablesWithConciliationStatements(payables: Payable[], clinicId: string): Promise<Payable[]> {
+  const payableIds = payables.map((payable) => payable.id).filter(Boolean);
+  if (!payableIds.length) return payables;
+
+  const { data, error } = await supabase
+    .from('conciliation_bank_statements')
+    .select('id,linked_financial_id,status,statement_date,amount,description,updated_at')
+    .eq('clinic_id', clinicId)
+    .eq('linked_type', 'payable')
+    .eq('status', 'conciliated')
+    .in('linked_financial_id', payableIds);
+
+  if (error) {
+    console.warn('Payable reconciliation enrichment skipped:', error);
+    return payables;
+  }
+
+  const statementByPayableId = new Map((data || []).map((statement: any) => [statement.linked_financial_id, statement]));
+
+  return payables.map((payable) => {
+    const statement = statementByPayableId.get(payable.id);
+    if (!statement) return payable;
+
+    const paymentAmount = Math.abs(Number(statement.amount || payable.net_amount || payable.amount || 0));
+    const paymentDate = String(statement.statement_date || statement.updated_at || payable.payment_date || payable.paid_at || '').split('T')[0];
+    const metadata = payable.metadata || {};
+    const enterprise = metadata.enterprise || {};
+    const reconciliation = enterprise.reconciliation || {};
+
+    return {
+      ...payable,
+      status: PayableStatus.PAID,
+      paid_value: Math.max(Number(payable.paid_value || 0), paymentAmount),
+      balance_amount: 0,
+      payment_date: payable.payment_date || paymentDate,
+      paid_at: payable.paid_at || statement.updated_at || paymentDate,
+      metadata: {
+        ...metadata,
+        enterprise: {
+          ...enterprise,
+          reconciliation: {
+            ...reconciliation,
+            status: 'MATCHED',
+            bank_statement_id: statement.id,
+            bank_transaction_id: reconciliation.bank_transaction_id || statement.id,
+            approved_at: reconciliation.approved_at || statement.updated_at,
+            payment_amount: paymentAmount,
+            payment_date: paymentDate,
+          },
+        },
+      },
+    };
+  });
+}
+
+async function listPayablesWithClientFilters(params: PayableFilterParams): Promise<PayablesPageResponse> {
+  const { data, error } = await supabase
+    .from('ap_bills')
+    .select('*')
+    .eq('clinic_id', params.clinic_id)
+    .limit(20000);
+
+  if (error) {
+    console.warn('listPayables direct client-filter fetch failed, using RPC fallback:', error);
+    return listPayablesViaRpc(params);
+  }
+
+  const payables = await enrichPayablesWithConciliationStatements((data || []).map(transformPayable), params.clinic_id);
+  const filtered = sortPayables(
+    payables
+      .filter((payable) => matchesPayableClientFilters(payable, params))
+      .filter((payable) => params.status?.length || payable.status !== PayableStatus.CANCELED),
+    params.order_by || 'due_date.asc',
+  );
+  const limit = params.limit || 50;
+  const offset = params.offset || 0;
+
   return {
     payables: filtered.slice(offset, offset + limit),
     total: filtered.length,
@@ -828,6 +972,11 @@ export async function listPayables(
 ): Promise<PayablesPageResponse> {
   try {
     const normalizedStatusFilter = expandStatusFilter(params.status);
+    const hasExplicitFilters = hasExplicitPayableFilters(params, normalizedStatusFilter);
+
+    if (hasExplicitFilters) {
+      return listPayablesWithClientFilters(params);
+    }
 
     let query = supabase
       .from('ap_bills')
@@ -868,6 +1017,10 @@ export async function listPayables(
     // Cost center filter
     if (params.cost_center_id) {
       query = query.eq('cost_center_id', params.cost_center_id);
+    }
+
+    if (params.financial_plan_account_id) {
+      query = query.eq('financial_plan_account_id', params.financial_plan_account_id);
     }
 
     if (params.financial_account_id) {
@@ -946,26 +1099,6 @@ export async function listPayables(
     // Exclude canceled only if explicit filters are applied
     // This ensures that without filters, all records are shown (including CANCELED for visibility)
     // but when user applies filters, CANCELED is excluded by default
-    const hasExplicitFilters = normalizedStatusFilter.length > 0 
-      || params.supplier_id 
-      || params.supplier_name 
-      || params.category 
-      || params.subcategory 
-      || params.chart_account_id 
-      || params.cost_center_id 
-      || params.financial_account_id 
-      || (params.payment_method && params.payment_method.length > 0)
-      || params.unit_id 
-      || params.due_date_start 
-      || params.due_date_end 
-      || params.issue_date_start 
-      || params.issue_date_end 
-      || params.payment_date_start 
-      || params.payment_date_end 
-      || params.competency_date_start 
-      || params.competency_date_end 
-      || params.search;
-
     if (hasExplicitFilters) {
       query = query
         .neq('status', 'CANCELED')
@@ -995,9 +1128,10 @@ export async function listPayables(
       }
     }
 
-    const normalizedPayables = (data || [])
-      .map(transformPayable)
-      .filter((payable) => matchesPayableClientFilters(payable, params));
+    const normalizedPayables = await enrichPayablesWithConciliationStatements(
+      (data || []).map(transformPayable).filter((payable) => matchesPayableClientFilters(payable, params)),
+      params.clinic_id,
+    );
 
     return {
       payables: normalizedPayables,
@@ -1085,6 +1219,7 @@ export async function createPayable(
         payment_reference: payableInput.payment_reference || null,
         chart_account_id: payableInput.chart_account_id || null,
         cost_center_id: payableInput.cost_center_id || null,
+        financial_plan_account_id: payableInput.financial_plan_account_id || null,
         financial_account_id: payableInput.financial_account_id || null,
         dre_classification: payableInput.dre_classification || null,
         cost_allocations: payableInput.cost_allocations || null,
@@ -1161,6 +1296,7 @@ export async function updatePayable(
     });
 
     const data = await updateApBillWithSchemaFallback(id, updateData as Record<string, any>);
+    await syncAPFinancialTransactions(data);
     invalidateFinanceCaches(data.clinic_id);
     return await syncEditedPayableInstallments(data, input);
   } catch (error) {
@@ -1810,7 +1946,8 @@ export async function getPayablesSummary(
       .limit(20000);
 
     if (error) throw error;
-    return buildNormalizedPayablesSummary(clinicId, data || []);
+    const payables = await enrichPayablesWithConciliationStatements((data || []).map(transformPayable), clinicId);
+    return buildNormalizedPayablesSummary(clinicId, payables);
   } catch (error) {
     console.error('Error getting payables summary:', error);
     // Retorna null ao invés de lançar erro - permite que a página continue funcionando

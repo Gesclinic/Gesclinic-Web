@@ -118,7 +118,7 @@ export async function importBankStatements({
   accountId = null,
 }) {
   try {
-    const records = statements.map((stmt) => {
+    const records = statements.map((stmt, index) => {
       const referenceNumber = stmt.bankId || stmt.referenceNumber || null;
       const referenceHash = generateReferenceHash(
         clinicId,
@@ -137,10 +137,16 @@ export async function importBankStatements({
         transaction_type: stmt.type || stmt.transaction_type,
         bank_id: referenceNumber,
         reference_hash: referenceHash,
-        metadata: stmt.metadata || {
+        metadata: {
+          ...(stmt.metadata || {}),
           operation_type: stmt.operationType || 'OUTRO',
           raw_type: stmt.rawType || null,
           raw_memo: stmt.rawMemo || null,
+          source_layout: stmt.sourceLayout || stmt.metadata?.source_layout || null,
+          source_document: stmt.sourceDocument || stmt.metadata?.source_document || null,
+          source_complement: stmt.sourceComplement || stmt.metadata?.source_complement || null,
+          source_history: stmt.sourceHistory || stmt.metadata?.source_history || null,
+          import_row_index: stmt.metadata?.import_row_index ?? index,
         },
         status: CONCILIATION_STATUS.PENDING,
         import_batch_id: batchId,
@@ -152,7 +158,7 @@ export async function importBankStatements({
     const hashes = records.map((r) => r.reference_hash);
     const { data: existingStatements, error: checkError } = await supabase
       .from('conciliation_bank_statements')
-      .select('id, reference_hash')
+      .select('id, reference_hash, metadata')
       .eq('clinic_id', clinicId)
       .in('reference_hash', hashes);
 
@@ -161,12 +167,37 @@ export async function importBankStatements({
     }
 
     const existingHashes = new Set(existingStatements?.map((s) => s.reference_hash) || []);
+    const existingByHash = new Map((existingStatements || []).map((s) => [s.reference_hash, s]));
     const newRecords = records.filter((r) => !existingHashes.has(r.reference_hash));
+    const duplicateRecordsWithBalance = records.filter((r) => {
+      if (!existingHashes.has(r.reference_hash)) return false;
+      return r.metadata?.end_balance !== null && typeof r.metadata?.end_balance !== 'undefined';
+    });
+
+    await Promise.all(duplicateRecordsWithBalance.map(async (record) => {
+      const existing = existingByHash.get(record.reference_hash);
+      if (!existing?.id) return;
+
+      const { error: updateError } = await supabase
+        .from('conciliation_bank_statements')
+        .update({
+          metadata: {
+            ...(existing.metadata || {}),
+            ...record.metadata,
+          },
+        })
+        .eq('id', existing.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+    }));
 
     if (newRecords.length === 0) {
       return {
         imported: 0,
         duplicates: records.length,
+        updated: duplicateRecordsWithBalance.length,
         statements: [],
       };
     }
@@ -183,6 +214,7 @@ export async function importBankStatements({
     return {
       imported: data.length,
       duplicates: records.length - newRecords.length,
+      updated: duplicateRecordsWithBalance.length,
       statements: data,
     };
   } catch (error) {
@@ -226,6 +258,7 @@ export async function updateBankStatementStatus(id, status, divergenceReason = n
  */
 export async function conciliateStatement(statementId, financialId, financialType) {
   try {
+    const reconciledAt = new Date().toISOString();
     // Atualizar status
     const { data: updated, error: updateError } = await supabase
       .from('conciliation_bank_statements')
@@ -233,13 +266,54 @@ export async function conciliateStatement(statementId, financialId, financialTyp
         status: CONCILIATION_STATUS.CONCILIATED,
         linked_financial_id: financialId,
         linked_type: financialType,
-        updated_at: new Date().toISOString(),
+        updated_at: reconciledAt,
       })
       .eq('id', statementId)
-      .select();
+      .select('id, statement_date, amount, bank_account_id');
 
     if (updateError) {
       throw updateError;
+    }
+
+    const statement = updated?.[0];
+    const movementDate = String(statement?.statement_date || reconciledAt).split('T')[0];
+    const amount = Math.abs(Number(statement?.amount || 0));
+
+    if (financialType === FINANCIAL_LINK_TYPE.RECEIVABLE) {
+      const receivablePayload = {
+        status: 'received',
+        received_date: movementDate,
+        received_value: amount,
+        updated_at: reconciledAt,
+      };
+      if (statement?.bank_account_id) {
+        receivablePayload.financial_account_id = statement.bank_account_id;
+      }
+      const first = await supabase.from('ar_invoices').update(receivablePayload).eq('id', financialId);
+      if (first.error) {
+        const { financial_account_id, updated_at, ...fallbackPayload } = receivablePayload;
+        const fallback = await supabase.from('ar_invoices').update(fallbackPayload).eq('id', financialId);
+        if (fallback.error) throw fallback.error;
+      }
+    }
+
+    if (financialType === FINANCIAL_LINK_TYPE.PAYABLE) {
+      const payablePayload = {
+        status: 'paid',
+        paid_at: movementDate,
+        paid_value: amount,
+        balance_amount: 0,
+        updated_at: reconciledAt,
+      };
+      if (statement?.bank_account_id) {
+        payablePayload.financial_account_id = statement.bank_account_id;
+      }
+      const first = await supabase.from('ap_bills').update(payablePayload).eq('id', financialId);
+      if (first.error) {
+        const { financial_account_id, paid_at, updated_at, ...fallbackPayload } = payablePayload;
+        const fallback = await supabase.from('ap_bills').update(fallbackPayload).eq('id', financialId);
+        if (fallback.error) throw fallback.error;
+      }
     }
 
     // Registrar no histórico
@@ -250,7 +324,7 @@ export async function conciliateStatement(statementId, financialId, financialTyp
       action: CONCILIATION_ACTION.CONCILIATE,
     });
 
-    return updated?.[0];
+    return statement;
   } catch (error) {
     console.error('Error conciliating statement:', error);
     throw error;
@@ -267,6 +341,7 @@ export async function createAndLinkFinancial({
   amount,
   description,
   dueDate,
+  statementDate,
   categoryId,
   costCenterId,
   paymentMethod = null,
@@ -276,6 +351,7 @@ export async function createAndLinkFinancial({
 }) {
   try {
     let financialId;
+    const movementDate = statementDate || dueDate || new Date().toISOString().split('T')[0];
 
     if (type === FINANCIAL_LINK_TYPE.PAYABLE) {
       // Criar em Contas a Pagar
@@ -290,9 +366,10 @@ export async function createAndLinkFinancial({
             cost_center_id: costCenterId,
             amount: parseFloat(amount),
             description: description || 'Lançamento automático - Conciliação Bancária',
-            due_date: dueDate,
+            due_date: dueDate || movementDate,
+            paid_at: movementDate,
             payment_method: paymentMethod,
-            status: 'OPEN',
+            status: 'paid',
             notes: notes,
           },
         ])
@@ -315,9 +392,11 @@ export async function createAndLinkFinancial({
             cost_center_id: costCenterId,
             amount: parseFloat(amount),
             description: description || 'Lançamento automático - Conciliação Bancária',
-            issue_date: new Date().toISOString().split('T')[0],
-            due_date: dueDate,
-            status: 'open',
+            issue_date: movementDate,
+            due_date: dueDate || movementDate,
+            received_date: movementDate,
+            received_value: parseFloat(amount),
+            status: 'received',
             notes: notes,
           },
         ])
@@ -431,11 +510,15 @@ export async function findSuggestions({
     const normalizedReference = referenceNumber
       ? String(referenceNumber).toLowerCase().replace(/[^a-z0-9]/g, '')
       : null;
-    const normalizedDescription = (description || '').toLowerCase();
+    const normalizeSearchText = (value) => String(value || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+    const normalizedDescription = normalizeSearchText(description);
 
-    const computeTextBoost = (candidateDescription) => {
+    const computeTextBoost = (...candidateParts) => {
       let boost = 0;
-      const candidate = (candidateDescription || '').toLowerCase();
+      const candidate = normalizeSearchText(candidateParts.filter(Boolean).join(' '));
 
       if (!candidate) {
         return boost;
@@ -510,7 +593,7 @@ export async function findSuggestions({
     if (!transactionType || transactionType === TRANSACTION_TYPE.DEBIT) {
       const { data: apSuggestions } = await supabase
         .from('ap_bills')
-        .select('id, description, amount, due_date, status')
+        .select('id, description, vendor_name, document_number, notes, amount, due_date, status')
         .eq('clinic_id', clinicId)
         .gte('amount', amount * 0.95)
         .lte('amount', amount * 1.05)
@@ -527,12 +610,17 @@ export async function findSuggestions({
                 ap.due_date,
                 tolerance,
               );
-              const textBoost = computeTextBoost(ap.description);
+              const textBoost = computeTextBoost(
+                ap.description,
+                ap.vendor_name,
+                ap.document_number,
+                ap.notes,
+              );
               const operationBoost = computeOperationTypeBoost(ap.description, operationType);
               return {
                 id: ap.id,
                 type: FINANCIAL_LINK_TYPE.PAYABLE,
-                description: ap.description,
+                description: ap.description || ap.vendor_name || 'Conta a pagar',
                 amount: ap.amount,
                 date: ap.due_date,
                 status: ap.status,
@@ -553,6 +641,58 @@ export async function findSuggestions({
 
     // Buscar em Contas a Receber (se crédito ou ambos)
     if (!transactionType || transactionType === TRANSACTION_TYPE.CREDIT) {
+      const { data: modernArSuggestions, error: modernArError } = await supabase
+        .from('ar_invoices')
+        .select('id, description, patient_name, payer_type, insurance_invoice_number, guide_number, notes, nf_document_name, net_value, due_date, status, metadata')
+        .eq('clinic_id', clinicId)
+        .gte('net_value', amount * 0.95)
+        .lte('net_value', amount * 1.05)
+        .not('status', 'in', '(received,canceled,reversed)');
+
+      if (!modernArError && modernArSuggestions) {
+        suggestions.push(
+          ...modernArSuggestions.map((ar) => ({
+            ...(function () {
+              const baseScore = calculateMatchScore(
+                amount,
+                ar.net_value,
+                statementDate,
+                ar.due_date,
+                tolerance,
+              );
+              const textBoost = computeTextBoost(
+                ar.description,
+                ar.patient_name,
+                ar.insurance_invoice_number,
+                ar.guide_number,
+                ar.notes,
+                ar.nf_document_name,
+                ar.metadata?.source_file_name,
+                ar.metadata?.payer?.document,
+                ar.metadata?.issuer?.document,
+              );
+              const operationBoost = computeOperationTypeBoost(ar.description, operationType);
+              return {
+                id: ar.id,
+                type: FINANCIAL_LINK_TYPE.RECEIVABLE,
+                description: ar.description || ar.patient_name || 'Conta a receber',
+                amount: ar.net_value,
+                date: ar.due_date,
+                status: ar.status,
+                matchScore: Math.min(baseScore + textBoost + operationBoost, 1),
+                matchReason: [
+                  textBoost > 0 && 'documento fiscal/texto',
+                  operationBoost > 0 && `tipo ${operationType}`,
+                  'valor/data aproximados',
+                ]
+                  .filter(Boolean)
+                  .join(' + '),
+              };
+            })(),
+          })),
+        );
+      }
+
       const { data: arSuggestions } = await supabase
         .from('invoices')
         .select('id, description, net_amount, due_date, status')
@@ -579,7 +719,7 @@ export async function findSuggestions({
                 id: ar.id,
                 type: FINANCIAL_LINK_TYPE.RECEIVABLE,
                 description: ar.description,
-                amount: ar.amount,
+                amount: ar.net_amount,
                 date: ar.due_date,
                 status: ar.status,
                 matchScore: Math.min(baseScore + textBoost + operationBoost, 1),
@@ -609,19 +749,136 @@ export async function findSuggestions({
  * Executa o matching inteligente de AP contra transações bancárias reais.
  */
 export async function runPayableReconciliationMatching(clinicId) {
-  const { data: userResult } = await supabase.auth.getUser().catch(() => ({ data: null }));
-  const actorId = userResult?.user?.id || null;
+  return listPayableReconciliationReviews(clinicId, 'review');
+}
 
-  const { data, error } = await supabase.rpc('match_payables_to_bank_transactions', {
-    p_clinic_id: clinicId,
-    p_actor_id: actorId,
-  });
+function isOpenPayableStatus(status) {
+  return !['paid', 'pago', 'paga', 'received', 'recebido', 'canceled', 'cancelado', 'cancelada', 'reversed', 'estornado'].includes(
+    String(status || '').toLowerCase(),
+  );
+}
 
-  if (error) {
-    throw error;
-  }
+function getPayableMatchAmount(payable = {}) {
+  return Number(payable.balance_amount ?? payable.net_amount ?? payable.amount ?? 0);
+}
 
-  return data || [];
+function normalizeStatementAmount(statement = {}) {
+  return Math.abs(Number(statement.amount || 0));
+}
+
+function normalizeMatchText(value) {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function getStatementMatchText(statement = {}) {
+  return normalizeMatchText([
+    statement.description,
+    statement.metadata?.source_complement,
+    statement.metadata?.source_history,
+    statement.metadata?.source_document,
+    statement.bank_id,
+  ].filter(Boolean).join(' '));
+}
+
+function getPayableMatchText(payable = {}) {
+  return normalizeMatchText([
+    payable.description,
+    payable.supplier_name,
+    payable.vendor_name,
+    payable.document_number,
+    payable.invoice_number,
+    payable.metadata?.source_document,
+    payable.metadata?.nf_number,
+    payable.metadata?.notes,
+  ].filter(Boolean).join(' '));
+}
+
+function calculateTextMatchBoost(statement = {}, payable = {}) {
+  const statementText = getStatementMatchText(statement);
+  const payableText = getPayableMatchText(payable);
+  if (!statementText || !payableText) return 0;
+
+  const statementTokens = statementText.split(/\s+/).filter((token) => token.length >= 4);
+  const payableTokens = new Set(payableText.split(/\s+/).filter((token) => token.length >= 4));
+  const matches = statementTokens.filter((token) => payableTokens.has(token) || payableText.includes(token)).length;
+  const referenceMatches = [payable.document_number, payable.invoice_number]
+    .filter(Boolean)
+    .some((value) => statementText.includes(normalizeMatchText(value)));
+
+  return Math.min((matches * 0.04) + (referenceMatches ? 0.12 : 0), 0.2);
+}
+
+function buildPayableReviewItem(statement, payable, status = 'review', matchScore = 0) {
+  return {
+    transaction: {
+      id: statement.id,
+      statement_id: statement.id,
+      transaction_date: statement.statement_date,
+      amount: Number(statement.amount || 0),
+      description: statement.description,
+      reference_number: statement.bank_id,
+      matched_to_id: payable?.id || statement.linked_financial_id || null,
+      match_type: status === 'matched' ? 'manual_approved' : 'valor_data_extrato_importado',
+      match_confidence: Math.round(matchScore * 100),
+      status,
+      notes: statement.divergence_reason || '',
+    },
+    statement,
+    payable: payable || null,
+  };
+}
+
+async function listPayablesByIds(ids = []) {
+  const payableIds = [...new Set(ids.filter(Boolean))];
+  if (payableIds.length === 0) return new Map();
+
+  const { data, error } = await supabase
+    .from('ap_bills')
+    .select('id, supplier_name, vendor_name, description, document_number, invoice_number, amount, net_amount, balance_amount, due_date, paid_at, status, metadata')
+    .in('id', payableIds);
+
+  if (error) throw error;
+  return new Map((data || []).map((payable) => [payable.id, payable]));
+}
+
+async function listOpenPayablesForMatching(clinicId) {
+  const { data, error } = await supabase
+    .from('ap_bills')
+    .select('id, supplier_name, vendor_name, description, document_number, invoice_number, amount, net_amount, balance_amount, due_date, paid_at, status, metadata')
+    .eq('clinic_id', clinicId)
+    .limit(10000);
+
+  if (error) throw error;
+  return (data || []).filter((payable) => isOpenPayableStatus(payable.status) && getPayableMatchAmount(payable) > 0);
+}
+
+function findBestPayableMatch(statement, payables = []) {
+  const statementAmount = normalizeStatementAmount(statement);
+  if (statementAmount <= 0) return null;
+
+  return payables.reduce((best, payable) => {
+    const payableAmount = getPayableMatchAmount(payable);
+    if (payableAmount <= 0) return best;
+
+    const amountDiffPct = Math.abs(statementAmount - payableAmount) / Math.max(statementAmount, payableAmount);
+    if (amountDiffPct > 0.05) return best;
+
+    const score = Math.min(
+      calculateMatchScore(statementAmount, payableAmount, statement.statement_date, payable.due_date, 7)
+        + calculateTextMatchBoost(statement, payable),
+      1,
+    );
+    if (!best || score > best.score) {
+      return { payable, score };
+    }
+
+    return best;
+  }, null);
 }
 
 /**
@@ -629,111 +886,62 @@ export async function runPayableReconciliationMatching(clinicId) {
  */
 export async function listPayableReconciliationReviews(clinicId, status = 'review') {
   const { data: statements, error: statementError } = await supabase
-    .from('bank_statements')
-    .select('id, account_id, statement_date')
+    .from('conciliation_bank_statements')
+    .select('id, bank_account_id, statement_date, description, amount, transaction_type, bank_id, status, linked_financial_id, linked_type, divergence_reason, metadata')
     .eq('clinic_id', clinicId)
-    .limit(1000);
+    .order('statement_date', { ascending: false })
+    .limit(5000);
 
-  if (statementError) {
-    throw statementError;
+  if (statementError) throw statementError;
+
+  const rows = statements || [];
+
+  if (status === 'matched') {
+    const matchedStatements = rows.filter((statement) => statement.status === CONCILIATION_STATUS.CONCILIATED && statement.linked_type === FINANCIAL_LINK_TYPE.PAYABLE);
+    const payablesById = await listPayablesByIds(matchedStatements.map((statement) => statement.linked_financial_id));
+    return matchedStatements.map((statement) => buildPayableReviewItem(statement, payablesById.get(statement.linked_financial_id), 'matched', 1));
   }
 
-  const statementIds = (statements || []).map((statement) => statement.id);
-  if (statementIds.length === 0) {
-    return [];
+  if (status === 'rejected') {
+    const rejectedStatements = rows.filter((statement) => statement.status === CONCILIATION_STATUS.DIVERGENT && statement.linked_type === FINANCIAL_LINK_TYPE.PAYABLE);
+    const payablesById = await listPayablesByIds(rejectedStatements.map((statement) => statement.linked_financial_id));
+    return rejectedStatements.map((statement) => buildPayableReviewItem(statement, payablesById.get(statement.linked_financial_id), 'rejected', 0));
   }
 
-  let transactionQuery = supabase
-    .from('bank_transactions')
-    .select('id, statement_id, transaction_date, amount, description, reference_number, matched_to_id, match_type, match_confidence, status, notes')
-    .in('statement_id', statementIds)
-    .order('transaction_date', { ascending: false })
-    .limit(500);
+  const reviewStatements = rows.filter((statement) => statement.status === CONCILIATION_STATUS.PENDING && statement.transaction_type === TRANSACTION_TYPE.DEBIT);
+  const payables = await listOpenPayablesForMatching(clinicId);
+  const reviewItems = reviewStatements
+    .map((statement) => {
+      const match = findBestPayableMatch(statement, payables);
+      return match ? buildPayableReviewItem(statement, match.payable, 'review', match.score) : null;
+    })
+    .filter(Boolean);
 
-  if (status !== 'rejected' && status !== 'all') {
-    transactionQuery = transactionQuery.not('matched_to_id', 'is', null);
+  if (status === 'all') {
+    const matchedItems = await listPayableReconciliationReviews(clinicId, 'matched');
+    const rejectedItems = await listPayableReconciliationReviews(clinicId, 'rejected');
+    return [...reviewItems, ...matchedItems, ...rejectedItems];
   }
 
-  if (status && status !== 'all') {
-    transactionQuery = transactionQuery.eq('status', status);
-  } else {
-    transactionQuery = transactionQuery.in('status', ['review', 'matched', 'rejected']);
-  }
-
-  const { data: transactions, error: transactionError } = await transactionQuery;
-  if (transactionError) {
-    throw transactionError;
-  }
-
-  const payableIds = [...new Set((transactions || []).map((item) => item.matched_to_id).filter(Boolean))];
-  const payablesById = new Map();
-
-  if (payableIds.length > 0) {
-    const { data: payables, error: payableError } = await supabase
-      .from('ap_bills')
-      .select('id, supplier_name, vendor_name, description, document_number, invoice_number, amount, net_amount, balance_amount, due_date, paid_at, status, metadata')
-      .in('id', payableIds);
-
-    if (payableError) {
-      throw payableError;
-    }
-
-    (payables || []).forEach((payable) => payablesById.set(payable.id, payable));
-  }
-
-  const statementsById = new Map((statements || []).map((statement) => [statement.id, statement]));
-
-  return (transactions || []).map((transaction) => ({
-    transaction,
-    statement: statementsById.get(transaction.statement_id) || null,
-    payable: payablesById.get(transaction.matched_to_id) || null,
-  }));
+  return reviewItems;
 }
 
 /**
  * Conta matches AP por status sem depender do filtro atualmente selecionado na UI.
  */
 export async function listPayableReconciliationReviewCounts(clinicId) {
-  const emptyCounts = { review: 0, matched: 0, rejected: 0, all: 0 };
+  const [review, matched, rejected] = await Promise.all([
+    listPayableReconciliationReviews(clinicId, 'review'),
+    listPayableReconciliationReviews(clinicId, 'matched'),
+    listPayableReconciliationReviews(clinicId, 'rejected'),
+  ]);
 
-  const { data: statements, error: statementError } = await supabase
-    .from('bank_statements')
-    .select('id')
-    .eq('clinic_id', clinicId)
-    .limit(1000);
-
-  if (statementError) {
-    throw statementError;
-  }
-
-  const statementIds = (statements || []).map((statement) => statement.id);
-  if (statementIds.length === 0) {
-    return emptyCounts;
-  }
-
-  const { data: transactions, error: transactionError } = await supabase
-    .from('bank_transactions')
-    .select('status, matched_to_id')
-    .in('statement_id', statementIds)
-    .in('status', ['review', 'matched', 'rejected'])
-    .limit(5000);
-
-  if (transactionError) {
-    throw transactionError;
-  }
-
-  return (transactions || []).reduce((counts, transaction) => {
-    if (transaction.status !== 'rejected' && !transaction.matched_to_id) {
-      return counts;
-    }
-
-    if (Object.prototype.hasOwnProperty.call(counts, transaction.status)) {
-      counts[transaction.status] += 1;
-      counts.all += 1;
-    }
-
-    return counts;
-  }, { ...emptyCounts });
+  return {
+    review: review.length,
+    matched: matched.length,
+    rejected: rejected.length,
+    all: review.length + matched.length + rejected.length,
+  };
 }
 
 async function updatePayableReconciliationMetadata(payableId, patch) {
@@ -773,37 +981,107 @@ async function updatePayableReconciliationMetadata(payableId, patch) {
   }
 }
 
+async function updatePayableAsPaidFromReconciliation(payableId, transaction, actorId, approvedAt) {
+  const { data: payable, error: fetchError } = await supabase
+    .from('ap_bills')
+    .select('metadata,amount,net_amount,paid_value,balance_amount')
+    .eq('id', payableId)
+    .single();
+
+  if (fetchError) {
+    throw fetchError;
+  }
+
+  const metadata = payable?.metadata || {};
+  const enterprise = metadata.enterprise || {};
+  const reconciliation = enterprise.reconciliation || {};
+  const paidValue = Math.abs(Number(transaction?.amount || payable?.net_amount || payable?.amount || 0));
+  const paymentDate = String(transaction?.statement_date || approvedAt).split('T')[0];
+  const payload = {
+    status: 'PAID',
+    paid_value: paidValue,
+    balance_amount: 0,
+    payment_date: paymentDate,
+    paid_at: approvedAt,
+    updated_at: approvedAt,
+    metadata: {
+      ...metadata,
+      enterprise: {
+        ...enterprise,
+        reconciliation: {
+          ...reconciliation,
+          status: 'MATCHED',
+          bank_statement_id: transaction?.id || reconciliation.bank_statement_id,
+          bank_transaction_id: transaction?.id || reconciliation.bank_transaction_id,
+          confidence: 100,
+          match_type: 'manual_approved',
+          approved_at: approvedAt,
+          approved_by: actorId,
+          payment_amount: paidValue,
+          payment_date: paymentDate,
+        },
+      },
+    },
+  };
+
+  const tryUpdate = async (candidate) => supabase
+    .from('ap_bills')
+    .update(candidate)
+    .eq('id', payableId);
+
+  const first = await tryUpdate(payload);
+  if (!first.error) return;
+
+  const { payment_date, paid_at, ...withoutOptionalDates } = payload;
+  const second = await tryUpdate(withoutOptionalDates);
+  if (!second.error) return;
+
+  throw second.error;
+}
+
 /**
  * Aprova um match AP sugerido pela rotina inteligente.
  */
 export async function approvePayableReconciliationMatch(transactionId, payableId) {
+  if (!payableId) {
+    throw new Error('Conta a pagar não informada para aprovação. Troque a vinculação ou rode a conciliação novamente.');
+  }
+
   const { data: userResult } = await supabase.auth.getUser().catch(() => ({ data: null }));
   const actorId = userResult?.user?.id || null;
   const approvedAt = new Date().toISOString();
 
   const { data: transaction, error: transactionError } = await supabase
-    .from('bank_transactions')
+    .from('conciliation_bank_statements')
     .update({
-      matched_to_id: payableId,
-      status: 'matched',
-      notes: `Aprovado manualmente em ${approvedAt}`,
+      linked_financial_id: payableId,
+      linked_type: FINANCIAL_LINK_TYPE.PAYABLE,
+      status: CONCILIATION_STATUS.CONCILIATED,
+      divergence_reason: null,
+      updated_at: approvedAt,
     })
     .eq('id', transactionId)
-    .select('id, match_confidence, match_type')
+    .select('id,statement_date,amount,description')
     .single();
 
   if (transactionError) {
     throw transactionError;
   }
 
-  await updatePayableReconciliationMetadata(payableId, {
-    status: 'MATCHED',
-    bank_transaction_id: transactionId,
-    confidence: Number(transaction?.match_confidence || 100),
-    match_type: transaction?.match_type || 'manual_approved',
-    approved_at: approvedAt,
-    approved_by: actorId,
-  });
+  await updatePayableAsPaidFromReconciliation(payableId, transaction, actorId, approvedAt);
+
+  try {
+    await addLinkHistory({
+      bank_statement_id: transactionId,
+      financial_id: payableId,
+      financial_type: FINANCIAL_LINK_TYPE.PAYABLE,
+      action: CONCILIATION_ACTION.CONCILIATE,
+      action_notes: 'Correspondência AP aprovada na revisão manual',
+      user_id: actorId,
+    });
+  } catch (historyError) {
+    console.warn('Payable reconciliation history insert skipped:', historyError?.message || historyError);
+  }
 
   return transaction;
 }
@@ -817,11 +1095,13 @@ export async function rejectPayableReconciliationMatch(transactionId, payableId,
   const rejectedAt = new Date().toISOString();
 
   const { data: transaction, error: transactionError } = await supabase
-    .from('bank_transactions')
+    .from('conciliation_bank_statements')
     .update({
-      matched_to_id: null,
-      status: 'rejected',
-      notes: reason || `Rejeitado manualmente em ${rejectedAt}`,
+      linked_financial_id: payableId || null,
+      linked_type: FINANCIAL_LINK_TYPE.PAYABLE,
+      status: CONCILIATION_STATUS.DIVERGENT,
+      divergence_reason: reason || `Correspondência AP rejeitada manualmente em ${rejectedAt}`,
+      updated_at: rejectedAt,
     })
     .eq('id', transactionId)
     .select('id')
@@ -832,12 +1112,29 @@ export async function rejectPayableReconciliationMatch(transactionId, payableId,
   }
 
   if (payableId) {
-    await updatePayableReconciliationMetadata(payableId, {
-      status: 'REJECTED',
-      rejected_at: rejectedAt,
-      rejected_by: actorId,
-      rejection_reason: reason || 'Rejeitado na revisão manual',
+    try {
+      await updatePayableReconciliationMetadata(payableId, {
+        status: 'REJECTED',
+        rejected_at: rejectedAt,
+        rejected_by: actorId,
+        rejection_reason: reason || 'Rejeitado na revisão manual',
+      });
+    } catch (metadataError) {
+      console.warn('Payable rejection metadata update skipped:', metadataError?.message || metadataError);
+    }
+  }
+
+  try {
+    await addLinkHistory({
+      bank_statement_id: transactionId,
+      financial_id: payableId || null,
+      financial_type: FINANCIAL_LINK_TYPE.PAYABLE,
+      action: CONCILIATION_ACTION.IGNORE,
+      action_notes: reason || 'Correspondência AP rejeitada na revisão manual',
+      user_id: actorId,
     });
+  } catch (historyError) {
+    console.warn('Payable rejection history insert skipped:', historyError?.message || historyError);
   }
 
   return transaction;
@@ -973,28 +1270,30 @@ export async function getIndicators(clinicId, accountId = null, startDate = null
     };
 
     data?.forEach((stmt) => {
+      const amount = Math.abs(Number(stmt.amount || 0));
+
       // Contar por status
       if (stmt.status === CONCILIATION_STATUS.PENDING) {
-        indicators.pending += stmt.amount;
+        indicators.pending += amount;
       }
       if (stmt.status === CONCILIATION_STATUS.CONCILIATED) {
-        indicators.conciliated += stmt.amount;
+        indicators.conciliated += amount;
       }
       if (stmt.status === CONCILIATION_STATUS.ADJUSTED) {
-        indicators.adjusted += stmt.amount;
+        indicators.adjusted += amount;
       }
       if (stmt.status === CONCILIATION_STATUS.DIVERGENT) {
-        indicators.divergent += stmt.amount;
+        indicators.divergent += amount;
       }
       if (stmt.status === CONCILIATION_STATUS.IGNORED) {
-        indicators.ignored += stmt.amount;
+        indicators.ignored += amount;
       }
 
       // Contar créditos e débitos
       if (stmt.transaction_type === TRANSACTION_TYPE.CREDIT) {
-        indicators.totalCredit += stmt.amount;
+        indicators.totalCredit += amount;
       } else {
-        indicators.totalDebit += stmt.amount;
+        indicators.totalDebit += amount;
       }
     });
 
@@ -1123,6 +1422,32 @@ export async function deleteStatement(statementId) {
     return { success: true };
   } catch (error) {
     console.error('Error deleting statement:', error);
+    throw error;
+  }
+}
+
+/**
+ * Deleta lançamentos bancários em lote
+ */
+export async function deleteStatements(statementIds = []) {
+  const ids = Array.from(new Set((statementIds || []).filter(Boolean)));
+  if (ids.length === 0) {
+    return { success: true, deleted: 0 };
+  }
+
+  try {
+    const { error } = await supabase
+      .from('conciliation_bank_statements')
+      .delete()
+      .in('id', ids);
+
+    if (error) {
+      throw error;
+    }
+
+    return { success: true, deleted: ids.length };
+  } catch (error) {
+    console.error('Error deleting statements:', error);
     throw error;
   }
 }

@@ -139,6 +139,7 @@ export const CreateEditPayableModal: React.FC<CreateEditPayableModalProps> = ({
     payment_bank: '',
     chart_account_id: '',
     cost_center_id: '',
+    financial_plan_account_id: '',
     dre_classification: DreClassification.OPERATIONAL,
     is_recurring: false,
     recurrence_type: RecurrenceType.MONTHLY,
@@ -151,7 +152,7 @@ export const CreateEditPayableModal: React.FC<CreateEditPayableModalProps> = ({
   const updateMutation = useUpdatePayable();
   const addAttachmentMutation = useAddPayableAttachment();
   const { uploadFile, isUploading, error: uploadError } = useFileUpload();
-  const { accountPlans, costCenters, isLoading: isLoadingFinanceOptions } = useFinanceOptions();
+  const { accountPlans, costCenters, financialPlanAccounts, isLoading: isLoadingFinanceOptions } = useFinanceOptions();
 
   const enrichParsedSupplier = async (parsed: ParsedPayableDocument | null): Promise<ParsedPayableDocument | null> => {
     if (!parsed?.document_number) {
@@ -844,6 +845,7 @@ export const CreateEditPayableModal: React.FC<CreateEditPayableModalProps> = ({
               <NfeReviewPanel
                 review={nfeReview}
                 onOpenAttachments={() => setActiveTab('anexos')}
+                onFilesSelected={handleDocumentFilesSelected}
               />
             </TabsContent>
 
@@ -986,6 +988,27 @@ export const CreateEditPayableModal: React.FC<CreateEditPayableModalProps> = ({
                       {costCenters.map((center) => (
                         <SelectItem key={center.id} value={center.id}>
                           {center.code ? `${center.code} - ${center.name}` : center.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Plano Financeiro</Label>
+                  <Select
+                    value={formData.financial_plan_account_id || '__none'}
+                    onValueChange={(value) => handleInputChange('financial_plan_account_id', value === '__none' ? '' : value)}
+                    disabled={isLoadingFinanceOptions}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none">Nao informado</SelectItem>
+                      {financialPlanAccounts.map((account) => (
+                        <SelectItem key={account.id} value={account.id}>
+                          {account.code ? `${account.code} - ${account.name}` : account.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1432,6 +1455,7 @@ function buildPayableInputFromDocument(
     payment_reference: baseFormData.payment_reference || undefined,
     chart_account_id: baseFormData.chart_account_id || undefined,
     cost_center_id: baseFormData.cost_center_id || undefined,
+    financial_plan_account_id: baseFormData.financial_plan_account_id || undefined,
     financial_account_id: baseFormData.financial_account_id || undefined,
     dre_classification: baseFormData.dre_classification || DreClassification.OPERATIONAL,
     cost_allocations: baseFormData.cost_allocations || undefined,
@@ -1456,18 +1480,41 @@ function buildPayableInputFromDocument(
 function NfeReviewPanel({
   review,
   onOpenAttachments,
+  onFilesSelected,
 }: {
   review: any;
   onOpenAttachments: () => void;
+  onFilesSelected: (files: File[]) => void;
 }) {
+  const [dragging, setDragging] = React.useState(false);
+
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setDragging(false);
+    const files = Array.from(event.dataTransfer.files || []);
+    if (files.length) {
+      onFilesSelected(files);
+    }
+  };
+
   if (!review.hasXmlData) {
     return (
-      <div className="rounded-lg border border-dashed bg-slate-50 p-4">
+      <div
+        className={`rounded-lg border border-dashed p-4 transition ${dragging ? 'border-sky-500 bg-sky-50 ring-2 ring-sky-100' : 'bg-slate-50'}`}
+        onDragOver={(event) => {
+          event.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false);
+        }}
+        onDrop={handleDrop}
+      >
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="font-semibold text-slate-900">Dados do documento fiscal no lançamento</h3>
             <p className="mt-1 text-sm text-slate-600">
-              Anexe cupom, NF ou XML para trazer dados fiscais, itens, impostos e rastreabilidade para esta aba.
+              Arraste cupom, NF ou XML aqui para trazer dados fiscais, itens, impostos e rastreabilidade para esta aba.
             </p>
           </div>
           <Button type="button" variant="outline" size="sm" onClick={onOpenAttachments}>

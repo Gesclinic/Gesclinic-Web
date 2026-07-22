@@ -56,6 +56,12 @@ import { useToast } from '@/components/ui/use-toast';
 // import FinancialIntegrationStatus from '@/components/clinica/financeiro/FinancialIntegrationStatus';
 import RelatoriosToolbar from '@/components/financeiro/RelatoriosToolbar';
 import ReceivableNfInput from '@/components/financeiro/ReceivableNfInput';
+import {
+  buildFiscalDocumentNotes,
+  buildReceivablePatchFromFiscalDocument,
+  readFiscalXmlFromUrl,
+} from '@/lib/fiscalXmlParser';
+import { ensureBasicProfessionalFromFiscalDocument } from '@/lib/professionalsApi';
 
 const emptyReceivableFilters = {
   payer: '',
@@ -369,30 +375,118 @@ function loadReceivableColumnOrder() {
 
 function getReceivableNfDisplay(row) {
   const extractionFields = row?.metadata?.document_extraction?.fields || {};
+  const metadata = row?.metadata || {};
   const inferNumberFromXmlName = (value) => {
     const key = String(value || '').match(/([0-9]{40,60})\.xml$/i)?.[1] || '';
     if (!key) return null;
     const nfseNumber = key.match(/0{6,}([0-9]{3,6})2606/)?.[1];
     return nfseNumber || null;
   };
+  const name = row?.nf_document_name
+    || row?.nf_name
+    || metadata.source_file_name
+    || metadata.nf_document_name
+    || metadata.nf_name
+    || metadata.xml?.name
+    || metadata.xml?.file_name
+    || extractionFields.file_name
+    || null;
+  const url = row?.nf_document_url
+    || row?.nf_url
+    || row?.document_url
+    || metadata.nf_document_url
+    || metadata.nf_url
+    || metadata.document_url
+    || metadata.xml?.url
+    || metadata.xml?.public_url
+    || metadata.document_extraction?.source_url
+    || extractionFields.url
+    || null;
   const number = extractionFields.guide_number
     || extractionFields.numero_guia
     || extractionFields.nf_number
     || extractionFields.invoice_number
     || row?.insurance_invoice_number
     || row?.guide_number
-    || inferNumberFromXmlName(row?.nf_document_name)
-    || inferNumberFromXmlName(row?.metadata?.source_file_name)
-    || row?.metadata?.guide_number
-    || row?.metadata?.invoice_number
-    || row?.metadata?.xml?.guide_number
+    || inferNumberFromXmlName(name)
+    || metadata.guide_number
+    || metadata.invoice_number
+    || metadata.xml?.guide_number
     || null;
-  const name = row?.nf_document_name || row?.metadata?.source_file_name || null;
   return {
     number,
     name,
-    url: row?.nf_document_url || null,
+    url,
   };
+}
+
+function inferProfessionalFromReceivableText(row) {
+  const extractionFields = row?.metadata?.document_extraction?.fields || {};
+  const existingName = row?.professional_name
+    || row?.profissional_name
+    || row?.metadata?.professional_name
+    || row?.metadata?.profissional_name
+    || extractionFields.professional_name
+    || extractionFields.profissional_name
+    || '';
+  const text = [
+    row?.description,
+    row?.service_description,
+    row?.notes,
+    extractionFields.description,
+    extractionFields.service_description,
+    extractionFields.discriminacao,
+    extractionFields.professional_text,
+  ].filter(Boolean).join(' ');
+
+  const directCrm = String(extractionFields.professional_crm || row?.metadata?.professional_crm || '').trim();
+  const directState = String(extractionFields.professional_state || row?.metadata?.professional_state || '').trim().toUpperCase();
+  if (isMeaningfulProfessionalName(existingName)) {
+    return {
+      name: existingName,
+      document: extractionFields.professional_document || row?.metadata?.professional_document || '',
+      crm: directCrm,
+      state: directState,
+    };
+  }
+
+  const crmMatch = text.match(/\b(CRM|CRP|CRO|COREN|CREFITO)\s*[\/\-]?\s*([A-Z]{2})?\s*[:.]?\s*([0-9][0-9.\-\/]*)/i);
+  const nameMatch = text.match(/(?:\bpelo\s+|\bpela\s+|\bprofissional\s+|\bDr\.?\s+|\bDra\.?\s+)(?:Dr\.?\s+|Dra\.?\s+)?([A-ZÁÀÂÃÉÈÊÍÓÔÕÚÇ][\p{L}\s.'-]{3,120}?)(?=,|\s+CRM\b|\s+CRP\b|\s+CRO\b|\s+COREN\b|\s+CREFITO\b|\s+prestado|\s+prestados|\s+realizado|\s+realizados|\.|$)/iu);
+  const name = String(nameMatch?.[1] || '').replace(/\s+/g, ' ').trim();
+  const crm = String(crmMatch?.[3] || '').replace(/\s+/g, ' ').trim();
+  const state = String(crmMatch?.[2] || '').replace(/\s+/g, ' ').trim().toUpperCase();
+
+  return isMeaningfulProfessionalName(name) || crm ? { name, crm, state, document: '' } : null;
+}
+
+function isMeaningfulProfessionalName(value) {
+  const normalized = String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+  return normalized
+    && normalized.length >= 4
+    && !['-', 'nao identificado', 'não identificado', 'nao informado', 'não informado', 'sem profissional', 'profissional nao informado', 'profissional não informado', 'profissional'].includes(normalized);
+}
+
+function chooseReceivableProfessionalSource(fiscalProfessional, fallbackProfessional) {
+  if (isMeaningfulProfessionalName(fiscalProfessional?.name)) return fiscalProfessional;
+  if (isMeaningfulProfessionalName(fallbackProfessional?.name)) return fallbackProfessional;
+  return null;
+}
+
+function withReceivableTimeout(promise, message, timeoutMs = 20000) {
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
+}
+
+function receivableHasXmlOrProfessionalText(row) {
+  return Boolean(getReceivableNfDisplay(row).url || inferProfessionalFromReceivableText(row));
 }
 
 function buildFiltersFromSearchParams(searchParams) {
@@ -792,6 +886,8 @@ export default function ContasReceber() {
   });
   const [glosaEvidenceFile, setGlosaEvidenceFile] = useState(null);
   const [actionLoadingId, setActionLoadingId] = useState(null);
+  const [reprocessingXmlId, setReprocessingXmlId] = useState(null);
+  const [bulkReprocessProgress, setBulkReprocessProgress] = useState({ active: false, current: 0, total: 0, succeeded: 0, failed: 0, currentLabel: '' });
   const [saveFilterDialogOpen, setSaveFilterDialogOpen] = useState(false);
   const [selectedReceivableIds, setSelectedReceivableIds] = useState([]);
   const [visibleColumns, setVisibleColumns] = useState(loadVisibleReceivableColumns);
@@ -1229,6 +1325,101 @@ export default function ContasReceber() {
       } else {
         setLoading(false);
       }
+    }
+  };
+
+  const reprocessReceivableXmlRow = async (row) => {
+    const nfDisplay = getReceivableNfDisplay(row);
+    if (!row?.id) {
+      throw new Error('Lançamento inválido.');
+    }
+
+    const fallbackProfessional = inferProfessionalFromReceivableText(row);
+    const fiscalDocument = nfDisplay.url ? await readFiscalXmlFromUrl(nfDisplay.url) : null;
+    const fiscalPatch = buildReceivablePatchFromFiscalDocument(fiscalDocument);
+    const fiscalNotes = buildFiscalDocumentNotes(fiscalDocument);
+
+    if (!fiscalDocument && !fallbackProfessional) {
+      throw new Error('Lançamento sem XML/NF anexado e sem profissional identificado no texto.');
+    }
+    if (nfDisplay.url && !fiscalDocument) {
+      throw new Error('O anexo não parece ser um XML fiscal válido.');
+    }
+
+    const professionalSource = chooseReceivableProfessionalSource(fiscalDocument?.professional, fallbackProfessional);
+    const professional = professionalSource
+      ? await ensureBasicProfessionalFromFiscalDocument(clinicId, professionalSource)
+      : null;
+    const amount = Number(fiscalPatch.amount || row.amount || 0);
+    const metadata = {
+      ...(row.metadata || {}),
+      document_extraction: {
+        ...(row.metadata?.document_extraction || {}),
+        documentType: fiscalDocument?.type || row.metadata?.document_extraction?.documentType || 'texto',
+        confidence: 'reprocessado',
+        extractedAt: new Date().toISOString(),
+        fields: {
+          ...(row.metadata?.document_extraction?.fields || {}),
+          payer_name: fiscalDocument?.recipient?.name || fiscalDocument?.emitter?.name || row.patient_name || null,
+          payer_document: fiscalDocument?.recipient?.document || null,
+          issuer_name: fiscalDocument?.emitter?.name || null,
+          issuer_document: fiscalDocument?.emitter?.document || null,
+          professional_name: professional?.name || professionalSource?.name || row.professional_name || row.profissional_name || null,
+          professional_document: professionalSource?.document || professional?.cpf || null,
+          professional_crm: professionalSource?.crm || professional?.crm || null,
+          professional_state: professionalSource?.state || professional?.state || null,
+          invoice_number: fiscalDocument?.number || row.insurance_invoice_number || null,
+          guide_number: fiscalDocument?.number || fiscalDocument?.accessKey || row.guide_number || null,
+          invoice_date: fiscalDocument?.issueDate || row.invoice_date || null,
+          due_date: fiscalDocument?.dueDate || fiscalDocument?.issueDate || row.due_date || null,
+          amount,
+        },
+      },
+      professional_id: professional?.id || row.professional_id || row.profissional_id || row.metadata?.professional_id || null,
+      professional_name: professional?.name || professionalSource?.name || row.professional_name || row.profissional_name || row.metadata?.professional_name || null,
+      source_file_name: nfDisplay.name || row.nf_document_name || row.metadata?.source_file_name || null,
+    };
+
+    const notes = [row.notes, fiscalNotes]
+      .filter(Boolean)
+      .filter((value, index, arr) => arr.findIndex((candidate) => candidate === value) === index)
+      .join(' | ');
+
+    return updateReceivable(row.id, {
+      patient_name: fiscalPatch.patient_name || row.patient_name,
+      description: fiscalPatch.description || row.description,
+      invoice_date: fiscalPatch.invoice_date || row.invoice_date || null,
+      due_date: fiscalPatch.due_date || row.due_date,
+      competency_date: fiscalPatch.competency_date || row.competency_date || fiscalPatch.invoice_date || null,
+      amount: amount || row.amount,
+      service_value: amount || row.service_value || row.amount,
+      gross_amount: amount || row.gross_amount || row.amount,
+      net_value: amount || row.net_value || row.amount,
+      insurance_invoice_number: fiscalPatch.insurance_invoice_number || row.insurance_invoice_number,
+      guide_number: fiscalPatch.guide_number || row.guide_number,
+      professional_id: professional?.id || row.professional_id || null,
+      profissional_id: professional?.id || row.profissional_id || null,
+      notes,
+      metadata,
+    }, clinicId);
+  };
+
+  const handleReprocessReceivableXml = async (row) => {
+    setReprocessingXmlId(row.id);
+    try {
+      await reprocessReceivableXmlRow(row);
+
+      toast({ title: 'XML reprocessado', description: 'Conta a receber atualizada e sincronizada para conciliação.' });
+      await load(filters);
+      await loadAllReceivablesForSummary();
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao reprocessar XML',
+        description: error?.message || 'Não foi possível ler o XML anexado.',
+      });
+    } finally {
+      setReprocessingXmlId(null);
     }
   };
 
@@ -2264,6 +2455,7 @@ export default function ContasReceber() {
   };
 
   const getBulkActionLabel = (type) => ({
+    reprocess_xml: 'Reprocessar XML/profissional selecionados',
     receive: 'Registrar recebimento',
     glosa: 'Registrar glosa',
     glosa_contestada: 'Contestar glosa',
@@ -2276,6 +2468,9 @@ export default function ContasReceber() {
   }[type] || 'Executar ação');
 
   const getBulkActionCandidates = (type, actionRows = selectedRows) => {
+    if (type === 'reprocess_xml') {
+      return actionRows.filter(receivableHasXmlOrProfessionalText);
+    }
     if (type === 'delete') return actionRows;
     if (type === 'receive' || type === 'glosa') {
       return actionRows.filter((row) => !['received', 'canceled', 'glossed'].includes(row.status));
@@ -2310,6 +2505,10 @@ export default function ContasReceber() {
       toast({ variant: 'destructive', title: 'Selecione uma ação' });
       return;
     }
+    if (bulkAction === 'reprocess_xml') {
+      executeBulkReprocessXml();
+      return;
+    }
     if (bulkAction === 'delete' && !isAdmin) {
       toast({ variant: 'destructive', title: 'Apenas admin pode excluir lançamentos' });
       return;
@@ -2320,6 +2519,58 @@ export default function ContasReceber() {
       return;
     }
     setBulkConfirmAction({ type: bulkAction, rows: candidates });
+  };
+
+  const executeBulkReprocessXml = async () => {
+    const candidates = getBulkActionCandidates('reprocess_xml');
+    if (!candidates.length) {
+      toast({
+        variant: 'destructive',
+        title: 'Nenhum XML ou profissional identificado',
+        description: `${selectedRows.length} lançamento(s) selecionado(s), mas nenhum tem XML fiscal com URL nem profissional/CRM no texto.`,
+      });
+      return;
+    }
+
+    setActionLoadingId('bulk-reprocess-xml');
+    setBulkReprocessProgress({ active: true, current: 0, total: candidates.length, succeeded: 0, failed: 0, currentLabel: 'Preparando lote' });
+    toast({ title: 'Reprocessando lançamentos', description: `${candidates.length} lançamento(s) serão atualizados por XML ou texto fiscal.` });
+    const failures = [];
+    const updatedRows = [];
+    try {
+      for (const [index, row] of candidates.entries()) {
+        const rowLabel = row.patient_name || row.payer_name || row.description || row.id;
+        setBulkReprocessProgress((prev) => ({ ...prev, current: index + 1, currentLabel: rowLabel }));
+        try {
+          const updated = await withReceivableTimeout(
+            reprocessReceivableXmlRow(row),
+            `Tempo excedido ao reprocessar ${rowLabel}.`,
+          );
+          updatedRows.push(updated);
+          setBulkReprocessProgress((prev) => ({ ...prev, succeeded: prev.succeeded + 1 }));
+        } catch (error) {
+          failures.push(`${rowLabel}: ${error?.message || 'erro desconhecido'}`);
+          setBulkReprocessProgress((prev) => ({ ...prev, failed: prev.failed + 1 }));
+        }
+      }
+
+      setRows((prev) => prev.map((row) => updatedRows.find((updated) => updated.id === row.id) || row));
+      await load(filters);
+      await loadAllReceivablesForSummary();
+      toast({
+        title: `${updatedRows.length} lançamento(s) reprocessado(s)`,
+        description: failures.length
+          ? `${failures.length} lançamento(s) não foram processados.`
+          : 'Selecionados atualizados para conciliação e repasse.',
+      });
+      if (failures.length) console.warn('[ContasReceber] Falhas ao reprocessar XMLs em lote:', failures);
+      clearSelection();
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Erro ao reprocessar XMLs', description: error?.message || 'Nao foi possivel concluir a ação.' });
+    } finally {
+      setActionLoadingId(null);
+      setBulkReprocessProgress((prev) => ({ ...prev, active: false, currentLabel: '' }));
+    }
   };
 
   const executeBulkReceive = async () => {
@@ -3963,6 +4214,7 @@ export default function ContasReceber() {
               disabled={!selectedRows.length}
             >
               <option value="">Ação selecionada</option>
+              <option value="reprocess_xml">Reprocessar XML/profissional selecionados</option>
               <option value="receive">Registrar recebimento</option>
               <option value="glosa">Registrar glosa</option>
               <option value="glosa_contestada">Contestar glosa</option>
@@ -3980,10 +4232,23 @@ export default function ContasReceber() {
               onClick={applyBulkAction}
               disabled={!selectedRows.length || !bulkAction || Boolean(actionLoadingId)}
             >
-              Aplicar
+              {bulkReprocessProgress.active ? `${bulkReprocessProgress.current} de ${bulkReprocessProgress.total}` : 'Aplicar'}
             </Button>
           </div>
         </div>
+        {bulkReprocessProgress.active && (
+          <div className="border-b border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-950">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="font-semibold">Reprocessando XML/profissional selecionados</p>
+                <p className="truncate text-xs text-blue-800">Atual: {bulkReprocessProgress.currentLabel}</p>
+              </div>
+              <div className="text-xs font-medium text-blue-800">
+                {bulkReprocessProgress.current} de {bulkReprocessProgress.total} · OK {bulkReprocessProgress.succeeded} · Falhas {bulkReprocessProgress.failed}
+              </div>
+            </div>
+          </div>
+        )}
         <div className="max-h-[70vh] overflow-auto">
           <table className="w-full text-sm" style={{ minWidth: `${tableMinWidth}px` }}>
             <thead className="sticky top-0 z-10 bg-gray-100 border-b">
@@ -4142,16 +4407,30 @@ export default function ContasReceber() {
                     <td key="nf" className="px-4 py-3 text-gray-700">
                       <div className="max-w-[180px] space-y-1 text-xs">
                         {nfDisplay.url ? (
-                          <a
-                            href={nfDisplay.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1 rounded border border-blue-200 px-2 py-1 font-medium text-blue-700 hover:bg-blue-50"
-                            title={formatReceivableText(nfDisplay.name) || 'Abrir NF'}
-                          >
-                            <FileText className="h-3 w-3" />
-                            {formatReceivableText(nfDisplay.number) || 'NF XML'}
-                          </a>
+                          <div className="flex flex-wrap items-center gap-1">
+                            <a
+                              href={nfDisplay.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 rounded border border-blue-200 px-2 py-1 font-medium text-blue-700 hover:bg-blue-50"
+                              title={formatReceivableText(nfDisplay.name) || 'Abrir NF'}
+                            >
+                              <FileText className="h-3 w-3" />
+                              {formatReceivableText(nfDisplay.number) || 'NF XML'}
+                            </a>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-7 px-2 text-[11px] text-emerald-700"
+                              title="Reprocessar XML anexado"
+                              disabled={reprocessingXmlId === r.id}
+                              onClick={() => handleReprocessReceivableXml(r)}
+                            >
+                              <RefreshCw className={`mr-1 h-3 w-3 ${reprocessingXmlId === r.id ? 'animate-spin' : ''}`} />
+                              Reprocessar XML
+                            </Button>
+                          </div>
                         ) : (
                           <p className="font-medium text-slate-700">{formatReceivableText(nfDisplay.number) || 'NF não cadastrada'}</p>
                         )}

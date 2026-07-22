@@ -21,6 +21,12 @@ import {
   createRecurringAP,
   listInvoicesBasic,
 } from '@/lib/financeApi';
+import { listFinancialPlanAccounts } from '@/modules/financeiro/plano-financeiro/services/financialPlanApi';
+import {
+  buildFiscalDocumentNotes,
+  buildPayablePatchFromFiscalDocument,
+  readFiscalXmlFile,
+} from '@/lib/fiscalXmlParser';
 import { Plus, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -41,8 +47,10 @@ export default function NovaConta() {
     document_number: '',
     status: 'open',
     category_id: '',
+    financial_plan_account_id: '',
   });
   const [attachmentFile, setAttachmentFile] = useState(null);
+  const [draggingAttachmentFile, setDraggingAttachmentFile] = useState(false);
   const [newSupplierOpen, setNewSupplierOpen] = useState(false);
   const [supplierReloadKey, setSupplierReloadKey] = useState(0);
   const [showItems, setShowItems] = useState(false);
@@ -70,6 +78,7 @@ export default function NovaConta() {
   });
 
   const [costCenters, setCostCenters] = useState([]);
+  const [financialPlanAccounts, setFinancialPlanAccounts] = useState([]);
   const [vendorOptions, setVendorOptions] = useState([]);
   const [paymentMethodOptions, setPaymentMethodOptions] = useState([]);
   const [productOptions, setProductOptions] = useState([]);
@@ -151,6 +160,19 @@ export default function NovaConta() {
         setCostCenters(Array.isArray(d) ? d : []);
       } catch (e) {
         console.warn(e);
+      }
+    })();
+  }, [clinicId]);
+  useEffect(() => {
+    if (!clinicId) {
+      return;
+    }
+    (async () => {
+      try {
+        const rows = await listFinancialPlanAccounts(clinicId);
+        setFinancialPlanAccounts((rows || []).filter((account) => account.is_active !== false && account.accepts_entries !== false));
+      } catch {
+        setFinancialPlanAccounts([]);
       }
     })();
   }, [clinicId]);
@@ -294,6 +316,9 @@ export default function NovaConta() {
           if (last.category_id) {
             patch.category_id = last.category_id;
           }
+          if (last.financial_plan_account_id) {
+            patch.financial_plan_account_id = last.financial_plan_account_id;
+          }
           if (last.payment_method) {
             patch.payment_method = last.payment_method;
           }
@@ -365,18 +390,66 @@ export default function NovaConta() {
     }
   };
 
+  const handleAttachmentDrop = (event) => {
+    event.preventDefault();
+    setDraggingAttachmentFile(false);
+    setAttachmentFile(event.dataTransfer.files?.[0] || null);
+  };
+
+  const mergeFiscalPatch = (baseForm, fiscalPatch) => {
+    if (!fiscalPatch || Object.keys(fiscalPatch).length === 0) {
+      return baseForm;
+    }
+    const merged = { ...baseForm };
+    Object.entries(fiscalPatch).forEach(([key, value]) => {
+      if (value && !merged[key]) {
+        merged[key] = value;
+      }
+    });
+    return merged;
+  };
+
+  const parsePayableXmlFile = async (file) => {
+    const fiscalDocument = await readFiscalXmlFile(file).catch(() => null);
+    return {
+      fiscalDocument,
+      fiscalPatch: buildPayablePatchFromFiscalDocument(fiscalDocument),
+      fiscalNotes: buildFiscalDocumentNotes(fiscalDocument),
+    };
+  };
+
+  const handleAttachmentFileChange = async (file) => {
+    setAttachmentFile(file || null);
+    if (!file) {
+      return;
+    }
+    const { fiscalPatch } = await parsePayableXmlFile(file);
+    if (Object.keys(fiscalPatch || {}).length > 0) {
+      setForm((current) => mergeFiscalPatch(current, fiscalPatch));
+      toast({
+        title: 'XML fiscal lido',
+        description: 'Dados da NF foram preenchidos no Contas a Pagar.',
+      });
+    }
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
+    const fiscalInfo = attachmentFile ? await parsePayableXmlFile(attachmentFile) : {};
+    const saveForm = mergeFiscalPatch(form, fiscalInfo.fiscalPatch || {});
+    if (saveForm !== form) {
+      setForm(saveForm);
+    }
     const errs = {};
     if (!clinicId) {
       errs.generic = 'Sem clínica ativa';
     }
-    if (!form.vendor_name) {
+    if (!saveForm.vendor_name) {
       errs.vendor_name = 'Fornecedor obrigatório';
     }
     const total =
-      Number(formItems && formItems.length > 0 ? itemsGrandTotal : form.amount || 0) || 0;
-    if (!form.due_date) {
+      Number(formItems && formItems.length > 0 ? itemsGrandTotal : saveForm.amount || 0) || 0;
+    if (!saveForm.due_date) {
       errs.due_date = 'Vencimento obrigatório';
     }
     if (total <= 0) {
@@ -396,7 +469,7 @@ export default function NovaConta() {
     if (Object.keys(errs).length > 0) {
       return;
     }
-    if (!form.category_id) {
+    if (!saveForm.category_id) {
       toast({
         variant: 'destructive',
         title: 'Categoria obrigatória',
@@ -432,18 +505,19 @@ export default function NovaConta() {
               return `Itens: ${lines.join(' | ')}`;
             })()
           : null;
-      const sharedNotes = [form.notes, itemsNote, docUrl ? `Anexo: ${docUrl}` : null]
+      const sharedNotes = [saveForm.notes, itemsNote, docUrl ? `Anexo: ${docUrl}` : null]
+        .concat(fiscalInfo.fiscalNotes ? [fiscalInfo.fiscalNotes] : [])
         .filter(Boolean)
         .join(' | ');
       const total =
-        Number(formItems && formItems.length > 0 ? itemsGrandTotal : form.amount || 0) || 0;
+        Number(formItems && formItems.length > 0 ? itemsGrandTotal : saveForm.amount || 0) || 0;
       const descriptionAuto = (() => {
         if (formItems && formItems.length > 0) {
           const first = formItems[0]?.name || 'NF';
           const extras = formItems.length > 1 ? ` (+${formItems.length - 1} produtos)` : '';
           return `${first}${extras}`;
         }
-        return form.description || 'Despesa';
+        return saveForm.description || 'Despesa';
       })();
 
       const itemsPayload = (formItems || []).map((it) => ({
@@ -468,18 +542,20 @@ export default function NovaConta() {
             d.setDate(d.getDate() + termDaysPattern[i]);
             const dueIso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
             const created = await createAP(clinicId, {
-              vendor_name: form.vendor_name,
+              vendor_name: saveForm.vendor_name,
               description: descriptionAuto,
               due_date: dueIso,
+              issue_date: saveForm.issue_date || null,
               amount: amountPer,
-              cost_center_id: form.category_id || null,
-              centro_custo_id: form.category_id || null,
-              payment_method: form.payment_method,
+              cost_center_id: saveForm.category_id || null,
+              centro_custo_id: saveForm.category_id || null,
+              payment_method: saveForm.payment_method,
               installments: parcels,
-              document_number: form.document_number,
+              document_number: saveForm.document_number,
               notes: [sharedNotes, `Parcela ${i + 1}/${parcels}`].filter(Boolean).join(' | '),
-              status: form.status,
-              category_id: form.category_id || null,
+              status: saveForm.status,
+              category_id: saveForm.category_id || null,
+              financial_plan_account_id: saveForm.financial_plan_account_id || null,
               document_url: docUrl || null,
               ir_pct: Number(nfTaxes.irPct || 0),
               csll_pct: Number(nfTaxes.csllPct || 0),
@@ -495,21 +571,23 @@ export default function NovaConta() {
           }
         }
       } else {
-        const parcels = isInstallment ? Math.max(2, parseInt(form.installments || '2', 10)) : 1;
+        const parcels = isInstallment ? Math.max(2, parseInt(saveForm.installments || '2', 10)) : 1;
         const amountPer = parcels > 1 ? Number((total / parcels).toFixed(2)) : total;
         const basePayload = {
-          vendor_name: form.vendor_name,
+          vendor_name: saveForm.vendor_name,
           description: descriptionAuto,
-          due_date: form.due_date,
+          due_date: saveForm.due_date,
+          issue_date: saveForm.issue_date || null,
           amount: amountPer,
-          cost_center_id: form.category_id || null,
-          centro_custo_id: form.category_id || null,
-          payment_method: form.payment_method,
+          cost_center_id: saveForm.category_id || null,
+          centro_custo_id: saveForm.category_id || null,
+          payment_method: saveForm.payment_method,
           installments: parcels,
-          document_number: form.document_number,
+          document_number: saveForm.document_number,
           notes: sharedNotes,
-          status: form.status,
-          category_id: form.category_id || null,
+          status: saveForm.status,
+          category_id: saveForm.category_id || null,
+          financial_plan_account_id: saveForm.financial_plan_account_id || null,
           document_url: docUrl || null,
           ir_pct: Number(nfTaxes.irPct || 0),
           csll_pct: Number(nfTaxes.csllPct || 0),
@@ -528,7 +606,7 @@ export default function NovaConta() {
           if (parcels === 1) {
             firstCreated = await createAP(clinicId, basePayload);
           } else {
-            const start = new Date(form.due_date);
+            const start = new Date(saveForm.due_date);
             for (let i = 0; i < parcels; i++) {
               const d = new Date(start);
               d.setMonth(d.getMonth() + i);
@@ -552,15 +630,15 @@ export default function NovaConta() {
       if (isRecurring) {
         const freq = recurring.frequency || 'monthly';
         await createRecurringAP(clinicId, {
-          supplier_id: form.supplier_id || null,
+          supplier_id: saveForm.supplier_id || null,
           description: descriptionAuto,
           value: total,
           frequency: freq,
-          start_date: recurring.start_date || form.due_date || null,
+          start_date: recurring.start_date || saveForm.due_date || null,
           end_date: recurring.no_end_date ? null : recurring.end_date || null,
-          chart_account_id: form.category_id || null,
-          cost_center: form.category_id || null,
-          payment_method: form.payment_method || null,
+          chart_account_id: saveForm.category_id || null,
+          cost_center: saveForm.category_id || null,
+          payment_method: saveForm.payment_method || null,
           active: true,
         });
       }
@@ -681,7 +759,7 @@ export default function NovaConta() {
                     <input
                       type="radio"
                       name="recgen"
-                      checked={!!recurring.auto_generate}
+                      onChange={(e) => handleAttachmentFileChange(e.target.files?.[0] || null)}
                       onChange={() => setRecurring((r) => ({ ...r, auto_generate: true }))}
                     />
                     Gerar lançamentos automaticamente
@@ -776,6 +854,23 @@ export default function NovaConta() {
                   placeholder="Selecione o centro de custo"
                 />
               )}
+            </div>
+            {/* Forma de pagamento */}
+            <div>
+              <Label className="text-xs text-gray-600 font-medium">Plano Financeiro</Label>
+              <select
+                className="w-full border rounded h-9 px-3 py-1.5 text-sm mt-1"
+                name="financial_plan_account_id"
+                value={form.financial_plan_account_id || ''}
+                onChange={handleChange}
+              >
+                <option value="">Selecione...</option>
+                {financialPlanAccounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.code ? `${account.code} - ${account.name}` : account.name}
+                  </option>
+                ))}
+              </select>
             </div>
             {/* Forma de pagamento */}
             <div>
@@ -1351,7 +1446,17 @@ export default function NovaConta() {
             Anexos e observações
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
+            <div
+              className={`rounded-md border p-3 transition ${draggingAttachmentFile ? 'border-sky-500 bg-sky-50 ring-2 ring-sky-100' : 'border-slate-200 bg-slate-50'}`}
+              onDragOver={(event) => {
+                event.preventDefault();
+                setDraggingAttachmentFile(true);
+              }}
+              onDragLeave={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) setDraggingAttachmentFile(false);
+              }}
+              onDrop={handleAttachmentDrop}
+            >
               <Label className="text-xs text-gray-600 font-medium">Upload de documento</Label>
               <Input
                 className="h-9 px-3 py-1.5 text-sm"
@@ -1359,7 +1464,12 @@ export default function NovaConta() {
                 accept="image/*,application/pdf"
                 onChange={(e) => setAttachmentFile(e.target.files?.[0] || null)}
               />
-              <div className="text-xs text-gray-500 mt-1">Nota, boleto ou contrato.</div>
+              <div className="text-xs text-gray-500 mt-1">Arraste aqui nota, boleto ou contrato, ou selecione pelo campo acima.</div>
+              {attachmentFile && (
+                <div className="mt-2 rounded bg-white px-2 py-1 text-xs font-medium text-slate-700">
+                  Selecionado: {attachmentFile.name}
+                </div>
+              )}
             </div>
             <div>
               <Label className="text-xs text-gray-600 font-medium">Observações</Label>

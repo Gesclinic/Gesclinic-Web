@@ -228,7 +228,7 @@ export const TransactionsTable = React.memo<TransactionsTableProps>(({
     });
   };
 
-  if (loading) {
+  if (loading && transactions.length === 0) {
     return (
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-8 text-center">
         <div className="inline-block">

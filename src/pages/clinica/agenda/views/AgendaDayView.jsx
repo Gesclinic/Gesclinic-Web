@@ -5,7 +5,6 @@ import { ptBR } from 'date-fns/locale';
 import { Edit, Eye, Lock, Trash2, Unlock } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import ModalCriarAgendamento from '../components/ModalCriarAgendamento';
-import AtendimentoModal from '../components/AtendimentoModal';
 import StatusBadge from '../components/StatusBadge';
 import { getStatusStyle } from '@/utils/helpers/getStatusStyle';
 
@@ -418,10 +417,6 @@ export default function AgendaDayView({
   const [holiday, setHoliday] = useState(null);
   const [overrideHoliday, setOverrideHoliday] = useState(false);
 
-  // 📋 Estado para AtendimentoModal (TISS)
-  const [atendimentoModalOpen, setAtendimentoModalOpen] = useState(false);
-  const [atendimentoModalAppointment, setAtendimentoModalAppointment] = useState(null);
-
   // 🆕 Estado LOCAL para appointments - isso vai ser atualizado via Realtime
   const [localAppointments, setLocalAppointments] = useState([]);
 
@@ -757,7 +752,7 @@ export default function AgendaDayView({
   };
 
   /**
-   * 📋 Abrir AtendimentoModal (TISS) para um agendamento
+   * 📋 Abrir tela correta de atendimento/check-out no modal unificado
    */
   const handleOpenAtendimento = (apt) => {
     const normalizedStatus = migrateStatus(apt?.status);
@@ -780,20 +775,7 @@ export default function AgendaDayView({
       return;
     }
 
-    setAtendimentoModalAppointment(apt);
-    setAtendimentoModalOpen(true);
-  };
-
-  /**
-   * 📋 Fechar AtendimentoModal e recarregar agenda
-   */
-  const handleCloseAtendimento = () => {
-    setAtendimentoModalOpen(false);
-    setAtendimentoModalAppointment(null);
-    // Recarregar agendamentos após mudança
-    if (appointments && appointments.length > 0) {
-      setLocalAppointments([...appointments]);
-    }
+    onEditAppointment(apt.id, { initialTab: 'pagamento' });
   };
 
   const handleCheckIn = (aptId, financialData = {}) => {
@@ -1448,15 +1430,6 @@ export default function AgendaDayView({
           </div>
         </>
       )}
-
-      {/* 📋 AtendimentoModal - TISS Compliant Check-in (from AgendaDayView) */}
-      <AtendimentoModal
-        isOpen={atendimentoModalOpen}
-        onClose={handleCloseAtendimento}
-        appointment={atendimentoModalAppointment}
-        arrivals={[]}
-        onArrivalsUpdate={handleCloseAtendimento}
-      />
     </div>
   );
 }

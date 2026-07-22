@@ -100,6 +100,7 @@ type PayableColumnKey =
   | 'balance'
   | 'paymentMethod'
   | 'status'
+  | 'reconciliation'
   | 'docs';
 
 type PayableColumnOption = {
@@ -123,6 +124,7 @@ const payableColumnOptions: PayableColumnOption[] = [
   { key: 'balance', label: 'Saldo', align: 'right' },
   { key: 'paymentMethod', label: 'Forma' },
   { key: 'status', label: 'Status', align: 'center' },
+  { key: 'reconciliation', label: 'Conciliação', align: 'center' },
   { key: 'docs', label: 'Docs', align: 'center' },
 ];
 
@@ -247,6 +249,41 @@ function getDocumentExtraction(payable: Payable) {
       extraction.fields?.amount ? `Valor: ${formatCurrency(Number(extraction.fields.amount || 0))}` : null,
       Array.isArray(extraction.warnings) && extraction.warnings[0] ? extraction.warnings[0] : null,
     ].filter(Boolean).join(' | '),
+  };
+}
+
+function getReconciliationState(payable: Payable) {
+  const reconciliation = payable.metadata?.enterprise?.reconciliation || {};
+  const status = String(reconciliation.status || '').toUpperCase();
+
+  if (status === 'MATCHED' || reconciliation.bank_statement_id || reconciliation.bank_transaction_id) {
+    return {
+      label: 'Conciliado',
+      className: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+      title: reconciliation.payment_date ? `Conciliado em ${formatDate(reconciliation.payment_date)}` : 'Conciliação bancária vinculada',
+    };
+  }
+
+  if (status === 'AWAITING_REVIEW') {
+    return {
+      label: 'Revisão',
+      className: 'border-amber-200 bg-amber-50 text-amber-700',
+      title: 'Conciliação aguardando aprovação',
+    };
+  }
+
+  if (status === 'REJECTED') {
+    return {
+      label: 'Rejeitada',
+      className: 'border-red-200 bg-red-50 text-red-700',
+      title: reconciliation.rejection_reason || 'Conciliação rejeitada',
+    };
+  }
+
+  return {
+    label: 'Pendente',
+    className: 'border-slate-200 bg-slate-50 text-slate-500',
+    title: 'Sem conciliação bancária vinculada',
   };
 }
 
@@ -523,8 +560,9 @@ export const PayablesTable = React.memo<PayablesTableProps>(
                 {!isLoading && payables.map((payable) => {
                   const isSelected = selected.has(payable.id);
                   const days = overdueDays(payable);
-                  const isOverdue = days !== null && payable.status !== PayableStatus.PAID;
+                  const isOverdue = days !== null && payable.status !== PayableStatus.PAID && Number(payable.balance_amount || 0) > 0;
                   const documentExtraction = getDocumentExtraction(payable);
+                  const reconciliationState = getReconciliationState(payable);
                   const documentUrl = payable.attachment_url || payable.invoice_pdf_url || payable.invoice_xml_url;
                   const columnCells: Record<PayableColumnKey, React.ReactNode> = {
                     dueDate: (
@@ -596,6 +634,16 @@ export const PayablesTable = React.memo<PayablesTableProps>(
                             {STATUS_LABELS[payable.status]}
                           </div>
                         </div>
+                      </TableCell>
+                    ),
+                    reconciliation: (
+                      <TableCell key="reconciliation" className="text-center">
+                        <span
+                          className={cn('inline-flex items-center rounded-full border px-2 py-1 text-xs font-medium', reconciliationState.className)}
+                          title={reconciliationState.title}
+                        >
+                          {reconciliationState.label}
+                        </span>
                       </TableCell>
                     ),
                     docs: (

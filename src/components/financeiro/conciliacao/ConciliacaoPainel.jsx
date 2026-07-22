@@ -72,7 +72,8 @@ export function ConciliacaoPainel({
         type: financialForm.type,
         amount: Math.abs(statement.amount),
         description: financialForm.description,
-        dueDate: financialForm.dueDate,
+        dueDate: financialForm.dueDate || statement.statement_date,
+        statementDate: statement.statement_date,
         categoryId: financialForm.categoryId,
         costCenterId: financialForm.costCenterId,
       });

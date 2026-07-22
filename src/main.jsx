@@ -43,6 +43,42 @@ Object.defineProperty(navigator, 'languages', {
   }
 })();
 
+const staleChunkReloadKey = 'gesclinic_stale_chunk_reload_at';
+const staleChunkErrorPatterns = [
+  'failed to fetch dynamically imported module',
+  'error loading dynamically imported module',
+  'importing a module script failed',
+  'loading chunk',
+  'chunkloaderror',
+];
+
+function isStaleChunkError(event) {
+  const reason = event?.reason || event?.error || event;
+  const message = [
+    reason?.message,
+    reason?.stack,
+    event?.message,
+    event?.filename,
+    String(reason || ''),
+  ].filter(Boolean).join(' ').toLowerCase();
+
+  return staleChunkErrorPatterns.some((pattern) => message.includes(pattern));
+}
+
+function reloadAfterStaleChunk(event) {
+  if (!isStaleChunkError(event)) return;
+
+  const now = Date.now();
+  const lastReload = Number(sessionStorage.getItem(staleChunkReloadKey) || 0);
+  if (now - lastReload < 30000) return;
+
+  sessionStorage.setItem(staleChunkReloadKey, String(now));
+  window.location.reload();
+}
+
+window.addEventListener('error', reloadAfterStaleChunk);
+window.addEventListener('unhandledrejection', reloadAfterStaleChunk);
+
 // Configurar Sentry para produção
 if (import.meta.env.PROD) {
   try {

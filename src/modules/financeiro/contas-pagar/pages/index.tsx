@@ -35,6 +35,11 @@ import {
   labelReconciliationStatus,
 } from '../utils/labels';
 import { generatePayablesReport } from '../utils/payablesReportUtils';
+import {
+  buildFiscalDocumentNotes,
+  buildPayablePatchFromFiscalDocument,
+  readFiscalXmlFromUrl,
+} from '@/lib/fiscalXmlParser';
 
 const emptyPayableFilters = {
   status: '',
@@ -128,8 +133,74 @@ function withTimeout<T>(promise: Promise<T>, message: string, timeoutMs = 45000)
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
 }
 
+function formatIsoDateToBr(value?: string) {
+  const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return value || '';
+  return `${match[3]}/${match[2]}/${match[1]}`;
+}
+
+function parseBrDateToIso(value: string) {
+  const match = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!match) return '';
+  const [, day, month, year] = match;
+  const date = new Date(Number(year), Number(month) - 1, Number(day));
+  if (date.getFullYear() !== Number(year) || date.getMonth() !== Number(month) - 1 || date.getDate() !== Number(day)) {
+    return '';
+  }
+  return `${year}-${month}-${day}`;
+}
+
+function maskBrDate(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+}
+
+function DateFilterInput({
+  title,
+  value,
+  onChange,
+}: {
+  title: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [displayValue, setDisplayValue] = React.useState(formatIsoDateToBr(value));
+
+  React.useEffect(() => {
+    setDisplayValue(formatIsoDateToBr(value));
+  }, [value]);
+
+  return (
+    <input
+      type="text"
+      title={title}
+      inputMode="numeric"
+      placeholder="dd/mm/aaaa"
+      maxLength={10}
+      value={displayValue}
+      onChange={(event) => {
+        const nextDisplay = maskBrDate(event.target.value);
+        setDisplayValue(nextDisplay);
+        if (!nextDisplay) {
+          onChange('');
+          return;
+        }
+        if (nextDisplay.length === 10) {
+          const nextIso = parseBrDateToIso(nextDisplay);
+          if (nextIso) onChange(nextIso);
+        }
+      }}
+      onBlur={() => setDisplayValue(formatIsoDateToBr(value))}
+      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+    />
+  );
+}
+
 function getBulkActionLabel(action: string) {
   const labels: Record<string, string> = {
+    reprocess_xml: 'Reprocessando XMLs fiscais',
     pay: 'Registrando pagamentos',
     send_to_approval: 'Enviando para aprovação',
     check: 'Marcando como conferida',
@@ -141,6 +212,35 @@ function getBulkActionLabel(action: string) {
     delete: 'Excluindo contas a pagar',
   };
   return labels[action] || 'Processando ação em lote';
+}
+
+function getPayableFiscalXmlUrl(payable: Payable): string {
+  const metadata = payable.metadata || {};
+  return String(
+    payable.invoice_xml_url
+    || payable.attachment_url
+    || metadata.invoice_xml_url
+    || metadata.document_url
+    || metadata.document_upload?.url
+    || metadata.xml?.url
+    || metadata.xml?.public_url
+    || metadata.nfe?.url
+    || metadata.nfe?.xml_url
+    || ''
+  );
+}
+
+function getPayableDocumentName(payable: Payable): string {
+  const metadata = payable.metadata || {};
+  return String(
+    metadata.source_file_name
+    || metadata.document_upload?.name
+    || metadata.xml?.name
+    || metadata.nfe?.file_name
+    || payable.document_number
+    || payable.invoice_number
+    || ''
+  );
 }
 
 export default function ContasApagarPage() {
@@ -231,6 +331,7 @@ export default function ContasApagarPage() {
     summary,
     isLoading,
     deletePayable,
+    updatePayable: updatePayableMutation,
     payPayable,
     cancelPayable,
     applyApprovalAction,
@@ -476,9 +577,9 @@ export default function ContasApagarPage() {
     filters.category ? `Categoria: ${filters.category}` : '',
     filters.subcategory ? `Subcategoria: ${filters.subcategory}` : '',
     filters.paymentMethod ? `Pagamento: ${labelPaymentMethod(filters.paymentMethod)}` : '',
-    filters.dueStartDate || filters.dueEndDate ? `Vencimento: ${filters.dueStartDate || '...'} a ${filters.dueEndDate || '...'}` : '',
-    filters.emissionStartDate || filters.emissionEndDate ? `Emissao: ${filters.emissionStartDate || '...'} a ${filters.emissionEndDate || '...'}` : '',
-    filters.competencyStartDate || filters.competencyEndDate ? `Competencia: ${filters.competencyStartDate || '...'} a ${filters.competencyEndDate || '...'}` : '',
+    filters.dueStartDate || filters.dueEndDate ? `Vencimento: ${formatIsoDateToBr(filters.dueStartDate) || '...'} a ${formatIsoDateToBr(filters.dueEndDate) || '...'}` : '',
+    filters.emissionStartDate || filters.emissionEndDate ? `Emissao: ${formatIsoDateToBr(filters.emissionStartDate) || '...'} a ${formatIsoDateToBr(filters.emissionEndDate) || '...'}` : '',
+    filters.competencyStartDate || filters.competencyEndDate ? `Competencia: ${formatIsoDateToBr(filters.competencyStartDate) || '...'} a ${formatIsoDateToBr(filters.competencyEndDate) || '...'}` : '',
   ].filter(Boolean);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -514,6 +615,9 @@ export default function ContasApagarPage() {
   }, []);
 
   const getBulkActionTargets = useCallback((action: string) => {
+    if (action === 'reprocess_xml') {
+      return selectedRows.filter((payable) => getPayableFiscalXmlUrl(payable));
+    }
     if (action === 'pay') {
       return selectedRows.filter((payable) => Number(payable.balance_amount || payable.net_amount || payable.amount || 0) > 0 && ![PayableStatus.PAID, PayableStatus.CANCELED, PayableStatus.REVERSED].includes(payable.status));
     }
@@ -532,14 +636,87 @@ export default function ContasApagarPage() {
     return selectedRows.filter((payable) => ![PayableStatus.PAID, PayableStatus.CANCELED, PayableStatus.REVERSED].includes(payable.status));
   }, [isAdmin, selectedRows]);
 
+  const reprocessPayableXml = useCallback(async (payable: Payable) => {
+    const xmlUrl = getPayableFiscalXmlUrl(payable);
+    if (!xmlUrl) {
+      throw new Error('Conta sem XML fiscal anexado.');
+    }
+
+    const fiscalDocument: any = await readFiscalXmlFromUrl(xmlUrl);
+    const fiscalPatch = buildPayablePatchFromFiscalDocument(fiscalDocument);
+    const fiscalNotes = buildFiscalDocumentNotes(fiscalDocument);
+
+    if (!fiscalDocument || Object.keys(fiscalPatch).length === 0) {
+      throw new Error('O anexo não parece ser um XML fiscal válido.');
+    }
+
+    const amount = Number(fiscalPatch.amount || payable.amount || 0);
+    const documentName = getPayableDocumentName(payable);
+    const metadata = {
+      ...(payable.metadata || {}),
+      source_file_name: documentName || payable.metadata?.source_file_name || null,
+      document_extraction: {
+        ...(payable.metadata?.document_extraction || {}),
+        documentType: fiscalDocument.type,
+        confidence: 'reprocessado',
+        extractedAt: new Date().toISOString(),
+        fields: {
+          ...(payable.metadata?.document_extraction?.fields || {}),
+          supplier_name: fiscalDocument.emitter?.name || payable.supplier_name || null,
+          supplier_document: fiscalDocument.emitter?.document || payable.supplier_document || null,
+          recipient_name: fiscalDocument.recipient?.name || null,
+          recipient_document: fiscalDocument.recipient?.document || null,
+          invoice_number: fiscalDocument.number || payable.invoice_number || null,
+          guide_number: fiscalDocument.number || fiscalDocument.accessKey || payable.guide_number || null,
+          issue_date: fiscalDocument.issueDate || payable.issue_date || null,
+          due_date: fiscalDocument.dueDate || fiscalDocument.issueDate || payable.due_date || null,
+          amount,
+        },
+      },
+      nfe: {
+        ...(payable.metadata?.nfe || {}),
+        url: xmlUrl,
+        access_key: fiscalDocument.accessKey || payable.metadata?.nfe?.access_key || null,
+        number: fiscalDocument.number || payable.metadata?.nfe?.number || null,
+        series: fiscalDocument.series || payable.metadata?.nfe?.series || null,
+      },
+    };
+
+    const observations = [payable.observations, fiscalNotes]
+      .filter(Boolean)
+      .filter((value, index, arr) => arr.findIndex((candidate) => candidate === value) === index)
+      .join(' | ');
+
+    await updatePayableMutation({
+      id: payable.id,
+      supplier_name: fiscalPatch.vendor_name || payable.supplier_name,
+      supplier_document: fiscalDocument.emitter?.document || payable.supplier_document,
+      description: fiscalPatch.description || payable.description,
+      issue_date: fiscalPatch.issue_date || payable.issue_date,
+      due_date: fiscalPatch.due_date || payable.due_date,
+      competency_date: fiscalPatch.issue_date || payable.competency_date,
+      amount: amount || payable.amount,
+      invoice_number: fiscalDocument.number || payable.invoice_number,
+      guide_number: fiscalDocument.number || fiscalDocument.accessKey || payable.guide_number,
+      document_number: fiscalPatch.document_number || payable.document_number,
+      observations,
+      has_invoice: true,
+      invoice_xml_url: payable.invoice_xml_url || xmlUrl,
+      attachment_url: payable.attachment_url || xmlUrl,
+      metadata,
+    });
+  }, [updatePayableMutation]);
+
   const handleApplyBulkAction = useCallback(async () => {
     if (!bulkAction || !selectedRows.length) return;
 
     const targets = getBulkActionTargets(bulkAction);
     if (!targets.length) {
       toast({
-        title: 'Nenhuma conta elegível',
-        description: 'Os lançamentos selecionados não permitem essa ação em lote.',
+        title: bulkAction === 'reprocess_xml' ? 'Nenhum XML fiscal anexado' : 'Nenhuma conta elegível',
+        description: bulkAction === 'reprocess_xml'
+          ? `${selectedRows.length} conta(s) selecionada(s), mas nenhuma tem XML fiscal com URL para reprocessar.`
+          : 'Os lançamentos selecionados não permitem essa ação em lote.',
         variant: 'destructive',
       });
       return;
@@ -584,7 +761,9 @@ export default function ContasApagarPage() {
         }));
 
         try {
-          if (bulkAction === 'pay') {
+          if (bulkAction === 'reprocess_xml') {
+            await withTimeout(reprocessPayableXml(payable), `Tempo excedido ao reprocessar XML de ${payableLabel}.`);
+          } else if (bulkAction === 'pay') {
             const amount = Number(payable.balance_amount || payable.net_amount || payable.amount || 0);
             await withTimeout(payPayable({
               id: payable.id,
@@ -650,7 +829,7 @@ export default function ContasApagarPage() {
       setBulkProcessing(false);
       setBulkProgress((prev) => ({ ...prev, active: false, currentLabel: '' }));
     }
-  }, [applyApprovalAction, bulkAction, cancelPayable, clearSelection, deletePayable, getBulkActionTargets, isAdmin, payPayable, selectedRows, toast, user?.id]);
+  }, [applyApprovalAction, bulkAction, cancelPayable, clearSelection, deletePayable, getBulkActionTargets, isAdmin, payPayable, reprocessPayableXml, selectedRows, toast, user?.id]);
 
   const exportRows = payables.map((payable) => ({
     vencimento: payable.due_date,
@@ -1007,50 +1186,38 @@ export default function ContasApagarPage() {
                 {/* Due Date Range */}
                 <div>
                   <label className="text-xs text-gray-600">Vencimento De</label>
-                  <input
-                    type="date"
+                  <DateFilterInput
                     title="Vencimento De"
-                    lang="pt-BR"
                     value={filters.dueStartDate}
-                    onChange={(e) => setFilters(p => ({ ...p, dueStartDate: e.target.value }))}
-                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    onChange={(value) => setFilters(p => ({ ...p, dueStartDate: value }))}
                   />
                 </div>
 
                 <div>
                   <label className="text-xs text-gray-600">Vencimento Até</label>
-                  <input
-                    type="date"
+                  <DateFilterInput
                     title="Vencimento Até"
-                    lang="pt-BR"
                     value={filters.dueEndDate}
-                    onChange={(e) => setFilters(p => ({ ...p, dueEndDate: e.target.value }))}
-                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    onChange={(value) => setFilters(p => ({ ...p, dueEndDate: value }))}
                   />
                 </div>
 
                 {/* Emission Date Range */}
                 <div>
                   <label className="text-xs text-gray-600">Emissão De</label>
-                  <input
-                    type="date"
+                  <DateFilterInput
                     title="Emissão De"
-                    lang="pt-BR"
                     value={filters.emissionStartDate}
-                    onChange={(e) => setFilters(p => ({ ...p, emissionStartDate: e.target.value }))}
-                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    onChange={(value) => setFilters(p => ({ ...p, emissionStartDate: value }))}
                   />
                 </div>
 
                 <div>
                   <label className="text-xs text-gray-600">Emissão Até</label>
-                  <input
-                    type="date"
+                  <DateFilterInput
                     title="Emissão Até"
-                    lang="pt-BR"
                     value={filters.emissionEndDate}
-                    onChange={(e) => setFilters(p => ({ ...p, emissionEndDate: e.target.value }))}
-                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    onChange={(value) => setFilters(p => ({ ...p, emissionEndDate: value }))}
                   />
                 </div>
 
@@ -1113,25 +1280,19 @@ export default function ContasApagarPage() {
 
                 <div>
                   <label className="text-xs text-gray-600">Competência De</label>
-                  <input
-                    type="date"
+                  <DateFilterInput
                     title="Competência De"
-                    lang="pt-BR"
                     value={filters.competencyStartDate}
-                    onChange={(e) => setFilters(p => ({ ...p, competencyStartDate: e.target.value }))}
-                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    onChange={(value) => setFilters(p => ({ ...p, competencyStartDate: value }))}
                   />
                 </div>
 
                 <div>
                   <label className="text-xs text-gray-600">Competência Até</label>
-                  <input
-                    type="date"
+                  <DateFilterInput
                     title="Competência Até"
-                    lang="pt-BR"
                     value={filters.competencyEndDate}
-                    onChange={(e) => setFilters(p => ({ ...p, competencyEndDate: e.target.value }))}
-                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    onChange={(value) => setFilters(p => ({ ...p, competencyEndDate: value }))}
                   />
                 </div>
               </div>
@@ -1210,6 +1371,7 @@ export default function ContasApagarPage() {
                         className="h-9 min-w-[210px] rounded-md border bg-white px-3 text-sm"
                       >
                         <option value="">Ação selecionada</option>
+                        <option value="reprocess_xml">Reprocessar XMLs selecionados</option>
                         <option value="pay">Registrar pagamento</option>
                         <option value="send_to_approval">Enviar para aprovação</option>
                         <option value="check">Marcar conferida</option>

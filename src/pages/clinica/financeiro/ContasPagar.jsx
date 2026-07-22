@@ -25,6 +25,7 @@ import {
   Check,
   AlertCircle,
   Save,
+  RefreshCw,
 } from 'lucide-react';
 import SummaryCards from '@/components/clinica/financeiro/SummaryCards';
 import { SaveFilterDialog } from '@/components/clinica/financeiro/SaveFilterDialog';
@@ -56,12 +57,18 @@ import {
   listAPQuery,
   deleteAP,
   deleteAPBulk,
+  updateAP,
   updateAPBulk,
   payAccountsPayableBatch,
   listAccountPlans,
   listVendorNames,
   listPaymentMethods,
 } from '@/lib/financeApi';
+import {
+  buildFiscalDocumentNotes,
+  buildPayablePatchFromFiscalDocument,
+  readFiscalXmlFromUrl,
+} from '@/lib/fiscalXmlParser';
 import { parseSearchGeneral, parcelLabel } from '@/utils/helpers/financeHelpers';
 import StatusBadge from '@/components/clinica/financeiro/StatusBadge';
 import { useDataCache, CacheManager } from '@/hooks/useDataCache';
@@ -83,6 +90,8 @@ const APRow = React.memo(
     selected,
     setSelected,
     parcelLabel,
+    onReprocessXml,
+    reprocessingXmlId,
   }) => (
     <React.Fragment key={item.id}>
       <tr className={`${isOverdue(item) ? 'bg-red-50' : ''} border-b`}>
@@ -194,15 +203,29 @@ const APRow = React.memo(
                   })()}
                 </span>
                 {item.document_url && (
-                  <a
-                    href={item.document_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="Abrir anexo"
-                    className="text-gray-600 hover:text-blue-600"
-                  >
-                    <Paperclip className="w-4 h-4" />
-                  </a>
+                  <>
+                    <a
+                      href={item.document_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Abrir anexo"
+                      className="text-gray-600 hover:text-blue-600"
+                    >
+                      <Paperclip className="w-4 h-4" />
+                    </a>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-xs text-emerald-700"
+                      title="Reprocessar XML anexado"
+                      disabled={reprocessingXmlId === item.id}
+                      onClick={() => onReprocessXml?.(item)}
+                    >
+                      <RefreshCw className={`mr-1 w-3 h-3 ${reprocessingXmlId === item.id ? 'animate-spin' : ''}`} />
+                      Reprocessar XML
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
@@ -234,6 +257,7 @@ const APRow = React.memo(
       prevProps.item.status === nextProps.item.status &&
       prevProps.item.amount === nextProps.item.amount &&
       prevProps.item.due_date === nextProps.item.due_date &&
+      prevProps.reprocessingXmlId === nextProps.reprocessingXmlId &&
       prevProps.expanded.has(prevProps.item.id) === nextProps.expanded.has(nextProps.item.id)
     );
   },
@@ -288,6 +312,7 @@ export default function ContasPagar() {
   const [items, setItems] = useState([]);
   const [allLoadedRows, setAllLoadedRows] = useState([]); // Para cálculos de indicadores (todos os dados, não paginados)
   const [loading, setLoading] = useState(false);
+  const [reprocessingXmlId, setReprocessingXmlId] = useState(null);
   const [selected, setSelected] = useState(new Set());
   const [autoSelectNext, setAutoSelectNext] = useState(false);
   const [costCenterDialogOpen, setCostCenterDialogOpen] = useState(false);
@@ -871,6 +896,49 @@ export default function ContasPagar() {
       sortDir,
     ],
   );
+
+  const handleReprocessPayableXml = useCallback(async (item) => {
+    if (!item?.id || !item?.document_url) {
+      return;
+    }
+    setReprocessingXmlId(item.id);
+    try {
+      const fiscalDocument = await readFiscalXmlFromUrl(item.document_url);
+      const fiscalPatch = buildPayablePatchFromFiscalDocument(fiscalDocument);
+      const fiscalNotes = buildFiscalDocumentNotes(fiscalDocument);
+
+      if (!fiscalDocument || Object.keys(fiscalPatch).length === 0) {
+        throw new Error('O anexo não parece ser um XML fiscal válido.');
+      }
+
+      const nextNotes = [item.notes, fiscalNotes]
+        .filter(Boolean)
+        .filter((value, index, arr) => arr.findIndex((candidate) => candidate === value) === index)
+        .join(' | ');
+
+      await updateAP(item.id, {
+        vendor_name: fiscalPatch.vendor_name || item.vendor_name,
+        description: fiscalPatch.description || item.description,
+        issue_date: fiscalPatch.issue_date || item.issue_date || null,
+        due_date: fiscalPatch.due_date || item.due_date,
+        amount: fiscalPatch.amount || item.amount,
+        document_number: fiscalPatch.document_number || item.document_number,
+        notes: nextNotes,
+      });
+
+      toast({ title: 'XML reprocessado', description: 'Conta a pagar atualizada e sincronizada para conciliação.' });
+      triggerLoad(false);
+      loadAllPayablesForSummary({});
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao reprocessar XML',
+        description: error?.message || 'Não foi possível ler o XML anexado.',
+      });
+    } finally {
+      setReprocessingXmlId(null);
+    }
+  }, [loadAllPayablesForSummary, toast, triggerLoad]);
 
   // Carrega inicialmente e quando a clínica muda
   useEffect(() => {
@@ -1623,6 +1691,8 @@ export default function ContasPagar() {
                       selected={selected}
                       setSelected={setSelected}
                       parcelLabel={parcelLabel}
+                      onReprocessXml={handleReprocessPayableXml}
+                      reprocessingXmlId={reprocessingXmlId}
                     />
                   ))
                 )}
@@ -1911,15 +1981,26 @@ export default function ContasPagar() {
                     return xmlNF || docNF || '—';
                   })()}
                   {viewItem.document_url && (
-                    <div className="mt-1">
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
                       <a
                         href={viewItem.document_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-600 underline"
+                        className="text-blue-600 underline text-sm"
                       >
                         Abrir anexo
                       </a>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-2 text-xs text-emerald-700"
+                        disabled={reprocessingXmlId === viewItem.id}
+                        onClick={() => handleReprocessPayableXml(viewItem)}
+                      >
+                        <RefreshCw className={`mr-1 h-3 w-3 ${reprocessingXmlId === viewItem.id ? 'animate-spin' : ''}`} />
+                        Reprocessar XML
+                      </Button>
                     </div>
                   )}
                 </div>

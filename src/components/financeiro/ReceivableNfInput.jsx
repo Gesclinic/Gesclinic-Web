@@ -20,6 +20,15 @@ export default function ReceivableNfInput({
   const streamRef = useRef(null);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraError, setCameraError] = useState('');
+  const [draggingFile, setDraggingFile] = useState(false);
+
+  const processFiles = (files) => {
+    if (multiple) {
+      onFilesSelected?.(files);
+      return;
+    }
+    onFileSelected?.(files[0] || null);
+  };
 
   const stopCamera = () => {
     streamRef.current?.getTracks?.().forEach((track) => track.stop());
@@ -105,7 +114,21 @@ export default function ReceivableNfInput({
   useEffect(() => () => stopCamera(), []);
 
   return (
-    <div className="rounded border bg-white p-3">
+    <div
+      className={`rounded border bg-white p-3 transition ${draggingFile ? 'border-sky-500 bg-sky-50 ring-2 ring-sky-100' : ''}`}
+      onDragOver={(event) => {
+        event.preventDefault();
+        setDraggingFile(true);
+      }}
+      onDragLeave={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setDraggingFile(false);
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        setDraggingFile(false);
+        processFiles(Array.from(event.dataTransfer.files || []));
+      }}
+    >
       <Label className="flex items-center gap-2 text-sm font-semibold text-slate-800">
         <FileText className="w-4 h-4 text-blue-600" />
         {label}
@@ -143,16 +166,11 @@ export default function ReceivableNfInput({
         multiple={multiple}
         className="hidden"
         onChange={(event) => {
-          const files = Array.from(event.target.files || []);
-          if (multiple) {
-            onFilesSelected?.(files);
-            return;
-          }
-          onFileSelected?.(files[0] || null);
+          processFiles(Array.from(event.target.files || []));
         }}
       />
       <p className="mt-2 text-xs text-slate-500">
-        Use PDF/XML/imagem ou capture uma foto pela camera do dispositivo.
+        Arraste PDF/XML/imagem para esta área, selecione um arquivo ou capture uma foto pela camera do dispositivo.
       </p>
       {selectedFile && (!multiple || selectedFiles.length <= 1) && (
         <p className="mt-2 text-xs font-medium text-slate-700">

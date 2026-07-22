@@ -2,6 +2,7 @@
 // Bloco de importação de extrato
 
 import React, { useState, useRef } from 'react';
+import * as XLSX from 'xlsx';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useBankStatementParser } from '@/hooks/useConciliation';
@@ -83,6 +84,22 @@ export function ConciliacaoImportacao({ bankAccounts, onImportSuccess }) {
     return ranked[0] || '';
   };
 
+  const isSpreadsheetFile = (selectedFile) => /\.(xlsx?|xlsm)$/i.test(selectedFile?.name || '');
+
+  const parseSpreadsheet = async (selectedFile) => {
+    const buffer = await selectedFile.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: 'array', cellDates: false });
+    const firstSheetName = workbook.SheetNames[0];
+
+    if (!firstSheetName) {
+      throw new Error('Planilha sem abas para importar');
+    }
+
+    const worksheet = workbook.Sheets[firstSheetName];
+    const csv = XLSX.utils.sheet_to_csv(worksheet, { FS: ';', blankrows: false });
+    return parseCSV(csv);
+  };
+
   const processSelectedFile = async (selectedFile) => {
     if (!selectedFile) {
       return;
@@ -91,13 +108,18 @@ export function ConciliacaoImportacao({ bankAccounts, onImportSuccess }) {
     setFile(selectedFile);
 
     try {
-      const content = await decodeFileContent(selectedFile, format);
       let statements = [];
 
-      if (format === IMPORT_FORMATS.CSV) {
+      if (isSpreadsheetFile(selectedFile)) {
+        statements = await parseSpreadsheet(selectedFile);
+      } else {
+        const content = await decodeFileContent(selectedFile, format);
+
+        if (format === IMPORT_FORMATS.CSV) {
         statements = parseCSV(content);
-      } else if (format === IMPORT_FORMATS.OFX) {
-        statements = parseOFX(content);
+        } else if (format === IMPORT_FORMATS.OFX) {
+          statements = parseOFX(content);
+        }
       }
 
       setPreview(statements.slice(0, 5)); // Mostrar 5 primeiros
@@ -138,13 +160,18 @@ export function ConciliacaoImportacao({ bankAccounts, onImportSuccess }) {
 
     try {
       setImporting(true);
-      const content = await decodeFileContent(file, format);
       let statements = [];
 
-      if (format === IMPORT_FORMATS.CSV) {
+      if (isSpreadsheetFile(file)) {
+        statements = await parseSpreadsheet(file);
+      } else {
+        const content = await decodeFileContent(file, format);
+
+        if (format === IMPORT_FORMATS.CSV) {
         statements = parseCSV(content);
-      } else if (format === IMPORT_FORMATS.OFX) {
-        statements = parseOFX(content);
+        } else if (format === IMPORT_FORMATS.OFX) {
+          statements = parseOFX(content);
+        }
       }
 
       const result = await onImportSuccess(statements, accountId);
@@ -164,9 +191,15 @@ export function ConciliacaoImportacao({ bankAccounts, onImportSuccess }) {
           if (result.duplicates > 0) {
             message += `\n⚠️ ${result.duplicates} duplicata(s) ignorada(s)`;
           }
+          if (result.updated > 0) {
+            message += `\n↻ ${result.updated} lançamento(ns) atualizado(s) com saldo do extrato`;
+          }
           alert(message);
         } else if (result.duplicates > 0) {
-          alert(`⚠️ Todos os ${result.duplicates} lançamento(ns) já existem no sistema (duplicatas ignoradas)`);
+          const updatedMessage = result.updated > 0
+            ? `\n↻ ${result.updated} lançamento(ns) atualizado(s) com saldo do extrato`
+            : '';
+          alert(`⚠️ Todos os ${result.duplicates} lançamento(ns) já existem no sistema (duplicatas ignoradas)${updatedMessage}`);
         }
       } else {
         alert(`${statements.length} lançamentos processados com sucesso!`);
@@ -235,10 +268,10 @@ export function ConciliacaoImportacao({ bankAccounts, onImportSuccess }) {
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            <input
+                <input
               ref={fileInputRef}
               type="file"
-              accept=".csv,.ofx,.txt"
+                  accept=".csv,.ofx,.txt,.xls,.xlsx,.xlsm"
               onChange={handleFileSelect}
               className="hidden"
             />

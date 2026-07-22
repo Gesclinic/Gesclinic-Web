@@ -25,7 +25,9 @@
 import React, { useState, useMemo } from 'react';
 import { X, CheckCircle2, AlertCircle, Zap, Play, Clock, TrendingUp } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { supabase } from '@/lib/customSupabaseClient';
 import { updateAppointment } from '@/lib/appointmentsApi';
+import { SERVICE_STATUSES } from '@/lib/appointmentStatusConstants';
 import { logCheckinStarted } from '@/lib/auditApi';
 import {
   validateCheckinData,
@@ -199,11 +201,17 @@ export default function CheckinDrawer({ isOpen, appointment, onClose, onStatusCh
         console.log('📋 Próximos passos:', checkinResult.nextSteps);
       }
 
-      // Atualizar status para liberado
-      await updateAppointment(currentAppointment.id, {
-        status: 'pronto_atendimento',
+      // Atualizar status para aguardando profissional
+      const releasedAt = new Date().toISOString();
+      const { error: releaseError } = await supabase.from('appointments').update({
+        status: SERVICE_STATUSES.AWAITING_PROFESSIONAL,
         liberado_em: new Date().toISOString(),
-      });
+        updated_at: releasedAt,
+      }).eq('id', currentAppointment.id);
+
+      if (releaseError) {
+        throw releaseError;
+      }
 
       console.log('💰 [Liberação] Processando registros financeiros...');
 
@@ -227,7 +235,7 @@ export default function CheckinDrawer({ isOpen, appointment, onClose, onStatusCh
         setWarnings([...warnings, `⚠️ ${financialResult.message}`]);
       }
 
-      onStatusChange(currentAppointment.id, 'liberado_para_atendimento');
+      onStatusChange(currentAppointment.id, SERVICE_STATUSES.AWAITING_PROFESSIONAL);
       onClose();
     } catch (error) {
       console.error('Erro ao liberar:', error);
@@ -248,6 +256,9 @@ export default function CheckinDrawer({ isOpen, appointment, onClose, onStatusCh
   // Calcular se botão de liberar está habilitado
   const canRelease =
     checklistComplete && financialOk && currentAppointment?.patient_type !== 'PRE_PATIENT';
+  const isReleasedForCareStatus =
+    currentAppointment?.status === SERVICE_STATUSES.AWAITING_PROFESSIONAL ||
+    currentAppointment?.status === 'pronto_atendimento';
 
   // Se não houver agendamento, não renderizar
   if (!currentAppointment) {
@@ -611,7 +622,7 @@ export default function CheckinDrawer({ isOpen, appointment, onClose, onStatusCh
                   <div
                     className={`w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs ${
                       currentAppointment?.status === 'presente' ||
-                      currentAppointment?.status === 'pronto_atendimento'
+                      isReleasedForCareStatus
                         ? 'bg-green-500'
                         : 'bg-blue-500'
                     }`}
@@ -621,7 +632,7 @@ export default function CheckinDrawer({ isOpen, appointment, onClose, onStatusCh
                   <span className="text-sm font-semibold text-gray-900">Confirmar Presença</span>
                 </div>
                 {currentAppointment?.status !== 'presente' &&
-                  currentAppointment?.status !== 'pronto_atendimento' && (
+                  !isReleasedForCareStatus && (
                     <button
                       onClick={handleRegistrarPresenca}
                       disabled={loading}
@@ -631,7 +642,7 @@ export default function CheckinDrawer({ isOpen, appointment, onClose, onStatusCh
                     </button>
                   )}
                 {(currentAppointment?.status === 'presente' ||
-                  currentAppointment?.status === 'pronto_atendimento') && (
+                  isReleasedForCareStatus) && (
                   <p className="text-xs text-green-700 font-semibold">✅ Presença registrada</p>
                 )}
               </div>
@@ -669,7 +680,7 @@ export default function CheckinDrawer({ isOpen, appointment, onClose, onStatusCh
                 <div className="flex items-center gap-2 mb-2">
                   <div
                     className={`w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs ${
-                      currentAppointment?.status === 'pronto_atendimento'
+                      isReleasedForCareStatus
                         ? 'bg-green-500'
                         : 'bg-gray-400'
                     }`}
@@ -680,7 +691,7 @@ export default function CheckinDrawer({ isOpen, appointment, onClose, onStatusCh
                     Liberar para Atendimento
                   </span>
                 </div>
-                {currentAppointment?.status !== 'pronto_atendimento' && (
+                {!isReleasedForCareStatus && (
                   <button
                     onClick={handleLiberar}
                     disabled={
@@ -703,7 +714,7 @@ export default function CheckinDrawer({ isOpen, appointment, onClose, onStatusCh
                   </button>
                 )}
 
-                {currentAppointment?.status === 'pronto_atendimento' && (
+                {isReleasedForCareStatus && (
                   <div className="w-full px-4 py-2 bg-green-100 border border-green-300 rounded-lg text-green-800 text-center font-medium">
                     ✅ Paciente pronto para atendimento
                   </div>

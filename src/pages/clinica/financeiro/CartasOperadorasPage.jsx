@@ -10,9 +10,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2, Edit2 } from 'lucide-react';
+import { Building2, CalendarDays, Edit2, Trash2 } from 'lucide-react';
 
-export default function CartasOperadorasPage() {
+export default function CartasOperadorasPage({ embedded = false }) {
   const { isAuthenticated } = useAuth();
   const { clinicId, loadingClinic } = useClinicContext();
 
@@ -122,40 +122,48 @@ export default function CartasOperadorasPage() {
   }
 
   return (
-    <div className="space-y-8 p-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">💳 Operadoras de Cartão</h1>
-        <p className="mt-2 text-gray-600">
-          Registre as operadoras de processamento (Stone, PagBank, etc) e configure o dia de crédito
-        </p>
-      </div>
+    <div className="space-y-6 pb-8">
+      {!embedded && (
+        <div>
+          <h1 className="flex items-center gap-3 text-3xl font-bold text-gray-900">
+            <Building2 className="h-8 w-8 text-sky-700" />
+            Operadoras de Cartão
+          </h1>
+          <p className="mt-2 text-gray-600">
+            Parametrize adquirentes, gateways e o dia padrão de crédito na conta.
+          </p>
+        </div>
+      )}
 
-      {/* Main Grid */}
-      <div className="grid gap-8 lg:grid-cols-3">
-        {/* Form - Left Column */}
-        <div className="lg:col-span-1">
-          <form onSubmit={handleSave} className="space-y-6 rounded-lg border border-gray-200 bg-white p-6">
-            <h2 className="text-xl font-semibold text-gray-900">
-              {editingId ? '✏️ Editar Operadora' : '➕ Nova Operadora'}
-            </h2>
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[380px_minmax(0,1fr)]">
+        <div>
+          <form onSubmit={handleSave} className="rounded-lg border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-100 px-5 py-4">
+              <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
+                <Building2 className="h-5 w-5 text-sky-700" />
+                {editingId ? 'Editar operadora' : 'Nova operadora'}
+              </h2>
+              <p className="mt-1 text-xs text-slate-500">Cadastre a adquirente ou processadora usada nos recebimentos de cartão.</p>
+            </div>
+
+            <div className="space-y-4 p-5">
 
             {/* Name */}
             <div>
-              <Label className="text-sm font-semibold">Nome da Operadora *</Label>
+              <Label className="mb-1.5 block text-sm font-semibold text-slate-700">Nome da operadora *</Label>
               <Input
                 type="text"
                 name="name"
                 placeholder="Ex: Stone, PagBank, PagSeguro"
                 value={formData.name}
                 onChange={handleInputChange}
-                className="h-9 text-sm"
+                className="h-10 text-sm"
               />
             </div>
 
             {/* Settlement Day */}
             <div>
-              <Label className="text-sm font-semibold">Dia de Crédito na Conta (1-31) *</Label>
+              <Label className="mb-1.5 block text-sm font-semibold text-slate-700">Dia de crédito na conta (1-31) *</Label>
               <div className="flex items-center gap-2">
                 <Input
                   type="number"
@@ -164,22 +172,22 @@ export default function CartasOperadorasPage() {
                   max="31"
                   value={formData.settlement_day}
                   onChange={handleInputChange}
-                  className="h-9 flex-1 text-sm"
+                  className="h-10 flex-1 text-sm"
                 />
-                <span className="text-xs text-gray-500">dia do mês</span>
+                <span className="whitespace-nowrap rounded-md bg-slate-100 px-2 py-2 text-xs text-slate-500">dia do mês</span>
               </div>
             </div>
 
             {/* Notes */}
             <div>
-              <Label className="text-sm font-semibold">Observações</Label>
+              <Label className="mb-1.5 block text-sm font-semibold text-slate-700">Observações</Label>
               <Input
                 type="text"
                 name="notes"
                 placeholder="Ex: Conta corporativa..."
                 value={formData.notes}
                 onChange={handleInputChange}
-                className="h-9 text-sm"
+                className="h-10 text-sm"
               />
             </div>
 
@@ -187,66 +195,73 @@ export default function CartasOperadorasPage() {
             <div className="flex gap-2">
               <Button
                 type="submit"
-                className="flex-1 h-9 text-sm"
+                className="h-10 flex-1 bg-sky-700 text-sm text-white hover:bg-sky-800"
               >
-                {editingId ? '💾 Atualizar' : '➕ Adicionar'}
+                {editingId ? 'Atualizar' : 'Adicionar'}
               </Button>
               {editingId && (
                 <Button
                   type="button"
                   onClick={handleCancel}
                   variant="outline"
-                  className="flex-1 h-9 text-sm"
+                  className="h-10 flex-1 text-sm"
                 >
-                  ✕ Cancelar
+                  Cancelar
                 </Button>
               )}
+            </div>
             </div>
           </form>
         </div>
 
-        {/* List - Right Columns */}
-        <div className="lg:col-span-2">
-          <div className="space-y-4 rounded-lg border border-gray-200 bg-white p-6">
-            <h2 className="flex items-center justify-between text-xl font-semibold text-gray-900">
-              📋 Operadoras Cadastradas
-              <span className="rounded-full bg-blue-100 px-3 py-1 text-sm font-normal text-blue-700">
-                {loading ? '...' : processors.length}
+        <div>
+          <div className="rounded-lg border border-slate-200 bg-white shadow-sm">
+            <div className="flex flex-col gap-2 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-base font-semibold text-slate-900">Operadoras cadastradas</h2>
+                <p className="text-xs text-slate-500">Operadoras disponíveis para cartões, taxas e conciliação.</p>
+              </div>
+              <span className="w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+                {loading ? '...' : `${processors.length} cadastro${processors.length === 1 ? '' : 's'}`}
               </span>
-            </h2>
+            </div>
 
             {loading ? (
-              <div className="py-12 text-center text-gray-500">Carregando...</div>
+              <div className="py-10 text-center text-sm text-slate-500">Carregando operadoras...</div>
             ) : processors.length === 0 ? (
-              <div className="py-12 text-center text-gray-500">
-                Nenhuma operadora cadastrada. Crie uma nova!
+              <div className="px-5 py-12 text-center">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-sky-50 text-sky-700">
+                  <Building2 className="h-6 w-6" />
+                </div>
+                <p className="font-medium text-slate-800">Nenhuma operadora cadastrada</p>
+                <p className="mt-1 text-sm text-slate-500">Use o formulário ao lado para cadastrar a primeira operadora.</p>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="divide-y divide-slate-100">
                 {processors.map((processor) => (
                   <div
                     key={processor.id}
-                    className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50 p-4 hover:bg-gray-100 transition-colors"
+                    className="flex items-start justify-between gap-4 p-4 transition-colors hover:bg-slate-50"
                   >
                     <div className="flex-1">
-                      <p className="font-semibold text-gray-900">{processor.name}</p>
-                      <div className="flex items-center gap-4 text-xs text-gray-600 mt-1">
-                        <span>📅 Crédito: dia <strong>{processor.settlement_day}</strong></span>
-                        {processor.notes && <span>📝 {processor.notes}</span>}
+                      <p className="font-semibold text-slate-900">{processor.name}</p>
+                      <div className="mt-2 grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
+                        <span className="flex items-center gap-2"><CalendarDays className="h-4 w-4 text-slate-400" /> Crédito: dia <strong>{processor.settlement_day}</strong></span>
+                        {processor.notes && <span className="sm:col-span-2">{processor.notes}</span>}
                       </div>
                     </div>
 
-                    <div className="flex gap-2 ml-4">
+                    <div className="flex gap-1">
                       <button
                         onClick={() => handleEdit(processor)}
-                        className="p-2 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                        className="rounded p-2 text-slate-600 transition-colors hover:bg-sky-50 hover:text-sky-700"
                         title="Editar"
                       >
                         <Edit2 size={18} />
                       </button>
                       <button
                         onClick={() => handleDelete(processor.id)}
-                        className="p-2 text-red-600 hover:bg-red-100 rounded transition-colors"
+                        className="rounded p-2 text-red-600 transition-colors hover:bg-red-50 hover:text-red-700"
                         title="Deletar"
                       >
                         <Trash2 size={18} />
@@ -261,9 +276,9 @@ export default function CartasOperadorasPage() {
       </div>
 
       {/* Info Box */}
-      <div className="rounded-lg border border-blue-200 bg-blue-50 p-6">
-        <h3 className="font-semibold text-blue-900">ℹ️ Como funciona</h3>
-        <ul className="mt-3 space-y-2 text-sm text-blue-800">
+      <div className="rounded-lg border border-sky-100 bg-sky-50 p-5">
+        <h3 className="font-semibold text-sky-900">Como funciona</h3>
+        <ul className="mt-3 space-y-2 text-sm text-sky-800">
           <li>
             <strong>Stone:</strong> Crédita geralmente no D+1 (próximo dia útil)
           </li>

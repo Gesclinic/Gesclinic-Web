@@ -17,6 +17,7 @@ import AppLayout from '@/components/layout/AppLayout';
 import Login from '@/pages/auth/Login';
 import Register from '@/pages/Register';
 import PublicHome from '@/pages/public/PublicHome';
+import TermosPage from '@/pages/public/Termos';
 import Checkout from '@/pages/Checkout';
 import PaymentConfirmation from '@/pages/PaymentConfirmation';
 import FixUserClinicPage from '@/pages/FixUserClinicPage';
@@ -64,7 +65,9 @@ import FinanceFluxoCaixa from '@/pages/clinica/financeiro/FluxoCaixa';
 import DREPage from '@/pages/clinica/financeiro/DRE';
 import FinancePlanoContas from '@/pages/clinica/financeiro/PlanoContas';
 import FinanceConciliacaoBancaria from '@/pages/clinica/financeiro/ConciliacaoBancaria';
+import ConciliacaoCartoes from '@/pages/clinica/financeiro/ConciliacaoCartoes';
 import ChartOfAccountsPage from '@/modules/financeiro/plano-contas/pages/ChartOfAccountsPage';
+import FinancialPlanPage from '@/modules/financeiro/plano-financeiro';
 import CostCenterPage from '@/modules/financeiro/centro-custo/pages/CostCenterPage';
 import { FinancialAccountsPage, FinancialAccountFormPage } from '@/modules/financeiro/contas-financeiras';
 // Contas a Pagar Module
@@ -75,12 +78,9 @@ import SolicitacoesEstorno from '@/pages/clinica/financeiro/SolicitacoesEstorno'
 import CaixaIndividual from '@/pages/clinica/financeiro/CaixaIndividual';
 import CaixaGerencial from '@/pages/clinica/financeiro/CaixaGerencial';
 import DivergenciasAnalytics from '@/pages/clinica/financeiro/DivergenciasAnalytics';
-import CartasPage from '@/pages/clinica/financeiro/CartasPage';
-import CartasOperadorasPage from '@/pages/clinica/financeiro/CartasOperadorasPage';
-import CartasProcessadorTaxasPage from '@/pages/clinica/financeiro/CartasProcessadorTaxasPage';
+import CartoesConfiguracaoPage from '@/pages/clinica/financeiro/CartoesConfiguracaoPage';
 import AuditReportPage from '@/pages/clinica/financeiro/AuditReportPage'; // ✅ ETAPA D.6
 import AuditoryAnalyticsDashboard from '@/pages/clinica/financeiro/AuditoryAnalyticsDashboard'; // ✅ ETAPA F.1
-import ProcessadorFeesAnalytics from '@/pages/clinica/financeiro/ProcessadorFeesAnalytics';
 // Motor Financeiro Enterprise
 import { FinancialTransactionsPage } from '@/modules/financeiro/lancamentos';
 // ETAPA 1: Integração Agenda → Financeiro
@@ -329,6 +329,9 @@ function PublicRoute() {
 export default function AppRoutes() {
   return (
     <Routes>
+      <Route path="/termos-de-uso" element={<TermosPage />} />
+      <Route path="/termos" element={<Navigate to="/termos-de-uso" replace />} />
+
       {/* PUBLIC */}
       <Route element={<PublicRoute />}>
         <Route path="/" element={<PublicHome />} />
@@ -528,10 +531,13 @@ export default function AppRoutes() {
           />
           <Route path="financeiro/fluxo-caixa" element={<FinanceFluxoCaixa />} />
           <Route path="financeiro/contas-pagar" element={<ContasApagarPage />} />
+          <Route path="financeiro/pagar" element={<Navigate to="/clinica/financeiro/contas-pagar" replace />} />
           <Route
             path="financeiro/contas-pagar/nova"
             element={<NovaContaPagarPage />}
           />
+          <Route path="financeiro/pagar/nova" element={<Navigate to="/clinica/financeiro/contas-pagar/nova" replace />} />
+          <Route path="financeiro/pagar/:id/editar" element={<LegacyPayableEditRedirect />} />
           <Route path="financeiro/contas-pagar/:id/editar" element={<LegacyPayableEditRedirect />} />
           <Route
             path="financeiro/movimento/contas-a-pagar"
@@ -546,26 +552,31 @@ export default function AppRoutes() {
             element={<ChartOfAccountsPage />}
           />
           <Route
+            path="financeiro/plano-financeiro"
+            element={<FinancialPlanPage />}
+          />
+          <Route
             path="financeiro/estrutura"
-            element={<Navigate to="/clinica/financeiro/contas-financeiras" replace />}
+            element={<Navigate to="/clinica/financeiro/plano-financeiro" replace />}
           />
           <Route path="financeiro/conciliacao-bancaria" element={<FinanceConciliacaoBancaria />} />
           <Route
             path="financeiro/conciliacao"
             element={<Navigate to="/clinica/financeiro/conciliacao-bancaria" replace />}
           />
+          <Route path="financeiro/conciliacao-cartoes" element={<ConciliacaoCartoes />} />
           <Route path="financeiro/alerts" element={<AlertCenter />} />
           <Route
             path="financeiro/cartoes"
-            element={<CartasPage />}
+            element={<CartoesConfiguracaoPage />}
           />
           <Route
             path="financeiro/cartoes-operadoras"
-            element={<CartasOperadorasPage />}
+            element={<Navigate to="/clinica/financeiro/cartoes?tab=operadoras" replace />}
           />
           <Route
             path="financeiro/cartoes-taxas-operadoras"
-            element={<CartasProcessadorTaxasPage />}
+            element={<Navigate to="/clinica/financeiro/cartoes?tab=taxas" replace />}
           />
           {/* ✅ ETAPA D.6: Rota de Auditoria */}
           <Route
@@ -579,7 +590,7 @@ export default function AppRoutes() {
           />
           <Route
             path="financeiro/cartoes-analytics"
-            element={<ProcessadorFeesAnalytics />}
+            element={<Navigate to="/clinica/financeiro/cartoes?tab=analytics" replace />}
           />
           {/* ETAPA 1: Integração Agenda → Financeiro */}
           <Route

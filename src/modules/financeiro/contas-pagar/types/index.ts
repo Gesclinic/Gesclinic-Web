@@ -163,6 +163,7 @@ export interface Payable {
   // Accounting
   chart_account_id?: string;
   cost_center_id?: string;
+  financial_plan_account_id?: string;
   financial_account_id?: string;
   dre_classification?: DreClassification;
   cost_allocations?: Array<{
@@ -337,6 +338,7 @@ export interface PayableCreateInput {
   
   chart_account_id?: string;
   cost_center_id?: string;
+  financial_plan_account_id?: string;
   financial_account_id?: string;
   dre_classification?: DreClassification;
   cost_allocations?: Payable['cost_allocations'];
@@ -393,6 +395,7 @@ export interface PayableFilterParams {
   supplier_name?: string;
   chart_account_id?: string;
   cost_center_id?: string;
+  financial_plan_account_id?: string;
   financial_account_id?: string;
   category?: string;
   subcategory?: string;

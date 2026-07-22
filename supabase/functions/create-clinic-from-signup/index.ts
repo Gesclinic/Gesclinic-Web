@@ -13,6 +13,11 @@ interface CreateClinicRequest {
   planId: string;
   adminName: string;
   adminEmail: string;
+  termsAccepted: boolean;
+  termsVersion?: string;
+  termsUrl?: string;
+  termsAcceptedAt?: string;
+  userAgent?: string;
 }
 
 serve(async (req) => {
@@ -47,13 +52,46 @@ serve(async (req) => {
 
     // Parse request body
     const payload: CreateClinicRequest = await req.json();
-    const { userId, clinicName, clinicCnpj, planId, adminName, adminEmail } =
+    const {
+      userId,
+      clinicName,
+      clinicCnpj,
+      planId,
+      adminName,
+      adminEmail,
+      termsAccepted,
+      termsVersion,
+      termsUrl,
+      termsAcceptedAt,
+      userAgent,
+    } =
       payload;
 
     // Validate required fields
     if (!userId || !clinicName || !clinicCnpj || !planId || !adminName || !adminEmail) {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    if (!termsAccepted) {
+      return new Response(
+        JSON.stringify({ error: "Terms acceptance is required" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const acceptedAt = termsAcceptedAt ? new Date(termsAcceptedAt) : new Date();
+    if (Number.isNaN(acceptedAt.getTime())) {
+      return new Response(
+        JSON.stringify({ error: "Invalid terms acceptance date" }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -164,6 +202,47 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           error: "Failed to create subscription: " + subscriptionError.message,
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // 5. Record legal acceptance for the contracted terms
+    const forwardedFor = req.headers.get("x-forwarded-for") || "";
+    const ipAddress = forwardedFor.split(",")[0]?.trim() || req.headers.get("cf-connecting-ip") || null;
+    const { error: acceptanceError } = await supabase
+      .from("legal_acceptances")
+      .insert({
+        clinic_id: clinicData.id,
+        user_id: userId,
+        subscription_id: subscriptionData.id,
+        accepted_by_name: adminName,
+        accepted_by_email: adminEmail,
+        document_type: "terms_of_use",
+        document_version: termsVersion || "2026-07-15",
+        document_url: termsUrl || "/termos-de-uso",
+        accepted_at: acceptedAt.toISOString(),
+        ip_address: ipAddress,
+        user_agent: userAgent || req.headers.get("user-agent"),
+        evidence: {
+          plan_id: planId,
+          clinic_name: clinicName,
+          clinic_cnpj: clinicCnpj,
+          source: "signup",
+        },
+      });
+
+    if (acceptanceError) {
+      console.error("Terms acceptance logging error:", acceptanceError);
+      await supabase.from("clinic_subscriptions").delete().eq("id", subscriptionData.id);
+      await supabase.from("users").delete().eq("id", userId);
+      await supabase.from("clinics").delete().eq("id", clinicData.id);
+      return new Response(
+        JSON.stringify({
+          error: "Failed to record terms acceptance: " + acceptanceError.message,
         }),
         {
           status: 500,

@@ -8,10 +8,10 @@ import { useToast } from '@/components/ui/use-toast';
 import { listProcessorFees } from '@/lib/processorFeesApi';
 import { listCardProcessors } from '@/lib/cardProcessorsApi';
 import { supabase } from '@/lib/customSupabaseClient';
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { CreditCard, TrendingUp, DollarSign, Percent } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart3, CreditCard, DollarSign, Percent, TrendingUp } from 'lucide-react';
 
-export default function ProcessadorFeesAnalytics() {
+export default function ProcessadorFeesAnalytics({ embedded = false }) {
   const { clinicId } = useAuth();
   const { clinic, loadingClinic } = useClinicContext();
   const { toast } = useToast();
@@ -170,27 +170,35 @@ export default function ProcessadorFeesAnalytics() {
   const processorData = feesByProcessor();
   const settlementData = feesBySettlement();
   const brandData = feesByBrand();
+  const hasReceivables = receivables.length > 0;
+  const formatCurrency = (value) => `R$ ${(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
 
   if (loading) {
+    const loadingContent = (
+      <div className="animate-pulse">
+        <div className="h-64 bg-gray-200 rounded mb-4"></div>
+      </div>
+    );
+
+    if (embedded) return loadingContent;
+
     return (
       <PageLayout title="Analytics de Taxas de Processamento" subtitle="Carregando dados...">
-        <div className="animate-pulse">
-          <div className="h-64 bg-gray-200 rounded mb-4"></div>
-        </div>
+        {loadingContent}
       </PageLayout>
     );
   }
 
-  return (
-    <PageLayout title="📊 Analytics de Taxas de Processamento" subtitle="Análise de custos com card processors">
+  const content = (
+    <>
       {/* Date Range Selector */}
-      <div className="mb-6 flex gap-2">
+      <div className="mb-5 flex flex-wrap gap-2">
         {['month', 'quarter', 'year'].map((range) => (
           <Button
             key={range}
             variant={dateRange === range ? 'default' : 'outline'}
             onClick={() => setDateRange(range)}
-            className="capitalize"
+            className={dateRange === range ? 'bg-sky-700 text-white hover:bg-sky-800' : ''}
           >
             {range === 'month' ? 'Último Mês' : range === 'quarter' ? 'Último Trimestre' : 'Último Ano'}
           </Button>
@@ -198,45 +206,45 @@ export default function ProcessadorFeesAnalytics() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card className="p-6">
+      <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-4">
+        <Card className="border-slate-200 p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 mb-2">Valor Total Processado</p>
+              <p className="mb-2 text-sm text-slate-500">Valor total processado</p>
               <p className="text-2xl font-bold">
-                R$ {(stats.totalAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                {formatCurrency(stats.totalAmount)}
               </p>
             </div>
             <DollarSign className="w-8 h-8 text-blue-500" />
           </div>
         </Card>
 
-        <Card className="p-6">
+        <Card className="border-slate-200 p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 mb-2">Total de Taxas</p>
+              <p className="mb-2 text-sm text-slate-500">Total de taxas</p>
               <p className="text-2xl font-bold text-red-600">
-                R$ {(stats.totalFees || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                {formatCurrency(stats.totalFees)}
               </p>
             </div>
             <TrendingUp className="w-8 h-8 text-red-500" />
           </div>
         </Card>
 
-        <Card className="p-6">
+        <Card className="border-slate-200 p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 mb-2">Taxa Média</p>
+              <p className="mb-2 text-sm text-slate-500">Taxa média</p>
               <p className="text-2xl font-bold text-orange-600">{stats.avgFeePercent.toFixed(2)}%</p>
             </div>
             <Percent className="w-8 h-8 text-orange-500" />
           </div>
         </Card>
 
-        <Card className="p-6">
+        <Card className="border-slate-200 p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 mb-2">Transações</p>
+              <p className="mb-2 text-sm text-slate-500">Transações</p>
               <p className="text-2xl font-bold">{stats.transactionCount}</p>
             </div>
             <CreditCard className="w-8 h-8 text-green-500" />
@@ -245,48 +253,66 @@ export default function ProcessadorFeesAnalytics() {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      {!hasReceivables && (
+        <Card className="mb-5 border-sky-100 bg-sky-50 p-5 text-center shadow-sm">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white text-sky-700">
+            <BarChart3 className="h-6 w-6" />
+          </div>
+          <p className="font-medium text-slate-800">Ainda não há dados de cartões para o período</p>
+          <p className="mt-1 text-sm text-slate-600">Os indicadores aparecem quando houver recebimentos com operadora, bandeira, forma de recebimento e taxa calculada.</p>
+        </Card>
+      )}
+
+      <div className="mb-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
         {/* Fees by Processor */}
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">💳 Taxas por Processadora</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={processorData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
-              <YAxis />
-              <Tooltip formatter={(value) => `R$ ${value.toFixed(2)}`} />
-              <Bar dataKey="totalFees" fill="#ef4444" />
-            </BarChart>
-          </ResponsiveContainer>
+        <Card className="border-slate-200 p-5 shadow-sm">
+          <h3 className="mb-4 flex items-center gap-2 text-base font-semibold text-slate-900"><CreditCard className="h-4 w-4 text-sky-700" /> Taxas por processadora</h3>
+          {processorData.length ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={processorData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+                <YAxis />
+                <Tooltip formatter={(value) => formatCurrency(value)} />
+                <Bar dataKey="totalFees" fill="#0f76a8" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex h-[300px] items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50 text-sm text-slate-500">Sem dados para exibir</div>
+          )}
         </Card>
 
         {/* Fees by Settlement Type */}
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">⏰ Taxas por Forma de Recebimento</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={settlementData}
-                dataKey="totalFees"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                outerRadius={100}
-                label
-              >
-                {settlementData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value) => `R$ ${value.toFixed(2)}`} />
-            </PieChart>
-          </ResponsiveContainer>
+        <Card className="border-slate-200 p-5 shadow-sm">
+          <h3 className="mb-4 flex items-center gap-2 text-base font-semibold text-slate-900"><Percent className="h-4 w-4 text-emerald-600" /> Taxas por forma de recebimento</h3>
+          {settlementData.length ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={settlementData}
+                  dataKey="totalFees"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={100}
+                  label
+                >
+                  {settlementData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value) => formatCurrency(value)} />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex h-[300px] items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50 text-sm text-slate-500">Sem dados para exibir</div>
+          )}
         </Card>
       </div>
 
       {/* Detailed Table */}
-      <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4">📋 Detalhes por Bandeira</h3>
+      <Card className="border-slate-200 p-5 shadow-sm">
+        <h3 className="mb-4 text-base font-semibold text-slate-900">Detalhes por bandeira</h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
@@ -299,33 +325,45 @@ export default function ProcessadorFeesAnalytics() {
               </tr>
             </thead>
             <tbody>
-              {brandData.map((brand, idx) => (
+              {brandData.length ? brandData.map((brand, idx) => (
                 <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                   <td className="px-4 py-2">{brand.name}</td>
                   <td className="px-4 py-2 text-right">{brand.count}</td>
                   <td className="px-4 py-2 text-right">
-                    R$ {(brand.totalAmount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    {formatCurrency(brand.totalAmount)}
                   </td>
                   <td className="px-4 py-2 text-right font-semibold text-red-600">
-                    R$ {(brand.totalFees || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    {formatCurrency(brand.totalFees)}
                   </td>
                   <td className="px-4 py-2 text-right">
-                    {((brand.totalFees / brand.totalAmount) * 100).toFixed(2)}%
+                    {brand.totalAmount ? ((brand.totalFees / brand.totalAmount) * 100).toFixed(2) : '0.00'}%
                   </td>
                 </tr>
-              ))}
+              )) : (
+                <tr>
+                  <td className="px-4 py-8 text-center text-slate-500" colSpan="5">Sem bandeiras processadas no período.</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </Card>
 
       {/* Info Box */}
-      <Card className="p-4 mt-6 bg-blue-50 border-l-4 border-blue-500">
-        <p className="text-sm text-gray-700">
-          💡 <strong>Dica:</strong> Monitore as taxas por processadora para negociar melhores condições. 
+      <Card className="mt-5 border-sky-100 bg-sky-50 p-4">
+        <p className="text-sm text-sky-800">
+          <strong>Dica:</strong> Monitore as taxas por processadora para negociar melhores condições.
           Quanto menor a taxa, maior o recebimento líquido. Considere usar D+30 quando a taxa for mais baixa.
         </p>
       </Card>
+    </>
+  );
+
+  if (embedded) return content;
+
+  return (
+    <PageLayout title="Analytics de Taxas de Processamento" subtitle="Análise de custos com card processors">
+      {content}
     </PageLayout>
   );
 }

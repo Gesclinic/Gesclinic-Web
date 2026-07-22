@@ -2,20 +2,22 @@
 // Página principal de Conciliação Bancária
 
 import React, { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useClinicContext } from '@/contexts/useClinicContext';
 import { useConciliation } from '@/hooks/useConciliation';
-import { deleteStatement } from '@/lib/conciliationApi';
 import { useFinancialAccounts } from '@/modules/financeiro/contas-financeiras';
 import { ConciliaoIndicadores } from '@/components/financeiro/conciliacao/ConciliaoIndicadores';
 import { ConciliacaoImportacao } from '@/components/financeiro/conciliacao/ConciliacaoImportacao';
 import { ConciliacaoLista } from '@/components/financeiro/conciliacao/ConciliacaoLista';
 import { ConciliacaoPainel } from '@/components/financeiro/conciliacao/ConciliacaoPainel';
 import { ConciliacaoPayablesReview } from '@/components/financeiro/conciliacao/ConciliacaoPayablesReview';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 export default function ConciliacaoBancaria() {
   const { clinicId } = useClinicContext();
+  const navigate = useNavigate();
   const [selectedStatements, setSelectedStatements] = useState([]);
 
   const { accounts: financialAccounts } = useFinancialAccounts({
@@ -29,6 +31,7 @@ export default function ConciliacaoBancaria() {
     statements,
     statementsTotal,
     loading,
+    payableLoading,
     error,
     indicators,
     bankAccounts,
@@ -45,6 +48,8 @@ export default function ConciliacaoBancaria() {
     handleMarkDivergent,
     handleIgnore,
     handleBulkConciliate,
+    deleteStatement,
+    deleteSelectedStatements,
     runPayableMatching,
     approvePayableMatch,
     rejectPayableMatch,
@@ -98,33 +103,10 @@ export default function ConciliacaoBancaria() {
   const handleBulkDelete = async (ids) => {
     const toDelete = [...ids];
     try {
-      const failed = [];
-
-      for (const id of toDelete) {
-        try {
-          await deleteStatement(id);
-        } catch (err) {
-          console.error(`Erro ao deletar ${id}:`, err);
-          failed.push(id);
-        }
-      }
-
-      try {
-        await loadStatements();
-        await loadIndicators();
-      } catch (loadErr) {
-        console.error('Erro ao recarregar após exclusão:', loadErr);
-      }
-
-      const success = toDelete.length - failed.length;
-      let message = `✓ ${success} lançamento(s) deletado(s) com sucesso`;
-      if (failed.length > 0) {
-        message += ` | ⚠️ ${failed.length} falharam`;
-      }
-
+      const result = await deleteSelectedStatements(toDelete);
       setSelectedStatements([]);
       setSelectedStatement(null);
-      alert(message);
+      alert(`✓ ${result.deleted || toDelete.length} lançamento(s) deletado(s) com sucesso`);
     } catch (err) {
       console.error('Erro crítico em bulk delete:', err);
       alert('Erro ao deletar em lote: ' + err.message);
@@ -183,11 +165,36 @@ export default function ConciliacaoBancaria() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Conciliação Bancária e Projeções</h1>
-        <p className="text-gray-600 mt-1">
-          Importe extratos, concilie com lançamentos e alinhe saldos do banco com o sistema
-        </p>
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Conciliação Bancária e Projeções</h1>
+          <p className="text-gray-600 mt-1">
+            Importe extratos, concilie com lançamentos e alinhe saldos do banco com o sistema
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            onClick={() => navigate('/clinica/financeiro/lancamentos')}
+            className="bg-slate-900 text-white hover:bg-slate-800"
+          >
+            Novo Lançamento Manual
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => navigate('/clinica/financeiro/receber/nova?from=conciliacao-bancaria')}
+          >
+            Nova Receita
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => navigate('/clinica/financeiro/contas-pagar/nova?from=conciliacao-bancaria')}
+          >
+            Nova Despesa
+          </Button>
+        </div>
       </div>
 
       {/* Indicadores */}
@@ -214,14 +221,16 @@ export default function ConciliacaoBancaria() {
         reviews={payableReviews}
         reviewCounts={payableReviewCounts}
         status={payableReviewStatus}
-        loading={loading}
+        loading={payableLoading}
         onStatusChange={async (status) => {
           setPayableReviewStatus(status);
           await loadPayableReviews(status);
         }}
         onRunMatching={async () => {
           const matches = await runPayableMatching('review');
-          alert(`${matches.length} correspondência(s) de Contas a Pagar encontrada(s) para revisão.`);
+          window.setTimeout(() => {
+            alert(`${matches.length} correspondência(s) de Contas a Pagar encontrada(s) para revisão.`);
+          }, 0);
         }}
         onApprove={approvePayableMatch}
         onReject={rejectPayableMatch}

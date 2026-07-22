@@ -116,7 +116,7 @@ export function ConciliacaoLista({
     return description || '—';
   };
 
-  if (loading) {
+  if (loading && statements.length === 0) {
     return (
       <Card className="p-6">
         <div className="text-center py-12">
@@ -340,6 +340,7 @@ export function ConciliacaoLista({
                 const importedDetail = getImportedDetail(stmt);
                 const historyDetail = getHistoryDetail(stmt);
                 const descriptionDetail = getDescriptionDetail(stmt);
+                const balance = metadata.end_balance;
 
                 return (
                   <tr key={stmt.id} className="border-b border-gray-200 hover:bg-gray-50">
@@ -383,7 +384,7 @@ export function ConciliacaoLista({
                       {isCredit ? formatCurrency(stmt.amount) : '—'}
                     </td>
                     <td className="px-4 py-3 text-right font-medium text-gray-900">
-                      {metadata.end_balance ? formatCurrency(metadata.end_balance) : '—'}
+                      {balance !== null && typeof balance !== 'undefined' ? formatCurrency(balance) : '—'}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className={`px-2 py-1 rounded text-xs font-medium ${visual.className}`}>

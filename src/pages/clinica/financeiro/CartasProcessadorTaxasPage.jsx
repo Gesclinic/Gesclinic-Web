@@ -19,35 +19,22 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { CreditCard, Percent, AlertCircle, Edit2, Trash2, History, Trash } from 'lucide-react';
+import { AlertCircle, CreditCard, Edit2, History, Percent, SlidersHorizontal, Trash, Trash2 } from 'lucide-react';
 import {
   validateProcessorFee,
   checkDuplicateFee,
   validateFeeRateReasonableness,
 } from '@/lib/processorFeeValidations';
+import { listCardBrands, listCardSettlementTypes } from '@/lib/cardParametersApi';
 import FeeAuditTrail from './components/FeeAuditTrail'; // ✅ ETAPA D.4
 
-const CARD_BRANDS = [
-  'Visa',
-  'Mastercard',
-  'Elo',
-  'Amex',
-  'Hipercard',
-  'Discover',
-];
-
-const SETTLEMENT_TYPES = [
-  { value: 'D+0', label: 'D+0 (Imediato)' },
-  { value: 'D+1', label: 'D+1 (Próximo dia)' },
-  { value: 'D+30', label: 'D+30 (30 dias)' },
-  { value: 'Payment Day', label: 'Payment Day (Dia configurado)' },
-];
-
-export default function CartasProcessadorTaxasPage() {
+export default function CartasProcessadorTaxasPage({ embedded = false }) {
   const { isAuthenticated, user } = useAuth(); // ✅ ETAPA D.2: Adicionar user
   const { clinicId } = useClinicContext();
 
   const [processors, setProcessors] = useState([]);
+  const [brands, setBrands] = useState([]);
+  const [settlementTypes, setSettlementTypes] = useState([]);
   const [fees, setFees] = useState([]);
   const [loadingProcessors, setLoadingProcessors] = useState(true);
   const [loadingFees, setLoadingFees] = useState(true);
@@ -71,6 +58,7 @@ export default function CartasProcessadorTaxasPage() {
       return;
     }
     loadProcessors();
+    loadParameters();
   }, [isAuthenticated, clinicId]);
 
   // Load all fees independently from the form selection.
@@ -95,6 +83,20 @@ export default function CartasProcessadorTaxasPage() {
       setError('Erro ao carregar operadoras');
     } finally {
       setLoadingProcessors(false);
+    }
+  };
+
+  const loadParameters = async () => {
+    try {
+      const [brandRows, settlementRows] = await Promise.all([
+        listCardBrands(clinicId),
+        listCardSettlementTypes(clinicId),
+      ]);
+      setBrands(brandRows || []);
+      setSettlementTypes(settlementRows || []);
+    } catch (err) {
+      console.error('Erro ao carregar parâmetros de cartão:', err);
+      setError('Erro ao carregar bandeiras/formas de recebimento');
     }
   };
 
@@ -279,29 +281,37 @@ export default function CartasProcessadorTaxasPage() {
   };
 
   const selectedProcessor = processors.find((p) => p.id === processorId);
+  const getBrandName = (code) => brands.find((brand) => (brand.code || brand.name) === code)?.name || code;
+  const getSettlementName = (code) => settlementTypes.find((type) => type.code === code)?.name || code;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 md:p-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3 mb-2">
-            <CreditCard className="w-8 h-8 text-blue-600" />
-            💰 Taxas de Processamento por Operadora
-          </h1>
-          <p className="text-slate-600">
-            Configure as taxas de cada operadora por bandeira e forma de recebimento
-          </p>
-        </div>
+    <div className="space-y-6 pb-8">
+      <div className="max-w-6xl">
+        {!embedded && (
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3 mb-2">
+              <CreditCard className="w-8 h-8 text-blue-600" />
+              Taxas de Processamento por Operadora
+            </h1>
+            <p className="text-slate-600">
+              Configure as taxas de cada operadora por bandeira e forma de recebimento
+            </p>
+          </div>
+        )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[380px_minmax(0,1fr)]">
           {/* Form */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-lg p-6 sticky top-8">
-              <h2 className="text-xl font-semibold text-slate-900 mb-6 flex items-center gap-2">
-                <Percent className="w-5 h-5 text-green-600" />
-                {editingId ? '✏️ Editar Taxa' : '➕ Nova Taxa'}
-              </h2>
+            <div className="sticky top-8 rounded-lg border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-100 px-5 py-4">
+                <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
+                  <Percent className="h-5 w-5 text-emerald-600" />
+                  {editingId ? 'Editar taxa' : 'Nova taxa'}
+                </h2>
+                <p className="mt-1 text-xs text-slate-500">Configure uma combinação por operadora, bandeira e forma de recebimento.</p>
+              </div>
+
+              <div className="p-5">
 
               {error && (
                 <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex gap-2">
@@ -326,7 +336,7 @@ export default function CartasProcessadorTaxasPage() {
                     <div className="text-sm text-slate-500 p-2">Carregando operadoras...</div>
                   ) : (
                     <Select value={processorId || undefined} onValueChange={setProcessorId}>
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger className="h-10 w-full">
                         <SelectValue placeholder="Selecione operadora" />
                       </SelectTrigger>
                       <SelectContent>
@@ -350,13 +360,13 @@ export default function CartasProcessadorTaxasPage() {
                     Bandeira *
                   </Label>
                   <Select value={cardBrand || undefined} onValueChange={setCardBrand}>
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger className="h-10 w-full">
                       <SelectValue placeholder="Selecione bandeira" />
                     </SelectTrigger>
                     <SelectContent>
-                      {CARD_BRANDS.map((brand) => (
-                        <SelectItem key={brand} value={brand}>
-                          {brand}
+                      {brands.map((brand) => (
+                        <SelectItem key={brand.id || brand.code} value={brand.code || brand.name}>
+                          {brand.name || brand.code}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -369,13 +379,13 @@ export default function CartasProcessadorTaxasPage() {
                     Forma de Recebimento *
                   </Label>
                   <Select value={settlementType || undefined} onValueChange={setSettlementType}>
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger className="h-10 w-full">
                       <SelectValue placeholder="Selecione forma" />
                     </SelectTrigger>
                     <SelectContent>
-                      {SETTLEMENT_TYPES.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {type.label}
+                      {settlementTypes.map((type) => (
+                        <SelectItem key={type.id || type.code} value={type.code}>
+                          {type.name || type.code}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -396,7 +406,7 @@ export default function CartasProcessadorTaxasPage() {
                       placeholder="Ex: 2.5"
                       value={feePercent}
                       onChange={(e) => setFeePercent(e.target.value)}
-                      className="pr-8"
+                      className="h-10 pr-8"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">
                       %
@@ -408,9 +418,9 @@ export default function CartasProcessadorTaxasPage() {
                 <div className="flex gap-2 pt-4">
                   <Button
                     type="submit"
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                    className="h-10 flex-1 bg-sky-700 text-white hover:bg-sky-800"
                   >
-                    {editingId ? '✏️ Atualizar' : '➕ Adicionar'}
+                    {editingId ? 'Atualizar' : 'Adicionar'}
                   </Button>
                   {editingId && (
                     <Button
@@ -419,35 +429,39 @@ export default function CartasProcessadorTaxasPage() {
                       onClick={resetForm}
                       className="flex-1"
                     >
-                      ✕ Cancelar
+                      Cancelar
                     </Button>
                   )}
                 </div>
               </form>
 
               {/* Info Box */}
-              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-xs text-blue-700 font-medium">💡 Dica:</p>
-                <ul className="text-xs text-blue-600 mt-2 space-y-1">
-                  <li>• Crie uma taxa para cada combinação de operadora + bandeira + recebimento</li>
-                  <li>• Deixe as bandeiras que não utiliza vazias</li>
-                  <li>• Atualize conforme negociações evoluem</li>
-                </ul>
+              <div className="mt-5 rounded-lg border border-sky-100 bg-sky-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-sky-800">Parâmetros usados</p>
+                <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-sky-700">
+                  <span>{processors.length} operadora{processors.length === 1 ? '' : 's'}</span>
+                  <span>{brands.length} bandeira{brands.length === 1 ? '' : 's'}</span>
+                  <span className="col-span-2">{settlementTypes.length} forma{settlementTypes.length === 1 ? '' : 's'} de recebimento</span>
+                </div>
+                {selectedProcessor && (
+                  <p className="mt-3 rounded-md bg-white px-3 py-2 text-xs text-slate-600">Operadora selecionada: <strong>{selectedProcessor.name}</strong></p>
+                )}
+              </div>
+              </div>
               </div>
             </div>
-          </div>
 
           {/* Lista de Taxas */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <div className="mb-6 space-y-4">
+            <div className="rounded-lg border border-slate-200 bg-white shadow-sm">
+              <div className="space-y-4 border-b border-slate-100 px-5 py-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <h2 className="text-xl font-semibold text-slate-900">
-                    📋 Taxas Configuradas{' '}
-                    <span className="text-sm font-normal text-slate-500">
-                      ({fees.length})
-                    </span>
-                  </h2>
+                  <div>
+                    <h2 className="text-base font-semibold text-slate-900">Taxas configuradas</h2>
+                    <p className="text-xs text-slate-500">Tabela usada para calcular o líquido previsto na conciliação de cartões.</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">{fees.length} taxa{fees.length === 1 ? '' : 's'}</span>
                   <Button
                     type="button"
                     variant="outline"
@@ -459,6 +473,7 @@ export default function CartasProcessadorTaxasPage() {
                     <Trash className="h-4 w-4" />
                     {bulkDeletingFees ? 'Excluindo...' : `Excluir selecionadas (${selectedFees.length})`}
                   </Button>
+                  </div>
                 </div>
 
                 {fees.length > 0 && (
@@ -481,13 +496,17 @@ export default function CartasProcessadorTaxasPage() {
               </div>
 
               {loadingFees ? (
-                <p className="text-slate-500 text-center py-8">Carregando...</p>
+                <p className="py-10 text-center text-sm text-slate-500">Carregando taxas...</p>
               ) : fees.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-slate-500 mb-4">Nenhuma taxa configurada.</p>
+                <div className="px-5 py-12 text-center">
+                  <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
+                    <SlidersHorizontal className="h-6 w-6" />
+                  </div>
+                  <p className="font-medium text-slate-800">Nenhuma taxa configurada</p>
+                  <p className="mt-1 text-sm text-slate-500">Cadastre a primeira combinação de operadora, bandeira, forma e percentual.</p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-3 p-5">
                   {fees.map((fee) => (
                     <div
                       key={fee.id}
@@ -508,14 +527,14 @@ export default function CartasProcessadorTaxasPage() {
                         <div className="flex-1">
                           <div className="flex gap-2 items-center mb-2">
                             <span className="font-semibold text-slate-900">
-                              {fee.card_brand}
+                              {getBrandName(fee.card_brand)}
                             </span>
                             <span className="text-xs bg-slate-100 text-slate-700 px-2 py-1 rounded">
-                              {fee.settlement_type}
+                              {getSettlementName(fee.settlement_type)}
                             </span>
                           </div>
                           <p className="text-sm text-slate-600">
-                            📊 Operadora:{' '}
+                            Operadora:{' '}
                             <span className="font-medium">
                               {fee.card_processor?.name || 'N/A'}
                             </span>
@@ -566,9 +585,9 @@ export default function CartasProcessadorTaxasPage() {
 
               {/* Summary */}
               {fees.length > 0 && (
-                <div className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                <div className="mx-5 mb-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
                   <p className="text-sm font-medium text-slate-700 mb-3">
-                    📊 Resumo geral
+                    Resumo geral
                   </p>
                   <div className="grid grid-cols-2 gap-2 text-xs text-slate-600">
                     <div>
@@ -594,12 +613,12 @@ export default function CartasProcessadorTaxasPage() {
         </div>
 
         {/* Info Section */}
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+        <div className="mt-5 rounded-lg border border-sky-100 bg-sky-50 p-5">
+          <h3 className="mb-3 flex items-center gap-2 font-semibold text-sky-900">
             <AlertCircle className="w-5 h-5" />
-            ℹ️ Como funciona:
+            Como funciona:
           </h3>
-          <ul className="text-sm text-blue-800 space-y-2">
+          <ul className="space-y-2 text-sm text-sky-800">
             <li>
               • Cada <strong>Operadora</strong> (Stone, PagBank, etc) pode ter múltiplas
               negociações

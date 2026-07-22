@@ -1,19 +1,41 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/hooks/useToast';
+import logoGesclinic from '@/assets/logo_gesclinic_g.png';
+
+const TERMS_VERSION = '2026-07-15';
+const TERMS_URL = '/termos-de-uso';
+
+const ENTERPRISE_PLAN = {
+  id: 'enterprise-custom',
+  name: 'Plano Enterprise',
+  slug: 'enterprise',
+  description: 'Escalas & Performance - para redes, grupos e operações complexas',
+  price_monthly: 489,
+  price_annual: 4890,
+  max_users: 999,
+  max_doctors: 999,
+  max_patients: 999999,
+  features: {
+    agenda: true,
+    financeiro: true,
+    estoque: true,
+    relatorios: true,
+    custom_branding: true,
+  },
+  active: true,
+};
 
 export default function Register() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { showToast } = useToast();
 
-  // Form state
-  const [step, setStep] = useState('plans'); // 'plans' | 'form' | 'loading'
   const [selectedPlan, setSelectedPlan] = useState(null);
-  const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // Form data
+  const [submitting, setSubmitting] = useState(false);
+  const [formErrors, setFormErrors] = useState({});
   const [formData, setFormData] = useState({
     clinicName: '',
     clinicCnpj: '',
@@ -24,14 +46,18 @@ export default function Register() {
     agreeTerms: false,
   });
 
-  const [formErrors, setFormErrors] = useState({});
-
-  // Load plans on mount
   useEffect(() => {
-    loadPlans();
-  }, []);
+    const selectedPlanSlug = searchParams.get('plan');
 
-  const loadPlans = async () => {
+    if (!selectedPlanSlug) {
+      navigate('/#planos', { replace: true });
+      return;
+    }
+
+    loadSelectedPlan(selectedPlanSlug);
+  }, [navigate, searchParams]);
+
+  const loadSelectedPlan = async (selectedPlanSlug) => {
     try {
       const { data, error } = await supabase
         .from('subscription_plans')
@@ -43,43 +69,33 @@ export default function Register() {
         throw error;
       }
 
-      // Update or add Enterprise plan with correct pricing
-      const enterpriseIndex = data.findIndex((p) => p.slug === 'enterprise');
-      const enterprisePlan = {
-        name: 'Plano Enterprise',
-        slug: 'enterprise',
-        description: 'Escalas & Performance — para redes, grupos e operações complexas',
-        price_monthly: 489,
-        price_annual: 4890,
-        max_users: 999,
-        max_doctors: 999,
-        max_patients: 999999,
-        features: {
-          agenda: true,
-          financeiro: true,
-          estoque: true,
-          relatorios: true,
-          custom_branding: true,
-        },
-        active: true,
-      };
+      const activePlans = [...data];
+      const enterpriseIndex = activePlans.findIndex((plan) => plan.slug === 'enterprise');
 
       if (enterpriseIndex !== -1) {
-        data[enterpriseIndex] = { ...data[enterpriseIndex], ...enterprisePlan };
+        activePlans[enterpriseIndex] = { ...activePlans[enterpriseIndex], ...ENTERPRISE_PLAN };
       } else {
-        data.push({
-          id: 'enterprise-custom',
-          ...enterprisePlan,
-        });
+        activePlans.push(ENTERPRISE_PLAN);
       }
 
-      setPlans(data);
+      const planFromUrl = activePlans.find((plan) => plan.slug === selectedPlanSlug);
+      if (!planFromUrl) {
+        navigate('/#planos', { replace: true });
+        return;
+      }
+
+      setSelectedPlan(planFromUrl);
     } catch (error) {
-      showToast('Erro ao carregar planos', 'error');
-      console.error('Error loading plans:', error);
+      console.error('Error loading selected plan:', error);
+      showToast('Erro ao carregar plano selecionado', 'error');
+      navigate('/#planos', { replace: true });
     } finally {
       setLoading(false);
     }
+  };
+
+  const updateFormData = (field, value) => {
+    setFormData((current) => ({ ...current, [field]: value }));
   };
 
   const validateForm = () => {
@@ -117,8 +133,8 @@ export default function Register() {
     return Object.keys(errors).length === 0;
   };
 
-  const handleSignup = async (e) => {
-    e.preventDefault();
+  const handleSignup = async (event) => {
+    event.preventDefault();
 
     if (!validateForm()) {
       return;
@@ -126,13 +142,13 @@ export default function Register() {
 
     if (!selectedPlan) {
       showToast('Selecione um plano', 'error');
+      navigate('/#planos', { replace: true });
       return;
     }
 
-    setStep('loading');
+    setSubmitting(true);
 
     try {
-      // 1. Criar usuário no Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.adminEmail,
         password: formData.adminPassword,
@@ -146,7 +162,6 @@ export default function Register() {
         throw new Error('Erro ao criar usuário');
       }
 
-      // 2. Chamar Supabase Edge Function para criar clínica e subscription
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const token = authData.session?.access_token;
 
@@ -163,6 +178,11 @@ export default function Register() {
           planId: selectedPlan.id,
           adminName: formData.adminName,
           adminEmail: formData.adminEmail,
+          termsAccepted: true,
+          termsVersion: TERMS_VERSION,
+          termsUrl: TERMS_URL,
+          termsAcceptedAt: new Date().toISOString(),
+          userAgent: navigator.userAgent,
         }),
       });
 
@@ -171,7 +191,6 @@ export default function Register() {
         throw new Error(errorData.error || 'Erro ao criar clínica');
       }
 
-      // 3. Login automático
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: formData.adminEmail,
         password: formData.adminPassword,
@@ -182,431 +201,182 @@ export default function Register() {
       }
 
       showToast('Clínica criada com sucesso! Redirecionando para pagamento...', 'success');
-      // Redirecionar para checkout com o plano selecionado
       navigate(
         `/checkout?planId=${selectedPlan.id}&clinicName=${encodeURIComponent(formData.clinicName)}`,
       );
     } catch (error) {
       console.error('Signup error:', error);
       showToast(error.message || 'Erro ao realizar cadastro', 'error');
-      setStep('form');
+      setSubmitting(false);
     }
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p>Carregando planos...</p>
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-primary" />
+          <p>Carregando plano selecionado...</p>
         </div>
       </div>
     );
   }
 
-  if (step === 'plans') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">Escolha seu Plano</h1>
-            <p className="text-xl text-gray-600">Selecione o melhor plano para sua clínica</p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6 mb-8">
-            {plans.map((plan) => {
-              const isProfessional = plan.slug === 'professional';
-              const isEnterprise = plan.slug === 'enterprise';
-              const isBasic = plan.slug === 'basic';
-
-              return (
-                <div
-                  key={plan.id}
-                  onClick={() => {
-                    setSelectedPlan(plan);
-                    setStep('form');
-                  }}
-                  className={`rounded-lg p-8 cursor-pointer transition-all ${
-                    isProfessional
-                      ? 'bg-blue-50 border-2 border-blue-600 shadow-xl scale-105'
-                      : 'bg-white border border-gray-200 shadow-lg hover:shadow-xl'
-                  }`}
-                >
-                  {/* Badge */}
-                  {isBasic && (
-                    <div className="mb-4">
-                      <span className="bg-green-600 text-white text-xs font-bold px-3 py-1 rounded-full">
-                        ✨ PERFEITO PARA INICIAR
-                      </span>
-                    </div>
-                  )}
-                  {isProfessional && (
-                    <div className="mb-4">
-                      <span className="bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full">
-                        ⭐ MAIS ESCOLHIDO
-                      </span>
-                    </div>
-                  )}
-                  {isEnterprise && (
-                    <div className="mb-4">
-                      <span className="bg-purple-600 text-white text-xs font-bold px-3 py-1 rounded-full">
-                        🚀 PARA GRANDES REDES
-                      </span>
-                    </div>
-                  )}
-
-                  <h3 className="text-2xl font-bold text-gray-900 mb-1">{plan.name}</h3>
-                  <p className="text-gray-600 text-sm mb-6">{plan.description}</p>
-
-                  <div className="mb-6">
-                    {plan.price_monthly ? (
-                      <>
-                        <div className="flex items-baseline mb-2">
-                          <span className="text-4xl font-bold text-gray-900">
-                            R$ {parseFloat(plan.price_monthly).toFixed(2)}
-                          </span>
-                          <span className="text-gray-600 ml-2 text-lg">/mês</span>
-                        </div>
-                        <p className="text-sm text-gray-500">
-                          ou R$ {parseFloat(plan.price_annual).toFixed(2)}/ano
-                        </p>
-                      </>
-                    ) : (
-                      <div className="text-lg font-semibold text-gray-900">Preço sob consulta</div>
-                    )}
-                  </div>
-
-                  <div className="border-t border-gray-200 pt-6 mb-6">
-                    <ul className="space-y-3">
-                      {isBasic && (
-                        <>
-                          <li className="flex items-start">
-                            <span className="text-green-500 mr-3 font-bold">✔</span>
-                            <span className="text-sm text-gray-700">Até 2 médicos</span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-green-500 mr-3 font-bold">✔</span>
-                            <span className="text-sm text-gray-700">Até 2 usuários</span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-green-500 mr-3 font-bold">✔</span>
-                            <span className="text-sm text-gray-700">Agenda de atendimentos</span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-green-500 mr-3 font-bold">✔</span>
-                            <span className="text-sm text-gray-700">Cadastro de pacientes</span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-green-500 mr-3 font-bold">✔</span>
-                            <span className="text-sm text-gray-700">Histórico básico</span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-green-500 mr-3 font-bold">✔</span>
-                            <span className="text-sm text-gray-700">Suporte padrão</span>
-                          </li>
-                        </>
-                      )}
-
-                      {isProfessional && (
-                        <>
-                          <li className="flex items-start">
-                            <span className="text-green-500 mr-3 font-bold">✔</span>
-                            <span className="text-sm text-gray-700">Até 5 médicos</span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-green-500 mr-3 font-bold">✔</span>
-                            <span className="text-sm text-gray-700">Até 10 usuários</span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-green-500 mr-3 font-bold">✔</span>
-                            <span className="text-sm text-gray-700">Agenda inteligente</span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-green-500 mr-3 font-bold">✔</span>
-                            <span className="text-sm text-gray-700">Financeiro completo</span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-green-500 mr-3 font-bold">✔</span>
-                            <span className="text-sm text-gray-700">Contas a pagar e receber</span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-green-500 mr-3 font-bold">✔</span>
-                            <span className="text-sm text-gray-700">Fluxo de caixa</span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-green-500 mr-3 font-bold">✔</span>
-                            <span className="text-sm text-gray-700">Controle de estoque</span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-green-500 mr-3 font-bold">✔</span>
-                            <span className="text-sm text-gray-700">Relatórios gerenciais</span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-green-500 mr-3 font-bold">✔</span>
-                            <span className="text-sm text-gray-700">Branding personalizado</span>
-                          </li>
-                        </>
-                      )}
-
-                      {isEnterprise && (
-                        <>
-                          <li className="flex items-start">
-                            <span className="text-green-500 mr-3 font-bold">✔</span>
-                            <span className="text-sm text-gray-700">Médicos ilimitados</span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-green-500 mr-3 font-bold">✔</span>
-                            <span className="text-sm text-gray-700">Usuários ilimitados</span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-green-500 mr-3 font-bold">✔</span>
-                            <span className="text-sm text-gray-700">Multiunidades</span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-green-500 mr-3 font-bold">✔</span>
-                            <span className="text-sm text-gray-700">DRE por unidade</span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-green-500 mr-3 font-bold">✔</span>
-                            <span className="text-sm text-gray-700">Repasse médico avançado</span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-green-500 mr-3 font-bold">✔</span>
-                            <span className="text-sm text-gray-700">
-                              Integrações personalizadas
-                            </span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-green-500 mr-3 font-bold">✔</span>
-                            <span className="text-sm text-gray-700">SLA e suporte dedicado</span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-green-500 mr-3 font-bold">✔</span>
-                            <span className="text-sm text-gray-700">Onboarding assistido</span>
-                          </li>
-                        </>
-                      )}
-                    </ul>
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      setSelectedPlan(plan);
-                      setStep('form');
-                    }}
-                    className={`w-full py-3 px-4 rounded-lg font-semibold transition duration-200 transform hover:scale-105 ${
-                      isEnterprise
-                        ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg hover:shadow-xl'
-                        : isProfessional
-                          ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg hover:shadow-xl'
-                          : 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg hover:shadow-xl'
-                    }`}
-                  >
-                    Escolher Plano
-                  </button>
-
-                  <p className="text-xs text-gray-500 mt-4 text-center">
-                    ✔ Sem fidelidade • ✔ Cancele quando quiser
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="text-center">
-            <p className="text-gray-600">
-              Já tem uma conta?{' '}
-              <button
-                onClick={() => navigate('/login')}
-                className="text-blue-600 font-semibold hover:underline"
-              >
-                Faça login
-              </button>
-            </p>
-          </div>
-        </div>
-      </div>
-    );
+  if (!selectedPlan) {
+    return null;
   }
 
-  if (step === 'form') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
-        <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Criar Conta</h1>
-            <p className="text-gray-600">
-              Plano: <span className="font-semibold">{selectedPlan?.name}</span>
-            </p>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 px-4 py-5 sm:py-8">
+      <div className="mx-auto max-w-2xl rounded-xl bg-white p-6 shadow-xl ring-1 ring-blue-100 sm:p-8">
+        <div className="mb-6 text-center">
+          <span className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-md ring-1 ring-slate-200">
+            <img src={logoGesclinic} alt="Gesclinic" className="h-10 w-10 object-contain" />
+          </span>
+          <p className="mb-1 text-sm font-bold text-cyan-800">Gesclinic Web</p>
+          <h1 className="mb-1 text-2xl font-bold text-gray-900 sm:text-3xl">Criar Conta</h1>
+          <p className="text-gray-600">
+            Plano: <span className="font-semibold">{selectedPlan.name}</span>
+          </p>
+        </div>
+
+        <form onSubmit={handleSignup} className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">Nome da Clínica *</label>
+            <input
+              type="text"
+              value={formData.clinicName}
+              onChange={(event) => updateFormData('clinicName', event.target.value)}
+              className={`h-11 w-full rounded-lg border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                formErrors.clinicName ? 'border-red-500' : 'border-gray-300'
+              }`}
+              placeholder="Ex: Clínica Vida"
+            />
+            {formErrors.clinicName && <p className="mt-1 text-sm text-red-500">{formErrors.clinicName}</p>}
           </div>
 
-          <form onSubmit={handleSignup} className="space-y-4">
-            {/* Clinic Name */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nome da Clínica *
-              </label>
-              <input
-                type="text"
-                value={formData.clinicName}
-                onChange={(e) => setFormData({ ...formData, clinicName: e.target.value })}
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  formErrors.clinicName ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="Ex: Clínica Vida"
-              />
-              {formErrors.clinicName && (
-                <p className="text-red-500 text-sm mt-1">{formErrors.clinicName}</p>
-              )}
-            </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">CNPJ *</label>
+            <input
+              type="text"
+              value={formData.clinicCnpj}
+              onChange={(event) => updateFormData('clinicCnpj', event.target.value)}
+              className={`h-11 w-full rounded-lg border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                formErrors.clinicCnpj ? 'border-red-500' : 'border-gray-300'
+              }`}
+              placeholder="00.000.000/0000-00"
+            />
+            {formErrors.clinicCnpj && <p className="mt-1 text-sm text-red-500">{formErrors.clinicCnpj}</p>}
+          </div>
 
-            {/* CNPJ */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">CNPJ *</label>
-              <input
-                type="text"
-                value={formData.clinicCnpj}
-                onChange={(e) => setFormData({ ...formData, clinicCnpj: e.target.value })}
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  formErrors.clinicCnpj ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="00.000.000/0000-00"
-              />
-              {formErrors.clinicCnpj && (
-                <p className="text-red-500 text-sm mt-1">{formErrors.clinicCnpj}</p>
-              )}
-            </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">Seu Nome Completo *</label>
+            <input
+              type="text"
+              value={formData.adminName}
+              onChange={(event) => updateFormData('adminName', event.target.value)}
+              className={`h-11 w-full rounded-lg border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                formErrors.adminName ? 'border-red-500' : 'border-gray-300'
+              }`}
+              placeholder="João da Silva"
+            />
+            {formErrors.adminName && <p className="mt-1 text-sm text-red-500">{formErrors.adminName}</p>}
+          </div>
 
-            {/* Admin Name */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Seu Nome Completo *
-              </label>
-              <input
-                type="text"
-                value={formData.adminName}
-                onChange={(e) => setFormData({ ...formData, adminName: e.target.value })}
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  formErrors.adminName ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="João da Silva"
-              />
-              {formErrors.adminName && (
-                <p className="text-red-500 text-sm mt-1">{formErrors.adminName}</p>
-              )}
-            </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">Email *</label>
+            <input
+              type="email"
+              value={formData.adminEmail}
+              onChange={(event) => updateFormData('adminEmail', event.target.value)}
+              className={`h-11 w-full rounded-lg border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                formErrors.adminEmail ? 'border-red-500' : 'border-gray-300'
+              }`}
+              placeholder="seu@email.com"
+            />
+            {formErrors.adminEmail && <p className="mt-1 text-sm text-red-500">{formErrors.adminEmail}</p>}
+          </div>
 
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-              <input
-                type="email"
-                value={formData.adminEmail}
-                onChange={(e) => setFormData({ ...formData, adminEmail: e.target.value })}
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  formErrors.adminEmail ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="seu@email.com"
-              />
-              {formErrors.adminEmail && (
-                <p className="text-red-500 text-sm mt-1">{formErrors.adminEmail}</p>
-              )}
-            </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">Senha *</label>
+            <input
+              type="password"
+              value={formData.adminPassword}
+              onChange={(event) => updateFormData('adminPassword', event.target.value)}
+              className={`h-11 w-full rounded-lg border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                formErrors.adminPassword ? 'border-red-500' : 'border-gray-300'
+              }`}
+              placeholder="Mínimo 8 caracteres"
+            />
+            {formErrors.adminPassword && <p className="mt-1 text-sm text-red-500">{formErrors.adminPassword}</p>}
+          </div>
 
-            {/* Password */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Senha *</label>
-              <input
-                type="password"
-                value={formData.adminPassword}
-                onChange={(e) => setFormData({ ...formData, adminPassword: e.target.value })}
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  formErrors.adminPassword ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="Mínimo 8 caracteres"
-              />
-              {formErrors.adminPassword && (
-                <p className="text-red-500 text-sm mt-1">{formErrors.adminPassword}</p>
-              )}
-            </div>
-
-            {/* Confirm Password */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Confirmar Senha *
-              </label>
-              <input
-                type="password"
-                value={formData.adminPasswordConfirm}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    adminPasswordConfirm: e.target.value,
-                  })
-                }
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  formErrors.adminPasswordConfirm ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="Confirme sua senha"
-              />
-              {formErrors.adminPasswordConfirm && (
-                <p className="text-red-500 text-sm mt-1">{formErrors.adminPasswordConfirm}</p>
-              )}
-            </div>
-
-            {/* Terms */}
-            <div className="flex items-start">
-              <input
-                type="checkbox"
-                checked={formData.agreeTerms}
-                onChange={(e) => setFormData({ ...formData, agreeTerms: e.target.checked })}
-                className="mt-1 mr-3"
-              />
-              <label className="text-sm text-gray-600">
-                Concordo com os{' '}
-                <button type="button" className="text-blue-600 hover:underline" onClick={() => {}}>
-                  termos de uso
-                </button>
-                <span className="text-red-500">*</span>
-              </label>
-            </div>
-            {formErrors.agreeTerms && (
-              <p className="text-red-500 text-sm">{formErrors.agreeTerms}</p>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">Confirmar Senha *</label>
+            <input
+              type="password"
+              value={formData.adminPasswordConfirm}
+              onChange={(event) => updateFormData('adminPasswordConfirm', event.target.value)}
+              className={`h-11 w-full rounded-lg border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                formErrors.adminPasswordConfirm ? 'border-red-500' : 'border-gray-300'
+              }`}
+              placeholder="Confirme sua senha"
+            />
+            {formErrors.adminPasswordConfirm && (
+              <p className="mt-1 text-sm text-red-500">{formErrors.adminPasswordConfirm}</p>
             )}
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={step === 'loading'}
-              className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 mt-6"
-            >
-              {step === 'loading' ? 'Criando conta...' : 'Criar Conta'}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setStep('plans')}
-              className="w-full text-blue-600 py-2 font-semibold hover:underline"
-            >
-              Voltar para planos
-            </button>
-          </form>
-
-          <div className="text-center mt-6">
-            <p className="text-gray-600">
-              Já tem uma conta?{' '}
-              <button
-                onClick={() => navigate('/login')}
-                className="text-blue-600 font-semibold hover:underline"
-              >
-                Faça login
-              </button>
-            </p>
           </div>
+          </div>
+
+          <div className="flex items-start">
+            <input
+              type="checkbox"
+              checked={formData.agreeTerms}
+              onChange={(event) => updateFormData('agreeTerms', event.target.checked)}
+              className="mr-3 mt-1"
+            />
+            <label className="text-sm text-gray-600">
+              Concordo com os{' '}
+              <Link
+                to={TERMS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline"
+              >
+                termos de uso
+              </Link>
+              <span className="text-red-500">*</span>
+            </label>
+          </div>
+          {formErrors.agreeTerms && <p className="text-sm text-red-500">{formErrors.agreeTerms}</p>}
+
+          <button
+            type="submit"
+            disabled={submitting}
+            className="h-11 w-full rounded-lg bg-blue-600 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+          >
+            {submitting ? 'Criando conta...' : 'Criar Conta'}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate('/#planos')}
+            className="w-full py-2 font-semibold text-blue-600 hover:underline"
+          >
+            Trocar plano
+          </button>
+        </form>
+
+        <div className="mt-6 text-center">
+          <p className="text-gray-600">
+            Já tem uma conta?{' '}
+            <button onClick={() => navigate('/login')} className="font-semibold text-blue-600 hover:underline">
+              Faça login
+            </button>
+          </p>
         </div>
       </div>
-    );
-  }
-
-  return null;
+    </div>
+  );
 }

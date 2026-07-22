@@ -18,6 +18,8 @@ import {
   listPayableReconciliationReviewCounts,
   approvePayableReconciliationMatch,
   rejectPayableReconciliationMatch,
+  deleteStatement as deleteBankStatement,
+  deleteStatements as deleteBankStatements,
 } from '@/lib/conciliationApi';
 import {
   CONCILIATION_STATUS,
@@ -32,6 +34,7 @@ export function useConciliation(clinicId) {
   const [statements, setStatements] = useState([]);
   const [statementsTotal, setStatementsTotal] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [payableLoading, setPayableLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const [filters, setFilters] = useState({
@@ -181,7 +184,7 @@ export function useConciliation(clinicId) {
 
   const runPayableMatching = useCallback(async (nextStatus = 'review') => {
     try {
-      setLoading(true);
+      setPayableLoading(true);
       setError(null);
       const matches = await runPayableReconciliationMatching(clinicId);
       setPayableReviewStatus(nextStatus);
@@ -192,14 +195,14 @@ export function useConciliation(clinicId) {
       setError(err.message);
       throw err;
     } finally {
-      setLoading(false);
+      setPayableLoading(false);
     }
   }, [clinicId, loadPayableReviews]);
 
   const approvePayableMatch = useCallback(
     async (transactionId, payableId) => {
       try {
-        setLoading(true);
+        setPayableLoading(true);
         setError(null);
         await approvePayableReconciliationMatch(transactionId, payableId);
         await loadPayableReviews(payableReviewStatus);
@@ -209,7 +212,7 @@ export function useConciliation(clinicId) {
         setError(err.message);
         throw err;
       } finally {
-        setLoading(false);
+        setPayableLoading(false);
       }
     },
     [loadIndicators, loadPayableReviews, payableReviewStatus],
@@ -218,7 +221,7 @@ export function useConciliation(clinicId) {
   const rejectPayableMatch = useCallback(
     async (transactionId, payableId, reason) => {
       try {
-        setLoading(true);
+        setPayableLoading(true);
         setError(null);
         await rejectPayableReconciliationMatch(transactionId, payableId, reason);
         await loadPayableReviews(payableReviewStatus);
@@ -228,7 +231,7 @@ export function useConciliation(clinicId) {
         setError(err.message);
         throw err;
       } finally {
-        setLoading(false);
+        setPayableLoading(false);
       }
     },
     [loadIndicators, loadPayableReviews, payableReviewStatus],
@@ -437,6 +440,57 @@ export function useConciliation(clinicId) {
     [statements, loadStatements, loadIndicators],
   );
 
+  const removeStatementsFromState = useCallback((ids) => {
+    const deletedIds = new Set((ids || []).filter(Boolean));
+    if (deletedIds.size === 0) return;
+
+    setStatements((current) => current.filter((statement) => !deletedIds.has(statement.id)));
+    setStatementsTotal((current) => Math.max(0, current - deletedIds.size));
+    setSuggestions((current) => {
+      const next = { ...current };
+      deletedIds.forEach((id) => delete next[id]);
+      return next;
+    });
+    setSelectedStatement((current) => (current && deletedIds.has(current.id) ? null : current));
+  }, []);
+
+  const deleteStatement = useCallback(
+    async (statementId) => {
+      try {
+        setError(null);
+        await deleteBankStatement(statementId);
+        removeStatementsFromState([statementId]);
+        await loadIndicators();
+        return { success: true, deleted: 1 };
+      } catch (err) {
+        console.error('Error deleting statement:', err);
+        setError(err.message);
+        throw err;
+      }
+    },
+    [loadIndicators, removeStatementsFromState],
+  );
+
+  const deleteSelectedStatements = useCallback(
+    async (statementIds = []) => {
+      const ids = Array.from(new Set((statementIds || []).filter(Boolean)));
+      if (ids.length === 0) return { success: true, deleted: 0 };
+
+      try {
+        setError(null);
+        const result = await deleteBankStatements(ids);
+        removeStatementsFromState(ids);
+        await loadIndicators();
+        return result;
+      } catch (err) {
+        console.error('Error deleting statements:', err);
+        setError(err.message);
+        throw err;
+      }
+    },
+    [loadIndicators, removeStatementsFromState],
+  );
+
   /**
    * Atualizar filtros
    */
@@ -484,6 +538,7 @@ export function useConciliation(clinicId) {
     statements,
     statementsTotal,
     loading,
+    payableLoading,
     error,
     indicators,
     bankAccounts,
@@ -502,6 +557,8 @@ export function useConciliation(clinicId) {
     handleMarkDivergent,
     handleIgnore,
     handleBulkConciliate,
+    deleteStatement,
+    deleteSelectedStatements,
     runPayableMatching,
     approvePayableMatch,
     rejectPayableMatch,
@@ -721,6 +778,40 @@ export function useBankStatementParser() {
     };
   }, []);
 
+  const getFirstFilled = useCallback((...values) => {
+    for (const value of values) {
+      if (value !== undefined && value !== null && String(value).trim() !== '') {
+        return value;
+      }
+    }
+    return null;
+  }, []);
+
+  const extractFinalBalanceFromRows = useCallback((rows) => {
+    for (let index = rows.length - 1; index >= 0; index -= 1) {
+      const row = rows[index] || {};
+      const values = Object.values(row).map((value) => cleanText(value, ''));
+      const labelIndex = values.findIndex((value) => /^saldo:?$/i.test(value));
+
+      if (labelIndex >= 0) {
+        const amountCandidate = values.slice(labelIndex + 1).find((value) => value && /\d/.test(value));
+        if (amountCandidate) {
+          return normalizeAmount(amountCandidate);
+        }
+      }
+
+      const balanceText = values.find((value) => /^saldo\s*:/i.test(value));
+      if (balanceText) {
+        const [, amountText] = balanceText.split(':');
+        if (amountText && /\d/.test(amountText)) {
+          return normalizeAmount(amountText);
+        }
+      }
+    }
+
+    return null;
+  }, [cleanText, normalizeAmount]);
+
   /**
    * Parse CSV
    */
@@ -732,8 +823,7 @@ export function useBankStatementParser() {
       const lines = fileContent.trim().split(/\r?\n/);
       const delimiter = detectDelimiter(lines[0]);
       const headers = splitDelimitedLine(lines[0], delimiter).map((h) => normalizeHeader(h));
-
-      const statements = lines.slice(1).map((line, idx) => {
+      const allRows = lines.slice(1).map((line) => {
         const values = splitDelimitedLine(line, delimiter);
         const row = {};
 
@@ -741,6 +831,14 @@ export function useBankStatementParser() {
           row[header] = values[i];
         });
 
+        return row;
+      });
+      const finalFileBalance = extractFinalBalanceFromRows(allRows);
+
+      const statements = allRows.map((row, idx) => {
+        const sisprimeComplement = cleanText(row.complemento || row.complement || row.descricao_complemento, '');
+        const sisprimeHistory = cleanText(row.historico || row.history || row.memo || row.movimento || row.lancamento, '');
+        const isSisprimeLayout = Boolean(sisprimeComplement && sisprimeHistory && getFirstFilled(row.saldo, row.balance, row.end_balance));
         const rawType = (row.tipo || row.type || row.transaction_type || '').toString().toLowerCase();
         const normalizedDate = normalizeDate(
           row.data || row.date || row.transaction_date || row.dt || row.posted_date,
@@ -751,6 +849,18 @@ export function useBankStatementParser() {
         const creditAmount = normalizeAmount(row.credito || row.credit || row.entrada);
         const debitAmount = normalizeAmount(row.debito || row.debit || row.saida);
         const amount = amountDirect || creditAmount || debitAmount;
+        const rawEndBalance = getFirstFilled(
+          row.saldo,
+          row.balance,
+          row.end_balance,
+          row.saldo_final,
+          row.saldo_atual,
+          row.valor_saldo,
+          row.saldo_r,
+          row.saldo_rs,
+          row.running_balance,
+        );
+        const endBalance = rawEndBalance !== null ? normalizeAmount(rawEndBalance) : null;
 
         const explicitCredit =
           rawType === 'c' ||
@@ -766,10 +876,9 @@ export function useBankStatementParser() {
           rawType === 'saida' ||
           rawType === 'saída';
 
-        const operationDescription = cleanText(
-          row.historico || row.history || row.memo || row.movimento || row.lancamento,
-          '',
-        );
+        const operationDescription = isSisprimeLayout
+          ? sisprimeHistory
+          : cleanText(row.historico || row.history || row.memo || row.movimento || row.lancamento, '');
         
         // Tentar extrair party name com mais prioridades
         const partyName = cleanText(
@@ -783,13 +892,15 @@ export function useBankStatementParser() {
             row.recebedor ||
             row.beneficiario ||
             row.contraparte ||
+            row.complemento ||
+            row.complement ||
+            row.descricao_complemento ||
             row.descricao ||
             row.description,
           '',
         );
         
-        // Se operationDescription está vazio e description tem conteúdo, usar description como operação
-        const finalOperationDescription = operationDescription || partyName || 'Transação CSV';
+        const finalOperationDescription = sisprimeComplement || operationDescription || partyName || 'Transação CSV';
         
         // Manter description como está para compatibilidade
         const description = finalOperationDescription;
@@ -799,6 +910,7 @@ export function useBankStatementParser() {
             row.referencia ||
               row.reference ||
               row.documento ||
+              row.document ||
               row.document_number ||
               row.doc ||
               row.nsu,
@@ -825,16 +937,40 @@ export function useBankStatementParser() {
           rawType: rawType || null,
           rawMemo: operationDescription || description,
           partyName: partyName || null,
+          endBalance,
+          importRowIndex: idx,
+          sourceLayout: isSisprimeLayout ? 'sisprime_csv' : 'csv',
+          sourceDocument: cleanText(row.documento || row.document || row.document_number || row.doc, ''),
+          sourceComplement: sisprimeComplement,
+          sourceHistory: sisprimeHistory,
         };
       });
 
-      return statements
-        .map((stmt) => ({
+      const validStatements = statements.filter((stmt) => stmt.date && stmt.amount > 0);
+      const needsComputedBalance = finalFileBalance !== null && validStatements.every((stmt) => stmt.endBalance === null);
+      const totalSigned = needsComputedBalance
+        ? validStatements.reduce((sum, stmt) => {
+          const signedAmount = stmt.type === TRANSACTION_TYPE.CREDIT ? stmt.amount : -stmt.amount;
+          return sum + signedAmount;
+        }, 0)
+        : 0;
+      let runningBalance = needsComputedBalance ? finalFileBalance - totalSigned : null;
+
+      return validStatements.map((stmt) => {
+        if (needsComputedBalance) {
+          runningBalance += stmt.type === TRANSACTION_TYPE.CREDIT ? stmt.amount : -stmt.amount;
+        }
+
+        return {
           ...stmt,
           operationType: detectOperationType(stmt.description, stmt.rawType, stmt.rawMemo),
           metadata: {
             raw_type: stmt.rawType,
             raw_memo: stmt.rawMemo,
+            source_layout: stmt.sourceLayout,
+            source_document: stmt.sourceDocument || null,
+            source_complement: stmt.sourceComplement || null,
+            source_history: stmt.sourceHistory || null,
             transaction_type: stmt.type,
             operation_type: detectOperationType(stmt.description, stmt.rawType, stmt.rawMemo),
             ...extractPartyInfo(stmt.description),
@@ -846,11 +982,12 @@ export function useBankStatementParser() {
             fee_amount: 0,
             channel: detectOperationType(stmt.description, stmt.rawType, stmt.rawMemo),
             posting_timestamp: null,
-            end_balance: null,
+            end_balance: stmt.endBalance ?? runningBalance,
+            import_row_index: stmt.importRowIndex,
             original_encoding: 'utf-8',
           },
-        }))
-        .filter((stmt) => stmt.date && stmt.amount > 0);
+        };
+      });
     } catch (err) {
       setParseError(err.message);
       throw err;
@@ -865,6 +1002,8 @@ export function useBankStatementParser() {
     normalizeDate,
     detectOperationType,
     extractPartyInfo,
+    extractFinalBalanceFromRows,
+    getFirstFilled,
     normalizeHeader,
     splitDelimitedLine,
   ]);
@@ -885,6 +1024,9 @@ export function useBankStatementParser() {
         const match = content.match(regex);
         return match ? match[1].trim() : null;
       };
+
+      const ledgerBalanceRaw = getOfxTagValue(fileContent, 'BALAMT');
+      const ledgerBalance = ledgerBalanceRaw !== null ? normalizeAmount(ledgerBalanceRaw) : null;
 
       transactions.forEach((tx) => {
         const postedAt = getOfxTagValue(tx, 'DTPOSTED');
@@ -927,30 +1069,44 @@ export function useBankStatementParser() {
           bankId: fitId || checkNum || referenceNumber || null,
           rawType: typeRaw || null,
           rawMemo: memo || null,
+          signedAmount: amountSigned,
         });
       });
 
+      let runningBalance = null;
+      if (ledgerBalance !== null && statements.length > 0) {
+        const totalSigned = statements.reduce((sum, stmt) => sum + Number(stmt.signedAmount || 0), 0);
+        runningBalance = ledgerBalance - totalSigned;
+      }
+
       return statements
-        .map((stmt) => ({
-          ...stmt,
-          operationType: detectOperationType(stmt.description, stmt.rawType, stmt.rawMemo),
-          metadata: {
-            raw_type: stmt.rawType,
-            raw_memo: stmt.rawMemo,
-            transaction_type: stmt.type,
-            operation_type: detectOperationType(stmt.description, stmt.rawType, stmt.rawMemo),
-            ...extractPartyInfo(stmt.description),
-            reference_number: stmt.referenceNumber,
-            bank_id: stmt.bankId,
-            check_number: stmt.rawMemo && /cheque|check/i.test(stmt.rawMemo) ? stmt.bankId : null,
-            sequence_number: stmt.bankId,
-            fee_amount: /tarifa|taxa|iof/i.test(stmt.description) ? stmt.amount : 0,
-            channel: detectOperationType(stmt.description, stmt.rawType, stmt.rawMemo),
-            posting_timestamp: null,
-            end_balance: null,
-            original_encoding: 'utf-8',
-          },
-        }))
+        .map((stmt, index) => {
+          if (runningBalance !== null) {
+            runningBalance += Number(stmt.signedAmount || 0);
+          }
+
+          return {
+            ...stmt,
+            operationType: detectOperationType(stmt.description, stmt.rawType, stmt.rawMemo),
+            metadata: {
+              raw_type: stmt.rawType,
+              raw_memo: stmt.rawMemo,
+              transaction_type: stmt.type,
+              operation_type: detectOperationType(stmt.description, stmt.rawType, stmt.rawMemo),
+              ...extractPartyInfo(stmt.description),
+              reference_number: stmt.referenceNumber,
+              bank_id: stmt.bankId,
+              check_number: stmt.rawMemo && /cheque|check/i.test(stmt.rawMemo) ? stmt.bankId : null,
+              sequence_number: stmt.bankId,
+              fee_amount: /tarifa|taxa|iof/i.test(stmt.description) ? stmt.amount : 0,
+              channel: detectOperationType(stmt.description, stmt.rawType, stmt.rawMemo),
+              posting_timestamp: null,
+              end_balance: runningBalance,
+              import_row_index: index,
+              original_encoding: 'utf-8',
+            },
+          };
+        })
         .filter((stmt) => stmt.date && stmt.amount > 0);
     } catch (err) {
       setParseError(err.message);
@@ -958,7 +1114,7 @@ export function useBankStatementParser() {
     } finally {
       setParsing(false);
     }
-  }, [cleanText, extractReferenceNumber, normalizeAmount, normalizeDate, detectOperationType, extractPartyInfo]);
+  }, [cleanText, extractReferenceNumber, normalizeAmount, normalizeDate, detectOperationType, extractPartyInfo, getFirstFilled]);
 
   return {
     parsing,

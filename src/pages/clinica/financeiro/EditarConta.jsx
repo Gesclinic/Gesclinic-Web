@@ -23,6 +23,12 @@ import {
   listAPQuery,
   listInvoicesBasic,
 } from '@/lib/financeApi';
+import { listFinancialPlanAccounts } from '@/modules/financeiro/plano-financeiro/services/financialPlanApi';
+import {
+  buildFiscalDocumentNotes,
+  buildPayablePatchFromFiscalDocument,
+  readFiscalXmlFile,
+} from '@/lib/fiscalXmlParser';
 import { Plus, Trash2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 
@@ -53,6 +59,7 @@ export default function EditarConta() {
   const [isInstallment, setIsInstallment] = useState(false);
 
   const [costCenters, setCostCenters] = useState([]);
+  const [financialPlanAccounts, setFinancialPlanAccounts] = useState([]);
   const [paymentMethodOptions, setPaymentMethodOptions] = useState([]);
   const [productOptions, setProductOptions] = useState([]);
   const [invoiceOptions, setInvoiceOptions] = useState([]);
@@ -71,6 +78,7 @@ export default function EditarConta() {
     document_number: '',
     status: 'open',
     category_id: '',
+    financial_plan_account_id: '',
     document_url: '',
   });
 
@@ -168,6 +176,19 @@ export default function EditarConta() {
     }
     (async () => {
       try {
+        const rows = await listFinancialPlanAccounts(clinicId);
+        setFinancialPlanAccounts((rows || []).filter((account) => account.is_active !== false && account.accepts_entries !== false));
+      } catch {
+        setFinancialPlanAccounts([]);
+      }
+    })();
+  }, [clinicId]);
+  useEffect(() => {
+    if (!clinicId) {
+      return;
+    }
+    (async () => {
+      try {
         const m = await listPaymentMethods(clinicId);
         setPaymentMethodOptions(Array.isArray(m) ? m : []);
       } catch {}
@@ -225,6 +246,7 @@ export default function EditarConta() {
           status: row.status || 'open',
           notes: row.notes || '',
           category_id: row.category_id || '',
+          financial_plan_account_id: row.financial_plan_account_id || '',
           document_url: row.document_url || '',
           repasse_doctor_name: row.repasse_doctor_name || '',
           linked_invoice_id: row.linked_invoice_id || '',
@@ -296,6 +318,7 @@ export default function EditarConta() {
             payment_method:
               missingMethod && last.payment_method ? last.payment_method : f.payment_method,
             category_id: missingCategory && last.category_id ? last.category_id : f.category_id,
+            financial_plan_account_id: !f.financial_plan_account_id && last.financial_plan_account_id ? last.financial_plan_account_id : f.financial_plan_account_id,
           }));
         }
       } catch {}
@@ -348,18 +371,60 @@ export default function EditarConta() {
     }
   };
 
+  const mergeFiscalPatch = (baseForm, fiscalPatch) => {
+    if (!fiscalPatch || Object.keys(fiscalPatch).length === 0) {
+      return baseForm;
+    }
+    const merged = { ...baseForm };
+    Object.entries(fiscalPatch).forEach(([key, value]) => {
+      if (value && !merged[key]) {
+        merged[key] = value;
+      }
+    });
+    return merged;
+  };
+
+  const parsePayableXmlFile = async (file) => {
+    const fiscalDocument = await readFiscalXmlFile(file).catch(() => null);
+    return {
+      fiscalDocument,
+      fiscalPatch: buildPayablePatchFromFiscalDocument(fiscalDocument),
+      fiscalNotes: buildFiscalDocumentNotes(fiscalDocument),
+    };
+  };
+
+  const handleAttachmentFileChange = async (file) => {
+    setAttachmentFile(file || null);
+    if (!file) {
+      return;
+    }
+    const { fiscalPatch } = await parsePayableXmlFile(file);
+    if (Object.keys(fiscalPatch || {}).length > 0) {
+      setForm((current) => mergeFiscalPatch(current, fiscalPatch));
+      toast({
+        title: 'XML fiscal lido',
+        description: 'Dados da NF foram preenchidos no Contas a Pagar.',
+      });
+    }
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
+    const fiscalInfo = attachmentFile ? await parsePayableXmlFile(attachmentFile) : {};
+    const saveForm = mergeFiscalPatch(form, fiscalInfo.fiscalPatch || {});
+    if (saveForm !== form) {
+      setForm(saveForm);
+    }
     const errs = {};
     if (!clinicId) {
       errs.generic = 'Sem clínica ativa';
     }
-    if (!form.vendor_name) {
+    if (!saveForm.vendor_name) {
       errs.vendor_name = 'Fornecedor obrigatório';
     }
     const total =
-      Number(formItems && formItems.length > 0 ? itemsGrandTotal : form.amount || 0) || 0;
-    if (!form.due_date) {
+      Number(formItems && formItems.length > 0 ? itemsGrandTotal : saveForm.amount || 0) || 0;
+    if (!saveForm.due_date) {
       errs.due_date = 'Vencimento obrigatório';
     }
     if (total <= 0) {
@@ -379,7 +444,7 @@ export default function EditarConta() {
     if (Object.keys(errs).length > 0) {
       return;
     }
-    if (!form.category_id) {
+    if (!saveForm.category_id) {
       toast({
         variant: 'destructive',
         title: 'Categoria obrigatória',
@@ -390,7 +455,8 @@ export default function EditarConta() {
     try {
       const docUrl = attachmentFile
         ? await uploadAttachmentFile(attachmentFile)
-        : form.document_url || null;
+        : saveForm.document_url || null;
+      const notes = [saveForm.notes, fiscalInfo.fiscalNotes].filter(Boolean).join(' | ');
       const itemsPayload = (formItems || []).map((it) => ({
         stock_item_id: it?.productId || null,
         name: it?.name || 'Produto',
@@ -400,15 +466,17 @@ export default function EditarConta() {
       }));
 
       const saved = await updateAP(id, {
-        vendor_name: form.vendor_name,
-        description: form.description,
-        due_date: form.due_date,
-        payment_method: form.payment_method,
-        document_number: form.document_number,
+        vendor_name: saveForm.vendor_name,
+        description: saveForm.description,
+        issue_date: saveForm.issue_date || null,
+        due_date: saveForm.due_date,
+        payment_method: saveForm.payment_method,
+        document_number: saveForm.document_number,
         amount: total,
-        installments: isInstallment ? form.installments : 1,
-        notes: form.notes,
-        category_id: form.category_id || null,
+        installments: isInstallment ? saveForm.installments : 1,
+        notes,
+        category_id: saveForm.category_id || null,
+        financial_plan_account_id: saveForm.financial_plan_account_id || null,
         document_url: docUrl,
         ir_pct: Number(nfTaxes.irPct || 0),
         csll_pct: Number(nfTaxes.csllPct || 0),
@@ -583,6 +651,22 @@ export default function EditarConta() {
                   placeholder="Selecione o centro de custo"
                 />
               )}
+            </div>
+            <div>
+              <Label className="text-xs text-gray-600 font-medium">Plano Financeiro</Label>
+              <select
+                className="w-full border rounded h-9 px-3 py-1.5 text-sm mt-1"
+                name="financial_plan_account_id"
+                value={form.financial_plan_account_id || ''}
+                onChange={handleChange}
+              >
+                <option value="">Selecione...</option>
+                {financialPlanAccounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.code ? `${account.code} - ${account.name}` : account.name}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <Label className="text-xs text-gray-600 font-medium">Forma de pagamento</Label>
@@ -1161,7 +1245,7 @@ export default function EditarConta() {
                 className="h-9 px-3 py-1.5 text-sm"
                 type="file"
                 accept="image/*,application/pdf"
-                onChange={(e) => setAttachmentFile(e.target.files?.[0] || null)}
+                onChange={(e) => handleAttachmentFileChange(e.target.files?.[0] || null)}
               />
               <div className="text-xs text-gray-500 mt-1">Nota, boleto ou contrato.</div>
             </div>

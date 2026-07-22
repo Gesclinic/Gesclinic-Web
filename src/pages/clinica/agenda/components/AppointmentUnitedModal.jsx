@@ -43,6 +43,7 @@ import {
   validatePatientDataForStatus,
   isStatusTransitionAllowed,
   getFormattedStatus,
+  migrateStatus,
 } from '@/lib/appointmentStatusConstants';
 import PaymentMethodFields from './PaymentMethodFields';
 import PaymentSplitFields from './PaymentSplitFields';
@@ -398,7 +399,9 @@ export default function AppointmentUnitedModal({
   });
 
   const [tabAtivo, setTabAtivo] = useState('dados');
-  const defaultInitialTab = initialTab === 'resumo' ? 'resumo' : 'dados';
+  const defaultInitialTab = ['dados', 'cadastrais', 'pagamento', 'resumo'].includes(initialTab)
+    ? initialTab
+    : 'dados';
 
   useEffect(() => {
     if (isOpen && initialTab) {
@@ -2623,6 +2626,17 @@ export default function AppointmentUnitedModal({
     SERVICE_STATUSES.AWAITING_PROFESSIONAL,
     SERVICE_STATUSES.IN_SERVICE,
   ].includes(appointmentStatus);
+  const normalizedAppointmentStatus = migrateStatus(appointmentStatus);
+  const isReleasedForProfessional =
+    normalizedAppointmentStatus === SERVICE_STATUSES.AWAITING_PROFESSIONAL;
+  const hasClinicalShortcuts = Boolean(
+    patientRecordId &&
+      [
+        SERVICE_STATUSES.AWAITING_PROFESSIONAL,
+        SERVICE_STATUSES.IN_SERVICE,
+        SERVICE_STATUSES.ATTENDED,
+      ].includes(normalizedAppointmentStatus),
+  );
 
   const loadFinancialStatus = async (appointmentId) => {
     if (!clinicId || !appointmentId) {
@@ -3332,6 +3346,10 @@ export default function AppointmentUnitedModal({
       },
     });
     handleCloseModal();
+  };
+
+  const handleOpenProfessionalFlow = () => {
+    handleOpenPatientRecord({ startAttendance: isReleasedForProfessional });
   };
 
   // Handler para mudan�as em campos de pagamento
@@ -4059,6 +4077,37 @@ export default function AppointmentUnitedModal({
     }
   };
 
+  const handleReleaseForCare = async () => {
+    const targetAppointmentId = finalAppointment?.id || appointment?.id || appointmentId;
+
+    if (!targetAppointmentId) {
+      alert('ID do agendamento nao encontrado para liberar atendimento.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { error } = await supabase.from('appointments').update({
+        status: SERVICE_STATUSES.AWAITING_PROFESSIONAL,
+        liberado_em: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }).eq('id', targetAppointmentId);
+
+      if (error) {
+        throw error;
+      }
+
+      updateAgendamentoField('status', SERVICE_STATUSES.AWAITING_PROFESSIONAL);
+      onSuccess?.();
+      onClose();
+    } catch (error) {
+      console.error('Erro ao liberar para atendimento:', error);
+      alert(`Erro ao liberar para atendimento: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Handle saving appointment changes
   const handleSaveChanges = async () => {
     if (saveChangesPromiseRef.current) {
@@ -4646,7 +4695,7 @@ export default function AppointmentUnitedModal({
                       <div>
                         <p className="text-sm font-semibold text-violet-900">Fluxo médico liberado</p>
                         <p className="mt-1 text-sm text-violet-700">
-                          O médico pode abrir o prontuário para consulta ou iniciar o atendimento, alterando o status para Em Atendimento.
+                          O profissional pode abrir o prontuario para consulta ou iniciar o atendimento.
                         </p>
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -4657,16 +4706,16 @@ export default function AppointmentUnitedModal({
                           className="border-violet-300 text-violet-700 hover:bg-violet-100"
                         >
                           <FileText size={16} className="mr-2" />
-                          Ver prontuário
+                          Abrir Prontuário
                         </Button>
                         <Button
                           type="button"
-                          onClick={() => handleOpenPatientRecord({ startAttendance: true })}
+                          onClick={handleOpenProfessionalFlow}
                           disabled={loading || appointmentStatus === SERVICE_STATUSES.IN_SERVICE}
                           className="bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-60"
                         >
                           <PlayCircle size={16} className="mr-2" />
-                          {appointmentStatus === SERVICE_STATUSES.IN_SERVICE ? 'Em atendimento' : 'Iniciar atendimento'}
+                          {appointmentStatus === SERVICE_STATUSES.IN_SERVICE ? 'Em atendimento' : 'Abrir Atendimento'}
                         </Button>
                       </div>
                     </div>
@@ -7597,14 +7646,12 @@ export default function AppointmentUnitedModal({
                     </span>
                   </Button>
                   <Button
-                    onClick={() => {
-                      onSuccess?.();
-                      onClose();
-                    }}
-                    className="h-10 min-w-[190px] bg-green-600 hover:bg-green-700 text-white font-semibold gap-2 whitespace-nowrap"
+                    onClick={handleReleaseForCare}
+                    disabled={loading}
+                    className="h-10 min-w-[190px] bg-green-600 hover:bg-green-700 text-white font-semibold gap-2 whitespace-nowrap disabled:bg-gray-300 disabled:text-gray-600"
                   >
                     <PlayCircle className="h-4 w-4 flex-shrink-0" />
-                    <span>Liberar para Atendimento</span>
+                    <span>{loading ? 'Liberando...' : 'Liberar para Atendimento'}</span>
                   </Button>
                 </>
               )}
