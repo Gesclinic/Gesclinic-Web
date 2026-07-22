@@ -5,6 +5,44 @@
 // ===================================================================
 
 import { createBrowserClient } from '@supabase/ssr';
+import { getStoredSession } from '@/lib/tenantContext';
+
+function getActiveTenantHeaders() {
+  if (typeof localStorage === 'undefined') {
+    return {};
+  }
+
+  const session = getStoredSession();
+  const companyId =
+    localStorage.getItem('gesclinic_active_company_id') ||
+    session?.company_id ||
+    session?.clinic_id;
+  const tenantId = session?.tenant_id;
+  const branchId = session?.branch_id;
+  const clinicId = session?.clinic_id || companyId;
+  const userId = session?.user_id;
+
+  return Object.fromEntries(
+    Object.entries({
+      'x-gesclinic-user-id': userId,
+      'x-gesclinic-tenant-id': tenantId,
+      'x-gesclinic-company-id': companyId,
+      'x-gesclinic-branch-id': branchId,
+      'x-gesclinic-clinic-id': clinicId,
+    }).filter(([, value]) => Boolean(value)),
+  );
+}
+
+function tenantScopedFetch(input, init = {}) {
+  const headers = new Headers(init.headers || {});
+  const tenantHeaders = getActiveTenantHeaders();
+
+  Object.entries(tenantHeaders).forEach(([key, value]) => {
+    headers.set(key, value);
+  });
+
+  return fetch(input, { ...init, headers });
+}
 
 // DEBUG: Logar URL e chave do Supabase client ao inicializar
 console.log('[DEBUG Supabase] URL:', import.meta.env.VITE_SUPABASE_URL);
@@ -82,6 +120,7 @@ if (!supabaseClient) {
       headers: {
         'x-client-info': 'gesclinic-web@1.0.0',
       },
+      fetch: tenantScopedFetch,
     },
   });
 

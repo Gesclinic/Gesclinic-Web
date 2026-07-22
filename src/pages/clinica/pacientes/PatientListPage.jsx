@@ -8,7 +8,7 @@
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useClinicContext } from '@/contexts/ClinicContext';
 import { listPatients, deletePatient } from '@/lib/patientsApi';
 import { usePagination } from '@/hooks/usePagination';
 import PageLayout from '@/components/ui/PageLayout';
@@ -254,7 +254,7 @@ PatientCard.displayName = 'PatientCard';
 export default function PatientListPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { clinicId } = useAuth();
+  const { clinicId } = useClinicContext();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
@@ -266,16 +266,52 @@ export default function PatientListPage() {
   const [patientToDelete, setPatientToDelete] = useState(null);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
-  // Carregar pacientes ao montar
+  // Carregar pacientes ao montar ou ao alternar a empresa ativa
   useEffect(() => {
-    loadPatientsList();
-  }, [clinicId]);
-
-  async function loadPatientsList() {
     if (!clinicId) {
+      setPatients([]);
+      return undefined;
+    }
+
+    let active = true;
+    setPatients([]);
+    setLoading(true);
+
+    async function loadPatientsList() {
+      try {
+        const data = await listPatients(clinicId, { limit: 500 });
+        if (active) {
+          setPatients(data || []);
+        }
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+        console.error('Erro ao carregar pacientes:', error);
+        toast({
+          title: 'Erro',
+          description: 'Não foi possível carregar a lista de pacientes',
+          variant: 'destructive',
+        });
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadPatientsList();
+
+    return () => {
+      active = false;
+    };
+  }, [clinicId, toast]);
+
+  async function refreshPatientsList() {
+    if (!clinicId) {
+      setPatients([]);
       return;
     }
-    setLoading(true);
     try {
       const data = await listPatients(clinicId, { limit: 500 });
       setPatients(data || []);
@@ -419,7 +455,7 @@ export default function PatientListPage() {
 
     try {
       await deletePatient(patientToDelete.id);
-      setPatients((prev) => prev.filter((p) => p.id !== patientToDelete.id));
+      await refreshPatientsList();
       toast({
         title: 'Sucesso',
         description: 'Paciente removido com sucesso',

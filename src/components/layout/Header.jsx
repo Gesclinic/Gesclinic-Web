@@ -17,7 +17,8 @@ import UserProfileModal from '@/components/common/UserProfileModal';
 
 export default function Header() {
   const { user, signOut } = useAuth();
-  const { clinic } = useClinicContext();
+  const { clinic, companies, activeCompany, activeCompanyId, canSwitchCompany, switchCompany } =
+    useClinicContext();
   const navigate = useNavigate();
   const [headerData, setHeaderData] = useState({ userName: 'Usuário', clinicName: 'Clínica' });
   const [showUserProfileModal, setShowUserProfileModal] = useState(false);
@@ -38,7 +39,11 @@ export default function Header() {
     // Usar dados da sessão, fallback para contexto, fallback para user do Supabase
     const finalUserName = sessionData?.full_name || user?.full_name || user?.email || 'Usuário';
     const finalClinicName =
-      sessionData?.clinic_name || clinic?.name || clinic?.brand_name || 'Clínica';
+      activeCompany?.name ||
+      clinic?.name ||
+      clinic?.brand_name ||
+      sessionData?.clinic_name ||
+      'Clínica';
 
     console.log('🔍 [Header Debug]', {
       sessionData: sessionData,
@@ -53,13 +58,13 @@ export default function Header() {
       userName: finalUserName,
       clinicName: finalClinicName,
     });
-  }, [user, clinic]);
+  }, [user, clinic, activeCompany]);
 
   // Efeito separado para atualizar URL da logo com cache-busting
   useEffect(() => {
     if (clinic?.logo_url) {
       // Adicionar parâmetro de cache busting com ID da clínica
-      const bustedUrl = clinic.logo_url.includes('?') 
+      const bustedUrl = clinic.logo_url.includes('?')
         ? `${clinic.logo_url}&v=${clinic.id?.substring(0, 8)}`
         : `${clinic.logo_url}?v=${clinic.id?.substring(0, 8)}`;
       console.log('🖼️ [Header] Logo URL atualizado:', bustedUrl);
@@ -110,9 +115,35 @@ export default function Header() {
                 <p className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
                   Clinica ativa
                 </p>
-                <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate max-w-[220px] md:max-w-[320px]">
-                  {headerData.clinicName}
-                </p>
+                {canSwitchCompany ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        className="inline-flex h-7 max-w-[220px] items-center gap-1 border-0 bg-transparent px-0 py-0 text-left text-sm font-semibold text-gray-800 shadow-none outline-none hover:text-[#1A5B8A] focus:outline-none dark:text-gray-100 dark:hover:text-blue-300 md:max-w-[320px]"
+                        aria-label="Clínica ativa"
+                      >
+                        <span className="truncate">{headerData.clinicName}</span>
+                        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-gray-500" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-64">
+                      {companies.map((company) => (
+                        <DropdownMenuItem
+                          key={company.id}
+                          onClick={() => switchCompany(company.id)}
+                          className={company.id === activeCompanyId ? 'font-semibold' : undefined}
+                        >
+                          <span className="truncate">{company.name}</span>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate max-w-[220px] md:max-w-[320px]">
+                    {headerData.clinicName}
+                  </p>
+                )}
               </div>
             </div>
           </div>

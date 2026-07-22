@@ -1,6 +1,14 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
+import {
+  getStoredActiveCompanyId,
+  getStoredSession,
+  normalizeCompanyAccess,
+  normalizeCompanyFromClinic,
+  persistActiveCompany,
+  publishTenantContext,
+} from '@/lib/tenantContext';
 
 const ClinicContext = createContext(undefined);
 
@@ -8,6 +16,8 @@ export function ClinicProvider({ children }) {
   const { user, clinicId, loading: authLoading } = useAuth();
 
   const [clinic, setClinic] = useState(null);
+  const [companies, setCompanies] = useState([]);
+  const [activeCompanyId, setActiveCompanyId] = useState(null);
   const [loadingClinic, setLoadingClinic] = useState(true);
 
   // Obter clinicId: primeiro de useAuth, depois do localStorage customizado
@@ -29,31 +39,131 @@ export function ClinicProvider({ children }) {
     return null;
   };
 
-  const resolvedClinicId = getClinicId();
+  const fallbackClinicId = getClinicId();
+  const activeCompany = useMemo(
+    () => companies.find((company) => company.id === activeCompanyId) || companies[0] || null,
+    [activeCompanyId, companies],
+  );
+  const resolvedClinicId = activeCompany?.clinic_id || fallbackClinicId;
+  const tenantId = activeCompany?.tenant_id || null;
+  const companyId = activeCompany?.company_id || resolvedClinicId || null;
+  const branchId = activeCompany?.branch_id || null;
+
+  const switchCompany = useCallback(
+    (companyIdToActivate) => {
+      const nextCompany = companies.find((company) => company.id === companyIdToActivate);
+      if (!nextCompany || nextCompany.id === activeCompanyId) {
+        return;
+      }
+
+      persistActiveCompany(nextCompany);
+      publishTenantContext(nextCompany);
+      setActiveCompanyId(nextCompany.id);
+    },
+    [activeCompanyId, companies],
+  );
 
   useEffect(() => {
     let active = true;
 
-    async function loadClinic() {
+    async function loadCompanies() {
       console.log(
-        '🏥 [ClinicContext] loadClinic acionado. authLoading:',
+        '🏢 [ClinicContext] loadCompanies acionado. authLoading:',
         authLoading,
-        'resolvedClinicId:',
-        resolvedClinicId,
+        'fallbackClinicId:',
+        fallbackClinicId,
       );
 
-      // 🔒 Aguarda o Auth terminar
       if (authLoading) {
         console.log('⏳ [ClinicContext] Aguardando auth completar...');
         return;
       }
 
-      if (!resolvedClinicId) {
-        console.log('⚠️ [ClinicContext] Sem resolvedClinicId');
+      const session = getStoredSession();
+      const userId = user?.id || session?.user_id;
+
+      if (!userId && !fallbackClinicId) {
+        console.log('⚠️ [ClinicContext] Sem usuário ou clínica de fallback');
         if (active) {
+          setCompanies([]);
+          setActiveCompanyId(null);
           setClinic(null);
           setLoadingClinic(false);
         }
+        return;
+      }
+
+      setLoadingClinic(true);
+      let nextCompanies = [];
+
+      if (userId) {
+        const { data, error } = await supabase
+          .from('user_companies')
+          .select(
+            'tenant_id, company_id, branch_id, role, permissions, companies:company_id(id, tenant_id, clinic_id, name, legal_name, trade_name, cnpj, default_branch_id)',
+          )
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .order('created_at', { ascending: true });
+
+        if (error) {
+          console.warn(
+            '[ClinicContext] user_companies indisponível, usando fallback legado:',
+            error.message,
+          );
+        } else {
+          nextCompanies = (data || []).map(normalizeCompanyAccess).filter(Boolean);
+        }
+      }
+
+      if (nextCompanies.length === 0 && fallbackClinicId) {
+        const { data, error } = await supabase
+          .from('clinics')
+          .select('*')
+          .eq('id', fallbackClinicId)
+          .maybeSingle();
+
+        if (error) {
+          console.error('[ClinicContext] erro ao carregar clínica fallback:', error.message);
+        } else {
+          const fallbackCompany = normalizeCompanyFromClinic(data, session);
+          nextCompanies = fallbackCompany ? [fallbackCompany] : [];
+        }
+      }
+
+      if (!active) {
+        return;
+      }
+
+      const storedCompanyId = getStoredActiveCompanyId();
+      const nextActiveCompany =
+        nextCompanies.find((company) => company.id === storedCompanyId) || nextCompanies[0] || null;
+
+      setCompanies(nextCompanies);
+      setActiveCompanyId(nextActiveCompany?.id || null);
+
+      if (nextActiveCompany) {
+        persistActiveCompany(nextActiveCompany);
+        publishTenantContext(nextActiveCompany);
+      } else {
+        publishTenantContext(null);
+      }
+
+      setLoadingClinic(false);
+    }
+
+    loadCompanies();
+
+    return () => {
+      active = false;
+    };
+  }, [authLoading, fallbackClinicId, user?.id]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadClinic() {
+      if (authLoading || !resolvedClinicId) {
         return;
       }
 
@@ -62,7 +172,7 @@ export function ClinicProvider({ children }) {
 
       const { data, error } = await supabase
         .from('clinics')
-        .select('id, name, logo_url, brand_color')
+        .select('*')
         .eq('id', resolvedClinicId)
         .maybeSingle();
 
@@ -72,11 +182,12 @@ export function ClinicProvider({ children }) {
 
       if (error) {
         console.error('[ClinicContext] erro ao carregar clínica:', error.message);
-        setClinic(null);
+        setClinic(activeCompany ? { id: resolvedClinicId, name: activeCompany.name } : null);
       } else {
         console.log('✅ [ClinicContext] Clínica carregada:', data);
-        setClinic(data);
-        window.__clinic = data; // 👈 debug global
+        const mergedClinic = data ? { ...data, name: activeCompany?.name || data.name } : null;
+        setClinic(mergedClinic);
+        window.__clinic = mergedClinic; // 👈 debug global
       }
 
       setLoadingClinic(false);
@@ -87,13 +198,21 @@ export function ClinicProvider({ children }) {
     return () => {
       active = false;
     };
-  }, [resolvedClinicId, authLoading]);
+  }, [activeCompany, authLoading, resolvedClinicId]);
 
   return (
     <ClinicContext.Provider
       value={{
         clinic,
         clinicId: resolvedClinicId,
+        tenantId,
+        companyId,
+        branchId,
+        companies,
+        activeCompany,
+        activeCompanyId,
+        canSwitchCompany: companies.length > 1,
+        switchCompany,
         loadingClinic,
         user,
         setClinic,
