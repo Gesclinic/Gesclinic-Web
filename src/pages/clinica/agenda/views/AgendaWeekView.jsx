@@ -410,7 +410,7 @@ export default function AgendaWeekView({
   return (
     <div
       style={{
-        border: '1px solid #d9e2ef',
+        border: '1px solid #ddd',
         borderRadius: 8,
         background: '#fff',
         boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
@@ -426,7 +426,7 @@ export default function AgendaWeekView({
           display: 'grid',
           gridTemplateColumns: '76px repeat(7, 1fr)',
           borderBottom: '2px solid #dee2e6',
-          background: '#f8fbff',
+          background: '#f8f9fa',
         }}
       >
         <div
@@ -536,7 +536,7 @@ export default function AgendaWeekView({
                     padding: 6,
                     borderRight: clickable ? '1px solid #dee2e6' : '1px solid #e8e8e8',
                     background: cellBg,
-                    minHeight: 54,
+                    minHeight: 50,
                     cursor: clickable && apt ? 'pointer' : 'default',
                     display: 'flex',
                     alignItems: 'center',
@@ -549,23 +549,7 @@ export default function AgendaWeekView({
                   }}
                   title={apt ? apt.patient_name : displayText}
                 >
-                  {apt ? (
-                    <div
-                      className="w-full rounded-md border bg-white/80 px-2 py-1 text-left shadow-sm"
-                      style={{ borderColor: textColor }}
-                    >
-                      <div className="truncate text-[11px] font-black leading-tight" style={{ color: textColor }}>
-                        {horario} - {displayText}
-                      </div>
-                      <div className="truncate text-[10px] font-semibold text-slate-600">
-                        {apt.service_name || apt.serviceName || apt.professional_name || apt.professionalName || 'Agendamento'}
-                      </div>
-                    </div>
-                  ) : (
-                    <span className="rounded-md border border-green-100 bg-green-50 px-2 py-1 text-[11px] font-black text-green-700">
-                      + Agendar
-                    </span>
-                  )}
+                  {displayText}
                 </div>
               );
             })}
