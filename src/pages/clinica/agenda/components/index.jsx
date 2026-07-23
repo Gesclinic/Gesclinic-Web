@@ -2,7 +2,20 @@ import React, { useState, useEffect, useLayoutEffect, useMemo, useCallback } fro
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { format, addDays, subDays, addMonths, subMonths, parseISO, startOfWeek } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Edit, Eye } from 'lucide-react';
+import {
+  BadgeCheck,
+  Briefcase,
+  Calendar,
+  CircleDollarSign,
+  Clock,
+  Edit,
+  Eye,
+  FileText,
+  MapPin,
+  Phone,
+  User,
+  X,
+} from 'lucide-react';
 
 // ? IMPORTAR API
 import { listAppointments } from '@/lib/appointmentsApi';
@@ -916,6 +929,50 @@ export default function AgendaIndex() {
   const freeSlots = Math.max(0, agendaCapacity - occupiedSlots);
   const occupancyPct = agendaCapacity > 0 ? Math.round((occupiedSlots / agendaCapacity) * 100) : 0;
 
+  const getDetailValue = useCallback((appointment, keys, fallback = 'Nao informado') => {
+    for (const key of keys) {
+      const value = key.split('.').reduce((current, part) => current?.[part], appointment);
+      if (value !== undefined && value !== null && String(value).trim() !== '') {
+        return value;
+      }
+    }
+    return fallback;
+  }, []);
+
+  const formatDetailDate = useCallback((value) => {
+    if (!value) {
+      return 'Nao informado';
+    }
+    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      const [year, month, day] = value.split('-');
+      return `${day}/${month}/${year}`;
+    }
+    try {
+      return new Date(value).toLocaleDateString('pt-BR');
+    } catch {
+      return 'Nao informado';
+    }
+  }, []);
+
+  const formatDetailTime = useCallback((appointment) => {
+    const value = appointment?.scheduled_time || appointment?.time || appointment?.horário || appointment?.start_time;
+    if (typeof value === 'string') {
+      const timeMatch = value.match(/(\d{2}:\d{2})(?::\d{2})?/);
+      if (timeMatch) {
+        return timeMatch[1];
+      }
+    }
+    return 'Nao informado';
+  }, []);
+
+  const formatDetailCurrency = useCallback((value) => {
+    const numberValue = Number(value);
+    if (!Number.isFinite(numberValue)) {
+      return 'Nao informado';
+    }
+    return numberValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }, []);
+
   const handleNewAppointment = useCallback(async () => {
     console.log('?? [TRACE] handleNewAppointment called - date:', date);
     console.log('?? [TRACE] date state:', date);
@@ -1673,183 +1730,190 @@ export default function AgendaIndex() {
             onClick={() => setDetailsDrawerOpen(false)}
           />
           {/* Drawer */}
-          <div className="relative ml-auto w-full max-w-md bg-white shadow-2xl flex flex-col max-h-screen overflow-y-auto">
-            {/* Header */}
-            <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 flex items-center justify-between border-b">
-              <h2 className="text-xl font-bold">Detalhes do Agendamento</h2>
-              <button
-                onClick={() => setDetailsDrawerOpen(false)}
-                className="text-white hover:bg-white/20 p-2 rounded transition-colors"
-              >
-                ?
-              </button>
+          <div className="relative ml-auto flex max-h-screen w-full max-w-xl flex-col bg-slate-50 shadow-2xl">
+            <div className="sticky top-0 z-10 border-b border-blue-700 bg-gradient-to-r from-blue-700 to-blue-600 px-6 py-5 text-white">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-100">Agendamento</p>
+                  <h2 className="mt-1 text-xl font-bold leading-tight">
+                    {getDetailValue(selectedAppointmentDetails, ['patients.name', 'patient_name', 'lead_name', 'paciente'], 'Paciente nao informado')}
+                  </h2>
+                  <p className="mt-1 text-sm text-blue-100">
+                    {getDetailValue(selectedAppointmentDetails, ['services.name', 'service_name', 'serviço', 'service'], 'Servico nao informado')}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDetailsDrawerOpen(false)}
+                  className="rounded-md p-2 text-white transition-colors hover:bg-white/20"
+                  aria-label="Fechar detalhes do agendamento"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
             </div>
 
-            {/* Content */}
-            <div className="flex-1 p-6 space-y-6">
-              {/* Paciente */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                  Paciente
-                </h3>
-                <p className="text-lg font-bold text-gray-900 mt-1">
-                  {selectedAppointmentDetails.patients?.name ||
-                    selectedAppointmentDetails.lead_name ||
-                    '�'}
-                </p>
-                {selectedAppointmentDetails.patients?.document_id && (
-                  <p className="text-sm text-gray-600 mt-1">
-                    CPF: {selectedAppointmentDetails.patients.document_id}
-                  </p>
-                )}
-                {selectedAppointmentDetails.patients?.prontuario_numero && (
-                  <p className="text-sm text-gray-600">
-                    Prontu�rio: {selectedAppointmentDetails.patients.prontuario_numero}
-                  </p>
-                )}
-              </div>
-
-              {/* Data e Hora */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <Calendar className="h-4 w-4 text-blue-600" />
                     Data
-                  </h3>
-                  <p className="text-base font-semibold text-gray-900 mt-1">
-                    {selectedAppointmentDetails.scheduled_date
-                      ? new Date(selectedAppointmentDetails.scheduled_date).toLocaleDateString(
-                          'pt-BR',
-                        )
-                      : '�'}
+                  </div>
+                  <p className="mt-2 text-base font-bold text-slate-900">
+                    {formatDetailDate(selectedAppointmentDetails.scheduled_date || selectedAppointmentDetails.date)}
                   </p>
                 </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                    Hor�rio
-                  </h3>
-                  <p className="text-base font-semibold text-gray-900 mt-1">
-                    {selectedAppointmentDetails.scheduled_time || '�'}
+                <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <Clock className="h-4 w-4 text-blue-600" />
+                    Hor&aacute;rio
+                  </div>
+                  <p className="mt-2 text-base font-bold text-slate-900">
+                    {formatDetailTime(selectedAppointmentDetails)}
                   </p>
                 </div>
-              </div>
-
-              {/* Servi�o */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                  Servi�o
-                </h3>
-                <p className="text-base text-gray-900 mt-1">
-                  {selectedAppointmentDetails.services?.name || '�'}
-                </p>
-              </div>
-
-              {/* Profissional */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                  Profissional
-                </h3>
-                <p className="text-base text-gray-900 mt-1">
-                  {selectedAppointmentDetails.professionals?.name || '�'}
-                </p>
-              </div>
-
-              {/* Sala */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                  Sala
-                </h3>
-                <p className="text-base text-gray-900 mt-1">
-                  {selectedAppointmentDetails.rooms?.name || '�'}
-                </p>
-              </div>
-
-              {/* Conv�nio */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                  Conv�nio
-                </h3>
-                <p className="text-base text-gray-900 mt-1">
-                  {selectedAppointmentDetails.payers?.active === false
-                    ? '�'
-                    : selectedAppointmentDetails.payers?.name || 'Particular'}
-                </p>
-              </div>
-
-              {/* Plano */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                  Plano
-                </h3>
-                <p className="text-base text-gray-900 mt-1">
-                  {selectedAppointmentDetails.plans?.name || '�'}
-                </p>
-                {selectedAppointmentDetails.plans?.code && (
-                  <p className="text-sm text-gray-600 mt-1">
-                    C�digo: {selectedAppointmentDetails.plans.code}
-                  </p>
-                )}
-              </div>
-
-              {/* Status */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                  Status
-                </h3>
-                <p className="text-base font-semibold mt-1">
+                <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <BadgeCheck className="h-4 w-4 text-blue-600" />
+                    Status
+                  </div>
                   <span
-                    className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-                      getStatusConfig(selectedAppointmentDetails.status)?.color ||
-                      'bg-gray-100 text-gray-800'
+                    className={`mt-2 inline-flex rounded-full px-3 py-1 text-sm font-semibold ${
+                      getStatusConfig(selectedAppointmentDetails.status)?.color || 'bg-gray-100 text-gray-800'
                     }`}
                   >
-                    {getStatusLabelOnly(selectedAppointmentDetails.status) ||
-                      selectedAppointmentDetails.status ||
-                      'desconhecido'}
+                    {getStatusLabelOnly(selectedAppointmentDetails.status) || selectedAppointmentDetails.status || 'Desconhecido'}
                   </span>
-                </p>
-              </div>
-
-              {/* Valor */}
-              {selectedAppointmentDetails.value && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <CircleDollarSign className="h-4 w-4 text-emerald-600" />
                     Valor
-                  </h3>
-                  <p className="text-lg font-bold text-gray-900 mt-1 text-green-600">
-                    R$ {parseFloat(selectedAppointmentDetails.value).toFixed(2)}
+                  </div>
+                  <p className="mt-2 text-base font-bold text-emerald-700">
+                    {formatDetailCurrency(selectedAppointmentDetails.value || selectedAppointmentDetails.valor)}
                   </p>
                 </div>
-              )}
-
-              {/* Contato */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                  Contato
-                </h3>
-                {selectedAppointmentDetails.patients?.cell_phone && (
-                  <p className="text-sm text-gray-900 mt-1">
-                    {' '}
-                    {selectedAppointmentDetails.patients.cell_phone}
-                  </p>
-                )}
-                {selectedAppointmentDetails.patients?.phone && (
-                  <p className="text-sm text-gray-900">
-                    ?? {selectedAppointmentDetails.patients.phone}
-                  </p>
-                )}
               </div>
 
-              {/* Observa��es */}
-              {selectedAppointmentDetails.notes && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">
-                    Observa��es
+              <div className="mt-5 space-y-4">
+                <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                    <User className="h-4 w-4 text-blue-600" />
+                    Paciente
                   </h3>
-                  <p className="text-sm text-gray-700 mt-1 p-3 bg-gray-50 rounded border border-gray-200">
-                    {selectedAppointmentDetails.notes}
-                  </p>
-                </div>
-              )}
+                  <div className="mt-3 space-y-1 text-sm text-slate-700">
+                    <p className="font-semibold text-slate-900">
+                      {getDetailValue(selectedAppointmentDetails, ['patients.name', 'patient_name', 'lead_name', 'paciente'], 'Paciente nao informado')}
+                    </p>
+                    <p>CPF: {getDetailValue(selectedAppointmentDetails, ['patients.document_id', 'patient_cpf', 'cpf'])}</p>
+                    <p>Prontu&aacute;rio: {getDetailValue(selectedAppointmentDetails, ['patients.prontuario_numero', 'prontuario_numero'])}</p>
+                  </div>
+                </section>
+
+                <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                    <Briefcase className="h-4 w-4 text-blue-600" />
+                    Atendimento
+                  </h3>
+                  <dl className="mt-3 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Servi&ccedil;o</dt>
+                      <dd className="mt-1 font-medium text-slate-900">
+                        {getDetailValue(selectedAppointmentDetails, ['services.name', 'service_name', 'serviço', 'service'])}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Profissional</dt>
+                      <dd className="mt-1 font-medium text-slate-900">
+                        {getDetailValue(selectedAppointmentDetails, ['professionals.name', 'professional_name', 'profissional', 'professional'])}
+                      </dd>
+                    </div>
+                  </dl>
+                </section>
+
+                <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                    <MapPin className="h-4 w-4 text-blue-600" />
+                    Local e conv&ecirc;nio
+                  </h3>
+                  <dl className="mt-3 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Sala</dt>
+                      <dd className="mt-1 font-medium text-slate-900">
+                        {getDetailValue(selectedAppointmentDetails, ['rooms.name', 'room_name', 'sala', 'room'])}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Conv&ecirc;nio</dt>
+                      <dd className="mt-1 font-medium text-slate-900">
+                        {selectedAppointmentDetails.payers?.active === false
+                          ? 'Nao informado'
+                          : getDetailValue(selectedAppointmentDetails, ['payers.name', 'payer_name', 'convênio', 'healthplan', 'plano'], 'Particular')}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">Plano</dt>
+                      <dd className="mt-1 font-medium text-slate-900">
+                        {getDetailValue(selectedAppointmentDetails, ['plans.name', 'plan_name'])}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">C&oacute;digo do plano</dt>
+                      <dd className="mt-1 font-medium text-slate-900">
+                        {getDetailValue(selectedAppointmentDetails, ['plans.code', 'plan_code', 'code'])}
+                      </dd>
+                    </div>
+                  </dl>
+                </section>
+
+                <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                    <Phone className="h-4 w-4 text-blue-600" />
+                    Contato
+                  </h3>
+                  <div className="mt-3 space-y-1 text-sm font-medium text-slate-900">
+                    <p>Celular: {getDetailValue(selectedAppointmentDetails, ['patients.cell_phone', 'patient_mobile', 'celular', 'mobile'])}</p>
+                    <p>Telefone: {getDetailValue(selectedAppointmentDetails, ['patients.phone', 'patient_phone', 'telefone', 'phone'])}</p>
+                  </div>
+                </section>
+
+                {selectedAppointmentDetails.notes && (
+                  <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                    <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                      <FileText className="h-4 w-4 text-blue-600" />
+                      Observa&ccedil;&otilde;es
+                    </h3>
+                    <p className="mt-3 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+                      {selectedAppointmentDetails.notes}
+                    </p>
+                  </section>
+                )}
+              </div>
+            </div>
+
+            <div className="border-t border-slate-200 bg-white px-6 py-4">
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setDetailsDrawerOpen(false)}
+                  className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                >
+                  Fechar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDetailsDrawerOpen(false);
+                    handleEditAppointment(selectedAppointmentDetails.id);
+                  }}
+                  className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+                >
+                  <Edit className="h-4 w-4" />
+                  Editar agendamento
+                </button>
+              </div>
             </div>
           </div>
         </div>
