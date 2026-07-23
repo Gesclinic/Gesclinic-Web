@@ -639,6 +639,7 @@ export default function AgendaDayView({
       // SEM filtro: uma linha por (hora + profissional disponível)
       const lines = [];
       sortedTimes.forEach((time) => {
+        const appointmentsForTime = groupedByTime[time] || [];
         // Encontrar profissionais disponíveis neste horário (inline)
         const availableProfs = [];
         Object.entries(professionalAvailability).forEach(([profId, slots]) => {
@@ -648,7 +649,7 @@ export default function AgendaDayView({
           }
         });
 
-        (groupedByTime[time] || []).forEach((apt) => {
+        appointmentsForTime.forEach((apt) => {
           const aptProfessionalId = apt.professional_id || apt.professionalId;
           if (!aptProfessionalId || availableProfs.some((prof) => prof.id === aptProfessionalId)) {
             return;
@@ -675,8 +676,8 @@ export default function AgendaDayView({
               type: 'multi-prof',
             });
           });
-        } else {
-          // Se não há profissionais disponíveis, renderizar uma linha genérica
+        } else if (appointmentsForTime.length > 0) {
+          // Se existe atendimento sem profissional disponível, preservar a linha para exibição
           lines.push({
             key: `${time}__none`,
             time,

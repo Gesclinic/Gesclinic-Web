@@ -12,7 +12,7 @@ import { listPayers } from '@/lib/payersApi';
 import { listRooms } from '@/lib/roomsApi';
 import { sendBatchConfirmations } from '@/lib/whatsappConfirmationApi';
 import { supabase } from '@/lib/customSupabaseClient';
-import { getClinicTimeSlots } from '@/lib/agendaUtils';
+import { getAvailableProfessionalsForDay, getClinicTimeSlots } from '@/lib/agendaUtils';
 
 // ?? Configura��o de abas por perfil
 import { getAccessibleAgendaTabs, DEFAULT_AGENDA_TAB_BY_ROLE } from '@/config/agendaTabs.config';
@@ -323,6 +323,7 @@ export default function AgendaIndex() {
 
   const [appointments, setAppointments] = useState([]);
   const [professionals, setProfessionals] = useState([]);
+  const [availableProfessionalsForDay, setAvailableProfessionalsForDay] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [services, setServices] = useState([]);
   const [payers, setPayers] = useState([]);
@@ -613,6 +614,33 @@ export default function AgendaIndex() {
     loadAppointments();
   }, [loadAppointments]);
 
+  useEffect(() => {
+    let active = true;
+
+    async function loadAvailabilityForIndicators() {
+      if (!clinicId || !date || viewMode !== 'dia') {
+        setAvailableProfessionalsForDay([]);
+        return;
+      }
+
+      const availableProfessionals = await getAvailableProfessionalsForDay(
+        date,
+        clinicId,
+        userProfessionalId,
+      );
+
+      if (active) {
+        setAvailableProfessionalsForDay(availableProfessionals || []);
+      }
+    }
+
+    loadAvailabilityForIndicators();
+
+    return () => {
+      active = false;
+    };
+  }, [clinicId, date, userProfessionalId, viewMode]);
+
   const agendaSummary = useMemo(() => {
     const summary = {};
     const dailyCapacity = getClinicTimeSlots(clinic).length || 1;
@@ -817,6 +845,21 @@ export default function AgendaIndex() {
 
   const agendaCapacity = useMemo(() => {
     const daySlots = clinicTimeSlots.length || 20;
+
+    if (viewMode === 'dia' && agendaMode !== 'sala') {
+      const visibleAvailability = filters.professional_id
+        ? availableProfessionalsForDay.filter((professional) => professional.id === filters.professional_id)
+        : availableProfessionalsForDay;
+      const availableSlotsCount = visibleAvailability.reduce(
+        (total, professional) => total + (professional.available_slots?.length || 0),
+        0,
+      );
+
+      if (availableSlotsCount > 0) {
+        return availableSlotsCount;
+      }
+    }
+
     const resourceCount =
       agendaMode === 'sala'
         ? Math.max(filters.room_id ? 1 : rooms.length, 1)
@@ -830,7 +873,7 @@ export default function AgendaIndex() {
       return daySlots * new Date(year, month, 0).getDate() * resourceCount;
     }
     return daySlots * resourceCount;
-  }, [agendaMode, clinicTimeSlots.length, date, filters.professional_id, filters.room_id, professionals.length, rooms.length, viewMode]);
+  }, [agendaMode, availableProfessionalsForDay, clinicTimeSlots.length, date, filters.professional_id, filters.room_id, professionals.length, rooms.length, viewMode]);
 
   const roomModeRooms = useMemo(() => {
     const registeredRooms = rooms.map((room) => ({
