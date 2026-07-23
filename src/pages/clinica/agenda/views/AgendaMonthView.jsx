@@ -567,15 +567,12 @@ export default function AgendaMonthView({
                         {dayAppts.slice(0, 2).map((apt) => {
                           // ✅ Validar antes de formatar data
                           let aptTime = (apt.scheduled_time || '').substring(0, 5);
-                          if (!aptTime && isValidDate(apt.startTime)) {
+                          if (!aptTime && isValidDate(apt.startTime || apt.start_time)) {
                             try {
-                              aptTime = format(apt.startTime, 'HH:mm');
+                              aptTime = format(apt.startTime || apt.start_time, 'HH:mm');
                             } catch {
-                              aptTime = '?';
+                              aptTime = '';
                             }
-                          }
-                          if (!aptTime) {
-                            aptTime = '?';
                           }
 
                           const fullName = apt.patient_name || 'Paciente';
@@ -599,7 +596,7 @@ export default function AgendaMonthView({
                               style={{ color: '#d97706' }}
                               title={fullName}
                             >
-                              {aptTime} • {displayName}
+                              {aptTime ? `${aptTime} • ${displayName}` : displayName}
                             </div>
                           );
                         })}
