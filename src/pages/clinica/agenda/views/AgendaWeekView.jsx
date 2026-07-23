@@ -2,9 +2,11 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { format, addDays, startOfWeek, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import clsx from 'clsx';
+import { Edit, Eye, Trash2 } from 'lucide-react';
 import { checkMultipleDates, getHolidayDetails, openHolidayManual } from '@/lib/holidaysApi';
 import { getClinicTimeSlots, getProfessionalAvailableSlots } from '@/lib/agendaUtils';
 import { getStatusStyle } from '@/utils/helpers/getStatusStyle';
+import { deleteAppointment } from '@/lib/appointmentsApi';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useClinicContext } from '@/contexts/ClinicContext';
 
@@ -36,6 +38,7 @@ export default function AgendaWeekView({
   onEditAppointment = () => {},
   onViewDetails = () => {},
   onContextMenu = () => {},
+  onRefreshAppointments = () => {},
   showWeekends = false,
   clinicId = null,
   filteredProfessionalId = null, // NOVO: ID do profissional filtrado
@@ -74,6 +77,45 @@ export default function AgendaWeekView({
   const [loadingHolidays, setLoadingHolidays] = useState(false);
   const [openingHoliday, setOpeningHoliday] = useState(null);
   const [professionalAvailabilityByDay, setProfessionalAvailabilityByDay] = useState({}); // NOVO: Disponibilidade por dia
+  const [contextMenu, setContextMenu] = useState(null);
+
+  useEffect(() => {
+    const handleClickOutside = () => setContextMenu(null);
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
+  const showAppointmentMenu = (x, y, appointment) => {
+    setTimeout(() => {
+      setContextMenu({ x, y, appointment });
+    }, 0);
+  };
+
+  const openAppointmentMenu = (event, appointment) => {
+    event.preventDefault();
+    event.stopPropagation();
+    showAppointmentMenu(event.clientX, event.clientY, appointment);
+    onContextMenu(event, appointment);
+  };
+
+  const handleDeleteAppointment = async () => {
+    const appointmentId = contextMenu?.appointment?.id;
+    if (!appointmentId) {
+      return;
+    }
+
+    if (!confirm('Tem certeza que deseja EXCLUIR este agendamento? Esta ação remove o registro da agenda.')) {
+      return;
+    }
+
+    try {
+      await deleteAppointment(appointmentId);
+      setContextMenu(null);
+      onRefreshAppointments();
+    } catch (error) {
+      alert(`Erro ao deletar agendamento: ${error.message || 'verifique permissões e vínculos do registro'}`);
+    }
+  };
 
   // Log de disponibilidade
   useEffect(() => {
@@ -382,14 +424,14 @@ export default function AgendaWeekView({
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: '80px repeat(7, 1fr)',
+          gridTemplateColumns: '76px repeat(7, 1fr)',
           borderBottom: '2px solid #dee2e6',
           background: '#f8f9fa',
         }}
       >
         <div
           style={{
-            padding: 12,
+            padding: 8,
             borderRight: '1px solid #dee2e6',
             textAlign: 'center',
             fontWeight: 700,
@@ -405,7 +447,7 @@ export default function AgendaWeekView({
             <div
               key={dayStr}
               style={{
-                padding: 12,
+                padding: 8,
                 borderRight: '1px solid #dee2e6',
                 textAlign: 'center',
                 background: isToday ? '#e7f3ff' : '#e7f3ff',
@@ -429,13 +471,13 @@ export default function AgendaWeekView({
             key={horario}
             style={{
               display: 'grid',
-              gridTemplateColumns: '80px repeat(7, 1fr)',
+              gridTemplateColumns: '76px repeat(7, 1fr)',
               borderBottom: '1px solid #dee2e6',
             }}
           >
             <div
               style={{
-                padding: 12,
+                padding: '8px 6px',
                 borderRight: '1px solid #dee2e6',
                 textAlign: 'center',
                 fontWeight: 600,
@@ -483,17 +525,18 @@ export default function AgendaWeekView({
                   onClick={() => {
                     if (clickable) {
                       if (apt) {
-                        onEditAppointment(apt.id);
+                        showAppointmentMenu(window.innerWidth / 2, window.innerHeight / 2, apt);
                       } else {
                         onBookSlot({ date: dayStr, time: horario });
                       }
                     }
                   }}
+                  onContextMenu={(event) => apt && openAppointmentMenu(event, apt)}
                   style={{
-                    padding: 8,
+                    padding: 6,
                     borderRight: clickable ? '1px solid #dee2e6' : '1px solid #e8e8e8',
                     background: cellBg,
-                    minHeight: 70,
+                    minHeight: 50,
                     cursor: clickable && apt ? 'pointer' : 'default',
                     display: 'flex',
                     alignItems: 'center',
@@ -513,6 +556,41 @@ export default function AgendaWeekView({
           </div>
         ))}
       </div>
+      {contextMenu && (
+        <div
+          className="fixed bg-white border border-gray-200 rounded-md shadow-lg z-50 min-w-[190px]"
+          style={{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <button
+            onClick={() => {
+              onEditAppointment(contextMenu.appointment.id);
+              setContextMenu(null);
+            }}
+            className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2"
+          >
+            <Edit className="w-4 h-4" />
+            Editar
+          </button>
+          <button
+            onClick={() => {
+              onViewDetails(contextMenu.appointment.id);
+              setContextMenu(null);
+            }}
+            className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2 border-t border-gray-100"
+          >
+            <Eye className="w-4 h-4" />
+            Detalhes
+          </button>
+          <button
+            onClick={handleDeleteAppointment}
+            className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2 border-t border-gray-100"
+          >
+            <Trash2 className="w-4 h-4" />
+            Excluir
+          </button>
+        </div>
+      )}
     </div>
   );
 }

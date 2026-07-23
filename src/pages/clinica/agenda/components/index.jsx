@@ -1437,7 +1437,7 @@ export default function AgendaIndex() {
         </div>
       ) : viewMode === 'semana' ? (
         // WEEK VIEW
-        <div className="flex-1 mt-4 bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div className="flex-1 mt-2 bg-white border border-gray-200 rounded-lg overflow-hidden">
           <AgendaWeekView
             date={date}
             appointments={filteredAppointments}
@@ -1446,6 +1446,7 @@ export default function AgendaIndex() {
             onEditAppointment={handleEditAppointment}
             onViewDetails={handleViewDetails}
             onContextMenu={handleContextMenu}
+            onRefreshAppointments={loadAppointments}
             showWeekends={true}
             clinicId={clinicId}
             filteredProfessionalId={filters.professional_id}
@@ -1455,7 +1456,7 @@ export default function AgendaIndex() {
         </div>
       ) : viewMode === 'mes' ? (
         // MONTH VIEW
-        <div className="flex-1 mt-4 bg-white border border-gray-200 rounded-lg overflow-hidden">
+        <div className="flex-1 mt-2 bg-white border border-gray-200 rounded-lg overflow-hidden">
           <AgendaMonthView
             date={date}
             appointments={filteredAppointments}
@@ -1464,6 +1465,7 @@ export default function AgendaIndex() {
             onEditAppointment={handleEditAppointment}
             onViewDetails={handleViewDetails}
             onContextMenu={handleContextMenu}
+            onRefreshAppointments={loadAppointments}
             clinicId={clinicId}
             filteredProfessionalId={filters.professional_id}
             userRole={auth?.currentRole}

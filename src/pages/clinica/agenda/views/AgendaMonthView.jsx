@@ -11,9 +11,11 @@ import {
   parseISO,
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { Edit, Eye, Trash2 } from 'lucide-react';
 import { getProfessionalAvailableSlots } from '@/lib/agendaUtils';
 import { checkMultipleDates } from '@/lib/holidaysApi';
 import { getStatusStyle } from '@/utils/helpers/getStatusStyle';
+import { deleteAppointment } from '@/lib/appointmentsApi';
 import { useClinicContext } from '@/contexts/ClinicContext';
 
 /**
@@ -55,6 +57,7 @@ export default function AgendaMonthView({
   onEditAppointment = () => {},
   onViewDetails = () => {},
   onContextMenu = () => {},
+  onRefreshAppointments = () => {},
   filteredProfessionalId = null, // NOVO: ID do profissional filtrado
   userRole = null, // Role do usuário logado
   userProfessionalId = null, // ID do profissional logado (se for profissional)
@@ -66,6 +69,45 @@ export default function AgendaMonthView({
   const [hoveredDay, setHoveredDay] = useState(null); // Rastrear qual dia está com hover
   const [holidaysMap, setHolidaysMap] = useState({}); // Mapa de feriados
   const [loadingHolidays, setLoadingHolidays] = useState(false); // Estado de carregamento de feriados
+  const [contextMenu, setContextMenu] = useState(null);
+
+  useEffect(() => {
+    const handleClickOutside = () => setContextMenu(null);
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
+  const showAppointmentMenu = (x, y, appointment) => {
+    setTimeout(() => {
+      setContextMenu({ x, y, appointment });
+    }, 0);
+  };
+
+  const openAppointmentMenu = (event, appointment) => {
+    event.preventDefault();
+    event.stopPropagation();
+    showAppointmentMenu(event.clientX, event.clientY, appointment);
+    onContextMenu(event, appointment);
+  };
+
+  const handleDeleteAppointment = async () => {
+    const appointmentId = contextMenu?.appointment?.id;
+    if (!appointmentId) {
+      return;
+    }
+
+    if (!confirm('Tem certeza que deseja EXCLUIR este agendamento? Esta ação remove o registro da agenda.')) {
+      return;
+    }
+
+    try {
+      await deleteAppointment(appointmentId);
+      setContextMenu(null);
+      onRefreshAppointments();
+    } catch (error) {
+      alert(`Erro ao deletar agendamento: ${error.message || 'verifique permissões e vínculos do registro'}`);
+    }
+  };
 
   // Log de disponibilidade
   useEffect(() => {
@@ -302,21 +344,21 @@ export default function AgendaMonthView({
   return (
     <div className="h-full bg-white flex flex-col overflow-hidden">
       {/* Cabeçalho - Mês/Ano */}
-      <div className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm px-6 py-4">
-        <h3 className="text-lg font-bold text-center" style={{ color: '#0052cc' }}>
+      <div className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm px-4 py-2">
+        <h3 className="text-base font-bold text-center" style={{ color: '#0052cc' }}>
           {format(dateObj, "MMMM 'de' yyyy", { locale: ptBR })}
         </h3>
       </div>
 
       {/* Grid de dias da semana */}
       <div
-        className="grid grid-cols-7 border-b border-gray-200 px-6 py-2"
+        className="grid grid-cols-7 border-b border-gray-200 px-4 py-1"
         style={{ background: '#e7f3ff' }}
       >
         {['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'].map((d) => (
           <div
             key={d}
-            className="text-center font-semibold py-2"
+            className="text-center font-semibold py-1.5"
             style={{ color: '#0052cc', fontSize: '13px', fontWeight: 700 }}
           >
             {d}
@@ -433,7 +475,7 @@ export default function AgendaMonthView({
                   onMouseEnter={() => setHoveredDay(dayKey)}
                   onMouseLeave={() => setHoveredDay(null)}
                   className={`
-                    min-h-[160px] p-3 transition-all border overflow-visible flex flex-col relative
+                    min-h-[108px] p-2 transition-all border overflow-visible flex flex-col relative
                     ${!isCurrentMonth ? 'text-gray-400' : ''}
                     ${isCurrentMonth && isHolidayBlocked ? 'cursor-not-allowed' : ''}
                     ${isCurrentMonth && !isHolidayBlocked && isProfessionalUnavailable ? 'text-gray-600 cursor-not-allowed' : ''}
@@ -515,13 +557,13 @@ export default function AgendaMonthView({
                   })()}
 
                   {/* Número do dia */}
-                  <div className="text-sm font-bold mb-2 text-gray-900">{format(dayObj, 'd')}</div>
+                  <div className="text-sm font-bold mb-1 text-gray-900">{format(dayObj, 'd')}</div>
 
                   {/* Conteúdo do dia */}
                   <div className="flex-1 flex items-center justify-center overflow-hidden">
                     {dayAppts.length > 0 && isCurrentMonth && !isHolidayBlocked ? (
                       // Quando tem agendamentos (até 2 exibidos)
-                      <div className="w-full text-center">
+                      <div className="w-full text-center space-y-0.5">
                         {dayAppts.slice(0, 2).map((apt) => {
                           // ✅ Validar antes de formatar data
                           let aptTime = (apt.scheduled_time || '').substring(0, 5);
@@ -548,14 +590,12 @@ export default function AgendaMonthView({
                               key={apt.id}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onEditAppointment(apt.id);
+                                showAppointmentMenu(e.clientX, e.clientY, apt);
                               }}
                               onContextMenu={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                onContextMenu(e, apt);
+                                openAppointmentMenu(e, apt);
                               }}
-                              className="text-xs font-semibold px-1 py-1 whitespace-nowrap overflow-hidden text-ellipsis cursor-pointer hover:opacity-75"
+                              className="text-xs font-semibold px-1 py-0.5 whitespace-nowrap overflow-hidden text-ellipsis cursor-pointer hover:opacity-75"
                               style={{ color: '#d97706' }}
                               title={fullName}
                             >
@@ -576,14 +616,14 @@ export default function AgendaMonthView({
                           // ❌ Profissional indisponível neste dia
                           <div className="flex flex-col items-center justify-center gap-1">
                             <span className="text-lg">🔒</span>
-                            <span className="text-xs font-semibold text-gray-600">
+                            <span className="text-[11px] font-semibold text-gray-600">
                               Indisponível
                             </span>
                           </div>
                         ) : (
                           // ✅ Disponível
                           <div
-                            className="text-xs font-black text-center"
+                            className="text-[11px] font-black text-center leading-tight"
                             style={{ color: '#10b981' }}
                           >
                             <div>Clique para</div>
@@ -616,7 +656,7 @@ export default function AgendaMonthView({
       </div>
 
       {/* Legenda */}
-      <div className="border-t border-gray-200 bg-gray-50 px-6 py-3 text-xs text-gray-600">
+      <div className="border-t border-gray-200 bg-gray-50 px-4 py-2 text-xs text-gray-600">
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2">
             <span
@@ -673,6 +713,41 @@ export default function AgendaMonthView({
           )}
         </div>
       </div>
+      {contextMenu && (
+        <div
+          className="fixed bg-white border border-gray-200 rounded-md shadow-lg z-50 min-w-[190px]"
+          style={{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <button
+            onClick={() => {
+              onEditAppointment(contextMenu.appointment.id);
+              setContextMenu(null);
+            }}
+            className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2"
+          >
+            <Edit className="w-4 h-4" />
+            Editar
+          </button>
+          <button
+            onClick={() => {
+              onViewDetails(contextMenu.appointment.id);
+              setContextMenu(null);
+            }}
+            className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2 border-t border-gray-100"
+          >
+            <Eye className="w-4 h-4" />
+            Detalhes
+          </button>
+          <button
+            onClick={handleDeleteAppointment}
+            className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2 border-t border-gray-100"
+          >
+            <Trash2 className="w-4 h-4" />
+            Excluir
+          </button>
+        </div>
+      )}
     </div>
   );
 }
