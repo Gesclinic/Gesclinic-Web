@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
+import { useClinicContext } from '@/contexts/ClinicContext';
 
 export function useAgenda() {
+  const { clinicId } = useClinicContext();
   const [view, setView] = useState('unificada');
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -10,12 +12,26 @@ export function useAgenda() {
 
   const [date, setDate] = useState(new Date());
 
-  const loadProfessionals = async () => {
-    const { data } = await supabase.from('professionals').select('*');
+  const loadProfessionals = useCallback(async () => {
+    if (!clinicId) {
+      setProfessionals([]);
+      return;
+    }
+
+    const { data } = await supabase
+      .from('professionals')
+      .select('*')
+      .eq('clinic_id', clinicId);
     setProfessionals(data || []);
-  };
+  }, [clinicId]);
 
   const load = useCallback(async () => {
+    if (!clinicId) {
+      setList([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
 
     const start = new Date(date);
@@ -25,7 +41,7 @@ export function useAgenda() {
     end.setHours(23, 59, 59, 999);
 
     const { data, error } = await supabase.rpc('list_agenda_v1', {
-      p_clinic_id: window.clinicId,
+      p_clinic_id: clinicId,
       p_start: start.toISOString(),
       p_end: end.toISOString(),
       p_professional_id: view === 'profissional' ? selectedProfessional || null : null,
@@ -35,12 +51,12 @@ export function useAgenda() {
       setList(data || []);
     }
     setLoading(false);
-  }, [date, view, selectedProfessional]);
+  }, [clinicId, date, view, selectedProfessional]);
 
   useEffect(() => {
     loadProfessionals();
     load();
-  }, [load]);
+  }, [load, loadProfessionals]);
 
   return {
     view,

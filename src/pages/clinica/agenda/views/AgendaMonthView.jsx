@@ -14,6 +14,7 @@ import { ptBR } from 'date-fns/locale';
 import { getProfessionalAvailableSlots } from '@/lib/agendaUtils';
 import { checkMultipleDates } from '@/lib/holidaysApi';
 import { getStatusStyle } from '@/utils/helpers/getStatusStyle';
+import { useClinicContext } from '@/contexts/ClinicContext';
 
 /**
  * AgendaMonthView - Visualização em calendário mensal
@@ -57,7 +58,10 @@ export default function AgendaMonthView({
   filteredProfessionalId = null, // NOVO: ID do profissional filtrado
   userRole = null, // Role do usuário logado
   userProfessionalId = null, // ID do profissional logado (se for profissional)
+  clinicId = null,
 }) {
+  const { clinicId: contextClinicId } = useClinicContext();
+  const activeClinicId = clinicId || contextClinicId || null;
   const [professionalAvailabilityByDay, setProfessionalAvailabilityByDay] = useState({}); // NOVO: Disponibilidade por dia
   const [hoveredDay, setHoveredDay] = useState(null); // Rastrear qual dia está com hover
   const [holidaysMap, setHolidaysMap] = useState({}); // Mapa de feriados
@@ -124,7 +128,7 @@ export default function AgendaMonthView({
         // ⚡ Carregar TODAS as disponibilidades em paralelo ao invés de sequencial
         const promises = monthDays.map((day) => {
           const dayStr = format(day, 'yyyy-MM-dd');
-          return getProfessionalAvailableSlots(profIdToLoad, dayStr)
+          return getProfessionalAvailableSlots(profIdToLoad, dayStr, activeClinicId)
             .then((slots) => ({
               dayStr,
               hasAvailability: slots && slots.length > 0,
@@ -176,7 +180,7 @@ export default function AgendaMonthView({
     if (profIdToLoad) {
       loadProfessionalAvailability();
     }
-  }, [filteredProfessionalId, userRole, userProfessionalId, dateObj]);
+  }, [filteredProfessionalId, userRole, userProfessionalId, dateObj, activeClinicId]);
 
   // 🎉 Carregar feriados do mês
   useEffect(() => {

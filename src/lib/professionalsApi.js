@@ -70,10 +70,8 @@ export async function listProfessionals(clinicId) {
   try {
     let query = supabase.from('professionals').select('*').order('name', { ascending: true });
 
-    // Se tiver clinicId, filtra direto no banco (Melhor performance e segurança)
-    // MAS TAMBÉM retorna profissionais sem clinic_id (fallback para dados antigos)
-    console.log('🔍 Filtrando por clinicId ou NULL (fallback):', clinicId);
-    query = query.or(`clinic_id.eq.${clinicId},clinic_id.is.null`);
+    console.log('🔍 Filtrando por clinicId:', clinicId);
+    query = query.eq('clinic_id', clinicId);
 
     const { data, error } = await query;
 

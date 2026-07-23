@@ -37,7 +37,7 @@ export default function AgendaWeekView({
   onViewDetails = () => {},
   onContextMenu = () => {},
   showWeekends = false,
-  clinicId = null, // Pode vir do pai ou usar clinic?.id
+  clinicId = null,
   filteredProfessionalId = null, // NOVO: ID do profissional filtrado
   userRole = null, // Role do usuário logado
   userProfessionalId = null, // ID do profissional logado (se for profissional)
@@ -57,21 +57,23 @@ export default function AgendaWeekView({
     return `${names[0]} ${names[names.length - 1]}`;
   };
 
+  const { user } = useAuth();
+  const { clinic: activeClinic, clinicId: contextClinicId } = useClinicContext();
+  const activeClinicId = clinicId || contextClinicId || null;
+
   // Debug: Log de props ao montar
   console.log('🔍 AgendaWeekView props:', {
     date,
-    clinicId,
+    activeClinicId,
     hasAppointments: appointments.length,
     filteredProfessionalId,
   });
+
   const [hoveredTime, setHoveredTime] = useState(null);
   const [holidaysMap, setHolidaysMap] = useState({});
   const [loadingHolidays, setLoadingHolidays] = useState(false);
   const [openingHoliday, setOpeningHoliday] = useState(null);
   const [professionalAvailabilityByDay, setProfessionalAvailabilityByDay] = useState({}); // NOVO: Disponibilidade por dia
-
-  const { user } = useAuth();
-  const clinic = useClinicContext();
 
   // Log de disponibilidade
   useEffect(() => {
@@ -83,8 +85,8 @@ export default function AgendaWeekView({
 
   // Gerar horários de acordo com as configurações da clínica
   const timeSlots = useMemo(() => {
-    return getClinicTimeSlots(clinic);
-  }, [clinic]);
+    return getClinicTimeSlots(activeClinic);
+  }, [activeClinic]);
 
   // Calcular semana a partir da data
   const weekStart = startOfWeek(parseISO(date), { weekStartsOn: 1 }); // Monday
@@ -168,9 +170,6 @@ export default function AgendaWeekView({
   // Carregar status de feriados da semana (com retry)
   useEffect(() => {
     const loadHolidays = async () => {
-      // Usar clinicId da prop ou do clinic context
-      const activeClinicId = clinicId || clinic?.id;
-
       // ✅ IMPORTANTE: Carregar feriados NACIONAIS mesmo sem clinicId!
       // A função checkMultipleDates() busca: clinic_id IS NULL OR clinic_id = activeClinicId
       // Quando activeClinicId é null, busca apenas feriados nacionais (clinic_id = NULL)
@@ -209,7 +208,7 @@ export default function AgendaWeekView({
     loadHolidays();
 
     // Depende de: date (muda semana) e showWeekends (muda dias incluídos)
-  }, [date, showWeekends]);
+  }, [date, showWeekends, activeClinicId, daysOfWeek]);
 
   // 🆕 NOVO: Carregar disponibilidade do profissional para cada dia da semana (OTIMIZADO COM PARALELO)
   useEffect(() => {
@@ -237,7 +236,7 @@ export default function AgendaWeekView({
         // ⚡ Carregar TODAS as disponibilidades em paralelo ao invés de sequencial
         const promises = daysOfWeek.map((day) => {
           const dayStr = format(day, 'yyyy-MM-dd');
-          return getProfessionalAvailableSlots(profIdToLoad, dayStr)
+          return getProfessionalAvailableSlots(profIdToLoad, dayStr, activeClinicId)
             .then((slots) => {
               console.log(`🔍 [AgendaWeekView] ${dayStr}: slots retornados:`, slots);
               return {
@@ -285,11 +284,11 @@ export default function AgendaWeekView({
     if (profIdToLoad) {
       loadProfessionalAvailability();
     }
-  }, [filteredProfessionalId, userRole, userProfessionalId, date]);
+  }, [filteredProfessionalId, userRole, userProfessionalId, date, activeClinicId, daysOfWeek]);
 
   // Handler para abrir agenda de feriado manualmente
   const handleOpenHoliday = async (dateStr, reason = '') => {
-    if (!user?.id || (!clinicId && !clinic?.id)) {
+    if (!user?.id || !activeClinicId) {
       return;
     }
 
@@ -297,7 +296,7 @@ export default function AgendaWeekView({
     try {
       const success = await openHolidayManual(
         dateStr,
-        clinicId || clinic.id,
+        activeClinicId,
         user.id,
         reason || 'Abertura manual da agenda',
       );
@@ -306,7 +305,7 @@ export default function AgendaWeekView({
         // Recarregar feriados após override
         const updatedHolidays = await checkMultipleDates(
           daysOfWeek.map((d) => format(d, 'yyyy-MM-dd')),
-          clinicId || clinic.id,
+          activeClinicId,
         );
         setHolidaysMap(updatedHolidays);
       }

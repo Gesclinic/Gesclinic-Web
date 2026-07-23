@@ -17,6 +17,39 @@ export function AuthProvider({ children }) {
   const [clinicId, setClinicId] = useState(null);
   const [currentRole, setCurrentRole] = useState(null);
 
+  useEffect(() => {
+    const syncActiveCompanyFromStorage = () => {
+      try {
+        const sessionData = JSON.parse(localStorage.getItem('gesclinic_session') || '{}');
+        if (sessionData.clinic_id || sessionData.clinicId) {
+          setClinicId(sessionData.clinic_id || sessionData.clinicId);
+        }
+        if (sessionData.role) {
+          setCurrentRole(sessionData.role);
+        }
+      } catch (error) {
+        console.warn('⚠️ [AuthProvider] Erro ao sincronizar empresa ativa:', error);
+      }
+    };
+
+    const handleTenantContextChanged = (event) => {
+      const nextClinicId = event.detail?.clinicId;
+      if (nextClinicId) {
+        setClinicId(nextClinicId);
+      }
+      syncActiveCompanyFromStorage();
+    };
+
+    syncActiveCompanyFromStorage();
+    window.addEventListener('gesclinic:tenant-context-changed', handleTenantContextChanged);
+    window.addEventListener('storage', syncActiveCompanyFromStorage);
+
+    return () => {
+      window.removeEventListener('gesclinic:tenant-context-changed', handleTenantContextChanged);
+      window.removeEventListener('storage', syncActiveCompanyFromStorage);
+    };
+  }, []);
+
   const loadUserData = useCallback(async (currentUser) => {
     console.log('🚀 [loadUserData] INICIANDO...', currentUser?.id, currentUser?.email);
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/customSupabaseClient';
+import { useClinicContext } from '@/contexts/ClinicContext';
 import ConfirmationDialog from '@/components/clinica/ConfirmationDialog';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
@@ -22,6 +23,7 @@ import {
 export default function Usuarios({ embedded = false }) {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { activeCompany, clinicId, companyId } = useClinicContext();
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -35,20 +37,79 @@ export default function Usuarios({ embedded = false }) {
   });
 
   useEffect(() => {
-    loadUsuarios();
-  }, []);
+    let isCurrent = true;
+    loadUsuarios(companyId, activeCompany?.clinic_id || clinicId, () => isCurrent);
 
-  const loadUsuarios = async () => {
+    return () => {
+      isCurrent = false;
+    };
+  }, [activeCompany?.clinic_id, clinicId, companyId]);
+
+  const loadUsuarios = async (
+    targetCompanyId = companyId,
+    targetClinicId = activeCompany?.clinic_id || clinicId,
+    isCurrent = () => true,
+  ) => {
+    setUsuarios([]);
+    setStats({ total: 0, roles: {} });
+
+    if (!targetCompanyId && !targetClinicId) {
+      setUsuarios([]);
+      setStats({ total: 0, roles: {} });
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, email, full_name, username, cpf, birthdate, role, created_at, clinic_id')
+      const { data: accessRows, error } = await supabase
+        .from('user_companies')
+        .select('role, users:user_id(id, email, full_name, username, cpf, birthdate, role, created_at, clinic_id, company_id)')
+        .eq('company_id', targetCompanyId)
+        .eq('is_active', true)
         .order('created_at', { ascending: false });
+
+      if (!isCurrent()) {
+        return;
+      }
 
       if (error) {
         throw error;
       }
+
+      const accessUsers = (accessRows || [])
+        .map((row) => (row.users ? { ...row.users, role: row.role || row.users.role } : null))
+        .filter(Boolean);
+
+      const legacyFilters = [
+        targetCompanyId ? `company_id.eq.${targetCompanyId}` : null,
+        targetClinicId ? `clinic_id.eq.${targetClinicId}` : null,
+      ].filter(Boolean);
+
+      const { data: legacyUsers, error: legacyError } = legacyFilters.length
+        ? await supabase
+            .from('users')
+            .select('id, email, full_name, username, cpf, birthdate, role, created_at, clinic_id, company_id')
+            .or(legacyFilters.join(','))
+            .order('created_at', { ascending: false })
+        : { data: [], error: null };
+
+      if (!isCurrent()) {
+        return;
+      }
+
+      if (legacyError) {
+        throw legacyError;
+      }
+
+      const usersById = new Map();
+      [...(legacyUsers || []), ...accessUsers].forEach((user) => {
+        if (user?.id) {
+          usersById.set(user.id, user);
+        }
+      });
+
+      const data = Array.from(usersById.values());
 
       setUsuarios(data || []);
 
@@ -74,7 +135,9 @@ export default function Usuarios({ embedded = false }) {
         description: error.message || 'Não foi possível buscar os usuários agora.',
       });
     } finally {
-      setLoading(false);
+      if (isCurrent()) {
+        setLoading(false);
+      }
     }
   };
 

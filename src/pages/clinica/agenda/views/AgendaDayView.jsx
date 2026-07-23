@@ -383,6 +383,7 @@ export default function AgendaDayView({
   filteredProfessionalId = null, // 🆕 ID do profissional filtrado (se houver)
   userRole = null, // 🆕 Role do usuário logado
   userProfessionalId = null, // 🆕 ID do profissional atual (para RBAC)
+  clinicId = null,
   professionals = [], // 🆕 Lista de profissionais
   services = [], // 🆕 Lista de serviços
   payers = [], // 🆕 Lista de convênios
@@ -430,7 +431,8 @@ export default function AgendaDayView({
   const [professionalsMap, setProfessionalsMap] = useState({}); // 🆕 { profId: { id, name } }
   const scrollContainerRef = useRef(null);
   const navigate = useNavigate();
-  const clinic = useClinicContext();
+  const { clinic: activeClinic, clinicId: contextClinicId } = useClinicContext();
+  const activeClinicId = clinicId || contextClinicId || null;
   const { currentRole } = useAuth();
 
   // Calcular estados de feriado
@@ -476,8 +478,7 @@ export default function AgendaDayView({
       }
 
       try {
-        const clinicId = clinic?.id || null;
-        const result = await checkMultipleDates([date], clinicId);
+        const result = await checkMultipleDates([date], activeClinicId);
         if (result[date]) {
           setHoliday(result[date]);
         } else {
@@ -490,7 +491,7 @@ export default function AgendaDayView({
     };
 
     loadHolidayInfo();
-  }, [date, clinic?.id]);
+  }, [date, activeClinicId]);
 
   const getAvailableProfessionalsForTime = (time) => {
     const availableProfs = [];
@@ -521,7 +522,7 @@ export default function AgendaDayView({
         if (filteredProfessionalId) {
           // Se há profissional filtrado, carregar apenas aquele
 
-          const slots = await getProfessionalAvailableSlots(filteredProfessionalId, date);
+          const slots = await getProfessionalAvailableSlots(filteredProfessionalId, date, activeClinicId);
           availability[filteredProfessionalId] = slots;
         } else {
           // ✅ NOVO: Buscar TODOS os profissionais disponíveis para o dia
@@ -531,7 +532,7 @@ export default function AgendaDayView({
 
           const availableProfessionals = await getAvailableProfessionalsForDay(
             date,
-            null,
+            activeClinicId,
             profIdToUse,
           );
 
@@ -551,7 +552,7 @@ export default function AgendaDayView({
     };
 
     loadProfessionalAvailability();
-  }, [date, filteredProfessionalId, userRole, userProfessionalId]);
+  }, [date, filteredProfessionalId, userRole, userProfessionalId, activeClinicId]);
 
   // 🆕 Carregar dados dos profissionais (nomes) do banco
   useEffect(() => {
@@ -559,7 +560,8 @@ export default function AgendaDayView({
       try {
         // Obter todos os IDs de profissionais que tem disponibilidade neste dia
         const profIds = Object.keys(professionalAvailability);
-        if (profIds.length === 0) {
+        if (profIds.length === 0 || !activeClinicId) {
+          setProfessionalsMap({});
           return;
         }
 
@@ -567,6 +569,7 @@ export default function AgendaDayView({
         const { data: profs, error } = await supabase
           .from('professionals')
           .select('id, name')
+          .eq('clinic_id', activeClinicId)
           .in('id', profIds);
 
         if (error) {
@@ -587,12 +590,12 @@ export default function AgendaDayView({
     };
 
     loadProfessionalsData();
-  }, [professionalAvailability]);
+  }, [professionalAvailability, activeClinicId]);
 
   // ✅ Gerar slots de horário baseado nas configurações da clínica
   const timeSlots = useMemo(() => {
-    return getClinicTimeSlots(clinic);
-  }, [clinic]);
+    return getClinicTimeSlots(activeClinic);
+  }, [activeClinic]);
 
   // Agrupar por horário e ordenar
   const groupedByTime = useMemo(() => {

@@ -5,7 +5,7 @@
 // Cache invalidation: 2025-03-17 v2
 // ============================================================
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useClinicContext } from '@/contexts/ClinicContext';
 import { usePagination } from '@/hooks/usePagination';
@@ -113,8 +113,8 @@ export function ProfessionalsPage() {
   // ============================================================
   // STATES & HOOKS
   // ============================================================
-  const { user, clinicId } = useAuth();
-  const { clinic, loadingClinic } = useClinicContext();
+  const { user } = useAuth();
+  const { clinicId, clinic, loadingClinic } = useClinicContext();
   const [professionals, setProfessionals] = useState([]);
   const [services, setServices] = useState([]);
   const [healthInsurances, setHealthInsurances] = useState([]);
@@ -171,6 +171,7 @@ export function ProfessionalsPage() {
   const [availableUsers, setAvailableUsers] = useState([]);
   const [linkingUser, setLinkingUser] = useState(false);
   const [refreshCounter, setRefreshCounter] = useState(0); // Força re-render
+  const loadRequestRef = useRef(0);
 
   const {
     pageNum,
@@ -186,17 +187,26 @@ export function ProfessionalsPage() {
   // LOAD DATA
   // ============================================================
   const loadData = useCallback(async () => {
+    const requestId = loadRequestRef.current + 1;
+    loadRequestRef.current = requestId;
+
     if (!clinicId || !user) {
       console.warn('🔴 [ProfessionalsPage] Missing clinicId or user:', {
         clinicId,
         user: user?.email,
       });
+      setProfessionals([]);
+      setServices([]);
+      setHealthInsurances([]);
       return;
     }
 
     try {
       setLoading(true);
       setError(null);
+      setProfessionals([]);
+      setServices([]);
+      setHealthInsurances([]);
 
       console.log('🔍 [ProfessionalsPage] Loading professionals for clinicId:', clinicId);
 
@@ -205,6 +215,10 @@ export function ProfessionalsPage() {
         servicesApi.listServices(clinicId),
         healthInsurancesApi.listHealthInsurances(clinicId),
       ]);
+
+      if (requestId !== loadRequestRef.current) {
+        return;
+      }
 
       console.log('✅ [ProfessionalsPage] Loaded professionals:', {
         count: profs?.length || 0,
@@ -216,10 +230,15 @@ export function ProfessionalsPage() {
       setServices(svcs || []);
       setHealthInsurances(insurances || []);
     } catch (err) {
+      if (requestId !== loadRequestRef.current) {
+        return;
+      }
       console.error('❌ [ProfessionalsPage] Error loading data:', err);
       setError(err.message || 'Erro ao carregar dados');
     } finally {
-      setLoading(false);
+      if (requestId === loadRequestRef.current) {
+        setLoading(false);
+      }
     }
   }, [clinicId, user, setProfessionals, setServices, setHealthInsurances]);
 

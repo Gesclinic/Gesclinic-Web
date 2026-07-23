@@ -1421,6 +1421,7 @@ export default function AgendaIndex() {
             onEditAppointment={handleEditAppointment}
             onViewDetails={handleViewDetails}
             onContextMenu={handleContextMenu}
+            clinicId={clinicId}
             filteredProfessionalId={filters.professional_id}
             userRole={auth?.currentRole}
             userProfessionalId={userProfessionalId}
@@ -1439,6 +1440,7 @@ export default function AgendaIndex() {
             onEditAppointment={handleEditAppointment}
             onViewDetails={handleViewDetails}
             date={date}
+            clinicId={clinicId}
             filteredProfessionalId={filters.professional_id}
             userRole={auth?.currentRole}
             userProfessionalId={userProfessionalId}

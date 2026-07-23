@@ -64,9 +64,10 @@ export function getClinicTimeSlots(clinic = null) {
  * Verifica se o profissional tem cadastro de disponibilidade para este dia
  * @param {string} professionalId - ID do profissional
  * @param {Date|string} date - Data a verificar (Date ou 'YYYY-MM-DD')
+ * @param {string|null} clinicId - ID da clínica/empresa ativa
  * @returns {Promise<string[]>} Array de horários disponíveis (HH:mm)
  */
-export async function getProfessionalAvailableSlots(professionalId, date) {
+export async function getProfessionalAvailableSlots(professionalId, date, clinicId = null) {
   if (!professionalId || !date) {
     console.log('⚠️ [getProfessionalAvailableSlots] Missing profId or date:', {
       professionalId,
@@ -90,18 +91,25 @@ export async function getProfessionalAvailableSlots(professionalId, date) {
 
     console.log('🔍 [getProfessionalAvailableSlots] Buscando para profissional:', {
       professionalId,
+      clinicId,
       date,
       dayOfWeek,
       dayName: ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][dayOfWeek],
     });
 
     // Buscar disponibilidade cadastrada para este profissional neste dia
-    const { data: schedules, error } = await supabase
+    let query = supabase
       .from('professional_schedules')
       .select('start_time, end_time, duration_minutes, active')
       .eq('professional_id', professionalId)
       .eq('day_of_week', dayOfWeek)
       .eq('active', true);
+
+    if (clinicId) {
+      query = query.eq('clinic_id', clinicId);
+    }
+
+    const { data: schedules, error } = await query;
 
     if (error) {
       console.error('❌ Erro ao carregar disponibilidade do profissional:', error);
@@ -207,6 +215,7 @@ export async function getAvailableProfessionalsForDay(
 
     console.log('🔍 [getAvailableProfessionalsForDay] Buscando profissionais para:', {
       date,
+      clinicId,
       dayOfWeek,
       dayName: ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][dayOfWeek],
       userProfessionalId,
@@ -268,10 +277,16 @@ export async function getAvailableProfessionalsForDay(
     const profIds = Array.from(professionalsMap.keys());
     console.log('🔍 [getAvailableProfessionalsForDay] IDs de profissionais a buscar:', profIds);
 
-    const { data: professionals, error: profError } = await supabase
+    let professionalsQuery = supabase
       .from('professionals')
       .select('id, name')
       .in('id', profIds);
+
+    if (clinicId) {
+      professionalsQuery = professionalsQuery.eq('clinic_id', clinicId);
+    }
+
+    const { data: professionals, error: profError } = await professionalsQuery;
 
     if (profError) {
       console.error('❌ Erro ao carregar dados dos profissionais:', profError);

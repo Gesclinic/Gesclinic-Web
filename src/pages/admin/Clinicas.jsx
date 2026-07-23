@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet';
 import { useNavigate } from 'react-router-dom';
 import ConfirmationDialog from '@/components/clinica/ConfirmationDialog';
 import { supabase } from '@/lib/customSupabaseClient';
+import { useClinicContext } from '@/contexts/ClinicContext';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 import {
@@ -25,6 +26,7 @@ import {
 export default function Clinicas({ embedded = false }) {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { companyId } = useClinicContext();
   const [clinicas, setClinicas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -38,28 +40,59 @@ export default function Clinicas({ embedded = false }) {
   });
 
   useEffect(() => {
-    loadClinicas();
-  }, []);
+    let isCurrent = true;
+    loadClinicas(companyId, () => isCurrent);
 
-  const loadClinicas = async () => {
+    return () => {
+      isCurrent = false;
+    };
+  }, [companyId]);
+
+  const loadClinicas = async (targetCompanyId = companyId, isCurrent = () => true) => {
+    setClinicas([]);
+    setStats({ total: 0, ativas: 0, inativas: 0 });
+
+    if (!targetCompanyId) {
+      setClinicas([]);
+      setStats({ total: 0, ativas: 0, inativas: 0 });
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('clinics')
-        .select('*')
+        .from('companies')
+        .select('id, clinic_id, name, legal_name, trade_name, cnpj, status, created_at, updated_at')
+        .eq('id', targetCompanyId)
         .order('created_at', { ascending: false });
+
+      if (!isCurrent()) {
+        return;
+      }
 
       if (error) {
         throw error;
       }
 
-      setClinicas(data || []);
+      const mappedData = (data || []).map((company) => ({
+        id: company.clinic_id || company.id,
+        company_id: company.id,
+        name: company.trade_name || company.name || company.legal_name,
+        fantasy_name: company.legal_name && company.legal_name !== company.name ? company.legal_name : company.trade_name,
+        cnpj: company.cnpj,
+        status: company.status || 'active',
+        created_at: company.created_at,
+        updated_at: company.updated_at,
+      }));
+
+      setClinicas(mappedData);
 
       // Calcular estatísticas
       const stats = {
-        total: data?.length || 0,
-        ativas: data?.filter((c) => c.status === 'active' || !c.status).length || 0,
-        inativas: data?.filter((c) => c.status === 'inactive').length || 0,
+        total: mappedData.length,
+        ativas: mappedData.filter((c) => c.status === 'active' || !c.status).length,
+        inativas: mappedData.filter((c) => c.status === 'inactive').length,
       };
       setStats(stats);
     } catch (error) {
@@ -70,7 +103,9 @@ export default function Clinicas({ embedded = false }) {
         description: error.message || 'Não foi possível buscar as clínicas agora.',
       });
     } finally {
-      setLoading(false);
+      if (isCurrent()) {
+        setLoading(false);
+      }
     }
   };
 
