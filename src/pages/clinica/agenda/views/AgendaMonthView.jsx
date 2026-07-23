@@ -49,6 +49,33 @@ const isValidDate = (date) => {
   return false;
 };
 
+const getAppointmentTimeLabel = (appointment) => {
+  const directTime =
+    appointment?.scheduled_time ||
+    appointment?.time ||
+    appointment?.horário ||
+    appointment?.hora ||
+    appointment?.start_time;
+
+  if (typeof directTime === 'string') {
+    const timeMatch = directTime.match(/(?:T)?(\d{2}:\d{2})(?::\d{2})?/);
+    if (timeMatch) {
+      return timeMatch[1];
+    }
+  }
+
+  const dateTimeValue = appointment?.startTime || appointment?.start || appointment?.scheduled_at;
+  if (isValidDate(dateTimeValue)) {
+    try {
+      return format(new Date(dateTimeValue), 'HH:mm');
+    } catch {
+      return '';
+    }
+  }
+
+  return '';
+};
+
 export default function AgendaMonthView({
   date,
   appointments = [],
@@ -565,15 +592,7 @@ export default function AgendaMonthView({
                       // Quando tem agendamentos (até 2 exibidos)
                       <div className="w-full text-center space-y-0.5">
                         {dayAppts.slice(0, 2).map((apt) => {
-                          // ✅ Validar antes de formatar data
-                          let aptTime = (apt.scheduled_time || '').substring(0, 5);
-                          if (!aptTime && isValidDate(apt.startTime || apt.start_time)) {
-                            try {
-                              aptTime = format(apt.startTime || apt.start_time, 'HH:mm');
-                            } catch {
-                              aptTime = '';
-                            }
-                          }
+                          const aptTime = getAppointmentTimeLabel(apt);
 
                           const fullName = apt.patient_name || 'Paciente';
                           const nameParts = fullName.split(' ').filter((p) => p.length > 0);
@@ -636,10 +655,17 @@ export default function AgendaMonthView({
                     <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs rounded px-2 py-1.5 pointer-events-none z-50 max-w-xs">
                       {dayAppts.map((apt, idx) => (
                         <div key={idx} className="whitespace-nowrap truncate">
-                          <span className="font-semibold">
-                            {apt.scheduled_time ? apt.scheduled_time.substring(0, 5) : 'S/H'}
-                          </span>{' '}
-                          • {apt.patient_name || 'Paciente'}
+                          {(() => {
+                            const aptTime = getAppointmentTimeLabel(apt);
+                            return aptTime ? (
+                              <>
+                                <span className="font-semibold">{aptTime}</span> •{' '}
+                                {apt.patient_name || 'Paciente'}
+                              </>
+                            ) : (
+                              apt.patient_name || 'Paciente'
+                            );
+                          })()}
                         </div>
                       ))}
                       <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-2 border-transparent border-t-gray-900" />
