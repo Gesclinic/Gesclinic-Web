@@ -67,14 +67,14 @@ export default function AgendaHeaderNew({
 
   return (
     <div className="bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm">
-      <div className="px-6 py-2.5 flex items-center justify-between gap-6">
+      <div className="px-4 py-2 flex flex-wrap items-center justify-between gap-3 lg:flex-nowrap">
         {/* 🅐 BLOCO A: Navegação de Data */}
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-[260px] items-center gap-2">
           {/* Seta Esquerda */}
           <button
             onClick={onPreviousDay}
             disabled={loading}
-            className="p-1.5 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-900 transition-colors disabled:opacity-50"
+            className="rounded-md border border-transparent p-2 text-gray-500 transition-colors hover:border-blue-100 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-50"
             title="Dia anterior"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -91,7 +91,7 @@ export default function AgendaHeaderNew({
           <button
             onClick={onNextDay}
             disabled={loading}
-            className="p-1.5 rounded hover:bg-gray-100 text-gray-500 hover:text-gray-900 transition-colors disabled:opacity-50"
+            className="rounded-md border border-transparent p-2 text-gray-500 transition-colors hover:border-blue-100 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-50"
             title="Próximo dia"
           >
             <ChevronRight className="w-4 h-4" />
@@ -110,7 +110,7 @@ export default function AgendaHeaderNew({
         </div>
 
         {/* 🅑 BLOCO B: Modo de Visualização */}
-        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+        <div className="order-3 flex w-full items-center justify-center gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1 lg:order-none lg:w-auto">
           {['dia', 'semana', 'mes'].map((mode) => {
             const isAccessible = accessibleTabs.includes(mode);
             const isActive = viewMode === mode;
@@ -137,10 +137,10 @@ export default function AgendaHeaderNew({
                 disabled={loading}
                 title={tabLabel.fullLabel}
                 className={`
-                  px-3 py-1.5 text-xs font-medium rounded transition-all whitespace-nowrap disabled:opacity-50
+                  px-4 py-2 text-xs font-semibold rounded-md transition-all whitespace-nowrap disabled:opacity-50
                   ${
                     isActive
-                      ? 'bg-white text-blue-600 shadow-sm'
+                      ? 'bg-white text-blue-700 shadow-sm ring-1 ring-blue-100'
                       : 'text-gray-600 hover:text-gray-900'
                   }
                 `}
@@ -155,7 +155,7 @@ export default function AgendaHeaderNew({
         <button
           onClick={onNewAppointment}
           disabled={loading}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 active:scale-95 whitespace-nowrap font-medium"
+          className="flex items-center gap-2 rounded-md bg-blue-600 px-5 py-2.5 text-white shadow-sm transition-colors hover:bg-blue-700 disabled:opacity-50 active:scale-95 whitespace-nowrap font-semibold"
         >
           <Plus className="w-4 h-4" />
           <span className="text-sm">Novo</span>

@@ -587,12 +587,13 @@ export default function AgendaMonthView({
                   <div className="text-sm font-bold mb-1 text-gray-900">{format(dayObj, 'd')}</div>
 
                   {/* Conteúdo do dia */}
-                  <div className="flex-1 flex items-center justify-center overflow-hidden">
+                  <div className={`flex-1 overflow-hidden ${dayAppts.length > 0 ? 'flex items-start' : 'flex items-center justify-center'}`}>
                     {dayAppts.length > 0 && isCurrentMonth && !isHolidayBlocked ? (
                       // Quando tem agendamentos (até 2 exibidos)
-                      <div className="w-full text-center space-y-0.5">
+                      <div className="w-full space-y-1">
                         {dayAppts.slice(0, 2).map((apt) => {
                           const aptTime = getAppointmentTimeLabel(apt);
+                          const { color } = getStatusStyle(apt.status);
 
                           const fullName = apt.patient_name || 'Paciente';
                           const nameParts = fullName.split(' ').filter((p) => p.length > 0);
@@ -611,11 +612,11 @@ export default function AgendaMonthView({
                               onContextMenu={(e) => {
                                 openAppointmentMenu(e, apt);
                               }}
-                              className="text-xs font-semibold px-1 py-0.5 whitespace-nowrap overflow-hidden text-ellipsis cursor-pointer hover:opacity-75"
-                              style={{ color: '#d97706' }}
+                              className="rounded-md border bg-white/85 px-2 py-1 text-[11px] font-black leading-tight shadow-sm whitespace-nowrap overflow-hidden text-ellipsis cursor-pointer hover:opacity-90"
+                              style={{ color: color || '#d97706', borderColor: color || '#f59e0b' }}
                               title={fullName}
                             >
-                              {aptTime ? `${aptTime} • ${displayName}` : displayName}
+                              {aptTime ? `${aptTime} - ${displayName}` : displayName}
                             </div>
                           );
                         })}

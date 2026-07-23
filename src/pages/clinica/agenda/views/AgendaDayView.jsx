@@ -298,8 +298,8 @@ const renderOccupiedSlot = (
 
   return (
     <div
-      className="grid grid-cols-12 gap-0 h-14 items-center w-full border-b border-gray-100"
-      style={{ background: statusBgColor }}
+      className="grid grid-cols-12 gap-0 h-16 items-stretch w-full border-b border-gray-100 border-l-4"
+      style={{ background: statusBgColor, borderLeftColor: statusStyle.color }}
     >
       <div
         className="col-span-1 px-3 text-sm font-semibold border-r border-gray-200 flex items-center justify-center"
@@ -312,7 +312,7 @@ const renderOccupiedSlot = (
       </div>
       <div className="col-span-2 px-3 border-r border-gray-200 flex items-center justify-center min-w-0 w-full">
         <div
-          className="text-sm font-bold group-hover:font-black transition-all truncate text-center cursor-pointer hover:underline"
+          className="max-w-full rounded-md border border-white/70 bg-white/75 px-2.5 py-1 text-sm font-black shadow-sm transition-all truncate text-center cursor-pointer hover:underline"
           style={{ color: statusStyle.color }}
           title={apt.patientName || apt.patient_name || apt.paciente || apt.patient || '—'}
         >

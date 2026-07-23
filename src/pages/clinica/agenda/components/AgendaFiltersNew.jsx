@@ -57,19 +57,19 @@ export default function AgendaFiltersNew({
   };
 
   return (
-    <div className="bg-white border-b border-gray-200 sticky top-32 z-10">
-      <div className="w-full mx-auto px-4 py-3">
-        <div className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+    <div className="bg-white border-b border-gray-200 sticky top-28 z-10">
+      <div className="w-full mx-auto px-4 py-2">
+        <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
           <button
             type="button"
             onClick={toggleOpen}
             className="flex w-full items-center justify-between gap-3 text-left"
             aria-expanded={isOpen}
           >
-            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-              <Filter className="h-5 w-5 text-slate-600" />
+            <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+              <Filter className="h-4 w-4 text-slate-600" />
               Filtros Avançados
-              <span className="rounded bg-slate-100 px-2 py-1 text-xs font-normal text-slate-500">
+              <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${activeFiltersCount > 0 ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}`}>
                 {activeFiltersCount} ativo(s)
               </span>
             </h3>
@@ -77,7 +77,7 @@ export default function AgendaFiltersNew({
           </button>
 
           {isOpen && (
-          <div className="mt-4 pt-4 border-t border-slate-100 space-y-4">
+          <div className="mt-3 pt-3 border-t border-slate-100 space-y-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
@@ -85,18 +85,18 @@ export default function AgendaFiltersNew({
                 placeholder="Buscar paciente, telefone ou serviço..."
                 value={filters.search || ''}
                 onChange={(e) => onFilterChange?.('search', e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3">
               {/* Filtro: Paciente */}
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-2">Paciente</label>
                 <select
                   value={filters.patient_id || ''}
                   onChange={(e) => onFilterChange?.('patient_id', e.target.value || '')}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Todos</option>
                   {metadata.patients?.map((patient) => (
@@ -115,7 +115,7 @@ export default function AgendaFiltersNew({
                 <select
                   value={filters.professional_id || ''}
                   onChange={(e) => onFilterChange?.('professional_id', e.target.value || '')}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Todos</option>
                   {metadata.professionals?.map((prof) => (
@@ -132,7 +132,7 @@ export default function AgendaFiltersNew({
                 <select
                   value={filters.room_id || ''}
                   onChange={(e) => onFilterChange?.('room_id', e.target.value || '')}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Todas</option>
                   {metadata.rooms?.map((room) => (
@@ -149,7 +149,7 @@ export default function AgendaFiltersNew({
                 <select
                   value={filters.status || ''}
                   onChange={(e) => onFilterChange?.('status', e.target.value || '')}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Todos</option>
                   <option value="scheduled">🗓️ Agendado</option>
@@ -167,7 +167,7 @@ export default function AgendaFiltersNew({
                 <select
                   value={filters.payer_id || ''}
                   onChange={(e) => onFilterChange?.('payer_id', e.target.value || '')}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Todos</option>
                   {metadata.payers?.map((payer) => (
@@ -184,7 +184,7 @@ export default function AgendaFiltersNew({
                 <select
                   value={filters.service_id || ''}
                   onChange={(e) => onFilterChange?.('service_id', e.target.value || '')}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Todos</option>
                   {metadata.services?.map((service) => (
