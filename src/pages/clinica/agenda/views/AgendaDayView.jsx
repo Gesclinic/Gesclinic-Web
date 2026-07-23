@@ -70,6 +70,9 @@ const getFirstAndLastName = (fullName) => {
   return `${names[0]} ${names[names.length - 1]}`;
 };
 
+const getVisibleProfessionalName = (...values) =>
+  values.find((value) => value && typeof value === 'string' && !/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(value)) || '';
+
 // ✅ FUNÇÃO HELPER PARA GERAR CLASSES DO GRID
 const getColSpanClass = (colName) => `col-span-${GRID_COLUMNS[colName] || 1}`;
 
@@ -499,8 +502,8 @@ export default function AgendaDayView({
     // Procurar por profissionais que têm este horário disponível
     Object.entries(professionalAvailability).forEach(([profId, slots]) => {
       if (Array.isArray(slots) && slots.includes(time)) {
-        // Usar o mapa para obter o nome
-        const profName = professionalsMap[profId]?.name || profId;
+        // Usar apenas nome legível; nunca exibir UUID/código do profissional.
+        const profName = getVisibleProfessionalName(professionalsMap[profId]?.name);
         availableProfs.push({ id: profId, name: profName });
       }
     });
@@ -537,9 +540,13 @@ export default function AgendaDayView({
           );
 
           // Converter para formato { profId: slots }
+          const professionalsById = {};
           availableProfessionals.forEach((prof) => {
             availability[prof.id] = prof.available_slots;
+            professionalsById[prof.id] = { id: prof.id, name: prof.name };
           });
+
+          setProfessionalsMap(professionalsById);
 
 
         }
@@ -644,7 +651,7 @@ export default function AgendaDayView({
         const availableProfs = [];
         Object.entries(professionalAvailability).forEach(([profId, slots]) => {
           if (Array.isArray(slots) && slots.includes(time)) {
-            const profName = professionalsMap[profId]?.name || profId;
+            const profName = getVisibleProfessionalName(professionalsMap[profId]?.name);
             availableProfs.push({ id: profId, name: profName });
           }
         });
@@ -656,12 +663,12 @@ export default function AgendaDayView({
           }
           availableProfs.push({
             id: aptProfessionalId,
-            name:
+            name: getVisibleProfessionalName(
               professionalsMap[aptProfessionalId]?.name ||
               apt.professional_name ||
               apt.professionalName ||
-              apt.profissional ||
-              aptProfessionalId,
+              apt.profissional,
+            ),
           });
         });
 
@@ -1109,7 +1116,7 @@ export default function AgendaDayView({
               const availableProfs = getAvailableProfessionalsForTime(time);
               const profNamesDisplay =
                 type === 'multi-prof' && professionalId
-                  ? professionalsMap[professionalId]?.name || professionalId
+                  ? getVisibleProfessionalName(professionalsMap[professionalId]?.name)
                   : availableProfs.map((p) => p.name).join(', ');
 
               return (
@@ -1198,7 +1205,7 @@ export default function AgendaDayView({
                 const availableProfs = getAvailableProfessionalsForTime(time);
                 const profNamesDisplay =
                   type === 'multi-prof' && filteredProfessionalId
-                    ? professionalsMap[filteredProfessionalId]?.name || filteredProfessionalId
+                    ? getVisibleProfessionalName(professionalsMap[filteredProfessionalId]?.name)
                     : availableProfs.map((p) => p.name).join(', ');
 
                 return (
