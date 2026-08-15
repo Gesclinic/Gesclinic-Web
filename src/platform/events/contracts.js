@@ -1,0 +1,17 @@
+export const PlatformEvents = {
+  ClinicCreated: 'ClinicCreated.v1',
+  ClinicActivated: 'ClinicActivated.v1',
+  UserCreated: 'UserCreated.v1',
+  PatientCreated: 'PatientCreated.v1',
+  AppointmentCreated: 'AppointmentCreated.v1',
+  AppointmentCancelled: 'AppointmentCancelled.v1',
+  InvoiceCreated: 'InvoiceCreated.v1',
+  InvoicePaid: 'InvoicePaid.v1',
+  PaymentReceived: 'PaymentReceived.v1',
+  NFeIssued: 'NFeIssued.v1',
+  WhatsAppSent: 'WhatsAppSent.v1',
+  EmailSent: 'EmailSent.v1',
+  WebhookReceived: 'WebhookReceived.v1',
+  IntegrationConnected: 'IntegrationConnected.v1',
+  IntegrationDisconnected: 'IntegrationDisconnected.v1',
+}

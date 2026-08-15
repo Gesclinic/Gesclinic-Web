@@ -19,18 +19,31 @@ CREATE OR REPLACE FUNCTION platform.append_audit_event_v2(
 RETURNS TABLE(id uuid)
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = platform, public
+SET search_path = pg_catalog, platform, extensions
 AS $$
 DECLARE
-  prev_sig text := p_previous_signature;
   new_id uuid;
+  new_hash text;
 BEGIN
-  INSERT INTO platform.audit_events(event_type, event_id, payload, metadata, tenant_id, clinic_id, actor_id, ip, user_agent, correlation_id, request_id, key_version, signature, previous_signature, created_at)
-  VALUES (p_event_type, p_event_id, p_payload, p_metadata, p_tenant_id, p_clinic_id, p_actor_id, p_ip, p_user_agent, p_correlation_id, p_request_id, p_key_version, p_signature, prev_sig, now()) RETURNING id INTO new_id;
+  SELECT appended.id, appended.new_hash
+  INTO new_id, new_hash
+  FROM platform.append_audit_event(
+    p_event_type, p_event_id, p_payload, p_metadata, p_tenant_id,
+    p_clinic_id, p_actor_id, p_ip, p_user_agent, p_correlation_id,
+    p_request_id, p_key_version
+  ) AS appended;
+
+  UPDATE platform.audit_events AS audit
+  SET signature = p_signature,
+      algorithm = p_algorithm,
+      previous_signature = p_previous_signature
+  WHERE audit.id = new_id;
+
   RETURN QUERY SELECT new_id;
 END;
 $$;
 
 -- Restrict execute to service role only and fix ownership
+REVOKE ALL ON FUNCTION platform.append_audit_event_v2(text, uuid, jsonb, jsonb, uuid, uuid, uuid, text, text, text, text, text, text, text, text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION platform.append_audit_event_v2(text, uuid, jsonb, jsonb, uuid, uuid, uuid, text, text, text, text, text, text, text, text) TO service_role;
 ALTER FUNCTION platform.append_audit_event_v2(text, uuid, jsonb, jsonb, uuid, uuid, uuid, text, text, text, text, text, text, text, text) OWNER TO postgres;

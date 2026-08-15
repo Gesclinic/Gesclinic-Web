@@ -42,6 +42,7 @@ export function ValidatedFormField({
   ...props
 }) {
   const [isFocused, setIsFocused] = useState(false);
+  const inputId = props.id || `field-${name}`;
 
   const showError = touched && error;
   const showSuccess = touched && !error && value && !validating;
@@ -80,7 +81,7 @@ export function ValidatedFormField({
     if (type === 'select' && options) {
       return (
         <Select value={value || ''} onValueChange={handleChange} disabled={disabled}>
-          <SelectTrigger className={baseInputClass}>
+          <SelectTrigger id={inputId} className={baseInputClass}>
             <SelectValue placeholder={placeholder || 'Selecione...'} />
           </SelectTrigger>
           <SelectContent>
@@ -97,6 +98,7 @@ export function ValidatedFormField({
     if (type === 'textarea') {
       return (
         <textarea
+          id={inputId}
           name={name}
           value={value || ''}
           onChange={handleChange}
@@ -113,6 +115,7 @@ export function ValidatedFormField({
 
     return (
       <Input
+        id={inputId}
         type={type}
         name={name}
         value={value || ''}
@@ -137,11 +140,11 @@ export function ValidatedFormField({
     <div className={containerClasses}>
       {/* LABEL */}
       <div className="flex items-center justify-between">
-        <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+        <label htmlFor={inputId} className="flex items-center gap-2 text-sm font-medium text-gray-700">
           {Icon && <Icon className="w-4 h-4 text-gray-500" />}
           <span>
             {label}
-            {required && <span className="text-red-500 ml-1">*</span>}
+            {required && <span aria-hidden="true" className="text-red-500 ml-1">*</span>}
           </span>
         </label>
         {validating && (
@@ -217,7 +220,7 @@ export function ValidatedFormFieldCompact({
     <div className="space-y-1">
       <label className="block text-xs font-semibold text-gray-700">
         {label}
-        {required && <span className="text-red-500 ml-1">*</span>}
+        {required && <span aria-hidden="true" className="text-red-500 ml-1">*</span>}
       </label>
       <ValidatedFormField
         label=""

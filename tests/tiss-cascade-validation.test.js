@@ -6,6 +6,26 @@
 
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 
+vi.mock('@/lib/customSupabaseClient', () => {
+  const query = {
+    select: () => query,
+    eq: () => query,
+    maybeSingle: async () => ({ data: null, error: null }),
+  };
+  return { customSupabaseClient: { from: () => query } };
+});
+
+import {
+  validateProfessionalServiceLinkage,
+  validateProfessionalCredentialAtPayer,
+  validateServiceTISSCompleteness,
+  validateProfessionalTISSCompleteness,
+  validatePayerTISSCompleteness,
+  validateAppointmentCascade,
+  validateTISSXMLGenerationCascade,
+  formatCascadeErrors,
+} from '@/lib/tiskCascadeValidationApi';
+
 // ============================================================
 // SUITE 1: Validação de Linkage Profissional-Serviço
 // ============================================================
@@ -92,7 +112,7 @@ describe('Phase 5.3: Service TISS Completeness Validation', () => {
     const result = validateServiceTISSCompleteness(service);
     
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain(expect.stringContaining('TUSS Code'));
+    expect(result.errors.some((error) => error.includes('TUSS Code'))).toBe(true);
   });
 
   it('❌ deve rejeitar TUSS code com formato inválido', () => {
@@ -107,7 +127,7 @@ describe('Phase 5.3: Service TISS Completeness Validation', () => {
     const result = validateServiceTISSCompleteness(service);
     
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain(expect.stringContaining('inválido'));
+    expect(result.errors.some((error) => error.includes('inválido'))).toBe(true);
   });
 
   it('❌ deve rejeitar type_service vazio', () => {
@@ -122,7 +142,7 @@ describe('Phase 5.3: Service TISS Completeness Validation', () => {
     const result = validateServiceTISSCompleteness(service);
     
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain(expect.stringContaining('Tipo de Serviço'));
+    expect(result.errors.some((error) => error.includes('Tipo de Serviço'))).toBe(true);
   });
 
   it('❌ deve rejeitar guide_type vazio', () => {
@@ -137,7 +157,7 @@ describe('Phase 5.3: Service TISS Completeness Validation', () => {
     const result = validateServiceTISSCompleteness(service);
     
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain(expect.stringContaining('Tipo de Guia'));
+    expect(result.errors.some((error) => error.includes('Tipo de Guia'))).toBe(true);
   });
 });
 
@@ -172,7 +192,7 @@ describe('Phase 5.4: Professional TISS Completeness Validation', () => {
     const result = validateProfessionalTISSCompleteness(professional);
     
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain(expect.stringContaining('CBO Code'));
+    expect(result.errors.some((error) => error.includes('CBO Code'))).toBe(true);
   });
 
   it('❌ deve rejeitar CBO code com formato inválido', () => {
@@ -187,7 +207,7 @@ describe('Phase 5.4: Professional TISS Completeness Validation', () => {
     const result = validateProfessionalTISSCompleteness(professional);
     
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain(expect.stringContaining('inválido'));
+    expect(result.errors.some((error) => error.includes('inválido'))).toBe(true);
   });
 
   it('❌ deve rejeitar council_state inválido', () => {
@@ -202,7 +222,7 @@ describe('Phase 5.4: Professional TISS Completeness Validation', () => {
     const result = validateProfessionalTISSCompleteness(professional);
     
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain(expect.stringContaining('UF'));
+    expect(result.errors.some((error) => error.includes('UF'))).toBe(true);
   });
 });
 
@@ -235,7 +255,7 @@ describe('Phase 5.5: Payer TISS Completeness Validation', () => {
     const result = validatePayerTISSCompleteness(payer);
     
     expect(result.valid).toBe(false);
-    expect(result.errors).toContain(expect.stringContaining('ANS'));
+    expect(result.errors.some((error) => error.includes('ANS'))).toBe(true);
   });
 
   it('✅ deve permitir operadora SUS sem ANS', () => {

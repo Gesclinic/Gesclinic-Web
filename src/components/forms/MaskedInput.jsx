@@ -92,7 +92,7 @@ export function maskCurrency(value) {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
-  }).format(number);
+  }).format(number).replace(/\u00a0/g, ' ');
 }
 
 /**
@@ -156,6 +156,7 @@ export function MaskedInput({
   ...props
 }) {
   const [isFocused, setIsFocused] = React.useState(false);
+  const inputId = props.id || `masked-${props.name || maskType || 'input'}`;
 
   // Resolver máscara
   const maskFn = typeof maskType === 'string' ? masks[maskType] : maskType;
@@ -185,13 +186,14 @@ export function MaskedInput({
   return (
     <div className={`space-y-1.5 ${containerClassName}`}>
       {label && (
-        <label className="block text-sm font-medium text-gray-700">
+        <label htmlFor={inputId} className="block text-sm font-medium text-gray-700">
           {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
+          {required && <span aria-hidden="true" className="text-red-500 ml-1">*</span>}
         </label>
       )}
 
       <Input
+        id={inputId}
         value={value || ''}
         onChange={handleChange}
         onFocus={handleFocus}

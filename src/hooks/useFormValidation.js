@@ -177,6 +177,9 @@ export const validators = {
       if (cpf.length !== 11) {
         return { error: 'CPF deve ter 11 dígitos' };
       }
+      if (/^(\d)\1{10}$/.test(cpf)) {
+        return { error: 'CPF inválido' };
+      }
       // Validar dígitos verificadores
       let sum = 0;
       for (let i = 0; i < 9; i++) {
@@ -187,6 +190,17 @@ export const validators = {
         remainder = 0;
       }
       if (parseInt(cpf[9]) !== remainder) {
+        return { error: 'CPF inválido' };
+      }
+      sum = 0;
+      for (let i = 0; i < 10; i++) {
+        sum += parseInt(cpf[i], 10) * (11 - i);
+      }
+      remainder = (sum * 10) % 11;
+      if (remainder === 10 || remainder === 11) {
+        remainder = 0;
+      }
+      if (parseInt(cpf[10], 10) !== remainder) {
         return { error: 'CPF inválido' };
       }
     }

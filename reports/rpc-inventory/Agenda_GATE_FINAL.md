@@ -13,9 +13,9 @@ Este documento registra apenas evidencias locais de pre-homologacao. As migratio
 
 ## Migrations revisadas
 
-- `supabase/migrations/20260813_create_platform_append_audit_event_fn.sql`
-- `supabase/migrations/20260813_create_platform_append_audit_event_v2.sql`
-- `supabase/migrations/20260813_create_platform_worker_leases.sql`
+- `supabase/migrations/20260813090600_create_platform_append_audit_event_fn.sql`
+- `supabase/migrations/20260813090700_create_platform_append_audit_event_v2.sql`
+- `supabase/migrations/20260813090900_create_platform_worker_leases.sql`
 
 As atribuicoes de owner devem ser verificadas contra os papeis disponiveis no ambiente antes da aplicacao.
 
@@ -29,9 +29,9 @@ npx vitest run tests/platform/hashChain.spec.js tests/platform/appointmentTransa
 
 Resultado local:
 
-- 6 arquivos coletados.
-- 2 arquivos aprovados e 4 arquivos de integracao ignorados por ausencia das variaveis do ambiente de integracao.
-- 3 testes aprovados e 5 testes ignorados.
+- 17 arquivos coletados na suite completa.
+- 13 arquivos aprovados e 4 arquivos de integracao ignorados por ausencia das variaveis do ambiente de integracao.
+- 183 testes aprovados e 5 testes ignorados.
 - Nenhuma falha nessa execucao focada.
 
 Os testes de integracao cobrem, quando executados com banco configurado:

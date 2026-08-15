@@ -8,9 +8,9 @@ Correções aplicadas:
 
 Arquivos alterados:
 - src/lib/memedApi.js (added deprecation shim)
-- supabase/migrations/20260813_create_platform_append_audit_event_fn.sql (tightened grants; set owner)
-- supabase/migrations/20260813_create_platform_append_audit_event_v2.sql (added SECURITY DEFINER, search_path, grants and owner)
-- supabase/migrations/20260813_create_platform_worker_leases.sql (set explicit owners for functions)
+- supabase/migrations/20260813090600_create_platform_append_audit_event_fn.sql (atomic hash chain, grants and owner)
+- supabase/migrations/20260813090700_create_platform_append_audit_event_v2.sql (shared hash-chain path, grants and owner)
+- supabase/migrations/20260813090900_create_platform_worker_leases.sql (lease validation, grants and owners)
 - tests/platform/hashChain.spec.js (new)
 - tests/platform/appointmentTransaction.spec.js (new)
 - tests/platform/auditHashChain.integration.spec.js (new)
@@ -23,9 +23,9 @@ Arquivos alterados:
 - package.json and package-lock.json (`pg` test dependency)
 
 Migrations alteradas:
-- 20260813_create_platform_append_audit_event_fn.sql
-- 20260813_create_platform_append_audit_event_v2.sql
-- 20260813_create_platform_worker_leases.sql
+- 20260813090600_create_platform_append_audit_event_fn.sql
+- 20260813090700_create_platform_append_audit_event_v2.sql
+- 20260813090900_create_platform_worker_leases.sql
 
 Testes adicionados/atualizados:
 - tests/platform/hashChain.spec.js — validates canonicalization and chained hash computation.
@@ -72,8 +72,9 @@ Cobertura obtida:
 
 Evidências:
 - Integration tests invoke real RPCs and query `platform.audit_events`, `platform.outbox_events`, and `platform.worker_leases` tables. See tests under `tests/platform/*integration.spec.js`.
-- Local focused run: 6 files collected, 2 files passed and 4 integration files skipped; 3 tests passed and 5 skipped because the required integration environment variables were not available.
+- Full local Vitest run: 13 files passed and 4 integration files skipped; 183 tests passed and 5 skipped because the required integration environment variables were not available.
+- Platform run: 9 files passed and 4 integration files skipped; 18 tests passed and 5 skipped.
 - Integration scenarios must run against the configured Supabase/PostgreSQL test environment before merge or staging deployment; skipped tests are not evidence of database execution.
 
 Status:
-AGUARDANDO EXECUÇÃO DOS TESTES DE INTEGRAÇÃO EM BANCO DE TESTES
+AGUARDANDO CORREÇÃO DOS GATES GLOBAIS E EXECUÇÃO EM BANCO DE TESTES
