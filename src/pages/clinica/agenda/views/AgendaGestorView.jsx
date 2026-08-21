@@ -13,20 +13,17 @@
  */
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { useAuth } from '@/contexts/SupabaseAuthContext';
-import { useClinicContext } from '@/contexts/ClinicContext';
 import {
   BOOKING_STATUSES,
   SERVICE_STATUSES,
   getStatusConfig,
-  getStatusLabelOnly,
+  getStatusLabel,
+  isStatusFinalized,
 } from '@/lib/appointmentStatusConstants';
 import { updateAppointment } from '@/lib/appointmentsApi';
-import { BarChart3, TrendingUp, Users, Clock, AlertCircle, CheckCircle2, Zap } from 'lucide-react';
+import { TrendingUp, Users, Clock, CheckCircle2, Zap } from 'lucide-react';
 
 export default function AgendaGestorView({ appointments = [], onRefresh }) {
-  const { user, currentRole } = useAuth();
-  const { clinicId } = useClinicContext();
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [loadingId, setLoadingId] = useState(null);
 
@@ -46,16 +43,16 @@ export default function AgendaGestorView({ appointments = [], onRefresh }) {
 
     const stats = {
       total: todayAppointments.length,
-      agendado: todayAppointments.filter((apt) => apt.status === APPOINTMENT_STATUS.AGENDADO)
+      agendado: todayAppointments.filter((apt) => apt.status === BOOKING_STATUSES.SCHEDULED)
         .length,
-      confirmado: todayAppointments.filter((apt) => apt.status === APPOINTMENT_STATUS.CONFIRMADO)
+      confirmado: todayAppointments.filter((apt) => apt.status === BOOKING_STATUSES.CONFIRMED)
         .length,
-      aguardando: todayAppointments.filter((apt) => apt.status === APPOINTMENT_STATUS.AGUARDANDO)
+      aguardando: todayAppointments.filter((apt) => apt.status === BOOKING_STATUSES.AT_RECEPTION)
         .length,
-      pendente: todayAppointments.filter((apt) => apt.status === APPOINTMENT_STATUS.PENDENTE)
+      pendente: todayAppointments.filter((apt) => apt.status === BOOKING_STATUSES.AT_CHECKOUT)
         .length,
       financeiro_pendente: todayAppointments.filter(
-        (apt) => apt.status === APPOINTMENT_STATUS.FINANCEIRO_PENDENTE,
+        (apt) => apt.status === BOOKING_STATUSES.AWAITING_INSURANCE,
       ).length,
       liberado: todayAppointments.filter(
         (apt) => apt.status === SERVICE_STATUSES.AWAITING_PROFESSIONAL,
@@ -65,7 +62,7 @@ export default function AgendaGestorView({ appointments = [], onRefresh }) {
       finalizado: todayAppointments.filter((apt) => apt.status === SERVICE_STATUSES.ATTENDED)
         .length,
       falta: todayAppointments.filter((apt) => apt.status === SERVICE_STATUSES.NO_SHOW).length,
-      cancelado: todayAppointments.filter((apt) => apt.status === APPOINTMENT_STATUS.CANCELADO)
+      cancelado: todayAppointments.filter((apt) => apt.status === SERVICE_STATUSES.CANCELED)
         .length,
     };
 
@@ -220,9 +217,9 @@ export default function AgendaGestorView({ appointments = [], onRefresh }) {
             Todos ({kpis.total})
           </button>
           <button
-            onClick={() => setSelectedStatus(APPOINTMENT_STATUS.AGENDADO)}
+            onClick={() => setSelectedStatus(BOOKING_STATUSES.SCHEDULED)}
             className={`px-3 py-1 rounded text-sm font-medium transition ${
-              selectedStatus === APPOINTMENT_STATUS.AGENDADO
+              selectedStatus === BOOKING_STATUSES.SCHEDULED
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
@@ -230,9 +227,9 @@ export default function AgendaGestorView({ appointments = [], onRefresh }) {
             Agendado ({kpis.agendado})
           </button>
           <button
-            onClick={() => setSelectedStatus(APPOINTMENT_STATUS.CONFIRMADO)}
+            onClick={() => setSelectedStatus(BOOKING_STATUSES.CONFIRMED)}
             className={`px-3 py-1 rounded text-sm font-medium transition ${
-              selectedStatus === APPOINTMENT_STATUS.CONFIRMADO
+              selectedStatus === BOOKING_STATUSES.CONFIRMED
                 ? 'bg-cyan-600 text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
@@ -240,9 +237,9 @@ export default function AgendaGestorView({ appointments = [], onRefresh }) {
             Confirmado ({kpis.confirmado})
           </button>
           <button
-            onClick={() => setSelectedStatus(APPOINTMENT_STATUS.AGUARDANDO)}
+            onClick={() => setSelectedStatus(BOOKING_STATUSES.AT_RECEPTION)}
             className={`px-3 py-1 rounded text-sm font-medium transition ${
-              selectedStatus === APPOINTMENT_STATUS.AGUARDANDO
+              selectedStatus === BOOKING_STATUSES.AT_RECEPTION
                 ? 'bg-yellow-600 text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
@@ -250,9 +247,9 @@ export default function AgendaGestorView({ appointments = [], onRefresh }) {
             Aguardando ({kpis.aguardando})
           </button>
           <button
-            onClick={() => setSelectedStatus(APPOINTMENT_STATUS.PENDENTE)}
+            onClick={() => setSelectedStatus(BOOKING_STATUSES.AT_CHECKOUT)}
             className={`px-3 py-1 rounded text-sm font-medium transition ${
-              selectedStatus === APPOINTMENT_STATUS.PENDENTE
+              selectedStatus === BOOKING_STATUSES.AT_CHECKOUT
                 ? 'bg-orange-600 text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
@@ -260,9 +257,9 @@ export default function AgendaGestorView({ appointments = [], onRefresh }) {
             Pendência ({kpis.pendente})
           </button>
           <button
-            onClick={() => setSelectedStatus(APPOINTMENT_STATUS.FINANCEIRO_PENDENTE)}
+            onClick={() => setSelectedStatus(BOOKING_STATUSES.AWAITING_INSURANCE)}
             className={`px-3 py-1 rounded text-sm font-medium transition ${
-              selectedStatus === APPOINTMENT_STATUS.FINANCEIRO_PENDENTE
+              selectedStatus === BOOKING_STATUSES.AWAITING_INSURANCE
                 ? 'bg-rose-600 text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
@@ -280,9 +277,9 @@ export default function AgendaGestorView({ appointments = [], onRefresh }) {
             Liberado ({kpis.liberado})
           </button>
           <button
-            onClick={() => setSelectedStatus(APPOINTMENT_STATUS.EM_ATENDIMENTO)}
+            onClick={() => setSelectedStatus(SERVICE_STATUSES.IN_SERVICE)}
             className={`px-3 py-1 rounded text-sm font-medium transition ${
-              selectedStatus === APPOINTMENT_STATUS.EM_ATENDIMENTO
+              selectedStatus === SERVICE_STATUSES.IN_SERVICE
                 ? 'bg-purple-600 text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
@@ -290,9 +287,9 @@ export default function AgendaGestorView({ appointments = [], onRefresh }) {
             Em Atendimento ({kpis.em_atendimento})
           </button>
           <button
-            onClick={() => setSelectedStatus(APPOINTMENT_STATUS.FINALIZADO)}
+            onClick={() => setSelectedStatus(SERVICE_STATUSES.ATTENDED)}
             className={`px-3 py-1 rounded text-sm font-medium transition ${
-              selectedStatus === APPOINTMENT_STATUS.FINALIZADO
+              selectedStatus === SERVICE_STATUSES.ATTENDED
                 ? 'bg-indigo-600 text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
@@ -346,16 +343,14 @@ export default function AgendaGestorView({ appointments = [], onRefresh }) {
                     <div>
                       <p className="text-xs text-gray-600 uppercase">Status</p>
                       <span
-                        className={`inline-block px-2 py-1 rounded text-xs font-medium ${getStatusColor(
-                          apt.status,
-                        )}`}
+                        className={`inline-block px-2 py-1 rounded text-xs font-medium ${getStatusConfig(apt.status).color} ${getStatusConfig(apt.status).textColor}`}
                       >
                         {getStatusLabel(apt.status)}
                       </span>
                     </div>
 
                     {/* Ações */}
-                    {!isFinalStatus(apt.status) && (
+                    {!isStatusFinalized(apt.status) && (
                       <div>
                         <p className="text-xs text-gray-600 uppercase mb-1">Ações</p>
                         <select
@@ -365,42 +360,42 @@ export default function AgendaGestorView({ appointments = [], onRefresh }) {
                           className="w-full px-2 py-1 text-sm border border-gray-300 rounded hover:border-gray-400 disabled:opacity-50 cursor-pointer"
                         >
                           <option value={apt.status}>{getStatusLabel(apt.status)}</option>
-                          {apt.status === APPOINTMENT_STATUS.AGENDADO && (
+                          {apt.status === BOOKING_STATUSES.SCHEDULED && (
                             <>
-                              <option value={APPOINTMENT_STATUS.CONFIRMADO}>→ Confirmar</option>
-                              <option value={APPOINTMENT_STATUS.CANCELADO}>→ Cancelar</option>
+                              <option value={BOOKING_STATUSES.CONFIRMED}>→ Confirmar</option>
+                              <option value={SERVICE_STATUSES.CANCELED}>→ Cancelar</option>
                             </>
                           )}
-                          {apt.status === APPOINTMENT_STATUS.CONFIRMADO && (
+                          {apt.status === BOOKING_STATUSES.CONFIRMED && (
                             <>
-                              <option value={APPOINTMENT_STATUS.AGUARDANDO}>→ Aguardando</option>
-                              <option value={APPOINTMENT_STATUS.CANCELADO}>→ Cancelar</option>
+                              <option value={BOOKING_STATUSES.AT_RECEPTION}>→ Aguardando</option>
+                              <option value={SERVICE_STATUSES.CANCELED}>→ Cancelar</option>
                             </>
                           )}
-                          {(apt.status === APPOINTMENT_STATUS.AGUARDANDO ||
-                            apt.status === APPOINTMENT_STATUS.PENDENTE ||
-                            apt.status === APPOINTMENT_STATUS.FINANCEIRO_PENDENTE) && (
+                          {(apt.status === BOOKING_STATUSES.AT_RECEPTION ||
+                            apt.status === BOOKING_STATUSES.AT_CHECKOUT ||
+                            apt.status === BOOKING_STATUSES.AWAITING_INSURANCE) && (
                             <>
                               <option value={SERVICE_STATUSES.AWAITING_PROFESSIONAL}>
                                 → Liberar
                               </option>
-                              <option value={APPOINTMENT_STATUS.PENDENTE}>→ Pendência</option>
-                              <option value={APPOINTMENT_STATUS.FINANCEIRO_PENDENTE}>
+                              <option value={BOOKING_STATUSES.AT_CHECKOUT}>→ Pendência</option>
+                              <option value={BOOKING_STATUSES.AWAITING_INSURANCE}>
                                 → Financeiro
                               </option>
-                              <option value={APPOINTMENT_STATUS.FALTA}>→ Falta</option>
+                              <option value={SERVICE_STATUSES.NO_SHOW}>→ Falta</option>
                             </>
                           )}
                           {apt.status === SERVICE_STATUSES.AWAITING_PROFESSIONAL && (
                             <>
-                              <option value={APPOINTMENT_STATUS.EM_ATENDIMENTO}>
+                              <option value={SERVICE_STATUSES.IN_SERVICE}>
                                 → Em Atendimento
                               </option>
-                              <option value={APPOINTMENT_STATUS.FALTA}>→ Falta</option>
+                              <option value={SERVICE_STATUSES.NO_SHOW}>→ Falta</option>
                             </>
                           )}
-                          {apt.status === APPOINTMENT_STATUS.EM_ATENDIMENTO && (
-                            <option value={APPOINTMENT_STATUS.FINALIZADO}>→ Finalizado</option>
+                          {apt.status === SERVICE_STATUSES.IN_SERVICE && (
+                            <option value={SERVICE_STATUSES.ATTENDED}>→ Finalizado</option>
                           )}
                         </select>
                       </div>
