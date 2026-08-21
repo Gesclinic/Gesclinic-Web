@@ -1,11 +1,17 @@
--- Remover constraint NOT NULL de clinic_id (plans é global, não por clinic)
-ALTER TABLE plans
-DROP CONSTRAINT IF EXISTS plans_clinic_id_not_null,
-ADD CONSTRAINT plans_clinic_id_not_null CHECK (true);
-
--- Dropar a constraint e permitir NULL
-ALTER TABLE plans
-ALTER COLUMN clinic_id DROP NOT NULL;
+-- Instalações legadas podem ter clinic_id; instalações novas já usam planos globais.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'plans'
+      AND column_name = 'clinic_id'
+  ) THEN
+    ALTER TABLE public.plans ALTER COLUMN clinic_id DROP NOT NULL;
+  END IF;
+END
+$$;
 
 -- Adicionar colunas faltantes à tabela plans
 ALTER TABLE plans

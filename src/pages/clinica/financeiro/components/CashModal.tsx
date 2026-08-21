@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { X, AlertCircle, Zap, Calculator, TrendingUp, Loader2 } from 'lucide-react';
 import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS } from '@/lib/paymentMethodsConfig';
-import type { CashMovementInput } from '../types/CashMovement';
+import type {
+  CashMovementInput,
+  CashMovementStatus,
+  CashMovementType,
+  PayerType,
+} from '../types/CashMovement';
 import type { Patient, Professional, Service, Payer } from '../hooks/useCashFormData';
 import { useAppointments } from '../hooks/useAppointments';
 import { useRepasseCalculation } from '../hooks/useRepasseCalculation';
@@ -18,6 +23,24 @@ interface CashModalProps {
   services: Service[];
   payers: Payer[];
   clinicId: string;
+}
+
+interface ManualFormState {
+  type: CashMovementType;
+  amount: string;
+  payment_method: string;
+  description: string;
+  status: CashMovementStatus;
+}
+
+interface LinkedFormState {
+  patient_id: string;
+  professional_id: string;
+  service_id: string;
+  payer_type: PayerType;
+  payer_id: string;
+  discount: string;
+  status: CashMovementStatus;
 }
 
 export const CashModal: React.FC<CashModalProps> = ({
@@ -39,22 +62,22 @@ export const CashModal: React.FC<CashModalProps> = ({
   const { findPatientAppointments } = useAppointments(clinicId);
   const { calculateRepasse } = useRepasseCalculation();
 
-  const [manualForm, setManualForm] = useState({
-    type: 'entrada' as const,
+  const [manualForm, setManualForm] = useState<ManualFormState>({
+    type: 'entrada',
     amount: '',
     payment_method: 'DINHEIRO',
     description: '',
-    status: 'confirmado' as const,
+    status: 'confirmado',
   });
 
-  const [linkedForm, setLinkedForm] = useState({
+  const [linkedForm, setLinkedForm] = useState<LinkedFormState>({
     patient_id: '',
     professional_id: '',
     service_id: '',
-    payer_type: 'particular' as const,
+    payer_type: 'particular',
     payer_id: '',
     discount: '',
-    status: 'confirmado' as const,
+    status: 'confirmado',
   });
 
   useEffect(() => {
@@ -200,6 +223,7 @@ export const CashModal: React.FC<CashModalProps> = ({
       await onSubmit({
         type: 'entrada',
         amount: netAmount,
+        payment_method: 'DINHEIRO',
         patient_id: linkedForm.patient_id,
         professional_id: linkedForm.professional_id || undefined,
         service_id: linkedForm.service_id,

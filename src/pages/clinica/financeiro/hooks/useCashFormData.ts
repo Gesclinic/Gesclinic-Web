@@ -23,7 +23,7 @@ export interface Service {
 export interface Payer {
   id: string;
   name: string;
-  type: string;
+  type?: string;
 }
 
 export const useCashFormData = (clinicId: string) => {

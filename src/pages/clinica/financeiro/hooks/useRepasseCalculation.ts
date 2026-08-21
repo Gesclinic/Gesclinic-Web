@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { customSupabaseClient } from '@/lib/customSupabaseClient';
 
 export interface ProfessionalRepasse {

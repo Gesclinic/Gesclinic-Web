@@ -39,24 +39,6 @@ interface CashChartsProps {
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
 
-const CustomTooltip = (props: any) => {
-  const { active, payload } = props;
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-slate-900 text-white p-3 rounded-lg shadow-lg">
-        <p className="font-semibold">{payload[0].name || payload[0].payload.name}</p>
-        <p className="text-sm">
-          {new Intl.NumberFormat('pt-BR', {
-            style: 'currency',
-            currency: 'BRL',
-          }).format(payload[0].value)}
-        </p>
-      </div>
-    );
-  }
-  return null;
-};
-
 export const CashCharts: React.FC<CashChartsProps> = ({
   porOrigem,
   porProfissional,
@@ -100,8 +82,8 @@ export const CashCharts: React.FC<CashChartsProps> = ({
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {porOrigem.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  {porOrigem.map((item, index) => (
+                    <Cell key={`cell-${item.origin}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip formatter={(value: number) => formatCurrency(value)} />
