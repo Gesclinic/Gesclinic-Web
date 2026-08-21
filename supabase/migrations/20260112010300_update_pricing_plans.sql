@@ -1,5 +1,9 @@
 -- Atualizar os planos com os novos preços e descrições
 
+DO $$
+BEGIN
+IF to_regclass('public.subscription_plans') IS NOT NULL THEN
+
 -- Plano Básico
 UPDATE subscription_plans 
 SET 
@@ -75,5 +79,9 @@ SET
     "dedicated_support": true
   }'::jsonb
 WHERE slug = 'enterprise';
+
+END IF;
+END
+$$;
 
 SELECT 'Planos atualizados com sucesso!' as status;

@@ -115,10 +115,10 @@ VALUES
 (
   'Plano Básico',
   'basic',
-  'Perfeito para clínicas pequenas iniciando',
+  'Agenda Essencial — Para clínicas que estão começando',
   99.00,
   990.00,
-  3,
+  2,
   500,
   '{
     "agenda": true,
@@ -128,7 +128,10 @@ VALUES
     "profissionais": true,
     "relatorios": false,
     "api_access": false,
-    "custom_branding": false
+    "custom_branding": false,
+    "medical_specialty": false,
+    "advanced_reporting": false,
+    "stock_control": false
   }'::jsonb,
   TRUE,
   30
@@ -136,9 +139,9 @@ VALUES
 (
   'Plano Profissional',
   'professional',
-  'Para clínicas em crescimento',
-  199.00,
-  1990.00,
+  'Gestão Completa — Para clínicas que querem controle e lucro',
+  249.00,
+  2490.00,
   10,
   5000,
   '{
@@ -149,7 +152,10 @@ VALUES
     "profissionais": true,
     "relatorios": true,
     "api_access": false,
-    "custom_branding": true
+    "custom_branding": true,
+    "medical_specialty": true,
+    "advanced_reporting": true,
+    "stock_control": true
   }'::jsonb,
   TRUE,
   30
@@ -157,7 +163,7 @@ VALUES
 (
   'Plano Enterprise',
   'enterprise',
-  'Solução completa para grandes redes',
+  'Escala & Performance — Para redes, grupos e operações complexas',
   NULL,
   NULL,
   999,
@@ -170,7 +176,14 @@ VALUES
     "profissionais": true,
     "relatorios": true,
     "api_access": true,
-    "custom_branding": true
+    "custom_branding": true,
+    "medical_specialty": true,
+    "advanced_reporting": true,
+    "stock_control": true,
+    "multi_units": true,
+    "dre_per_unit": true,
+    "medical_repasse": true,
+    "dedicated_support": true
   }'::jsonb,
   TRUE,
   60
