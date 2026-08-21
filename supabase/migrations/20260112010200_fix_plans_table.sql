@@ -36,8 +36,8 @@ VALUES
   ('550e8400-e29b-41d4-a716-446655440001', 'Plano Básico', 'basic', 'Agenda Essencial — Para clínicas que estão começando', 2, 2, false, false, false, false, 'prod_basic'),
   ('550e8400-e29b-41d4-a716-446655440002', 'Plano Profissional', 'professional', 'Gestão Completa — Para clínicas que querem controle e lucro', 10, 5, true, true, true, false, 'prod_professional'),
   ('550e8400-e29b-41d4-a716-446655440003', 'Plano Enterprise', 'enterprise', 'Escalas & Performance — para redes, grupos e operações complexas', 999, 999, true, true, true, true, 'prod_enterprise')
-ON CONFLICT (id) DO UPDATE SET
-  slug = EXCLUDED.slug,
+ON CONFLICT (slug) DO UPDATE SET
+  name = EXCLUDED.name,
   description = EXCLUDED.description,
   max_users = EXCLUDED.max_users,
   max_doctors = EXCLUDED.max_doctors,
