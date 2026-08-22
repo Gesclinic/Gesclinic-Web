@@ -44,6 +44,9 @@ ON CONFLICT (email) DO UPDATE SET role = 'profissional'
 RETURNING id, email, name, role;
 
 -- Create corresponding professional record
+WITH clinic_data AS (
+  SELECT id FROM clinics WHERE name = 'Gesclinic Demo' LIMIT 1
+)
 INSERT INTO professionals (clinic_id, name, email, active)
 SELECT
   clinic_data.id,
