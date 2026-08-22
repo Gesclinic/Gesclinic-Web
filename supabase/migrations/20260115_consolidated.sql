@@ -925,7 +925,7 @@ WITH prof_data AS (
     COUNT(CASE WHEN a.status = 'confirmado' THEN 1 END) as confirmados,
     COUNT(CASE WHEN a.status = 'finalizado' THEN 1 END) as finalizado,
     COUNT(CASE WHEN a.status = 'falta' THEN 1 END) as faltas,
-    COALESCE(AVG(EXTRACT(EPOCH FROM (a.end_time - a.start_time)) / 60), 0) as avg_duration,
+    COALESCE(AVG(EXTRACT(EPOCH FROM (a.end_time - a.scheduled_time)) / 60), 0) as avg_duration,
     COALESCE(SUM(COALESCE(a.value, s.price)), 0) as revenue
   FROM appointments a
   LEFT JOIN professionals p ON a.professional_id = p.id
@@ -1286,7 +1286,7 @@ WITH prof_data AS (
     COUNT(CASE WHEN a.status = 'confirmado' THEN 1 END) as confirmados,
     COUNT(CASE WHEN a.status = 'finalizado' THEN 1 END) as finalizado,
     COUNT(CASE WHEN a.status = 'falta' THEN 1 END) as faltas,
-    COALESCE(AVG(EXTRACT(EPOCH FROM (a.end_time - a.start_time)) / 60), 0) as avg_duration,
+    COALESCE(AVG(EXTRACT(EPOCH FROM (a.end_time - a.scheduled_time)) / 60), 0) as avg_duration,
     COALESCE(SUM(COALESCE(a.value, s.price)), 0) as revenue
   FROM appointments a
   LEFT JOIN professionals p ON a.professional_id = p.id
