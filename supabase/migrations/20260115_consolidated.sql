@@ -763,8 +763,8 @@ WITH financial_data AS (
   SELECT
     a.clinic_id,
     a.scheduled_date::date as appt_date,
-    a.scheduled_date::time as appt_time,
-    EXTRACT(HOUR FROM a.scheduled_date::timestamp) as hour_of_day,
+    a.scheduled_time as appt_time,
+    EXTRACT(HOUR FROM a.scheduled_time) as hour_of_day,
     COALESCE(a.value, s.price, 0) as appointment_value
   FROM appointments a
   LEFT JOIN services s ON a.service_id = s.id
@@ -1121,8 +1121,8 @@ WITH financial_data AS (
   SELECT
     a.clinic_id,
     a.scheduled_date::date as appt_date,
-    a.scheduled_date::time as appt_time,
-    EXTRACT(HOUR FROM a.scheduled_date::timestamp) as hour_of_day,
+    a.scheduled_time as appt_time,
+    EXTRACT(HOUR FROM a.scheduled_time) as hour_of_day,
     COALESCE(a.value, s.price, 0) as appointment_value
   FROM appointments a
   LEFT JOIN services s ON a.service_id = s.id
