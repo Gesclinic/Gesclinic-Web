@@ -2,6 +2,11 @@
 -- Consolidated from 20260115_CLEAN_AND_REINIT.sql
 -- ============================================================================
 
+/*
+ * Legacy manual reset script. It is intentionally disabled in the migration
+ * chain because the following schema script only alters existing tables.
+ * Executing this block would delete the schema created by prior migrations.
+ *
 -- ============================================================
 -- CLEAN ALL TABLES AND REINITIALIZE
 -- ============================================================
@@ -70,6 +75,7 @@ DROP VIEW IF EXISTS repasse_dashboard;
 
 -- Confirmation
 SELECT 'All tables and views dropped successfully!' as status;
+*/
 
 -- ============================================================================
 -- Consolidated from 20260115_add_missing_appointments_columns.sql
