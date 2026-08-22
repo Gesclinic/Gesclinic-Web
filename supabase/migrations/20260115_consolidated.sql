@@ -558,6 +558,69 @@ ON CONFLICT (service_id, clinic_id) DO NOTHING;
 -- Views e Fun├º├Áes para c├ílculo de KPIs
 -- ============================================
 
+-- Legacy hyphenated migrations that create this dependency are not applied by
+-- the CLI. Keep the audit contract required by the indicator views here.
+CREATE TABLE IF NOT EXISTS appointment_audit_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  appointment_id UUID NOT NULL REFERENCES appointments(id) ON DELETE CASCADE,
+  action_type TEXT NOT NULL,
+  old_status TEXT,
+  new_status TEXT,
+  performed_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  performed_by_role TEXT,
+  performed_at TIMESTAMPTZ DEFAULT NOW(),
+  context JSONB,
+  ip_address TEXT,
+  user_agent TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_appointment_audit_logs_appointment_id
+  ON appointment_audit_logs(appointment_id);
+CREATE INDEX IF NOT EXISTS idx_appointment_audit_logs_performed_at
+  ON appointment_audit_logs(performed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_appointment_audit_logs_action_type
+  ON appointment_audit_logs(action_type);
+
+ALTER TABLE appointment_audit_logs ENABLE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'appointment_audit_logs'
+      AND policyname = 'appointment_audit_logs_view_by_role'
+  ) THEN
+    CREATE POLICY appointment_audit_logs_view_by_role
+      ON appointment_audit_logs
+      FOR SELECT
+      USING (
+        EXISTS (
+          SELECT 1
+          FROM users u
+          JOIN appointments a ON a.id = appointment_audit_logs.appointment_id
+          WHERE u.id = auth.uid()
+            AND u.clinic_id = a.clinic_id
+            AND u.role IN ('admin', 'gestor', 'gerente')
+        )
+      );
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'appointment_audit_logs'
+      AND policyname = 'appointment_audit_logs_insert_authenticated'
+  ) THEN
+    CREATE POLICY appointment_audit_logs_insert_authenticated
+      ON appointment_audit_logs
+      FOR INSERT
+      WITH CHECK (auth.uid() IS NOT NULL);
+  END IF;
+END
+$$;
+
 -- ============================================
 -- 1. VIEW: Indicadores Operacionais por Dia
 -- ============================================
