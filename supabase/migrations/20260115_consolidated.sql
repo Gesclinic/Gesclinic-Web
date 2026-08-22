@@ -216,10 +216,11 @@ CREATE TABLE IF NOT EXISTS health_insurances (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 
-  UNIQUE(code, clinic_id),
-  UNIQUE(cnpj, clinic_id) WHERE cnpj IS NOT NULL
+  UNIQUE(code, clinic_id)
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_health_insurances_cnpj_clinic
+  ON health_insurances(cnpj, clinic_id) WHERE cnpj IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_health_insurances_clinic ON health_insurances(clinic_id, active);
 CREATE INDEX IF NOT EXISTS idx_health_insurances_code ON health_insurances(code, clinic_id);
 
