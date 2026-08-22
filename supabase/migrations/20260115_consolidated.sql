@@ -558,6 +558,9 @@ ON CONFLICT (service_id, clinic_id) DO NOTHING;
 -- Views e Fun├º├Áes para c├ílculo de KPIs
 -- ============================================
 
+ALTER TABLE clinics
+  ADD COLUMN IF NOT EXISTS settings JSONB DEFAULT '{}';
+
 -- Legacy hyphenated migrations that create this dependency are not applied by
 -- the CLI. Keep the audit contract required by the indicator views here.
 CREATE TABLE IF NOT EXISTS appointment_audit_logs (
@@ -789,7 +792,7 @@ SELECT
   ) as receita_estimada_por_hora,
   -- Meta padr├úo (pode vir de configura├º├úo da cl├¡nica depois)
   COALESCE(
-    (SELECT CAST(settings->>'daily_revenue_target' AS NUMERIC) FROM clinics WHERE id = clinic_id),
+    (SELECT CAST(c.settings->>'daily_revenue_target' AS NUMERIC) FROM clinics c WHERE c.id = fd.clinic_id),
     5000.00
   ) as meta_dia,
   NOW() as calculated_at
@@ -1146,7 +1149,7 @@ SELECT
     END, 2
   ) as receita_estimada_por_hora,
   COALESCE(
-    (SELECT CAST(settings->>'daily_revenue_target' AS NUMERIC) FROM clinics WHERE id = clinic_id),
+    (SELECT CAST(c.settings->>'daily_revenue_target' AS NUMERIC) FROM clinics c WHERE c.id = fd.clinic_id),
     5000.00
   ) as meta_dia,
   NOW() as calculated_at
