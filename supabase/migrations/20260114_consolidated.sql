@@ -210,11 +210,10 @@ CREATE POLICY "suggestion_audit_logs_view_by_role"
   USING (
     EXISTS (
       SELECT 1
-      FROM user_roles ur
-      JOIN roles r ON ur.role_id = r.id
-      WHERE ur.clinic_id = suggestion_audit_logs.clinic_id
-      AND ur.user_id = auth.uid()
-      AND r.name IN ('gestor', 'admin', 'recepcao')
+      FROM users u
+      WHERE u.clinic_id = suggestion_audit_logs.clinic_id
+      AND u.id = auth.uid()
+      AND u.role IN ('gestor', 'admin', 'recepcao', 'recepcionista')
     )
   );
 
