@@ -172,6 +172,12 @@ CREATE TABLE IF NOT EXISTS professional_services (
   UNIQUE(professional_id, service_id, clinic_id)
 );
 
+ALTER TABLE professional_services
+  ADD COLUMN IF NOT EXISTS duration_minutes_override INT,
+  ADD COLUMN IF NOT EXISTS competence_level VARCHAR(50) DEFAULT 'standard',
+  ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE,
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+
 CREATE INDEX IF NOT EXISTS idx_professional_services_professional_clinic ON professional_services(professional_id, clinic_id, active);
 CREATE INDEX IF NOT EXISTS idx_professional_services_service_clinic ON professional_services(service_id, clinic_id, active);
 
