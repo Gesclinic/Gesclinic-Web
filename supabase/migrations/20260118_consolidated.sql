@@ -218,7 +218,13 @@ ALTER TABLE account_plans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cost_centers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE plans ENABLE ROW LEVEL SECURITY;
-ALTER TABLE payment_methods ENABLE ROW LEVEL SECURITY;
+DO $$
+BEGIN
+  IF to_regclass('public.payment_methods') IS NOT NULL THEN
+    EXECUTE 'ALTER TABLE payment_methods ENABLE ROW LEVEL SECURITY';
+  END IF;
+END
+$$;
 
 -- ============================================================
 -- CLINICS TABLE POLICIES
@@ -900,29 +906,23 @@ CREATE POLICY "plans_update"
 -- PAYMENT METHODS TABLE POLICIES
 -- ============================================================
 
-CREATE POLICY "payment_methods_select"
-  ON payment_methods FOR SELECT
-  USING (
-    clinic_id IN (
-      SELECT clinic_id FROM users WHERE id = auth.uid()
-    )
-  );
+DO $$
+BEGIN
+  IF to_regclass('public.payment_methods') IS NOT NULL THEN
+    EXECUTE 'CREATE POLICY "payment_methods_select"
+      ON payment_methods FOR SELECT
+      USING (clinic_id IN (SELECT clinic_id FROM users WHERE id = auth.uid()))';
 
-CREATE POLICY "payment_methods_insert"
-  ON payment_methods FOR INSERT
-  WITH CHECK (
-    clinic_id IN (
-      SELECT clinic_id FROM users WHERE id = auth.uid()
-    )
-  );
+    EXECUTE 'CREATE POLICY "payment_methods_insert"
+      ON payment_methods FOR INSERT
+      WITH CHECK (clinic_id IN (SELECT clinic_id FROM users WHERE id = auth.uid()))';
 
-CREATE POLICY "payment_methods_update"
-  ON payment_methods FOR UPDATE
-  USING (
-    clinic_id IN (
-      SELECT clinic_id FROM users WHERE id = auth.uid()
-    )
-  );
+    EXECUTE 'CREATE POLICY "payment_methods_update"
+      ON payment_methods FOR UPDATE
+      USING (clinic_id IN (SELECT clinic_id FROM users WHERE id = auth.uid()))';
+  END IF;
+END
+$$;
 
 -- Confirmation
 SELECT 'RLS Policies criadas com sucesso!' as status;
