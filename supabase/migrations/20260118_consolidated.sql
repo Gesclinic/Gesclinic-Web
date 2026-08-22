@@ -179,6 +179,22 @@ CHECK (type IS NULL OR type IN ('private_insurance', 'health_plan', 'government'
 -- ============================================================
 -- Ensure each clinic can only see and modify their own data
 
+-- The legacy AP items migration is disabled, but the policies below depend on
+-- its table. Restore that existing contract before enabling RLS.
+CREATE TABLE IF NOT EXISTS ap_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  ap_bill_id UUID NOT NULL REFERENCES ap_bills(id) ON DELETE CASCADE,
+  clinic_id UUID NOT NULL,
+  stock_item_id UUID,
+  name TEXT NOT NULL,
+  qty NUMERIC(18, 3) NOT NULL,
+  unit_value NUMERIC(18, 2) NOT NULL,
+  total_value NUMERIC(18, 2) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS ap_items_bill_idx ON ap_items(ap_bill_id);
+
 -- Enable RLS on all relevant tables
 ALTER TABLE clinics ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
