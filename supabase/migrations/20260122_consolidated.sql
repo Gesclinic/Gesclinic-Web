@@ -49,7 +49,7 @@ SELECT
   ab.id,
   ab.clinic_id,
   COALESCE(ab.due_date, CURRENT_DATE) AS date,
-  COALESCE(ab.description, ab.vendor_name) AS description,
+  COALESCE(ab.description, ab.supplier_name) AS description,
   COALESCE(ab.amount, 0) AS amount,
   NULL::UUID AS cost_center_id,
   COALESCE(ab.category_id, NULL::UUID) AS category_id,
@@ -84,11 +84,8 @@ ALTER TABLE IF EXISTS public.invoices
 -- Sincronizar colunas derivadas
 UPDATE public.invoices
 SET
-  total = amount,
-  due_date = CAST(due_at AS DATE),
-  issued_date = CAST(issued_at AS DATE),
-  paid_date = CAST(paid_at AS DATE)
-WHERE total IS NULL OR due_date IS NULL OR issued_date IS NULL;
+  total = amount
+WHERE total IS NULL;
 
 -- Criar ├¡ndices para performance
 CREATE INDEX IF NOT EXISTS idx_invoices_patient_id ON public.invoices(patient_id);
@@ -104,12 +101,10 @@ SELECT
   amount,
   COALESCE(total, amount) AS total,
   patient_id,
-  COALESCE(issued_date, CAST(issued_at AS DATE)) AS issued_date,
-  COALESCE(due_date, CAST(due_at AS DATE)) AS due_date,
-  COALESCE(paid_date, CAST(paid_at AS DATE)) AS paid_date,
+  issued_date,
+  due_date,
+  paid_date,
   status,
-  subscription_id,
-  stripe_invoice_id,
   created_at,
   updated_at
 FROM public.invoices;
