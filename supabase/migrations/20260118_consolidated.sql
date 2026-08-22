@@ -546,37 +546,29 @@ CREATE POLICY "rooms_delete"
 -- STOCK TABLE POLICIES
 -- ============================================================
 
-CREATE POLICY "stock_select"
-  ON stock FOR SELECT
-  USING (
-    clinic_id IN (
-      SELECT clinic_id FROM users WHERE id = auth.uid()
-    )
-  );
+DO $$
+BEGIN
+  IF to_regclass('public.stock') IS NOT NULL THEN
+    EXECUTE 'ALTER TABLE stock ENABLE ROW LEVEL SECURITY';
 
-CREATE POLICY "stock_insert"
-  ON stock FOR INSERT
-  WITH CHECK (
-    clinic_id IN (
-      SELECT clinic_id FROM users WHERE id = auth.uid()
-    )
-  );
+    EXECUTE 'CREATE POLICY "stock_select"
+      ON stock FOR SELECT
+      USING (clinic_id IN (SELECT clinic_id FROM users WHERE id = auth.uid()))';
 
-CREATE POLICY "stock_update"
-  ON stock FOR UPDATE
-  USING (
-    clinic_id IN (
-      SELECT clinic_id FROM users WHERE id = auth.uid()
-    )
-  );
+    EXECUTE 'CREATE POLICY "stock_insert"
+      ON stock FOR INSERT
+      WITH CHECK (clinic_id IN (SELECT clinic_id FROM users WHERE id = auth.uid()))';
 
-CREATE POLICY "stock_delete"
-  ON stock FOR DELETE
-  USING (
-    clinic_id IN (
-      SELECT clinic_id FROM users WHERE id = auth.uid()
-    )
-  );
+    EXECUTE 'CREATE POLICY "stock_update"
+      ON stock FOR UPDATE
+      USING (clinic_id IN (SELECT clinic_id FROM users WHERE id = auth.uid()))';
+
+    EXECUTE 'CREATE POLICY "stock_delete"
+      ON stock FOR DELETE
+      USING (clinic_id IN (SELECT clinic_id FROM users WHERE id = auth.uid()))';
+  END IF;
+END
+$$;
 
 -- ============================================================
 -- STOCK ITEMS TABLE POLICIES
