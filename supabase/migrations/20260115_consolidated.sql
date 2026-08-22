@@ -77,6 +77,24 @@ DROP VIEW IF EXISTS repasse_dashboard;
 SELECT 'All tables and views dropped successfully!' as status;
 */
 
+-- The original rooms migration has a legacy hyphenated version that the CLI
+-- does not apply. Ensure the dependency exists before appointments references it.
+CREATE TABLE IF NOT EXISTS rooms (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  clinic_id UUID NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  type VARCHAR(50),
+  unit VARCHAR(100),
+  description TEXT,
+  capacity INT,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_rooms_clinic ON rooms(clinic_id);
+CREATE INDEX IF NOT EXISTS idx_rooms_active ON rooms(is_active);
+
 -- ============================================================================
 -- Consolidated from 20260115_add_missing_appointments_columns.sql
 -- ============================================================================
