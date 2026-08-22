@@ -872,25 +872,23 @@ CREATE POLICY "payers_update"
 
 CREATE POLICY "plans_select"
   ON plans FOR SELECT
-  USING (
-    clinic_id IN (
-      SELECT clinic_id FROM users WHERE id = auth.uid()
-    )
-  );
+  USING (true);
 
 CREATE POLICY "plans_insert"
   ON plans FOR INSERT
   WITH CHECK (
-    clinic_id IN (
-      SELECT clinic_id FROM users WHERE id = auth.uid()
+    EXISTS (
+      SELECT 1 FROM users
+      WHERE id = auth.uid() AND role = 'admin'
     )
   );
 
 CREATE POLICY "plans_update"
   ON plans FOR UPDATE
   USING (
-    clinic_id IN (
-      SELECT clinic_id FROM users WHERE id = auth.uid()
+    EXISTS (
+      SELECT 1 FROM users
+      WHERE id = auth.uid() AND role = 'admin'
     )
   );
 
