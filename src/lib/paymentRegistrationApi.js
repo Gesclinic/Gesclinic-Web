@@ -73,10 +73,6 @@ export async function registerOrUpdateReceivable({
         .eq('id', existing.id)
         .select();
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
 
       if (error) {
         console.error('❌ Erro UPDATE accounts_receivable:', error);
@@ -108,10 +104,6 @@ export async function registerOrUpdateReceivable({
         })
         .select();
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
 
       if (error) {
         console.error('❌ Erro INSERT accounts_receivable:', error);
@@ -183,10 +175,6 @@ export async function recordFinancialEntry({
       })
       .select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
 
     if (error) {
       throw error;
@@ -261,10 +249,6 @@ export async function recordToCashRegister({
         })
         .select('id');
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
 
       if (sessionError) {
         throw sessionError;
@@ -289,10 +273,6 @@ export async function recordToCashRegister({
       })
       .select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
 
     if (movementError) {
       throw movementError;
@@ -346,10 +326,6 @@ export async function auditPaymentRecord({
       })
       .select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
 
     if (error) {
       throw error;
@@ -493,10 +469,6 @@ export async function closeCashRegister(sessionId, closedBy, discrepancy = 0) {
       .eq('id', sessionId)
       .select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
 
     if (error) {
       throw error;

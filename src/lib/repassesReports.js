@@ -67,18 +67,19 @@ export async function getRepassesReport(clinicId, year) {
       throw viewError;
     }
 
-    console.log('✅ Dados carregados via view view_doctor_commissions_summary');
-
-    return (viewData || []).map((r) => ({
-      profissional_nome: r.profissional_nome,
-      convenio_nome: r.convenio_nome,
-      mes: `${String(r.reference_month).padStart(2, '0')}/${r.reference_year}`,
-      total_servicos: r.total_services || 0,
-      valor_bruto: r.total_bruto || 0,
-      percentual_repasse: r.percentual_repasse || 0,
-      valor_repasse: r.total_repasse || 0,
-      status: r.status || 'pendente',
-    }));
+    if (viewData?.length > 0) {
+      console.log('✅ Dados carregados via view view_doctor_commissions_summary');
+      return viewData.map((r) => ({
+        profissional_nome: r.profissional_nome,
+        convenio_nome: r.convenio_nome,
+        mes: `${String(r.reference_month).padStart(2, '0')}/${r.reference_year}`,
+        total_servicos: r.total_services || 0,
+        valor_bruto: r.total_bruto || 0,
+        percentual_repasse: r.percentual_repasse || 0,
+        valor_repasse: r.total_repasse || 0,
+        status: r.status || 'pendente',
+      }));
+    }
 
     // ✅ 3️⃣ Fallback adicional: usar agregação da view `repasse_dashboard`
     // Essa view é preenchida quando cadastramos repasses na AP com vínculo à receita
@@ -103,6 +104,8 @@ export async function getRepassesReport(clinicId, year) {
         margin: r.margin,
       }));
     }
+
+    return [];
   } catch (error) {
     console.error('❌ Erro ao carregar relatório de repasses:', error.message);
     throw error;

@@ -139,10 +139,6 @@ export async function confirmAppointmentByToken(token, status) {
       .select('*')
       .eq('confirmation_token', token);
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
 
     if (selectError) {
       console.error('❌ Confirmação não encontrada:', selectError);

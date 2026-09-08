@@ -437,10 +437,6 @@ export async function getTISSSubmissionStatus(guideId, clinicId) {
       .order('created_at', { ascending: false })
       .limit(1);
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
 
     if (error && error.code !== 'PGRST116') {
       throw error;
@@ -468,10 +464,6 @@ export async function retryTISSSubmission(submissionId, clinicId) {
       .eq('id', submissionId)
       .eq('clinic_id', clinicId);
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
 
     if (fetchError || !submission) {
       throw new Error('Submissão não encontrada');

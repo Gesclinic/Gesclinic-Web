@@ -38,17 +38,13 @@ function onlyAllowed(patch = {}) {
 async function runClinicUpdate(clinicId, patch) {
   let sanitizedPatch = onlyAllowed(patch);
 
-  while (true) {
+  for (;;) {
     const { data, error } = await supabase
       .from('clinics')
       .update(sanitizedPatch)
       .eq('id', clinicId)
       .select('*');
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
 
     if (!error) {
       return { data: normalizeClinicRow(data), error: null };
@@ -89,10 +85,6 @@ export async function getClinic(clinicId) {
   }
   const { data, error } = await supabase.from('clinics').select('*').eq('id', clinicId);
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
 
   if (error) {
     console.error('[clinic] get error', error);

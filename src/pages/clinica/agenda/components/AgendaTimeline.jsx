@@ -113,8 +113,6 @@ function TimelineColumnas({
                                   onSlotClick(slotData);
                                 }}
                                 onCheckin={() => {
-                                  e.preventDefault?.();
-                                  e.stopPropagation?.();
                                   onCheckin(apt);
                                 }}
                                 compact={true}

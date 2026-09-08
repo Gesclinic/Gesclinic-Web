@@ -66,10 +66,6 @@ export async function finalizeAppointmentWithFinancials(appointmentId, clinicId)
       .eq('clinic_id', clinicId)
       .select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
 
     if (updateError) {
       return {
@@ -85,10 +81,6 @@ export async function finalizeAppointmentWithFinancials(appointmentId, clinicId)
       .eq('appointment_id', appointmentId)
       .eq('clinic_id', clinicId);
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
 
     // Step 4: Fetch auto-created TISS guide (if convênio)
     let guideRecord = null;
@@ -99,10 +91,6 @@ export async function finalizeAppointmentWithFinancials(appointmentId, clinicId)
         .eq('appointment_id', appointmentId)
         .eq('clinic_id', clinicId);
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
       guideRecord = guide;
     }
 
@@ -253,10 +241,6 @@ export async function cancelAppointmentFinancials(appointmentId, clinicId) {
       .eq('appointment_id', appointmentId)
       .eq('clinic_id', clinicId);
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
 
     return {
       success: true,
@@ -294,10 +278,6 @@ export async function validateFinancialIntegration(appointmentId, clinicId) {
       .eq('id', appointmentId)
       .eq('clinic_id', clinicId);
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
 
     // Get AR
     const { data: ar } = await supabase

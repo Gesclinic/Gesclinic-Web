@@ -270,10 +270,6 @@ export async function updateHoliday(holidayId, updates) {
       .eq('id', holidayId)
       .select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
 
     if (error) {
       throw error;

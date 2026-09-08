@@ -24,58 +24,6 @@ export default function AgendamentoEditarModal({ agendamentoId, onClose, onSucce
   // RBAC - Verificar permissões
   const { canEditAppointment, canEditAppointmentValue } = useAuthorization();
 
-  // Se não tem permissão, renderizar erro
-  if (!canEditAppointment) {
-    return (
-      <div
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100vw',
-          height: '100vh',
-          background: 'rgba(0,0,0,0.25)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-        }}
-      >
-        <div
-          style={{
-            background: '#fff',
-            borderRadius: 10,
-            minWidth: 420,
-            maxWidth: 600,
-            padding: 32,
-            boxShadow: '0 2px 16px #0002',
-          }}
-        >
-          <h2 style={{ fontWeight: 700, fontSize: 22, marginBottom: 18, color: '#d32f2f' }}>
-            ❌ Permissão Negada
-          </h2>
-          <p style={{ color: '#666', marginBottom: 24 }}>
-            Você não tem permissão para editar agendamentos.
-          </p>
-          <button
-            onClick={onClose}
-            style={{
-              padding: '8px 18px',
-              background: '#1976d2',
-              color: '#fff',
-              border: 0,
-              borderRadius: 4,
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            Fechar
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   // Hooks para carregar dados
   const { data: pacientes } = usePacientes({ clinicId: clinic?.id });
   const { data: profissionais } = useProfissionais({ clinicId: clinic?.id });
@@ -93,7 +41,7 @@ export default function AgendamentoEditarModal({ agendamentoId, onClose, onSucce
 
   // Carregar dados do agendamento e listas de convênios
   useEffect(() => {
-    if (!agendamentoId || !clinic?.id) {
+    if (!canEditAppointment || !agendamentoId || !clinic?.id) {
       return;
     }
     setLoading(true);
@@ -120,20 +68,26 @@ export default function AgendamentoEditarModal({ agendamentoId, onClose, onSucce
       setConvenios(convs);
       setLoading(false);
     });
-  }, [agendamentoId, clinic?.id]);
+  }, [agendamentoId, canEditAppointment, clinic?.id]);
 
   // Carregar serviços ao trocar profissional
   useEffect(() => {
+    if (!canEditAppointment) {
+      return;
+    }
     if (form?.professionalId) {
       listarServicosPorProfissional({ profissionalId: form.professionalId }).then(setServicos);
     } else {
       setServicos([]);
     }
     setForm((f) => (f ? { ...f, serviceId: '' } : f));
-  }, [form?.professionalId]);
+  }, [canEditAppointment, form?.professionalId]);
 
   // Carregar planos ao trocar convênio
   useEffect(() => {
+    if (!canEditAppointment) {
+      return;
+    }
     if (form?.payerId && form.payerId !== '' && form.payerId !== '~') {
       listarPlanosPorConvenio({ convenioId: form.payerId }).then((planos) => {
         setPlanos(planos);
@@ -146,7 +100,27 @@ export default function AgendamentoEditarModal({ agendamentoId, onClose, onSucce
       setPlanos([]);
       setForm((f) => (f ? { ...f, planId: '' } : f));
     }
-  }, [form?.payerId]);
+  }, [canEditAppointment, form?.payerId]);
+
+  if (!canEditAppointment) {
+    return (
+      <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/25">
+        <div className="min-w-[420px] max-w-[600px] rounded-[10px] bg-white p-8 shadow-lg">
+          <h2 className="mb-[18px] text-[22px] font-bold text-red-700">Permissão negada</h2>
+          <p className="mb-6 text-gray-600">
+            Você não tem permissão para editar agendamentos.
+          </p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="cursor-pointer rounded bg-blue-600 px-[18px] py-2 font-semibold text-white"
+          >
+            Fechar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   function validar() {
     if (!form.date) {

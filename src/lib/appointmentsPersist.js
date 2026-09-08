@@ -223,10 +223,6 @@ export async function updateAppointment(id, clinicId, payload) {
     .eq('clinic_id', clinicId)
     .select(RETURN_COLUMNS);
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
 
   if (error) {
     console.error('Erro ao atualizar agendamento:', error);
@@ -302,10 +298,6 @@ async function getAppointmentById(id, clinicId) {
     .eq('id', id)
     .eq('clinic_id', clinicId);
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
 
   if (error) {
     throw new Error(`Falha ao ler agendamento: ${error.message}`);

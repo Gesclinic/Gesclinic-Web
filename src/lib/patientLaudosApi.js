@@ -198,10 +198,6 @@ export async function updatePatientLaudo(id, updates) {
     .eq('id', id)
     .select();
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
 
   if (error) {
     if (shouldUseLocalFallback(error)) {
@@ -270,10 +266,6 @@ export async function syncLocalPatientLaudos(patientId, clinicId = null) {
       )
       .select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
 
     if (error) {
       failedRows.push({ row, error });

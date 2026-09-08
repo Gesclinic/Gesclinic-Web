@@ -720,10 +720,6 @@ export function ProfessionalsPage() {
         .select('id, email, full_name, role, clinic_id')
         .eq('id', userId);
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
 
       if (fetchError) {
         console.error('❌ Erro ao buscar usuário criado:', fetchError);
@@ -2037,6 +2033,8 @@ export function ProfessionalsPage() {
 // ============================================================
 
 function TabDados({ formData, setFormData, handleSubmit, submitting }) {
+  const [selectedDocType, setSelectedDocType] = useState('');
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4 w-full">
       {/* Foto do Profissional - Display */}

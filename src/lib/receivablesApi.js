@@ -289,10 +289,6 @@ export async function updateReceivable(id, patch) {
   }
   const { data, error } = await supabase.from('ar_receivables').update(upd).eq('id', id).select();
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
   if (error) {
     throw new Error(error.message);
   }
@@ -328,10 +324,6 @@ export async function deleteReceivable(id) {
 export async function getReceivableById(id) {
   const { data, error } = await supabase.from('ar_receivables').select('*').eq('id', id);
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
   if (error) {
     throw new Error(error.message);
   }

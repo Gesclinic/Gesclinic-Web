@@ -1,18 +1,7 @@
 ﻿/**
- * AgendaProfessionalView.jsx
- *
- * ðŸ‘¨â€âš•ï¸ Tela do Profissional (Atendimento)
- *
- * Responsabilidades:
- * - Visualizar APENAS agendamentos liberados para atendimento
- * - Iniciar atendimento (registrar hora_inicio)
- * - Finalizar atendimento (registrar hora_fim)
- * - Interface limpa e sem distraÃ§Ãµes
- *
- * Fluxo:
- * LIBERADO_PARA_ATENDIMENTO â†’ EM_ATENDIMENTO â†’ FINALIZADO
- *
- * âš ï¸ CRÃTICO: Profissional NÃƒO pode editar agendamento, ver financeiro, ou pular etapas
+ * Tela do profissional para iniciar e finalizar atendimentos liberados.
+ * O profissional nao pode editar o agendamento, acessar dados financeiros
+ * ou ignorar etapas do fluxo de atendimento.
  */
 
 import React, { useState, useMemo, useCallback } from 'react';

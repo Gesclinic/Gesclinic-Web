@@ -319,10 +319,6 @@ export default function SincronizarProfissionais() {
             })
             .select();
 
-          if (!data || data.length === 0) {
-            throw new Error('Record not found');
-          }
-          return data[0];
 
           if (!createError && createdProf) {
             created++;

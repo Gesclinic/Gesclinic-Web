@@ -147,10 +147,6 @@ export const stockItemsApi = {
       .select('id, name, sku, category_id')
       .eq('id', id);
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
     if (error) {
       throw error;
     }
@@ -257,10 +253,6 @@ export const stockSuppliersApi = {
       .insert({ ...safe, clinic_id: clinicId })
       .select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
     if (error) {
       throw error;
     }
@@ -285,10 +277,6 @@ export const stockSuppliersApi = {
       .eq('id', id)
       .select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
     if (error) {
       throw error;
     }
@@ -471,10 +459,6 @@ export const stockMovementsApi = {
       .eq('id', id)
       .select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
 
     if (error) {
       throw error;
@@ -499,17 +483,9 @@ export const stockMovementsApi = {
       .eq('id', id)
       .limit(1);
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
     if (res.error && isMissingColumnError(res.error)) {
       res = await supabase.from('stock_movements').select('id, notes').eq('id', id).limit(1);
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
     }
     if (res.error) {
       throw res.error;
@@ -579,10 +555,6 @@ export const stockRequestsApi = {
       )
       .eq('id', id);
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
     if (error) {
       throw error;
     }
@@ -602,10 +574,6 @@ export const stockRequestsApi = {
     };
     const { data: req, error: e1 } = await supabase.from('stock_requests').insert(header).select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
     if (e1) {
       throw e1;
     }
@@ -689,10 +657,6 @@ export const stockRequestsApi = {
       .eq('id', id)
       .select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
     if (error) {
       throw error;
     }
@@ -712,10 +676,6 @@ export const stockRequestsApi = {
       .eq('id', id)
       .select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
     if (error) {
       throw error;
     }
@@ -793,10 +753,6 @@ export const stockRequestsApi = {
             .select('id, delivered_qty, qty')
             .eq('id', l.id || '');
 
-          if (!data || data.length === 0) {
-            throw new Error('Record not found');
-          }
-          return data[0];
           if (!it || eGet) {
             // fallback by request_id + item_id
             const { data: it2, error: e2 } = await supabase
@@ -806,10 +762,6 @@ export const stockRequestsApi = {
               .eq('item_id', l.item_id)
               .limit(1);
 
-            if (!data || data.length === 0) {
-              throw new Error('Record not found');
-            }
-            return data[0];
             if (e2) {
               throw e2;
             }

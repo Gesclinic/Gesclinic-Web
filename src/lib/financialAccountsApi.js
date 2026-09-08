@@ -46,7 +46,7 @@ export const calculateDRE = (transactions = []) => {
   };
 
   transactions.forEach((t) => {
-    if (summary.hasOwnProperty(t.type)) {
+    if (Object.prototype.hasOwnProperty.call(summary, t.type)) {
       summary[t.type] += t.value || 0;
     }
   });

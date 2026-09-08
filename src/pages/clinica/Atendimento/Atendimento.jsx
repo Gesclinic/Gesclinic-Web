@@ -6,6 +6,7 @@ import GuiaConvenioTab from '@/components/clinica/Atendimento/GuiaConvenioTab';
 import EvolucaoAtendimentoTab from '@/components/clinica/Atendimento/EvolucaoAtendimentoTab';
 import FinanceiroAtendimentoTab from '@/components/clinica/Atendimento/FinanceiroAtendimentoTab';
 import DocumentosAtendimentoTab from '@/components/clinica/Atendimento/DocumentosAtendimentoTab';
+import { supabase } from '@/lib/customSupabaseClient';
 
 export default function Atendimento() {
   const { id } = useParams();
@@ -34,10 +35,6 @@ export default function Atendimento() {
         .insert([{ ...fields, appointment_id: id }])
         .select();
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
       setGuide(newGuide);
     }
     alert('Guia salva com sucesso!');
@@ -54,10 +51,6 @@ export default function Atendimento() {
         .select('*, patient:patients(*), professional:professionals(*), service:services(*)')
         .eq('id', id);
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
       setAppointment(apptData);
 
       // Buscar guia vinculada
@@ -66,10 +59,6 @@ export default function Atendimento() {
         .select('*')
         .eq('appointment_id', id);
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
       setGuide(guideData || {});
 
       // Buscar financeiro vinculado

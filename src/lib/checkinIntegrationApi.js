@@ -458,10 +458,6 @@ export async function confirmCheckin(appointmentId, clinicId, checkinData = {}) 
       .eq('id', appointmentId)
       .select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
 
     // Próximos passos
     const nextSteps = [];

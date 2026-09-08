@@ -143,10 +143,6 @@ export const examRequestsApi = {
         ])
         .select();
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
 
       if (error) {
         throw error;
@@ -165,10 +161,6 @@ export const examRequestsApi = {
         .eq('id', requestId)
         .select();
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
 
       if (error) {
         throw error;
@@ -183,10 +175,6 @@ export const examRequestsApi = {
     try {
       const { data, error } = await client.from('exam_requests').select('*').eq('id', requestId);
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
 
       if (error) {
         throw error;
@@ -235,10 +223,6 @@ export const examRequestsApi = {
         .eq('id', requestId)
         .select();
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
 
       if (error) {
         throw error;
@@ -260,10 +244,6 @@ export const examRequestsApi = {
         .eq('id', requestId)
         .select();
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
 
       if (error) {
         throw error;
@@ -282,10 +262,6 @@ export const examRequestsApi = {
         .eq('id', requestId)
         .select();
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
 
       if (error) {
         throw error;
@@ -310,10 +286,6 @@ export const examRequestsApi = {
         .eq('id', requestId)
         .select();
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
 
       if (error) {
         throw error;

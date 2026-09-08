@@ -43,10 +43,6 @@ export const financeAccountsApi = {
         .eq('id', accountId)
         .select();
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
 
       if (error) {
         throw error;
@@ -79,10 +75,6 @@ export const financeAccountsApi = {
     try {
       const { data, error } = await client.from('finance_accounts').select('*').eq('id', accountId);
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
 
       if (error) {
         throw error;
@@ -101,10 +93,6 @@ export const financeAccountsApi = {
         .eq('id', accountId)
         .select();
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
 
       if (error) {
         throw error;

@@ -89,10 +89,6 @@ export async function updateOrcamento(id, payload) {
     .eq('id', id)
     .select();
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
   if (error) {
     throw error;
   }
@@ -219,10 +215,6 @@ export async function addOrcamentoItem(orcamentoId, item) {
     .insert({ ...item, orcamento_id: orcamentoId })
     .select();
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
   if (error) {
     throw error;
   }
@@ -236,10 +228,6 @@ export async function updateOrcamentoItem(id, patch) {
     .eq('id', id)
     .select();
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
   if (error) {
     throw error;
   }

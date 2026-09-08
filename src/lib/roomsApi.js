@@ -108,10 +108,6 @@ export async function updateRoom(roomId, updates) {
   try {
     const { data, error } = await supabase.from('rooms').update(updates).eq('id', roomId).select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
 
     if (error) {
       console.error('Erro ao atualizar sala:', error);

@@ -291,14 +291,12 @@ export default function AgendaPage() {
   }, [patientIdFromUrl, agenda]);
 
   // Calcular métricas Agenda × Financeiro
-  const metrics = useMemo(() => {
-    return useAgendaFinanceMetrics(
-      agenda.filteredAppointments || [],
-      agenda.metadata?.professionals || [],
-      agenda.metadata?.services || [],
-      agenda.date,
-    );
-  }, [agenda.filteredAppointments, agenda.metadata, agenda.date]);
+  const metrics = useAgendaFinanceMetrics(
+    agenda.filteredAppointments || [],
+    agenda.metadata?.professionals || [],
+    agenda.metadata?.services || [],
+    agenda.date,
+  );
 
   // 👨‍⚕️ Filtrar agendamentos para profissional
   const professionalAppointments = useMemo(() => {
@@ -1360,7 +1358,7 @@ export default function AgendaPage() {
         <div className="flex gap-4 text-sm font-mono">
           <div>
             <strong>🔍 Debug:</strong> Role={currentRole} | Mode={agendaMode} | Prof=
-            {isProfessional ? userProfessionalId || 'loading' : 'N/A'}
+            {isProfissional ? userProfessionalId || 'loading' : 'N/A'}
           </div>
           <div>
             | Auth Loading={authLoading} | Clinic Loading={loadingClinic}

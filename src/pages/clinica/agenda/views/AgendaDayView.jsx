@@ -883,10 +883,6 @@ export default function AgendaDayView({
           }
         }
 
-        // Fechar drawer
-        setDrawerOpen(false);
-        console.log('📭 Drawer fechado');
-
         // Aguardar para Supabase propagar
         console.log('⏳ Aguardando para Supabase propagar...');
         await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -935,7 +931,6 @@ export default function AgendaDayView({
           }
 
           console.log('✅ Agendamento deletado com sucesso');
-          setDrawerOpen(false);
           onEditAppointment?.();
         } catch (err) {
           console.error('💥 Erro:', err);

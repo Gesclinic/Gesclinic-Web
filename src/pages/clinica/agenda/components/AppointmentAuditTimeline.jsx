@@ -63,22 +63,11 @@ const AppointmentAuditTimeline = ({
   // Verificar permissões de acesso
   const canViewAudit = ['admin', 'gestor'].includes(currentRole?.toLowerCase?.());
 
-  if (!canViewAudit) {
-    return (
-      <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-        <div className="flex items-center gap-2 text-yellow-700">
-          <Lock className="w-4 h-4" />
-          <span className="text-sm">
-            Você não tem permissão para visualizar o histórico de auditoria.
-          </span>
-        </div>
-      </div>
-    );
-  }
-
   useEffect(() => {
-    fetchLogs();
-  }, [appointmentId]);
+    if (canViewAudit) {
+      fetchLogs();
+    }
+  }, [appointmentId, canViewAudit]);
 
   const fetchLogs = async () => {
     try {
@@ -96,6 +85,19 @@ const AppointmentAuditTimeline = ({
 
   // Filtrar logs baseado em permissões
   const displayLogs = compact ? logs.slice(-5) : logs;
+
+  if (!canViewAudit) {
+    return (
+      <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <div className="flex items-center gap-2 text-yellow-700">
+          <Lock className="w-4 h-4" />
+          <span className="text-sm">
+            Você não tem permissão para visualizar o histórico de auditoria.
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   // Mapear tipo de ação para ícone
   const getActionIcon = (actionType) => {

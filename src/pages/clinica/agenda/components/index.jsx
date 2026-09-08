@@ -91,20 +91,11 @@ export default function AgendaIndex() {
   console.log('═══════════════════════════════════════════════════════════════');
 
   // ============ CONTEXTOS & AUTH ============
-  let auth, clinicId, clinic, loadingClinic;
-  try {
-    auth = useAuth();
-    const clinicCtx = useClinicContext();
-    clinicId = clinicCtx?.clinicId;
-    clinic = clinicCtx?.clinic;
-    loadingClinic = clinicCtx?.loadingClinic;
-  } catch (e) {
-    console.warn('⚠️ Contextos não disponíveis');
-    auth = { user: { role: 'gestor', id: 'user-demo' } };
-    clinic = { id: 'clinic-123', name: 'Clínica Demo' };
-    clinicId = 'clinic-123';
-    loadingClinic = false;
-  }
+  const auth = useAuth();
+  const clinicCtx = useClinicContext();
+  const clinicId = clinicCtx?.clinicId;
+  const clinic = clinicCtx?.clinic;
+  const loadingClinic = clinicCtx?.loadingClinic;
 
   const currentRole = auth?.currentRole?.toLowerCase() || 'recepcao';
   const accessibleTabs = getAccessibleAgendaTabs(currentRole);

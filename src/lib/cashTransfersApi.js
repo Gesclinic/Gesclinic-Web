@@ -50,10 +50,6 @@ export const cashTransfersApi = {
         .eq('id', transferId)
         .select();
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
 
       if (error) {
         throw error;
@@ -72,10 +68,6 @@ export const cashTransfersApi = {
         .eq('id', transferId)
         .select();
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
 
       if (error) {
         throw error;
@@ -114,10 +106,6 @@ export const cashTransfersApi = {
     try {
       const { data, error } = await client.from('cash_transfers').select('*').eq('id', transferId);
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
 
       if (error) {
         throw error;

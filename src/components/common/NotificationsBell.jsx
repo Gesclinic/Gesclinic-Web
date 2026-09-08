@@ -30,10 +30,6 @@ export default function NotificationsBell() {
     console.log('🔔 DEBUG Notifications - clinicId:', clinicId, 'type:', typeof clinicId);
     console.log('🔔 DEBUG Notifications - user.id:', user.id, 'type:', typeof user.id);
 
-    // TEMPORARIAMENTE DESABILITADO PARA PARAR OS ERROS
-    console.log('🔔 Notificações temporariamente desabilitadas');
-    return;
-
     try {
       const { data, error } = await supabase.rpc('get_unread_notifications_count', {
         p_clinic_id: clinicId,

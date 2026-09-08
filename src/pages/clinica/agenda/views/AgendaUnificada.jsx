@@ -18,6 +18,7 @@ import AgendaFilters from '@/components/agenda/AgendaFilters';
 import AgendaSlotCard from '@/components/agenda/AgendaSlotCard';
 import ModalCriarAgendamento from '../components/ModalCriarAgendamento';
 import { listRooms } from '@/lib/roomsApi';
+import { buscarAgendamentoPorId, listarAgenda } from '@/modules/agenda/services';
 
 function AgendaUnificada() {
   const { clinic } = useClinicContext();

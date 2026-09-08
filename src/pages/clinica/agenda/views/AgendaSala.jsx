@@ -4,6 +4,7 @@ import { listarAgenda } from '@/modules/agenda/services/agenda.api.complex';
 import { mapAgendaItem } from '@/modules/agenda/services/agendaMapper';
 import { useClinicContext } from '@/contexts/ClinicContext';
 import AgendaFilters from '@/components/agenda/AgendaFilters';
+import AgendaSlotCard from '@/components/agenda/AgendaSlotCard';
 import AgendamentoDetalhesModal from '../components/AgendamentoDetalhesModal';
 import ModalCriarAgendamento from '../components/ModalCriarAgendamento';
 import { listProfessionals } from '@/lib/professionalsApi';

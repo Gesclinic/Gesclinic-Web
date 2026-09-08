@@ -45,10 +45,6 @@ export const bankReconciliationApi = {
         .eq('id', reconciliationId)
         .select();
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
 
       if (error) {
         throw error;
@@ -93,10 +89,6 @@ export const bankReconciliationApi = {
         .select('*')
         .eq('id', reconciliationId);
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
 
       if (error) {
         throw error;

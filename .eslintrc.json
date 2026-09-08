@@ -7,6 +7,10 @@
   "ignorePatterns": [
     "**/*.ts",
     "**/*.tsx",
+    "**/*.backup.js",
+    "**/*_BACKUP.jsx",
+    "**/*.examples.js",
+    "**/QUICK_START.js",
     "dist/",
     "node_modules/",
     "build/"

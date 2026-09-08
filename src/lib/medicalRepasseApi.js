@@ -73,10 +73,6 @@ export async function salvarConfigRepasse(clinicId, professionalId, config) {
       .eq('id', existing.id)
       .select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
 
     if (error) {
       throw error;
@@ -86,10 +82,6 @@ export async function salvarConfigRepasse(clinicId, professionalId, config) {
     // Insert
     const { data, error } = await supabase.from('medical_repasse_config').insert([dados]).select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
 
     if (error) {
       throw error;
@@ -121,10 +113,6 @@ export async function registrarProducao(clinicId, professionalId, producao) {
     ])
     .select();
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
 
   if (error) {
     throw error;
@@ -204,10 +192,6 @@ export async function obterRepassePeriodo(clinicId, professionalId, dataInicio, 
     .eq('periodo_inicio', dataInicio)
     .eq('periodo_fim', dataFim);
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
 
   if (error && error.code !== 'PGRST116') {
     throw error;

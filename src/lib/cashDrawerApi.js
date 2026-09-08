@@ -73,10 +73,6 @@ export const cashDrawerApi = {
         .eq('id', drawerId)
         .select();
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
 
       if (error) {
         throw error;
@@ -91,10 +87,6 @@ export const cashDrawerApi = {
     try {
       const { data, error } = await client.from('cash_drawers').select('*').eq('id', drawerId);
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
 
       if (error) {
         throw error;
@@ -157,10 +149,6 @@ export const cashDrawerApi = {
         ])
         .select();
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
 
       if (error) {
         throw error;
@@ -333,10 +321,6 @@ export const cashDrawerApi = {
         .eq('id', transferId)
         .select();
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
 
       if (error) {
         throw error;

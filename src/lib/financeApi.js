@@ -310,10 +310,6 @@ export async function updateAP(id, patch) {
 
   const { data, error } = await supabase.from('ap_bills').update(upd).eq('id', id).select();
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
 
   if (!error) {
     return data;
@@ -361,11 +357,6 @@ export async function updateAP(id, patch) {
     }
 
     const res = await supabase.from('ap_bills').update(fallback).eq('id', id).select();
-
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
     if (res.error) {
       console.error('updateAP fallback error:', res.error);
       throw new Error(res.error.message);
@@ -381,11 +372,6 @@ export async function updateAP(id, patch) {
   if (isFkCategory && 'category_id' in upd) {
     const { category_id, ...fallback } = upd;
     const res = await supabase.from('ap_bills').update(fallback).eq('id', id).select();
-
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
     if (res.error) {
       console.error('updateAP fk fallback error:', res.error);
       throw new Error(res.error.message);
@@ -537,10 +523,6 @@ export async function createFinanceAccount(clinicId, payload) {
     })
     .select();
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
 
   if (error) {
     throw error;
@@ -560,10 +542,6 @@ export async function updateFinanceAccount(accountId, payload) {
     .eq('id', accountId)
     .select();
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
 
   if (error) {
     throw error;
@@ -664,10 +642,6 @@ export async function listAPItems(apBillId) {
 export async function getAPById(id) {
   const { data, error } = await supabase.from('ap_bills').select('*').eq('id', id);
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
   if (error) {
     throw new Error(error.message);
   }
@@ -724,10 +698,6 @@ export async function createRecurringAP(clinicId, payload) {
   try {
     const { data, error } = await supabase.from('recurring_accounts_payable').insert(row).select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
     if (error) {
       throw error;
     }
@@ -786,10 +756,6 @@ export async function createAR(clinicId, payload) {
     })
     .select();
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
   if (error) {
     throw new Error(error.message);
   }
@@ -803,10 +769,6 @@ export async function updateAR(id, patch) {
     .eq('id', id)
     .select('*, patient:patients(name)');
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
   if (error) {
     throw new Error(error.message);
   }
@@ -901,10 +863,6 @@ export async function createCashFlowManual(clinicId, row) {
   };
   const { data, error } = await supabase.from('cash_flow').insert(payload).select();
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
   if (error) {
     throw new Error(error.message);
   }
@@ -944,10 +902,6 @@ export async function deleteCashFlowManual(id) {
     .select('id, origin, is_reconciled')
     .eq('id', id);
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
   if (error) {
     throw new Error(error.message);
   }

@@ -272,7 +272,23 @@ export default defineConfig({
 		sourcemap: false,
 		rollupOptions: {
 			output: {
-				manualChunks: undefined,
+				manualChunks(id) {
+					if (!id.includes('node_modules')) {
+						return undefined;
+					}
+
+					if (id.includes('@tensorflow')) return 'vendor-tensorflow';
+					if (id.includes('@fullcalendar')) return 'vendor-calendar';
+					if (id.includes('jspdf') || id.includes('html2canvas')) return 'vendor-pdf';
+					if (id.includes('/xlsx/')) return 'vendor-xlsx';
+					if (id.includes('recharts')) return 'vendor-charts';
+					if (id.includes('@supabase')) return 'vendor-supabase';
+					if (/node_modules\/(react|react-dom|react-router|react-router-dom|react-helmet)/.test(id)) {
+						return 'vendor-react';
+					}
+
+					return 'vendor';
+				},
 			},
 		},
 	},

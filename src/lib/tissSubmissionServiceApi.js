@@ -133,10 +133,6 @@ async function submitViaHTTPAPI(guideId, clinicId, payer) {
       .order('created_at', { ascending: false })
       .limit(1);
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
 
     if (xmlError || !xmlData) {
       // Gerar XML se ainda não existir
@@ -224,10 +220,6 @@ async function submitViaHTTPSFTP(guideId, clinicId, payer) {
     .eq('clinic_id', clinicId)
     .limit(1);
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
 
   return {
     success: true,
@@ -259,10 +251,6 @@ async function generateForPortalSubmission(guideId, clinicId, payer) {
       .eq('clinic_id', clinicId)
       .limit(1);
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
 
     return {
       success: true,
@@ -476,10 +464,6 @@ async function fetchCompleteGuideData(guideId, clinicId) {
     .eq('id', guideId)
     .eq('clinic_id', clinicId);
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
 
   if (error) {
     throw error;

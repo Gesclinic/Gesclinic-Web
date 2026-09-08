@@ -204,7 +204,7 @@ export default function AppointmentDialog(props) {
           ? new Date(`${date}T${endTime}`)
           : new Date(start.getTime() + 30 * 60000);
       setDate(start.toISOString().slice(0, 10));
-      function getLocalTimeStringFromUTC(dateIso) {
+      const getLocalTimeStringFromUTC = (dateIso) => {
         if (!dateIso) {
           return '';
         }
@@ -214,7 +214,7 @@ export default function AppointmentDialog(props) {
           new Date(iso).toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }),
         );
         return local.toTimeString().slice(0, 5);
-      }
+      };
       const startLocal = getLocalTimeStringFromUTC(attached.start_time);
       setStartTime(startLocal || '09:00');
       // Se já existe hora fim, não sobrescreva, senão calcula 30min após início

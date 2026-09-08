@@ -223,10 +223,6 @@ export async function updateCBHPM(procedureId, procedureData) {
     .eq('id', procedureId)
     .select();
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
 
   if (error) {
     throw error;
@@ -362,10 +358,6 @@ export async function mapCBHPMToService(cbhpmId, serviceId, clinicId, options = 
     ])
     .select();
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
 
   if (error) {
     if (error.code === '23505') {
@@ -448,10 +440,6 @@ export async function getEffectivePrice(cbhpmId, serviceId) {
     .eq('cbhpm_id', cbhpmId)
     .eq('service_id', serviceId);
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
 
   if (mapping && mapping.sobrescreve_valor && mapping.valor_especifico) {
     return mapping.valor_especifico;

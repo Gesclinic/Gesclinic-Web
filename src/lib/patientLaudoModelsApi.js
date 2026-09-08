@@ -176,10 +176,6 @@ export async function updatePatientLaudoTemplate(id, updates) {
     .eq('id', id)
     .select();
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
 
   if (error) {
     if (shouldUseLocalFallback(error)) {

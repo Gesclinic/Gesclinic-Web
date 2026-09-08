@@ -66,10 +66,6 @@ const discountApprovalsApi = {
         .eq('id', appointmentId)
         .select();
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
 
       if (updateError) {
         throw updateError;
@@ -208,10 +204,6 @@ const discountApprovalsApi = {
           .select('*')
           .eq('id', authorizationId);
 
-        if (!data || data.length === 0) {
-          throw new Error('Record not found');
-        }
-        return data[0];
 
         if (!error && data) {
           return data;
@@ -226,10 +218,6 @@ const discountApprovalsApi = {
         .eq('id', authorizationId)
         .gt('discount', 0);
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
 
       if (error) {
         throw error;
@@ -257,10 +245,6 @@ const discountApprovalsApi = {
           .eq('id', authorizationId)
           .select();
 
-        if (!data || data.length === 0) {
-          throw new Error('Record not found');
-        }
-        return data[0];
 
         if (!error && data) {
           return data;
@@ -279,10 +263,6 @@ const discountApprovalsApi = {
         .eq('id', authorizationId)
         .select();
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
 
       if (error) {
         throw error;
@@ -304,10 +284,6 @@ const discountApprovalsApi = {
         .eq('id', appointmentId)
         .select();
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
 
       if (error) {
         throw error;
@@ -348,10 +324,6 @@ const discountApprovalsApi = {
         .eq('id', appointmentId)
         .select();
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
 
       if (error) {
         throw error;
@@ -393,10 +365,6 @@ const discountApprovalsApi = {
         .eq('id', appointmentId)
         .select();
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
 
       if (error) {
         throw error;
@@ -438,10 +406,6 @@ const discountApprovalsApi = {
         .eq('id', appointmentId)
         .select();
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
 
       if (error) {
         throw error;

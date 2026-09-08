@@ -306,10 +306,6 @@ export async function createProfessionalService(clinicId, data) {
     ])
     .select();
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
 
   if (error) {
     if (error.code === '23505') {
@@ -341,10 +337,6 @@ export async function updateProfessionalServiceById(id, data) {
     .eq('id', id)
     .select();
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
 
   if (error) {
     throw new Error(`Falha ao atualizar vínculo: ${error.message}`);

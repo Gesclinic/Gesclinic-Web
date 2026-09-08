@@ -113,10 +113,6 @@ async function runRemoteUpdate(id, updates) {
     .eq('id', id)
     .select();
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
 }
 
 export async function listPatientRecords(patientId) {
@@ -231,10 +227,6 @@ export async function syncLocalPatientRecords(patientId) {
       )
       .select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
 
     if (error) {
       failedRows.push({ row, error });

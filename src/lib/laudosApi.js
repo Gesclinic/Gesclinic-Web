@@ -37,10 +37,6 @@ export async function createLaudo(clinicId, payload) {
 export async function updateLaudo(id, payload) {
   const { data, error } = await supabase.from('laudos').update(payload).eq('id', id).select();
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
   if (error) {
     throw error;
   }

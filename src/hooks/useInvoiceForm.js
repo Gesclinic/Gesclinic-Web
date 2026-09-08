@@ -290,6 +290,7 @@ export function useInvoiceForm(appointment, clinic) {
     taxBreakdown,
     validationErrors,
     loading,
+    setDiscount,
 
     // Item management
     addItem,
@@ -315,12 +316,7 @@ export function useInvoiceForm(appointment, clinic) {
 /**
  * Exemplo de como usar o hook em um componente
  */
-export function InvoiceFormExample() {
-  const { clinic, clinicId } = useClinicContext(); // seu contexto
-  const { data: appointment } = useQuery(['appointment', appointmentId], () =>
-    fetchAppointment(appointmentId),
-  );
-
+export function InvoiceFormExample({ appointment, clinic }) {
   const invoice = useInvoiceForm(appointment, clinic);
 
   const handleAddService = (service) => {
@@ -384,7 +380,7 @@ export function InvoiceFormExample() {
         <input
           type="number"
           value={invoice.discount}
-          onChange={(e) => setDiscount(Math.max(0, parseFloat(e.target.value) || 0))}
+          onChange={(e) => invoice.setDiscount(Math.max(0, parseFloat(e.target.value) || 0))}
           className="w-full px-3 py-2 border rounded"
         />
       </div>

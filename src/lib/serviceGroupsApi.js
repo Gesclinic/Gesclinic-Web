@@ -87,10 +87,6 @@ export async function updateServiceGroup(id, patch) {
     .eq('id', id)
     .select('id, name, status');
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
 
   if (error) {
     const msg = (error.message || '').toLowerCase();

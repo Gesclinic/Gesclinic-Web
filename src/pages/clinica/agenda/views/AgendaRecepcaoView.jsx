@@ -23,6 +23,7 @@ import {
   getStatusLabelOnly,
 } from '@/lib/appointmentStatusConstants';
 import { updateAppointment } from '@/lib/appointmentsApi';
+import { canPerformAction } from '@/lib/appointmentStatusEnums';
 import { ChevronDown, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
 
 export default function AgendaRecepcaoView({ appointments = [], onRefresh }) {
@@ -31,6 +32,9 @@ export default function AgendaRecepcaoView({ appointments = [], onRefresh }) {
   const [expandedId, setExpandedId] = useState(null);
   const [loadingId, setLoadingId] = useState(null);
   const [filterStatus, setFilterStatus] = useState('all');
+  const canMarkArrival = canPerformAction(currentRole, 'canMarkArrival');
+  const canMarkPending = canPerformAction(currentRole, 'canMarkPending');
+  const canRelease = canPerformAction(currentRole, 'canReleaseForCare');
 
   // Filtra agendamentos do dia que estão na fase de recepção
   const receptionAppointments = useMemo(() => {
@@ -277,7 +281,7 @@ export default function AgendaRecepcaoView({ appointments = [], onRefresh }) {
                     <div className="bg-gray-50 p-3 rounded-lg">
                       <p className="text-xs text-gray-600 mb-1">Status Atual</p>
                       <p className="text-sm font-semibold text-gray-900">
-                        {getStatusLabel(apt.status)}
+                        {getStatusLabelOnly(apt.status)}
                       </p>
                     </div>
 

@@ -491,10 +491,6 @@ export async function generateProntuarioForPatient(patientId, clinicCode) {
       .eq('id', patientId)
       .select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
 
     if (updateError) {
       throw updateError;

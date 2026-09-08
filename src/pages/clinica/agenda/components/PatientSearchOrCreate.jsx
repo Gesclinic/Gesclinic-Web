@@ -117,7 +117,6 @@ export default function PatientSearchOrCreate({
       // Dados de agendamento
       patientId: patient.id, // ✅ GARANTIDO: vem preenchido
       patientName: patient.name,
-      phone: patient.phone || '',
       recordNumber: patient.prontuario_numero || '',
 
       // Dados cadastrais (mapeamento correto!)

@@ -60,10 +60,6 @@ export async function updatePayer(id, payload) {
     .eq('id', id)
     .select();
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
   if (error) {
     throw error;
   }
@@ -128,10 +124,6 @@ export async function createPlan(clinicId, payerId, payload) {
     })
     .select();
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
   if (error) {
     throw error;
   }
@@ -151,10 +143,6 @@ export async function updatePlan(id, payload) {
     .eq('id', id)
     .select();
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
   if (error) {
     throw error;
   }

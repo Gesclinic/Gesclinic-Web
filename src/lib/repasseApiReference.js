@@ -4,6 +4,8 @@
  * Cole e use diretamente nos seus componentes React
  */
 
+import { useEffect, useState } from 'react';
+
 import {
   calcularRepasseEmLote,
   dashboardRepasseMedico,

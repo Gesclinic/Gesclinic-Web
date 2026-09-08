@@ -1006,10 +1006,6 @@ export function ConveniosPage() {
 
           .select('id');
 
-        if (!data || data.length === 0) {
-          throw new Error('Record not found');
-        }
-        return data[0];
 
         if (createError) {
           setError('Erro ao criar conv�nio');

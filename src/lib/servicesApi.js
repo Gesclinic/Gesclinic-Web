@@ -105,10 +105,6 @@ export async function updateService(serviceId, serviceData) {
     .eq('id', serviceId)
     .select();
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
 
   if (error) {
     throw error;
@@ -128,10 +124,6 @@ export async function deleteService(serviceId) {
     .eq('id', serviceId)
     .select();
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
 
   if (error) {
     throw error;

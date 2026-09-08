@@ -152,10 +152,6 @@ const createAccountsReceivable = async (appointmentId, appointment, financialDat
         .select('price, name')
         .eq('id', appointment.service_id);
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
 
       if (service?.price) {
         finalValue = parseFloat(service.price);
@@ -261,10 +257,6 @@ const createBillingGuide = async (appointmentId, appointment, financialData) => 
         .select('price')
         .eq('id', appointment.service_id);
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
 
       finalValue = service?.price || 0;
     }

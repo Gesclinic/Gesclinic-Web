@@ -90,10 +90,6 @@ export default function Hierarquia() {
         .eq('id', editing.id)
         .select();
 
-      if (!data || data.length === 0) {
-        throw new Error('Record not found');
-      }
-      return data[0];
       if (error) {
         throw error;
       }

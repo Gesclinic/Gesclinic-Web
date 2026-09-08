@@ -43,13 +43,6 @@ export default function DrawerAtendimento({ open, onClose, appointment, onSave }
 
   const defaultTemplates = {
     receita: `
-      <h2 style="text-align:center;">RECEITA MÉDICA</h2>
-      <p><strong>Paciente:</strong> {{paciente}}</p>
-      <p><strong>Prescrição:</strong></p>
-      <div style="min-height:200px;border-bottom:1px solid #ccc;"></div>
-      <br/><div style="text-align:center;">
-      <p>__________________________________</p></div>`,
-    receita: `
         <div class='receita-bloco-unico'>
           <div class='receita-cabecalho-linha'>
             <span class='logo-clinica'>Gesclinic</span>

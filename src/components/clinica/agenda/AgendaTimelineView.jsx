@@ -227,7 +227,7 @@ export default function AgendaTimelineView({
                 <div className="col-span-1 p-3 border-r border-gray-200 text-center font-mono text-sm flex items-center justify-center bg-gray-50">
                   <span className="font-bold text-gray-800 text-base">{time}</span>
                 </div>
-                {appointment && isBlocked ? (
+                {isBlocked ? (
                   <>
                     {/* Prontuário */}
                     <div className="col-span-1 p-2 border-r border-gray-200 text-center text-sm flex items-center justify-center">
@@ -289,7 +289,7 @@ export default function AgendaTimelineView({
                       <span className="text-red-600 font-medium italic">Sistema</span>
                     </div>
                   </>
-                ) : appointment ? (
+                ) : (
                   <>
                     {/* Prontuário */}
                     <div className="col-span-1 p-2 border-r border-gray-200 text-center text-sm flex items-center justify-center">
@@ -373,6 +373,8 @@ export default function AgendaTimelineView({
                         </div>
                       </div>
                     </div>
+                  </>
+                )}
                   </div>
                 );
               });

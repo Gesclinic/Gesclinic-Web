@@ -61,7 +61,7 @@ const ToastAction = React.forwardRef(({ className, ...props }, ref) => (
     {...props}
   />
 ));
-ToastAction.displayName = ToastAction.displayName;
+ToastAction.displayName = ToastPrimitives.Action.displayName;
 
 const ToastClose = React.forwardRef(({ className, ...props }, ref) => (
   <ToastPrimitives.Close

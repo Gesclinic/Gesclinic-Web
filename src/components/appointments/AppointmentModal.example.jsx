@@ -399,5 +399,3 @@ export function AppointmentModalWithReactQuery({ appointmentId, onClose }) {
  */
 
 // ============================================================================
-
-export { AppointmentModalSimple, AppointmentModalAdvanced, AppointmentModalWithReactQuery };
