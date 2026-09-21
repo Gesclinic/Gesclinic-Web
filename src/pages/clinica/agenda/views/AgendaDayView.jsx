@@ -388,6 +388,7 @@ export default function AgendaDayView({
   userProfessionalId = null, // 🆕 ID do profissional atual (para RBAC)
   clinicId = null,
   professionals = [], // 🆕 Lista de profissionais
+  availableProfessionals = [],
   services = [], // 🆕 Lista de serviços
   payers = [], // 🆕 Lista de convênios
 }) {
@@ -528,27 +529,14 @@ export default function AgendaDayView({
           const slots = await getProfessionalAvailableSlots(filteredProfessionalId, date, activeClinicId);
           availability[filteredProfessionalId] = slots;
         } else {
-          // ✅ NOVO: Buscar TODOS os profissionais disponíveis para o dia
-          // 🔒 Se é profissional logado, usar apenas ele
-          const profIdToUse =
-            userRole?.toLowerCase?.() === 'profissional' ? userProfessionalId : null;
-
-          const availableProfessionals = await getAvailableProfessionalsForDay(
-            date,
-            activeClinicId,
-            profIdToUse,
-          );
-
-          // Converter para formato { profId: slots }
+          // Usar a mesma disponibilidade que alimenta os indicadores da página.
           const professionalsById = {};
           availableProfessionals.forEach((prof) => {
-            availability[prof.id] = prof.available_slots;
+            availability[prof.id] = prof.available_slots || [];
             professionalsById[prof.id] = { id: prof.id, name: prof.name };
           });
 
           setProfessionalsMap(professionalsById);
-
-
         }
 
         setProfessionalAvailability(availability);
@@ -559,7 +547,7 @@ export default function AgendaDayView({
     };
 
     loadProfessionalAvailability();
-  }, [date, filteredProfessionalId, userRole, userProfessionalId, activeClinicId]);
+  }, [date, filteredProfessionalId, availableProfessionals, activeClinicId]);
 
   // 🆕 Carregar dados dos profissionais (nomes) do banco
   useEffect(() => {

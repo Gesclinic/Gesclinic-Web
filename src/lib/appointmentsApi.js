@@ -1094,31 +1094,6 @@ export async function deleteAppointment(id) {
       unlinkByAppointmentId('invoices'),
     ]);
 
-    // Delete current operational receivables first.
-    const { error: arError } = await supabase
-      .from('ar_invoices')
-      .delete()
-      .eq('appointment_id', id);
-
-    if (arError && arError.code !== 'PGRST116') {
-      // PGRST116 = no rows deleted
-      console.warn('⚠️ Erro ao deletar AR:', arError);
-    } else {
-      console.log('✅ Recebíveis atuais deletados');
-    }
-
-    // Delete billing_guides (cascade FK added 2026-04-09)
-    const { error: guidesError } = await supabase
-      .from('billing_guides')
-      .delete()
-      .eq('appointment_id', id);
-
-    if (guidesError && guidesError.code !== 'PGRST116') {
-      console.warn('⚠️ Erro ao deletar guias:', guidesError);
-    } else {
-      console.log('✅ Guias de faturamento deletadas');
-    }
-
     // Now delete the appointment
     const { error } = await supabase.from('appointments').delete().eq('id', id);
 

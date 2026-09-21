@@ -1547,6 +1547,7 @@ export default function AgendaIndex() {
             userRole={auth?.currentRole}
             userProfessionalId={userProfessionalId}
             professionals={professionals}
+            availableProfessionals={availableProfessionalsForDay}
             services={services}
             payers={payers}
           />

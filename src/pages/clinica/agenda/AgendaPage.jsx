@@ -55,8 +55,6 @@ import {
 import { seedNationalHolidays } from '@/lib/holidaysApi';
 import { getAvailableProfessionalsForDay } from '@/lib/agendaUtils';
 
-import { sendBatchConfirmations } from '@/lib/whatsappConfirmationApi';
-
 /**
  * AgendaPage - Página principal da Agenda Única
  *
@@ -120,9 +118,6 @@ export default function AgendaPage() {
 
   const [agendaMode, setAgendaMode] = useState('recepcao');
   const [userProfessionalId, setUserProfessionalId] = useState(null);
-  const [whatsappLoading, setWhatsappLoading] = useState(false);
-  const [whatsappResult, setWhatsappResult] = useState(null);
-  const [whatsappError, setWhatsappError] = useState(null);
 
   // 📡 REALTIME: Subscribe to appointment changes
   useRealtimeAppointmentChanges(clinicId || '', null, (event) => {
@@ -387,14 +382,12 @@ const [atendimentoUnificadoOpen, setAtendimentoUnificadoOpen] = useState(false);
   }, [agenda.selectedSlot, agenda.metadata?.professionals, clinicId]);
 
   // Calcular métricas Agenda × Financeiro
-  const metrics = useMemo(() => {
-    return useAgendaFinanceMetrics(
-      agenda.filteredAppointments || [],
-      agenda.metadata?.professionals || [],
-      agenda.metadata?.services || [],
-      agenda.date,
-    );
-  }, [agenda.filteredAppointments, agenda.metadata, agenda.date]);
+  const metrics = useAgendaFinanceMetrics(
+    agenda.filteredAppointments || [],
+    agenda.metadata?.professionals || [],
+    agenda.metadata?.services || [],
+    agenda.date,
+  );
 
   // 👨‍⚕️ Filtrar agendamentos para profissional
   const professionalAppointments = useMemo(() => {
@@ -442,18 +435,14 @@ const [atendimentoUnificadoOpen, setAtendimentoUnificadoOpen] = useState(false);
       agenda.setLoading(true);
       agenda.setError(null);
 
-      // Converter data em formato YYYY-MM-DD para Date local (não UTC!)
-      const [year, month, day] = agenda.date.split('-').map(Number);
-      const startDate = new Date(year, month - 1, day, 0, 0, 0, 0);
-      const startISO = startDate.toISOString();
-
-      const endDate = new Date(year, month - 1, day, 23, 59, 59, 999);
-      const endISO = endDate.toISOString();
+      // scheduled_date is a DATE column, so keep the selected clinic date timezone-neutral.
+      const startDate = agenda.date;
+      const endDate = agenda.date;
 
       console.log('📅 Buscando agendamentos:', {
         date: agenda.date,
-        startISO,
-        endISO,
+        startDate,
+        endDate,
         clinicId,
         currentRole: currentRole,
         user_id: user?.id,
@@ -525,8 +514,8 @@ const [atendimentoUnificadoOpen, setAtendimentoUnificadoOpen] = useState(false);
       // Buscar agendamentos
       const appointments = await listAppointments({
         clinicId,
-        start: startISO,
-        end: endISO,
+        start: startDate,
+        end: endDate,
         userRole: currentRole,
         userProfessionalId: userProfId,
       });
@@ -1103,12 +1092,7 @@ const [atendimentoUnificadoOpen, setAtendimentoUnificadoOpen] = useState(false);
 
       console.log('🗑️ Deletando agendamento:', appointmentId);
 
-      const { error } = await supabase.from('appointments').delete().eq('id', appointmentId);
-
-      if (error) {
-        console.error('❌ Erro do Supabase:', error);
-        throw new Error(`Erro ao deletar: ${error.message}`);
-      }
+      await deleteAppointment(appointmentId);
 
       console.log('✅ Agendamento deletado com sucesso');
 
@@ -1507,34 +1491,6 @@ const [atendimentoUnificadoOpen, setAtendimentoUnificadoOpen] = useState(false);
     }
   };
 
-  // 📱 Função para disparar confirmações via WhatsApp
-  const handleSendWhatsAppConfirmations = async () => {
-    console.log('🔥 [AgendaPage] handleSendWhatsAppConfirmations foi chamada!');
-
-    if (
-      !window.confirm('Enviar confirmações de WhatsApp para pacientes com agendamentos de amanhã?')
-    ) {
-      return;
-    }
-
-    try {
-      setWhatsappLoading(true);
-      setWhatsappError(null);
-      setWhatsappResult(null);
-
-      const result = await sendBatchConfirmations(clinicId);
-      setWhatsappResult(result);
-
-      // Auto-hide success message after 5 seconds
-      setTimeout(() => setWhatsappResult(null), 5000);
-    } catch (error) {
-      console.error('❌ Erro ao enviar confirmações:', error);
-      setWhatsappError(error.message || 'Erro ao enviar confirmações');
-    } finally {
-      setWhatsappLoading(false);
-    }
-  };
-
   // 🏁 Effect para alerta de renderização (apenas uma vez)
   useEffect(() => {
     if (typeof window !== 'undefined' && !window.testeAlertShown) {
@@ -1572,49 +1528,6 @@ const [atendimentoUnificadoOpen, setAtendimentoUnificadoOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-8">
-      {/* 🔴 DEBUG BANNER - Mostrar role e mode */}
-      <div className="w-full bg-red-200 border-b-4 border-red-600 px-4 py-3">
-        <div className="flex gap-4 text-sm font-mono">
-          <div>
-            <strong>🔍 Debug:</strong> Role={currentRole} | Mode={agendaMode} | Prof=
-            {isProfessional ? userProfessionalId || 'loading' : 'N/A'}
-          </div>
-          <div>
-            | Auth Loading={authLoading} | Clinic Loading={loadingClinic}
-          </div>
-        </div>
-      </div>
-      {/* 🔥 TESTE: Botão em posição FIXA - TOP LEVEL */}
-      <div
-        style={{
-          position: 'fixed',
-          top: '20px',
-          right: '20px',
-          zIndex: 99999,
-          backgroundColor: '#dc2626',
-          padding: '20px',
-          borderRadius: '10px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-        }}
-      >
-        <button
-          onClick={handleSendWhatsAppConfirmations}
-          disabled={whatsappLoading}
-          style={{
-            padding: '12px 24px',
-            backgroundColor: '#ef4444',
-            color: 'white',
-            fontSize: '16px',
-            fontWeight: 'bold',
-            border: '2px solid white',
-            borderRadius: '8px',
-            cursor: whatsappLoading ? 'not-allowed' : 'pointer',
-          }}
-        >
-          🔥 TESTE: {whatsappLoading ? 'Enviando...' : 'CLIQUE AQUI'}
-        </button>
-      </div>
-
       {/* 🎯 MODO PROFISSIONAL - LAYOUT COMPLETAMENTE DIFERENTE */}
       {agendaMode === 'profissional' ? (
         <div className="w-full py-6">
