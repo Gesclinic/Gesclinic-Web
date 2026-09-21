@@ -29,6 +29,21 @@ function normalizeStatus(status) {
   return 'Aberto';
 }
 
+function normalizeGuideNumber(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+export function getUnlinkedBillingGuides(guides = [], invoices = []) {
+  const invoicedGuideNumbers = new Set(invoices
+    .map((invoice) => normalizeGuideNumber(invoice.guide_number || invoice.metadata?.guide_number))
+    .filter(Boolean));
+
+  return guides.filter((guide) => {
+    const guideNumber = normalizeGuideNumber(guide.numero_guia || guide.guide_number);
+    return !guideNumber || !invoicedGuideNumbers.has(guideNumber);
+  });
+}
+
 function servicesFromInvoice(row) {
   const services = row.metadata?.billing_event?.services || row.metadata?.services || [];
   if (Array.isArray(services) && services.length > 0) {
@@ -166,7 +181,9 @@ export async function loadFaturamentoReportBase({ clinicId, startDate, endDate }
 
 export async function getProductionByPayer({ clinicId, startDate, endDate, payerFilter = 'all' }) {
   const { invoices, guides } = await loadFaturamentoReportBase({ clinicId, startDate, endDate });
-  const totalNet = invoices.reduce((sum, row) => sum + money(row.net_value || row.amount), 0);
+  const unlinkedGuides = getUnlinkedBillingGuides(guides, invoices);
+  const totalNet = invoices.reduce((sum, row) => sum + money(row.net_value || row.amount), 0)
+    + unlinkedGuides.reduce((sum, guide) => sum + money(guide.valor), 0);
   const map = new Map();
 
   for (const row of invoices) {
@@ -207,7 +224,7 @@ export async function getProductionByPayer({ clinicId, startDate, endDate, payer
     map.set(name, current);
   }
 
-  for (const guide of guides) {
+  for (const guide of unlinkedGuides) {
     const name = guide.convenio || 'Particular';
     if (!map.has(name)) {
       map.set(name, {

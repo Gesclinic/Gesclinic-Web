@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { mapGuiaFromDatabase, mapGuiaToDatabase } from '../../src/lib/mappers.js';
 import { validateGuiaPayload } from '../../src/lib/validators.js';
+import { buildReceivablePayloadFromGuide } from '../../src/lib/faturamentoOperationalApi.js';
+import { getUnlinkedBillingGuides } from '../../src/lib/faturamentoReportsApi.js';
 
 const clinicId = '11111111-1111-4111-8111-111111111111';
 
@@ -75,5 +77,45 @@ describe('Faturamento enterprise TISS flow', () => {
 
   it('bloqueia tipos que nao pertencem ao fluxo TISS implementado', () => {
     expect(() => validateGuiaPayload(buildGuide('RPS'))).toThrow('Tipo de guia inválido');
+  });
+
+  it('preserva os vinculos da Agenda e a base de repasse no recebivel', () => {
+    const payload = buildReceivablePayloadFromGuide({
+      ...buildGuide('SADT'),
+      id: 'guide-001',
+      appointment_id: 'appointment-001',
+      patient_id: 'patient-001',
+      professional_id: 'professional-001',
+      payer_id: 'payer-001',
+      service_id: 'service-001',
+      repasse_expected: 54.15,
+      repasse_model: 'appointment_services',
+    });
+
+    expect(payload).toMatchObject({
+      appointment_id: 'appointment-001',
+      patient_id: 'patient-001',
+      professional_id: 'professional-001',
+      payer_id: 'payer-001',
+      convenio_id: 'payer-001',
+      procedure_id: 'service-001',
+      repasse_expected: 54.15,
+      repasse_model: 'appointment_services',
+    });
+    expect(payload.metadata).toMatchObject({
+      guide_id: 'guide-001',
+      appointment_id: 'appointment-001',
+      professional_id: 'professional-001',
+    });
+  });
+
+  it('nao duplica no relatorio uma guia que ja possui recebivel', () => {
+    const guides = [
+      { id: 'guide-001', numero_guia: 'GUIA-SADT-001', valor: 180.5 },
+      { id: 'guide-002', numero_guia: 'GUIA-SADT-002', valor: 90 },
+    ];
+    const invoices = [{ id: 'invoice-001', guide_number: 'guia-sadt-001', net_value: 180.5 }];
+
+    expect(getUnlinkedBillingGuides(guides, invoices)).toEqual([guides[1]]);
   });
 });

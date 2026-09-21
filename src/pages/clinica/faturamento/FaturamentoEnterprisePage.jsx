@@ -117,6 +117,7 @@ function buildProductionRows(receivables) {
     unidade: row.unit_name || 'Sem unidade',
     convenio: row.payer_name || 'Particular',
     procedimento: row.procedure_name || row.service_description || row.description || 'Procedimento',
+    competencia: monthKey(row.competency_date || row.invoice_date || row.due_date || row.created_at),
     quantidade: row.metadata?.billing_event?.quantity || 1,
     produzido: metricValue(row),
     faturado: ['billed', 'received', 'partial', 'glossed'].includes(String(row.status || '').toLowerCase()) ? metricValue(row) : 0,
@@ -235,7 +236,7 @@ export default function FaturamentoEnterprisePage({ page = 'producao' }) {
   }, [clinicId]);
 
   const productionRows = useMemo(() => buildProductionRows(data.receivables || []).filter((row) => {
-    return (!filters.competencia || row.id.includes(filters.competencia) || String(row.competencia || '').includes(filters.competencia))
+    return (!filters.competencia || row.competencia.includes(filters.competencia))
       && (!filters.medico || row.medico.toLowerCase().includes(filters.medico.toLowerCase()))
       && (!filters.convenio || row.convenio.toLowerCase().includes(filters.convenio.toLowerCase()))
       && (!filters.unidade || row.unidade.toLowerCase().includes(filters.unidade.toLowerCase()))

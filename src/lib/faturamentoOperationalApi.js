@@ -358,8 +358,13 @@ export function buildReceivablePayloadFromGuide(guide = {}) {
   const guideNumber = getGuideNumber(guide);
   const amount = getGuideValue(guide);
   const createdAt = dateOnly(guide.data_criacao || guide.created_at);
+  const billingEvent = guide.metadata?.billing_event || {};
+  const payerId = guide.payer_id || guide.convenio_id || billingEvent.payer_id || null;
+  const payerType = guide.payer_type || billingEvent.payer_type || (guide.convenio ? 'CONVENIO' : 'PARTICULAR');
+  const isConvenio = normalizeText(payerType) === 'convenio';
 
   return {
+    patient_id: guide.patient_id || billingEvent.patient_id || null,
     patient_name: guide.paciente_nome || guide.patient_name || guide.payer_name || 'Paciente',
     payer_name: guide.convenio || guide.payer_name || 'Particular',
     amount,
@@ -373,18 +378,30 @@ export function buildReceivablePayloadFromGuide(guide = {}) {
     due_date: dateOnly(guide.data_envio || guide.data_criacao || guide.created_at),
     status: 'billed',
     payment_method: guide.convenio ? 'convenio' : 'pix',
-    payer_type: guide.convenio ? 'CONVENIO' : 'PARTICULAR',
-    appointment_id: guide.appointment_id || null,
+    payer_type: payerType,
+    payer_id: payerId,
+    convenio_id: isConvenio ? payerId : null,
+    appointment_id: guide.appointment_id || billingEvent.appointment_id || null,
+    professional_id: guide.professional_id || billingEvent.professional_id || null,
     guide_number: guideNumber,
+    procedure_id: guide.service_id || guide.procedure_id || billingEvent.procedure_id || null,
     procedure_name: guide.codigo_cbhpm || guide.tipo_guia || null,
+    specialty_id: guide.specialty_id || billingEvent.specialty_id || null,
+    specialty_name: guide.specialty_name || billingEvent.specialty_name || null,
+    unit_id: guide.unit_id || billingEvent.unit_id || null,
+    unit_name: guide.unit_name || billingEvent.unit_name || null,
     insurance_billing_status: guide.convenio ? 'FATURADO' : null,
     tiss_xml_status: guide.xml_path ? 'GERADO' : null,
+    repasse_expected: money(guide.repasse_expected ?? billingEvent.repasse_expected),
+    repasse_model: guide.repasse_model || billingEvent.repasse_model || null,
     negotiated_value: guide.negotiated_value || guide.metadata?.negotiated_value || null,
     coparticipation_value: guide.coparticipation_value || guide.metadata?.coparticipation_value || 0,
     metadata: {
       source: 'faturamento_operacional',
       guide_id: guide.id,
       guide_number: guideNumber,
+      appointment_id: guide.appointment_id || billingEvent.appointment_id || null,
+      professional_id: guide.professional_id || billingEvent.professional_id || null,
       billing_guide: guide,
       billing_workflow_status: WORKFLOW_STATUS.RECEBIVEL,
     },
@@ -640,6 +657,23 @@ export async function findReceivablesByGuide(clinicId, guideNumber) {
   return data || [];
 }
 
+async function syncGuideProfessionalRepasse(clinicId, guide = {}, receivable = null) {
+  const payload = buildReceivablePayloadFromGuide(guide);
+  if (!clinicId || !payload.appointment_id || !payload.professional_id || !receivable) return;
+
+  try {
+    const referenceDate = new Date(`${payload.competency_date || payload.invoice_date}T00:00:00`);
+    await supabase.rpc('gerar_repasse_medico', {
+      p_clinic_id: clinicId,
+      p_mes: referenceDate.getMonth() + 1,
+      p_ano: referenceDate.getFullYear(),
+      p_tipo_geracao: 'agenda',
+    });
+  } catch (error) {
+    console.warn('[faturamento] Repasse automatico ignorado:', error.message);
+  }
+}
+
 export async function ensureReceivableForGuide(clinicId, guide) {
   const guideNumber = getGuideNumber(guide);
   const existing = await findReceivablesByGuide(clinicId, guideNumber);
@@ -662,6 +696,7 @@ export async function ensureReceivableForGuide(clinicId, guide) {
     billing_rules_snapshot: validation,
   };
   const receivable = await createReceivable(clinicId, payload);
+  await syncGuideProfessionalRepasse(clinicId, guide, receivable);
   await persistGuideWorkflowStatus({ clinicId, guide, workflowStatus: WORKFLOW_STATUS.RECEBIVEL, status: 'Faturado', context: { receivable_id: Array.isArray(receivable) ? receivable[0]?.id : receivable?.id } });
   return receivable;
 }
