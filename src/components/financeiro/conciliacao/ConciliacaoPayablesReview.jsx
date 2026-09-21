@@ -444,7 +444,7 @@ export function ConciliacaoPayablesReview({
             {filteredReviews.length === 0 ? (
               <tr>
                 <td colSpan="7" className="px-3 py-8 text-center text-gray-500">
-                  Nenhuma correspondência de AP encontrada para os filtros atuais.
+                  Nenhuma correspondência de AP encontrada para o filtro atual.
                 </td>
               </tr>
             ) : (

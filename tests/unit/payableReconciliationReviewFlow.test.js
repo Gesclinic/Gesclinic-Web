@@ -31,18 +31,21 @@ describe('fluxo de revisao de conciliacao AP', () => {
   });
 
   it('preserva filtros de revisao, aprovado, rejeitado e todos na API de conciliacao AP', () => {
-    expect(conciliationApi).toContain("if (status !== 'rejected' && status !== 'all')");
-    expect(conciliationApi).toContain("transactionQuery = transactionQuery.not('matched_to_id', 'is', null)");
-    expect(conciliationApi).toContain("transactionQuery = transactionQuery.eq('status', status)");
-    expect(conciliationApi).toContain("transactionQuery = transactionQuery.in('status', ['review', 'matched', 'rejected'])");
+    expect(conciliationApi).toContain("if (status === 'matched')");
+    expect(conciliationApi).toContain("if (status === 'rejected')");
+    expect(conciliationApi).toContain("if (status === 'all')");
+    expect(conciliationApi).toContain('CONCILIATION_STATUS.PENDING');
+    expect(conciliationApi).toContain('CONCILIATION_STATUS.CONCILIATED');
+    expect(conciliationApi).toContain('CONCILIATION_STATUS.DIVERGENT');
     expect(conciliationApi).toContain("status: 'REJECTED'");
   });
 
   it('usa contadores independentes do filtro atual na fila de revisao AP', () => {
     expect(conciliationApi).toContain('export async function listPayableReconciliationReviewCounts(clinicId)');
-    expect(conciliationApi).toContain("select('status, matched_to_id')");
-    expect(conciliationApi).toContain(".in('status', ['review', 'matched', 'rejected'])");
-    expect(conciliationApi).toContain("if (transaction.status !== 'rejected' && !transaction.matched_to_id)");
+    expect(conciliationApi).toContain("listPayableReconciliationReviews(clinicId, 'review')");
+    expect(conciliationApi).toContain("listPayableReconciliationReviews(clinicId, 'matched')");
+    expect(conciliationApi).toContain("listPayableReconciliationReviews(clinicId, 'rejected')");
+    expect(conciliationApi).toContain('all: review.length + matched.length + rejected.length');
 
     expect(conciliationHook).toContain('listPayableReconciliationReviewCounts');
     expect(conciliationHook).toContain('const [payableReviewCounts, setPayableReviewCounts]');

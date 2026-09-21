@@ -491,7 +491,7 @@ function getPayablePending(row = {}, total = getPayableTotal(row), paid = getPay
 }
 
 function getReceivableEffectiveDate(row = {}) {
-  return dateOnly(row.competency_date || row.invoice_date || row.due_date || row.received_date || row.received_at || row.payment_date || row.paid_at || row.transaction_date || row.created_at);
+  return dateOnly(row.received_date || row.received_at || row.payment_date || row.paid_at || row.transaction_date || row.competency_date || row.invoice_date || row.due_date || row.created_at);
 }
 
 function getReceivableDueDate(row = {}) {
@@ -1774,7 +1774,16 @@ export function buildOperationalModel(consolidation, accounts = [], returnTo = '
     const accountLabel = account.code ? `${account.code} - ${account.name}` : account.name;
     const sectionDefinition = getManagementSectionForMovement(movement, accountLabel, financialPlan);
     const section = getSection(sectionDefinition);
-    const managementPath = getManagementPath(movement, accountLabel, financialPlan);
+    const managementPath = movement.type === 'income' && !financialPlan.hasPersistedPlan
+      ? [
+          getInternalPeriodNode(movement, periodicity),
+          makeNode(accountLabel, 'Conta financeira', { accountKey: account.id || accountLabel }),
+          makeNode(getProfessionalManagementLabel(movement), 'Profissional'),
+          makeNode(firstMeaningful(movement.serviceGroupName, 'Grupo nao informado'), 'Grupo do servico'),
+          makeNode(firstMeaningful(movement.serviceName, movement.description, 'Servico nao informado'), 'Servico'),
+          makeNode(getRevenuePatientLabel(movement), 'Paciente'),
+        ]
+      : getManagementPath(movement, accountLabel, financialPlan);
     const path = [
       ...managementPath,
       {

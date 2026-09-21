@@ -186,8 +186,8 @@ describe('buildOperationalModel cash-flow management table', () => {
     const monthly = buildModel(consolidation, { periodicity: 'monthly' });
     const weekly = buildModel(consolidation, { periodicity: 'weekly' });
 
-    expect(row(monthly, '08/07/2026').parentKey).toBe('section:income');
-    expect(row(weekly, '08/07/2026').parentKey).toBe('section:income');
+    expect(row(monthly, '08/07/2026').parentKey).toBe('section:revenue');
+    expect(row(weekly, '08/07/2026').parentKey).toBe('section:revenue');
   });
 
   it('uses day under income in daily view and month under income in annual view', () => {
@@ -204,8 +204,8 @@ describe('buildOperationalModel cash-flow management table', () => {
     const daily = buildModel(consolidation, { periodicity: 'daily' });
     const annual = buildModel(consolidation, { periodicity: 'yearly' });
 
-    expect(row(daily, '08/07/2026').parentKey).toBe('section:income');
-    expect(row(annual, 'Julho/2026').parentKey).toBe('section:income');
+    expect(row(daily, '08/07/2026').parentKey).toBe('section:revenue');
+    expect(row(annual, 'Julho/2026').parentKey).toBe('section:revenue');
   });
 
   it('treats operator cash-drawer paid expenses as realized, not overdue forecast', () => {

@@ -39,7 +39,7 @@ import { buildDerivedFinancialTransactions } from '@/lib/financialConsolidationA
 import {
   loadDashboardDataWithCache,
   calculateDashboardMetrics,
-  getOpenPayableBalance,
+  getPayablesDueWithinDaysBalance,
 } from '@/services/dashboardDataService';
 
 // Legacy APIs (fallback - kept for reference)
@@ -397,7 +397,7 @@ export default function FluxoCaixaPage() {
   const receivable30d = Number(receivableWindows.today?.value || 0)
     + Number(receivableWindows['7d']?.value || 0)
     + Number(receivableWindows['30d']?.value || 0);
-  const payable30d = payables.reduce((sum, bill) => sum + getOpenPayableBalance(bill), 0);
+  const payable30d = getPayablesDueWithinDaysBalance(payables);
   const projectedBalance = React.useMemo(() => {
     if (!Array.isArray(projection) || projection.length === 0) return 0;
     const lastProjection = projection[projection.length - 1] || {};

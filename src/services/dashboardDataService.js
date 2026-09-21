@@ -42,6 +42,24 @@ export function getOpenPayableBalance(payable = {}) {
   return Math.max(0, amount - paid);
 }
 
+export function getPayablesDueWithinDaysBalance(payables = [], referenceDate = new Date(), days = 30) {
+  const start = new Date(referenceDate);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + days);
+
+  return payables.reduce((total, payable) => {
+    const dueDateValue = payable?.due_date || payable?.data_vencimento;
+    if (!dueDateValue) return total;
+
+    const [year, month, day] = String(dueDateValue).split('T')[0].split('-').map(Number);
+    const dueDate = new Date(year, month - 1, day);
+    if (Number.isNaN(dueDate.getTime()) || dueDate < start || dueDate > end) return total;
+
+    return total + getOpenPayableBalance(payable);
+  }, 0);
+}
+
 /**
  * Calcula período de data baseado em label (7d, 30d, 90d, 12m, custom)
  * @param {string} period - 'today', '7d', '30d', '90d', '12m', ou 'custom'
