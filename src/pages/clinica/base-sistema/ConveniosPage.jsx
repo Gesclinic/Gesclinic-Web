@@ -1126,17 +1126,17 @@ export function ConveniosPage() {
             },
           ])
 
-          .select('id');
-
-        if (!data || data.length === 0) {
-          throw new Error('Record not found');
-        }
-        return data[0];
+          .select('id')
+          .maybeSingle();
 
         if (createError) {
           setError('Erro ao criar convênio');
 
           return;
+        }
+
+        if (!newPayer) {
+          throw new Error('Convênio não encontrado após criação');
         }
 
         payerDataUpload = { data: newPayer };
@@ -1957,7 +1957,7 @@ export function ConveniosPage() {
 
       tiss_username: insurance.tiss_username || '',
 
-      tiss_password: insurance.tiss_password || '',
+      tiss_password: '',
 
       tiss_response_email: insurance.tiss_response_email || '',
 
@@ -1965,15 +1965,15 @@ export function ConveniosPage() {
 
       portal_username: insurance.portal_username || '',
 
-      portal_password: insurance.portal_password || '',
+      portal_password: '',
 
       portal_webhook_url: insurance.portal_webhook_url || '',
 
-      portal_api_key: insurance.portal_api_key || '',
+      portal_api_key: '',
 
       certificate_path: insurance.certificate_path || '',
 
-      certificate_password: insurance.certificate_password || '',
+      certificate_password: '',
 
       use_certificate: insurance.use_certificate ?? true,
 
@@ -2577,22 +2577,19 @@ export function ConveniosPage() {
         portal_connection_status: formData.portal_connection_status?.trim() || 'untested',
       };
 
-      console.log('?? Frontend - Dados a salvar:', dataToSave);
-
-      console.log('?? Modo:', editingId ? 'UPDATE' : 'CREATE', editingId || 'novo');
-
       if (editingId) {
-        console.log('?? Chamando UPDATE...');
+        // Empty credential fields mean "keep the saved value", never erase it.
+        for (const field of ['tiss_password', 'portal_password', 'portal_api_key', 'certificate_password']) {
+          if (!dataToSave[field]) delete dataToSave[field];
+        }
 
         await healthInsurancesApi.updateHealthInsurance(editingId, clinicId, dataToSave);
 
-        setInsurances(insurances.map((i) => (i.id === editingId ? { ...i, ...dataToSave } : i)));
+        await loadInsurances();
       } else {
-        console.log('? Chamando CREATE...');
+        await healthInsurancesApi.createHealthInsurance(clinicId, dataToSave);
 
-        const newInsurance = await healthInsurancesApi.createHealthInsurance(clinicId, dataToSave);
-
-        setInsurances([...insurances, newInsurance]);
+        await loadInsurances();
       }
 
       closeForm();
@@ -4568,9 +4565,9 @@ export function ConveniosPage() {
                               <FormInput
                                 type="password"
                                 label="Senha TISS"
-                                required
+                                required={!editingId}
                                 placeholder="Senha para autenticação"
-                                hint="Será encriptada no servidor"
+                                hint={editingId ? 'Deixe vazio para manter a senha atual' : 'Credencial usada pela integração TISS'}
                                 value={formData.tiss_password || ''}
                                 onChange={(e) => setFormData({ ...formData, tiss_password: e.target.value })}
                                 disabled={submitting}
@@ -4625,7 +4622,7 @@ export function ConveniosPage() {
                                       type="password"
                                       label="Senha Portal"
                                       placeholder="••••••••"
-                                      hint="Será encriptada no servidor"
+                                      hint="Deixe vazio ao editar para manter a senha atual"
                                       value={formData.portal_password || ''}
                                       onChange={(e) => setFormData({ ...formData, portal_password: e.target.value })}
                                       disabled={submitting}
@@ -4635,7 +4632,7 @@ export function ConveniosPage() {
                                       type="text"
                                       label="Chave de API Portal"
                                       placeholder="Ex: sk_live_xxx..."
-                                      hint="Token de autenticação da API"
+                                      hint="Token de autenticação da API; deixe vazio ao editar para manter"
                                       value={formData.portal_api_key || ''}
                                       onChange={(e) => setFormData({ ...formData, portal_api_key: e.target.value })}
                                       disabled={submitting}
@@ -4675,7 +4672,7 @@ export function ConveniosPage() {
                                           type="password"
                                           label="Senha do Certificado"
                                           placeholder="••••••••"
-                                          hint="Será encriptada no servidor"
+                                          hint="Deixe vazio ao editar para manter a senha atual"
                                           value={formData.certificate_password || ''}
                                           onChange={(e) => setFormData({ ...formData, certificate_password: e.target.value })}
                                           disabled={submitting}

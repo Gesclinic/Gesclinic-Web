@@ -295,23 +295,25 @@ export default function EditUser() {
         updated_at: new Date().toISOString(),
       };
 
-      // Se uma nova senha foi inserida
       if (newPassword && newPassword.trim()) {
-        if (newPassword.length < 6) {
-          setError('A senha deve ter pelo menos 6 caracteres');
+        if (newPassword.length < 12) {
+          setError('A senha deve ter pelo menos 12 caracteres');
           setSaving(false);
           return;
         }
-        updateData.password_hash = btoa(newPassword);
         setPasswordChanging(true);
       } else {
         setPasswordChanging(false);
       }
 
-      const { error: updateError } = await supabase.from('users').update(updateData).eq('id', id);
-
-      if (updateError) {
-        throw updateError;
+      const { data: updated, error: updateError } = await supabase.functions.invoke('manage-user-auth', {
+        body: {
+          action: 'update', user_id: id, clinic_id: form.clinic_id,
+          fields: updateData, password: newPassword || null,
+        },
+      });
+      if (updateError || !updated?.success) {
+        throw new Error(updated?.error || 'Não foi possível atualizar o usuário.');
       }
 
       try {

@@ -209,7 +209,6 @@ const ICONS = {
   Lock,
   CalendarCog,
   WalletCards,
-  UsersRound,
   Building2,
   Receipt,
 };

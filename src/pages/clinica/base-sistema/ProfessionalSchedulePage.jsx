@@ -339,7 +339,7 @@ export function ProfessionalSchedulePage() {
       return;
     }
     try {
-      await agendaRulesApi.deleteAgendaRule(id);
+      await agendaRulesApi.deleteAgendaRule(id, clinicId);
       setRules(rules.filter((r) => r.id !== id));
     } catch (err) {
       setError(err.message || 'Erro ao deletar regra');

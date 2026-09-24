@@ -8,7 +8,6 @@ const TERMS_VERSION = '2026-07-15';
 const TERMS_URL = '/termos-de-uso';
 
 const ENTERPRISE_PLAN = {
-  id: 'enterprise-custom',
   name: 'Plano Enterprise',
   slug: 'enterprise',
   description: 'Escalas & Performance - para redes, grupos e operações complexas',
@@ -74,8 +73,6 @@ export default function Register() {
 
       if (enterpriseIndex !== -1) {
         activePlans[enterpriseIndex] = { ...activePlans[enterpriseIndex], ...ENTERPRISE_PLAN };
-      } else {
-        activePlans.push(ENTERPRISE_PLAN);
       }
 
       const planFromUrl = activePlans.find((plan) => plan.slug === selectedPlanSlug);
@@ -117,8 +114,8 @@ export default function Register() {
       errors.adminEmail = 'Email válido é obrigatório';
     }
 
-    if (formData.adminPassword.length < 8) {
-      errors.adminPassword = 'Senha deve ter no mínimo 8 caracteres';
+    if (formData.adminPassword.length < 12) {
+      errors.adminPassword = 'Senha deve ter no mínimo 12 caracteres';
     }
 
     if (formData.adminPassword !== formData.adminPasswordConfirm) {
@@ -152,6 +149,16 @@ export default function Register() {
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.adminEmail,
         password: formData.adminPassword,
+        options: {
+          emailRedirectTo: `${window.location.origin}/complete-registration`,
+          data: {
+            pending_clinic_name: formData.clinicName.trim(),
+            pending_clinic_cnpj: formData.clinicCnpj.trim(),
+            pending_admin_name: formData.adminName.trim(),
+            pending_plan_id: selectedPlan.id,
+            pending_terms_accepted: true,
+          },
+        },
       });
 
       if (authError) {
@@ -164,6 +171,11 @@ export default function Register() {
 
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const token = authData.session?.access_token;
+      if (!token) {
+        showToast('Confira seu e-mail para confirmar a conta e concluir o cadastro.', 'success');
+        navigate('/complete-registration');
+        return;
+      }
 
       const response = await fetch(`${supabaseUrl}/functions/v1/create-clinic-from-signup`, {
         method: 'POST',
@@ -307,7 +319,7 @@ export default function Register() {
               className={`h-11 w-full rounded-lg border px-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 formErrors.adminPassword ? 'border-red-500' : 'border-gray-300'
               }`}
-              placeholder="Mínimo 8 caracteres"
+              placeholder="Mínimo 12 caracteres"
             />
             {formErrors.adminPassword && <p className="mt-1 text-sm text-red-500">{formErrors.adminPassword}</p>}
           </div>

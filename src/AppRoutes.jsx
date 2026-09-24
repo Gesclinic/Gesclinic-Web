@@ -5,150 +5,158 @@ const EditarRecebimento = React.lazy(
 );
 import { Routes, Route, Navigate, Outlet, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
-import { ClinicProvider } from '@/contexts/ClinicContext';
+import { useClinicContext } from '@/contexts/ClinicContext';
 import { usePermissions } from '@/contexts/PermissionsContext';
 import { resolvePermissionForPath } from '@/lib/menuPermissionCatalog';
 import { ProtectedWizardRoute } from '@/components/ProtectedWizardRoute';
 
 // Layout principal
-import AppLayout from '@/components/layout/AppLayout';
+const AppLayout = React.lazy(() => import('@/components/layout/AppLayout'));
 
 // Auth
-import Login from '@/pages/auth/Login';
-import Register from '@/pages/Register';
-import PublicHome from '@/pages/public/PublicHome';
-import TermosPage from '@/pages/public/Termos';
-import Checkout from '@/pages/Checkout';
-import PaymentConfirmation from '@/pages/PaymentConfirmation';
-import FixUserClinicPage from '@/pages/FixUserClinicPage';
-import ForceLogoutPage from '@/pages/ForceLogoutPage';
-import DiagnosticsPage from '@/pages/DiagnosticsPage';
-import Forbidden from '@/pages/Forbidden';
+const Login = React.lazy(() => import('@/pages/auth/Login'));
+const ForgotPassword = React.lazy(() => import('@/pages/auth/ForgotPassword'));
+const ResetPassword = React.lazy(() => import('@/pages/auth/ResetPassword'));
+const Register = React.lazy(() => import('@/pages/Register'));
+const CompleteRegistration = React.lazy(() => import('@/pages/auth/CompleteRegistration'));
+const PublicHome = React.lazy(() => import('@/pages/public/PublicHome'));
+const TermosPage = React.lazy(() => import('@/pages/public/Termos'));
+const PrivacidadePage = React.lazy(() => import('@/pages/public/Privacidade'));
+const CookiesPage = React.lazy(() => import('@/pages/public/Cookies'));
+const Checkout = React.lazy(() => import('@/pages/Checkout'));
+const PaymentConfirmation = React.lazy(() => import('@/pages/PaymentConfirmation'));
+const FixUserClinicPage = React.lazy(() => import('@/pages/FixUserClinicPage'));
+const ForceLogoutPage = React.lazy(() => import('@/pages/ForceLogoutPage'));
+const DiagnosticsPage = React.lazy(() => import('@/pages/DiagnosticsPage'));
+const Forbidden = React.lazy(() => import('@/pages/Forbidden'));
 
 // Clínica
-import GeraisConfig from '@/pages/clinica/configuracoes/GeraisConfig';
-import PerfisUsuarioConfig from '@/pages/clinica/configuracoes/PerfisUsuarioConfig';
-import PermissoesConfig from '@/pages/clinica/configuracoes/PermissoesConfig';
-import AgendaConfig from '@/pages/clinica/configuracoes/AgendaConfig';
-import FaturamentoConfig from '@/pages/clinica/configuracoes/FaturamentoConfig';
-import EstoqueConfig from '@/pages/clinica/configuracoes/EstoqueConfig';
+const GeraisConfig = React.lazy(() => import('@/pages/clinica/configuracoes/GeraisConfig'));
+const PerfisUsuarioConfig = React.lazy(() => import('@/pages/clinica/configuracoes/PerfisUsuarioConfig'));
+const PermissoesConfig = React.lazy(() => import('@/pages/clinica/configuracoes/PermissoesConfig'));
+const AgendaConfig = React.lazy(() => import('@/pages/clinica/configuracoes/AgendaConfig'));
+const FaturamentoConfig = React.lazy(() => import('@/pages/clinica/configuracoes/FaturamentoConfig'));
+const EstoqueConfig = React.lazy(() => import('@/pages/clinica/configuracoes/EstoqueConfig'));
 
 // Estoque
-import EstoqueProdutos from '@/pages/clinica/estoque/Produtos';
-import EstoqueProdutoForm from '@/pages/clinica/estoque/ProdutoFormPage';
-import EstoqueCategorias from '@/pages/clinica/estoque/Categorias';
-import EstoqueCategoriaForm from '@/pages/clinica/estoque/CategoriaFormPage';
-import EstoqueFornecedores from '@/pages/clinica/estoque/Fornecedores';
-import EstoqueFornecedorForm from '@/pages/clinica/estoque/FornecedorFormPage';
-import EstoqueMovimentacoes from '@/pages/clinica/estoque/Movimentacoes';
-import EstoqueLocais from '@/pages/clinica/estoque/Locais';
-import EstoqueLocalForm from '@/pages/clinica/estoque/LocalFormPage';
-import EstoqueEntradas from '@/pages/clinica/estoque/Entradas';
-import EstoqueSaidas from '@/pages/clinica/estoque/Saidas';
-import EstoqueUnidades from '@/pages/clinica/estoque/Unidades';
-import EstoqueUnidadeForm from '@/pages/clinica/estoque/UnidadeFormPage';
-import EstoqueTransferencias from '@/pages/clinica/estoque/Transferencias';
-import EstoqueMovimentoForm from '@/pages/clinica/estoque/MovimentoFormPage';
-import EstoqueRequisicoes from '@/pages/clinica/estoque/Requisicoes';
-import EstoqueRequisicaoForm from '@/pages/clinica/estoque/RequisicaoFormPage';
-import EstoqueInventario from '@/pages/clinica/estoque/Inventario';
-import EstoqueInventarioForm from '@/pages/clinica/estoque/InventarioFormPage';
-import EstoqueRelatorios from '@/pages/clinica/estoque/Relatorios';
-import AvaliacaoEstoque from '@/pages/clinica/estoque/AvaliacaoEstoque';
-import DashboardEstoque from '@/pages/clinica/estoque/DashboardEstoque';
+const EstoqueProdutos = React.lazy(() => import('@/pages/clinica/estoque/Produtos'));
+const EstoqueProdutoForm = React.lazy(() => import('@/pages/clinica/estoque/ProdutoFormPage'));
+const EstoqueCategorias = React.lazy(() => import('@/pages/clinica/estoque/Categorias'));
+const EstoqueCategoriaForm = React.lazy(() => import('@/pages/clinica/estoque/CategoriaFormPage'));
+const EstoqueFornecedores = React.lazy(() => import('@/pages/clinica/estoque/Fornecedores'));
+const EstoqueFornecedorForm = React.lazy(() => import('@/pages/clinica/estoque/FornecedorFormPage'));
+const EstoqueMovimentacoes = React.lazy(() => import('@/pages/clinica/estoque/Movimentacoes'));
+const EstoqueLocais = React.lazy(() => import('@/pages/clinica/estoque/Locais'));
+const EstoqueLocalForm = React.lazy(() => import('@/pages/clinica/estoque/LocalFormPage'));
+const EstoqueEntradas = React.lazy(() => import('@/pages/clinica/estoque/Entradas'));
+const EstoqueSaidas = React.lazy(() => import('@/pages/clinica/estoque/Saidas'));
+const EstoqueUnidades = React.lazy(() => import('@/pages/clinica/estoque/Unidades'));
+const EstoqueUnidadeForm = React.lazy(() => import('@/pages/clinica/estoque/UnidadeFormPage'));
+const EstoqueTransferencias = React.lazy(() => import('@/pages/clinica/estoque/Transferencias'));
+const EstoqueMovimentoForm = React.lazy(() => import('@/pages/clinica/estoque/MovimentoFormPage'));
+const EstoqueRequisicoes = React.lazy(() => import('@/pages/clinica/estoque/Requisicoes'));
+const EstoqueRequisicaoForm = React.lazy(() => import('@/pages/clinica/estoque/RequisicaoFormPage'));
+const EstoqueInventario = React.lazy(() => import('@/pages/clinica/estoque/Inventario'));
+const EstoqueInventarioForm = React.lazy(() => import('@/pages/clinica/estoque/InventarioFormPage'));
+const EstoqueRelatorios = React.lazy(() => import('@/pages/clinica/estoque/Relatorios'));
+const AvaliacaoEstoque = React.lazy(() => import('@/pages/clinica/estoque/AvaliacaoEstoque'));
+const DashboardEstoque = React.lazy(() => import('@/pages/clinica/estoque/DashboardEstoque'));
 
 // Financeiro - removed duplicate Dashboard import, using FinanceDashboard instead
-import FinanceDashboard from '@/pages/clinica/financeiro/DashboardFinanceiro';
-import FinanceContasReceber from '@/pages/clinica/financeiro/ContasReceber';
-import FinanceNovoRecebimento from '@/pages/clinica/financeiro/NovoRecebimento';
-import FinanceFluxoCaixa from '@/pages/clinica/financeiro/FluxoCaixa';
-import DREPage from '@/pages/clinica/financeiro/DRE';
-import FinancePlanoContas from '@/pages/clinica/financeiro/PlanoContas';
-import FinanceConciliacaoBancaria from '@/pages/clinica/financeiro/ConciliacaoBancaria';
-import ConciliacaoCartoes from '@/pages/clinica/financeiro/ConciliacaoCartoes';
-import ChartOfAccountsPage from '@/modules/financeiro/plano-contas/pages/ChartOfAccountsPage';
-import FinancialPlanPage from '@/modules/financeiro/plano-financeiro';
-import CostCenterPage from '@/modules/financeiro/centro-custo/pages/CostCenterPage';
-import { FinancialAccountsPage, FinancialAccountFormPage } from '@/modules/financeiro/contas-financeiras';
+const FinanceDashboard = React.lazy(() => import('@/pages/clinica/financeiro/DashboardFinanceiro'));
+const FinanceContasReceber = React.lazy(() => import('@/pages/clinica/financeiro/ContasReceber'));
+const FinanceNovoRecebimento = React.lazy(() => import('@/pages/clinica/financeiro/NovoRecebimento'));
+const FinanceFluxoCaixa = React.lazy(() => import('@/pages/clinica/financeiro/FluxoCaixa'));
+const DREPage = React.lazy(() => import('@/pages/clinica/financeiro/DRE'));
+const FinancePlanoContas = React.lazy(() => import('@/pages/clinica/financeiro/PlanoContas'));
+const FinanceConciliacaoBancaria = React.lazy(() => import('@/pages/clinica/financeiro/ConciliacaoBancaria'));
+const ConciliacaoCartoes = React.lazy(() => import('@/pages/clinica/financeiro/ConciliacaoCartoes'));
+const ChartOfAccountsPage = React.lazy(() => import('@/modules/financeiro/plano-contas/pages/ChartOfAccountsPage'));
+const FinancialPlanPage = React.lazy(() => import('@/modules/financeiro/plano-financeiro'));
+const CostCenterPage = React.lazy(() => import('@/modules/financeiro/centro-custo/pages/CostCenterPage'));
+const FinancialAccountsPage = React.lazy(() => import('@/modules/financeiro/contas-financeiras')
+  .then((module) => ({ default: module.FinancialAccountsPage })));
+const FinancialAccountFormPage = React.lazy(() => import('@/modules/financeiro/contas-financeiras')
+  .then((module) => ({ default: module.FinancialAccountFormPage })));
 // Contas a Pagar Module
-import ContasApagarPage from '@/modules/financeiro/contas-pagar/pages';
-import NovaContaPagarPage from '@/modules/financeiro/contas-pagar/pages/NovaContaPagarPage';
-import AutorizacaoDescontos from '@/pages/clinica/financeiro/AutorizacaoDescontos';
-import SolicitacoesEstorno from '@/pages/clinica/financeiro/SolicitacoesEstorno';
-import CaixaIndividual from '@/pages/clinica/financeiro/CaixaIndividual';
-import CaixaGerencial from '@/pages/clinica/financeiro/CaixaGerencial';
-import DivergenciasAnalytics from '@/pages/clinica/financeiro/DivergenciasAnalytics';
-import CartoesConfiguracaoPage from '@/pages/clinica/financeiro/CartoesConfiguracaoPage';
-import AuditReportPage from '@/pages/clinica/financeiro/AuditReportPage'; // ✅ ETAPA D.6
-import AuditoryAnalyticsDashboard from '@/pages/clinica/financeiro/AuditoryAnalyticsDashboard'; // ✅ ETAPA F.1
+const ContasApagarPage = React.lazy(() => import('@/modules/financeiro/contas-pagar/pages'));
+const NovaContaPagarPage = React.lazy(() => import('@/modules/financeiro/contas-pagar/pages/NovaContaPagarPage'));
+const AutorizacaoDescontos = React.lazy(() => import('@/pages/clinica/financeiro/AutorizacaoDescontos'));
+const SolicitacoesEstorno = React.lazy(() => import('@/pages/clinica/financeiro/SolicitacoesEstorno'));
+const CaixaIndividual = React.lazy(() => import('@/pages/clinica/financeiro/CaixaIndividual'));
+const CaixaGerencial = React.lazy(() => import('@/pages/clinica/financeiro/CaixaGerencial'));
+const DivergenciasAnalytics = React.lazy(() => import('@/pages/clinica/financeiro/DivergenciasAnalytics'));
+const CartoesConfiguracaoPage = React.lazy(() => import('@/pages/clinica/financeiro/CartoesConfiguracaoPage'));
+const AuditReportPage = React.lazy(() => import('@/pages/clinica/financeiro/AuditReportPage'));
+const AuditoryAnalyticsDashboard = React.lazy(() => import('@/pages/clinica/financeiro/AuditoryAnalyticsDashboard'));
 // Motor Financeiro Enterprise
-import { FinancialTransactionsPage } from '@/modules/financeiro/lancamentos';
+const FinancialTransactionsPage = React.lazy(() => import('@/modules/financeiro/lancamentos')
+  .then((module) => ({ default: module.FinancialTransactionsPage })));
 // ETAPA 1: Integração Agenda → Financeiro
-import AppointmentFinancialIntegrationConfig from '@/modules/financeiro/etapa1-integracao-agenda/AppointmentFinancialIntegrationConfig';
+const AppointmentFinancialIntegrationConfig = React.lazy(() => import('@/modules/financeiro/etapa1-integracao-agenda/AppointmentFinancialIntegrationConfig'));
 // Novas páginas de repasse (estrutura real)
-import RepasseMedicoLayout from '@/pages/financeiro/RepasseMedicoLayout';
-import RepasseEnterprisePage from '@/pages/financeiro/repasse-medico/RepasseEnterprisePage';
-import DREDashboard from '@/components/financeiro/DRE/DREDashboard';
+const RepasseMedicoLayout = React.lazy(() => import('@/pages/financeiro/RepasseMedicoLayout'));
+const RepasseEnterprisePage = React.lazy(() => import('@/pages/financeiro/repasse-medico/RepasseEnterprisePage'));
 // ETAPA 6: Conciliação Inteligente
 // ETAPA 8: Alertas e Automações
-import AlertCenter from '@/pages/admin/AlertCenter';
-import JobMonitor from '@/pages/admin/JobMonitor';
-import SystemHealthPage from '@/pages/admin/SystemHealthPage';
-import OperationalAnalyticsPage from '@/pages/admin/OperationalAnalyticsPage';
-import OperationalCompliancePage from '@/pages/admin/OperationalCompliancePage';
+const AlertCenter = React.lazy(() => import('@/pages/admin/AlertCenter'));
+const JobMonitor = React.lazy(() => import('@/pages/admin/JobMonitor'));
+const SystemHealthPage = React.lazy(() => import('@/pages/admin/SystemHealthPage'));
+const OperationalAnalyticsPage = React.lazy(() => import('@/pages/admin/OperationalAnalyticsPage'));
+const OperationalCompliancePage = React.lazy(() => import('@/pages/admin/OperationalCompliancePage'));
 
 // Faturamento
-import GuiasPage from '@/pages/clinica/faturamento/GuiasPage';
-import XMLPage from '@/pages/clinica/faturamento/XMLPage';
-import RetornosPage from '@/pages/clinica/faturamento/RetornosPage';
-import LotesPage from '@/pages/clinica/faturamento/LotesPage';
-import RelatoriosPage from '@/pages/clinica/faturamento/RelatoriosPage';
-import TISSPage from '@/pages/clinica/faturamento/TISSPage';
-import FaturamentoDashboard from '@/pages/clinica/faturamento/FaturamentoDashboard';
-import FaturamentoEnterprisePage from '@/pages/clinica/faturamento/FaturamentoEnterprisePage';
-import CentroFiscal from '@/pages/clinica/faturamento/CentroFiscal';
-import NotasFiscais from '@/pages/clinica/faturamento/NotasFiscais';
-import IntegracoesFiscais from '@/pages/clinica/faturamento/IntegracoesFiscais';
-import XmlPdfFiscal from '@/pages/clinica/faturamento/XmlPdfFiscal';
+const GuiasPage = React.lazy(() => import('@/pages/clinica/faturamento/GuiasPage'));
+const XMLPage = React.lazy(() => import('@/pages/clinica/faturamento/XMLPage'));
+const RetornosPage = React.lazy(() => import('@/pages/clinica/faturamento/RetornosPage'));
+const LotesPage = React.lazy(() => import('@/pages/clinica/faturamento/LotesPage'));
+const RelatoriosPage = React.lazy(() => import('@/pages/clinica/faturamento/RelatoriosPage'));
+const TISSPage = React.lazy(() => import('@/pages/clinica/faturamento/TISSPage'));
+const FaturamentoDashboard = React.lazy(() => import('@/pages/clinica/faturamento/FaturamentoDashboard'));
+const FaturamentoEnterprisePage = React.lazy(() => import('@/pages/clinica/faturamento/FaturamentoEnterprisePage'));
+const CentroFiscal = React.lazy(() => import('@/pages/clinica/faturamento/CentroFiscal'));
+const NotasFiscais = React.lazy(() => import('@/pages/clinica/faturamento/NotasFiscais'));
+const IntegracoesFiscais = React.lazy(() => import('@/pages/clinica/faturamento/IntegracoesFiscais'));
+const XmlPdfFiscal = React.lazy(() => import('@/pages/clinica/faturamento/XmlPdfFiscal'));
 
 // Dashboards
-import DashboardAtendimentos from '@/pages/clinica/dashboard/DashboardAtendimentos';
-import DashboardFinanceiro from '@/pages/clinica/dashboard/DashboardFinanceiro';
-import DashboardFaturamento from '@/pages/clinica/dashboard/DashboardFaturamento';
+const DashboardAtendimentos = React.lazy(() => import('@/pages/clinica/dashboard/DashboardAtendimentos'));
+const DashboardFinanceiro = React.lazy(() => import('@/pages/clinica/dashboard/DashboardFinanceiro'));
+const DashboardFaturamento = React.lazy(() => import('@/pages/clinica/dashboard/DashboardFaturamento'));
 
-import NotFound from '@/pages/NotFound';
+const NotFound = React.lazy(() => import('@/pages/NotFound'));
 
 // ⭐ AGENDA
-import AgendaPage from '@/pages/clinica/agenda/AgendaPage';
-import AgendaLayout from '@/pages/clinica/agenda/layout/AgendaLayout';
-import AgendaUnificada from '@/pages/clinica/agenda/views/AgendaUnificadaSimples';
-import AgendaPorProfissional from '@/pages/clinica/agenda/views/AgendaPorProfissional';
-import AgendaSala from '@/pages/clinica/agenda/views/AgendaSala';
-import AgendaConfirmacao from '@/pages/clinica/agenda/views/AgendaConfirmacao';
-import AgendaListaEspera from '@/pages/clinica/agenda/views/AgendaEspera';
-import AppointmentConfirmationPage from '@/pages/clinica/agendamento/AppointmentConfirmationPage';
-import AgendaRelatorios from '@/pages/clinica/agenda/views/AgendaRelatorios';
-import AgendaKpis from '@/pages/clinica/agenda/views/AgendaKpis';
-import AgendaNotificacoes from '@/pages/clinica/agenda/views/AgendaNotificacoes';
+const AgendaPage = React.lazy(() => import('@/pages/clinica/agenda/AgendaPage'));
+const AgendaLayout = React.lazy(() => import('@/pages/clinica/agenda/layout/AgendaLayout'));
+const AgendaUnificada = React.lazy(() => import('@/pages/clinica/agenda/views/AgendaUnificadaSimples'));
+const AgendaPorProfissional = React.lazy(() => import('@/pages/clinica/agenda/views/AgendaPorProfissional'));
+const AgendaSala = React.lazy(() => import('@/pages/clinica/agenda/views/AgendaSala'));
+const AgendaConfirmacao = React.lazy(() => import('@/pages/clinica/agenda/views/AgendaConfirmacao'));
+const AgendaListaEspera = React.lazy(() => import('@/pages/clinica/agenda/views/AgendaEspera'));
+const AppointmentConfirmationPage = React.lazy(() => import('@/pages/clinica/agendamento/AppointmentConfirmationPage'));
+const AgendaRelatorios = React.lazy(() => import('@/pages/clinica/agenda/views/AgendaRelatorios'));
+const AgendaKpis = React.lazy(() => import('@/pages/clinica/agenda/views/AgendaKpis'));
+const AgendaNotificacoes = React.lazy(() => import('@/pages/clinica/agenda/views/AgendaNotificacoes'));
 // 🟢 ETAPA 6: Import das páginas placeholder
-import AgendaLogNotificacoes from '@/pages/clinica/agenda/views/AgendaLogNotificacoes';
+const AgendaLogNotificacoes = React.lazy(() => import('@/pages/clinica/agenda/views/AgendaLogNotificacoes'));
 
 // ✨ NOVA AGENDA REFATORADA - COMPONENTES
-import AgendaIndexNew from '@/pages/clinica/agenda/components/index';
+const AgendaIndexNew = React.lazy(() => import('@/pages/clinica/agenda/components/index'));
 
 // 👨‍⚕️ ATENDIMENTO DO PROFISSIONAL (DESCONTINUADO - Consolidado na Página de Paciente)
 // import AtendimentoProfissionalView from "@/pages/clinica/agenda/views/AtendimentoProfissionalView";
 
 // Atendimento
-import Atendimento from '@/pages/clinica/Atendimento/Atendimento';
+const Atendimento = React.lazy(() => import('@/pages/clinica/Atendimento/Atendimento'));
 
 // 👥 PACIENTES - V2 REFATORADO (SINGLE-SCREEN COM ABAS)
-import PatientListPage from '@/pages/clinica/pacientes/PatientListPage';
-import PatientCadastroPage from '@/pages/clinica/pacientes/PatientCadastroPage';
-import PatientDetailPage from '@/pages/clinica/pacientes/PatientDetailPage';
+const PatientListPage = React.lazy(() => import('@/pages/clinica/pacientes/PatientListPage'));
+const PatientCadastroPage = React.lazy(() => import('@/pages/clinica/pacientes/PatientCadastroPage'));
+const PatientDetailPage = React.lazy(() => import('@/pages/clinica/pacientes/PatientDetailPage'));
 
 // 📊 AUDITORIA
-import AuditoriaPage from '@/pages/clinica/auditoria/AuditoriaPage';
+const AuditoriaPage = React.lazy(() => import('@/pages/clinica/auditoria/AuditoriaPage'));
 
 // 🏗️ BASE DO SISTEMA - NOVO MÓDULO
 import {
@@ -164,20 +172,21 @@ import {
 } from '@/pages/clinica/base-sistema/pages';
 
 // Admin
-import Usuarios from '@/pages/admin/Usuarios';
-import NewUser from '@/pages/admin/NewUser';
-import EditUser from '@/pages/admin/EditUser';
-import SincronizarProfissionais from '@/pages/admin/SincronizarProfissionais';
-import Clinicas from '@/pages/admin/Clinicas';
-import NewClinic from '@/pages/admin/NewClinic';
-import EditClinic from '@/pages/admin/EditClinic';
+const Usuarios = React.lazy(() => import('@/pages/admin/Usuarios'));
+const NewUser = React.lazy(() => import('@/pages/admin/NewUser'));
+const EditUser = React.lazy(() => import('@/pages/admin/EditUser'));
+const SincronizarProfissionais = React.lazy(() => import('@/pages/admin/SincronizarProfissionais'));
+const Clinicas = React.lazy(() => import('@/pages/admin/Clinicas'));
+const NewClinic = React.lazy(() => import('@/pages/admin/NewClinic'));
+const EditClinic = React.lazy(() => import('@/pages/admin/EditClinic'));
 
 function getCriticalPermissionForPath(pathname) {
   return resolvePermissionForPath(pathname);
 }
 
 function CriticalPermissionRoute() {
-  const { currentRole } = useAuth();
+  const { activeCompany } = useClinicContext();
+  const currentRole = activeCompany?.role;
   const { canView, canEdit, loading } = usePermissions();
   const location = useLocation();
 
@@ -206,10 +215,8 @@ function CriticalPermissionRoute() {
 
 /* 🔐 Protected Route */
 function ProtectedRoute() {
-  const { isAuthenticated, loading } = useAuth();
-
-  // Verificar se existe sessão customizada no localStorage
-  const hasCustomSession = localStorage.getItem('gesclinic_session');
+  const { isAuthenticated, loading, signOut } = useAuth();
+  const { activeCompany, loadingClinic } = useClinicContext();
 
   if (loading) {
     return (
@@ -219,9 +226,22 @@ function ProtectedRoute() {
     );
   }
 
-  // Permitir acesso se tem autenticação Supabase OU sessão customizada
-  if (!isAuthenticated && !hasCustomSession) {
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (loadingClinic) {
+    return <div className="flex min-h-screen items-center justify-center">Verificando acesso à clínica...</div>;
+  }
+  if (!activeCompany) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4">
+        <p>Você não possui acesso ativo a uma clínica.</p>
+        <button type="button" onClick={() => signOut()} className="text-blue-600 underline">
+          Sair
+        </button>
+      </div>
+    );
   }
 
   return <Outlet />;
@@ -229,22 +249,8 @@ function ProtectedRoute() {
 
 /* 🔐 Admin Route - Only for admin users */
 function AdminRoute() {
-  const { isAuthenticated, loading, currentRole } = useAuth();
-  const { canView, canEdit } = usePermissions();
-  const location = useLocation();
-
-  // Verificar se existe sessão customizada no localStorage
-  const customSession = (() => {
-    const session = localStorage.getItem('gesclinic_session');
-    if (!session) {
-      return null;
-    }
-    try {
-      return JSON.parse(session);
-    } catch (e) {
-      return null;
-    }
-  })();
+  const { isAuthenticated, loading } = useAuth();
+  const { activeCompany } = useClinicContext();
 
   if (loading) {
     return (
@@ -254,23 +260,12 @@ function AdminRoute() {
     );
   }
 
-  // Verificar autenticação: Supabase OU sessão customizada
-  const isAuthenticatedUser = isAuthenticated || !!customSession;
-
-  if (!isAuthenticatedUser) {
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  const userRole = customSession?.role || currentRole;
-  const required = getCriticalPermissionForPath(location.pathname);
-  const requiredPermission = required ? (typeof required === 'string' ? required : required.permission) : null;
-  const requiredLevel = required ? (typeof required === 'string' ? 'view' : required.level || 'view') : 'view';
-  const hasPermission =
-    !requiredPermission ||
-    userRole === 'admin' ||
-    (requiredLevel === 'edit' ? canEdit(requiredPermission) : canView(requiredPermission));
-
-  if (!hasPermission) {
+  const userRole = activeCompany?.role;
+  if (userRole !== 'admin') {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
@@ -315,11 +310,7 @@ function LegacyPayableEditRedirect() {
 function PublicRoute() {
   const { isAuthenticated } = useAuth();
 
-  // Verificar se existe sessão customizada no localStorage
-  const hasCustomSession = localStorage.getItem('gesclinic_session');
-
-  // Se tem qualquer autenticação (Supabase ou customizada), redireciona
-  if (isAuthenticated || hasCustomSession) {
+  if (isAuthenticated) {
     return <Navigate to="/clinica" replace />;
   }
 
@@ -328,16 +319,22 @@ function PublicRoute() {
 
 export default function AppRoutes() {
   return (
+    <React.Suspense fallback={<div>Carregando...</div>}>
     <Routes>
       <Route path="/termos-de-uso" element={<TermosPage />} />
+      <Route path="/privacidade" element={<PrivacidadePage />} />
+      <Route path="/politica-de-cookies" element={<CookiesPage />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/checkout" element={<Checkout />} />
+      <Route path="/complete-registration" element={<CompleteRegistration />} />
       <Route path="/termos" element={<Navigate to="/termos-de-uso" replace />} />
 
       {/* PUBLIC */}
       <Route element={<PublicRoute />}>
         <Route path="/" element={<PublicHome />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/checkout" element={<Checkout />} />
         <Route path="/fix-user-clinic" element={<FixUserClinicPage />} />
         <Route path="/403" element={<Forbidden />} />
       </Route>
@@ -689,5 +686,6 @@ export default function AppRoutes() {
       {/* ROOT */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </React.Suspense>
   );
 }

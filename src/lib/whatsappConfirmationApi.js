@@ -6,14 +6,9 @@ import { supabase } from './customSupabaseClient';
 
 // Gerar token único (sem dependência de uuid)
 function generateToken() {
-  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  return crypto.randomUUID();
 }
 
-// Configuração da Evolution API
-const EVOLUTION_API_URL =
-  import.meta.env.VITE_EVOLUTION_API_URL || 'http://localhost:8080/message/sendText';
-const EVOLUTION_API_KEY = import.meta.env.VITE_EVOLUTION_API_KEY || '';
-const EVOLUTION_INSTANCE = import.meta.env.VITE_EVOLUTION_INSTANCE || '';
 const APP_URL = import.meta.env.VITE_APP_URL || 'http://localhost:3000';
 
 /**
@@ -72,35 +67,13 @@ export async function sendAppointmentConfirmation(
     // Montar mensagem
     const message = `Olá ${patientName}! 👋\n\nPara confirmar sua consulta *amanhã (${formatDate(appointmentDate)}) às ${appointmentTime}* com ${professionalName}:\n\n✅ *Confirmar:* ${confirmLink}\n❌ *Cancelar:* ${rejectLink}\n\nQualquer dúvida, me chama! 😊`;
 
-    console.log(`📱 [WhatsApp] Enviando confirmação para ${patientPhone}:`, {
-      patientName,
-      appointmentDate,
-      appointmentTime,
-      professionalName,
-      confirmationToken,
-    });
-
-    // Enviar via Evolution API
-    const response = await fetch(EVOLUTION_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${EVOLUTION_API_KEY}`,
+    const { data: result, error: sendError } = await supabase.functions.invoke('send-integrated-message', {
+      body: {
+        kind: 'whatsapp', clinic_id: clinicId, appointment_id: appointmentId,
+        number: normalizedPhone, message,
       },
-      body: JSON.stringify({
-        number: normalizedPhone,
-        text: message,
-        instance: EVOLUTION_INSTANCE,
-      }),
     });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('❌ Erro ao enviar WhatsApp:', errorData);
-      throw new Error(`Erro ao enviar: ${response.statusText}`);
-    }
-
-    const result = await response.json();
+    if (sendError || !result?.success) throw new Error('Não foi possível enviar WhatsApp.');
 
     // Atualizar registro com success
     await supabase
@@ -108,7 +81,6 @@ export async function sendAppointmentConfirmation(
       .update({ message_sent_at: new Date().toISOString() })
       .eq('id', confirmation.id);
 
-    console.log('✅ Confirmação enviada com sucesso:', result);
     return {
       success: true,
       message: 'Mensagem enviada',
@@ -137,15 +109,14 @@ export async function confirmAppointmentByToken(token, status) {
     const { data: confirmation, error: selectError } = await supabase
       .from('appointment_confirmations')
       .select('*')
-      .eq('confirmation_token', token);
-
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
+      .eq('confirmation_token', token)
+      .maybeSingle();
 
     if (selectError) {
       console.error('❌ Confirmação não encontrada:', selectError);
+      throw new Error('Link de confirmação expirado ou inválido');
+    }
+    if (!confirmation) {
       throw new Error('Link de confirmação expirado ou inválido');
     }
 

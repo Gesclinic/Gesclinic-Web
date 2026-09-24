@@ -1,10 +1,11 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { authorizeClinic } from '../_shared/authorize-clinic.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Cache-Control": "no-store",
 };
 
 const jsonResponse = (body: unknown, status = 200) =>
@@ -38,18 +39,20 @@ serve(async (req: Request) => {
     const body = (await req.json()) as ScheduleReportRequest;
     const { to, clinic_id, action, schedule_id } = body;
 
-    if (!to || !clinic_id) {
-      return jsonResponse({ error: "Missing required fields" }, 400);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to || '') ||
+        !/^[0-9a-f-]{36}$/i.test(clinic_id || '') ||
+        !['create', 'update', 'delete'].includes(action) ||
+        (action !== 'create' && !/^[0-9a-f-]{36}$/i.test(schedule_id || ''))) {
+      return jsonResponse({ error: 'Dados inválidos.' }, 400);
     }
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
-    if (!supabaseUrl || !supabaseKey) {
-      return jsonResponse({ error: "Supabase not configured" }, 500);
+    if (action !== 'delete' && !['daily', 'weekly', 'monthly'].includes(body.frequency)) {
+      return jsonResponse({ error: 'Frequência inválida.' }, 400);
     }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const access = await authorizeClinic(req, clinic_id, ['admin', 'gestor', 'financeiro']);
+    if (access.status !== 200 || !access.admin) {
+      return jsonResponse({ error: 'Acesso negado.' }, access.status);
+    }
+    const supabase = access.admin;
 
     if (action === "delete" && schedule_id) {
       const { error } = await supabase.from("email_schedules").delete().eq("id", schedule_id).eq("clinic_id", clinic_id);
@@ -72,7 +75,7 @@ serve(async (req: Request) => {
       const { data: schedule, error } = await supabase
         .from("email_schedules")
         .update(data)
-        .eq("id", schedule_id)
+        .eq("id", schedule_id).eq('clinic_id', clinic_id)
         .select();
       if (error) throw error;
       return jsonResponse({ success: true, schedule }, 200);

@@ -191,22 +191,13 @@ export const updateEmailTemplate = async (templateId, updates) => {
 /**
  * Disparar processamento de emails pendentes via Edge Function
  */
-export const triggerEmailProcessing = async () => {
+export const triggerEmailProcessing = async (clinicId) => {
   try {
-    const response = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-alert-email`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabase.auth.session?.access_token || ''}`,
-        },
-      }
-    )
-
-    const result = await response.json()
-    console.log('Email processing triggered:', result)
-    return result.success
+    if (!clinicId) return false
+    const { data, error } = await supabase.functions.invoke('send-alert-email', {
+      body: { clinic_id: clinicId },
+    })
+    return !error && data?.success === true
   } catch (error) {
     console.error('Erro ao disparar processamento de emails:', error)
     return false
@@ -274,7 +265,7 @@ export const resendEmail = async (emailLogId) => {
     if (error) throw error
 
     // Disparar reprocessamento
-    await triggerEmailProcessing()
+    await triggerEmailProcessing(data?.[0]?.clinic_id)
 
     return data?.[0]
   } catch (error) {
@@ -364,18 +355,8 @@ export const updateEmailSchedule = (scheduleId, updates) => {
  */
 export const sendReportEmail = async (emailConfig) => {
   try {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-
-    const response = await fetch(
-      `${supabaseUrl}/functions/v1/send-report`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseKey}`,
-        },
-        body: JSON.stringify({
+    const { data: result, error } = await supabase.functions.invoke('send-report', {
+        body: {
           to: emailConfig.to,
           recipient_name: emailConfig.recipient_name,
           clinic_id: emailConfig.clinic_id,
@@ -384,16 +365,9 @@ export const sendReportEmail = async (emailConfig) => {
           attach_pdf: emailConfig.attach_pdf !== false,
           attach_excel: emailConfig.attach_excel !== false,
           dashboardData: emailConfig.dashboardData,
-        }),
-      }
-    )
-
-    if (!response.ok) {
-      const result = await response.json().catch(() => null)
-      throw new Error(result?.error || `Edge Function error: ${response.status}`)
-    }
-
-    const result = await response.json()
+        },
+      })
+    if (error || !result?.success) throw error || new Error(result?.error || 'Falha ao enviar relatório')
     return { success: true, email_id: result.email_id, message: 'Email enviado com sucesso' }
   } catch (error) {
     console.error('[sendReportEmail] Erro:', error)
@@ -406,18 +380,8 @@ export const sendReportEmail = async (emailConfig) => {
  */
 export const scheduleEmailReport = async (scheduleConfig) => {
   try {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-
-    const response = await fetch(
-      `${supabaseUrl}/functions/v1/schedule-report`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseKey}`,
-        },
-        body: JSON.stringify({
+    const { data: result, error } = await supabase.functions.invoke('schedule-report', {
+        body: {
           to: scheduleConfig.to,
           recipient_name: scheduleConfig.recipient_name,
           clinic_id: scheduleConfig.clinic_id,
@@ -426,15 +390,9 @@ export const scheduleEmailReport = async (scheduleConfig) => {
           attach_pdf: scheduleConfig.attach_pdf !== false,
           attach_excel: scheduleConfig.attach_excel !== false,
           action: 'create',
-        }),
-      }
-    )
-
-    if (!response.ok) {
-      throw new Error(`Edge Function error: ${response.status}`)
-    }
-
-    const result = await response.json()
+        },
+      })
+    if (error || !result?.success) throw error || new Error(result?.error || 'Falha ao agendar relatório')
     return {
       success: true,
       schedule_id: result.schedule?.[0]?.id,

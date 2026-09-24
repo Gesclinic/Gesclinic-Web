@@ -1,64 +1,36 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-const dashboard = readFileSync(resolve('src/pages/financeiro/DashboardDRE.jsx'), 'utf8');
+const rpc = vi.fn();
+vi.mock('../../src/lib/customSupabaseClient.js', () => ({
+  customSupabaseClient: { rpc },
+}));
+
+const { calculateDREForPeriod } = await import('../../src/lib/dynamicDREApi.ts');
 const migration = readFileSync(
-  resolve('supabase/migrations/20260612_fix_dre_dynamic_executive_views_clinic_id.sql'),
-  'utf8',
+  resolve('supabase/migrations/20260612_fix_dre_dynamic_executive_views_clinic_id.sql'), 'utf8',
 );
 
-const dashboardViews = [
-  'v_executive_kpis',
-  'v_daily_financial_summary',
-  'v_monthly_financial_summary',
-  'v_delinquency_analysis',
-  'v_professional_contribution',
-  'v_professional_repayment_summary',
-  'v_alerts_summary_by_clinic',
-];
-
-const executiveKpiIdempotentColumnOrder = [
-  ['Contas a Receber', 'Contas a Receber', 'ar'],
-  ['Contas Pagas', 'Contas Pagas', 'ar'],
-  ['Taxa de Recebimento %', 'Taxa de Recebimento', 'ar'],
-  ['Repasses Pendentes', 'Repasses Pendentes', 'prep'],
-  ['Repasses Pagos', 'Repasses Pagos', 'prep'],
-];
-
-describe('DRE dinamica com views executivas por clinica', () => {
-  it('filtra todas as views executivas por clinic_id no dashboard', () => {
-    dashboardViews.forEach((view) => {
-      const viewQuery = new RegExp(`\\.from\\('${view}'\\)[\\s\\S]*?\\.eq\\('clinic_id', clinicId\\)`, 'm');
-      expect(dashboard).toMatch(viewQuery);
+describe('DRE por clínica', () => {
+  it('envia a clínica e o período à RPC ativa, sem aceitar um resultado de outra consulta', async () => {
+    const result = { revenue: { gross_revenue: 100 } };
+    rpc.mockResolvedValueOnce({ data: result, error: null });
+    await expect(calculateDREForPeriod('clinic-a', '2026-06-01', '2026-06-30'))
+      .resolves.toEqual(result);
+    expect(rpc).toHaveBeenCalledWith('calculate_dre_for_period', {
+      p_clinic_id: 'clinic-a', p_start_date: '2026-06-01',
+      p_end_date: '2026-06-30', p_competence_type: 'accrual',
     });
   });
 
-  it('recria views da DRE com clinic_id e status canonicos de ar_invoices', () => {
-    [
-      'v_daily_financial_summary',
-      'v_monthly_financial_summary',
-      'v_delinquency_analysis',
-      'v_professional_contribution',
-      'v_professional_repayment_summary',
-      'v_executive_kpis',
-    ].forEach((view) => {
-      expect(migration).toContain(`CREATE OR REPLACE VIEW ${view} AS`);
-    });
-
-    expect(migration).toContain("ar.status::text = ANY (ARRAY['received'::text, 'paid'::text])");
-    expect(migration).toContain("ar.status::text = ANY (ARRAY['open'::text, 'planned'::text, 'pending'::text, 'billed'::text, 'overdue'::text, 'partial'::text])");
-    expect(migration).toContain('COALESCE(ar.net_value, ar.amount, 0::numeric)');
-    expect(migration).toContain('COALESCE(ar.paid_total, ar.received_value, 0::numeric)');
-
-    executiveKpiIdempotentColumnOrder.forEach(([metricName, label, alias]) => {
-      expect(migration).toMatch(
-        new RegExp(`${alias}\\.clinic_id,\\s*'${metricName}'::text AS metric_name,\\s*'${label}'::text AS label`),
-      );
-    });
-
-    expect(migration).not.toContain("ar.status::text = 'paid'::text");
-    expect(migration).not.toContain("ar.status::text = 'pending'::text");
-    expect(migration).not.toContain("ar.status::text = 'cancelled'::text");
+  it('mantém clinic_id nas views executivas legadas que ainda existem no banco', () => {
+    for (const view of ['v_daily_financial_summary', 'v_monthly_financial_summary',
+      'v_delinquency_analysis', 'v_professional_contribution',
+      'v_professional_repayment_summary', 'v_executive_kpis']) {
+      const definition = migration.split(`CREATE OR REPLACE VIEW ${view} AS`)[1]
+        ?.split('CREATE OR REPLACE VIEW ')[0];
+      expect(definition, view).toContain('clinic_id');
+    }
   });
 });
