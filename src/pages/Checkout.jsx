@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/lib/customSupabaseClient';
-import { STRIPE_PRODUCTS, getPriceId } from '@/config/stripe-products';
-
-let stripe = null;
 
 export default function Checkout() {
   const navigate = useNavigate();
@@ -18,39 +15,7 @@ export default function Checkout() {
 
   // Load plans on mount
   useEffect(() => {
-    // Carregar Stripe dinamicamente
-    const loadStripe = async () => {
-      return new Promise((resolve) => {
-        // Check if already loaded
-        if (window.Stripe && !stripe) {
-          stripe = window.Stripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
-          resolve();
-          return;
-        }
-
-        // If not loaded, load the script dynamically
-        if (!window.Stripe) {
-          const script = document.createElement('script');
-          script.src = 'https://js.stripe.com/v3/';
-          script.async = true;
-          script.onload = () => {
-            stripe = window.Stripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
-            resolve();
-          };
-          script.onerror = () => {
-            console.error('Failed to load Stripe script');
-            resolve(); // Continue anyway
-          };
-          document.head.appendChild(script);
-        } else {
-          resolve();
-        }
-      });
-    };
-
-    loadStripe().then(() => {
-      loadPlans();
-    });
+    loadPlans();
 
     // Check if returning from successful payment
     const sessionId = searchParams.get('session_id');
@@ -110,11 +75,6 @@ export default function Checkout() {
 
       if (enterpriseIndex !== -1) {
         data[enterpriseIndex] = { ...data[enterpriseIndex], ...enterprisePlan };
-      } else {
-        data.push({
-          id: 'enterprise-custom',
-          ...enterprisePlan,
-        });
       }
 
       setPlans(data);
@@ -137,29 +97,14 @@ export default function Checkout() {
 
   const handlePaymentSuccess = async (sessionId) => {
     try {
-      // Verify session and create clinic subscription
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-stripe-session`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({ session_id: sessionId }),
-        },
-      );
-
-      if (response.ok) {
-        const result = await response.json();
-        alert('Pagamento confirmado! Bem-vindo ao Gesclinic!');
-        setTimeout(() => {
-          navigate('/clinica/dashboard');
-        }, 2000);
-      }
+      const { data, error } = await supabase.functions.invoke('verify-stripe-session', {
+        body: { session_id: sessionId },
+      });
+      if (error || !data?.paid) throw new Error('Pagamento ainda não confirmado.');
+      navigate('/clinica/dashboard');
     } catch (error) {
       console.error('Error verifying payment:', error);
-      alert('Erro ao processar pagamento');
+      alert('Pagamento em processamento. Consulte o status novamente em alguns instantes.');
     }
   };
 
@@ -172,60 +117,12 @@ export default function Checkout() {
     setProcessing(true);
 
     try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-      console.log('=== TESTE DIRETO ===');
-      console.log('URL:', supabaseUrl);
-      console.log('Key exists:', !!anonKey);
-      console.log('Plan:', plan.name, plan.id);
-
-      // Get the correct Price ID from Stripe configuration
-      const priceId = getPriceId(plan.slug, billingCycle === 'annual' ? 'annual' : 'monthly');
-      const productId = STRIPE_PRODUCTS[plan.slug].productId;
-
-      const response = await fetch(`${supabaseUrl}/functions/v1/create-stripe-checkout`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${anonKey}`,
-        },
-        body: JSON.stringify({
-          planId: plan.id,
-          planSlug: plan.slug,
-          priceId: priceId,
-          productId: productId,
-          billingCycle: billingCycle,
-          clinicName: clinicName,
-        }),
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) throw new Error('Entre na sua conta para continuar o pagamento.');
+      const { data: result, error } = await supabase.functions.invoke('create-stripe-checkout', {
+        body: { planId: plan.id, planSlug: plan.slug, billingCycle, clinicName },
       });
-
-      console.log('Status da resposta:', response.status);
-      console.log('Headers:', response.headers);
-
-      const text = await response.text();
-      console.log('Resposta bruta:', text);
-
-      let result;
-      try {
-        result = JSON.parse(text);
-      } catch (e) {
-        console.error('Erro ao fazer parse JSON:', e);
-        throw new Error('Resposta inválida da API: ' + text);
-      }
-
-      console.log('Resultado parseado:', result);
-
-      if (!response.ok) {
-        throw new Error(result.error || `Erro HTTP ${response.status}`);
-      }
-
-      if (!result.checkout_url) {
-        console.error('checkout_url não encontrado em:', result);
-        throw new Error('checkout_url não foi retornado');
-      }
-
-      console.log('Redirecionando para:', result.checkout_url);
+      if (error || !result?.checkout_url) throw new Error('Não foi possível iniciar o checkout.');
       // Redirecionar para Stripe - ao retornar, vai para payment-confirmation
       window.location.href = result.checkout_url;
     } catch (error) {

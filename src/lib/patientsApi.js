@@ -306,7 +306,6 @@ export async function uploadPatientPhoto(clinicId, patientId, photoDataUrl) {
     // Isto pode ser permitido pela RLS policy
     const fileName = `photos/${patientId}.jpg`;
 
-    console.log('📸 Uploading file:', { fileName, size: blob.size });
 
     // Upload para Supabase Storage - SEM upsert para evitar novo "row"
     const { error: uploadError, data } = await supabase.storage
@@ -318,7 +317,6 @@ export async function uploadPatientPhoto(clinicId, patientId, photoDataUrl) {
 
     // Se o arquivo já existe, tenta com update
     if (uploadError && uploadError.message.includes('already exists')) {
-      console.log('📸 Arquivo existe, tentando update...');
       const { error: updateError, data: updateData } = await supabase.storage
         .from('patient-photos')
         .update(fileName, blob, {
@@ -333,12 +331,10 @@ export async function uploadPatientPhoto(clinicId, patientId, photoDataUrl) {
       throw uploadError;
     }
 
-    console.log('✅ Upload/Update concluído');
 
     // Obter URL pública
     const { data: publicUrlData } = supabase.storage.from('patient-photos').getPublicUrl(fileName);
 
-    console.log('✅ URL Pública gerada:', publicUrlData.publicUrl);
     return publicUrlData.publicUrl;
   } catch (error) {
     console.error('❌ Erro ao processar foto:', error);
@@ -633,7 +629,6 @@ export async function generateProntuarioForPatient(patientId, clinicCode) {
       throw new Error('Record not found');
     }
 
-    console.log('✅ Prontuário gerado:', newProntuario);
     return data[0];
   } catch (error) {
     console.error('❌ Erro ao gerar prontuário:', error);

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useAuth } from './SupabaseAuthContext';
+import { useClinicContext } from './ClinicContext';
 
 const PermissionsContext = createContext(null);
 
@@ -36,7 +37,9 @@ function permissionMatches(permissionKey, requestedKey) {
 }
 
 export function PermissionsProvider({ children }) {
-  const { user, clinicId, currentRole } = useAuth();
+  const { user } = useAuth();
+  const { clinicId, activeCompany } = useClinicContext();
+  const currentRole = activeCompany?.role || null;
   const [permissions, setPermissions] = useState([]);
   const [loading, setLoading] = useState(false);
 

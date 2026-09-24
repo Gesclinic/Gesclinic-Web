@@ -894,6 +894,9 @@ export async function getAppointmentById(appointmentId) {
   return mapped;
 }
 
+// Compatibilidade com o módulo de check-in.
+export const getAppointment = getAppointmentById;
+
 export async function createAppointment(payload) {
   const data = mapToDatabase(payload);
 

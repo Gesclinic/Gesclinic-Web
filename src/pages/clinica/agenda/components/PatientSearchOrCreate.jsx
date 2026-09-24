@@ -140,7 +140,6 @@ export default function PatientSearchOrCreate({
       document_id: patient.document_id || '', // ✅ CPF/RG
       birthdate: patient.birthdate || '', // ✅ Data de nascimento
       gender: patient.gender || '', // ✅ Gênero
-      phone: patient.phone || '', // ✅ Telefone
       cell_phone: patient.cell_phone || patient.phone || '', // ✅ Celular (com fallback para phone)
       email: patient.email || '', // ✅ Email
       street: patient.street || patient.address || '', // ✅ Rua (tenta street primeiro, depois address)

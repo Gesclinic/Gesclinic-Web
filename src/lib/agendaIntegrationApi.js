@@ -169,7 +169,7 @@ export async function listProfessionalsForService(clinicId, serviceId) {
  */
 export async function getServiceDurationForProfessional(clinicId, serviceId, professionalId) {
   try {
-    const duration = await agendaRulesApi.getServiceDuration(professionalId, serviceId, clinicId);
+    const duration = await professionalServicesApi.getServiceDuration(professionalId, serviceId, clinicId);
 
     return duration || 60; // Default 60 minutos
   } catch (error) {

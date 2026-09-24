@@ -415,7 +415,7 @@ export function ProfessionalsPage() {
           const serviceIds = professionalServices[editingListId] || [];
           for (const serviceId of serviceIds) {
             try {
-              await professionalServicesApi.upsertProfessionalService(editingListId, serviceId);
+              await professionalServicesApi.upsertProfessionalService(editingListId, serviceId, clinicId);
             } catch (err) {
               console.warn('Erro ao salvar serviço:', err);
             }
