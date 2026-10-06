@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { mapGuiaFromDatabase, mapGuiaToDatabase } from '../../src/lib/mappers.js';
 import { validateGuiaPayload } from '../../src/lib/validators.js';
-import { buildReceivablePayloadFromGuide } from '../../src/lib/faturamentoOperationalApi.js';
+import {
+  buildBillingBatchKey,
+  buildReceivablePayloadFromGuide,
+} from '../../src/lib/faturamentoOperationalApi.js';
 import { getUnlinkedBillingGuides } from '../../src/lib/faturamentoReportsApi.js';
+import { canTransitionBillingBatch } from '../../src/lib/billingOperationsApi.js';
 
 const clinicId = '11111111-1111-4111-8111-111111111111';
 
@@ -117,5 +121,29 @@ describe('Faturamento enterprise TISS flow', () => {
     const invoices = [{ id: 'invoice-001', guide_number: 'guia-sadt-001', net_value: 180.5 }];
 
     expect(getUnlinkedBillingGuides(guides, invoices)).toEqual([guides[1]]);
+  });
+
+  it('mantem uma chave de lote estavel para todas as guias', () => {
+    const guides = [
+      { id: 'guide-001', convenio: 'Operadora Integrada' },
+      { id: 'guide-002', convenio: 'Operadora Integrada' },
+    ];
+
+    expect(buildBillingBatchKey(guides, {
+      date: '2026-10-06',
+      suffix: '000123',
+    })).toBe('20261006-OPERADORA-INTEGRADA-000123');
+
+    expect(buildBillingBatchKey([
+      { ...guides[0], billing_batch_key: 'LOTE-JA-FECHADO' },
+      guides[1],
+    ])).toBe('LOTE-JA-FECHADO');
+  });
+
+  it('bloqueia saltos de status que quebram a rastreabilidade do lote', () => {
+    expect(canTransitionBillingBatch('draft', 'closed')).toBe(true);
+    expect(canTransitionBillingBatch('closed', 'xml_generated')).toBe(true);
+    expect(canTransitionBillingBatch('draft', 'paid')).toBe(false);
+    expect(canTransitionBillingBatch('sent', 'reopened')).toBe(false);
   });
 });

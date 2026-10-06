@@ -1,4 +1,5 @@
 import { supabase } from './customSupabaseClient';
+import { createBillingBatch } from './billingOperationsApi';
 import {
   createReceivable,
   registerReceivableGlosa,
@@ -89,6 +90,21 @@ function getGuideProcedureCode(guide = {}) {
 
 function getGuidePayerName(guide = {}) {
   return guide.convenio || guide.payer_name || guide.health_insurance_name || guide.metadata?.payer_name || 'Particular';
+}
+
+export function buildBillingBatchKey(guides = [], options = {}) {
+  const existingKey = guides.find((guide) => guide.billing_batch_key)?.billing_batch_key;
+  if (existingKey) return existingKey;
+
+  const date = String(options.date || new Date().toISOString()).slice(0, 10).replaceAll('-', '');
+  const payer = getGuidePayerName(guides[0])
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .toUpperCase() || 'PARTICULAR';
+  const suffix = options.suffix || crypto.randomUUID().slice(0, 8).toUpperCase();
+  return `${date}-${payer}-${suffix}`;
 }
 
 function getRuleValue(rule = {}, key, fallback = null) {
@@ -701,7 +717,7 @@ export async function ensureReceivableForGuide(clinicId, guide) {
   return receivable;
 }
 
-export async function markGuideAsBilled(clinicId, guide) {
+export async function markGuideAsBilled(clinicId, guide, billingBatchKey = null) {
   const rules = await loadConventionRules(clinicId);
   const validation = evaluateConventionRulesForGuide(guide, rules);
   if (!validation.valid) {
@@ -719,15 +735,30 @@ export async function markGuideAsBilled(clinicId, guide) {
     contractual_due_date: validation.contractualDueDate,
     negotiated_value: validation.negotiatedValue || null,
     coparticipation_value: validation.coparticipationValue || 0,
+    billing_batch_key: billingBatchKey || guide.billing_batch_key || buildBillingBatchKey([guide]),
     data_atualizacao: new Date().toISOString(),
   });
   return { guide: data, receivable };
 }
 
 export async function markGuidesAsBilled(clinicId, guides = []) {
+  const billingBatchKey = buildBillingBatchKey(guides);
   const results = [];
   for (const guide of guides) {
-    results.push(await markGuideAsBilled(clinicId, guide));
+    results.push(await markGuideAsBilled(clinicId, guide, billingBatchKey));
+  }
+  try {
+    await createBillingBatch({
+      clinicId,
+      batchKey: billingBatchKey,
+      payerId: guides[0]?.payer_id || guides[0]?.convenio_id || null,
+      payerName: getGuidePayerName(guides[0]),
+      competencyDate: String(guides[0]?.competency_date || guides[0]?.data_criacao || new Date().toISOString()).slice(0, 10),
+      guideIds: guides.map((guide) => guide.id),
+    });
+  } catch (error) {
+    if (!/create_billing_batch|schema cache|function/i.test(error?.message || '')) throw error;
+    console.warn('[faturamento] Lote transacional indisponivel; mantida a chave nas guias.', error.message);
   }
   return results;
 }

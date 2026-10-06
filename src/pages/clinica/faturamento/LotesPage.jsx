@@ -26,6 +26,7 @@ function formatDate(value) {
 }
 
 function getGuideLotKey(guide) {
+  if (guide.billing_batch_key) return guide.billing_batch_key;
   if (guide.xml_path) return guide.xml_path;
   const month = String(guide.data_criacao || new Date().toISOString()).slice(0, 7);
   return `pendente-${month}-${guide.convenio || 'sem-convenio'}`;
@@ -64,7 +65,7 @@ function normalizeLots(guides, submissions) {
       id: key,
       nome: key.startsWith('pendente-')
         ? `LOT-${String(index + 1).padStart(3, '0')}`
-        : key.split('/').pop()?.replace('.xml', '') || key,
+        : guideName(key),
       dataCriacao: createdAt,
       guias: groupedGuides.length,
       valor: groupedGuides.reduce((sum, guide) => sum + Number(guide.valor || 0), 0),
@@ -75,6 +76,10 @@ function normalizeLots(guides, submissions) {
       convenio: groupedGuides[0]?.convenio || '-',
     };
   });
+}
+
+function guideName(key) {
+  return key.includes('/') ? key.split('/').pop()?.replace('.xml', '') || key : key;
 }
 
 export default function LotesPage() {
@@ -92,7 +97,7 @@ export default function LotesPage() {
       const [guidesResult, submissionsResult] = await Promise.all([
         supabase
           .from('billing_guides')
-          .select('id, numero_guia, convenio, valor, status, xml_path, data_criacao, data_envio, data_processamento')
+          .select('id, numero_guia, convenio, valor, status, xml_path, billing_batch_key, data_criacao, data_envio, data_processamento')
           .eq('clinic_id', clinicId)
           .order('data_criacao', { ascending: false }),
         supabase
