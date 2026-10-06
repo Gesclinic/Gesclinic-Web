@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Link, Outlet } from 'react-router-dom';
 
 import Sidebar from './Sidebar';
 import Header from './Header';
@@ -10,15 +10,6 @@ export default function AppLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const { activeCompanyId, clinicId } = useClinicContext();
   const activeClinicKey = activeCompanyId || clinicId || 'no-active-clinic';
-
-  // Request browser notification permission on mount
-  useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission().catch(err => {
-        console.log('Notification permission denied:', err);
-      });
-    }
-  }, []);
 
   return (
     <div className="flex h-screen overflow-hidden bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
@@ -39,6 +30,11 @@ export default function AppLayout() {
             {/* Aqui o React Router 6 injeta a rota correta */}
             <Outlet key={activeClinicKey} />
           </div>
+          <footer className="mt-8 flex flex-wrap gap-4 border-t border-gray-200 pt-3 text-xs text-gray-500 dark:border-gray-700">
+            <Link to="/termos-de-uso">Termos</Link>
+            <Link to="/privacidade">Privacidade</Link>
+            <Link to="/politica-de-cookies">Cookies</Link>
+          </footer>
         </main>
       </div>
     </div>

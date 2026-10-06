@@ -88,22 +88,47 @@ serve(async (req) => {
       );
     }
 
-    const acceptedAt = termsAcceptedAt ? new Date(termsAcceptedAt) : new Date();
-    if (Number.isNaN(acceptedAt.getTime())) {
-      return new Response(
-        JSON.stringify({ error: "Invalid terms acceptance date" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
+    const acceptedAt = new Date();
 
     // Create Supabase client
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") || "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
     );
+
+    // The submitted userId/email are hints only. Bind creation to the verified Auth identity.
+    const bearer = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
+    const { data: { user: actor }, error: actorError } = bearer
+      ? await supabase.auth.getUser(bearer)
+      : { data: { user: null }, error: new Error("Missing token") };
+    if (actorError || !actor || actor.id !== userId ||
+        actor.email?.toLowerCase() !== String(adminEmail).toLowerCase()) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (clinicName.trim().length > 160 || adminName.trim().length > 160 ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adminEmail) ||
+        !/^\d{14}$/.test(clinicCnpj.replace(/\D/g, ''))) {
+      return new Response(JSON.stringify({ error: 'Dados inválidos.' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const { data: existingUser, error: existingError } = await supabase.from('users')
+      .select('id').eq('id', actor.id).maybeSingle();
+    if (existingError || existingUser) {
+      return new Response(JSON.stringify({ error: 'Conta já vinculada ou indisponível.' }), {
+        status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const { data: planData, error: planError } = await supabase.from('subscription_plans')
+      .select('id, trial_days').eq('id', planId).eq('active', true).maybeSingle();
+    if (planError || !planData) {
+      return new Response(JSON.stringify({ error: 'Plano indisponível.' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // 1. Create clinic
     const { data: clinicData, error: clinicError } = await supabase
@@ -119,7 +144,7 @@ serve(async (req) => {
     if (clinicError) {
       console.error("Clinic creation error:", clinicError);
       return new Response(
-        JSON.stringify({ error: "Failed to create clinic: " + clinicError.message }),
+        JSON.stringify({ error: "Não foi possível criar a clínica." }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -145,7 +170,7 @@ serve(async (req) => {
       // Delete clinic if user creation fails
       await supabase.from("clinics").delete().eq("id", clinicData.id);
       return new Response(
-        JSON.stringify({ error: "Failed to create user: " + userError.message }),
+        JSON.stringify({ error: "Não foi possível vincular o usuário." }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -154,26 +179,6 @@ serve(async (req) => {
     }
 
     // 3. Get plan details
-    const { data: planData, error: planError } = await supabase
-      .from("subscription_plans")
-      .select("id, trial_days")
-      .eq("id", planId)
-      .single();
-
-    if (planError || !planData) {
-      console.error("Plan error:", planError);
-      // Clean up
-      await supabase.from("users").delete().eq("id", userId);
-      await supabase.from("clinics").delete().eq("id", clinicData.id);
-      return new Response(
-        JSON.stringify({ error: "Invalid plan" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
     // 4. Create subscription with trial
     const trialDays = planData.trial_days || 30;
     const startDate = new Date();
@@ -201,7 +206,7 @@ serve(async (req) => {
       await supabase.from("clinics").delete().eq("id", clinicData.id);
       return new Response(
         JSON.stringify({
-          error: "Failed to create subscription: " + subscriptionError.message,
+          error: "Não foi possível criar a assinatura.",
         }),
         {
           status: 500,
@@ -211,8 +216,7 @@ serve(async (req) => {
     }
 
     // 5. Record legal acceptance for the contracted terms
-    const forwardedFor = req.headers.get("x-forwarded-for") || "";
-    const ipAddress = forwardedFor.split(",")[0]?.trim() || req.headers.get("cf-connecting-ip") || null;
+    const ipAddress = null;
     const { error: acceptanceError } = await supabase
       .from("legal_acceptances")
       .insert({
@@ -222,8 +226,8 @@ serve(async (req) => {
         accepted_by_name: adminName,
         accepted_by_email: adminEmail,
         document_type: "terms_of_use",
-        document_version: termsVersion || "2026-07-15",
-        document_url: termsUrl || "/termos-de-uso",
+        document_version: "2026-07-15",
+        document_url: "/termos-de-uso",
         accepted_at: acceptedAt.toISOString(),
         ip_address: ipAddress,
         user_agent: userAgent || req.headers.get("user-agent"),
@@ -242,7 +246,7 @@ serve(async (req) => {
       await supabase.from("clinics").delete().eq("id", clinicData.id);
       return new Response(
         JSON.stringify({
-          error: "Failed to record terms acceptance: " + acceptanceError.message,
+          error: "Não foi possível registrar a aceitação dos termos.",
         }),
         {
           status: 500,
@@ -270,7 +274,7 @@ serve(async (req) => {
     console.error("Unexpected error:", error);
     return new Response(
       JSON.stringify({
-        error: error instanceof Error ? error.message : "Internal server error",
+        error: "Erro interno ao criar a clínica.",
       }),
       {
         status: 500,

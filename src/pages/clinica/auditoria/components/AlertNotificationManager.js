@@ -18,38 +18,9 @@ export class AlertNotificationManager {
       const criticalAlerts = alerts.filter(a => a.severity === 'CRITICAL');
       if (criticalAlerts.length === 0) return;
 
-      // Preparar conteúdo do email
-      const subject = `🚨 Alertas Críticos de Auditoria - ${new Date().toLocaleDateString('pt-BR')}`;
-      const alertContent = criticalAlerts
-        .map(
-          a => `
-        <div style="border-left: 4px solid #dc2626; padding: 12px; margin: 8px 0; background-color: #fee2e2;">
-          <strong>${a.title}</strong><br/>
-          <small>${a.message}</small><br/>
-          <small style="color: #666;">${new Date(a.timestamp).toLocaleString('pt-BR')}</small>
-        </div>
-      `
-        )
-        .join('');
-
-      const htmlContent = `
-        <h2 style="color: #1f2937;">Alertas de Auditoria Críticos</h2>
-        <p>Você recebeu ${criticalAlerts.length} alerta(s) crítico(s) de auditoria.</p>
-        ${alertContent}
-        <hr/>
-        <p style="font-size: 12px; color: #666;">
-          Para desativar estas notificações, acesse as <a href="#">configurações de alertas</a>.
-        </p>
-      `;
-
-      // Chamar função de envio de email (usando Supabase Edge Function ou similar)
+      // Processa apenas notificações previamente registradas na fila da clínica.
       const { data, error } = await supabase.functions.invoke('send-alert-email', {
-        body: {
-          to: recipientEmail,
-          subject,
-          html: htmlContent,
-          clinic_id: clinicId,
-        },
+        body: { clinic_id: clinicId },
       });
 
       if (error) {
@@ -57,8 +28,7 @@ export class AlertNotificationManager {
         return false;
       }
 
-      console.log('Email de alerta enviado com sucesso:', data);
-      return true;
+      return data?.success === true;
     } catch (error) {
       console.error('Erro em AlertNotificationManager.sendAlertEmail:', error);
       return false;

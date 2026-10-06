@@ -187,6 +187,21 @@ export async function deactivateAgendaRule(serviceId, clinicId) {
   return data[0];
 }
 
+/** Desativa uma regra pelo ID, sempre limitada à clínica ativa. */
+export async function deleteAgendaRule(id, clinicId) {
+  if (!id || !clinicId) throw new Error('Regra ou clínica não informada');
+  const { data, error } = await supabase
+    .from('agenda_rules')
+    .update({ active: false })
+    .eq('id', id)
+    .eq('clinic_id', clinicId)
+    .select('id')
+    .maybeSingle();
+  if (error) throw new Error(`Falha ao desativar regra: ${error.message}`);
+  if (!data) throw new Error('Regra não encontrada');
+  return data;
+}
+
 /**
  * Valida se data/hora pode ser agendada (baseado em regras)
  * @param {string} serviceId

@@ -92,15 +92,6 @@ const AVAILABLE_ROLES = {
 
 const PERMISSIONS_BY_MODULE = getMenuPermissionModules();
 
-// Função auxiliar para gerar hash simples (para fallback)
-async function hashPassword(password) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-
 export default function NewUser() {
   const navigate = useNavigate();
   const [clinics, setClinics] = useState([]);
@@ -232,8 +223,8 @@ export default function NewUser() {
       setLoading(false);
       return;
     }
-    if (!form.password || form.password.length < 6) {
-      setError('Senha deve ter no mínimo 6 caracteres');
+    if (!form.password || form.password.length < 12) {
+      setError('Senha deve ter no mínimo 12 caracteres');
       setLoading(false);
       return;
     }
@@ -284,27 +275,21 @@ export default function NewUser() {
         return;
       }
 
-      // Criar usuário na tabela users
-      const userId = crypto.randomUUID();
-      const passwordHash = btoa(form.password); // Codificar senha em base64
-
-      const { error: insertError } = await supabase.from('users').insert({
-        id: userId,
+      const { data: created, error: createError } = await supabase.functions.invoke('manage-user-auth', {
+        body: {
+        action: 'create',
         email: form.email,
         full_name: form.full_name,
         username: form.username,
         cpf: form.cpf,
         birthdate: form.birthdate,
-        password_hash: passwordHash,
+        password: form.password,
         role: form.role,
         clinic_id: form.clinic_id,
-        status: 'ativo',
-        created_at: new Date().toISOString(),
+        },
       });
-
-      if (insertError) {
-        throw insertError;
-      }
+      if (createError || !created?.user_id) throw new Error(created?.error || 'Falha ao criar usuário');
+      const userId = created.user_id;
 
       try {
         await saveUserPermissions(userId, form.clinic_id, form.role, selectedPermissions);
@@ -560,7 +545,7 @@ export default function NewUser() {
                       name="password"
                       value={form.password}
                       onChange={handleChange}
-                      placeholder="Mínimo 6 caracteres"
+                      placeholder="Mínimo 12 caracteres"
                       className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-10 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[hsl(var(--primary))] focus:ring-4 focus:ring-[hsl(var(--primary))]/10 disabled:bg-slate-50 disabled:text-slate-500"
                       disabled={loading}
                     />

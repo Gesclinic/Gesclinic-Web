@@ -338,7 +338,7 @@ export function SalasPage() {
 
     try {
       setError(null);
-      await roomsApi.deleteRoom(id);
+      await roomsApi.deleteRoom(id, clinicId);
       setRooms(rooms.filter((r) => r.id !== id));
     } catch (err) {
       setError(err.message || 'Erro ao deletar sala');

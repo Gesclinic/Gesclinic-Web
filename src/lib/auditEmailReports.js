@@ -76,26 +76,13 @@ export async function sendAuditReportEmail(clinicId, emails, period = 'weekly') 
     // Gerar relatório
     const report = await generateAuditReportForEmail(clinicId, period);
 
-    // Enviar via Resend
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.VITE_RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
+    const { data, error } = await supabase.functions.invoke('send-integrated-message', {
+      body: {
+        kind: 'audit-email', clinic_id: clinicId, emails,
+        subject: report.subject, html: report.html,
       },
-      body: JSON.stringify({
-        from: 'auditoria@gesclinic.com.br',
-        to: emails,
-        subject: report.subject,
-        html: report.html,
-      }),
     });
-
-    if (!response.ok) {
-      throw new Error(`Erro ao enviar email: ${response.statusText}`);
-    }
-
-    const data = await response.json();
+    if (error || !data?.id) throw new Error('Não foi possível enviar o relatório.');
 
     // Log the email sent
     await logEmailSent(clinicId, emails, period, data.id);

@@ -7,17 +7,16 @@ export default function Logout() {
       try {
         // Fazer logout no Supabase Auth
         await supabase.auth.signOut();
-        console.log('[LOGOUT] ✅ Supabase Auth signOut bem-sucedido');
       } catch (err) {
-        console.error('[LOGOUT] ⚠️  Erro ao fazer signOut no Supabase:', err);
+        console.error('[LOGOUT] Erro ao fazer signOut no Supabase:', err);
       }
 
       // Limpar dados da sessão customizada
       localStorage.removeItem('clinic');
       localStorage.removeItem('gesclinic_session');
       localStorage.removeItem('gesclinic_clinic_data');
+      localStorage.removeItem('gesclinic_active_company_id');
 
-      console.log('[LOGOUT] ✅ Sessão customizada limpa');
 
       window.location.href = '/login';
     }

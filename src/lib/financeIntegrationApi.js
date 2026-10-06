@@ -148,7 +148,7 @@ export async function getProfessionalRepasseRules(clinicId, professionalId) {
  */
 export async function getServicePricesByInsurance(clinicId, serviceId) {
   try {
-    const prices = await servicepricesApi.listServicePrices(serviceId, clinicId);
+    const prices = await servicepricesApi.getServicePricesByService(serviceId, clinicId);
 
     return Promise.all(
       prices.map(async (price) => {

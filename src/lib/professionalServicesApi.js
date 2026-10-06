@@ -176,6 +176,37 @@ export async function canProfessionalServe(professionalId, serviceId, clinicId) 
   return !!data;
 }
 
+/** Obtém o vínculo ativo usado pelas validações de agenda e check-in. */
+export async function getProfessionalServiceData(professionalId, serviceId, clinicId) {
+  const { data, error } = await supabase
+    .from('professional_services')
+    .select('id, professional_id, service_id, competence_level, duration_minutes_override, active')
+    .eq('professional_id', professionalId)
+    .eq('service_id', serviceId)
+    .eq('clinic_id', clinicId)
+    .eq('active', true)
+    .maybeSingle();
+
+  if (error) throw new Error(`Falha ao obter vínculo: ${error.message}`);
+  return data;
+}
+
+/** Cria ou reativa o vínculo sem criar uma segunda linha para o mesmo par. */
+export async function upsertProfessionalService(professionalId, serviceId, clinicId) {
+  if (!clinicId) throw new Error('Clínica não informada');
+  const { data: existing, error } = await supabase
+    .from('professional_services')
+    .select('id, active')
+    .eq('professional_id', professionalId)
+    .eq('service_id', serviceId)
+    .eq('clinic_id', clinicId)
+    .maybeSingle();
+  if (error) throw new Error(`Falha ao consultar vínculo: ${error.message}`);
+  if (existing?.active) return existing;
+  if (existing) return updateProfessionalService(professionalId, serviceId, clinicId, { active: true });
+  return linkProfessionalService(professionalId, serviceId, clinicId);
+}
+
 /**
  * Obtém duração do atendimento (com override se houver)
  * @param {string} professionalId
@@ -306,11 +337,6 @@ export async function createProfessionalService(clinicId, data) {
     ])
     .select();
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
-
   if (error) {
     if (error.code === '23505') {
       throw new Error('Este profissional já possui este serviço registrado');
@@ -318,7 +344,8 @@ export async function createProfessionalService(clinicId, data) {
     throw new Error(`Falha ao criar vínculo: ${error.message}`);
   }
 
-  return result;
+  if (!result?.length) throw new Error('Vínculo não encontrado');
+  return result[0];
 }
 
 /**
@@ -341,15 +368,11 @@ export async function updateProfessionalServiceById(id, data) {
     .eq('id', id)
     .select();
 
-  if (!data || data.length === 0) {
-    throw new Error('Record not found');
-  }
-  return data[0];
-
   if (error) {
     throw new Error(`Falha ao atualizar vínculo: ${error.message}`);
   }
-  return result;
+  if (!result?.length) throw new Error('Vínculo não encontrado');
+  return result[0];
 }
 
 /**

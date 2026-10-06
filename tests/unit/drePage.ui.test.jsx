@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 import DREPage from '@/pages/clinica/financeiro/DRE';
 
 const setVariantMock = vi.fn();
+const refreshMock = vi.fn();
 
 vi.mock('@/hooks/useBreadcrumbs', () => ({
   useBreadcrumbs: vi.fn(() => []),
@@ -67,7 +68,7 @@ vi.mock('@/modules/financeiro/dre/hooks/useFinancialDRE', () => ({
     clearFilters: vi.fn(),
     period: { start: '2026-06-01', end: '2026-06-30' },
     setPeriod: vi.fn(),
-    refresh: vi.fn(),
+    refresh: refreshMock,
     loading: false,
     loadingComparison: false,
     loadingBenchmark: false,
@@ -156,6 +157,7 @@ vi.mock('recharts', () => {
 describe('DREPage UI interactions', () => {
   beforeEach(() => {
     setVariantMock.mockReset();
+    refreshMock.mockReset();
   });
 
   it('aciona a troca para Projetada ao clicar na variante Projetada', async () => {
@@ -167,21 +169,12 @@ describe('DREPage UI interactions', () => {
     expect(setVariantMock).toHaveBeenCalledWith('projetada');
   });
 
-  it('Exibir legado substitui a visao nova e permite retornar', async () => {
+  it('atualiza a DRE ativa ao solicitar nova análise', async () => {
     const user = userEvent.setup();
     render(<DREPage />);
 
     expect(screen.getByTestId('enterprise-kpis')).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: 'Exibir legado' }));
-
-    expect(screen.queryByTestId('enterprise-kpis')).not.toBeInTheDocument();
-    expect(screen.getByText(/Modo legado ativo:/i)).toBeInTheDocument();
-    expect(screen.getByText(/Período:/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Exibir motor novo' })).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: 'Exibir motor novo' }));
-
-    expect(screen.getByTestId('enterprise-kpis')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Atualizar analise' }));
+    expect(refreshMock).toHaveBeenCalledOnce();
   });
 });

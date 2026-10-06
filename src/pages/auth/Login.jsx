@@ -29,133 +29,37 @@ export default function Login() {
     try {
       const clinicCode = e.target.clinicCode.value.trim().toUpperCase();
       const username = e.target.username.value.trim().toLowerCase();
-      const password = e.target.password.value.trim();
+      const password = e.target.password.value;
 
       if (!clinicCode || !username || !password) {
         setError('Preencha todos os campos.');
-        setLoading(false);
         return;
       }
 
-      // 1️⃣ Buscar clínica pelo código
-      const { data: clinic, error: clinicError } = await supabase
-        .from('clinics')
-        .select('id, name, clinic_code')
-        .eq('clinic_code', clinicCode)
-        .maybeSingle();
-
-      if (clinicError || !clinic) {
-        setError('Código de clínica inválido.');
-        setLoading(false);
-        return;
-      }
-
-      // 2️⃣ Buscar usuário na clínica (case-insensitive)
-      const { data: user, error: userError } = await supabase
-        .from('users')
-        .select('id, full_name, email, username, password_hash, role, clinic_id, status')
-        .eq('clinic_id', clinic.id)
-        .ilike('username', username)
-        .maybeSingle();
-
-      if (userError || !user) {
-        setError('Usuário ou senha inválidos.');
-        setLoading(false);
-        return;
-      }
-
-      // 3️⃣ Verificar se usuário está ativo
-      if (user.status !== 'ativo') {
-        setError('Usuário inativo. Contate o administrador.');
-        setLoading(false);
-        return;
-      }
-
-      // 4️⃣ Validar senha (comparar com password_hash em base64)
-      const hashedPassword = btoa(password); // Codifica a senha em base64
-      if (user.password_hash !== hashedPassword) {
-        setError('Usuário ou senha inválidos.');
-        setLoading(false);
-        return;
-      }
-
-      // 5️⃣ AGORA: Também fazer login no Supabase Auth para ativar RLS
-      console.log('[LOGIN] ✅ Autenticação customizada validada, tentando Supabase Auth...');
-
-      // Tentar login no Supabase Auth com email e senha
-      let { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: user.email,
-        password: password // Usar a senha fornecida
+      const { data, error: loginError } = await supabase.functions.invoke('secure-login', {
+        body: { clinicCode, username, password },
       });
-
-      if (authError) {
-        console.warn('[LOGIN] ⚠️  Supabase Auth falhou:', authError.message);
-        console.log('[LOGIN] Sincronizando credenciais customizadas com Supabase Auth...');
-
-        const { data: syncData, error: syncError } = await supabase.functions.invoke('sync-custom-auth', {
-          body: { clinicCode, username, password },
-        });
-
-        if (syncError || !syncData?.success) {
-          console.error('[LOGIN] Erro ao sincronizar Supabase Auth:', syncError || syncData);
-          setError('Não foi possível iniciar a sessão segura. Tente novamente.');
-          setLoading(false);
-          return;
-        }
-
-        const retry = await supabase.auth.signInWithPassword({
-          email: syncData.email || user.email,
-          password,
-        });
-
-        authData = retry.data;
-        authError = retry.error;
-
-        if (authError) {
-          console.error('[LOGIN] Supabase Auth ainda falhou após sincronização:', authError.message);
-          setError('Não foi possível iniciar a sessão segura. Tente novamente.');
-          setLoading(false);
-          return;
-        }
-      } else {
-        console.log('[LOGIN] ✅ Supabase Auth bem-sucedido!', {
-          userId: authData?.user?.id,
-          userEmail: authData?.user?.email
-        });
+      if (loginError || !data?.access_token || !data?.refresh_token) {
+        setError('Credenciais inválidas.');
+        return;
       }
 
-      console.log('[LOGIN] ✅ Sessão Supabase ativa:', {
-        userId: authData?.user?.id,
-        userEmail: authData?.user?.email,
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
       });
+      if (sessionError) {
+        setError('Não foi possível iniciar a sessão. Tente novamente.');
+        return;
+      }
 
-      // 6️⃣ Salvar dados da sessão no localStorage
-      const sessionData = {
-        user_id: user.id,
-        clinic_id: clinic.id,
-        clinic_code: clinic.clinic_code,
-        clinic_name: clinic.name,
-        username: user.username,
-        full_name: user.full_name,
-        email: user.email,
-        role: user.role,
-        logged_at: new Date().toISOString(),
-      };
-
-      localStorage.setItem('gesclinic_session', JSON.stringify(sessionData));
-      localStorage.setItem(
-        'gesclinic_clinic_data',
-        JSON.stringify({ clinic_code: clinic.clinic_code }),
-      );
-
-      console.log('[LOGIN] Sucesso:', sessionData);
-
-      // 7️⃣ Redirecionar para dashboard
+      localStorage.removeItem('gesclinic_session');
+      localStorage.removeItem('gesclinic_active_company_id');
+      localStorage.removeItem('gesclinic_clinic_data');
       navigate('/clinica');
-      setLoading(false);
-    } catch (err) {
-      console.error('[LOGIN] Erro:', err);
-      setError('Erro ao fazer login. Tente novamente.');
+    } catch {
+      setError('Não foi possível iniciar a sessão. Tente novamente.');
+    } finally {
       setLoading(false);
     }
   };
@@ -187,7 +91,7 @@ export default function Login() {
           </CardHeader>
 
           <CardContent>
-            <form className="space-y-5" onSubmit={handleSubmit}>
+            <form method="post" className="space-y-5" onSubmit={handleSubmit}>
               {/* Código da Clínica */}
               <div>
                 <Label className="text-gray-700 font-medium mb-2 flex items-center gap-2">
@@ -272,6 +176,12 @@ export default function Login() {
                 )}
               </Button>
             </form>
+
+            <div className="mt-3 text-center text-sm">
+              <Link to="/forgot-password" className="text-blue-600 hover:underline">
+                Esqueci minha senha
+              </Link>
+            </div>
 
             {/* Link para Registro */}
             <div className="mt-6 pt-6 border-t text-center">

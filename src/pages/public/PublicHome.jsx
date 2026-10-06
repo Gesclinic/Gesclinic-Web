@@ -349,6 +349,9 @@ export default function PublicHome() {
           <div className="mt-4 flex justify-center gap-4">
             <Link to="/login" className="font-semibold hover:text-blue-700">Login</Link>
             <Link to="/register" className="font-semibold hover:text-blue-700">Cadastro</Link>
+            <Link to="/termos-de-uso" className="font-semibold hover:text-blue-700">Termos</Link>
+            <Link to="/privacidade" className="font-semibold hover:text-blue-700">Privacidade</Link>
+            <Link to="/politica-de-cookies" className="font-semibold hover:text-blue-700">Cookies</Link>
           </div>
         </footer>
       </div>

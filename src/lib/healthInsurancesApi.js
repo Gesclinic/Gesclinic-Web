@@ -81,7 +81,6 @@ export async function listHealthInsurances(clinicId, options = {}) {
       submission_method,
       tiss_endpoint,
       tiss_username,
-      tiss_password,
       tiss_response_email,
       tiss_last_sync
     `,
@@ -193,7 +192,6 @@ export async function getHealthInsurance(insuranceId, clinicId) {
       submission_method,
       tiss_endpoint,
       tiss_username,
-      tiss_password,
       tiss_response_email,
       tiss_last_sync
     `,
@@ -429,23 +427,19 @@ export async function createHealthInsurance(clinicId, data) {
     active: true,
   };
 
-  console.log('📊 Dados sendo enviados para INSERT:', insertData);
-
   const { data: insurance, error } = await supabase
     .from('health_insurances')
     .insert([insertData])
-    .select()
+    .select('id, clinic_id, code, name, active')
     .maybeSingle();
 
   if (error) {
-    console.error('❌ Erro Supabase INSERT:', error);
     if (error.code === '23505') {
       throw new Error('CNPJ ou código já cadastrado para esta clínica');
     }
     throw new Error(`Falha ao criar convênio: ${error.message}`);
   }
 
-  console.log('✅ Convênio criado com sucesso:', insurance);
   return insurance;
 }
 
@@ -457,9 +451,6 @@ export async function createHealthInsurance(clinicId, data) {
  * @returns {Promise<Object>}
  */
 export async function updateHealthInsurance(insuranceId, clinicId, updates) {
-  console.log('🔄 UPDATE - insuranceId:', insuranceId, 'clinicId:', clinicId);
-  console.log('📊 Dados sendo enviados para UPDATE:', updates);
-
   // Se atualizando código, validar unicidade
   if (updates.code) {
     const existing = await supabase
@@ -480,8 +471,6 @@ export async function updateHealthInsurance(insuranceId, clinicId, updates) {
     Object.entries(updates).filter(([, value]) => value !== undefined),
   );
 
-  console.log('📊 Dados filtrados para UPDATE:', dataToUpdate);
-
   // Adionar updated_at automaticamente (será sobrescrito pelo trigger, mas mantém consistência)
   const dataWithTimestamp = {
     ...dataToUpdate,
@@ -493,10 +482,9 @@ export async function updateHealthInsurance(insuranceId, clinicId, updates) {
     .update(dataWithTimestamp)
     .eq('id', insuranceId)
     .eq('clinic_id', clinicId)
-    .select();
+    .select('id, clinic_id, code, name, active');
 
   if (error) {
-    console.error('❌ Erro Supabase UPDATE:', error);
     if (error.code === '23505') {
       throw new Error('CNPJ ou código já cadastrado');
     }
@@ -507,7 +495,6 @@ export async function updateHealthInsurance(insuranceId, clinicId, updates) {
     throw new Error('Convênio não encontrado ou sem permissão');
   }
 
-  console.log('✅ Convênio atualizado com sucesso:', data);
   return data;
 }
 
@@ -523,7 +510,7 @@ export async function deactivateHealthInsurance(insuranceId, clinicId) {
     .update({ active: false, updated_at: new Date() })
     .eq('id', insuranceId)
     .eq('clinic_id', clinicId)
-    .select()
+    .select('id, clinic_id, code, name, active')
     .maybeSingle();
 
   if (error) {
@@ -544,7 +531,7 @@ export async function reactivateHealthInsurance(insuranceId, clinicId) {
     .update({ active: true, updated_at: new Date() })
     .eq('id', insuranceId)
     .eq('clinic_id', clinicId)
-    .select()
+    .select('id, clinic_id, code, name, active')
     .maybeSingle();
 
   if (error) {
@@ -565,7 +552,7 @@ export async function deleteHealthInsurance(insuranceId, clinicId) {
     .delete()
     .eq('id', insuranceId)
     .eq('clinic_id', clinicId)
-    .select()
+    .select('id')
     .maybeSingle();
 
   if (error) {

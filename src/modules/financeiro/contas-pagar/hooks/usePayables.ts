@@ -27,6 +27,9 @@ import {
   runPayablesSmartReconciliation,
   approvePayableReconciliationMatch,
   rejectPayableReconciliationMatch,
+  splitPayableIntoInstallments,
+  setupRecurringPayable,
+  generateRecurringPayables,
 } from '../services/payablesApi';
 import {
   Payable,
@@ -674,7 +677,6 @@ export function useSplitPayableIntoInstallments() {
       payableId: string;
       installmentsCount: number;
     }) => {
-      const { splitPayableIntoInstallments } = await import('../services/payablesApi');
       return splitPayableIntoInstallments(clinicId, payableId, installmentsCount);
     },
     onSuccess: () => {
@@ -709,7 +711,6 @@ export function useSetupRecurringPayable() {
       recurrenceInterval: number;
       recurrenceEndDate?: string;
     }) => {
-      const { setupRecurringPayable } = await import('../services/payablesApi');
       return setupRecurringPayable(
         clinicId,
         payableId,
@@ -734,7 +735,6 @@ export function useGenerateRecurringPayables() {
 
   return useMutation({
     mutationFn: async (clinicId: string) => {
-      const { generateRecurringPayables } = await import('../services/payablesApi');
       return generateRecurringPayables(clinicId);
     },
     onSuccess: () => {

@@ -1,87 +1,46 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-const fromMock = vi.fn();
-const listAPQueryMock = vi.fn();
-
+const from = vi.fn();
+const rpc = vi.fn();
 vi.mock('../../src/lib/customSupabaseClient.js', () => ({
-  supabase: {
-    from: (...args) => fromMock(...args),
-  },
+  customSupabaseClient: { from, rpc },
 }));
 
-vi.mock('../../src/lib/financeApi.js', async () => {
-  const actual = await vi.importActual('../../src/lib/financeApi.js');
-  return {
-    ...actual,
-    listAPQuery: (...args) => listAPQueryMock(...args),
-  };
-});
+const { getDREDrillDown } = await import('../../src/lib/dynamicDREApi.ts');
 
-const { getExpenseByCategory } = await import('../../src/lib/dreApi.js');
-
-function createThenableQuery(result) {
-  const query = {
-    select: vi.fn(() => query),
-    eq: vi.fn(() => query),
-    in: vi.fn(() => query),
-    neq: vi.fn(() => query),
-    gte: vi.fn(() => query),
-    lte: vi.fn(() => query),
+function query(result) {
+  const calls = [];
+  const builder = {
+    calls,
+    select: () => builder,
+    eq: (...args) => { calls.push(['eq', ...args]); return builder; },
+    neq: (...args) => { calls.push(['neq', ...args]); return builder; },
+    gte: (...args) => { calls.push(['gte', ...args]); return builder; },
+    lte: (...args) => { calls.push(['lte', ...args]); return builder; },
+    in: (...args) => { calls.push(['in', ...args]); return builder; },
+    order: async () => result,
     then: (resolve, reject) => Promise.resolve(result).then(resolve, reject),
   };
-  return query;
+  return builder;
 }
 
-describe('dreApi.getExpenseByCategory', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+describe('DRE ativa: despesas por linha', () => {
+  it('consulta somente a clínica e categorias da linha pedida', async () => {
+    rpc.mockResolvedValueOnce({ data: {
+      revenue: {}, costs_and_profit: {}, expenses: { admin_expense: 1200 }, result: {},
+    }, error: null });
+    const accounts = query({ data: [{ id: 'account-1', clinic_id: 'clinic-a',
+      account_code: '3.1', account_name: 'Pessoal', account_type: 'despesa',
+      dre_line_item: 'admin_expense', is_active: true }], error: null });
+    const entries = query({ data: [{ amount: 1200 }], error: null });
+    from.mockImplementation((table) => table === 'financial_chart_of_accounts' ? accounts : entries);
 
-  it('considera apenas transacoes realizadas e ignora previstas', async () => {
-    const query = createThenableQuery({
-      data: [
-        { category: 'Operacional', type: 'expense', amount: 4000, status: 'scheduled', movement_type: 'PREDICTED' },
-        { category: 'Operacional', type: 'expense', amount: 1200, status: 'paid', movement_type: 'REALIZED' },
-      ],
-      error: null,
-    });
-
-    fromMock.mockReturnValue(query);
-
-    const result = await getExpenseByCategory('clinic-1', '2026-06-01', '2026-06-30');
-
-    expect(result).toHaveLength(1);
-    expect(result[0]).toMatchObject({
-      category: 'Operacional',
-      type: 'Despesa',
-      total: 1200,
-      percentual: 100,
-    });
-    expect(listAPQueryMock).not.toHaveBeenCalled();
-  });
-
-  it('faz fallback para AP pago quando nao ha transacao realizada', async () => {
-    const query = createThenableQuery({
-      data: [
-        { category: 'Operacional', type: 'expense', amount: 4000, status: 'scheduled', movement_type: 'PREDICTED' },
-      ],
-      error: null,
-    });
-
-    fromMock.mockReturnValue(query);
-    listAPQueryMock.mockResolvedValue([
-      { category_name: 'Financeiro', category_type: 'financial', amount: 500 },
-      { category_name: 'Financeiro', category_type: 'financial', amount: 1500 },
-    ]);
-
-    const result = await getExpenseByCategory('clinic-1', '2026-06-01', '2026-06-30');
-
-    expect(listAPQueryMock).toHaveBeenCalled();
-    expect(result).toHaveLength(1);
-    expect(result[0]).toMatchObject({
-      category: 'Financeiro',
-      total: 2000,
-      percentual: 100,
-    });
+    const result = await getDREDrillDown('clinic-a', '2026-06-01', '2026-06-30', 'admin_expense');
+    expect(result).toEqual([expect.objectContaining({ account_name: 'Pessoal', value: 1200 })]);
+    expect(accounts.calls).toContainEqual(['eq', 'clinic_id', 'clinic-a']);
+    expect(entries.calls).toContainEqual(['eq', 'clinic_id', 'clinic-a']);
+    expect(entries.calls).toContainEqual(['eq', 'type', 'expense']);
+    expect(entries.calls).toContainEqual(['in', 'category', ['payroll', 'other']]);
+    expect(entries.calls).toContainEqual(['neq', 'status', 'canceled']);
   });
 });

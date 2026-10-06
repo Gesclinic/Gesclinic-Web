@@ -17,13 +17,18 @@ export default function ResetPassword() {
     e.preventDefault();
     setLoading(true);
     setMsg('');
-    if (!password || password.length < 6) {
-      setMsg('A senha deve ter pelo menos 6 caracteres.');
+    if (!password || password.length < 12) {
+      setMsg('A senha deve ter pelo menos 12 caracteres.');
       setLoading(false);
       return;
     }
     const { error } = await supabase.auth.updateUser({ password });
-    setMsg(error ? error.message : 'Senha atualizada com sucesso! Faça login novamente.');
+    if (!error) {
+      await supabase.auth.signOut({ scope: 'global' });
+      localStorage.removeItem('gesclinic_session');
+      localStorage.removeItem('gesclinic_active_company_id');
+    }
+    setMsg(error ? 'Não foi possível atualizar a senha.' : 'Senha atualizada com sucesso! Faça login novamente.');
     setLoading(false);
   };
 

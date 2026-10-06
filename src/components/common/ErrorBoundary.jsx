@@ -11,8 +11,7 @@ export default class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, info) {
-    // Log the error for debugging
-    console.error('ErrorBoundary caught', error, info);
+    if (import.meta.env.DEV) console.error('ErrorBoundary caught', error, info);
   }
 
   render() {
@@ -20,9 +19,7 @@ export default class ErrorBoundary extends React.Component {
       return (
         <div style={{ padding: 24, fontFamily: 'system-ui, sans-serif' }}>
           <h2>Ocorreu um erro na aplicação</h2>
-          <pre style={{ whiteSpace: 'pre-wrap' }}>
-            {String(this.state.error?.stack || this.state.error)}
-          </pre>
+          <p>Recarregue a página. Se o problema persistir, informe o suporte da clínica.</p>
         </div>
       );
     }

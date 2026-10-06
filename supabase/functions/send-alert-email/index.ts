@@ -3,12 +3,20 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.0"
+import { authorizeClinic } from '../_shared/authorize-clinic.ts'
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 
 // Supabase client com service role para acesso total
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Cache-Control': 'no-store',
+  'Content-Type': 'application/json',
+}
 
 interface PendingEmail {
   id: string
@@ -143,7 +151,12 @@ async function sendViaSendGrid(apiKey: string, req: SendEmailRequest, html: stri
  * Constrói HTML do email com template e branding
  */
 function buildEmailHTML(req: SendEmailRequest): string {
-  const { subject, body, clinic_name, severity } = req
+  const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (char) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char] || char)
+  const subject = escapeHtml(req.subject)
+  const body = escapeHtml(req.body).replace(/\n/g, '<br>')
+  const clinic_name = escapeHtml(req.clinic_name)
+  const { severity } = req
   const severityColors: Record<string, string> = {
     CRITICAL: "#dc2626",
     HIGH: "#f97316",
@@ -245,12 +258,13 @@ function buildEmailHTML(req: SendEmailRequest): string {
 /**
  * Processa emails pendentes
  */
-async function processPendingEmails(): Promise<void> {
+async function processPendingEmails(clinicId: string): Promise<void> {
   try {
     // Buscar emails pendentes
     const { data: pendingEmails, error: fetchError } = await supabase
       .from("v_pending_emails")
       .select("*")
+      .eq('clinic_id', clinicId)
       .limit(10)
 
     if (fetchError) {
@@ -283,7 +297,7 @@ async function processPendingEmails(): Promise<void> {
               delivery_status: "sent",
               updated_at: new Date().toISOString(),
             })
-            .eq("id", email.id)
+            .eq("id", email.id).eq('clinic_id', clinicId)
 
           console.log(`✅ Email sent to ${email.recipient_email}`)
         } else {
@@ -300,7 +314,7 @@ async function processPendingEmails(): Promise<void> {
                 next_retry_at: nextRetry.toISOString(),
                 updated_at: new Date().toISOString(),
               })
-              .eq("id", email.id)
+              .eq("id", email.id).eq('clinic_id', clinicId)
 
             console.log(`⚠️ Email failed, will retry. Attempt ${newRetryCount}/${email.max_retries}`)
           } else {
@@ -312,7 +326,7 @@ async function processPendingEmails(): Promise<void> {
                 error_message: "Max retries exceeded",
                 updated_at: new Date().toISOString(),
               })
-              .eq("id", email.id)
+              .eq("id", email.id).eq('clinic_id', clinicId)
 
             console.log(`❌ Email failed permanently after ${email.max_retries} attempts`)
           }
@@ -330,30 +344,40 @@ async function processPendingEmails(): Promise<void> {
  * Manipulador de requisição HTTP
  */
 serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders })
   // Verificar se é GET (health check) ou POST (trigger processing)
   if (req.method === "GET") {
     return new Response(
       JSON.stringify({ status: "ok", message: "Email processor running" }),
-      { status: 200, headers: { "Content-Type": "application/json" } }
+      { status: 200, headers: corsHeaders }
     )
   }
 
   if (req.method === "POST") {
     try {
-      await processPendingEmails()
+      const body = await req.json()
+      const clinicId = String(body?.clinic_id || '')
+      if (!/^[0-9a-f-]{36}$/i.test(clinicId)) {
+        return new Response(JSON.stringify({ error: 'Dados inválidos.' }), { status: 400, headers: corsHeaders })
+      }
+      const access = await authorizeClinic(req, clinicId, ['admin', 'gestor', 'financeiro'])
+      if (access.status !== 200) {
+        return new Response(JSON.stringify({ error: 'Acesso negado.' }), { status: access.status, headers: corsHeaders })
+      }
+      await processPendingEmails(clinicId)
 
       return new Response(
         JSON.stringify({ success: true, message: "Emails processed" }),
-        { status: 200, headers: { "Content-Type": "application/json" } }
+        { status: 200, headers: corsHeaders }
       )
     } catch (error) {
       console.error("Error:", error)
       return new Response(
-        JSON.stringify({ success: false, error: String(error) }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
+        JSON.stringify({ success: false, error: 'Falha ao processar e-mails.' }),
+        { status: 500, headers: corsHeaders }
       )
     }
   }
 
-  return new Response("Method not allowed", { status: 405 })
+  return new Response("Method not allowed", { status: 405, headers: corsHeaders })
 })

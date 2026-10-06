@@ -3,7 +3,6 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import {
   getStoredActiveCompanyId,
-  getStoredSession,
   normalizeCompanyAccess,
   normalizeCompanyFromClinic,
   persistActiveCompany,
@@ -13,33 +12,14 @@ import {
 const ClinicContext = createContext(undefined);
 
 export function ClinicProvider({ children }) {
-  const { user, clinicId, loading: authLoading } = useAuth();
+  const { user, clinicId, currentRole, loading: authLoading } = useAuth();
 
   const [clinic, setClinic] = useState(null);
   const [companies, setCompanies] = useState([]);
   const [activeCompanyId, setActiveCompanyId] = useState(null);
   const [loadingClinic, setLoadingClinic] = useState(true);
 
-  // Obter clinicId: primeiro de useAuth, depois do localStorage customizado
-  const getClinicId = () => {
-    if (clinicId) {
-      return clinicId;
-    }
-
-    // Fallback para sessão customizada do localStorage
-    const customSession = localStorage.getItem('gesclinic_session');
-    if (customSession) {
-      try {
-        const sessionData = JSON.parse(customSession);
-        return sessionData.clinic_id || sessionData.clinicId;
-      } catch (e) {
-        console.error('Erro ao parsear sessão customizada:', e);
-      }
-    }
-    return null;
-  };
-
-  const fallbackClinicId = getClinicId();
+  const fallbackClinicId = user ? clinicId : null;
   const activeCompany = useMemo(
     () => companies.find((company) => company.id === activeCompanyId) || companies[0] || null,
     [activeCompanyId, companies],
@@ -67,23 +47,13 @@ export function ClinicProvider({ children }) {
     let active = true;
 
     async function loadCompanies() {
-      console.log(
-        '🏢 [ClinicContext] loadCompanies acionado. authLoading:',
-        authLoading,
-        'fallbackClinicId:',
-        fallbackClinicId,
-      );
-
       if (authLoading) {
-        console.log('⏳ [ClinicContext] Aguardando auth completar...');
         return;
       }
 
-      const session = getStoredSession();
-      const userId = user?.id || session?.user_id;
+      const userId = user?.id;
 
       if (!userId && !fallbackClinicId) {
-        console.log('⚠️ [ClinicContext] Sem usuário ou clínica de fallback');
         if (active) {
           setCompanies([]);
           setActiveCompanyId(null);
@@ -95,15 +65,15 @@ export function ClinicProvider({ children }) {
 
       setLoadingClinic(true);
       let nextCompanies = [];
+      let hasPrimaryMembership = false;
 
       if (userId) {
         const { data, error } = await supabase
           .from('user_companies')
           .select(
-            'tenant_id, company_id, branch_id, role, permissions, companies:company_id(id, tenant_id, clinic_id, name, legal_name, trade_name, cnpj, default_branch_id)',
+            'tenant_id, company_id, branch_id, role, permissions, is_active, companies:company_id(id, tenant_id, clinic_id, name, legal_name, trade_name, cnpj, default_branch_id)',
           )
           .eq('user_id', userId)
-          .eq('is_active', true)
           .order('created_at', { ascending: true });
 
         if (error) {
@@ -112,11 +82,13 @@ export function ClinicProvider({ children }) {
             error.message,
           );
         } else {
-          nextCompanies = (data || []).map(normalizeCompanyAccess).filter(Boolean);
+          hasPrimaryMembership = (data || []).some((row) => row.companies?.clinic_id === fallbackClinicId);
+          nextCompanies = (data || []).filter((row) => row.is_active)
+            .map(normalizeCompanyAccess).filter(Boolean);
         }
       }
 
-      if (nextCompanies.length === 0 && fallbackClinicId) {
+      if (nextCompanies.length === 0 && fallbackClinicId && !hasPrimaryMembership) {
         const { data, error } = await supabase
           .from('clinics')
           .select('*')
@@ -126,7 +98,7 @@ export function ClinicProvider({ children }) {
         if (error) {
           console.error('[ClinicContext] erro ao carregar clínica fallback:', error.message);
         } else {
-          const fallbackCompany = normalizeCompanyFromClinic(data, session);
+          const fallbackCompany = normalizeCompanyFromClinic(data, { role: currentRole });
           nextCompanies = fallbackCompany ? [fallbackCompany] : [];
         }
       }
@@ -157,7 +129,7 @@ export function ClinicProvider({ children }) {
     return () => {
       active = false;
     };
-  }, [authLoading, fallbackClinicId, user?.id]);
+  }, [authLoading, fallbackClinicId, currentRole, user?.id]);
 
   useEffect(() => {
     let active = true;
@@ -167,7 +139,6 @@ export function ClinicProvider({ children }) {
         return;
       }
 
-      console.log('🔄 [ClinicContext] Buscando clínica com ID:', resolvedClinicId);
       setLoadingClinic(true);
 
       const { data, error } = await supabase
@@ -184,10 +155,8 @@ export function ClinicProvider({ children }) {
         console.error('[ClinicContext] erro ao carregar clínica:', error.message);
         setClinic(activeCompany ? { id: resolvedClinicId, name: activeCompany.name } : null);
       } else {
-        console.log('✅ [ClinicContext] Clínica carregada:', data);
         const mergedClinic = data ? { ...data, name: activeCompany?.name || data.name } : null;
         setClinic(mergedClinic);
-        window.__clinic = mergedClinic; // 👈 debug global
       }
 
       setLoadingClinic(false);

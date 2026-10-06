@@ -1689,7 +1689,7 @@ async function fetchConvenioData(clinicId: string, convenioId?: string): Promise
   try {
     let query = supabase
       .from('health_insurances')
-      .select('*')
+      .select('id, code, name, active')
       .eq('clinic_id', clinicId);
 
     if (convenioId) query = query.eq('id', convenioId);

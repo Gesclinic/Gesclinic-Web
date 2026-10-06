@@ -201,10 +201,10 @@ const UserProfileModal = ({ isOpen, initialSection = 'profile', onClose }) => {
       });
       return;
     }
-    if (newPassword.length < 6) {
+    if (newPassword.length < 12) {
       toast({
         title: 'Senha muito curta',
-        description: 'A senha deve ter pelo menos 6 caracteres.',
+        description: 'A senha deve ter pelo menos 12 caracteres.',
         variant: 'destructive',
       });
       return;
@@ -218,14 +218,19 @@ const UserProfileModal = ({ isOpen, initialSection = 'profile', onClose }) => {
         throw error;
       }
 
+      await supabase.auth.signOut({ scope: 'global' });
+      localStorage.removeItem('gesclinic_session');
+      localStorage.removeItem('gesclinic_active_company_id');
+
       setNewPassword('');
       setConfirmPassword('');
 
       toast({
         title: 'Senha alterada com sucesso!',
-        description: 'Sua nova senha já está ativa.',
+        description: 'Faça login novamente com a nova senha.',
         className: 'bg-emerald-600 text-white border-none',
       });
+      window.location.assign('/login');
     } catch (err) {
       console.error('Erro ao alterar senha:', err.message);
       toast({

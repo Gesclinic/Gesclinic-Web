@@ -108,17 +108,11 @@ export async function updateRoom(roomId, updates) {
   try {
     const { data, error } = await supabase.from('rooms').update(updates).eq('id', roomId).select();
 
-    if (!data || data.length === 0) {
-      throw new Error('Record not found');
-    }
-    return data[0];
-
     if (error) {
       console.error('Erro ao atualizar sala:', error);
       return null;
     }
-
-    return data;
+    return data?.[0] ?? null;
   } catch (err) {
     console.error('Erro inesperado ao atualizar sala:', err);
     return null;
@@ -148,4 +142,19 @@ export async function deactivateRoom(roomId) {
     console.error('Erro inesperado ao inativar sala:', err);
     return false;
   }
+}
+
+/** Desativa a sala selecionada dentro da clínica atual. */
+export async function deleteRoom(roomId, clinicId) {
+  if (!roomId || !clinicId) throw new Error('Sala ou clínica não informada');
+  const { data, error } = await supabase
+    .from('rooms')
+    .update({ is_active: false })
+    .eq('id', roomId)
+    .eq('clinic_id', clinicId)
+    .select('id')
+    .maybeSingle();
+  if (error) throw new Error(`Falha ao desativar sala: ${error.message}`);
+  if (!data) throw new Error('Sala não encontrada');
+  return data;
 }

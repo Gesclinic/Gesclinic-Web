@@ -23,27 +23,13 @@ export default function PaymentConfirmation() {
         return;
       }
 
-      console.log('Verificando sessão:', sessionId);
-
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-      // Chamar função para verificar pagamento
-      const response = await fetch(`${supabaseUrl}/functions/v1/verify-stripe-session`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${anonKey}`,
-        },
-        body: JSON.stringify({ session_id: sessionId }),
+      const { data, error: verifyError } = await supabase.functions.invoke('verify-stripe-session', {
+        body: { session_id: sessionId },
       });
-
-      console.log('Response status:', response.status);
-      const data = await response.json();
-      console.log('Response data:', data);
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Erro ao verificar pagamento');
+      if (verifyError || !data?.paid) {
+        setStatus('pending');
+        setMessage('O pagamento ainda não foi confirmado. Consulte novamente em alguns instantes.');
+        return;
       }
 
       setStatus('success');
@@ -100,6 +86,15 @@ export default function PaymentConfirmation() {
           </>
         )}
 
+        {status === 'pending' && (
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Pagamento em processamento</h1>
+            <p className="text-gray-600">{message}</p>
+            <button type="button" onClick={verifyPayment} className="mt-6 rounded bg-blue-600 px-4 py-2 text-white">
+              Verificar novamente
+            </button>
+          </div>
+        )}
         {status === 'failed' && (
           <>
             <div className="mb-6">

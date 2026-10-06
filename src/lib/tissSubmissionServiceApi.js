@@ -85,7 +85,7 @@ export async function submitGuideWithOperatorRouting(guideId, clinicId) {
       .select(
         `
         id, guide_number,
-        health_insurances(id, name, registration_ans, tiss_endpoint, tiss_username, tiss_password, submission_method),
+        health_insurances(id, name, registration_ans, tiss_endpoint, submission_method),
         appointments(id, scheduled_date, total_value)
       `,
       )
@@ -170,41 +170,12 @@ export async function submitGuideWithOperatorRouting(guideId, clinicId) {
  */
 async function submitViaHTTPAPI(guideId, clinicId, payer) {
   try {
-    const submission = await getOrCreateTISSSubmission(guideId, clinicId);
-
-    // 2. Preparar request HTTP (simulado - em produção integrar com SDK de cada operadora)
-    const response = await fetch(payer.tiss_endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/xml',
-        Authorization: `Bearer ${btoa(`${payer.tiss_username}:${payer.tiss_password}`)}`,
-      },
-      body: submission.xml_content,
+    await getOrCreateTISSSubmission(guideId, clinicId);
+    const { data, error } = await supabase.functions.invoke('submit-tiss-guide', {
+      body: { guide_id: guideId, clinic_id: clinicId },
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`HTTP ${response.status}: ${errorText}`);
-    }
-
-    const responseData = await response.json();
-
-    // 3. Registrar resposta
-    await supabase
-      .from('tiss_submissions')
-      .update({
-        status: 'sent',
-        response_data: responseData,
-      })
-      .eq('guide_id', guideId)
-      .eq('clinic_id', clinicId);
-
-    return {
-      success: true,
-      method: 'http',
-      message: 'Guia enviada via HTTP API',
-      submissionId: responseData.submissionId || submission.id,
-    };
+    if (error || !data?.success) throw new Error(data?.error || 'Envio indisponível.');
+    return data;
   } catch (error) {
     console.error('[submitViaHTTPAPI]', error);
     return {
@@ -237,7 +208,7 @@ async function submitViaHTTPSFTP(guideId, clinicId, payer) {
     manualStep: true,
     instructions: `
       1. Conectar ao SFTP: ${payer.tiss_endpoint}
-      2. Usuário: ${payer.tiss_username}
+      2. Utilize as credenciais armazenadas no gerenciador seguro da clínica.
       3. Diretório: /guias/entrada
       4. Arquivo: TISS-${guideId}.xml
     `,
@@ -266,7 +237,7 @@ async function generateForPortalSubmission(guideId, clinicId, payer) {
       downloadLink: true,
       instructions: `
         1. Acessar portal: ${payer.tiss_endpoint}
-        2. Login: ${payer.tiss_username}
+        2. Entre com as credenciais armazenadas no gerenciador seguro da clínica.
         3. Menu: Enviar Guias TISS
         4. Carregar arquivo: TISS-${guideId}.xml
         5. Confirmar envio
