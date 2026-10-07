@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,13 +9,21 @@ import {
   AlertTriangle,
   BarChart3,
   Building2,
+  CalendarDays,
   CreditCard,
   FileCheck2,
   FileText,
+  FolderClock,
+  PackageCheck,
+  Upload,
   Loader2,
   RefreshCw,
 } from 'lucide-react';
-import { loadFaturamentoOperationalData, subscribeFaturamentoRealtime } from '@/lib/faturamentoOperationalApi';
+import {
+  loadFaturamentoOperationalData,
+  subscribeFaturamentoRealtime,
+} from '@/lib/faturamentoOperationalApi';
+import { loadBillingOperationsSnapshot } from '@/lib/billingOperationsApi';
 
 function currency(value) {
   return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -26,7 +35,9 @@ function percent(value, total) {
 }
 
 function percentNumber(value) {
-  return `${Number(value || 0).toFixed(1).replace('.', ',')}%`;
+  return `${Number(value || 0)
+    .toFixed(1)
+    .replace('.', ',')}%`;
 }
 
 function MetricCard({ label, value, hint, icon: Icon }) {
@@ -128,14 +139,24 @@ export default function FaturamentoDashboard() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
+  const [operations, setOperations] = useState(null);
 
   const loadDashboard = async () => {
     if (!clinicId) return;
     setLoading(true);
     try {
-      setData(await loadFaturamentoOperationalData(clinicId));
+      const [operationalData, operationsData] = await Promise.all([
+        loadFaturamentoOperationalData(clinicId),
+        loadBillingOperationsSnapshot(clinicId),
+      ]);
+      setData(operationalData);
+      setOperations(operationsData);
     } catch (error) {
-      toast({ title: 'Erro ao carregar faturamento', description: error.message, variant: 'destructive' });
+      toast({
+        title: 'Erro ao carregar faturamento',
+        description: error.message,
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
@@ -156,6 +177,7 @@ export default function FaturamentoDashboard() {
   const kpis = snapshot?.kpis || {};
   const audit = snapshot?.audit || {};
   const glosas = snapshot?.glosas || {};
+  const operationsMetrics = operations?.metrics || {};
 
   const auditTotal = useMemo(() => {
     return [
@@ -173,26 +195,207 @@ export default function FaturamentoDashboard() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Faturamento Operacional</h1>
           <p className="text-sm text-muted-foreground">
-            Produz guias, recebiveis e indicadores para o Financeiro consumir em Receber, Fluxo, DRE e Cockpit.
+            Produz guias, recebiveis e indicadores para o Financeiro consumir em Receber, Fluxo, DRE
+            e Cockpit.
           </p>
         </div>
         <Button variant="outline" onClick={loadDashboard} disabled={loading} className="gap-2">
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+          {loading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <RefreshCw className="h-4 w-4" />
+          )}
           Atualizar
         </Button>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard label="Receita prevista" value={currency(kpis.expectedRevenue)} hint="Guias e recebiveis" icon={BarChart3} />
-        <MetricCard label="Receita faturada" value={currency(kpis.billedRevenue)} hint="ar_invoices faturadas" icon={FileText} />
-        <MetricCard label="Receita recebida" value={currency(kpis.receivedRevenue)} hint={percent(kpis.receivedRevenue, kpis.expectedRevenue)} icon={FileCheck2} />
-        <MetricCard label="Receita glosada" value={currency(kpis.glosaValue)} hint={percentNumber(kpis.glosaRate)} icon={AlertTriangle} />
-        <MetricCard label="Receita recuperada" value={currency(kpis.recoveredValue)} hint={percentNumber(kpis.recoveryRate)} icon={RefreshCw} />
-        <MetricCard label="Ticket medio" value={currency(kpis.averageTicket)} hint={`${kpis.receivables || 0} recebiveis`} icon={CreditCard} />
-        <MetricCard label="Prazo medio recebimento" value={`${Number(kpis.averageReceiptDays || 0).toFixed(0)} dias`} hint="invoice_date ate recebimento" icon={FileCheck2} />
-        <MetricCard label="Margem operacional" value={percentNumber(kpis.operatingMargin)} hint="recebido + recuperado - glosa" icon={BarChart3} />
-        <MetricCard label="Auditorias abertas" value={auditTotal || 0} hint="TUSS, guias, repasse e divergencias" icon={AlertTriangle} />
+        <MetricCard
+          label="Receita prevista"
+          value={currency(kpis.expectedRevenue)}
+          hint="Guias e recebiveis"
+          icon={BarChart3}
+        />
+        <MetricCard
+          label="Receita faturada"
+          value={currency(kpis.billedRevenue)}
+          hint="ar_invoices faturadas"
+          icon={FileText}
+        />
+        <MetricCard
+          label="Receita recebida"
+          value={currency(kpis.receivedRevenue)}
+          hint={percent(kpis.receivedRevenue, kpis.expectedRevenue)}
+          icon={FileCheck2}
+        />
+        <MetricCard
+          label="Receita glosada"
+          value={currency(kpis.glosaValue)}
+          hint={percentNumber(kpis.glosaRate)}
+          icon={AlertTriangle}
+        />
+        <MetricCard
+          label="Receita recuperada"
+          value={currency(kpis.recoveredValue)}
+          hint={percentNumber(kpis.recoveryRate)}
+          icon={RefreshCw}
+        />
+        <MetricCard
+          label="Ticket medio"
+          value={currency(kpis.averageTicket)}
+          hint={`${kpis.receivables || 0} recebiveis`}
+          icon={CreditCard}
+        />
+        <MetricCard
+          label="Prazo medio recebimento"
+          value={`${Number(kpis.averageReceiptDays || 0).toFixed(0)} dias`}
+          hint="invoice_date ate recebimento"
+          icon={FileCheck2}
+        />
+        <MetricCard
+          label="Margem operacional"
+          value={percentNumber(kpis.operatingMargin)}
+          hint="recebido + recuperado - glosa"
+          icon={BarChart3}
+        />
+        <MetricCard
+          label="Auditorias abertas"
+          value={auditTotal || 0}
+          hint="TUSS, guias, repasse e divergencias"
+          icon={AlertTriangle}
+        />
       </div>
+
+      <Card className="border-l-4 border-l-cyan-600">
+        <CardHeader className="pb-3">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <CardTitle className="text-lg">Operacao de convenios</CardTitle>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Lotes persistentes, prazos contratuais, documentos e demonstrativos.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild variant="outline" size="sm">
+                <Link to="/clinica/faturamento/lotes-faturamento">
+                  <PackageCheck className="mr-2 h-4 w-4" />
+                  Gerenciar lotes
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="sm">
+                <Link to="/clinica/faturamento/retornos">
+                  <Upload className="mr-2 h-4 w-4" />
+                  Importar retorno
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="sm">
+                <Link to="/clinica/configuracoes/faturamento">
+                  <CalendarDays className="mr-2 h-4 w-4" />
+                  Parametrizar
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
+            <MetricCard
+              label="Lotes"
+              value={operationsMetrics.batches || 0}
+              hint={currency(operationsMetrics.batchAmount)}
+              icon={PackageCheck}
+            />
+            <MetricCard
+              label="Em montagem"
+              value={operationsMetrics.openBatches || 0}
+              icon={FolderClock}
+            />
+            <MetricCard
+              label="Prontos para envio"
+              value={operationsMetrics.readyToSend || 0}
+              icon={FileCheck2}
+            />
+            <MetricCard
+              label="Prazos futuros"
+              value={operationsMetrics.upcomingDeadlines || 0}
+              icon={CalendarDays}
+            />
+            <MetricCard
+              label="Prazos vencidos"
+              value={operationsMetrics.overdueDeadlines || 0}
+              icon={AlertTriangle}
+            />
+            <MetricCard
+              label="Documentos pendentes"
+              value={operationsMetrics.pendingDocuments || 0}
+              icon={FileText}
+            />
+            <MetricCard
+              label="Importacoes pendentes"
+              value={operationsMetrics.pendingImports || 0}
+              icon={Upload}
+            />
+            <MetricCard
+              label="Calendarios"
+              value={operations?.calendars?.length || 0}
+              icon={CalendarDays}
+            />
+          </div>
+          <div className="grid gap-4 xl:grid-cols-2">
+            <div className="rounded-md border">
+              <div className="border-b px-4 py-3 text-sm font-semibold">Proximos fechamentos</div>
+              {(operations?.calendars || []).slice(0, 5).map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between gap-4 border-b px-4 py-3 text-sm last:border-b-0"
+                >
+                  <div>
+                    <p className="font-medium">{item.payer_name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Competencia {String(item.competency_date || '').slice(0, 7)}
+                    </p>
+                  </div>
+                  <span className="font-mono">
+                    {item.billing_close_date
+                      ? new Date(`${item.billing_close_date}T00:00:00`).toLocaleDateString('pt-BR')
+                      : '-'}
+                  </span>
+                </div>
+              ))}
+              {!operations?.calendars?.length && (
+                <p className="px-4 py-6 text-center text-sm text-muted-foreground">
+                  Nenhum calendario parametrizado.
+                </p>
+              )}
+            </div>
+            <div className="rounded-md border">
+              <div className="border-b px-4 py-3 text-sm font-semibold">Lotes recentes</div>
+              {(operations?.batches || []).slice(0, 5).map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between gap-4 border-b px-4 py-3 text-sm last:border-b-0"
+                >
+                  <div>
+                    <p className="font-mono font-medium">{item.batch_key}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {item.payer_name} · {item.guide_count || 0} guias
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium">{currency(item.gross_amount)}</p>
+                    <p className="text-xs uppercase text-muted-foreground">{item.status}</p>
+                  </div>
+                </div>
+              ))}
+              {!operations?.batches?.length && (
+                <p className="px-4 py-6 text-center text-sm text-muted-foreground">
+                  Nenhum lote persistente criado.
+                </p>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Tabs defaultValue="producao" className="space-y-4">
         <TabsList className="flex h-auto flex-wrap justify-start">
@@ -208,7 +411,10 @@ export default function FaturamentoDashboard() {
         <TabsContent value="producao" className="space-y-4">
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
             <RankingTable title="Producao por medico" rows={snapshot?.production?.byDoctor || []} />
-            <RankingTable title="Producao por especialidade" rows={snapshot?.production?.bySpecialty || []} />
+            <RankingTable
+              title="Producao por especialidade"
+              rows={snapshot?.production?.bySpecialty || []}
+            />
             <RankingTable title="Producao por unidade" rows={snapshot?.production?.byUnit || []} />
           </div>
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
@@ -223,11 +429,18 @@ export default function FaturamentoDashboard() {
 
         <TabsContent value="particular" className="space-y-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            <MetricCard label="Particular previsto" value={currency(snapshot?.particular?.total)} icon={CreditCard} />
+            <MetricCard
+              label="Particular previsto"
+              value={currency(snapshot?.particular?.total)}
+              icon={CreditCard}
+            />
             <MetricCard label="Recebido" value={currency(snapshot?.particular?.received)} />
             <MetricCard label="PIX" value={snapshot?.particular?.pix || 0} />
             <MetricCard label="Cartao" value={snapshot?.particular?.card || 0} />
-            <MetricCard label="Boleto/Link" value={(snapshot?.particular?.boleto || 0) + (snapshot?.particular?.link || 0)} />
+            <MetricCard
+              label="Boleto/Link"
+              value={(snapshot?.particular?.boleto || 0) + (snapshot?.particular?.link || 0)}
+            />
           </div>
           <p className="text-sm text-muted-foreground">
             A geracao automatica de recebivel usa Contas a Receber existente via ar_invoices.
@@ -236,7 +449,11 @@ export default function FaturamentoDashboard() {
 
         <TabsContent value="convenios" className="space-y-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            <MetricCard label="Operadoras" value={snapshot?.convenio?.byPayer?.length || 0} icon={Building2} />
+            <MetricCard
+              label="Operadoras"
+              value={snapshot?.convenio?.byPayer?.length || 0}
+              icon={Building2}
+            />
             <MetricCard label="Guias pendentes" value={snapshot?.convenio?.pendingGuides || 0} />
             <MetricCard label="Guias faturadas" value={snapshot?.convenio?.billedGuides || 0} />
             <MetricCard label="Guias recebidas" value={snapshot?.convenio?.receivedGuides || 0} />
@@ -247,11 +464,18 @@ export default function FaturamentoDashboard() {
 
         <TabsContent value="glosas" className="space-y-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            <MetricCard label="Valor glosado" value={currency(kpis.glosaValue)} icon={AlertTriangle} />
+            <MetricCard
+              label="Valor glosado"
+              value={currency(kpis.glosaValue)}
+              icon={AlertTriangle}
+            />
             <MetricCard label="Tecnicas" value={glosas.technical || 0} />
             <MetricCard label="Administrativas" value={glosas.administrative || 0} />
             <MetricCard label="Financeiras" value={glosas.financial || 0} />
-            <MetricCard label="Recursos/Reenvios" value={(glosas.resources || 0) + (glosas.reenvios || 0)} />
+            <MetricCard
+              label="Recursos/Reenvios"
+              value={(glosas.resources || 0) + (glosas.reenvios || 0)}
+            />
           </div>
           <RankingTable
             title="Glosas recentes"
@@ -264,12 +488,45 @@ export default function FaturamentoDashboard() {
         </TabsContent>
 
         <TabsContent value="auditoria" className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          <AuditList title="Procedimentos sem TUSS" rows={audit.proceduresWithoutTuss || []} getText={(row) => row.description || row.procedure_name || row.service_description || 'Procedimento sem codigo'} />
-          <AuditList title="Guias invalidas" rows={audit.invalidGuides || []} getText={(row) => `${row.numero_guia || row.id} - ${row.paciente_nome || 'Paciente nao informado'}`} />
-          <AuditList title="Medicos sem repasse" rows={audit.doctorsWithoutRepasse || []} getText={(row) => row.description || row.professional_id || 'Recebivel sem regra de repasse'} />
-          <AuditList title="Faturamento inconsistente" rows={audit.inconsistentBilling || []} getText={(row) => `${row.numero_guia || row.id} sem recebivel vinculado`} />
-          <AuditList title="Receitas divergentes" rows={audit.divergentRevenue || []} getText={(row) => `${row.numero_guia || row.id} - ${currency(row.valor)}`} />
-          <AuditList title="Alertas anti-glosa" rows={audit.antiGlosaAlerts || []} getText={(row) => `${row.code} - ${row.message}`} />
+          <AuditList
+            title="Procedimentos sem TUSS"
+            rows={audit.proceduresWithoutTuss || []}
+            getText={(row) =>
+              row.description ||
+              row.procedure_name ||
+              row.service_description ||
+              'Procedimento sem codigo'
+            }
+          />
+          <AuditList
+            title="Guias invalidas"
+            rows={audit.invalidGuides || []}
+            getText={(row) =>
+              `${row.numero_guia || row.id} - ${row.paciente_nome || 'Paciente nao informado'}`
+            }
+          />
+          <AuditList
+            title="Medicos sem repasse"
+            rows={audit.doctorsWithoutRepasse || []}
+            getText={(row) =>
+              row.description || row.professional_id || 'Recebivel sem regra de repasse'
+            }
+          />
+          <AuditList
+            title="Faturamento inconsistente"
+            rows={audit.inconsistentBilling || []}
+            getText={(row) => `${row.numero_guia || row.id} sem recebivel vinculado`}
+          />
+          <AuditList
+            title="Receitas divergentes"
+            rows={audit.divergentRevenue || []}
+            getText={(row) => `${row.numero_guia || row.id} - ${currency(row.valor)}`}
+          />
+          <AuditList
+            title="Alertas anti-glosa"
+            rows={audit.antiGlosaAlerts || []}
+            getText={(row) => `${row.code} - ${row.message}`}
+          />
         </TabsContent>
 
         <TabsContent value="relatorios" className="space-y-4">
@@ -280,7 +537,8 @@ export default function FaturamentoDashboard() {
           <Card>
             <CardContent className="flex items-start gap-3 p-4 text-sm text-muted-foreground">
               <FileText className="mt-0.5 h-4 w-4" />
-              Relatorios detalhados e exportacao seguem no submenu Relatorios, consumindo os mesmos recebiveis, guias, XML e glosas.
+              Relatorios detalhados e exportacao seguem no submenu Relatorios, consumindo os mesmos
+              recebiveis, guias, XML e glosas.
             </CardContent>
           </Card>
         </TabsContent>

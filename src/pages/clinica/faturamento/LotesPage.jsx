@@ -6,8 +6,20 @@ import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useToast } from '@/components/ui/use-toast';
 import { Download, Eye, FileText, Loader2, RefreshCw, RotateCcw, Send } from 'lucide-react';
 import { markGuidesAsBilled, markGuideAsSent } from '@/lib/faturamentoOperationalApi';
+import { listBillingBatches } from '@/lib/billingOperationsApi';
 
 const statusClasses = {
+  draft: 'bg-gray-100 text-gray-800',
+  closed: 'bg-cyan-100 text-cyan-800',
+  xml_generated: 'bg-indigo-100 text-indigo-800',
+  sent: 'bg-blue-100 text-blue-800',
+  protocolled: 'bg-blue-100 text-blue-800',
+  processed: 'bg-green-100 text-green-800',
+  partially_paid: 'bg-amber-100 text-amber-800',
+  paid: 'bg-green-100 text-green-800',
+  glossed: 'bg-red-100 text-red-800',
+  reopened: 'bg-orange-100 text-orange-800',
+  canceled: 'bg-slate-100 text-slate-500',
   rascunho: 'bg-gray-100 text-gray-800',
   enviado: 'bg-blue-100 text-blue-800',
   processado: 'bg-green-100 text-green-800',
@@ -82,11 +94,30 @@ function guideName(key) {
   return key.includes('/') ? key.split('/').pop()?.replace('.xml', '') || key : key;
 }
 
+function normalizePersistedBatch(batch) {
+  return {
+    id: batch.id,
+    nome: batch.batch_key,
+    dataCriacao: batch.created_at,
+    guias: batch.guide_count || 0,
+    valor: batch.gross_amount || 0,
+    status: batch.status,
+    recibo: batch.protocol_number || null,
+    xmlPath: batch.xml_path || null,
+    guideIds: (batch.billing_batch_guides || [])
+      .filter((row) => !row.removed_at)
+      .map((row) => row.guide_id),
+    convenio: batch.payer_name || '-',
+    persisted: true,
+  };
+}
+
 export default function LotesPage() {
   const { clinicId } = useAuth();
   const { toast } = useToast();
   const [guides, setGuides] = useState([]);
   const [submissions, setSubmissions] = useState([]);
+  const [persistedBatches, setPersistedBatches] = useState([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -94,10 +125,12 @@ export default function LotesPage() {
     if (!clinicId) return;
     setLoading(true);
     try {
-      const [guidesResult, submissionsResult] = await Promise.all([
+      const [guidesResult, submissionsResult, batches] = await Promise.all([
         supabase
           .from('billing_guides')
-          .select('id, numero_guia, convenio, valor, status, xml_path, billing_batch_key, data_criacao, data_envio, data_processamento')
+          .select(
+            'id, numero_guia, convenio, valor, status, xml_path, billing_batch_key, data_criacao, data_envio, data_processamento',
+          )
           .eq('clinic_id', clinicId)
           .order('data_criacao', { ascending: false }),
         supabase
@@ -105,6 +138,7 @@ export default function LotesPage() {
           .select('id, guide_id, status, created_at, updated_at')
           .eq('clinic_id', clinicId)
           .order('created_at', { ascending: false }),
+        listBillingBatches(clinicId),
       ]);
 
       if (guidesResult.error) throw guidesResult.error;
@@ -112,8 +146,13 @@ export default function LotesPage() {
 
       setGuides(guidesResult.data || []);
       setSubmissions(submissionsResult.data || []);
+      setPersistedBatches(batches);
     } catch (error) {
-      toast({ title: 'Erro ao carregar lotes', description: error.message, variant: 'destructive' });
+      toast({
+        title: 'Erro ao carregar lotes',
+        description: error.message,
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
@@ -123,7 +162,14 @@ export default function LotesPage() {
     loadData();
   }, [clinicId]);
 
-  const lotes = useMemo(() => normalizeLots(guides, submissions), [guides, submissions]);
+  const lotes = useMemo(() => {
+    const persisted = persistedBatches.map(normalizePersistedBatch);
+    const persistedKeys = new Set(persisted.map((batch) => batch.nome));
+    const legacy = normalizeLots(guides, submissions).filter(
+      (batch) => !persistedKeys.has(batch.id),
+    );
+    return [...persisted, ...legacy];
+  }, [guides, submissions, persistedBatches]);
   const totalGuias = lotes.reduce((sum, lote) => sum + lote.guias, 0);
 
   const updateLot = async (lot, status) => {
@@ -132,14 +178,20 @@ export default function LotesPage() {
       const lotGuides = guides.filter((guide) => lot.guideIds.includes(guide.id));
       if (status === 'Faturado') {
         await markGuidesAsBilled(clinicId, lotGuides);
-        toast({ title: 'Lote faturado', description: `${lot.guias} guia(s) com recebivel garantido em Contas a Receber.` });
+        toast({
+          title: 'Lote faturado',
+          description: `${lot.guias} guia(s) com recebivel garantido em Contas a Receber.`,
+        });
         await loadData();
         return;
       }
 
       if (status === 'Enviado') {
         await Promise.all(lotGuides.map((guide) => markGuideAsSent(clinicId, guide)));
-        toast({ title: 'Lote enviado', description: `${lot.guias} guia(s) enviadas e sincronizadas com Contas a Receber.` });
+        toast({
+          title: 'Lote enviado',
+          description: `${lot.guias} guia(s) enviadas e sincronizadas com Contas a Receber.`,
+        });
         await loadData();
         return;
       }
@@ -156,7 +208,11 @@ export default function LotesPage() {
       toast({ title: 'Lote atualizado', description: `${lot.nome} marcado como ${status}.` });
       await loadData();
     } catch (error) {
-      toast({ title: 'Erro ao atualizar lote', description: error.message, variant: 'destructive' });
+      toast({
+        title: 'Erro ao atualizar lote',
+        description: error.message,
+        variant: 'destructive',
+      });
     } finally {
       setActionLoading(false);
     }
@@ -176,7 +232,10 @@ export default function LotesPage() {
         .in('id', lot.guideIds);
       if (error) throw error;
 
-      toast({ title: 'XML preparado', description: `${lot.guias} guia(s) vinculadas a ${xmlPath}.` });
+      toast({
+        title: 'XML preparado',
+        description: `${lot.guias} guia(s) vinculadas a ${xmlPath}.`,
+      });
       await loadData();
     } catch (error) {
       toast({ title: 'Erro ao preparar XML', description: error.message, variant: 'destructive' });
@@ -190,7 +249,9 @@ export default function LotesPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Lotes de Faturamento</h1>
-          <p className="text-gray-600 mt-2">Montagem, validação, auditoria, XML, envio, retorno e recebimento</p>
+          <p className="text-gray-600 mt-2">
+            Lotes persistentes com montagem, auditoria, XML, protocolo, retorno e recebimento
+          </p>
         </div>
         <button
           type="button"
@@ -225,56 +286,99 @@ export default function LotesPage() {
               <tbody>
                 {loading && (
                   <tr>
-                    <td colSpan="8" className="py-8 text-center text-gray-500">Carregando lotes...</td>
+                    <td colSpan="8" className="py-8 text-center text-gray-500">
+                      Carregando lotes...
+                    </td>
                   </tr>
                 )}
                 {!loading && lotes.length === 0 && (
                   <tr>
                     <td colSpan="8" className="py-8 text-center text-gray-500">
-                      Nenhuma guia TISS encontrada para montar lotes.
+                      Nenhum lote ou guia TISS encontrado.
                     </td>
                   </tr>
                 )}
-                {!loading && lotes.map((lote) => (
-                  <tr key={lote.id} className="border-b hover:bg-gray-50">
-                    <td className="py-3 px-4 font-mono font-semibold">{lote.nome}</td>
-                    <td className="py-3 px-4">{lote.convenio}</td>
-                    <td className="py-3 px-4">{formatDate(lote.dataCriacao)}</td>
-                    <td className="py-3 px-4 text-center">
-                      <span className="inline-block px-3 py-1 bg-gray-100 rounded-full text-xs font-semibold">{lote.guias}</span>
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono">{formatCurrency(lote.valor)}</td>
-                    <td className="py-3 px-4">
-                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${statusClasses[lote.status] || 'bg-gray-100 text-gray-800'}`}>
-                        {lote.status}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      {lote.recibo ? <span className="font-mono text-blue-600">{lote.recibo}</span> : <span className="text-gray-400">-</span>}
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex flex-wrap justify-center gap-2">
-                        {lote.xmlPath && (
-                          <a className="text-gray-600 hover:text-blue-600" title="Visualizar XML" href={lote.xmlPath} target="_blank" rel="noreferrer">
-                            <Eye size={16} />
-                          </a>
+                {!loading &&
+                  lotes.map((lote) => (
+                    <tr key={lote.id} className="border-b hover:bg-gray-50">
+                      <td className="py-3 px-4 font-mono font-semibold">{lote.nome}</td>
+                      <td className="py-3 px-4">{lote.convenio}</td>
+                      <td className="py-3 px-4">{formatDate(lote.dataCriacao)}</td>
+                      <td className="py-3 px-4 text-center">
+                        <span className="inline-block px-3 py-1 bg-gray-100 rounded-full text-xs font-semibold">
+                          {lote.guias}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono">
+                        {formatCurrency(lote.valor)}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span
+                          className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${statusClasses[lote.status] || 'bg-gray-100 text-gray-800'}`}
+                        >
+                          {lote.status}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        {lote.recibo ? (
+                          <span className="font-mono text-blue-600">{lote.recibo}</span>
+                        ) : (
+                          <span className="text-gray-400">-</span>
                         )}
-                        <button type="button" className="text-gray-600 hover:text-green-600" title="Preparar XML" disabled={actionLoading} onClick={() => prepareXml(lote)}>
-                          <Download size={16} />
-                        </button>
-                        <button type="button" className="text-gray-600 hover:text-indigo-600" title="Faturar e gerar recebivel" disabled={actionLoading} onClick={() => updateLot(lote, 'Faturado')}>
-                          <FileText size={16} />
-                        </button>
-                        <button type="button" className="text-gray-600 hover:text-blue-600" title="Enviar" disabled={actionLoading} onClick={() => updateLot(lote, 'Enviado')}>
-                          <Send size={16} />
-                        </button>
-                        <button type="button" className="text-gray-600 hover:text-orange-600" title="Reabrir" disabled={actionLoading} onClick={() => updateLot(lote, 'Aguardando XML')}>
-                          <RotateCcw size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex flex-wrap justify-center gap-2">
+                          {lote.xmlPath && (
+                            <a
+                              className="text-gray-600 hover:text-blue-600"
+                              title="Visualizar XML"
+                              href={lote.xmlPath}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              <Eye size={16} />
+                            </a>
+                          )}
+                          <button
+                            type="button"
+                            className="text-gray-600 hover:text-green-600"
+                            title="Preparar XML"
+                            disabled={actionLoading}
+                            onClick={() => prepareXml(lote)}
+                          >
+                            <Download size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            className="text-gray-600 hover:text-indigo-600"
+                            title="Faturar e gerar recebivel"
+                            disabled={actionLoading}
+                            onClick={() => updateLot(lote, 'Faturado')}
+                          >
+                            <FileText size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            className="text-gray-600 hover:text-blue-600"
+                            title="Enviar"
+                            disabled={actionLoading}
+                            onClick={() => updateLot(lote, 'Enviado')}
+                          >
+                            <Send size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            className="text-gray-600 hover:text-orange-600"
+                            title="Reabrir"
+                            disabled={actionLoading}
+                            onClick={() => updateLot(lote, 'Aguardando XML')}
+                          >
+                            <RotateCcw size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
@@ -282,10 +386,47 @@ export default function LotesPage() {
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card><CardHeader><CardTitle className="text-sm font-medium text-gray-600">Lotes Rascunho</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold text-gray-900">{lotes.filter((l) => l.status === 'rascunho').length}</div></CardContent></Card>
-        <Card><CardHeader><CardTitle className="text-sm font-medium text-gray-600">Lotes Enviados</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold text-blue-600">{lotes.filter((l) => l.status === 'enviado').length}</div></CardContent></Card>
-        <Card><CardHeader><CardTitle className="text-sm font-medium text-gray-600">Lotes Processados</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold text-green-600">{lotes.filter((l) => ['processado', 'pago'].includes(l.status)).length}</div></CardContent></Card>
-        <Card><CardHeader><CardTitle className="text-sm font-medium text-gray-600">Total Guias</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold text-purple-600">{totalGuias}</div></CardContent></Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-gray-600">Lotes em Montagem</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-gray-900">
+              {lotes.filter((l) => ['rascunho', 'draft', 'reopened'].includes(l.status)).length}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-gray-600">Lotes Enviados</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-blue-600">
+              {lotes.filter((l) => ['enviado', 'sent', 'protocolled'].includes(l.status)).length}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-gray-600">Lotes Processados</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-green-600">
+              {
+                lotes.filter((l) => ['processado', 'processed', 'pago', 'paid'].includes(l.status))
+                  .length
+              }
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-gray-600">Total Guias</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-cyan-700">{totalGuias}</div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
