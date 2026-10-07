@@ -108,8 +108,9 @@ export function buildBillingBatchKey(guides = [], options = {}) {
 }
 
 function getRuleValue(rule = {}, key, fallback = null) {
-  const metadataValue = rule.metadata?.[key] ?? rule.rules?.[key];
-  return rule[key] ?? metadataValue ?? fallback;
+  const normalizedRule = rule || {};
+  const metadataValue = normalizedRule.metadata?.[key] ?? normalizedRule.rules?.[key];
+  return normalizedRule[key] ?? metadataValue ?? fallback;
 }
 
 function hasMissingColumnError(error) {

@@ -4,6 +4,7 @@ import { validateGuiaPayload } from '../../src/lib/validators.js';
 import {
   buildBillingBatchKey,
   buildReceivablePayloadFromGuide,
+  evaluateConventionRulesForGuide,
 } from '../../src/lib/faturamentoOperationalApi.js';
 import { getUnlinkedBillingGuides } from '../../src/lib/faturamentoReportsApi.js';
 import { canTransitionBillingBatch } from '../../src/lib/billingOperationsApi.js';
@@ -28,6 +29,12 @@ function buildGuide(tipoGuia) {
 }
 
 describe('Faturamento enterprise TISS flow', () => {
+  it('usa regras padrao quando a guia nao possui regra de convenio', () => {
+    const result = evaluateConventionRulesForGuide(buildGuide('SADT'), []);
+
+    expect(result).toMatchObject({ valid: true, rule: null, issues: [] });
+  });
+
   it('bloqueia pre-faturamento quando autorizacao, TUSS e documentos obrigatorios faltam', () => {
     const result = classifyBillingWorkItem({
       appointment: { patient_id: 'patient-1', payer_id: 'payer-1' },
