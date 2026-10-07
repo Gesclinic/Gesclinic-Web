@@ -16,6 +16,12 @@ export function canTransitionBillingBatch(currentStatus, nextStatus) {
   return BILLING_BATCH_TRANSITIONS[currentStatus]?.includes(nextStatus) === true;
 }
 
+export function getBillingPayerIdentity(row = {}) {
+  const id = row.payer_id || row.convenio_id || null;
+  const name = row.payer_name || row.convenio || 'Particular';
+  return { id, name, key: id || `name:${String(name).trim().toLowerCase()}` };
+}
+
 export async function listBillingBatches(clinicId) {
   const { data, error } = await supabase
     .from('billing_batches')

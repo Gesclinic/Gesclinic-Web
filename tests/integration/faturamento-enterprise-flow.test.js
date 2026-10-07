@@ -7,7 +7,7 @@ import {
   evaluateConventionRulesForGuide,
 } from '../../src/lib/faturamentoOperationalApi.js';
 import { getUnlinkedBillingGuides } from '../../src/lib/faturamentoReportsApi.js';
-import { canTransitionBillingBatch } from '../../src/lib/billingOperationsApi.js';
+import { canTransitionBillingBatch, getBillingPayerIdentity } from '../../src/lib/billingOperationsApi.js';
 import { classifyBillingWorkItem } from '../../src/lib/billingMasterApi.js';
 
 const clinicId = '11111111-1111-4111-8111-111111111111';
@@ -29,6 +29,14 @@ function buildGuide(tipoGuia) {
 }
 
 describe('Faturamento enterprise TISS flow', () => {
+  it('separa convenios pelo identificador mesmo quando possuem o mesmo nome', () => {
+    const first = getBillingPayerIdentity({ payer_id: 'payer-001', convenio: 'Unimed' });
+    const second = getBillingPayerIdentity({ payer_id: 'payer-002', convenio: 'Unimed' });
+
+    expect(first.name).toBe(second.name);
+    expect(first.key).not.toBe(second.key);
+  });
+
   it('usa regras padrao quando a guia nao possui regra de convenio', () => {
     const result = evaluateConventionRulesForGuide(buildGuide('SADT'), []);
 
@@ -132,6 +140,7 @@ describe('Faturamento enterprise TISS flow', () => {
       patient_id: 'patient-001',
       professional_id: 'professional-001',
       payer_id: 'payer-001',
+      billing_batch_key: 'LOT-PAYER-001',
       service_id: 'service-001',
       repasse_expected: 54.15,
       repasse_model: 'appointment_services',
@@ -143,6 +152,7 @@ describe('Faturamento enterprise TISS flow', () => {
       professional_id: 'professional-001',
       payer_id: 'payer-001',
       convenio_id: 'payer-001',
+      batch_number: 'LOT-PAYER-001',
       procedure_id: 'service-001',
       repasse_expected: 54.15,
       repasse_model: 'appointment_services',

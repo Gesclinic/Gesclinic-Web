@@ -9,6 +9,7 @@ import { markGuidesAsBilled, markGuideAsSent } from '@/lib/faturamentoOperationa
 import {
   createBillingBatch,
   generateBillingBatchXml,
+  getBillingPayerIdentity,
   listBillingBatches,
   setBillingBatchGuide,
   transitionBillingBatch,
@@ -92,6 +93,7 @@ function normalizeLots(guides, submissions) {
       xmlPath: groupedGuides.find((guide) => guide.xml_path)?.xml_path || null,
       guideIds: groupedGuides.map((guide) => guide.id),
       convenio: groupedGuides[0]?.convenio || '-',
+      payerId: groupedGuides[0]?.payer_id || null,
     };
   });
 }
@@ -114,6 +116,7 @@ function normalizePersistedBatch(batch) {
       .filter((row) => !row.removed_at)
       .map((row) => row.guide_id),
     convenio: batch.payer_name || '-',
+    payerId: batch.payer_id || null,
     persisted: true,
   };
 }
@@ -128,6 +131,7 @@ export default function LotesPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [selectedGuideIds, setSelectedGuideIds] = useState([]);
   const [targetBatchId, setTargetBatchId] = useState('new');
+  const [payerFilter, setPayerFilter] = useState('all');
 
   const loadData = async () => {
     if (!clinicId) return;
@@ -176,7 +180,15 @@ export default function LotesPage() {
     );
     return [...persisted, ...legacy];
   }, [guides, submissions, persistedBatches]);
-  const totalGuias = lotes.reduce((sum, lote) => sum + lote.guias, 0);
+  const payerOptions = useMemo(() => Array.from(new Map(
+    guides.map((guide) => {
+      const payer = getBillingPayerIdentity(guide);
+      return [payer.key, payer];
+    }),
+  ).values()).sort((a, b) => a.name.localeCompare(b.name)), [guides]);
+  const filteredLotes = payerFilter === 'all'
+    ? lotes
+    : lotes.filter((lote) => getBillingPayerIdentity({ payer_id: lote.payerId, payer_name: lote.convenio }).key === payerFilter);
   const assignedGuideIds = useMemo(() => new Set(
     persistedBatches.flatMap((batch) => (batch.billing_batch_guides || [])
       .filter((row) => !row.removed_at)
@@ -184,6 +196,10 @@ export default function LotesPage() {
   ), [persistedBatches]);
   const availableGuides = guides.filter((guide) => !assignedGuideIds.has(guide.id)
     && !['Enviado', 'Processado', 'Pago', 'Glosado'].includes(guide.status));
+  const filteredAvailableGuides = payerFilter === 'all'
+    ? availableGuides
+    : availableGuides.filter((guide) => getBillingPayerIdentity(guide).key === payerFilter);
+  const totalGuias = filteredLotes.reduce((sum, lote) => sum + lote.guias, 0);
   const editableBatches = persistedBatches.filter((batch) => ['draft', 'reopened'].includes(batch.status));
 
   const toggleGuide = (guide) => {
@@ -195,7 +211,8 @@ export default function LotesPage() {
   const createBatch = async () => {
     const selectedGuides = availableGuides.filter((guide) => selectedGuideIds.includes(guide.id));
     if (selectedGuides.length === 0) return;
-    const payers = [...new Set(selectedGuides.map((guide) => guide.convenio || 'Particular'))];
+    const payerIdentities = selectedGuides.map(getBillingPayerIdentity);
+    const payers = [...new Set(payerIdentities.map((payer) => payer.key))];
     if (payers.length > 1) {
       toast({ title: 'Selecione um único convênio', description: 'Cada lote deve conter guias da mesma operadora.', variant: 'destructive' });
       return;
@@ -204,11 +221,11 @@ export default function LotesPage() {
     try {
       if (targetBatchId === 'new') {
         const competencyDate = new Date().toISOString().slice(0, 10);
-        await createBillingBatch({ clinicId, batchKey: `LOT-${competencyDate.replaceAll('-', '')}-${Date.now().toString().slice(-6)}`, payerName: payers[0], competencyDate, guideIds: selectedGuideIds });
+        await createBillingBatch({ clinicId, batchKey: `LOT-${competencyDate.replaceAll('-', '')}-${Date.now().toString().slice(-6)}`, payerId: payerIdentities[0].id, payerName: payerIdentities[0].name, competencyDate, guideIds: selectedGuideIds });
         toast({ title: 'Lote criado', description: `${selectedGuides.length} guia(s) adicionada(s) ao novo lote.` });
       } else {
         const target = editableBatches.find((batch) => batch.id === targetBatchId);
-        if (!target || target.payer_name !== payers[0]) throw new Error('O convênio das guias deve ser o mesmo do lote selecionado.');
+        if (!target || getBillingPayerIdentity(target).key !== payerIdentities[0].key) throw new Error('O convênio das guias deve ser o mesmo do lote selecionado.');
         await Promise.all(selectedGuideIds.map((guideId) => setBillingBatchGuide({ clinicId, batchId: targetBatchId, guideId, include: true })));
         toast({ title: 'Lote atualizado', description: `${selectedGuides.length} guia(s) adicionada(s) com auditoria.` });
       }
@@ -356,8 +373,9 @@ export default function LotesPage() {
           <button type="button" onClick={createBatch} disabled={actionLoading || selectedGuideIds.length === 0} className="flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"><Plus size={16} />{targetBatchId === 'new' ? 'Criar lote' : 'Adicionar ao lote'} ({selectedGuideIds.length})</button>
         </CardHeader>
         <CardContent>
+          <label className="mb-4 block max-w-md text-sm font-medium">Convênio<select className="mt-1 h-10 w-full rounded-md border bg-white px-3 font-normal" value={payerFilter} onChange={(event) => { setPayerFilter(event.target.value); setSelectedGuideIds([]); }}><option value="all">Todos os convênios</option>{payerOptions.map((payer) => <option key={payer.key} value={payer.key}>{payer.name}</option>)}</select></label>
           <label className="mb-4 block max-w-md text-sm font-medium">Destino<select className="mt-1 h-10 w-full rounded-md border bg-white px-3 font-normal" value={targetBatchId} onChange={(event) => setTargetBatchId(event.target.value)}><option value="new">Novo lote</option>{editableBatches.map((batch) => <option key={batch.id} value={batch.id}>{batch.batch_key} · {batch.payer_name}</option>)}</select></label>
-          {availableGuides.length === 0 ? <p className="rounded-md border border-dashed p-6 text-center text-sm text-gray-500">Nenhuma guia disponível. Gere guias no pré-faturamento ou todas já estão em lotes.</p> : <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">{availableGuides.map((guide) => <label key={guide.id} className="flex cursor-pointer items-center gap-3 rounded-md border p-3 hover:bg-gray-50"><input type="checkbox" checked={selectedGuideIds.includes(guide.id)} onChange={() => toggleGuide(guide)} /><span className="min-w-0 flex-1"><span className="block truncate font-semibold">{guide.numero_guia || guide.id}</span><span className="block text-xs text-gray-500">{guide.convenio || 'Particular'} · {formatCurrency(guide.valor)}</span></span></label>)}</div>}
+          {filteredAvailableGuides.length === 0 ? <p className="rounded-md border border-dashed p-6 text-center text-sm text-gray-500">Nenhuma guia disponível para o convênio selecionado.</p> : <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">{filteredAvailableGuides.map((guide) => <label key={guide.id} className="flex cursor-pointer items-center gap-3 rounded-md border p-3 hover:bg-gray-50"><input type="checkbox" checked={selectedGuideIds.includes(guide.id)} onChange={() => toggleGuide(guide)} /><span className="min-w-0 flex-1"><span className="block truncate font-semibold">{guide.numero_guia || guide.id}</span><span className="block text-xs text-gray-500">{guide.convenio || 'Particular'} · {formatCurrency(guide.valor)}</span></span></label>)}</div>}
         </CardContent>
       </Card>
 
@@ -388,7 +406,7 @@ export default function LotesPage() {
                     </td>
                   </tr>
                 )}
-                {!loading && lotes.length === 0 && (
+                {!loading && filteredLotes.length === 0 && (
                   <tr>
                     <td colSpan="8" className="py-8 text-center text-gray-500">
                       Nenhum lote ou guia TISS encontrado.
@@ -396,7 +414,7 @@ export default function LotesPage() {
                   </tr>
                 )}
                 {!loading &&
-                  lotes.map((lote) => (
+                  filteredLotes.map((lote) => (
                     <tr key={lote.id} className="border-b hover:bg-gray-50">
                       <td className="py-3 px-4 font-mono font-semibold">{lote.nome}</td>
                       <td className="py-3 px-4">{lote.convenio}</td>
@@ -486,7 +504,7 @@ export default function LotesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-gray-900">
-              {lotes.filter((l) => ['rascunho', 'draft', 'reopened'].includes(l.status)).length}
+              {filteredLotes.filter((l) => ['rascunho', 'draft', 'reopened'].includes(l.status)).length}
             </div>
           </CardContent>
         </Card>
@@ -496,7 +514,7 @@ export default function LotesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-blue-600">
-              {lotes.filter((l) => ['enviado', 'sent', 'protocolled'].includes(l.status)).length}
+              {filteredLotes.filter((l) => ['enviado', 'sent', 'protocolled'].includes(l.status)).length}
             </div>
           </CardContent>
         </Card>
@@ -507,7 +525,7 @@ export default function LotesPage() {
           <CardContent>
             <div className="text-3xl font-bold text-green-600">
               {
-                lotes.filter((l) => ['processado', 'processed', 'pago', 'paid'].includes(l.status))
+                filteredLotes.filter((l) => ['processado', 'processed', 'pago', 'paid'].includes(l.status))
                   .length
               }
             </div>

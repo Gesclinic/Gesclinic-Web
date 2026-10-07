@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -65,6 +65,7 @@ export default function GuiasConsulta({
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [payerFilter, setPayerFilter] = useState('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingGuia, setEditingGuia] = useState(null);
 
@@ -222,6 +223,8 @@ export default function GuiasConsulta({
     );
   };
 
+  const payerOptions = useMemo(() => [...new Set(guias.map((guia) => guia.convenio || 'Particular'))]
+    .sort((a, b) => a.localeCompare(b)), [guias]);
   const filteredGuias = guias.filter((guia) => {
     const matchesSearch =
       String(guia.paciente_nome || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -229,8 +232,9 @@ export default function GuiasConsulta({
       String(guia.convenio || '').toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus = statusFilter === 'all' || guia.status === statusFilter;
+    const matchesPayer = payerFilter === 'all' || (guia.convenio || 'Particular') === payerFilter;
 
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus && matchesPayer;
   });
 
   return (
@@ -389,7 +393,7 @@ export default function GuiasConsulta({
       {/* Filtros */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex gap-4 items-end">
+          <div className="flex flex-wrap gap-4 items-end">
             <div className="flex-1">
               <Label htmlFor="search">Buscar</Label>
               <div className="relative">
@@ -402,6 +406,19 @@ export default function GuiasConsulta({
                   className="pl-10"
                 />
               </div>
+            </div>
+
+            <div>
+              <Label>Convênio</Label>
+              <Select value={payerFilter} onValueChange={setPayerFilter}>
+                <SelectTrigger className="w-64">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Convênios</SelectItem>
+                  {payerOptions.map((payer) => <SelectItem key={payer} value={payer}>{payer}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
@@ -479,7 +496,7 @@ export default function GuiasConsulta({
               {filteredGuias.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                    {searchTerm || statusFilter !== 'all'
+                    {searchTerm || statusFilter !== 'all' || payerFilter !== 'all'
                       ? 'Nenhuma guia encontrada com os filtros aplicados.'
                       : 'Nenhuma guia cadastrada ainda.'}
                   </TableCell>
