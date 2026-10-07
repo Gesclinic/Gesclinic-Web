@@ -136,9 +136,7 @@ export default function LotesPage() {
       const [guidesResult, submissionsResult, batches] = await Promise.all([
         supabase
           .from('billing_guides')
-          .select(
-            'id, numero_guia, convenio, valor, status, xml_path, billing_batch_key, data_criacao, data_envio, data_processamento',
-          )
+          .select('*')
           .eq('clinic_id', clinicId)
           .order('data_criacao', { ascending: false }),
         supabase
