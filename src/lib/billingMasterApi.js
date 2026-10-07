@@ -87,12 +87,12 @@ export async function saveBillingPayerSetting(clinicId, setting) {
   return data;
 }
 
-export async function listBillingDocumentRequirements(clinicId, payerId = null) {
+export async function listBillingDocumentRequirements(clinicId, payerId = null, includeInactive = true) {
   let query = supabase
     .from('billing_document_requirements')
     .select('*')
-    .eq('clinic_id', clinicId)
-    .eq('active', true);
+    .eq('clinic_id', clinicId);
+  if (!includeInactive) query = query.eq('active', true);
   if (payerId) query = query.eq('payer_id', payerId);
   const { data, error } = await query.order('label');
   if (error) throw error;
@@ -126,7 +126,7 @@ export async function syncBillingWorkQueue(clinicId) {
       .order('scheduled_date', { ascending: false })
       .limit(1000),
     listBillingPayerSettings(clinicId),
-    listBillingDocumentRequirements(clinicId),
+    listBillingDocumentRequirements(clinicId, null, false),
     listBillingWorkItems(clinicId),
   ]);
   if (appointmentsResult.error) throw appointmentsResult.error;

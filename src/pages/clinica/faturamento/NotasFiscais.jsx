@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, CheckCircle2, FileText, Loader2, Plus, RefreshCcw, Search, XCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle2, ExternalLink, FileText, Loader2, Plus, RefreshCcw, Search, XCircle } from 'lucide-react';
 import PageLayout from '@/components/ui/PageLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -211,6 +211,7 @@ export default function NotasFiscais() {
                       <TableHead>Atendimento</TableHead>
                       <TableHead>Descricao</TableHead>
                       <TableHead className="text-right">Valor</TableHead>
+                      <TableHead className="text-right">Ação</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -222,6 +223,7 @@ export default function NotasFiscais() {
                         <TableCell className="font-mono text-xs">{invoice.appointment_id || '-'}</TableCell>
                         <TableCell className="max-w-md truncate">{invoice.description || '-'}</TableCell>
                         <TableCell className="text-right font-medium">{currency.format(getInvoiceAmount(invoice))}</TableCell>
+                        <TableCell className="text-right">{invoice.appointment_id ? <Button asChild size="sm" variant="outline"><a href={`/clinica/faturamento/centro-fiscal?appointmentId=${encodeURIComponent(invoice.appointment_id)}`}><ExternalLink className="mr-2 h-3.5 w-3.5" />Abrir</a></Button> : <span className="text-xs text-slate-400">Sem atendimento</span>}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

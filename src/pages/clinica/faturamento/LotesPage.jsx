@@ -4,11 +4,13 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useClinicContext } from '@/contexts/ClinicContext';
 import { useToast } from '@/components/ui/use-toast';
-import { Download, Eye, FileText, Loader2, RefreshCw, RotateCcw, Send } from 'lucide-react';
+import { Eye, Loader2, Plus, RefreshCw } from 'lucide-react';
 import { markGuidesAsBilled, markGuideAsSent } from '@/lib/faturamentoOperationalApi';
 import {
+  createBillingBatch,
   generateBillingBatchXml,
   listBillingBatches,
+  setBillingBatchGuide,
   transitionBillingBatch,
 } from '@/lib/billingOperationsApi';
 
@@ -124,6 +126,8 @@ export default function LotesPage() {
   const [persistedBatches, setPersistedBatches] = useState([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [selectedGuideIds, setSelectedGuideIds] = useState([]);
+  const [targetBatchId, setTargetBatchId] = useState('new');
 
   const loadData = async () => {
     if (!clinicId) return;
@@ -175,6 +179,62 @@ export default function LotesPage() {
     return [...persisted, ...legacy];
   }, [guides, submissions, persistedBatches]);
   const totalGuias = lotes.reduce((sum, lote) => sum + lote.guias, 0);
+  const assignedGuideIds = useMemo(() => new Set(
+    persistedBatches.flatMap((batch) => (batch.billing_batch_guides || [])
+      .filter((row) => !row.removed_at)
+      .map((row) => row.guide_id)),
+  ), [persistedBatches]);
+  const availableGuides = guides.filter((guide) => !assignedGuideIds.has(guide.id)
+    && !['Enviado', 'Processado', 'Pago', 'Glosado'].includes(guide.status));
+  const editableBatches = persistedBatches.filter((batch) => ['draft', 'reopened'].includes(batch.status));
+
+  const toggleGuide = (guide) => {
+    setSelectedGuideIds((current) => current.includes(guide.id)
+      ? current.filter((id) => id !== guide.id)
+      : [...current, guide.id]);
+  };
+
+  const createBatch = async () => {
+    const selectedGuides = availableGuides.filter((guide) => selectedGuideIds.includes(guide.id));
+    if (selectedGuides.length === 0) return;
+    const payers = [...new Set(selectedGuides.map((guide) => guide.convenio || 'Particular'))];
+    if (payers.length > 1) {
+      toast({ title: 'Selecione um único convênio', description: 'Cada lote deve conter guias da mesma operadora.', variant: 'destructive' });
+      return;
+    }
+    setActionLoading(true);
+    try {
+      if (targetBatchId === 'new') {
+        const competencyDate = new Date().toISOString().slice(0, 10);
+        await createBillingBatch({ clinicId, batchKey: `LOT-${competencyDate.replaceAll('-', '')}-${Date.now().toString().slice(-6)}`, payerName: payers[0], competencyDate, guideIds: selectedGuideIds });
+        toast({ title: 'Lote criado', description: `${selectedGuides.length} guia(s) adicionada(s) ao novo lote.` });
+      } else {
+        const target = editableBatches.find((batch) => batch.id === targetBatchId);
+        if (!target || target.payer_name !== payers[0]) throw new Error('O convênio das guias deve ser o mesmo do lote selecionado.');
+        await Promise.all(selectedGuideIds.map((guideId) => setBillingBatchGuide({ clinicId, batchId: targetBatchId, guideId, include: true })));
+        toast({ title: 'Lote atualizado', description: `${selectedGuides.length} guia(s) adicionada(s) com auditoria.` });
+      }
+      setSelectedGuideIds([]);
+      await loadData();
+    } catch (error) {
+      toast({ title: 'Erro ao criar lote', description: error.message, variant: 'destructive' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const removeGuide = async (batch, guideId) => {
+    setActionLoading(true);
+    try {
+      await setBillingBatchGuide({ clinicId, batchId: batch.id, guideId, include: false });
+      toast({ title: 'Guia removida do lote' });
+      await loadData();
+    } catch (error) {
+      toast({ title: 'Erro ao remover guia', description: error.message, variant: 'destructive' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const updateLot = async (lot, status) => {
     setActionLoading(true);
@@ -293,6 +353,17 @@ export default function LotesPage() {
       </div>
 
       <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div><CardTitle>Montar lote</CardTitle><p className="mt-1 text-sm text-gray-600">Selecione guias do mesmo convênio e crie ou atualize um lote aberto.</p></div>
+          <button type="button" onClick={createBatch} disabled={actionLoading || selectedGuideIds.length === 0} className="flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"><Plus size={16} />{targetBatchId === 'new' ? 'Criar lote' : 'Adicionar ao lote'} ({selectedGuideIds.length})</button>
+        </CardHeader>
+        <CardContent>
+          <label className="mb-4 block max-w-md text-sm font-medium">Destino<select className="mt-1 h-10 w-full rounded-md border bg-white px-3 font-normal" value={targetBatchId} onChange={(event) => setTargetBatchId(event.target.value)}><option value="new">Novo lote</option>{editableBatches.map((batch) => <option key={batch.id} value={batch.id}>{batch.batch_key} · {batch.payer_name}</option>)}</select></label>
+          {availableGuides.length === 0 ? <p className="rounded-md border border-dashed p-6 text-center text-sm text-gray-500">Nenhuma guia disponível. Gere guias no pré-faturamento ou todas já estão em lotes.</p> : <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">{availableGuides.map((guide) => <label key={guide.id} className="flex cursor-pointer items-center gap-3 rounded-md border p-3 hover:bg-gray-50"><input type="checkbox" checked={selectedGuideIds.includes(guide.id)} onChange={() => toggleGuide(guide)} /><span className="min-w-0 flex-1"><span className="block truncate font-semibold">{guide.numero_guia || guide.id}</span><span className="block text-xs text-gray-500">{guide.convenio || 'Particular'} · {formatCurrency(guide.valor)}</span></span></label>)}</div>}
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardHeader>
           <CardTitle>Histórico de Lotes de Faturamento</CardTitle>
         </CardHeader>
@@ -355,7 +426,7 @@ export default function LotesPage() {
                         )}
                       </td>
                       <td className="py-3 px-4">
-                        <div className="flex flex-wrap justify-center gap-2">
+                        <div className="flex flex-wrap justify-center gap-2 text-xs">
                           {lote.xmlPath && (
                             <a
                               className="text-gray-600 hover:text-blue-600"
@@ -364,45 +435,42 @@ export default function LotesPage() {
                               target="_blank"
                               rel="noreferrer"
                             >
-                              <Eye size={16} />
+                              <span className="flex items-center gap-1 rounded border px-2 py-1"><Eye size={14} />Ver XML</span>
                             </a>
                           )}
-                          <button
+                          {['draft', 'reopened', 'closed', 'rascunho'].includes(lote.status) && <button
                             type="button"
-                            className="text-gray-600 hover:text-green-600"
-                            title="Preparar XML"
+                            className="rounded border px-2 py-1 font-medium hover:bg-gray-100"
                             disabled={actionLoading}
                             onClick={() => prepareXml(lote)}
                           >
-                            <Download size={16} />
-                          </button>
-                          <button
+                            Gerar XML
+                          </button>}
+                          {['draft', 'reopened', 'rascunho'].includes(lote.status) && <button
                             type="button"
-                            className="text-gray-600 hover:text-indigo-600"
-                            title="Faturar e gerar recebivel"
+                            className="rounded border px-2 py-1 font-medium hover:bg-gray-100"
                             disabled={actionLoading}
                             onClick={() => updateLot(lote, 'Faturado')}
                           >
-                            <FileText size={16} />
-                          </button>
-                          <button
+                            Gerar contas a receber
+                          </button>}
+                          {['xml_generated', 'rascunho'].includes(lote.status) && <button
                             type="button"
-                            className="text-gray-600 hover:text-blue-600"
-                            title="Enviar"
+                            className="rounded bg-blue-600 px-2 py-1 font-medium text-white disabled:opacity-50"
                             disabled={actionLoading}
                             onClick={() => updateLot(lote, 'Enviado')}
                           >
-                            <Send size={16} />
-                          </button>
-                          <button
+                            Marcar como enviado
+                          </button>}
+                          {lote.persisted && ['closed', 'xml_generated'].includes(lote.status) && <button
                             type="button"
-                            className="text-gray-600 hover:text-orange-600"
-                            title="Reabrir"
+                            className="rounded border px-2 py-1 font-medium hover:bg-gray-100"
                             disabled={actionLoading}
                             onClick={() => updateLot(lote, 'Aguardando XML')}
                           >
-                            <RotateCcw size={16} />
-                          </button>
+                            Reabrir
+                          </button>}
+                          {lote.persisted && ['draft', 'reopened'].includes(lote.status) && lote.guideIds.map((guideId, index) => <button key={guideId} type="button" className="rounded border border-red-200 px-2 py-1 font-medium text-red-700 hover:bg-red-50" disabled={actionLoading} onClick={() => removeGuide(lote, guideId)}>Remover guia {index + 1}</button>)}
                         </div>
                       </td>
                     </tr>

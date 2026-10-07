@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,8 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -30,29 +33,20 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { normalizeCodeCBHPM } from '@/utils/formatters/formatters';
 import {
-  FileUp,
   Plus,
   Edit,
-  Eye,
-  Download,
-  CheckCircle,
-  AlertCircle,
   Search,
-  Calendar,
   FileCode,
+  PackagePlus,
+  Trash2,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import {
   criarGuia,
   atualizarGuia,
   listarGuias,
-  gerarNumeroGuia,
   deletarGuia,
 } from '@/modules/financeiro/services/guiasApi';
-import {
-  validateTISSXMLGenerationCascade,
-  formatCascadeErrors,
-} from '@/lib/tiskCascadeValidationApi';
 
 /**
  * Componente para Guias de Consulta SP/SADT
@@ -65,6 +59,7 @@ export default function GuiasConsulta({
   allowTipoChange = false,
 }) {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const { clinicId } = useAuth();
   const [guias, setGuias] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -72,7 +67,6 @@ export default function GuiasConsulta({
   const [statusFilter, setStatusFilter] = useState('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingGuia, setEditingGuia] = useState(null);
-  const [xmlValidationErrors, setXmlValidationErrors] = useState([]);
 
   // Form state
   const buildInitialForm = () => ({
@@ -171,6 +165,14 @@ export default function GuiasConsulta({
     setFormData(buildInitialForm());
   };
 
+  const handleDialogChange = (open) => {
+    setIsDialogOpen(open);
+    if (!open) {
+      setEditingGuia(null);
+      resetForm();
+    }
+  };
+
   const handleEdit = (guia) => {
     setEditingGuia(guia);
     setFormData({
@@ -187,63 +189,19 @@ export default function GuiasConsulta({
     setIsDialogOpen(true);
   };
 
-  const handleGenerateXML = async (guia) => {
+  const handleDelete = async (guia) => {
+    const editable = ['Aguardando XML', 'draft', 'rascunho', null, undefined].includes(guia.status);
+    if (!editable) {
+      toast({ title: 'Guia protegida', description: 'Guias já processadas devem ser corrigidas pelo fluxo de lote.', variant: 'destructive' });
+      return;
+    }
+    if (!window.confirm(`Excluir a guia ${guia.numero_guia}? Esta ação não pode ser desfeita.`)) return;
     try {
-      setXmlValidationErrors([]);
-
-      // FASE 4: Validação em cascata para geração de TISS XML
-      // Simulando dados do serviço, profissional e operadora baseado na guia
-      const guideData = {
-        service: {
-          tuss_code: guia.codigo_cbhpm || '', // Usando código CBHPM como TUSS
-          type_service: (guia.tipo_guia || guia.tipo) === 'SP' ? 'Consulta' : 'Exame',
-          guide_type: (guia.tipo_guia || guia.tipo) === 'SP' ? 'Guia de Consulta' : guia.tipo_guia || guia.tipo,
-          unit_measure: 'Unidade',
-          cost_value: parseFloat(guia.valor) || 0,
-        },
-        professional: {
-          cbo_code: '225101', // Simulado - seria buscado do BD
-          council_type: 'CRM', // Simulado
-          council_number: '12345', // Simulado
-          council_state: 'SP', // Simulado
-          cns_code: 'ABC123456', // Simulado
-        },
-        payer: {
-          registration_ans: '', // Simulado
-          tiss_pattern: true, // Simulado
-          guide_format: 'XML', // Simulado
-          type: guia.convenio === 'Governo' ? 'SUS' : 'privada',
-        },
-      };
-
-      // ⚠️ COMENTADO: Validação em cascata para TISS XML
-      // TODO: Reabilitar após ajustar validações - validação deve ser menos restritiva
-      // const validation = validateTISSXMLGenerationCascade(guideData);
-      // if (!validation.valid) {
-      //   setXmlValidationErrors(validation.errors);
-      //   console.warn('[GuiasConsulta] TISS validation failed:', validation.errors);
-      //   toast({
-      //     title: '❌ Erro de Validação TISS',
-      //     description: `Dados incompletos para gerar XML:\n\n${formatCascadeErrors(validation.errors)}`,
-      //     variant: 'destructive',
-      //   });
-      //   return;
-      // }
-
-      // Se passou na validação, gerar XML
-      console.log('✅ TISS validation passed. Gerando XML para guia:', guia.id);
-
-      toast({
-        title: '✅ XML Gerado',
-        description: `XML da guia ${guia.numero_guia} gerado com sucesso e pronto para envio.`,
-      });
+      await deletarGuia(guia.id);
+      toast({ title: 'Guia excluída', description: `${guia.numero_guia} foi removida.` });
+      await fetchGuias();
     } catch (error) {
-      console.error('[handleGenerateXML] Error:', error);
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível gerar o XML: ' + error.message,
-        variant: 'destructive',
-      });
+      toast({ title: 'Erro ao excluir guia', description: error.message, variant: 'destructive' });
     }
   };
 
@@ -287,21 +245,24 @@ export default function GuiasConsulta({
           <p className="text-muted-foreground">{descricao}</p>
         </div>
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}>
           <DialogTrigger asChild>
             <Button className="gap-2">
               <Plus className="w-4 h-4" />
               Nova Guia
             </Button>
           </DialogTrigger>
-          <DialogContent className="app-dialog-shell app-dialog-shell--content app-dialog-shell--wide">
-            <DialogHeader>
+          <DialogContent className="max-h-[90vh] w-[calc(100vw-2rem)] max-w-3xl gap-0 overflow-hidden p-0">
+            <DialogHeader className="border-b px-6 py-4 text-left">
               <DialogTitle>{editingGuia ? 'Editar Guia' : `Nova ${titulo}`}</DialogTitle>
+              <DialogDescription>
+                Informe os dados da cobrança para gerar a guia e incluí-la em um lote TISS.
+              </DialogDescription>
             </DialogHeader>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
+            <form onSubmit={handleSubmit} className="flex min-h-0 flex-col">
+              <div className="grid max-h-[calc(90vh-9rem)] grid-cols-1 gap-4 overflow-y-auto px-6 py-5 sm:grid-cols-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="tipo_guia">Tipo de Guia</Label>
                   <Select
                     value={formData.tipo_guia}
@@ -319,7 +280,7 @@ export default function GuiasConsulta({
                   </Select>
                 </div>
 
-                <div>
+                <div className="space-y-1.5">
                   <Label htmlFor="paciente_nome">Nome do Paciente</Label>
                   <Input
                     id="paciente_nome"
@@ -329,7 +290,7 @@ export default function GuiasConsulta({
                   />
                 </div>
 
-                <div>
+                <div className="space-y-1.5">
                   <Label htmlFor="convenio">Convênio</Label>
                   <Input
                     id="convenio"
@@ -339,7 +300,7 @@ export default function GuiasConsulta({
                   />
                 </div>
 
-                <div>
+                <div className="space-y-1.5">
                   <Label htmlFor="plano">Plano</Label>
                   <Input
                     id="plano"
@@ -349,7 +310,7 @@ export default function GuiasConsulta({
                   />
                 </div>
 
-                <div>
+                <div className="space-y-1.5">
                   <Label htmlFor="numero_carteirinha">Número da Carteirinha</Label>
                   <Input
                     id="numero_carteirinha"
@@ -361,7 +322,7 @@ export default function GuiasConsulta({
                   />
                 </div>
 
-                <div>
+                <div className="space-y-1.5">
                   <Label htmlFor="profissional">Profissional</Label>
                   <Input
                     id="profissional"
@@ -371,7 +332,7 @@ export default function GuiasConsulta({
                   />
                 </div>
 
-                <div>
+                <div className="space-y-1.5">
                   <Label htmlFor="codigo_cbhpm">Código CBHPM</Label>
                   <Input
                     id="codigo_cbhpm"
@@ -381,12 +342,12 @@ export default function GuiasConsulta({
                       setFormData({ ...formData, codigo_cbhpm: normalized });
                     }}
                     placeholder="Ex: 1.01.01.01-2"
-                    className="font-bold text-lg tracking-widest text-gray-900"
+                    className="font-mono"
                     required
                   />
                 </div>
 
-                <div>
+                <div className="space-y-1.5">
                   <Label htmlFor="valor">Valor (R$)</Label>
                   <Input
                     id="valor"
@@ -397,32 +358,29 @@ export default function GuiasConsulta({
                     required
                   />
                 </div>
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label htmlFor="observacoes">Observações</Label>
+                  <Textarea
+                    id="observacoes"
+                    value={formData.observacoes}
+                    onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
+                    rows={3}
+                  />
+                </div>
               </div>
 
-              <div>
-                <Label htmlFor="observacoes">Observações</Label>
-                <Textarea
-                  id="observacoes"
-                  value={formData.observacoes}
-                  onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
-                  rows={3}
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4">
+              <DialogFooter className="border-t bg-muted/20 px-6 py-4 sm:justify-end">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => {
-                    setIsDialogOpen(false);
-                    setEditingGuia(null);
-                    resetForm();
+                    handleDialogChange(false);
                   }}
                 >
                   Cancelar
                 </Button>
                 <Button type="submit">{editingGuia ? 'Atualizar' : 'Criar'} Guia</Button>
-              </div>
+              </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
@@ -470,33 +428,6 @@ export default function GuiasConsulta({
         </CardContent>
       </Card>
 
-      {/* FASE 4: Exibir erros de validação TISS XML */}
-      {xmlValidationErrors.length > 0 && (
-        <Card className="bg-red-50 border-red-200">
-          <CardContent className="pt-6">
-            <div className="flex gap-3">
-              <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h3 className="font-semibold text-red-900 mb-2">
-                  ❌ Erros de Validação TISS para Geração de XML
-                </h3>
-                <ul className="space-y-1">
-                  {xmlValidationErrors.map((error, idx) => (
-                    <li key={idx} className="text-red-800 text-sm">
-                      • {error}
-                    </li>
-                  ))}
-                </ul>
-                <p className="text-red-700 text-xs mt-3">
-                  Preencha todos os dados TISS obrigatórios nos cadastros (Serviços, Profissionais,
-                  Convênios) antes de gerar XML.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Tabela de Guias */}
       <Card>
         <CardHeader>
@@ -538,20 +469,8 @@ export default function GuiasConsulta({
                         <Edit className="w-3 h-3" />
                       </Button>
 
-                      {!guia.xml_path ? (
-                        <Button size="sm" onClick={() => handleGenerateXML(guia)} className="gap-1">
-                          <FileUp className="w-3 h-3" />
-                          Gerar XML
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => console.log('Baixar XML:', guia.xml_path)}
-                        >
-                          <Download className="w-3 h-3" />
-                        </Button>
-                      )}
+                      <Button size="sm" variant="outline" onClick={() => handleDelete(guia)} title="Excluir guia"><Trash2 className="w-3 h-3" /></Button>
+                      <Button size="sm" onClick={() => navigate('/clinica/faturamento/lotes-faturamento')} className="gap-1"><PackagePlus className="w-3 h-3" />Adicionar ao lote</Button>
                     </div>
                   </TableCell>
                 </TableRow>

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useClinicContext } from '@/contexts/ClinicContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -18,12 +18,16 @@ import {
   Upload,
   Loader2,
   RefreshCw,
+  ArrowRight,
+  PlayCircle,
+  Settings2,
 } from 'lucide-react';
 import {
   loadFaturamentoOperationalData,
   subscribeFaturamentoRealtime,
 } from '@/lib/faturamentoOperationalApi';
 import { loadBillingOperationsSnapshot } from '@/lib/billingOperationsApi';
+import { loadBillingMasterWorkspace, syncBillingWorkQueue } from '@/lib/billingMasterApi';
 
 function currency(value) {
   return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -135,22 +139,26 @@ function AuditList({ title, rows, getText }) {
 }
 
 export default function FaturamentoDashboard() {
-  const { clinicId } = useAuth();
+  const { clinicId } = useClinicContext();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [running, setRunning] = useState(false);
   const [data, setData] = useState(null);
   const [operations, setOperations] = useState(null);
+  const [workspace, setWorkspace] = useState(null);
 
   const loadDashboard = async () => {
     if (!clinicId) return;
     setLoading(true);
     try {
-      const [operationalData, operationsData] = await Promise.all([
+      const [operationalData, operationsData, workspaceData] = await Promise.all([
         loadFaturamentoOperationalData(clinicId),
         loadBillingOperationsSnapshot(clinicId),
+        loadBillingMasterWorkspace(clinicId),
       ]);
       setData(operationalData);
       setOperations(operationsData);
+      setWorkspace(workspaceData);
     } catch (error) {
       toast({
         title: 'Erro ao carregar faturamento',
@@ -178,6 +186,29 @@ export default function FaturamentoDashboard() {
   const audit = snapshot?.audit || {};
   const glosas = snapshot?.glosas || {};
   const operationsMetrics = operations?.metrics || {};
+  const workItems = workspace?.workItems || [];
+  const openPendingItems = (workspace?.pendingItems || []).filter((row) => row.status !== 'resolved');
+  const suggestedMatches = (workspace?.matches || []).filter((row) => ['suggested', 'confirmed'].includes(row.status));
+
+  const workCounts = useMemo(() => ({
+    review: workItems.filter((row) => ['pending', 'in_review'].includes(row.status)).length,
+    blocked: workItems.filter((row) => row.status === 'blocked').length,
+    ready: workItems.filter((row) => row.status === 'ready').length,
+    guides: workItems.filter((row) => ['guide_generated', 'batched'].includes(row.status)).length,
+  }), [workItems]);
+
+  const handleSyncProduction = async () => {
+    setRunning(true);
+    try {
+      const rows = await syncBillingWorkQueue(clinicId);
+      toast({ title: 'Produção sincronizada', description: `${rows.length} serviço(s) atualizado(s) na fila.` });
+      await loadDashboard();
+    } catch (error) {
+      toast({ title: 'Erro ao sincronizar produção', description: error.message, variant: 'destructive' });
+    } finally {
+      setRunning(false);
+    }
+  };
 
   const auditTotal = useMemo(() => {
     return [
@@ -199,15 +230,46 @@ export default function FaturamentoDashboard() {
             e Cockpit.
           </p>
         </div>
-        <Button variant="outline" onClick={loadDashboard} disabled={loading} className="gap-2">
-          {loading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <RefreshCw className="h-4 w-4" />
-          )}
-          Atualizar
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={loadDashboard} disabled={loading} className="gap-2">
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            Atualizar
+          </Button>
+          <Button onClick={handleSyncProduction} disabled={running || !clinicId} className="gap-2">
+            {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlayCircle className="h-4 w-4" />}
+            Sincronizar produção
+          </Button>
+        </div>
       </div>
+
+      <Card className="border-blue-200 bg-blue-50/30">
+        <CardHeader className="pb-3">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <CardTitle className="text-lg">Fila operacional</CardTitle>
+              <p className="mt-1 text-sm text-muted-foreground">Execute o ciclo na ordem: revisar, gerar guia, montar lote, enviar e conciliar.</p>
+            </div>
+            <Button asChild variant="outline" size="sm"><Link to="/clinica/faturamento/contratos-regras"><Settings2 className="mr-2 h-4 w-4" />Configurar convênios</Link></Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+            {[
+              { label: '1. Revisar produção', value: workCounts.review, hint: `${workCounts.blocked} bloqueado(s)`, path: '/clinica/faturamento/pre-faturamento', action: 'Abrir fila' },
+              { label: '2. Gerar guias', value: workCounts.ready, hint: 'Aprovados sem guia', path: '/clinica/faturamento/pre-faturamento', action: 'Gerar guias' },
+              { label: '3. Montar lotes', value: workCounts.guides, hint: `${operationsMetrics.openBatches || 0} lote(s) aberto(s)`, path: '/clinica/faturamento/lotes-faturamento', action: 'Montar lotes' },
+              { label: '4. Enviar XML', value: operationsMetrics.readyToSend || 0, hint: 'Lotes prontos', path: '/clinica/faturamento/lotes-faturamento', action: 'Gerar e enviar' },
+              { label: '5. Conciliar', value: suggestedMatches.length, hint: 'Matches aguardando aplicação', path: '/clinica/faturamento/conciliacao', action: 'Aplicar retornos' },
+            ].map((step) => (
+              <div key={step.label} className="flex min-h-36 flex-col justify-between rounded-md border bg-white p-4">
+                <div><p className="text-sm font-semibold">{step.label}</p><p className="mt-2 text-3xl font-bold">{step.value}</p><p className="mt-1 text-xs text-muted-foreground">{step.hint}</p></div>
+                <Button asChild size="sm" variant="outline" className="mt-4 w-full justify-between"><Link to={step.path}>{step.action}<ArrowRight className="h-4 w-4" /></Link></Button>
+              </div>
+            ))}
+          </div>
+          {openPendingItems.length > 0 && <div className="mt-4 flex flex-col gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm sm:flex-row sm:items-center sm:justify-between"><span><strong>{openPendingItems.length} pendência(s)</strong> exigem correção antes do envio.</span><Button asChild size="sm" variant="outline"><Link to="/clinica/faturamento/pendencias">Resolver pendências</Link></Button></div>}
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard

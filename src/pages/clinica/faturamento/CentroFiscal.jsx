@@ -57,25 +57,25 @@ const STEPS = [
 ];
 
 const ACTIONS = [
-  { label: 'Salvar rascunho', icon: Archive, enabled: true },
-  { label: 'Validar', icon: ShieldCheck, enabled: true },
-  { label: 'Simular', icon: FileSearch, enabled: true },
+  { label: 'Salvar rascunho', icon: Archive, enabled: false },
+  { label: 'Validar', icon: ShieldCheck, enabled: false },
+  { label: 'Simular', icon: FileSearch, enabled: false },
   { label: 'Emitir', icon: Send, primary: true, enabled: true },
-  { label: 'Cancelar', icon: AlertTriangle, enabled: true },
-  { label: 'Substituir', icon: RefreshCcw, enabled: true },
-  { label: 'Reprocessar', icon: Clock3, enabled: true },
-  { label: 'Pre visualizar XML', icon: FileText, enabled: true },
-  { label: 'Pre visualizar DANFSE', icon: ReceiptText, enabled: true },
-  { label: 'Download XML', icon: Download, enabled: true },
-  { label: 'Download PDF', icon: Download, enabled: true },
-  { label: 'Enviar Email', icon: Mail, enabled: true },
-  { label: 'Enviar WhatsApp', icon: Send, enabled: true },
-  { label: 'Enviar Contabilidade', icon: UploadCloud, enabled: true },
-  { label: 'Enviar SIEG', icon: UploadCloud, enabled: true },
-  { label: 'Enviar Dominio', icon: UploadCloud, enabled: true },
-  { label: 'Historico', icon: History, enabled: true },
-  { label: 'Logs', icon: FileSearch, enabled: true },
-  { label: 'Auditoria', icon: ShieldCheck, enabled: true },
+  { label: 'Cancelar', icon: AlertTriangle, enabled: false },
+  { label: 'Substituir', icon: RefreshCcw, enabled: false },
+  { label: 'Reprocessar', icon: Clock3, enabled: false },
+  { label: 'Pre visualizar XML', icon: FileText, enabled: false },
+  { label: 'Pre visualizar DANFSE', icon: ReceiptText, enabled: false },
+  { label: 'Download XML', icon: Download, enabled: false },
+  { label: 'Download PDF', icon: Download, enabled: false },
+  { label: 'Enviar Email', icon: Mail, enabled: false },
+  { label: 'Enviar WhatsApp', icon: Send, enabled: false },
+  { label: 'Enviar Contabilidade', icon: UploadCloud, enabled: false },
+  { label: 'Enviar SIEG', icon: UploadCloud, enabled: false },
+  { label: 'Enviar Dominio', icon: UploadCloud, enabled: false },
+  { label: 'Historico', icon: History, enabled: false },
+  { label: 'Logs', icon: FileSearch, enabled: false },
+  { label: 'Auditoria', icon: ShieldCheck, enabled: false },
 ];
 
 function formatCurrency(value) {
@@ -534,7 +534,8 @@ export default function CentroFiscal() {
                       key={action.label}
                       type="button"
                       variant={action.primary ? 'default' : 'outline'}
-                      disabled={isEmit ? !canEmit : saving}
+                      disabled={!action.enabled || (isEmit ? !canEmit : saving)}
+                      title={!action.enabled ? 'Ação ainda não integrada ao provedor fiscal' : undefined}
                       onClick={isEmit ? handleEmit : undefined}
                       className={action.primary ? 'bg-blue-700 text-white hover:bg-blue-800' : ''}
                     >

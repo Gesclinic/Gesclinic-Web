@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Archive, Download, Eye, FileArchive, FileText, Loader2, Mail, RefreshCcw, Search, Send, UploadCloud } from 'lucide-react';
+import { Download, Eye, FileArchive, FileText, Loader2, RefreshCcw, Search } from 'lucide-react';
 import PageLayout from '@/components/ui/PageLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,11 @@ function hasXml(invoice) {
 
 function hasPdf(invoice) {
   return Boolean(invoice.pdf_url || invoice.pdf_path || invoice.danfse_url || invoice.pdf);
+}
+
+function documentUrl(invoice, type) {
+  if (type === 'xml') return invoice.xml_url || invoice.xml_path || null;
+  return invoice.pdf_url || invoice.pdf_path || invoice.danfse_url || null;
 }
 
 function DocumentBadge({ available, label }) {
@@ -218,18 +223,9 @@ export default function XmlPdfFiscal() {
                         <TableCell><DocumentBadge available={hasPdf(invoice)} label="PDF" /></TableCell>
                         <TableCell>
                           <div className="flex justify-end gap-2">
-                            <Button size="icon" variant="ghost" title="Visualizar">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button size="icon" variant="ghost" title="Download">
-                              <Download className="h-4 w-4" />
-                            </Button>
-                            <Button size="icon" variant="ghost" title="Enviar email">
-                              <Mail className="h-4 w-4" />
-                            </Button>
-                            <Button size="icon" variant="ghost" title="Enviar contabilidade">
-                              <UploadCloud className="h-4 w-4" />
-                            </Button>
+                            {documentUrl(invoice, 'pdf') && <Button asChild size="sm" variant="outline"><a href={documentUrl(invoice, 'pdf')} target="_blank" rel="noreferrer"><Eye className="mr-2 h-4 w-4" />Ver PDF</a></Button>}
+                            {documentUrl(invoice, 'xml') && <Button asChild size="sm" variant="outline"><a href={documentUrl(invoice, 'xml')} download><Download className="mr-2 h-4 w-4" />Baixar XML</a></Button>}
+                            {!documentUrl(invoice, 'pdf') && !documentUrl(invoice, 'xml') && <span className="text-xs text-slate-400">Documentos pendentes</span>}
                           </div>
                         </TableCell>
                       </TableRow>

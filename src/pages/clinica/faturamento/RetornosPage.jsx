@@ -38,6 +38,7 @@ export default function RetornosPage() {
   const [loading, setLoading] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState(null);
   const [data, setData] = useState({ guides: [], submissions: [], receivables: [], glosas: [] });
+  const [paymentInputs, setPaymentInputs] = useState({});
   const [glosaInputs, setGlosaInputs] = useState({});
   const [glosaWorkflowInputs, setGlosaWorkflowInputs] = useState({});
 
@@ -104,18 +105,24 @@ export default function RetornosPage() {
   }, [data.glosas, data.submissions, guideById]);
 
   const registerPayment = async (receivable) => {
+    const input = paymentInputs[receivable.id] || {};
+    const amount = Number(input.amount || receivable.balance || 0);
+    if (amount <= 0 || amount > receivable.balance) {
+      toast({ title: 'Valor inválido', description: 'O recebimento deve ser maior que zero e não pode superar o saldo.', variant: 'destructive' });
+      return;
+    }
     setActionLoadingId(receivable.id);
     try {
-      const amount = receivable.balance || receivable.net_value || receivable.amount;
       await registerBillingPayment({
         clinicId,
         receivable,
         amount,
-        paymentDate: new Date().toISOString().slice(0, 10),
-        paymentMethod: receivable.payment_method || 'convenio',
-        notes: 'Recebimento registrado em Retornos de Faturamento',
+        paymentDate: input.date || new Date().toISOString().slice(0, 10),
+        paymentMethod: input.method || receivable.payment_method || 'convenio',
+        notes: input.notes || 'Recebimento registrado em Retornos de Faturamento',
       });
       toast({ title: 'Recebimento registrado', description: 'Contas a Receber, Fluxo, DRE e Cockpit passam a consumir o recebivel atualizado.' });
+      setPaymentInputs((current) => ({ ...current, [receivable.id]: {} }));
       await loadData();
     } catch (error) {
       toast({ title: 'Erro ao registrar recebimento', description: error.message, variant: 'destructive' });
@@ -227,6 +234,10 @@ export default function RetornosPage() {
                       <span className={`mt-2 inline-block rounded px-2 py-1 text-xs font-medium ${statusClass(item.billingStatus)}`}>{item.billingStatus}</span>
                     </div>
                     <div className="flex flex-wrap gap-2">
+                      <Input className="h-9 w-32" type="number" min="0.01" max={item.balance} step="0.01" placeholder="Valor recebido" value={paymentInputs[item.id]?.amount || ''} onChange={(event) => setPaymentInputs((current) => ({ ...current, [item.id]: { ...(current[item.id] || {}), amount: event.target.value } }))} />
+                      <Input className="h-9 w-36" type="date" value={paymentInputs[item.id]?.date || ''} onChange={(event) => setPaymentInputs((current) => ({ ...current, [item.id]: { ...(current[item.id] || {}), date: event.target.value } }))} />
+                      <select className="h-9 rounded-md border bg-white px-2 text-sm" value={paymentInputs[item.id]?.method || 'convenio'} onChange={(event) => setPaymentInputs((current) => ({ ...current, [item.id]: { ...(current[item.id] || {}), method: event.target.value } }))}><option value="convenio">Convênio</option><option value="pix">PIX</option><option value="transferencia">Transferência</option><option value="boleto">Boleto</option><option value="outro">Outro</option></select>
+                      <Input className="h-9 w-44" placeholder="Observação do recebimento" value={paymentInputs[item.id]?.notes || ''} onChange={(event) => setPaymentInputs((current) => ({ ...current, [item.id]: { ...(current[item.id] || {}), notes: event.target.value } }))} />
                       <Input
                         className="h-9 w-32"
                         type="number"
