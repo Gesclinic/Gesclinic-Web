@@ -77,7 +77,20 @@ jobs:
           path: dist/
 
       - name: Deploy to Vercel
-        run: npx vercel deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN }}
+        id: vercel_deploy
+        shell: bash
+        run: |
+          deployment_url=$(npx vercel deploy --prod --yes --token=${{ secrets.VERCEL_TOKEN }} | tail -n 1)
+          echo "deployment_url=$deployment_url" >> "$GITHUB_OUTPUT"
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_CLI_TELEMETRY_DISABLED: 1
+
+      - name: Promote production aliases
+        run: |
+          npx vercel alias set "${{ steps.vercel_deploy.outputs.deployment_url }}" gesclinic-web.vercel.app --token=${{ secrets.VERCEL_TOKEN }}
+          npx vercel alias set "${{ steps.vercel_deploy.outputs.deployment_url }}" www.gesclinicweb.com.br --token=${{ secrets.VERCEL_TOKEN }}
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
