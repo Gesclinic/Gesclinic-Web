@@ -67,6 +67,94 @@ export async function transitionBillingBatch({ clinicId, batchId, nextStatus, co
   return data;
 }
 
+function escapeXml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&apos;');
+}
+
+async function sha256(value) {
+  const bytes = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+export function buildBillingBatchXml(batch, guides, tissVersion = '4.01.00') {
+  const guideXml = guides.map((guide, index) => `    <guia sequencial="${index + 1}">
+      <numero>${escapeXml(guide.numero_guia || guide.guide_number || guide.id)}</numero>
+      <tipo>${escapeXml(guide.tipo_guia || 'SP-SADT')}</tipo>
+      <beneficiario>${escapeXml(guide.paciente_nome)}</beneficiario>
+      <procedimento>${escapeXml(guide.codigo_cbhpm || guide.codigo_tuss)}</procedimento>
+      <valor>${Number(guide.valor || 0).toFixed(2)}</valor>
+    </guia>`).join('\n');
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<loteGuias versaoTISS="${escapeXml(tissVersion)}">
+  <cabecalho>
+    <identificacaoLote>${escapeXml(batch.batch_key)}</identificacaoLote>
+    <operadora>${escapeXml(batch.payer_name)}</operadora>
+    <competencia>${escapeXml(batch.competency_date)}</competencia>
+  </cabecalho>
+  <guias>
+${guideXml}
+  </guias>
+</loteGuias>`;
+}
+
+export async function generateBillingBatchXml({ clinicId, batchId, tissVersion = '4.01.00' }) {
+  const { data: batch, error: batchError } = await supabase
+    .from('billing_batches')
+    .select('*, billing_batch_guides(guide_id, removed_at)')
+    .eq('clinic_id', clinicId)
+    .eq('id', batchId)
+    .single();
+  if (batchError) throw batchError;
+  if (!['draft', 'reopened', 'closed'].includes(batch.status)) {
+    throw new Error(`Lote ${batch.status} não permite nova versão XML`);
+  }
+  const guideIds = (batch.billing_batch_guides || []).filter((row) => !row.removed_at).map((row) => row.guide_id);
+  if (guideIds.length === 0) throw new Error('Lote sem guias para gerar XML');
+  const { data: guides, error: guidesError } = await supabase
+    .from('billing_guides')
+    .select('*')
+    .eq('clinic_id', clinicId)
+    .in('id', guideIds);
+  if (guidesError) throw guidesError;
+
+  let currentBatch = batch;
+  if (['draft', 'reopened'].includes(batch.status)) {
+    currentBatch = await transitionBillingBatch({ clinicId, batchId, nextStatus: 'closed' });
+  }
+  const xmlContent = buildBillingBatchXml(currentBatch, guides || [], tissVersion);
+  const contentHash = await sha256(xmlContent);
+  const version = Number(currentBatch.xml_version || 0) + 1;
+  const filePath = `tiss/lotes/${currentBatch.batch_key}-v${version}.xml`;
+  const { data: xmlVersion, error: versionError } = await supabase
+    .from('billing_xml_versions')
+    .insert({
+      clinic_id: clinicId,
+      batch_id: batchId,
+      version,
+      tiss_version: tissVersion,
+      file_path: filePath,
+      content_hash: contentHash,
+      xml_content: xmlContent,
+      validation_status: 'valid',
+    })
+    .select()
+    .single();
+  if (versionError) throw versionError;
+  const updatedBatch = await transitionBillingBatch({
+    clinicId,
+    batchId,
+    nextStatus: 'xml_generated',
+    context: { xml_path: filePath, content_hash: contentHash, tiss_version: tissVersion },
+  });
+  return { batch: updatedBatch, version: xmlVersion };
+}
+
 export async function listBillingCalendars(clinicId, { startDate, endDate } = {}) {
   let query = supabase.from('billing_calendars').select('*').eq('clinic_id', clinicId);
   if (startDate) query = query.gte('billing_close_date', startDate);

@@ -106,6 +106,7 @@ import RelatoriosPage from '@/pages/clinica/faturamento/RelatoriosPage';
 import TISSPage from '@/pages/clinica/faturamento/TISSPage';
 import FaturamentoDashboard from '@/pages/clinica/faturamento/FaturamentoDashboard';
 import FaturamentoEnterprisePage from '@/pages/clinica/faturamento/FaturamentoEnterprisePage';
+import BillingMasterPage from '@/pages/clinica/faturamento/BillingMasterPage';
 import CentroFiscal from '@/pages/clinica/faturamento/CentroFiscal';
 import NotasFiscais from '@/pages/clinica/faturamento/NotasFiscais';
 import IntegracoesFiscais from '@/pages/clinica/faturamento/IntegracoesFiscais';
@@ -631,16 +632,21 @@ export default function AppRoutes() {
           <Route path="faturamento/integracoes-fiscais" element={<IntegracoesFiscais />} />
           <Route path="faturamento/producao" element={<FaturamentoEnterprisePage page="producao" />} />
           <Route path="faturamento/atendimentos" element={<FaturamentoEnterprisePage page="atendimentos" />} />
+          <Route path="faturamento/pre-faturamento" element={<BillingMasterPage page="prebilling" />} />
+          <Route path="faturamento/contratos-regras" element={<BillingMasterPage page="contracts" />} />
+          <Route path="faturamento/autorizacoes-documentos" element={<BillingMasterPage page="documents" />} />
           <Route path="faturamento/convenios" element={<FaturamentoEnterprisePage page="convenios" />} />
           <Route path="faturamento/guias" element={<GuiasPage />} />
           <Route path="faturamento/lotes-faturamento" element={<LotesPage />} />
           <Route path="faturamento/xml" element={<XMLPage />} />
           <Route path="faturamento/retornos" element={<RetornosPage />} />
+          <Route path="faturamento/conciliacao" element={<BillingMasterPage page="reconciliation" />} />
+          <Route path="faturamento/rastreabilidade" element={<BillingMasterPage page="traceability" />} />
           <Route path="faturamento/lotes" element={<LotesPage />} />
           <Route path="faturamento/auditoria" element={<FaturamentoEnterprisePage page="auditoria" />} />
           <Route path="faturamento/forecast" element={<FaturamentoEnterprisePage page="forecast" />} />
           <Route path="faturamento/inteligencia" element={<FaturamentoEnterprisePage page="inteligencia" />} />
-          <Route path="faturamento/pendencias" element={<FaturamentoEnterprisePage page="pendencias" />} />
+          <Route path="faturamento/pendencias" element={<BillingMasterPage page="pending" />} />
           <Route path="faturamento/relatorios" element={<RelatoriosPage />} />
           <Route path="faturamento/configuracoes" element={<Navigate to="/clinica/configuracoes/faturamento" replace />} />
           <Route path="faturamento/tiss" element={<TISSPage />} />

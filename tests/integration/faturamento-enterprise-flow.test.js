@@ -7,6 +7,7 @@ import {
 } from '../../src/lib/faturamentoOperationalApi.js';
 import { getUnlinkedBillingGuides } from '../../src/lib/faturamentoReportsApi.js';
 import { canTransitionBillingBatch } from '../../src/lib/billingOperationsApi.js';
+import { classifyBillingWorkItem } from '../../src/lib/billingMasterApi.js';
 
 const clinicId = '11111111-1111-4111-8111-111111111111';
 
@@ -27,6 +28,39 @@ function buildGuide(tipoGuia) {
 }
 
 describe('Faturamento enterprise TISS flow', () => {
+  it('bloqueia pre-faturamento quando autorizacao, TUSS e documentos obrigatorios faltam', () => {
+    const result = classifyBillingWorkItem({
+      appointment: { patient_id: 'patient-1', payer_id: 'payer-1' },
+      service: { value: 180, services: { name: 'Consulta' } },
+      payerSetting: { requires_eligibility: true, requires_authorization: true, requires_tuss: true },
+      documentRequirements: [{ required: true, blocks_billing: true }],
+    });
+
+    expect(result.status).toBe('blocked');
+    expect(result.blockerCodes).toEqual(
+      expect.arrayContaining(['TUSS_AUSENTE', 'AUTORIZACAO_AUSENTE', 'DOCUMENTOS_PENDENTES']),
+    );
+    expect(result.eligibilityStatus).toBe('pending');
+  });
+
+  it('mantem servico apto para revisao quando regras e valor estao completos', () => {
+    const result = classifyBillingWorkItem({
+      appointment: { patient_id: 'patient-1', payer_id: 'payer-1' },
+      service: { value: 180, services: { tuss_code: '10101012' } },
+      payerSetting: { requires_eligibility: false, requires_authorization: false, requires_tuss: true },
+      documentRequirements: [],
+    });
+
+    expect(result).toMatchObject({
+      status: 'pending',
+      blockerCodes: [],
+      eligibilityStatus: 'waived',
+      authorizationStatus: 'waived',
+      documentStatus: 'waived',
+      valueStatus: 'valid',
+    });
+  });
+
   it.each(['SP', 'SADT', 'Internação'])('valida e mapeia guia %s para billing_guides', (tipoGuia) => {
     const payload = buildGuide(tipoGuia);
 

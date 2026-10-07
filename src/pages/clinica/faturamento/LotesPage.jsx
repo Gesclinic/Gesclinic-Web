@@ -2,11 +2,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useClinicContext } from '@/contexts/ClinicContext';
 import { useToast } from '@/components/ui/use-toast';
 import { Download, Eye, FileText, Loader2, RefreshCw, RotateCcw, Send } from 'lucide-react';
 import { markGuidesAsBilled, markGuideAsSent } from '@/lib/faturamentoOperationalApi';
-import { listBillingBatches } from '@/lib/billingOperationsApi';
+import {
+  generateBillingBatchXml,
+  listBillingBatches,
+  transitionBillingBatch,
+} from '@/lib/billingOperationsApi';
 
 const statusClasses = {
   draft: 'bg-gray-100 text-gray-800',
@@ -113,7 +117,7 @@ function normalizePersistedBatch(batch) {
 }
 
 export default function LotesPage() {
-  const { clinicId } = useAuth();
+  const { clinicId } = useClinicContext();
   const { toast } = useToast();
   const [guides, setGuides] = useState([]);
   const [submissions, setSubmissions] = useState([]);
@@ -176,6 +180,21 @@ export default function LotesPage() {
     setActionLoading(true);
     try {
       const lotGuides = guides.filter((guide) => lot.guideIds.includes(guide.id));
+      if (lot.persisted && status === 'Enviado') {
+        await transitionBillingBatch({ clinicId, batchId: lot.id, nextStatus: 'sent' });
+        await Promise.all(lotGuides.map((guide) => markGuideAsSent(clinicId, guide)));
+        toast({ title: 'Lote enviado', description: `${lot.nome} avançou para enviado com auditoria.` });
+        await loadData();
+        return;
+      }
+
+      if (lot.persisted && status === 'Aguardando XML') {
+        await transitionBillingBatch({ clinicId, batchId: lot.id, nextStatus: 'reopened' });
+        toast({ title: 'Lote reaberto', description: 'Uma nova versão XML poderá ser gerada após o fechamento.' });
+        await loadData();
+        return;
+      }
+
       if (status === 'Faturado') {
         await markGuidesAsBilled(clinicId, lotGuides);
         toast({
@@ -221,6 +240,15 @@ export default function LotesPage() {
   const prepareXml = async (lot) => {
     setActionLoading(true);
     try {
+      if (lot.persisted) {
+        const result = await generateBillingBatchXml({ clinicId, batchId: lot.id });
+        toast({
+          title: 'XML versionado',
+          description: `${lot.guias} guia(s) na versão ${result.version.version}.`,
+        });
+        await loadData();
+        return;
+      }
       const xmlPath = lot.xmlPath || `tiss/lotes/${lot.nome}-${Date.now()}.xml`;
       const { error } = await supabase
         .from('billing_guides')

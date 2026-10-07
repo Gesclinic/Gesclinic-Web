@@ -2,11 +2,15 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useClinicContext } from '@/contexts/ClinicContext';
 import { useToast } from '@/components/ui/use-toast';
 import { CheckCircle, FileText, Loader2, RefreshCw, Send, Upload } from 'lucide-react';
-import { supabase } from '@/lib/customSupabaseClient';
 import { loadFaturamentoOperationalData, markGuideAsSent } from '@/lib/faturamentoOperationalApi';
+import {
+  generateBillingBatchXml,
+  listBillingBatches,
+  transitionBillingBatch,
+} from '@/lib/billingOperationsApi';
 
 function formatDate(value) {
   if (!value) return '-';
@@ -38,20 +42,43 @@ function buildLots(guides) {
   return Array.from(map.values()).sort((a, b) => String(b.data).localeCompare(String(a.data)));
 }
 
+function buildPersistedLots(batches) {
+  const labels = {
+    draft: 'Aguardando fechamento', closed: 'Aguardando XML', reopened: 'Aguardando XML',
+    xml_generated: 'Pronto para envio', sent: 'Enviado', protocolled: 'Em processamento',
+    processed: 'Em processamento', partially_paid: 'Em processamento', paid: 'Processado', glossed: 'Processado',
+  };
+  return batches.map((batch) => ({
+    id: batch.id,
+    lote: batch.batch_key,
+    guias: (batch.billing_batch_guides || []).filter((row) => !row.removed_at).map((row) => ({ id: row.guide_id })),
+    data: batch.created_at,
+    status: labels[batch.status] || batch.status,
+    xmlPath: batch.xml_path,
+    persisted: true,
+    rawStatus: batch.status,
+    xmlVersion: batch.xml_version,
+  }));
+}
+
 export default function XMLPage() {
-  const { clinicId } = useAuth();
+  const { clinicId } = useClinicContext();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('pendentes');
   const [loading, setLoading] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState(null);
-  const [data, setData] = useState({ guides: [], submissions: [] });
+  const [data, setData] = useState({ guides: [], submissions: [], batches: [] });
   const [lastPreparedBatch, setLastPreparedBatch] = useState(null);
 
   const loadData = async () => {
     if (!clinicId) return;
     setLoading(true);
     try {
-      setData(await loadFaturamentoOperationalData(clinicId));
+      const [operational, batches] = await Promise.all([
+        loadFaturamentoOperationalData(clinicId),
+        listBillingBatches(clinicId),
+      ]);
+      setData({ ...operational, batches });
     } catch (error) {
       toast({ title: 'Erro ao carregar XML TISS', description: error.message, variant: 'destructive' });
     } finally {
@@ -63,7 +90,7 @@ export default function XMLPage() {
     loadData();
   }, [clinicId]);
 
-  const lots = useMemo(() => buildLots(data.guides || []), [data.guides]);
+  const lots = useMemo(() => data.batches?.length ? buildPersistedLots(data.batches) : buildLots(data.guides || []), [data.batches, data.guides]);
   const pendingLots = lots.filter((lot) => lot.status !== 'Enviado' && lot.status !== 'Em processamento');
   const sentLots = lots.filter((lot) => lot.status === 'Enviado');
   const processingLots = lots.filter((lot) => lot.status === 'Em processamento');
@@ -71,16 +98,16 @@ export default function XMLPage() {
   const prepareXml = async (lot) => {
     setActionLoadingId(lot.id);
     try {
+      if (lot.persisted) {
+        const result = await generateBillingBatchXml({ clinicId, batchId: lot.id });
+        setLastPreparedBatch({ lote: lot.lote, guias: lot.guias.length, fileName: result.version.file_path });
+        toast({ title: 'XML versionado', description: `Versão ${result.version.version} validada e pronta para envio.` });
+        await loadData();
+        return;
+      }
       const xmlPath = lot.xmlPath || `tiss/guias/${lot.lote}-${Date.now()}.xml`;
-      const { error } = await supabase
-        .from('billing_guides')
-        .update({ status: 'XML Gerado', xml_path: xmlPath, data_atualizacao: new Date().toISOString() })
-        .eq('clinic_id', clinicId)
-        .in('id', lot.guias.map((guide) => guide.id));
-      if (error) throw error;
       setLastPreparedBatch({ lote: lot.lote, guias: lot.guias.length, fileName: xmlPath });
-      toast({ title: 'XML preparado', description: `${lot.guias.length} guia(s) prontas para envio.` });
-      await loadData();
+      throw new Error('Lote legado sem entidade persistente. Recrie o lote antes de gerar XML.');
     } catch (error) {
       toast({ title: 'Erro ao preparar XML', description: error.message, variant: 'destructive' });
     } finally {
@@ -91,6 +118,9 @@ export default function XMLPage() {
   const sendLot = async (lot) => {
     setActionLoadingId(lot.id);
     try {
+      if (lot.persisted) {
+        await transitionBillingBatch({ clinicId, batchId: lot.id, nextStatus: 'sent' });
+      }
       await Promise.all(lot.guias.map((guide) => markGuideAsSent(clinicId, guide)));
       toast({ title: 'XML enviado', description: 'Guias enviadas e recebiveis sincronizados com Contas a Receber.' });
       setActiveTab('enviados');
