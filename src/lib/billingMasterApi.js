@@ -20,6 +20,16 @@ function dateOnly(value) {
   return value ? String(value).slice(0, 10) : new Date().toISOString().slice(0, 10);
 }
 
+function payerServiceDate(value) {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString().slice(0, 10);
+  const text = String(value || '').trim();
+  const brazilianDate = text.match(/^(\d{2})\/(\d{2})\/(\d{2}|\d{4})$/);
+  if (!brazilianDate) return dateOnly(value);
+  const [, day, month, rawYear] = brazilianDate;
+  const year = rawYear.length === 2 ? `20${rawYear}` : rawYear;
+  return `${year}-${month}-${day}`;
+}
+
 function firstRelated(value) {
   return Array.isArray(value) ? value[0] : value;
 }
@@ -38,6 +48,39 @@ function parseMoney(value) {
   const text = String(value || '').trim().replace(/R\$\s?/gi, '').replace(/\s/g, '');
   const normalized = text.includes(',') ? text.replace(/\./g, '').replace(',', '.') : text;
   return numberValue(normalized);
+}
+
+function getPayerPaymentSheetData(sheet, XLSX) {
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: false });
+  const paymentIdentifierRow = rows.find((row) =>
+    String(row?.[0] || '').toUpperCase().includes('IDENTIFICADOR PAGAMENTO'),
+  );
+  const paymentIdentifier = String(paymentIdentifierRow?.[0] || '').match(/:\s*([^\s]+)/)?.[1] || null;
+  const headerIndex = rows.findIndex((row) => {
+    const headers = new Set((row || []).map(normalizeHeader));
+    return headers.has('guia') && headers.has('beneficiario') && headers.has('codigoprocedimento');
+  });
+
+  if (headerIndex < 0) {
+    return {
+      paymentIdentifier,
+      headerRowNumber: 1,
+      sourceRows: XLSX.utils.sheet_to_json(sheet, { defval: '' }),
+    };
+  }
+
+  const headers = rows[headerIndex];
+  const sourceRows = rows.slice(headerIndex + 1)
+    .filter((row) => row.some((value) => String(value || '').trim()))
+    .map((row) => Object.fromEntries(headers.map((header, index) => [header, row[index] ?? ''])));
+
+  return { paymentIdentifier, headerRowNumber: headerIndex + 1, sourceRows };
+}
+
+function reportDateFromFileName(fileName) {
+  const compactDate = String(fileName || '').match(/(?:^|_)(20\d{6})(?:_|\.|$)/)?.[1];
+  if (!compactDate) return null;
+  return `${compactDate.slice(0, 4)}-${compactDate.slice(4, 6)}-${compactDate.slice(6, 8)}`;
 }
 
 async function hashBuffer(buffer) {
@@ -249,33 +292,64 @@ export async function importPayerPaymentFile({ clinicId, payerId, payerName, fil
   if (!file || !payerName) throw new Error('Informe operadora e arquivo de retorno');
   const buffer = await file.arrayBuffer();
   const fileHash = await hashBuffer(buffer);
+  const { data: previousImport, error: previousImportError } = await supabase
+    .from('payer_payment_imports')
+    .select('*')
+    .eq('clinic_id', clinicId)
+    .eq('file_hash', fileHash)
+    .maybeSingle();
+  if (previousImportError) throw previousImportError;
+  if (previousImport) {
+    throw new Error(`Arquivo já importado em ${new Date(previousImport.imported_at).toLocaleString('pt-BR')}`);
+  }
+
   const XLSX = await import('xlsx');
   const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const sourceRows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+  const { paymentIdentifier, headerRowNumber, sourceRows } = getPayerPaymentSheetData(sheet, XLSX);
   if (sourceRows.length === 0) throw new Error('Arquivo sem linhas de demonstrativo');
 
   const extension = String(file.name).split('.').pop()?.toLowerCase();
   const fileFormat = ['xlsx', 'csv', 'txt'].includes(extension) ? extension : 'xlsx';
   const normalizedRows = sourceRows.map((row, index) => {
-    const presentedAmount = parseMoney(rowValue(row, ['valor apresentado', 'valor cobrado', 'apresentado']));
-    const paidAmount = parseMoney(rowValue(row, ['valor pago', 'pago', 'valor liberado']));
     const glosaAmount = parseMoney(rowValue(row, ['valor glosa', 'glosa', 'valor glosado']));
+    const totalAmount = parseMoney(rowValue(row, ['total']));
+    const explicitPresentedAmount = rowValue(row, ['valor apresentado', 'valor cobrado', 'apresentado']);
+    const explicitPaidAmount = rowValue(row, ['valor pago', 'pago', 'valor liberado']);
+    const presentedAmount = explicitPresentedAmount === undefined
+      ? totalAmount + glosaAmount
+      : parseMoney(explicitPresentedAmount);
+    const paidAmount = explicitPaidAmount === undefined ? totalAmount : parseMoney(explicitPaidAmount);
+    const requesterName = String(rowValue(row, ['solicitante']) || '').trim() || null;
+    const procedureName = String(rowValue(row, ['nome procedimento', 'descricao procedimento']) || '').trim() || null;
+    const presentedQuantity = parseMoney(rowValue(row, ['qtde apresentada', 'quantidade apresentada']));
+    const paidQuantity = parseMoney(rowValue(row, ['qtde paga', 'quantidade paga']));
+    const honorariumAmount = parseMoney(rowValue(row, ['honorario', 'honorário']));
     return {
       clinic_id: clinicId,
-      line_number: index + 2,
+      line_number: headerRowNumber + index + 2,
       guide_number: String(rowValue(row, ['numero guia', 'guia', 'nr guia']) || '').trim() || null,
-      protocol_number: String(rowValue(row, ['protocolo', 'numero protocolo']) || '').trim() || null,
+      protocol_number: String(rowValue(row, ['protocolo', 'numero protocolo', 'conta']) || '').trim() || null,
       patient_name: String(rowValue(row, ['paciente', 'beneficiario', 'nome paciente']) || '').trim() || null,
-      procedure_code: String(rowValue(row, ['procedimento', 'codigo tuss', 'tuss']) || '').trim() || null,
-      service_date: dateOnly(rowValue(row, ['data atendimento', 'data execucao', 'data'])),
+      procedure_code: String(rowValue(row, ['procedimento', 'codigo procedimento', 'codigo tuss', 'tuss']) || '').trim() || null,
+      service_date: payerServiceDate(rowValue(row, ['data atendimento', 'data servico', 'data execucao', 'data'])),
       presented_amount: presentedAmount,
       paid_amount: paidAmount,
       glosa_amount: glosaAmount,
       discount_amount: parseMoney(rowValue(row, ['desconto', 'valor desconto'])),
       tax_amount: parseMoney(rowValue(row, ['imposto', 'tributo', 'retencao'])),
       event_type: glosaAmount > 0 ? 'glosa' : paidAmount < presentedAmount ? 'partial_payment' : 'payment',
-      raw_data: row,
+      raw_data: {
+        ...row,
+        _repasse: {
+          requester_name: requesterName,
+          procedure_name: procedureName,
+          presented_quantity: presentedQuantity,
+          paid_quantity: paidQuantity,
+          honorarium_amount: honorariumAmount,
+          payment_identifier: paymentIdentifier,
+        },
+      },
     };
   });
 
@@ -286,6 +360,10 @@ export async function importPayerPaymentFile({ clinicId, payerId, payerName, fil
       file_name: file.name, file_hash: fileHash, file_format: fileFormat,
       status: 'validated', total_rows: normalizedRows.length,
       total_amount: normalizedRows.reduce((sum, row) => sum + row.paid_amount, 0),
+      metadata: {
+        payment_identifier: paymentIdentifier,
+        report_date: reportDateFromFileName(file.name),
+      },
     })
     .select()
     .single();
@@ -333,7 +411,18 @@ export async function importPayerPaymentFile({ clinicId, payerId, payerName, fil
     .eq('clinic_id', clinicId)
     .eq('id', imported.id);
   if (updateError) throw updateError;
-  return { imported, lines, matches };
+
+  let repasse = null;
+  if (paymentIdentifier) {
+    const { data, error } = await supabase.rpc('process_payer_report_repasse', {
+      p_clinic_id: clinicId,
+      p_import_id: imported.id,
+    });
+    if (error && error.code !== 'PGRST202' && error.code !== '42883') throw error;
+    repasse = data || null;
+  }
+
+  return { imported, lines, matches, repasse };
 }
 
 export async function listBillingXmlVersions(clinicId, batchId = null) {
