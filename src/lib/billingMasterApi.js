@@ -209,6 +209,24 @@ export async function transitionBillingWorkItem({ clinicId, workItemId, nextStat
   return data;
 }
 
+export async function generateGuideFromBillingWorkItem(clinicId, workItemId) {
+  const { data, error } = await supabase.rpc('generate_guide_from_billing_work_item', {
+    p_clinic_id: clinicId,
+    p_work_item_id: workItemId,
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function applyPayerPaymentMatch(clinicId, matchId) {
+  const { data, error } = await supabase.rpc('apply_payer_payment_match', {
+    p_clinic_id: clinicId,
+    p_match_id: matchId,
+  });
+  if (error) throw error;
+  return data;
+}
+
 export async function listBillingPendingItems(clinicId, status = 'open') {
   let query = supabase.from('billing_pending_items').select('*').eq('clinic_id', clinicId);
   if (status !== 'all') query = query.eq('status', status);

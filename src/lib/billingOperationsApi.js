@@ -46,6 +46,17 @@ export async function createBillingBatch({
   return data;
 }
 
+export async function setBillingBatchGuide({ clinicId, batchId, guideId, include }) {
+  const { data, error } = await supabase.rpc('set_billing_batch_guide', {
+    p_clinic_id: clinicId,
+    p_batch_id: batchId,
+    p_guide_id: guideId,
+    p_include: include,
+  });
+  if (error) throw error;
+  return data;
+}
+
 export async function transitionBillingBatch({ clinicId, batchId, nextStatus, context = {} }) {
   const { data: current, error: currentError } = await supabase
     .from('billing_batches')
