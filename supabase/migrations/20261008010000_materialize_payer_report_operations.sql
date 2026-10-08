@@ -215,8 +215,6 @@ BEGIN
       jsonb_build_object('source', 'payer_report', 'import_id', p_import_id, 'import_line_id', v_line.id))
     RETURNING id INTO v_invoice_id;
 
-    UPDATE public.appointments SET ar_id = v_invoice_id WHERE id = v_appointment_id;
-
     INSERT INTO public.payer_report_operational_links (clinic_id, import_id, import_line_id,
       patient_id, service_id, appointment_id, appointment_service_id, billing_work_item_id,
       billing_guide_id, invoice_id)
