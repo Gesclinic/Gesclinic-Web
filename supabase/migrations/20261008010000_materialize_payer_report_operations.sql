@@ -175,16 +175,21 @@ BEGIN
       v_line.glosa_amount, 1, 'completed', v_repasse.professional_percentage)
     RETURNING id INTO v_appointment_service_id;
 
-    INSERT INTO public.billing_guides (clinic_id, numero_guia, tipo_guia, status,
-      paciente_nome, numero_carteirinha, convenio, profissional, codigo_cbhpm, valor, observacoes, data_criacao,
-      data_processamento, appointment_id, workflow_status, negotiated_value, payer_id,
-      patient_id, professional_id, procedure_id)
-    VALUES (p_clinic_id, v_line.guide_number, 'retorno_operadora', 'Pago', v_line.patient_name,
-      'NÃO INFORMADO', v_import.payer_name, v_repasse.requester_name, v_line.procedure_code, v_line.presented_amount,
-      'Importado do demonstrativo ' || v_import.file_name, v_service_date, v_import.processed_at,
-      v_appointment_id, 'paid', v_line.paid_amount, v_import.payer_id, v_patient_id,
-      v_repasse.professional_id, v_service_id)
-    RETURNING id INTO v_guide_id;
+    SELECT id INTO v_guide_id FROM public.billing_guides
+    WHERE numero_guia = v_line.guide_number LIMIT 1;
+
+    IF v_guide_id IS NULL THEN
+      INSERT INTO public.billing_guides (clinic_id, numero_guia, tipo_guia, status,
+        paciente_nome, numero_carteirinha, convenio, profissional, codigo_cbhpm, valor, observacoes, data_criacao,
+        data_processamento, appointment_id, workflow_status, negotiated_value, payer_id,
+        patient_id, professional_id, procedure_id)
+      VALUES (p_clinic_id, v_line.guide_number, 'retorno_operadora', 'Pago', v_line.patient_name,
+        'NÃO INFORMADO', v_import.payer_name, v_repasse.requester_name, v_line.procedure_code, v_line.presented_amount,
+        'Importado do demonstrativo ' || v_import.file_name, v_service_date, v_import.processed_at,
+        v_appointment_id, 'paid', v_line.paid_amount, v_import.payer_id, v_patient_id,
+        v_repasse.professional_id, v_service_id)
+      RETURNING id INTO v_guide_id;
+    END IF;
 
     INSERT INTO public.billing_work_items (clinic_id, appointment_id, appointment_service_id,
       guide_id, payer_id, patient_id, professional_id, procedure_id, competency_date,
