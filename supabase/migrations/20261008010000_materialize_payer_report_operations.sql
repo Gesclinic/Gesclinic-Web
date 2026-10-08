@@ -198,12 +198,12 @@ BEGIN
     RETURNING id INTO v_work_item_id;
 
     INSERT INTO public.ar_invoices (clinic_id, patient_id, patient_name, appointment_id,
-      payer_id, payer_name, payer_type, description, amount, net_value, gross_amount,
+      payer_id, payer_type, description, amount, net_value, gross_amount,
       received_value, paid_total, glosa_value, balance_amount, due_date, received_at,
       received_date, status, guide_number, insurance_return_status,
       insurance_return_protocol, insurance_return_date, metadata)
     VALUES (p_clinic_id, v_patient_id, v_line.patient_name, v_appointment_id,
-      v_import.payer_id, v_import.payer_name, 'health_insurance', v_procedure_name,
+      v_import.payer_id, 'health_insurance', v_procedure_name,
       v_line.presented_amount, v_line.paid_amount, v_line.presented_amount,
       v_line.paid_amount, v_line.paid_amount, v_line.glosa_amount,
       GREATEST(v_line.presented_amount - v_line.paid_amount - v_line.glosa_amount, 0),
