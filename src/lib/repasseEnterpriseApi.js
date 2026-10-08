@@ -157,6 +157,23 @@ export async function listMedicalProduction({
       )
     : [];
 
+  const professionalIds = [...new Set(filteredAppointments.map((row) => row.professional_id).filter(Boolean))];
+  const patientIds = [...new Set(filteredAppointments.map((row) => row.patient_id).filter(Boolean))];
+  const serviceIds = [...new Set(services.map((row) => row.service_id).filter(Boolean))];
+  const payerIds = [...new Set(filteredAppointments.map((row) => row.health_insurance_id || row.payer_id).filter(Boolean))];
+  const [professionals, patients, serviceDefinitions, payers, guides] = await Promise.all([
+    professionalIds.length ? selectSafe('professionals', (q) => q.select('id, name, specialization').in('id', professionalIds)) : [],
+    patientIds.length ? selectSafe('patients', (q) => q.select('id, name').in('id', patientIds)) : [],
+    serviceIds.length ? selectSafe('services', (q) => q.select('id, name, code, tuss_code').in('id', serviceIds)) : [],
+    payerIds.length ? selectSafe('health_insurances', (q) => q.select('id, name, fantasy_name').in('id', payerIds)) : [],
+    appointmentIds.length ? selectSafe('billing_guides', (q) => q.select('appointment_id, paciente_nome, profissional, convenio, codigo_cbhpm').in('appointment_id', appointmentIds)) : [],
+  ]);
+  const professionalsById = new Map(professionals.map((row) => [row.id, row]));
+  const patientsById = new Map(patients.map((row) => [row.id, row]));
+  const servicesById = new Map(serviceDefinitions.map((row) => [row.id, row]));
+  const payersById = new Map(payers.map((row) => [row.id, row]));
+  const guidesByAppointmentId = new Map(guides.map((row) => [row.appointment_id, row]));
+
   const invoices = await selectSafe('ar_invoices', (q) =>
     q.select('*').eq('clinic_id', clinicId).limit(5000),
   );
@@ -191,6 +208,11 @@ export async function listMedicalProduction({
     const appointmentServices = serviceByAppointment.get(appointment.id) || [null];
 
     for (const svc of appointmentServices) {
+      const professional = professionalsById.get(appointment.professional_id) || {};
+      const patient = patientsById.get(appointment.patient_id) || {};
+      const serviceDefinition = servicesById.get(svc?.service_id) || {};
+      const payer = payersById.get(appointment.health_insurance_id || appointment.payer_id) || {};
+      const guide = guidesByAppointmentId.get(appointment.id) || {};
       const qty = toNumber(svc?.quantity || 1);
       const unitPrice = toNumber(
         svc?.unit_price ?? svc?.price ?? appointment?.amount ?? appointment?.value ?? 0,
@@ -210,10 +232,10 @@ export async function listMedicalProduction({
       rows.push({
         appointment_id: appointment.id,
         professional_id: appointment.professional_id,
-        professional_name: appointment.professional_name || appointment.doctor_name || 'N/A',
-        patient_name: appointment.patient_name || 'N/A',
-        convenio_name: appointment.health_insurance_name || appointment.payer_name || 'Particular',
-        procedure_name: svc?.service_name || svc?.description || appointment.service_name || 'Atendimento',
+        professional_name: appointment.professional_name || appointment.doctor_name || professional.name || guide.profissional || 'Profissional não identificado',
+        patient_name: appointment.patient_name || patient.name || guide.paciente_nome || 'Paciente não identificado',
+        convenio_name: appointment.health_insurance_name || appointment.payer_name || payer.fantasy_name || payer.name || guide.convenio || 'Particular',
+        procedure_name: svc?.service_name || svc?.description || serviceDefinition.name || appointment.service_name || (guide.codigo_cbhpm ? `Procedimento TUSS ${guide.codigo_cbhpm}` : 'Atendimento'),
         date: toDateOnly(extractAppointmentDate(appointment)),
         quantity: qty,
         produced_amount: produced,
@@ -223,8 +245,8 @@ export async function listMedicalProduction({
         eligible_amount: eligible,
         status: appointment.status || 'atendido',
         unit_id: appointment.unit_id || null,
-        specialty: appointment.specialty || appointment.professional_specialty || null,
-        convenio_id: appointment.health_insurance_id || null,
+        specialty: appointment.specialty || appointment.professional_specialty || professional.specialization || null,
+        convenio_id: appointment.health_insurance_id || appointment.payer_id || null,
         procedure_id: svc?.service_id || appointment.service_id || null,
       });
     }
