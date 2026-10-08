@@ -175,11 +175,11 @@ BEGIN
     RETURNING id INTO v_appointment_service_id;
 
     INSERT INTO public.billing_guides (clinic_id, numero_guia, tipo_guia, status,
-      paciente_nome, convenio, profissional, codigo_cbhpm, valor, observacoes, data_criacao,
+      paciente_nome, numero_carteirinha, convenio, profissional, codigo_cbhpm, valor, observacoes, data_criacao,
       data_processamento, appointment_id, workflow_status, negotiated_value, payer_id,
       patient_id, professional_id, procedure_id)
     VALUES (p_clinic_id, v_line.guide_number, 'retorno_operadora', 'Pago', v_line.patient_name,
-      v_import.payer_name, v_repasse.requester_name, v_line.procedure_code, v_line.presented_amount,
+      'NÃO INFORMADO', v_import.payer_name, v_repasse.requester_name, v_line.procedure_code, v_line.presented_amount,
       'Importado do demonstrativo ' || v_import.file_name, v_service_date, v_import.processed_at,
       v_appointment_id, 'paid', v_line.paid_amount, v_import.payer_id, v_patient_id,
       v_repasse.professional_id, v_service_id)
