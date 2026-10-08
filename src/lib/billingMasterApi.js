@@ -446,10 +446,42 @@ export async function loadBillingMasterWorkspace(clinicId) {
   ]);
   const failed = [importsResult, matchesResult, auditResult].find((result) => result.error);
   if (failed?.error) throw failed.error;
+
+  const patientIds = [...new Set(workItems.map((row) => row.patient_id).filter(Boolean))];
+  const professionalIds = [...new Set(workItems.map((row) => row.professional_id).filter(Boolean))];
+  const procedureIds = [...new Set(workItems.map((row) => row.procedure_id).filter(Boolean))];
+  const payerIds = [...new Set(workItems.map((row) => row.payer_id).filter(Boolean))];
+  const [patientsResult, professionalsResult, proceduresResult, payersResult] = await Promise.all([
+    patientIds.length ? supabase.from('patients').select('id, name').in('id', patientIds) : Promise.resolve({ data: [], error: null }),
+    professionalIds.length ? supabase.from('professionals').select('id, name').in('id', professionalIds) : Promise.resolve({ data: [], error: null }),
+    procedureIds.length ? supabase.from('services').select('id, name, code, tuss_code').in('id', procedureIds) : Promise.resolve({ data: [], error: null }),
+    payerIds.length ? supabase.from('health_insurances').select('id, name, fantasy_name').in('id', payerIds) : Promise.resolve({ data: [], error: null }),
+  ]);
+  const enrichmentFailure = [patientsResult, professionalsResult, proceduresResult, payersResult]
+    .find((result) => result.error);
+  if (enrichmentFailure?.error) throw enrichmentFailure.error;
+
+  const patientsById = new Map((patientsResult.data || []).map((row) => [row.id, row]));
+  const professionalsById = new Map((professionalsResult.data || []).map((row) => [row.id, row]));
+  const proceduresById = new Map((proceduresResult.data || []).map((row) => [row.id, row]));
+  const payersById = new Map((payersResult.data || []).map((row) => [row.id, row]));
+  const enrichedWorkItems = workItems.map((row) => {
+    const procedure = proceduresById.get(row.procedure_id) || {};
+    const payer = payersById.get(row.payer_id) || {};
+    return {
+      ...row,
+      patient_name: patientsById.get(row.patient_id)?.name || 'Paciente não identificado',
+      professional_name: professionalsById.get(row.professional_id)?.name || 'Profissional não identificado',
+      procedure_name: procedure.name || 'Procedimento não identificado',
+      procedure_code: procedure.tuss_code || procedure.code || null,
+      payer_name: payer.fantasy_name || payer.name || 'Convênio não identificado',
+    };
+  });
+
   return {
     settings,
     requirements,
-    workItems,
+    workItems: enrichedWorkItems,
     pendingItems,
     xmlVersions,
     imports: importsResult.data || [],

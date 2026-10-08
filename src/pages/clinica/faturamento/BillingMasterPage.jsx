@@ -100,10 +100,42 @@ function currency(value) {
   return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+const STATUS_LABELS = {
+  pending: 'Pendente',
+  blocked: 'Com pendência',
+  in_review: 'Em revisão',
+  ready: 'Pronto para gerar guia',
+  guide_generated: 'Guia gerada',
+  batched: 'Incluído em lote',
+  canceled: 'Cancelado',
+  eligible: 'Elegível',
+  ineligible: 'Não elegível',
+  authorized: 'Autorizado',
+  denied: 'Negado',
+  waived: 'Não exigido',
+  validated: 'Validado',
+};
+
+const BLOCKER_LABELS = {
+  CADASTRO_PACIENTE: 'Cadastro do paciente incompleto',
+  CONVENIO_AUSENTE: 'Convênio não informado',
+  TUSS_AUSENTE: 'Código TUSS não informado',
+  AUTORIZACAO_AUSENTE: 'Autorização não informada',
+  CID_AUSENTE: 'CID não informado',
+  VALOR_INVALIDO: 'Valor do procedimento inválido',
+  VALUE_INVALID: 'Valor do procedimento inválido',
+  DOCUMENTOS_PENDENTES: 'Documentos obrigatórios pendentes',
+};
+
+function readableLabel(value, labels = STATUS_LABELS) {
+  const normalized = String(value || '').toLowerCase();
+  return labels[value] || labels[normalized] || String(value || '-').replaceAll('_', ' ').toLowerCase();
+}
+
 function Status({ value }) {
   return (
-    <span className="inline-flex rounded border bg-muted/40 px-2 py-1 text-xs font-medium uppercase">
-      {String(value || '-').replaceAll('_', ' ')}
+    <span className="inline-flex rounded border bg-muted/40 px-2 py-1 text-xs font-medium">
+      {readableLabel(value)}
     </span>
   );
 }
@@ -142,18 +174,18 @@ function WorkQueue({ rows, actionId, selectedIds, onSelect, onSelectAll, onOpen,
               {rows.map((row) => (
                 <tr key={row.id} className="border-t align-top">
                   <td className="px-3 py-3"><input type="checkbox" aria-label={`Selecionar atendimento ${row.appointment_id}`} checked={selectedIds.includes(row.id)} onChange={() => onSelect(row.id)} /></td>
-                  <td className="px-3 py-3">{row.competency_date}</td>
-                  <td className="px-3 py-3"><button type="button" className="flex items-center gap-1 font-mono text-xs text-blue-700 hover:underline" onClick={() => onOpen(row)}>{row.appointment_id}<ExternalLink className="h-3 w-3" /></button></td>
+                  <td className="px-3 py-3">{row.competency_date ? new Date(`${row.competency_date}T00:00:00`).toLocaleDateString('pt-BR') : '-'}</td>
+                  <td className="px-3 py-3"><button type="button" className="text-left text-blue-700 hover:underline" onClick={() => onOpen(row)}><span className="flex items-center gap-1 font-medium">{row.patient_name}<ExternalLink className="h-3 w-3" /></span><span className="block text-xs text-muted-foreground">{row.procedure_name}{row.procedure_code ? ` · TUSS ${row.procedure_code}` : ''}</span><span className="block text-xs text-muted-foreground">{row.professional_name} · {row.payer_name}</span></button></td>
                   <td className="px-3 py-3">
                     <Status value={row.status} />
                     <div className="mt-2 text-xs text-muted-foreground">
-                      Elegibilidade: {row.eligibility_status} · Autorização:{' '}
-                      {row.authorization_status} · Documentos: {row.document_status}
+                      Elegibilidade: {readableLabel(row.eligibility_status)} · Autorização:{' '}
+                      {readableLabel(row.authorization_status)} · Documentos: {readableLabel(row.document_status)}
                     </div>
                   </td>
                   <td className="px-3 py-3 text-right font-mono">{currency(row.net_amount)}</td>
                   <td className="px-3 py-3 text-xs text-red-700">
-                    {row.blocker_codes?.join(', ') || 'Sem bloqueios'}
+                    {row.blocker_codes?.map((code) => readableLabel(code, BLOCKER_LABELS)).join(', ') || 'Sem pendências'}
                   </td>
                   <td className="px-3 py-3 text-right"><div className="flex flex-wrap justify-end gap-2">
                     <Button size="sm" variant="outline" onClick={() => onOpen(row)}>Abrir</Button>
@@ -236,7 +268,7 @@ export default function BillingMasterPage({ page = 'prebilling' }) {
     () =>
       (workspace?.workItems || []).filter((row) => {
         const text =
-          `${row.appointment_id} ${row.status} ${(row.blocker_codes || []).join(' ')}`.toLowerCase();
+          `${row.patient_name} ${row.professional_name} ${row.procedure_name} ${row.payer_name} ${row.appointment_id} ${row.status} ${(row.blocker_codes || []).join(' ')}`.toLowerCase();
         return !query || text.includes(query.toLowerCase());
       }),
     [workspace, query],
