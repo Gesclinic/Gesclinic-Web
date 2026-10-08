@@ -187,6 +187,7 @@ export default function FaturamentoDashboard() {
   const glosas = snapshot?.glosas || {};
   const operationsMetrics = operations?.metrics || {};
   const workItems = workspace?.workItems || [];
+  const paymentImports = workspace?.imports || [];
   const openPendingItems = (workspace?.pendingItems || []).filter((row) => row.status !== 'resolved');
   const suggestedMatches = (workspace?.matches || []).filter((row) => ['suggested', 'confirmed'].includes(row.status));
 
@@ -454,6 +455,78 @@ export default function FaturamentoDashboard() {
                   Nenhum lote persistente criado.
                 </p>
               )}
+            </div>
+          </div>
+          <div className="rounded-md border">
+            <div className="flex flex-col gap-2 border-b px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold">Retornos importados</p>
+                <p className="text-xs text-muted-foreground">
+                  Demonstrativos recebidos das operadoras e situação da conciliação.
+                </p>
+              </div>
+              <Button asChild variant="outline" size="sm">
+                <Link to="/clinica/faturamento/retornos">
+                  <Upload className="mr-2 h-4 w-4" />
+                  Importar retorno
+                </Link>
+              </Button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[760px] text-sm">
+                <thead className="bg-muted/50 text-left">
+                  <tr>
+                    <th className="px-4 py-2 font-medium">Operadora / arquivo</th>
+                    <th className="px-4 py-2 font-medium">Competência</th>
+                    <th className="px-4 py-2 text-right font-medium">Linhas</th>
+                    <th className="px-4 py-2 text-right font-medium">Valor recebido</th>
+                    <th className="px-4 py-2 text-right font-medium">Conciliação</th>
+                    <th className="px-4 py-2 font-medium">Repasse</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paymentImports.slice(0, 5).map((item) => {
+                    const reportDate = item.metadata?.report_date;
+                    const repasseItems = Number(item.metadata?.repasse_item_count || 0);
+                    return (
+                      <tr key={item.id} className="border-t">
+                        <td className="max-w-xs px-4 py-3">
+                          <p className="font-medium">{item.payer_name || 'Operadora não informada'}</p>
+                          <p className="truncate text-xs text-muted-foreground" title={item.file_name}>
+                            {item.file_name}
+                          </p>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3">
+                          {reportDate
+                            ? new Date(`${reportDate}T00:00:00`).toLocaleDateString('pt-BR')
+                            : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono">{item.total_rows || 0}</td>
+                        <td className="px-4 py-3 text-right font-mono">{currency(item.total_amount)}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-right font-mono">
+                          {item.matched_rows || 0}/{item.total_rows || 0}
+                        </td>
+                        <td className="px-4 py-3">
+                          {repasseItems > 0 ? (
+                            <span className="text-emerald-700">
+                              Processado · {repasseItems} itens
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">Não processado</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {paymentImports.length === 0 && (
+                    <tr>
+                      <td colSpan="6" className="px-4 py-6 text-center text-muted-foreground">
+                        Nenhum retorno importado.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </CardContent>
