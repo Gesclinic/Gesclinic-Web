@@ -236,10 +236,10 @@ BEGIN
       AND calculation.metadata->'import_ids' @> jsonb_build_array(p_import_id)
       AND calculation.ap_bill_id IS NULL AND calculation.net_repasse_amount > 0
   LOOP
-    INSERT INTO public.ap_bills (clinic_id, supplier_id, vendor_id, supplier_name, vendor_name,
+    INSERT INTO public.ap_bills (clinic_id, supplier_id, supplier_name, vendor_name,
       description, amount, net_amount, balance_amount, due_date, competency_date, status,
       category, subcategory, dre_classification, cost_center_id, metadata)
-    SELECT p_clinic_id, v_calc.professional_id, v_calc.professional_id, professional.name,
+    SELECT p_clinic_id, v_calc.professional_id, professional.name,
       professional.name, format('Repasse médico %s/%s - retorno %s',
       lpad(v_calc.reference_month::text, 2, '0'), v_calc.reference_year, v_import.payer_name),
       v_calc.net_repasse_amount, v_calc.net_repasse_amount, v_calc.net_repasse_amount,
