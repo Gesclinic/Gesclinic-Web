@@ -120,8 +120,9 @@ BEGIN
     ORDER BY active DESC NULLS LAST, created_at LIMIT 1;
 
     IF v_patient_id IS NULL THEN
-      INSERT INTO public.patients (clinic_id, name, payer_id, active, medical_notes)
+      INSERT INTO public.patients (clinic_id, name, payer_id, active, prontuario_numero, medical_notes)
       VALUES (p_clinic_id, v_line.patient_name, v_import.payer_id, true,
+        'RET-' || left(replace(p_import_id::text, '-', ''), 8) || '-' || lpad(v_line.line_number::text, 4, '0'),
         'Cadastro criado pelo retorno ' || v_import.file_name)
       RETURNING id INTO v_patient_id;
       v_patient_count := v_patient_count + 1;
