@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { useClinicContext } from '@/contexts/ClinicContext';
 import { supabase } from '@/lib/customSupabaseClient';
 import {
   approveCalculationStage,
+  adjustRepasseCalculation,
+  deleteRepasseRule,
   generateMedicalPayables,
   getExecutiveDashboard,
   getMedicalRentability,
@@ -183,6 +185,7 @@ const sectionTitles = {
 
 export default function RepasseEnterprisePage() {
   const { section = 'dashboard-executivo', scope = null } = useParams();
+  const navigate = useNavigate();
   const { clinicId } = useClinicContext();
   const { user } = useAuth();
 
@@ -251,6 +254,7 @@ export default function RepasseEnterprisePage() {
   }, [clinicId]);
 
   const [ruleForm, setRuleForm] = useState({
+    id: null,
     name: '',
     rule_type: scope || 'individual',
     professional_id: '',
@@ -570,6 +574,41 @@ export default function RepasseEnterprisePage() {
     }
   };
 
+  const handleRejectApproval = async (approvalRow) => {
+    const observation = window.prompt('Informe o motivo da rejeição:');
+    if (!observation?.trim()) return;
+    try {
+      setLoading(true);
+      setError(null);
+      await approveCalculationStage({ clinicId, calculationId: approvalRow.calculation_id, stage: approvalRow.stage, status: 'rejeitado', observation: observation.trim(), actorId });
+      await transitionRepasseCalculationStatus({ clinicId, calculationId: approvalRow.calculation_id, newStatus: 'cancelado', actorId, observation: observation.trim() });
+      await loadSection();
+    } catch (err) {
+      setError(err.message || 'Erro ao rejeitar etapa');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAdjustCalculation = async (row) => {
+    const gross = window.prompt('Novo valor bruto do repasse:', String(row.gross_repasse_amount || 0));
+    if (gross == null) return;
+    const discounts = window.prompt('Novo valor de descontos:', String(row.discounts_amount || 0));
+    if (discounts == null) return;
+    const reason = window.prompt('Justificativa obrigatória para o ajuste:');
+    if (!reason?.trim()) return;
+    try {
+      setLoading(true);
+      setError(null);
+      await adjustRepasseCalculation({ clinicId, calculation: row, adjustments: { gross_repasse_amount: gross, discounts_amount: discounts }, actorId, reason });
+      await loadSection();
+    } catch (err) {
+      setError(err.message || 'Erro ao ajustar cálculo');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleTransition = async (calculationId, newStatus) => {
     try {
       setLoading(true);
@@ -636,6 +675,7 @@ export default function RepasseEnterprisePage() {
       await upsertRepasseRule(
         clinicId,
         {
+          id: ruleForm.id || undefined,
           name: ruleForm.name,
           rule_type: ruleForm.rule_type,
           professional_id: ruleForm.professional_id || null,
@@ -652,13 +692,14 @@ export default function RepasseEnterprisePage() {
           valid_to: ruleForm.valid_to || null,
           priority: Number(ruleForm.priority || 100),
           notes: ruleForm.notes || null,
-          is_active: true,
+          is_active: ruleForm.is_active !== false,
         },
         actorId,
       );
 
       setRuleForm((prev) => ({
         ...prev,
+        id: null,
         name: '',
         professional_id: '',
         specialty: '',
@@ -677,6 +718,41 @@ export default function RepasseEnterprisePage() {
       await loadSection();
     } catch (err) {
       setError(err.message || 'Erro ao criar regra');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditRule = (row) => {
+    setRuleForm({
+      id: row.id,
+      name: row.name || '', rule_type: row.rule_type || scope || 'individual', professional_id: row.professional_id || '', specialty: row.specialty || '', convenio_id: row.convenio_id || '', procedure_id: row.procedure_id || '', percentage: row.percentage ?? '', fixed_value: row.fixed_value ?? '', progressive_ranges: '', applies_to: row.applies_to || 'recebido', ceiling_value: row.ceiling_value ?? '', floor_value: row.floor_value ?? '', valid_from: row.valid_from || periodStart, valid_to: row.valid_to || '', priority: String(row.priority ?? 100), notes: row.notes || '', is_active: row.is_active !== false,
+    });
+    setProgressiveRanges(Array.isArray(row.progressive_ranges) ? row.progressive_ranges : []);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleToggleRule = async (row) => {
+    try {
+      setLoading(true);
+      await upsertRepasseRule(clinicId, { ...row, is_active: row.is_active === false }, actorId);
+      await loadSection();
+    } catch (err) {
+      setError(err.message || 'Erro ao alterar regra');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteRule = async (row) => {
+    if (!window.confirm(`Excluir a regra “${row.name}”? A exclusão ficará registrada na auditoria.`)) return;
+    try {
+      setLoading(true);
+      await deleteRepasseRule(clinicId, row.id);
+      if (ruleForm.id === row.id) setRuleForm((prev) => ({ ...prev, id: null, name: '' }));
+      await loadSection();
+    } catch (err) {
+      setError(err.message || 'Erro ao excluir regra');
     } finally {
       setLoading(false);
     }
@@ -879,6 +955,7 @@ export default function RepasseEnterprisePage() {
               'Glosa',
               'Elegivel',
               'Status',
+              'Ações',
             ]}
             rows={production.map((row) => [
               row.professional_name,
@@ -892,7 +969,8 @@ export default function RepasseEnterprisePage() {
               money(row.received_amount),
               money(row.glosa_amount),
               money(row.eligible_amount),
-              row.status || '-',
+              String(row.status || '-').replaceAll('_', ' '),
+              <button key={row.appointment_id} type="button" onClick={() => navigate(`/clinica/agenda?appointmentId=${row.appointment_id}&mode=edit`)} className="rounded border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100">Abrir atendimento</button>,
             ])}
           />
         </div>
@@ -924,7 +1002,7 @@ export default function RepasseEnterprisePage() {
               'Acoes',
             ]}
             rows={calculations.map((row) => [
-              row.professional_id,
+              lookupProfessionals.find((professional) => professional.id === row.professional_id)?.name || row.professional_id || 'Não identificado',
               money(row.production_amount),
               money(row.received_amount),
               money(row.glosa_amount),
@@ -934,37 +1012,39 @@ export default function RepasseEnterprisePage() {
               money(row.discounts_amount),
               money(row.net_repasse_amount),
               row.status,
-              <div key={row.id} className="flex gap-1">
-                <button
+              <div key={row.id} className="flex flex-wrap gap-1">
+                {!['liberado', 'pago'].includes(row.status) && <button type="button" onClick={() => handleAdjustCalculation(row)} className="rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800">Ajustar</button>}
+                {row.status === 'calculado' && <button
                   onClick={() => handleTransition(row.id, 'provisionado')}
                   className="rounded bg-blue-600 px-2 py-1 text-xs font-medium text-white"
                 >
                   Provisionar
-                </button>
-                <button
+                </button>}
+                {row.status === 'provisionado' && <button
                   onClick={() => handleTransition(row.id, 'aprovado')}
                   className="rounded bg-indigo-600 px-2 py-1 text-xs font-medium text-white"
                 >
                   Aprovar
-                </button>
-                <button
+                </button>}
+                {row.status === 'aprovado' && <button
                   onClick={() => handleTransition(row.id, 'liberado')}
                   className="rounded bg-purple-600 px-2 py-1 text-xs font-medium text-white"
                 >
                   Liberar
-                </button>
-                <button
+                </button>}
+                {row.status === 'liberado' && <button
                   onClick={() => handleTransition(row.id, 'pago')}
                   className="rounded bg-emerald-600 px-2 py-1 text-xs font-medium text-white"
                 >
                   Pagar
-                </button>
-                <button
+                </button>}
+                {!['pago', 'cancelado'].includes(row.status) && <button
                   onClick={() => handleTransition(row.id, 'cancelado')}
                   className="rounded bg-rose-600 px-2 py-1 text-xs font-medium text-white"
                 >
                   Cancelar
-                </button>
+                </button>}
+                {row.status === 'cancelado' && <button type="button" onClick={() => handleTransition(row.id, 'calculado')} className="rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700">Reabrir</button>}
               </div>,
             ])}
           />
@@ -989,7 +1069,7 @@ export default function RepasseEnterprisePage() {
           <RulesScopeHeader scope={scope} />
           <div className="rounded-lg border border-slate-200 bg-white p-4">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-slate-900">Cadastrar Regra de Repasse</h3>
+              <h3 className="text-sm font-semibold text-slate-900">{ruleForm.id ? 'Editar Regra de Repasse' : 'Cadastrar Regra de Repasse'}</h3>
               {scope && SCOPE_META[scope] && (
                 <span className="text-xs text-slate-500">
                   {SCOPE_META[scope].icon} Campo principal: <strong>{SCOPE_META[scope].primaryField}</strong>
@@ -1284,7 +1364,7 @@ export default function RepasseEnterprisePage() {
             <div className="mt-3 flex justify-end gap-2">
               <button
                 onClick={() => {
-                  setRuleForm({ name: '', rule_type: scope || 'individual', professional_id: '', specialty: '', convenio_id: '', procedure_id: '', percentage: '', fixed_value: '', progressive_ranges: '', applies_to: 'recebido', ceiling_value: '', floor_value: '', valid_from: periodStart, valid_to: '', priority: '100', notes: '' });
+                  setRuleForm({ id: null, name: '', rule_type: scope || 'individual', professional_id: '', specialty: '', convenio_id: '', procedure_id: '', percentage: '', fixed_value: '', progressive_ranges: '', applies_to: 'recebido', ceiling_value: '', floor_value: '', valid_from: periodStart, valid_to: '', priority: '100', notes: '', is_active: true });
                   setProgressiveRanges([]);
                   setProgressiveRangeDraft({ from: '', to: '', percentage: '' });
                   setEditingProgressiveRangeIndex(null);
@@ -1297,14 +1377,14 @@ export default function RepasseEnterprisePage() {
                 onClick={handleCreateRule}
                 className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white"
               >
-                Salvar Regra
+                {ruleForm.id ? 'Atualizar Regra' : 'Salvar Regra'}
               </button>
             </div>
           </div>
 
           <SimpleTable
             title={`Regras Cadastradas — ${SCOPE_META[scope || 'individual']?.label || scope || 'Todas'}`}
-            columns={['Nome', 'Médico', 'Especialidade', 'Convênio', 'Procedimento', 'Base Cálculo', 'Percentual', 'Valor Fixo', 'Piso', 'Teto', 'Prioridade', 'Vigência Início', 'Vigência Fim', 'Ativa']}
+            columns={['Nome', 'Médico', 'Especialidade', 'Convênio', 'Procedimento', 'Base Cálculo', 'Percentual', 'Valor Fixo', 'Piso', 'Teto', 'Prioridade', 'Vigência Início', 'Vigência Fim', 'Ativa', 'Ações']}
             rows={rules.filter((r) => !scope || r.rule_type === scope).map((row) => {
               const profName = lookupProfessionals.find((p) => p.id === row.professional_id)?.name || row.professional_id || '-';
               const convenioName = lookupConvenios.find((c) => c.id === row.convenio_id)?.name || row.convenio_id || '-';
@@ -1324,6 +1404,11 @@ export default function RepasseEnterprisePage() {
                 row.valid_from || '-',
                 row.valid_to || 'Sem fim',
                 row.is_active !== false ? '✓ Sim' : '✗ Não',
+                <div key={row.id} className="flex gap-1">
+                  <button type="button" onClick={() => handleEditRule(row)} className="rounded border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">Editar</button>
+                  <button type="button" onClick={() => handleToggleRule(row)} className="rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700">{row.is_active === false ? 'Ativar' : 'Desativar'}</button>
+                  <button type="button" onClick={() => handleDeleteRule(row)} className="rounded border border-red-200 bg-red-50 px-2 py-1 text-xs font-medium text-red-700">Excluir</button>
+                </div>,
               ];
             })}
           />
@@ -1371,13 +1456,10 @@ export default function RepasseEnterprisePage() {
             row.status,
             row.approved_by || '-',
             row.approved_at || '-',
-            <button
-              key={row.id}
-              onClick={() => handleQuickApprove(row)}
-              className="rounded bg-blue-600 px-2 py-1 text-xs font-medium text-white"
-            >
-              Aprovar
-            </button>,
+            <div key={row.id} className="flex gap-1">
+              <button type="button" disabled={row.status === 'aprovado'} onClick={() => handleQuickApprove(row)} className="rounded bg-blue-600 px-2 py-1 text-xs font-medium text-white disabled:opacity-50">Aprovar</button>
+              <button type="button" disabled={row.status === 'rejeitado'} onClick={() => handleRejectApproval(row)} className="rounded bg-red-600 px-2 py-1 text-xs font-medium text-white disabled:opacity-50">Rejeitar</button>
+            </div>,
           ])}
         />
       )}

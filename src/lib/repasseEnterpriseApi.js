@@ -115,6 +115,16 @@ export async function upsertRepasseRule(clinicId, payload, actorId = null) {
   return data;
 }
 
+export async function deleteRepasseRule(clinicId, ruleId) {
+  if (!clinicId || !ruleId) throw new Error('Clínica e regra são obrigatórias');
+  const { error } = await supabase
+    .from('medical_repasse_rules')
+    .delete()
+    .eq('clinic_id', clinicId)
+    .eq('id', ruleId);
+  if (error) throw error;
+}
+
 export async function listMedicalProduction({
   clinicId,
   periodStart,
@@ -438,6 +448,46 @@ export async function listRepasseCalculations(clinicId, referenceMonth, referenc
   }
 
   return data || [];
+}
+
+export async function adjustRepasseCalculation({ clinicId, calculation, adjustments, actorId, reason }) {
+  if (!clinicId || !calculation?.id) throw new Error('Cálculo não informado');
+  if (!reason?.trim()) throw new Error('Informe a justificativa do ajuste');
+  if (['liberado', 'pago'].includes(String(calculation.status || '').toLowerCase())) {
+    throw new Error('Cálculos liberados ou pagos não podem ser ajustados');
+  }
+
+  const gross = toNumber(adjustments.gross_repasse_amount);
+  const discounts = toNumber(adjustments.discounts_amount);
+  const net = Math.max(0, gross - discounts);
+  const base = toNumber(calculation.base_amount);
+  const payload = {
+    gross_repasse_amount: gross,
+    discounts_amount: discounts,
+    net_repasse_amount: net,
+    percentage_applied: base > 0 ? Number(((gross / base) * 100).toFixed(4)) : 0,
+    calculated_by: actorId,
+    calculated_at: new Date().toISOString(),
+    metadata: {
+      ...(calculation.metadata || {}),
+      last_manual_adjustment: {
+        reason: reason.trim(),
+        actor_id: actorId,
+        adjusted_at: new Date().toISOString(),
+        previous_gross: toNumber(calculation.gross_repasse_amount),
+        previous_discounts: toNumber(calculation.discounts_amount),
+      },
+    },
+  };
+  const { data, error } = await supabase
+    .from('medical_repasse_calculations')
+    .update(payload)
+    .eq('clinic_id', clinicId)
+    .eq('id', calculation.id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
 }
 
 export async function transitionRepasseCalculationStatus({
