@@ -242,13 +242,17 @@ export default function RepasseEnterprisePage() {
     Promise.all([
       supabase.from('professionals').select('id, name, specialization').eq('clinic_id', clinicId).order('name'),
       supabase.from('health_insurances').select('id, name').eq('clinic_id', clinicId).order('name'),
+      supabase.from('payers').select('id, name').eq('clinic_id', clinicId).order('name'),
       supabase.from('services').select('id, name').eq('clinic_id', clinicId).order('name'),
-    ]).then(([profsRes, conveniosRes, servicesRes]) => {
+    ]).then(([profsRes, conveniosRes, payersRes, servicesRes]) => {
       const profs = profsRes.data || [];
       setLookupProfessionals(profs);
       const specs = [...new Set(profs.map((p) => p.specialization).filter(Boolean))].sort();
       setLookupSpecialties(specs);
-      setLookupConvenios(conveniosRes.data || []);
+      const convenioMap = new Map(
+        [...(conveniosRes.data || []), ...(payersRes.data || [])].map((row) => [row.id, row]),
+      );
+      setLookupConvenios([...convenioMap.values()].sort((a, b) => a.name.localeCompare(b.name)));
       setLookupServices(servicesRes.data || []);
     });
   }, [clinicId]);
@@ -1188,7 +1192,7 @@ export default function RepasseEnterprisePage() {
                 </select>
                 <span className="min-h-4 text-[11px] text-transparent select-none">.</span>
               </div>
-              {ruleForm.calculation_mode === 'percentage' && <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1">
                 <label className="h-4 text-xs leading-4 text-slate-500">Convênio {scope === 'convenio' ? '*' : '(filtro opcional)'}</label>
                 <select
                   value={ruleForm.convenio_id}
@@ -1201,8 +1205,8 @@ export default function RepasseEnterprisePage() {
                   ))}
                 </select>
                 <span className="min-h-4 text-[11px] text-transparent select-none">.</span>
-              </div>}
-              {ruleForm.calculation_mode === 'fixed' && <div className="flex flex-col gap-1">
+              </div>
+              <div className="flex flex-col gap-1">
                 <label className="h-4 text-xs leading-4 text-slate-500">Procedimento {scope === 'procedimento' ? '*' : '(filtro opcional)'}</label>
                 <select
                   value={ruleForm.procedure_id}
@@ -1215,9 +1219,9 @@ export default function RepasseEnterprisePage() {
                   ))}
                 </select>
                 <span className="min-h-4 text-[11px] text-transparent select-none">.</span>
-              </div>}
+              </div>
 
-              <div className="flex flex-col gap-1">
+              {ruleForm.calculation_mode === 'percentage' && <div className="flex flex-col gap-1">
                 <label className="h-4 text-xs leading-4 text-slate-500">Percentual (%)</label>
                 <input
                   value={ruleForm.percentage}
@@ -1226,8 +1230,8 @@ export default function RepasseEnterprisePage() {
                   className="h-9 rounded-md border border-slate-300 px-3 text-sm"
                 />
                 <span className="min-h-4 text-[11px] text-transparent select-none">.</span>
-              </div>
-              <div className="flex flex-col gap-1">
+              </div>}
+              {ruleForm.calculation_mode === 'fixed' && <div className="flex flex-col gap-1">
                 <label className="h-4 text-xs leading-4 text-slate-500">Valor fixo (R$)</label>
                 <input
                   value={ruleForm.fixed_value}
@@ -1236,7 +1240,7 @@ export default function RepasseEnterprisePage() {
                   className="h-9 rounded-md border border-slate-300 px-3 text-sm"
                 />
                 <span className="min-h-4 text-[11px] text-transparent select-none">.</span>
-              </div>
+              </div>}
               <div className="flex flex-col gap-1">
                 <label className="h-4 text-xs leading-4 text-slate-500">Piso (R$)</label>
                 <input
