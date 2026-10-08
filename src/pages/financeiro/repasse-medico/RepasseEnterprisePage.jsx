@@ -32,7 +32,7 @@ const SCOPE_META = {
     label: 'Individual',
     color: 'blue',
     icon: '👤',
-    description: 'Regra aplicada a um profissional específico. Tem a maior prioridade no motor de cálculo.',
+    description: 'Comece pelo profissional e combine convênio e procedimento quando precisar de uma regra mais específica.',
     primaryField: 'Profissional',
     hint: 'Selecione o profissional para vincular esta regra a ele exclusivamente.',
   },
@@ -48,7 +48,7 @@ const SCOPE_META = {
     label: 'Convênio',
     color: 'emerald',
     icon: '🤝',
-    description: 'Regra aplicada ao faturamento de um convênio específico (Unimed, Amil, Particular…).',
+    description: 'Comece pelo convênio e combine profissional e procedimento quando necessário.',
     primaryField: 'Convênio (ID)',
     hint: 'Informe o ID do convênio. Afeta todos os profissionais que atenderem por ele.',
   },
@@ -56,7 +56,7 @@ const SCOPE_META = {
     label: 'Procedimento',
     color: 'orange',
     icon: '⚕️',
-    description: 'Regra aplicada a um procedimento ou serviço específico independente do profissional.',
+    description: 'Comece pelo procedimento e combine profissional e convênio quando necessário.',
     primaryField: 'Procedimento (ID)',
     hint: 'Informe o ID do serviço/procedimento (ex: EEG, Consulta, Ressonância).',
   },
@@ -261,6 +261,7 @@ export default function RepasseEnterprisePage() {
     specialty: '',
     convenio_id: '',
     procedure_id: '',
+    calculation_mode: 'percentage',
     percentage: '',
     fixed_value: '',
     progressive_ranges: '',
@@ -659,9 +660,28 @@ export default function RepasseEnterprisePage() {
       setLoading(true);
       setError(null);
 
+      if (!ruleForm.name.trim()) throw new Error('Informe um nome para identificar a regra.');
+      if (!ruleForm.professional_id && !ruleForm.specialty && !ruleForm.convenio_id && !ruleForm.procedure_id) {
+        throw new Error('Selecione pelo menos um profissional, especialidade, convênio ou procedimento.');
+      }
+      if (!ruleForm.valid_from) throw new Error('Informe o início da vigência.');
+      if (ruleForm.valid_to && ruleForm.valid_to < ruleForm.valid_from) {
+        throw new Error('O fim da vigência não pode ser anterior ao início.');
+      }
+      if (ruleForm.calculation_mode === 'percentage' && ruleForm.percentage === '') {
+        throw new Error('Informe o percentual da regra.');
+      }
+      if (ruleForm.calculation_mode === 'fixed' && ruleForm.fixed_value === '') {
+        throw new Error('Informe o valor fixo da regra.');
+      }
+
       let progressiveRangesPayload = progressiveRanges.length
         ? progressiveRanges
         : parseProgressiveRangesInput(ruleForm.progressive_ranges);
+
+      if (ruleForm.calculation_mode === 'progressive' && !progressiveRangesPayload.length) {
+        throw new Error('Inclua pelo menos uma faixa progressiva.');
+      }
 
       if (Array.isArray(progressiveRangesPayload) && progressiveRangesPayload.length > 0 && typeof progressiveRangesPayload[0] === 'object') {
         const sortedPayload = sortProgressiveRanges(progressiveRangesPayload);
@@ -682,9 +702,9 @@ export default function RepasseEnterprisePage() {
           specialty: ruleForm.specialty || null,
           convenio_id: ruleForm.convenio_id || null,
           procedure_id: ruleForm.procedure_id || null,
-          percentage: ruleForm.percentage === '' ? null : Number(ruleForm.percentage),
-          fixed_value: ruleForm.fixed_value === '' ? null : Number(ruleForm.fixed_value),
-          progressive_ranges: progressiveRangesPayload,
+          percentage: ruleForm.calculation_mode === 'percentage' ? Number(ruleForm.percentage) : null,
+          fixed_value: ruleForm.calculation_mode === 'fixed' ? Number(ruleForm.fixed_value) : null,
+          progressive_ranges: ruleForm.calculation_mode === 'progressive' ? progressiveRangesPayload : [],
           applies_to: ruleForm.applies_to,
           ceiling_value: ruleForm.ceiling_value === '' ? null : Number(ruleForm.ceiling_value),
           floor_value: ruleForm.floor_value === '' ? null : Number(ruleForm.floor_value),
@@ -705,6 +725,7 @@ export default function RepasseEnterprisePage() {
         specialty: '',
         convenio_id: '',
         procedure_id: '',
+        calculation_mode: 'percentage',
         percentage: '',
         fixed_value: '',
         progressive_ranges: '',
@@ -726,7 +747,7 @@ export default function RepasseEnterprisePage() {
   const handleEditRule = (row) => {
     setRuleForm({
       id: row.id,
-      name: row.name || '', rule_type: row.rule_type || scope || 'individual', professional_id: row.professional_id || '', specialty: row.specialty || '', convenio_id: row.convenio_id || '', procedure_id: row.procedure_id || '', percentage: row.percentage ?? '', fixed_value: row.fixed_value ?? '', progressive_ranges: '', applies_to: row.applies_to || 'recebido', ceiling_value: row.ceiling_value ?? '', floor_value: row.floor_value ?? '', valid_from: row.valid_from || periodStart, valid_to: row.valid_to || '', priority: String(row.priority ?? 100), notes: row.notes || '', is_active: row.is_active !== false,
+      name: row.name || '', rule_type: row.rule_type || scope || 'individual', professional_id: row.professional_id || '', specialty: row.specialty || '', convenio_id: row.convenio_id || '', procedure_id: row.procedure_id || '', calculation_mode: row.fixed_value != null ? 'fixed' : (Array.isArray(row.progressive_ranges) && row.progressive_ranges.length ? 'progressive' : 'percentage'), percentage: row.percentage ?? '', fixed_value: row.fixed_value ?? '', progressive_ranges: '', applies_to: row.applies_to || 'recebido', ceiling_value: row.ceiling_value ?? '', floor_value: row.floor_value ?? '', valid_from: row.valid_from || periodStart, valid_to: row.valid_to || '', priority: String(row.priority ?? 100), notes: row.notes || '', is_active: row.is_active !== false,
     });
     setProgressiveRanges(Array.isArray(row.progressive_ranges) ? row.progressive_ranges : []);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1067,6 +1088,9 @@ export default function RepasseEnterprisePage() {
       {!loading && section === 'regras' && (
         <div className="space-y-4">
           <RulesScopeHeader scope={scope} />
+          <div className="rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
+            <strong>Hierarquia automática:</strong> serviço + profissional + convênio, depois profissional + convênio, depois profissional e, por último, a regra mais genérica. Em empate, vence a menor prioridade numérica.
+          </div>
           <div className="rounded-lg border border-slate-200 bg-white p-4">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-sm font-semibold text-slate-900">{ruleForm.id ? 'Editar Regra de Repasse' : 'Cadastrar Regra de Repasse'}</h3>
@@ -1089,7 +1113,7 @@ export default function RepasseEnterprisePage() {
                 <span className="min-h-4 text-[11px] text-transparent select-none">.</span>
               </div>
               <div className="flex flex-col gap-1">
-                <label className="h-4 text-xs leading-4 text-slate-500">Tipo de Regra</label>
+                <label className="h-4 text-xs leading-4 text-slate-500">Categoria da Regra</label>
                 <select
                   value={ruleForm.rule_type}
                   onChange={(e) => setRuleForm((prev) => ({ ...prev, rule_type: e.target.value }))}
@@ -1103,6 +1127,19 @@ export default function RepasseEnterprisePage() {
                 <span className="min-h-4 text-[11px] text-transparent select-none">.</span>
               </div>
               <div className="flex flex-col gap-1">
+                <label className="h-4 text-xs leading-4 text-slate-500">Lógica de Cálculo</label>
+                <select
+                  value={ruleForm.calculation_mode}
+                  onChange={(e) => setRuleForm((prev) => ({ ...prev, calculation_mode: e.target.value }))}
+                  className="h-9 rounded-md border border-slate-300 bg-white px-3 text-sm"
+                >
+                  <option value="percentage">Percentual</option>
+                  <option value="fixed">Valor fixo</option>
+                  <option value="progressive">Faixas progressivas</option>
+                </select>
+                <span className="min-h-4 text-[11px] text-transparent select-none">.</span>
+              </div>
+              <div className="flex flex-col gap-1">
                 <label className="h-4 text-xs leading-4 text-slate-500">Base de Cálculo</label>
                 <select
                   value={ruleForm.applies_to}
@@ -1111,10 +1148,8 @@ export default function RepasseEnterprisePage() {
                 >
                   <optgroup label="Sobre o Líquido (recebido)">
                     <option value="recebido">% sobre o recebido</option>
-                    <option value="liquido">% sobre o líquido</option>
                   </optgroup>
                   <optgroup label="Sobre o Bruto (produzido)">
-                    <option value="bruto">% sobre o bruto</option>
                     <option value="produzido">% sobre o produzido</option>
                   </optgroup>
                   <optgroup label="Sobre o Faturado">
@@ -1153,7 +1188,7 @@ export default function RepasseEnterprisePage() {
                 </select>
                 <span className="min-h-4 text-[11px] text-transparent select-none">.</span>
               </div>
-              <div className="flex flex-col gap-1">
+              {ruleForm.calculation_mode === 'percentage' && <div className="flex flex-col gap-1">
                 <label className="h-4 text-xs leading-4 text-slate-500">Convênio {scope === 'convenio' ? '*' : '(filtro opcional)'}</label>
                 <select
                   value={ruleForm.convenio_id}
@@ -1166,8 +1201,8 @@ export default function RepasseEnterprisePage() {
                   ))}
                 </select>
                 <span className="min-h-4 text-[11px] text-transparent select-none">.</span>
-              </div>
-              <div className="flex flex-col gap-1">
+              </div>}
+              {ruleForm.calculation_mode === 'fixed' && <div className="flex flex-col gap-1">
                 <label className="h-4 text-xs leading-4 text-slate-500">Procedimento {scope === 'procedimento' ? '*' : '(filtro opcional)'}</label>
                 <select
                   value={ruleForm.procedure_id}
@@ -1180,7 +1215,7 @@ export default function RepasseEnterprisePage() {
                   ))}
                 </select>
                 <span className="min-h-4 text-[11px] text-transparent select-none">.</span>
-              </div>
+              </div>}
 
               <div className="flex flex-col gap-1">
                 <label className="h-4 text-xs leading-4 text-slate-500">Percentual (%)</label>
@@ -1284,7 +1319,7 @@ export default function RepasseEnterprisePage() {
                 <span className="min-h-4 text-[11px] text-transparent select-none">.</span>
               </div>
 
-              <div className="flex flex-col gap-1 md:col-span-2 xl:col-span-2">
+              {ruleForm.calculation_mode === 'progressive' && <div className="flex flex-col gap-1 md:col-span-2 xl:col-span-2">
                 <label className="h-4 text-xs leading-4 text-slate-500">Faixas progressivas (opcional)</label>
 
                 <div className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_1fr_1fr_auto]">
@@ -1359,12 +1394,12 @@ export default function RepasseEnterprisePage() {
                 )}
 
                 <span className="min-h-4 text-[11px] text-slate-400">Use Incluir Faixa para adicionar e Excluir para remover cada faixa progressiva.</span>
-              </div>
+              </div>}
             </div>
             <div className="mt-3 flex justify-end gap-2">
               <button
                 onClick={() => {
-                  setRuleForm({ id: null, name: '', rule_type: scope || 'individual', professional_id: '', specialty: '', convenio_id: '', procedure_id: '', percentage: '', fixed_value: '', progressive_ranges: '', applies_to: 'recebido', ceiling_value: '', floor_value: '', valid_from: periodStart, valid_to: '', priority: '100', notes: '', is_active: true });
+                  setRuleForm({ id: null, name: '', rule_type: scope || 'individual', professional_id: '', specialty: '', convenio_id: '', procedure_id: '', calculation_mode: 'percentage', percentage: '', fixed_value: '', progressive_ranges: '', applies_to: 'recebido', ceiling_value: '', floor_value: '', valid_from: periodStart, valid_to: '', priority: '100', notes: '', is_active: true });
                   setProgressiveRanges([]);
                   setProgressiveRangeDraft({ from: '', to: '', percentage: '' });
                   setEditingProgressiveRangeIndex(null);
@@ -1384,7 +1419,7 @@ export default function RepasseEnterprisePage() {
 
           <SimpleTable
             title={`Regras Cadastradas — ${SCOPE_META[scope || 'individual']?.label || scope || 'Todas'}`}
-            columns={['Nome', 'Médico', 'Especialidade', 'Convênio', 'Procedimento', 'Base Cálculo', 'Percentual', 'Valor Fixo', 'Piso', 'Teto', 'Prioridade', 'Vigência Início', 'Vigência Fim', 'Ativa', 'Ações']}
+            columns={['Nome', 'Médico', 'Especialidade', 'Convênio', 'Procedimento', 'Base Cálculo', 'Lógica', 'Piso', 'Teto', 'Prioridade', 'Vigência Início', 'Vigência Fim', 'Ativa', 'Ações']}
             rows={rules.filter((r) => !scope || r.rule_type === scope).map((row) => {
               const profName = lookupProfessionals.find((p) => p.id === row.professional_id)?.name || row.professional_id || '-';
               const convenioName = lookupConvenios.find((c) => c.id === row.convenio_id)?.name || row.convenio_id || '-';
@@ -1396,8 +1431,11 @@ export default function RepasseEnterprisePage() {
                 row.convenio_id ? convenioName : '-',
                 row.procedure_id ? serviceName : '-',
                 row.applies_to || '-',
-                row.percentage != null ? percent(row.percentage) : '-',
-                row.fixed_value != null ? money(row.fixed_value) : '-',
+                row.fixed_value != null
+                  ? `Fixo: ${money(row.fixed_value)}`
+                  : (Array.isArray(row.progressive_ranges) && row.progressive_ranges.length
+                    ? `${row.progressive_ranges.length} faixas progressivas`
+                    : `Percentual: ${percent(row.percentage)}`),
                 row.floor_value != null ? money(row.floor_value) : '-',
                 row.ceiling_value != null ? money(row.ceiling_value) : '-',
                 row.priority ?? '-',

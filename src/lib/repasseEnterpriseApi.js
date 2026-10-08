@@ -259,7 +259,12 @@ export async function listMedicalProduction({
     .filter((row) => (status ? String(row.status || '').toLowerCase() === String(status).toLowerCase() : true));
 }
 
-function resolveRule(rules, line) {
+function ruleSpecificity(rule) {
+  return [rule.professional_id, rule.specialty, rule.convenio_id, rule.procedure_id]
+    .filter(Boolean).length;
+}
+
+export function resolveRepasseRule(rules, line) {
   const active = (rules || []).filter((rule) => {
     if (!rule.is_active) {
       return false;
@@ -272,26 +277,22 @@ function resolveRule(rules, line) {
       return false;
     }
 
-    if (rule.rule_type === 'individual') {
-      return rule.professional_id && rule.professional_id === line.professional_id;
-    }
-    if (rule.rule_type === 'especialidade') {
-      return rule.specialty && rule.specialty === line.specialty;
-    }
-    if (rule.rule_type === 'convenio') {
-      return rule.convenio_id && rule.convenio_id === line.convenio_id;
-    }
-    if (rule.rule_type === 'procedimento') {
-      return rule.procedure_id && rule.procedure_id === line.procedure_id;
-    }
-    return false;
+    const hasScope = ruleSpecificity(rule) > 0;
+    return hasScope
+      && (!rule.professional_id || rule.professional_id === line.professional_id)
+      && (!rule.specialty || rule.specialty === line.specialty)
+      && (!rule.convenio_id || rule.convenio_id === line.convenio_id)
+      && (!rule.procedure_id || rule.procedure_id === line.procedure_id);
   });
 
   if (!active.length) {
     return null;
   }
 
-  active.sort((a, b) => toNumber(a.priority) - toNumber(b.priority));
+  active.sort((a, b) => {
+    const specificityDifference = ruleSpecificity(b) - ruleSpecificity(a);
+    return specificityDifference || toNumber(a.priority) - toNumber(b.priority);
+  });
   return active[0];
 }
 
@@ -308,11 +309,24 @@ function ruleBaseAmount(rule, line) {
   return toNumber(line.received_amount);
 }
 
-function calculateLineRepasse(rule, line) {
+function progressivePercentage(ranges, base) {
+  const matchingRange = (Array.isArray(ranges) ? ranges : []).find((range) => {
+    if (!range || typeof range !== 'object') return false;
+    const from = range.from == null ? Number.NEGATIVE_INFINITY : toNumber(range.from);
+    const to = range.to == null ? Number.POSITIVE_INFINITY : toNumber(range.to);
+    return base >= from && base <= to;
+  });
+  return matchingRange?.percentage == null ? null : toNumber(matchingRange.percentage);
+}
+
+export function calculateRepasseLine(rule, line) {
   const base = ruleBaseAmount(rule, line);
   let gross = 0;
+  const rangePercentage = progressivePercentage(rule?.progressive_ranges, base);
   if (rule?.fixed_value != null) {
     gross = toNumber(rule.fixed_value);
+  } else if (rangePercentage != null) {
+    gross = base * (rangePercentage / 100);
   } else {
     gross = base * (toNumber(rule?.percentage ?? 70) / 100);
   }
@@ -377,8 +391,8 @@ export async function recalculateRepasse({
         lines: 0,
       };
 
-    const rule = resolveRule(rules, line);
-    const calc = calculateLineRepasse(rule, line);
+    const rule = resolveRepasseRule(rules, line);
+    const calc = calculateRepasseLine(rule, line);
 
     current.production_amount += toNumber(line.produced_amount);
     current.billed_amount += toNumber(line.billed_amount);
