@@ -23,7 +23,7 @@ function dateOnly(value) {
 function payerServiceDate(value) {
   if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString().slice(0, 10);
   const text = String(value || '').trim();
-  const brazilianDate = text.match(/^(\d{2})\/(\d{2})\/(\d{2}|\d{4})$/);
+  const brazilianDate = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/);
   if (!brazilianDate) return dateOnly(value);
   const [, day, month, rawYear] = brazilianDate;
   const year = rawYear.length === 2 ? `20${rawYear}` : rawYear;
