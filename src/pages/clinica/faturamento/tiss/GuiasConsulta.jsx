@@ -93,7 +93,9 @@ export default function GuiasConsulta({
     setLoading(true);
     try {
       const data = await listarGuias();
-      setGuias((data || []).filter((guia) => (guia.tipo_guia || guia.tipo) === tipoGuia));
+      setGuias(tipoGuia === 'all'
+        ? (data || [])
+        : (data || []).filter((guia) => (guia.tipo_guia || guia.tipo) === tipoGuia));
     } catch (error) {
       console.error('❌ Erro ao buscar guias:', error);
       toast({

@@ -3,12 +3,14 @@ import {
   AlertTriangle,
   CheckCircle2,
   FileCheck2,
+  ExternalLink,
   Loader2,
   RefreshCw,
   Save,
   Search,
   ShieldCheck,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useClinicContext } from '@/contexts/ClinicContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -116,7 +118,7 @@ function EmptyRow({ columns, text }) {
   );
 }
 
-function WorkQueue({ rows, actionId, onTransition, onGenerateGuide }) {
+function WorkQueue({ rows, actionId, selectedIds, onSelect, onSelectAll, onOpen, onTransition, onGenerateGuide, onCancel }) {
   return (
     <Card>
       <CardContent className="p-0">
@@ -124,6 +126,7 @@ function WorkQueue({ rows, actionId, onTransition, onGenerateGuide }) {
           <table className="w-full text-sm">
             <thead className="bg-muted/50">
               <tr>
+                <th className="w-10 px-3 py-2"><input type="checkbox" aria-label="Selecionar todos" checked={rows.length > 0 && rows.every((row) => selectedIds.includes(row.id))} onChange={(event) => onSelectAll(event.target.checked)} /></th>
                 <th className="px-3 py-2 text-left">Competência</th>
                 <th className="px-3 py-2 text-left">Atendimento</th>
                 <th className="px-3 py-2 text-left">Classificação</th>
@@ -134,12 +137,13 @@ function WorkQueue({ rows, actionId, onTransition, onGenerateGuide }) {
             </thead>
             <tbody>
               {rows.length === 0 && (
-                <EmptyRow columns={6} text="Nenhum serviço concluído na fila." />
+                <EmptyRow columns={7} text="Nenhum serviço concluído na fila." />
               )}
               {rows.map((row) => (
                 <tr key={row.id} className="border-t align-top">
+                  <td className="px-3 py-3"><input type="checkbox" aria-label={`Selecionar atendimento ${row.appointment_id}`} checked={selectedIds.includes(row.id)} onChange={() => onSelect(row.id)} /></td>
                   <td className="px-3 py-3">{row.competency_date}</td>
-                  <td className="px-3 py-3 font-mono text-xs">{row.appointment_id}</td>
+                  <td className="px-3 py-3"><button type="button" className="flex items-center gap-1 font-mono text-xs text-blue-700 hover:underline" onClick={() => onOpen(row)}>{row.appointment_id}<ExternalLink className="h-3 w-3" /></button></td>
                   <td className="px-3 py-3">
                     <Status value={row.status} />
                     <div className="mt-2 text-xs text-muted-foreground">
@@ -151,7 +155,8 @@ function WorkQueue({ rows, actionId, onTransition, onGenerateGuide }) {
                   <td className="px-3 py-3 text-xs text-red-700">
                     {row.blocker_codes?.join(', ') || 'Sem bloqueios'}
                   </td>
-                  <td className="px-3 py-3 text-right">
+                  <td className="px-3 py-3 text-right"><div className="flex flex-wrap justify-end gap-2">
+                    <Button size="sm" variant="outline" onClick={() => onOpen(row)}>Abrir</Button>
                     {row.status === 'ready' ? (
                       <Button
                         size="sm"
@@ -172,7 +177,8 @@ function WorkQueue({ rows, actionId, onTransition, onGenerateGuide }) {
                         {row.status === 'in_review' ? 'Aprovar' : 'Revisar'}
                       </Button>
                     )}
-                  </td>
+                    {!['guide_generated', 'batched', 'canceled'].includes(row.status) && <Button size="sm" variant="outline" className="text-red-700" disabled={actionId === row.id} onClick={() => onCancel(row)}>Cancelar</Button>}
+                  </div></td>
                 </tr>
               ))}
             </tbody>
@@ -187,12 +193,14 @@ export default function BillingMasterPage({ page = 'prebilling' }) {
   const config = PAGE_CONFIG[page] || PAGE_CONFIG.prebilling;
   const Icon = config.icon;
   const { clinicId } = useClinicContext();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [workspace, setWorkspace] = useState(null);
   const [payers, setPayers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [actionId, setActionId] = useState(null);
   const [query, setQuery] = useState('');
+  const [selectedWorkItemIds, setSelectedWorkItemIds] = useState([]);
   const [setting, setSetting] = useState(emptySetting);
   const [requirement, setRequirement] = useState(emptyRequirement);
   const [importPayerId, setImportPayerId] = useState('');
@@ -278,6 +286,40 @@ export default function BillingMasterPage({ page = 'prebilling' }) {
       await load();
     } catch (error) {
       toast({ title: 'Erro ao gerar guia', description: error.message, variant: 'destructive' });
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const openAppointment = (row) => {
+    navigate(`/clinica/agenda?appointmentId=${row.appointment_id}&mode=edit`);
+  };
+
+  const transitionMany = async (nextStatus) => {
+    const selectedRows = workItems.filter((row) => selectedWorkItemIds.includes(row.id));
+    if (!selectedRows.length) return;
+    if (nextStatus === 'canceled' && !window.confirm(`Cancelar ${selectedRows.length} item(ns) de pré-faturamento? O histórico será preservado.`)) return;
+    setActionId('bulk');
+    try {
+      await Promise.all(selectedRows.map((row) => transitionBillingWorkItem({ clinicId, workItemId: row.id, nextStatus })));
+      setSelectedWorkItemIds([]);
+      toast({ title: 'Fila atualizada', description: `${selectedRows.length} item(ns) movido(s) para ${nextStatus}.` });
+      await load();
+    } catch (error) {
+      toast({ title: 'Operação em lote bloqueada', description: error.message, variant: 'destructive' });
+    } finally {
+      setActionId(null);
+    }
+  };
+
+  const cancelWorkItem = async (row) => {
+    if (!window.confirm('Cancelar este item de pré-faturamento? O registro continuará disponível para auditoria.')) return;
+    setActionId(row.id);
+    try {
+      await transitionBillingWorkItem({ clinicId, workItemId: row.id, nextStatus: 'canceled' });
+      await load();
+    } catch (error) {
+      toast({ title: 'Cancelamento bloqueado', description: error.message, variant: 'destructive' });
     } finally {
       setActionId(null);
     }
@@ -424,17 +466,17 @@ export default function BillingMasterPage({ page = 'prebilling' }) {
 
       {page === 'prebilling' && (
         <>
-          <Input
-            className="max-w-md"
-            placeholder="Buscar atendimento, status ou bloqueio"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"><Input className="max-w-md" placeholder="Buscar atendimento, status ou bloqueio" value={query} onChange={(event) => setQuery(event.target.value)} /><div className="flex flex-wrap gap-2"><Button variant="outline" disabled={!selectedWorkItemIds.length || actionId === 'bulk'} onClick={() => transitionMany('in_review')}>Revisar selecionados</Button><Button variant="outline" disabled={!selectedWorkItemIds.length || actionId === 'bulk'} onClick={() => transitionMany('ready')}>Aprovar selecionados</Button><Button variant="outline" className="text-red-700" disabled={!selectedWorkItemIds.length || actionId === 'bulk'} onClick={() => transitionMany('canceled')}>Cancelar selecionados</Button></div></div>
           <WorkQueue
             rows={workItems}
             actionId={actionId}
+            selectedIds={selectedWorkItemIds}
+            onSelect={(id) => setSelectedWorkItemIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])}
+            onSelectAll={(checked) => setSelectedWorkItemIds(checked ? workItems.map((row) => row.id) : [])}
+            onOpen={openAppointment}
             onTransition={handleTransition}
             onGenerateGuide={handleGenerateGuide}
+            onCancel={cancelWorkItem}
           />
         </>
       )}

@@ -653,10 +653,56 @@ export async function loadFaturamentoOperationalData(clinicId) {
   const failed = [guidesResult, submissionsResult, receivablesResult, glosasResult].find((result) => result.error);
   if (failed?.error) throw failed.error;
 
+  const rawReceivables = receivablesResult.data || [];
+  const appointmentIds = [...new Set(rawReceivables.map((row) => row.appointment_id).filter(Boolean))];
+  const [appointmentsResult, professionalsResult, servicesResult, payersResult, clinicResult] = await Promise.all([
+    appointmentIds.length
+      ? supabase.from('appointments').select('*').eq('clinic_id', clinicId).in('id', appointmentIds)
+      : Promise.resolve({ data: [], error: null }),
+    supabase.from('professionals').select('*').eq('clinic_id', clinicId),
+    supabase.from('services').select('*').eq('clinic_id', clinicId),
+    supabase.from('health_insurances').select('*').eq('clinic_id', clinicId),
+    supabase.from('clinics').select('*').eq('id', clinicId).maybeSingle(),
+  ]);
+
+  const enrichmentFailure = [appointmentsResult, professionalsResult, servicesResult, payersResult, clinicResult]
+    .find((result) => result.error);
+  if (enrichmentFailure?.error) throw enrichmentFailure.error;
+
+  const appointmentsById = new Map((appointmentsResult.data || []).map((row) => [row.id, row]));
+  const professionalsById = new Map((professionalsResult.data || []).map((row) => [row.id, row]));
+  const servicesById = new Map((servicesResult.data || []).map((row) => [row.id, row]));
+  const payersById = new Map((payersResult.data || []).map((row) => [row.id, row]));
+  const clinicName = clinicResult.data?.name || clinicResult.data?.fantasy_name || 'Unidade principal';
+
+  const enrichedReceivables = rawReceivables.map((row) => {
+    const appointment = appointmentsById.get(row.appointment_id) || {};
+    const professionalId = row.professional_id || appointment.professional_id || null;
+    const procedureId = row.procedure_id || appointment.service_id || null;
+    const payerId = row.payer_id || row.convenio_id || appointment.payer_id || appointment.convenio_id || null;
+    const professional = professionalsById.get(professionalId) || {};
+    const service = servicesById.get(procedureId) || {};
+    const payer = payersById.get(payerId) || {};
+
+    return {
+      ...row,
+      professional_id: professionalId,
+      professional_name: row.professional_name || professional.name || null,
+      specialty_id: row.specialty_id || professional.specialty_id || null,
+      specialty_name: row.specialty_name || professional.specialty || professional.specialty_name || 'Sem especialidade cadastrada',
+      procedure_id: procedureId,
+      procedure_code: row.procedure_code || service.tuss_code || service.procedure_code || service.code || null,
+      procedure_name: row.procedure_name || service.procedure_name || service.name || row.service_description || null,
+      payer_id: payerId,
+      payer_name: row.payer_name || payer.fantasy_name || payer.name || appointment.payer_name || null,
+      unit_name: row.unit_name || clinicName,
+    };
+  });
+
   const data = {
     guides: guidesResult.data || [],
     submissions: submissionsResult.data || [],
-    receivables: receivablesResult.data || [],
+    receivables: enrichedReceivables,
     glosas: glosasResult.data || [],
     rules: rules || [],
   };

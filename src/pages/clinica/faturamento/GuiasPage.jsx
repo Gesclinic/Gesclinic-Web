@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import GuiasConsulta from './tiss/GuiasConsulta';
 
 export default function GuiasPage() {
-  const [activeTab, setActiveTab] = useState('consulta');
+  const [activeTab, setActiveTab] = useState('todas');
 
   return (
     <div className="space-y-6">
@@ -19,10 +19,20 @@ export default function GuiasPage() {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
+          <TabsTrigger value="todas">Todas as Guias</TabsTrigger>
           <TabsTrigger value="consulta">Guias de Consulta</TabsTrigger>
           <TabsTrigger value="internacao">Guias de Internação</TabsTrigger>
           <TabsTrigger value="sadt">Guias SADT</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="todas" className="space-y-6">
+          <GuiasConsulta
+            tipoGuia="all"
+            titulo="Todas as Guias"
+            descricao="Guias manuais, assistenciais e importadas de retornos de operadoras"
+            allowTipoChange
+          />
+        </TabsContent>
 
         {/* Guias de Consulta */}
         <TabsContent value="consulta" className="space-y-6">
