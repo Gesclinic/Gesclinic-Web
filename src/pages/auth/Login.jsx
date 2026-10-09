@@ -37,99 +37,50 @@ export default function Login() {
         return;
       }
 
-      // 1️⃣ Buscar clínica pelo código
+      // Validar credenciais e sincronizar o usuário sem depender de consultas
+      // anônimas bloqueadas pelo RLS.
+      const { data: syncData, error: syncError } = await supabase.functions.invoke('sync-custom-auth', {
+        body: { clinicCode, username, password },
+      });
+
+      if (syncError || !syncData?.success) {
+        console.error('[LOGIN] Erro ao validar credenciais:', syncError || syncData);
+        setError('Código da clínica, usuário ou senha inválidos.');
+        setLoading(false);
+        return;
+      }
+
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: syncData.email,
+        password,
+      });
+
+      if (authError || !authData?.user) {
+        console.error('[LOGIN] Erro ao iniciar sessão Supabase:', authError);
+        setError('Não foi possível iniciar a sessão segura. Tente novamente.');
+        setLoading(false);
+        return;
+      }
+
+      const { data: user, error: userError } = await supabase
+        .from('users')
+        .select('id, full_name, email, username, role, clinic_id')
+        .eq('id', syncData.user_id)
+        .maybeSingle();
+
       const { data: clinic, error: clinicError } = await supabase
         .from('clinics')
         .select('id, name, clinic_code')
-        .eq('clinic_code', clinicCode)
+        .eq('id', syncData.clinic_id)
         .maybeSingle();
 
-      if (clinicError || !clinic) {
-        setError('Código de clínica inválido.');
+      if (userError || clinicError || !user || !clinic) {
+        await supabase.auth.signOut();
+        setError('Não foi possível carregar os dados da sessão.');
         setLoading(false);
         return;
       }
 
-      // 2️⃣ Buscar usuário na clínica (case-insensitive)
-      const { data: user, error: userError } = await supabase
-        .from('users')
-        .select('id, full_name, email, username, password_hash, role, clinic_id, status')
-        .eq('clinic_id', clinic.id)
-        .ilike('username', username)
-        .maybeSingle();
-
-      if (userError || !user) {
-        setError('Usuário ou senha inválidos.');
-        setLoading(false);
-        return;
-      }
-
-      // 3️⃣ Verificar se usuário está ativo
-      if (user.status !== 'ativo') {
-        setError('Usuário inativo. Contate o administrador.');
-        setLoading(false);
-        return;
-      }
-
-      // 4️⃣ Validar senha (comparar com password_hash em base64)
-      const hashedPassword = btoa(password); // Codifica a senha em base64
-      if (user.password_hash !== hashedPassword) {
-        setError('Usuário ou senha inválidos.');
-        setLoading(false);
-        return;
-      }
-
-      // 5️⃣ AGORA: Também fazer login no Supabase Auth para ativar RLS
-      console.log('[LOGIN] ✅ Autenticação customizada validada, tentando Supabase Auth...');
-
-      // Tentar login no Supabase Auth com email e senha
-      let { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: user.email,
-        password: password // Usar a senha fornecida
-      });
-
-      if (authError) {
-        console.warn('[LOGIN] ⚠️  Supabase Auth falhou:', authError.message);
-        console.log('[LOGIN] Sincronizando credenciais customizadas com Supabase Auth...');
-
-        const { data: syncData, error: syncError } = await supabase.functions.invoke('sync-custom-auth', {
-          body: { clinicCode, username, password },
-        });
-
-        if (syncError || !syncData?.success) {
-          console.error('[LOGIN] Erro ao sincronizar Supabase Auth:', syncError || syncData);
-          setError('Não foi possível iniciar a sessão segura. Tente novamente.');
-          setLoading(false);
-          return;
-        }
-
-        const retry = await supabase.auth.signInWithPassword({
-          email: syncData.email || user.email,
-          password,
-        });
-
-        authData = retry.data;
-        authError = retry.error;
-
-        if (authError) {
-          console.error('[LOGIN] Supabase Auth ainda falhou após sincronização:', authError.message);
-          setError('Não foi possível iniciar a sessão segura. Tente novamente.');
-          setLoading(false);
-          return;
-        }
-      } else {
-        console.log('[LOGIN] ✅ Supabase Auth bem-sucedido!', {
-          userId: authData?.user?.id,
-          userEmail: authData?.user?.email
-        });
-      }
-
-      console.log('[LOGIN] ✅ Sessão Supabase ativa:', {
-        userId: authData?.user?.id,
-        userEmail: authData?.user?.email,
-      });
-
-      // 6️⃣ Salvar dados da sessão no localStorage
       const sessionData = {
         user_id: user.id,
         clinic_id: clinic.id,
@@ -150,7 +101,6 @@ export default function Login() {
 
       console.log('[LOGIN] Sucesso:', sessionData);
 
-      // 7️⃣ Redirecionar para dashboard
       navigate('/clinica');
       setLoading(false);
     } catch (err) {
