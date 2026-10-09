@@ -209,9 +209,6 @@ function CriticalPermissionRoute() {
 function ProtectedRoute() {
   const { isAuthenticated, loading } = useAuth();
 
-  // Verificar se existe sessão customizada no localStorage
-  const hasCustomSession = localStorage.getItem('gesclinic_session');
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -220,8 +217,7 @@ function ProtectedRoute() {
     );
   }
 
-  // Permitir acesso se tem autenticação Supabase OU sessão customizada
-  if (!isAuthenticated && !hasCustomSession) {
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
@@ -234,19 +230,6 @@ function AdminRoute() {
   const { canView, canEdit } = usePermissions();
   const location = useLocation();
 
-  // Verificar se existe sessão customizada no localStorage
-  const customSession = (() => {
-    const session = localStorage.getItem('gesclinic_session');
-    if (!session) {
-      return null;
-    }
-    try {
-      return JSON.parse(session);
-    } catch (e) {
-      return null;
-    }
-  })();
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -255,14 +238,11 @@ function AdminRoute() {
     );
   }
 
-  // Verificar autenticação: Supabase OU sessão customizada
-  const isAuthenticatedUser = isAuthenticated || !!customSession;
-
-  if (!isAuthenticatedUser) {
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  const userRole = customSession?.role || currentRole;
+  const userRole = currentRole;
   const required = getCriticalPermissionForPath(location.pathname);
   const requiredPermission = required ? (typeof required === 'string' ? required : required.permission) : null;
   const requiredLevel = required ? (typeof required === 'string' ? 'view' : required.level || 'view') : 'view';
@@ -316,11 +296,7 @@ function LegacyPayableEditRedirect() {
 function PublicRoute() {
   const { isAuthenticated } = useAuth();
 
-  // Verificar se existe sessão customizada no localStorage
-  const hasCustomSession = localStorage.getItem('gesclinic_session');
-
-  // Se tem qualquer autenticação (Supabase ou customizada), redireciona
-  if (isAuthenticated || hasCustomSession) {
+  if (isAuthenticated) {
     return <Navigate to="/clinica" replace />;
   }
 

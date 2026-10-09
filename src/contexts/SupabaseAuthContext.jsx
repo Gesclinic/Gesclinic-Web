@@ -180,38 +180,6 @@ export function AuthProvider({ children }) {
           sessionError,
         });
 
-        // Se não houver sessão do Supabase, tentar restaurar do localStorage (login customizado)
-        if (!session) {
-          console.log('🔍 [initAuth] Tentando restaurar sessão do localStorage...');
-          const savedSession = localStorage.getItem('gesclinic_session');
-          if (savedSession) {
-            try {
-              const sessionData = JSON.parse(savedSession);
-              console.log('✅ [initAuth] Sessão do localStorage restaurada:', sessionData);
-
-              // Agora buscar os dados do usuário no banco
-              if (sessionData.user_id) {
-                const { data: userData, error: userError } = await supabase
-                  .from('users')
-                  .select('clinic_id, role')
-                  .eq('id', sessionData.user_id)
-                  .maybeSingle();
-
-                if (!userError && userData?.clinic_id) {
-                  console.log('✅ [initAuth] Clinic ID carregado do banco:', userData.clinic_id);
-                  setClinicId(userData.clinic_id);
-                  setCurrentRole(userData.role || 'recepcao');
-                  setUser({ id: sessionData.user_id, email: sessionData.email });
-                  setLoading(false);
-                  return;
-                }
-              }
-            } catch (e) {
-              console.warn('⚠️ [initAuth] Erro ao restaurar do localStorage:', e);
-            }
-          }
-        }
-
         if (sessionError) {
           console.error('Erro ao obter sessão:', sessionError);
           if (
@@ -364,6 +332,8 @@ export function AuthProvider({ children }) {
       setUser(null);
       setClinicId(null);
       setCurrentRole(null);
+      localStorage.removeItem('gesclinic_session');
+      localStorage.removeItem('gesclinic_clinic_data');
 
       return { error: null };
     } catch (error) {
