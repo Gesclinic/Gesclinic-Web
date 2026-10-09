@@ -44,9 +44,10 @@ serve(async (req: Request) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
 
-    if (!supabaseUrl || !serviceRoleKey) {
-      return jsonResponse({ error: "Supabase service role not configured" }, 500);
+    if (!supabaseUrl || !serviceRoleKey || !anonKey) {
+      return jsonResponse({ error: "Supabase authentication not configured" }, 500);
     }
 
     const supabase = createClient(supabaseUrl, serviceRoleKey, {
@@ -74,13 +75,36 @@ serve(async (req: Request) => {
       return jsonResponse({ error: "Invalid credentials" }, 401);
     }
 
-    if (user.password_hash !== btoa(password)) {
-      return jsonResponse({ error: "Invalid credentials" }, 401);
-    }
-
     const email = normalizeText(user.email).toLowerCase();
     if (!email) {
       return jsonResponse({ error: "User email is required for Supabase Auth" }, 400);
+    }
+
+    const authClient = createClient(supabaseUrl, anonKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { data: verifiedAuth } = await authClient.auth.signInWithPassword({ email, password });
+
+    if (verifiedAuth.user) {
+      const { error: metadataError } = await supabase.auth.admin.updateUserById(verifiedAuth.user.id, {
+        user_metadata: {
+          clinic_id: user.clinic_id,
+          username: user.username,
+          role: user.role,
+          legacy_user_id: user.id,
+        },
+      });
+
+      if (metadataError) {
+        console.error("Auth metadata update error:", metadataError);
+        return jsonResponse({ error: "Failed to update auth user" }, 500);
+      }
+
+      return jsonResponse({ success: true, email, user_id: user.id, clinic_id: user.clinic_id });
+    }
+
+    if (user.password_hash !== btoa(password)) {
+      return jsonResponse({ error: "Invalid credentials" }, 401);
     }
 
     const { data: existingById, error: getUserError } = await supabase.auth.admin.getUserById(user.id);
