@@ -100,7 +100,14 @@ serve(async (req: Request) => {
         return jsonResponse({ error: "Failed to update auth user" }, 500);
       }
 
-      return jsonResponse({ success: true, email, user_id: user.id, clinic_id: user.clinic_id });
+      return jsonResponse({
+        success: true,
+        email,
+        user_id: user.id,
+        clinic_id: user.clinic_id,
+        access_token: verifiedAuth.session?.access_token,
+        refresh_token: verifiedAuth.session?.refresh_token,
+      });
     }
 
     if (user.password_hash !== btoa(password)) {
@@ -144,7 +151,24 @@ serve(async (req: Request) => {
       }
     }
 
-    return jsonResponse({ success: true, email, user_id: user.id, clinic_id: user.clinic_id });
+    const { data: migratedAuth, error: migratedAuthError } = await authClient.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (migratedAuthError || !migratedAuth.session) {
+      console.error("Auth sign-in after migration error:", migratedAuthError);
+      return jsonResponse({ error: "Failed to start auth session" }, 500);
+    }
+
+    return jsonResponse({
+      success: true,
+      email,
+      user_id: user.id,
+      clinic_id: user.clinic_id,
+      access_token: migratedAuth.session.access_token,
+      refresh_token: migratedAuth.session.refresh_token,
+    });
   } catch (error) {
     console.error("sync-custom-auth error:", error);
     return jsonResponse({ error: "Internal server error" }, 500);

@@ -50,10 +50,12 @@ export default function Login() {
         return;
       }
 
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: syncData.email,
-        password,
-      });
+      const { data: authData, error: authError } = syncData.access_token && syncData.refresh_token
+        ? await supabase.auth.setSession({
+          access_token: syncData.access_token,
+          refresh_token: syncData.refresh_token,
+        })
+        : await supabase.auth.signInWithPassword({ email: syncData.email, password });
 
       if (authError || !authData?.user) {
         console.error('[LOGIN] Erro ao iniciar sessão Supabase:', authError);
