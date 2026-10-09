@@ -154,6 +154,11 @@ export async function saveBillingDocumentRequirement(clinicId, requirement) {
 }
 
 export async function syncBillingWorkQueue(clinicId) {
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError || !sessionData?.session?.user) {
+    throw new Error('Sua sessão segura expirou. Saia do sistema e entre novamente antes de sincronizar a produção.');
+  }
+
   const [appointmentsResult, settings, requirements, existingItems] = await Promise.all([
     supabase
       .from('appointments')
